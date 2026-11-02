@@ -1,0 +1,42 @@
+name: M0 foundation
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  offline-foundation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - name: Install pinned uv
+        run: python -m pip install uv==0.12.23
+      - name: Install locked dependencies
+        run: uv sync --locked --all-groups
+      - name: Lint
+        run: uv run --no-sync ruff check .
+      - name: Format
+        run: uv run --no-sync ruff format --check .
+      - name: Types
+        run: uv run --no-sync mypy
+      - name: Offline unit and integration tests
+        run: uv run --no-sync pytest -q --junitxml=var/pytest.xml
+      - name: CLI smoke
+        run: |
+          uv run --no-sync python -m girlframe --help
+          uv run --no-sync python -m girlframe health
+      - name: Planning contracts
+        run: uv run --no-sync python GIRLFRAME_Discord_Codex_Handoff_v0.2/verification/verify_handoff.py
+      - name: Publishable file and manifest check
+        run: uv run --no-sync python tools/check_repository.py
+      - name: Preserve synthetic test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m0-test-results
+          path: var/pytest.xml
+          if-no-files-found: ignore

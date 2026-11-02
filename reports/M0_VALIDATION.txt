@@ -1,0 +1,61 @@
+$ uv --cache-dir .cache/uv sync --locked --all-groups --offline
+Resolved 36 packages in 1ms
+Checked 35 packages in 0.37ms
+Exit: 0 (expected 0)
+
+$ .venv/bin/ruff check .
+All checks passed!
+Exit: 0 (expected 0)
+
+$ .venv/bin/ruff format --check .
+27 files already formatted
+Exit: 0 (expected 0)
+
+$ .venv/bin/mypy
+Success: no issues found in 18 source files
+Exit: 0 (expected 0)
+
+$ .venv/bin/pytest -q --junitxml=var/pytest.xml
+..............................                                           [100%]
+30 passed in 0.36s
+Exit: 0 (expected 0)
+
+$ .venv/bin/python -m girlframe --help
+usage: __main__.py [-h] [--version] {health,start} ...
+
+GIRL FRAME M0 offline foundation
+
+positional arguments:
+  {health,start}
+    health        Check local SQLite access without tokens or network
+    start         Report the unimplemented Discord runtime (exit 2)
+
+options:
+  -h, --help      show this help message and exit
+  --version       show program's version number and exit
+Exit: 0 (expected 0)
+
+$ .venv/bin/python -m girlframe health
+{"database_checked": true, "discord_connected": false, "milestone": "M0", "rules_implemented": false, "status": "foundation_ok"}
+Exit: 0 (expected 0)
+
+$ .venv/bin/python -m girlframe start
+M0 has no Discord runtime. Use 'health' for the offline startup check.
+Exit: 2 (expected 2)
+
+$ .venv/bin/python -m alembic upgrade head
+Exit: 0 (expected 0)
+
+$ .venv/bin/python -m alembic check
+No new upgrade operations detected.
+Exit: 0 (expected 0)
+
+$ .venv/bin/python GIRLFRAME_Discord_Codex_Handoff_v0.2/verification/verify_handoff.py
+Planning package check: 34 required files, 86 planned cases, 4 JSON Schemas and 4 synthetic fixtures.
+PASS: files present, example contracts validated, milestones covered, examples synthetic, and no forbidden PDFs.
+IMPORTANT: This verifies PLANNING PACKAGE ONLY. It DOES NOT assert any running bot, game engine or Discord integration passes.
+Exit: 0 (expected 0)
+
+$ .venv/bin/python tools/check_repository.py
+Repository check: 82 publishable files; 40 manifest entries; 0 findings.
+Exit: 0 (expected 0)
