@@ -1,4 +1,4 @@
-name: M0 foundation
+name: Read-only Discord bot
 
 on: [push, pull_request]
 
@@ -37,6 +37,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: m0-test-results
+          name: offline-test-results
           path: var/pytest.xml
           if-no-files-found: ignore

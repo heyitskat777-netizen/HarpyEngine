@@ -1,3 +1,3 @@
-"""GIRL FRAME Discord foundation. No game rules or live bot implemented."""
+"""GIRL FRAME read-only Discord bot. Game rules and mutations are deferred."""
 
 __version__ = "0.1.0"

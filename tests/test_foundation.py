@@ -60,9 +60,12 @@ def test_unwritable_database_reports_failure(
     assert "failed" in capsys.readouterr().err
 
 
-def test_start_does_not_claim_bot_is_running(capsys: pytest.CaptureFixture[str]) -> None:
+def test_start_requires_explicit_configuration(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("GIRLFRAME_DISCORD_CONFIG", raising=False)
     assert main(["start"]) == 2
-    assert "no Discord runtime" in capsys.readouterr().err
+    assert "--config" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize(

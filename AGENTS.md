@@ -5,8 +5,9 @@ under `GIRLFRAME_Discord_Codex_Handoff_v0.2/`. References to `planning/` in that
 handoff mean this retained directory; do not duplicate or regenerate it.
 
 Follow the handoff's authority, privacy, and engineering boundaries throughout
-this repository. The current authorized implementation milestone is **M0 only**.
-Stop after its acceptance report. M1 and later milestones need owner acceptance.
+this repository. The owner accepted M0 and authorized **M1 read-only Discord bot**.
+Implement only /help, /campaign_status and administrator /health with access checks.
+The broader M1 ledgers/dice work is still deferred. Stop before engine writes or M2.
 
 - Run `bash tools/install.sh`, then the checks in `README.md`.
 - Use the existing checkout. Cloud tasks are isolated; create no worktree unless requested.
@@ -19,4 +20,5 @@ Stop after its acceptance report. M1 and later milestones need owner acceptance.
   Engine mutation/reconstruction is deferred; empty namespaces are intentional.
   Do not turn planning examples into implemented game mechanics.
 - Record actual commands, output, counts, failures, and limitations in
-  `reports/M0_ACCEPTANCE.md`. Do not claim live bot or rules readiness.
+  `reports/M1_ACCEPTANCE.md`. Preserve M0's historical evidence. Keep offline,
+  live login/registration and human slash-command outcomes distinct.

@@ -1,9 +1,12 @@
-"""Offline CLI and explicit no-token startup boundary."""
+"""Read-only Discord startup and local offline checks."""
 
 import argparse
+import asyncio
 import json
+import os
 import sys
 from collections.abc import Sequence
+from pathlib import Path
 
 from pydantic import ValidationError
 from sqlalchemy.exc import ArgumentError, SQLAlchemyError
@@ -11,17 +14,27 @@ from sqlalchemy.exc import ArgumentError, SQLAlchemyError
 from girlframe import __version__
 from girlframe.config import load_settings
 from girlframe.database.connection import check_database
+from girlframe.discord_adapter.config import load_bot_policy, load_bot_token, policy_summary
+from girlframe.discord_adapter.runtime import connection_failure_message, serve
 from girlframe.engine_adapter.snapshot import SandboxStatusSource
 from girlframe.services.engine_status import EngineStatusUnavailable, get_engine_status
 from girlframe.services.health import foundation_health
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="GIRL FRAME M0 offline foundation")
+    parser = argparse.ArgumentParser(
+        description="GIRL FRAME read-only Discord bot and local checks"
+    )
     parser.add_argument("--version", action="version", version=__version__)
     commands = parser.add_subparsers(dest="command")
     commands.add_parser("health", help="Check local SQLite access without tokens or network")
-    commands.add_parser("start", help="Report the unimplemented Discord runtime (exit 2)")
+    start = commands.add_parser("start", help="Run the guild-scoped read-only Discord bot")
+    start.add_argument(
+        "--config", type=Path, help="Trusted local JSON policy (never a player input)"
+    )
+    start.add_argument(
+        "--check", action="store_true", help="Validate local policy/sandbox without login"
+    )
     commands.add_parser(
         "engine-status", help="Read turn/paused from an explicitly configured sandbox"
     )
@@ -30,11 +43,35 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.print_help()
         return 0
     if args.command == "start":
-        print(
-            "M0 has no Discord runtime. Use 'health' for the offline startup check.",
-            file=sys.stderr,
-        )
-        return 2
+        configured_path = args.config or os.environ.get("GIRLFRAME_DISCORD_CONFIG")
+        if not configured_path:
+            print("Use start --config PATH or set GIRLFRAME_DISCORD_CONFIG.", file=sys.stderr)
+            return 2
+        try:
+            policy = load_bot_policy(Path(configured_path))
+            get_engine_status(SandboxStatusSource(policy.sandbox))
+        except (OSError, ValueError, EngineStatusUnavailable):
+            print("Bot policy or disposable sandbox is invalid; startup refused.", file=sys.stderr)
+            return 1
+        if args.check:
+            print(policy_summary(policy))
+            return 0
+        try:
+            token = load_bot_token()
+        except ValueError:
+            print(
+                "DiscordBot is not available; configure it securely in this environment.",
+                file=sys.stderr,
+            )
+            return 1
+        try:
+            asyncio.run(serve(policy, token, os.environ.get("HTTPS_PROXY")))
+        except KeyboardInterrupt:
+            print("Discord bot stopped.")
+        except Exception as error:
+            print(connection_failure_message(error), file=sys.stderr)
+            return 1
+        return 0
     if args.command == "engine-status":
         try:
             settings = load_settings()
