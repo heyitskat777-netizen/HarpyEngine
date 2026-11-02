@@ -3,7 +3,55 @@
 **Status: PASS for local M0 foundation checks; pending owner/reviewer acceptance.**
 **Date:** 2026-11-02. **Scope:** foundation only; stop before M1.
 
-## Outcome
+## Read-only integration update (current)
+
+The owner supplied and verified the corrected private v1.3.10 package after the
+initial foundation, then authorized a read-only integration. Added an explicitly
+configured sandbox adapter, service/source protocol, immutable status projection,
+local `engine-status` CLI and reviewed vendored bridge. No Discord endpoint or
+engine mutation was added. Original foundation evidence is retained below.
+
+Current command transcripts: [M0_ENGINE_VALIDATION.txt](M0_ENGINE_VALIDATION.txt).
+
+| Current check | Actual outcome |
+|---|---|
+| Application tests | **51 passed, 0 failed, 0 skipped, 0 xfailed** (30 original + 21 new) |
+| Ruff lint / format | All checks passed; 37 Python files formatted |
+| Strict mypy | No issues in 25 source files |
+| Locked offline sync | No dependency changes; lock remains valid |
+| Planning validator / manifest | Passed; 40 original manifest entries preserved |
+| Integration privacy | Only turn/paused returned; strict types, malformed/missing/oversized state rejected; private canaries absent |
+| Isolation | Missing marker and symlinked roots/state rejected; no DB created by status; synthetic source bytes unchanged |
+| Private runtime smoke | Configured disposable runtime read succeeded; runtime and canonical template hashes unchanged |
+| Build | Offline wheel/source distribution succeeded; reviewed bridge/adapter included |
+| Artifact inspection | 29 wheel entries and 92 source-distribution entries; no PDFs, campaign JSON, DBs, private archive, cache or virtualenv |
+| Installed-wheel smoke | New wheel installed in separate environment; engine-status worked from outside source with synthetic data |
+| Remote CI | Workflow unchanged; current remote outcome not yet observed |
+
+The private engine intake's **66 focused tests** and zero-error/zero-warning
+validation are separate, earlier results; they are not counted in the 51 tests.
+No real campaign values are recorded in these public/publishable evidence files.
+Full private smoke output and runtime/template hashes remain outside Git.
+Source provenance and integration instructions are in
+[ENGINE_SOURCE_INVENTORY.md](../docs/ENGINE_SOURCE_INVENTORY.md).
+
+Only the minimal bridge was incorporated into Git. Full private engine code/data
+remain external references. The integration requires no private archive for CI;
+an operator supplies a disposable runtime for local status use. A marker is an
+accident-prevention measure, not authentication or a guarantee of atomic reads.
+Audience approval and per-user/guild/campaign authorization are required before
+Discord exposure. Resolve JSON/database authority and implement transactional
+writes, revisions and idempotency before enabling any engine mutation in M1.
+
+Changed since the initial baseline: `.env.example`, `AGENTS.md`, `README.md`,
+`docs/M0_ARCHITECTURE_DECISIONS.md`, `src/girlframe/config.py`,
+`src/girlframe/__main__.py`, `tests/test_foundation.py`, and this report.
+New: `docs/ENGINE_SOURCE_INVENTORY.md`, `reports/M0_ENGINE_VALIDATION.txt`,
+`src/girlframe/_vendor/` (3 files), `src/girlframe/engine/status.py`,
+`src/girlframe/engine_adapter/` (2 files), `src/girlframe/services/engine_status.py`,
+and `tests/test_engine_status.py`. No dependencies or original handoff files changed.
+
+## Initial foundation outcome
 
 Installable typed package with all requested namespaces, a strictly validated
 identity/context contract, fake private-response transport, offline health service
@@ -11,11 +59,11 @@ and CLI, local SQLite connection configuration, empty Alembic scaffold, pinned
 runtime/dev dependencies and uv lock, installation script, documentation, CI and
 synthetic offline tests. The original handoff is unchanged.
 
-No campaign tables, commands, real Discord transport, authorization implementation,
+No campaign tables, Discord commands, real Discord transport, authorization implementation,
 roll engine, game mechanics, AI calls, or campaign import is implemented. Empty
-namespaces are intentional. Missing old engine source does not block this milestone.
+namespaces are intentional. Engine recovery was not required for the initial foundation.
 
-## Executed checks
+## Initial foundation checks (historical)
 
 Full final command output and exit codes: [M0_VALIDATION.txt](M0_VALIDATION.txt).
 
@@ -97,13 +145,13 @@ into Git. No environment draft updates or publication were performed.
 
 ## M1 prerequisites
 
-Owner/reviewer acceptance of M0; implement the M1 work order with synthetic data.
+Owner/reviewer acceptance of M0; start M1 with authorized read-only commands and synthetic data.
 Before live tests, provide an authorized private guild/application and bot credentials
 through secure configuration. Confirm deployment privacy and backup/retention plans
-before using real campaign data. Decide public source licensing separately. Engine
-recovery/recreation and official rule implementations remain deferred.
+before using real campaign data. Decide public source licensing separately.
+Engine mechanics integration and official rule implementations remain deferred.
 
-## Changed files
+## Initial foundation files
 
 All entries below are new. No original handoff file was changed.
 

@@ -1,0 +1,61 @@
+$ uv --cache-dir .cache/uv sync --locked --all-groups --offline
+Resolved 36 packages in 1ms
+   Building girlframe-discord @ file:///workspace/HarpyEngine
+      Built girlframe-discord @ file:///workspace/HarpyEngine
+Prepared 1 package in 252ms
+Uninstalled 1 package in 0.93ms
+Installed 1 package in 1ms
+ ~ girlframe-discord==0.1.0 (from file:///workspace/HarpyEngine)
+Exit: 0
+
+$ .venv/bin/ruff check .
+All checks passed!
+Exit: 0
+
+$ .venv/bin/ruff format --check .
+37 files already formatted
+Exit: 0
+
+$ .venv/bin/mypy
+Success: no issues found in 25 source files
+Exit: 0
+
+$ .venv/bin/pytest -q --junitxml=var/pytest.xml
+...................................................                      [100%]
+51 passed in 0.37s
+Exit: 0
+
+$ .venv/bin/python -m girlframe --help
+usage: __main__.py [-h] [--version] {health,start,engine-status} ...
+
+GIRL FRAME M0 offline foundation
+
+positional arguments:
+  {health,start,engine-status}
+    health              Check local SQLite access without tokens or network
+    start               Report the unimplemented Discord runtime (exit 2)
+    engine-status       Read turn/paused from an explicitly configured sandbox
+
+options:
+  -h, --help            show this help message and exit
+  --version             show program's version number and exit
+Exit: 0
+
+$ .venv/bin/python -m girlframe health
+{"database_checked": true, "discord_connected": false, "milestone": "M0", "rules_implemented": false, "status": "foundation_ok"}
+Exit: 0
+
+$ .venv/bin/python GIRLFRAME_Discord_Codex_Handoff_v0.2/verification/verify_handoff.py
+Planning package check: 34 required files, 86 planned cases, 4 JSON Schemas and 4 synthetic fixtures.
+PASS: files present, example contracts validated, milestones covered, examples synthetic, and no forbidden PDFs.
+IMPORTANT: This verifies PLANNING PACKAGE ONLY. It DOES NOT assert any running bot, game engine or Discord integration passes.
+Exit: 0
+
+$ .venv/bin/python tools/check_repository.py
+Repository check: 91 publishable files; 40 manifest entries; 0 findings.
+Exit: 0
+
+Additional executed checks:
+Private runtime smoke: exactly two typed status fields; runtime/template hashes unchanged. Raw values retained privately.
+Offline build: wheel and sdist succeeded; contents inspected (29 / 92 entries); no private data assets.
+Installed-wheel engine-status smoke: exit 0 using synthetic runtime from outside source directory.

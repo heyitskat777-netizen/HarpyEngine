@@ -11,6 +11,8 @@ from sqlalchemy.exc import ArgumentError, SQLAlchemyError
 from girlframe import __version__
 from girlframe.config import load_settings
 from girlframe.database.connection import check_database
+from girlframe.engine_adapter.snapshot import SandboxStatusSource
+from girlframe.services.engine_status import EngineStatusUnavailable, get_engine_status
 from girlframe.services.health import foundation_health
 
 
@@ -20,6 +22,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     commands = parser.add_subparsers(dest="command")
     commands.add_parser("health", help="Check local SQLite access without tokens or network")
     commands.add_parser("start", help="Report the unimplemented Discord runtime (exit 2)")
+    commands.add_parser(
+        "engine-status", help="Read turn/paused from an explicitly configured sandbox"
+    )
     args = parser.parse_args(argv)
     if args.command is None:
         parser.print_help()
@@ -30,6 +35,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+    if args.command == "engine-status":
+        try:
+            settings = load_settings()
+            if settings.engine_sandbox is None:
+                raise EngineStatusUnavailable("Sandbox is not configured")
+            status = get_engine_status(SandboxStatusSource(settings.engine_sandbox))
+        except (ValidationError, ArgumentError, EngineStatusUnavailable):
+            print(
+                "Engine status unavailable; configure GIRLFRAME_ENGINE_SANDBOX "
+                "with an isolated development runtime.",
+                file=sys.stderr,
+            )
+            return 1
+        print(status.model_dump_json())
+        return 0
     try:
         settings = load_settings()
         check_database(settings)

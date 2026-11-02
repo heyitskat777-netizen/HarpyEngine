@@ -115,7 +115,17 @@ def test_offline_service_responds_only_to_addressed_interaction() -> None:
 def test_engine_import_boundaries() -> None:
     root = Path(__file__).resolve().parents[1] / "src/girlframe/engine"
     forbidden = {"discord", "openai", "sqlalchemy", "alembic"}
-    forbidden_internal = {"database", "discord_adapter", "ai", "delivery", "gm", "handler"}
+    forbidden_internal = {
+        "database",
+        "discord_adapter",
+        "engine_adapter",
+        "_vendor",
+        "services",
+        "ai",
+        "delivery",
+        "gm",
+        "handler",
+    }
     for path in root.rglob("*.py"):
         for node in ast.walk(ast.parse(path.read_text())):
             imports = []

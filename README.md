@@ -27,12 +27,54 @@ to create or refresh the development environment. It does not start services.
 The local cache location supports cloud machines with read-only home directories.
 `uv.lock` pins transitive dependencies and hashes. Do not regenerate the lock as
 part of normal installation. Python is constrained to 3.12 for this tested M0
-baseline; widen support only with validation. No tokens are required. The old
-engine's `tools/bootstrap_dev.py` and `tools/verify_engine.py` are not available.
+baseline; widen support only with validation. No tokens are required. The recovered
+private engine supplies its own bootstrap/verification tools outside this checkout;
+see [engine source inventory](docs/ENGINE_SOURCE_INVENTORY.md).
 
 `health` executes a local SQL query and reports `discord_connected: false` and
 `rules_implemented: false`. `start` deliberately exits **2**, explaining that no
 Discord runtime exists yet. Health success is not bot/game readiness.
+
+## Read-only engine integration
+
+M0 now includes a reviewed copy of the v1.3.10 read-only bridge and a local
+`engine-status` service/CLI. This code is installed by the normal locked setup;
+it does not import or execute the private engine's Python scripts. No private
+archive is required for the synthetic CI suite.
+
+Keep the supplied PRIVATE archive outside the checkout. From its extracted root
+(containing its own `AGENTS.md`), follow its private setup instructions:
+
+```bash
+python tools/package_probe.py
+python tools/verify_engine.py --require-full
+python tools/bootstrap_dev.py
+python runtime/dev/scripts/gm.py validate
+```
+
+Bootstrap creates a disposable runtime with a noncanonical marker and refuses to
+overwrite an existing destination. Do not run mutating commands against the
+packaged canonical template. Back in this application's root, configure the
+absolute location of that disposable runtime:
+
+```bash
+export GIRLFRAME_ENGINE_SANDBOX=/absolute/private/path/runtime/dev
+python -m girlframe engine-status
+```
+
+Output contains exactly `turn` (nonnegative integer) and `paused` (boolean). These
+fields still need GM approval for their audience before Discord exposure. The
+command does not create a DB, write state, launch the engine, or call Discord. No
+path option can be supplied by a player; only trusted local configuration selects
+the sandbox. Without configuration it exits 1; it never searches for campaign data.
+
+The source must have the bootstrap marker, `scripts/gm.py`, and `state/campaign.json`.
+The adapter rejects symlinked roots, scripts/state directories, or required files,
+invalid status types, malformed JSON and snapshots larger than 4 MiB. The marker
+is an accident-prevention check, not cryptographic proof of isolation. Use a
+trusted local sandbox and filesystem; M0 does not guarantee consistent reads while
+another process is rewriting files. Errors omit underlying paths and raw data.
+Public-facing Discord commands and user/campaign authorization remain M1 work.
 
 ## Validate
 
@@ -51,7 +93,9 @@ python tools/check_repository.py
 Tests use synthetic data and block in-process network connections. They exercise
 identity validation, the service/fake-transport seam, CLI success/failure paths,
 SQLite WAL and foreign keys, and repeatable empty migration setup. No live Discord
-or model integration is tested. The historical 86-case catalog remains NOT_RUN;
+or model integration is tested. Engine-status tests also verify allowlisting,
+strict types, sandbox selection, bounded reads and byte-for-byte nonmutation with
+synthetic files. The historical 86-case catalog remains NOT_RUN;
 it is not the executable M0 suite. Coverage percentage is not currently measured.
 
 The original handoff is excluded from Ruff so historical files and hashes remain
@@ -87,17 +131,22 @@ application revisions to reverse and leaves Alembic's empty version table.
 
 ## Boundaries and next milestone
 
-- `engine`: transport-independent typed identity; rules deferred.
+- `engine`: transport-independent typed identity and status projection; rules deferred.
+- `engine_adapter`: read-only sandbox adapter; no subprocess or mutation methods.
+- `_vendor/harpyframe`: reviewed minimal bridge, with source provenance documented.
 - `discord_adapter`: private-response protocol and in-memory test fake.
-- `services`: offline foundation health only; no authorization or mutations.
+- `services`: offline health and read-only engine status; no authorization or mutations.
 - `database`: connection setup and empty metadata.
 - `scenes`, `gm`, `handler`, `ai`, `delivery`: reserved namespaces only.
 
 M1 adds server-side membership/authorization, campaigns and sheets, raw dice,
 idempotency, event journal, outbox, real Discord transport, and persistence/restart
 tests. Live testing will require an authorized private test guild and securely
-provided bot credentials. Engine recovery/reconstruction and all official Plays
-are deferred. There is no claim of v1.3.11 Scene Integrity Engine support.
+provided bot credentials. Begin M1 with authorized read-only commands; before
+mutable rolls/finalization, resolve the legacy JSON/database authority boundary
+and implement transactions, revisions, serialization and idempotency. The full
+engine has been recovered and privately verified, but mechanics integration and
+all official Plays are deferred. There is no claim of v1.3.11 implementation.
 
 ## Source and game rights
 

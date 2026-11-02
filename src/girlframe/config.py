@@ -2,6 +2,7 @@
 
 import os
 from collections.abc import Mapping
+from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy.engine import make_url
@@ -11,6 +12,19 @@ class Settings(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     database_url: str = "sqlite:///./var/girlframe.db"
+    engine_sandbox: Path | None = None
+
+    @field_validator("engine_sandbox", mode="before")
+    @classmethod
+    def absolute_sandbox(cls, value: object) -> Path | None:
+        if value is None:
+            return None
+        if not isinstance(value, (str, Path)):
+            raise ValueError("An absolute local sandbox path is required")
+        path = Path(value)
+        if not path.is_absolute():
+            raise ValueError("An absolute local sandbox path is required")
+        return path
 
     @field_validator("database_url")
     @classmethod
@@ -31,4 +45,8 @@ class Settings(BaseModel):
 
 def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
     values = os.environ if environ is None else environ
-    return Settings(database_url=values.get("GIRLFRAME_DATABASE_URL", Settings().database_url))
+    sandbox = values.get("GIRLFRAME_ENGINE_SANDBOX")
+    return Settings(
+        database_url=values.get("GIRLFRAME_DATABASE_URL", Settings().database_url),
+        engine_sandbox=Path(sandbox) if sandbox is not None else None,
+    )
