@@ -1,0 +1,18 @@
+{
+  "proposal_id": "66666666-6666-4666-8666-666666666666",
+  "campaign_id": "11111111-1111-4111-8111-111111111111",
+  "scene_id": "77777777-7777-4777-8777-777777777777",
+  "role": "gm",
+  "based_on_revision": 1,
+  "source_fact_ids": [
+    "synthetic-fact-001"
+  ],
+  "knowledge_scope": "gm_world",
+  "text": "The cargo hatch is sealed.",
+  "requested_effects": [],
+  "needs_player_choice": false,
+  "requires_fact_ids": [
+    "synthetic-fact-001"
+  ],
+  "forbids_fact_ids": []
+}

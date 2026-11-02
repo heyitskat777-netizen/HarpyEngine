@@ -1,0 +1,207 @@
+{
+  "package_version": "v0.2",
+  "classification": "Codex planning package, not application",
+  "generated_utc": "2026-11-02T18:47:16.064561+00:00",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "size_bytes": 4213,
+      "sha256": "a5f3f289435358f8a5ab91ddf51be32af0f8c088da4b5d5d4bdac591624cc832"
+    },
+    {
+      "path": "README_START_HERE.md",
+      "size_bytes": 5047,
+      "sha256": "a614955eb2a9f8ae672ffd38cccf299b15ee1114dca3b783c7c46d075ea245b0"
+    },
+    {
+      "path": "contracts/ai_proposal.schema.json",
+      "size_bytes": 2838,
+      "sha256": "71a3f123e355e86170502bdc8901772518e03a6d065d7315c62495affd252313"
+    },
+    {
+      "path": "contracts/event_envelope.schema.json",
+      "size_bytes": 2380,
+      "sha256": "fe9406d53e5e02e0101c049b12fadd799cbd8b1a86e1a0f46825741dcaf62d01"
+    },
+    {
+      "path": "contracts/pending_choice.schema.json",
+      "size_bytes": 1727,
+      "sha256": "61c1ec4f90ad8c45de5aabbb694f8e2b7bc1386c05097ab65e05367f4ff662aa"
+    },
+    {
+      "path": "contracts/roll_receipt.schema.json",
+      "size_bytes": 2077,
+      "sha256": "4ca92eb28b853ada751df8568bd53128dc583a2f6c230ab0dd9539caa0b422fe"
+    },
+    {
+      "path": "docs/AI_GM_HANDLER.md",
+      "size_bytes": 5746,
+      "sha256": "bfbc34f6d87eb89e60317ff4fda660d0121c23e7fec8323db8cd04ef9c27b798"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "size_bytes": 5927,
+      "sha256": "d1f1ac9de8a9a1e147f88c8031049b449d005ffb3165882065b60bb74275584b"
+    },
+    {
+      "path": "docs/DECISIONS_RISKS.md",
+      "size_bytes": 4772,
+      "sha256": "173d52b1bfdc88c05b7f0bc663577b4ddbf9f915c28576e27137843b1cf1023c"
+    },
+    {
+      "path": "docs/DISCORD_UX.md",
+      "size_bytes": 7066,
+      "sha256": "bf1d7ae33ab69415de0b0f0c7bfacf52c725012b89bfad16ef772bcc3086a6be"
+    },
+    {
+      "path": "docs/MILESTONE_MASTER_PLAN.md",
+      "size_bytes": 8688,
+      "sha256": "13cfed868059d30c99d07c54eb69011861643d32f05fed9cdc13d5367e7a854a"
+    },
+    {
+      "path": "docs/PLATFORM_SOURCES.md",
+      "size_bytes": 1853,
+      "sha256": "7466ec4106fe589c13f3e8ba3dfb8fc92d29f9987de34512a96f38effa8619aa"
+    },
+    {
+      "path": "docs/PRODUCT_AND_SCOPE.md",
+      "size_bytes": 4310,
+      "sha256": "b6d9d1b32a399ec2949d040dd666a9881c69e633bf1c3d805b8e54e752f6a627"
+    },
+    {
+      "path": "docs/RULES_PORT_PLAN.md",
+      "size_bytes": 7323,
+      "sha256": "0ee6dfd37b668a691e7706af8e4f98deb2ba66d9b1b7596b085cb65e59904c4f"
+    },
+    {
+      "path": "docs/SECURITY_OPS.md",
+      "size_bytes": 5300,
+      "sha256": "e733134a1d2629e31207209d164fa00975e64a1265aead542a34acacd782850d"
+    },
+    {
+      "path": "docs/STORAGE_EVENT_MODEL.md",
+      "size_bytes": 8058,
+      "sha256": "d9fb46a4c73d26b50d02122698ede9323ade8a3e135401b2c11321c95b830078"
+    },
+    {
+      "path": "fixtures/synthetic_ai_proposal.json",
+      "size_bytes": 479,
+      "sha256": "12339c6092ef4253824af0fca921c09933a7a3e3799b41ed12763fcf7cb7157d"
+    },
+    {
+      "path": "fixtures/synthetic_event.json",
+      "size_bytes": 623,
+      "sha256": "5a191988fe64678ee96ff61b7f1556c450fa133e1bea912dac9aeb52353833fa"
+    },
+    {
+      "path": "fixtures/synthetic_pending_choice.json",
+      "size_bytes": 498,
+      "sha256": "6cc77944a6932f7ec2155f00b518cdf226873b7ff44451f93f055f2944041eba"
+    },
+    {
+      "path": "fixtures/synthetic_roll.json",
+      "size_bytes": 397,
+      "sha256": "2514247154f954ff2979f8d9c7fca752ff86498c8eddf12ea20ff9a175114827"
+    },
+    {
+      "path": "reference/PREVIOUS_TECHNICAL_SPEC_v0.1.md",
+      "size_bytes": 43252,
+      "sha256": "c85eb8b975721e53a5a2835f5ded9971303627917cd6f85edf7daef86ba47f30"
+    },
+    {
+      "path": "reference/RULES_SOURCE_HANDOFF.md",
+      "size_bytes": 2152,
+      "sha256": "5bb09cef83b7c83461354d1f3f5a4499b4e7f449c4bf929350d2cfb2e5844fb1"
+    },
+    {
+      "path": "reference/UI_MOCKUP_DESIGN_NOTES.md",
+      "size_bytes": 6056,
+      "sha256": "a2dfbe3fdfda789ae412c9ba95b92059a2c3a553d9d0dfa230fb9a1482e73803"
+    },
+    {
+      "path": "templates/PROPOSED_REPOSITORY_TREE.md",
+      "size_bytes": 1273,
+      "sha256": "4bf035300716c7dd9918c3e94ddfff511a51d58d2efcac7df9a5d0126f1b22cf"
+    },
+    {
+      "path": "verification/REGRESSION_CASES.json",
+      "size_bytes": 35118,
+      "sha256": "a1d3ac5704af458b9755b2ce5a9857e133d6e4b2f1225398c132ca75d9bc35e0"
+    },
+    {
+      "path": "verification/REGRESSION_CHAT_HANDOFF.md",
+      "size_bytes": 3709,
+      "sha256": "eb6e8cbe158389bb7aeb4ef710840bb859dd684ba128535b21751758d46dfe42"
+    },
+    {
+      "path": "verification/REVIEW_VERDICT_TEMPLATE.md",
+      "size_bytes": 832,
+      "sha256": "d27e2f1892c240097c0c5ab7b84b3f67896869792bce85e305ff0ed50c46dfe5"
+    },
+    {
+      "path": "verification/TRACEABILITY_MATRIX.md",
+      "size_bytes": 1781,
+      "sha256": "1b7b35268304e6024be89a0c315459f153a0c2924392eb5e2e0f8010d3093e39"
+    },
+    {
+      "path": "verification/generate_cases.py",
+      "size_bytes": 10052,
+      "sha256": "9192077abf151921efc6e157c0a7136c323be3b93de89eee1825de8a192cc980"
+    },
+    {
+      "path": "verification/verify_handoff.py",
+      "size_bytes": 4467,
+      "sha256": "a111d8b9d306966f0f9c8b8a63d6555370a15ae61c82e4a5c8a3a06c8a462a5a"
+    },
+    {
+      "path": "work_orders/CODEX_FIRST_MESSAGE.md",
+      "size_bytes": 1249,
+      "sha256": "c02ccfbf566c05f2347d8a33573fa54d21a106e9fdceccdcbd9b1b904f1e2a45"
+    },
+    {
+      "path": "work_orders/CODEX_M0_START.md",
+      "size_bytes": 2686,
+      "sha256": "061cd4a8d6a45f8c5e5c2aa11070891dea9e2eb65a3bffd626da0e989a31b9be"
+    },
+    {
+      "path": "work_orders/CODEX_M1_ENGINE_LEDGER.md",
+      "size_bytes": 3928,
+      "sha256": "79836f1d94232bb895edf39c0e73f849badc3e211739af2f5ce9d599ae963f64"
+    },
+    {
+      "path": "work_orders/CODEX_M2_PLAY_WIZARD.md",
+      "size_bytes": 1304,
+      "sha256": "79497bc3871ddba4d45e170f83198c6f79604ca2d96321759fedf4206723fa32"
+    },
+    {
+      "path": "work_orders/CODEX_M3_RULES.md",
+      "size_bytes": 1344,
+      "sha256": "cd00356f3f197ab997de7a9f32b9e6342d5c4683b0004c0c6650e4955132d3ae"
+    },
+    {
+      "path": "work_orders/CODEX_M4_SCENES.md",
+      "size_bytes": 875,
+      "sha256": "9d35854e299cb1b1d011ed5324d507de254c7e93ba1b91a8d2ec5bc75ed5312a"
+    },
+    {
+      "path": "work_orders/CODEX_M5_GM.md",
+      "size_bytes": 899,
+      "sha256": "bb0d63c868f9c381061056c88aaf30c7685a5adaa8d4e741a1506979a1adcd9b"
+    },
+    {
+      "path": "work_orders/CODEX_M6_HANDLER.md",
+      "size_bytes": 864,
+      "sha256": "6b89dee89bef5cea6381257786d5518dc43be18f708afb582c22ac571623a488"
+    },
+    {
+      "path": "work_orders/CODEX_M7_PILOT.md",
+      "size_bytes": 957,
+      "sha256": "8d118888c99bc7a0c248ff38522b7e5f198e1dfc9f4e85153864212d957529fd"
+    },
+    {
+      "path": "work_orders/REVIEWER_REPORT_TEMPLATE.md",
+      "size_bytes": 1258,
+      "sha256": "3eb5f90db8f40e1ddc9ad87c75d3821bd2da1f4126b3b3b1f64a3793ba6b5de3"
+    }
+  ]
+}

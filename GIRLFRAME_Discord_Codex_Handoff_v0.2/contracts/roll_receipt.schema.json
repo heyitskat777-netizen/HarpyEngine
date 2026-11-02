@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/girlframe/contracts/roll_receipt.schema.json",
+  "title": "roll_receipt",
+  "description": "Dice faces immutable; kind 2d6 must have 2 faces in application domain validation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "roll_id",
+    "campaign_id",
+    "event_id",
+    "kind",
+    "faces",
+    "modifier_total",
+    "total",
+    "rolled_utc",
+    "rng_source",
+    "idempotency_key"
+  ],
+  "properties": {
+    "roll_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "campaign_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "event_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "2d6",
+        "1d6",
+        "d4",
+        "other"
+      ]
+    },
+    "faces": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      }
+    },
+    "modifiers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "source",
+          "amount"
+        ],
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "modifier_total": {
+      "type": "integer"
+    },
+    "total": {
+      "type": "integer"
+    },
+    "rolled_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "rng_source": {
+      "type": "string",
+      "enum": [
+        "os",
+        "test_injected"
+      ]
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 8
+    },
+    "play_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "acting_character_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "rolled",
+        "awaiting_choices",
+        "resolved"
+      ]
+    }
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/girlframe/contracts/event_envelope.schema.json",
+  "title": "event_envelope",
+  "description": "An immutable authoritative campaign event. Operational corrections are new events, not edits.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "campaign_id",
+    "sequence",
+    "event_type",
+    "authority",
+    "actor_id",
+    "ruleset_version",
+    "schema_version",
+    "command_id",
+    "committed_utc",
+    "visibility",
+    "payload",
+    "command_event_index"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "campaign_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "event_type": {
+      "type": "string",
+      "minLength": 3
+    },
+    "authority": {
+      "type": "string",
+      "enum": [
+        "engine",
+        "player",
+        "gm_ai",
+        "handler_ai",
+        "facilitator"
+      ]
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ruleset_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "committed_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "fictional_time": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "scene_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "source_message_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "public",
+        "scene",
+        "owner_private",
+        "gm_private",
+        "named_recipients"
+      ]
+    },
+    "payload": {
+      "type": "object"
+    },
+    "source_event_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "expected_revision": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "command_id": {
+      "type": "string",
+      "minLength": 8
+    },
+    "command_event_index": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "0-based event index within one idempotent command, supporting multiple game events per interaction."
+    }
+  }
+}

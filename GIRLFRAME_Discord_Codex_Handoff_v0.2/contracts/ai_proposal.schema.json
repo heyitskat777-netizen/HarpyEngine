@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/girlframe/contracts/ai_proposal.schema.json",
+  "title": "ai_proposal",
+  "description": "Untrusted model output, proposed only. All effects require server-side validation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "proposal_id",
+    "campaign_id",
+    "scene_id",
+    "role",
+    "based_on_revision",
+    "source_fact_ids",
+    "text",
+    "requested_effects",
+    "needs_player_choice",
+    "knowledge_scope"
+  ],
+  "properties": {
+    "proposal_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "campaign_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "scene_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "gm",
+        "handler"
+      ]
+    },
+    "based_on_revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "source_fact_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "knowledge_scope": {
+      "type": "string",
+      "enum": [
+        "gm_world",
+        "handler_known"
+      ]
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "requested_effects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "effect_type",
+          "target_id",
+          "rule_or_fact_ref"
+        ],
+        "properties": {
+          "effect_type": {
+            "type": "string",
+            "minLength": 1
+          },
+          "target_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rule_or_fact_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "arguments": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "needs_player_choice": {
+      "type": "boolean"
+    },
+    "requires_fact_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "forbids_fact_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "role": {
+            "const": "handler"
+          }
+        },
+        "required": [
+          "role"
+        ]
+      },
+      "then": {
+        "properties": {
+          "knowledge_scope": {
+            "const": "handler_known"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "role": {
+            "const": "gm"
+          }
+        },
+        "required": [
+          "role"
+        ]
+      },
+      "then": {
+        "properties": {
+          "knowledge_scope": {
+            "const": "gm_world"
+          }
+        }
+      }
+    }
+  ]
+}

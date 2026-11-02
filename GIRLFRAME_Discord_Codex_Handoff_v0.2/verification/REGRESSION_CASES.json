@@ -1,0 +1,1296 @@
+{
+  "schema_version": 1,
+  "status": "planning_only_not_executed",
+  "cases": [
+    {
+      "id": "M0-001",
+      "milestone": "M0",
+      "title": "Fresh clone installs reproducibly without credentials",
+      "expected": "Setup works from pinned dependency lock and Python requirement.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M0-002",
+      "milestone": "M0",
+      "title": "Engine domain has no Discord or OpenAI imports",
+      "expected": "Static module import-boundary test.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M0-003",
+      "milestone": "M0",
+      "title": "Tests and help CLI run offline",
+      "expected": "No external HTTP/Discord/OpenAI network dependency.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M0-004",
+      "milestone": "M0",
+      "title": "Repository contains no secrets, official PDFs or live saves",
+      "expected": "Secret scan and forbidden source path scan.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "BLOCKER"
+    },
+    {
+      "id": "M0-005",
+      "milestone": "M0",
+      "title": "CI and local commands are reproducible",
+      "expected": "ruff/pytest with actual captured output.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M1-001",
+      "milestone": "M1",
+      "title": "Fresh database migration",
+      "expected": "Tables and foreign keys created, migration version persisted.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M1-002",
+      "milestone": "M1",
+      "title": "New campaign and member bind guild/user snowflakes",
+      "expected": "Authority uses IDs rather than display names.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M1-003",
+      "milestone": "M1",
+      "title": "Create Girl draft and own private sheet",
+      "expected": "Only owner sees private synthetic field.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "BLOCKER"
+    },
+    {
+      "id": "M1-004",
+      "milestone": "M1",
+      "title": "Other user cannot inspect owner private sheet",
+      "expected": "Secret canary absent from all outputs.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "BLOCKER"
+    },
+    {
+      "id": "M1-005",
+      "milestone": "M1",
+      "title": "Two campaigns with identical callsign are isolated",
+      "expected": "Cross-campaign query/mutation denied.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M1-006",
+      "milestone": "M1",
+      "title": "Basic 2d6 real dice receipt",
+      "expected": "Faces in 1..6, total computed, OS RNG used in production.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M1-007",
+      "milestone": "M1",
+      "title": "Duplicate interaction retries exactly same roll",
+      "expected": "One DB receipt and one event after duplicate + restart.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "BLOCKER"
+    },
+    {
+      "id": "M1-008",
+      "milestone": "M1",
+      "title": "Same interaction ID with different payload rejected",
+      "expected": "Typed idempotency conflict; no state changes.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M1-009",
+      "milestone": "M1",
+      "title": "Concurrent expected-revision mutation",
+      "expected": "One success, other STALE_REVISION, no lost update.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "BLOCKER"
+    },
+    {
+      "id": "M1-010",
+      "milestone": "M1",
+      "title": "Crash after commit before Discord send",
+      "expected": "Outbox retries; DB event not duplicated.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M1-011",
+      "milestone": "M1",
+      "title": "Crash after Discord send before ACK persistence",
+      "expected": "At-least-once delivery reconciliation; game state not duplicated.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M1-012",
+      "milestone": "M1",
+      "title": "Rebuild projections after restart",
+      "expected": "Event/roll/sheet projections match original exactly.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M1-013",
+      "milestone": "M1",
+      "title": "Fake player cannot act as another PC",
+      "expected": "Server-side ownership check, no UI-only security.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M1-014",
+      "milestone": "M1",
+      "title": "Original Discord message edit does not mutate canon",
+      "expected": "Source link remains, committed events immutable.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M1-015",
+      "milestone": "M1",
+      "title": "Invalid source-message claim to be system authority",
+      "expected": "Ignored as game text, no escalation.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M1-016",
+      "milestone": "M1",
+      "title": "Private sheet and ledger pagination",
+      "expected": "No leaking hidden data in errors or pages.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "BLOCKER"
+    },
+    {
+      "id": "M1-017",
+      "milestone": "M1",
+      "title": "Fake Discord integration end-to-end command sequence",
+      "expected": "create\u2192join\u2192GirlDraft\u2192sheet\u2192basic roll\u2192ledger.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M1-018",
+      "milestone": "M1",
+      "title": "Backup restore and migration smoke",
+      "expected": "Restore to new location returns identical journal/rolls.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M1-019",
+      "milestone": "M1",
+      "title": "No fake official Play claim",
+      "expected": "Roll is labeled test primitive, not Flirt/Engage.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M1-020",
+      "milestone": "M1",
+      "title": "Safety pause command works without AI",
+      "expected": "Scene or campaign OOC pause persists correctly.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M2-001",
+      "milestone": "M2",
+      "title": "/play legal selections reflect current sheet",
+      "expected": "Only implemented Play IDs/eligible targets offered.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M2-002",
+      "milestone": "M2",
+      "title": "Heat cannot exceed available resources",
+      "expected": "Rejects negative/too-large spend.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M2-003",
+      "milestone": "M2",
+      "title": "Heat 5+ forced full spend",
+      "expected": "Published rule enforced for appropriate acting trigger.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M2-004",
+      "milestone": "M2",
+      "title": "Identity marking is pre-roll",
+      "expected": "1\u20133 Heat gain when eligible before dice sampled.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "BLOCKER"
+    },
+    {
+      "id": "M2-005",
+      "milestone": "M2",
+      "title": "Post-roll Tag modifies only legal roll",
+      "expected": "Not applied before dice, cannot mark multiple Girl Tags.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "BLOCKER"
+    },
+    {
+      "id": "M2-006",
+      "milestone": "M2",
+      "title": "Repeated click does not reroll",
+      "expected": "Full receipt stable across view and bot restart.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "BLOCKER"
+    },
+    {
+      "id": "M2-007",
+      "milestone": "M2",
+      "title": "Pending other-human choice authenticated",
+      "expected": "Only target player may submit answer.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "BLOCKER"
+    },
+    {
+      "id": "M2-008",
+      "milestone": "M2",
+      "title": "Pending question survives days and expired ephemeral UI",
+      "expected": "Resume via /choice or durable bot message.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M2-009",
+      "milestone": "M2",
+      "title": "Published 11+ choices and 7\u2212 effects exact",
+      "expected": "No substituted Tag or missing mandatory Handler action.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M2-010",
+      "milestone": "M2",
+      "title": "Unimplemented Play blocks cleanly",
+      "expected": "UNSUPPORTED_RULE, no roll, no guessed effect.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M2-011",
+      "milestone": "M2",
+      "title": "Direct superior order required for Disobey Orders",
+      "expected": "Fails if only generic disagreement.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "BLOCKER"
+    },
+    {
+      "id": "M2-012",
+      "milestone": "M2",
+      "title": "Disobey Orders 7\u2212 halts refusal",
+      "expected": "No contrary narrative accepted.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "BLOCKER"
+    },
+    {
+      "id": "M2-013",
+      "milestone": "M2",
+      "title": "Flirt target answer comes from target player",
+      "expected": "No AI authored reply or unilateral Bond improvement.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M2-014",
+      "milestone": "M2",
+      "title": "Stale Play wizard target/Heat selection",
+      "expected": "Refresh or typed error without double-spend.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M2-015",
+      "milestone": "M2",
+      "title": "Result pending choices cannot publish final state",
+      "expected": "Choice-owner and options count enforced.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M3-001",
+      "milestone": "M3",
+      "title": "Status swap and one-use maxim",
+      "expected": "Oldgen gain exchange and consume only once.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "BLOCKER"
+    },
+    {
+      "id": "M3-002",
+      "milestone": "M3",
+      "title": "Go Off-Duty Status modifiers and 7\u2212 scene",
+      "expected": "Dog/Wing/Ace and on-screen harsh scene.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M3-003",
+      "milestone": "M3",
+      "title": "Princess Show Dog both extra choices",
+      "expected": "Printed second selection/NPC Bond not dropped.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M3-004",
+      "milestone": "M3",
+      "title": "Dog mission-end Punishment",
+      "expected": "Applies even if not in mission; absent PC choice respected.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "BLOCKER"
+    },
+    {
+      "id": "M3-005",
+      "milestone": "M3",
+      "title": "Budget High 6 second-column recursion",
+      "expected": "Compulsory extra rolls/endgame; cannot park indefinitely.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "BLOCKER"
+    },
+    {
+      "id": "M3-006",
+      "milestone": "M3",
+      "title": "Low Rebellion escaped prisoner escalation",
+      "expected": "Mandatory Strain rise if unresolved.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M3-007",
+      "milestone": "M3",
+      "title": "Void/Gorgon movement and placement",
+      "expected": "No invented map square; exact eligible movements.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M3-008",
+      "milestone": "M3",
+      "title": "Flirt 11+ all official extra options",
+      "expected": "Never swap arbitrary Tag for printed choice.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M3-009",
+      "milestone": "M3",
+      "title": "Director due price and breach consequence",
+      "expected": "No consequence-free expiration.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M3-010",
+      "milestone": "M3",
+      "title": "Harpy medical, custody, Core consent separate",
+      "expected": "No implied conversion from medical help.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M3-011",
+      "milestone": "M3",
+      "title": "Requisitions and Permissions triggers",
+      "expected": "All participants and Ace bonuses exact.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M3-012",
+      "milestone": "M3",
+      "title": "Per-Playbook and Frame Assets",
+      "expected": "All agreed printed roles and exceptions tested.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M3-013",
+      "milestone": "M3",
+      "title": "All published table rows tracked",
+      "expected": "Each Low/High Strain table branch has source fixture.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M3-014",
+      "milestone": "M3",
+      "title": "Full rule registry coverage report",
+      "expected": "No unsupported Play incorrectly marked verified.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M4-001",
+      "milestone": "M4",
+      "title": "Concurrent independent scene progress",
+      "expected": "MAUL-like scene can wait while another progresses.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M4-002",
+      "milestone": "M4",
+      "title": "Location temporal conflict rejected",
+      "expected": "One Girl cannot be in incompatible scenes at same fictional time.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M4-003",
+      "milestone": "M4",
+      "title": "Private fact revealed only to one real Player",
+      "expected": "Backend projection hides from others.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M4-004",
+      "milestone": "M4",
+      "title": "GM secret not automatically known to Handler",
+      "expected": "Knowledge grant has explicit source and witness.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M4-005",
+      "milestone": "M4",
+      "title": "Message context canon proposal not automatic commit",
+      "expected": "GM/facilitator validates contested fiction.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M4-006",
+      "milestone": "M4",
+      "title": "Event correction preserves original and descendants",
+      "expected": "No silent rewrite of roll/canon.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M4-007",
+      "milestone": "M4",
+      "title": "Safety pause stops associated scene",
+      "expected": "No fictional penalty or automated narration.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M4-008",
+      "milestone": "M4",
+      "title": "Scene pending choice survives restart",
+      "expected": "DB state restores and recipient receives same required action.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M4-009",
+      "milestone": "M4",
+      "title": "Late message not retroactive knowledge",
+      "expected": "In-world timestamps and dependency barriers enforced.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M5-001",
+      "milestone": "M5",
+      "title": "AI JSON proposal schema validation",
+      "expected": "Unknown effect/target/invalid schema rejected.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M5-002",
+      "milestone": "M5",
+      "title": "Prompt-injection in user dialogue",
+      "expected": "No privileged instructions follow from chat text.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M5-003",
+      "milestone": "M5",
+      "title": "Escaped Harpy custody contradiction",
+      "expected": "GM proposal rejected without new committed capture.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M5-004",
+      "milestone": "M5",
+      "title": "GM cannot generate player dialogue/choices",
+      "expected": "Human PC speech/consent remains absent.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M5-005",
+      "milestone": "M5",
+      "title": "Model outage leaves pending GM ruling",
+      "expected": "No silent canonical success or reroll.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M5-006",
+      "milestone": "M5",
+      "title": "Stale model proposal rejected",
+      "expected": "State revision check before commit.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M5-007",
+      "milestone": "M5",
+      "title": "Basic game queries perform zero AI calls",
+      "expected": "/sheet, /roll basic, /ledger bypass model.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M5-008",
+      "milestone": "M5",
+      "title": "Private facts filtered from NPC/player output",
+      "expected": "GM-only canary never appears in user-facing output.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M6-001",
+      "milestone": "M6",
+      "title": "Handler never reads GM-only canary",
+      "expected": "Different knowledge projection than GM.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M6-002",
+      "milestone": "M6",
+      "title": "Handler direct order source/provenance",
+      "expected": "Issuer, exact words, recipient, scene and time recorded.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M6-003",
+      "milestone": "M6",
+      "title": "Handler cannot choose for human Girl",
+      "expected": "Human owns order response, Heat and legal Play options.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M6-004",
+      "milestone": "M6",
+      "title": "Handler Punishment legal trigger/option",
+      "expected": "Authoritative Engine validates her choice.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M6-005",
+      "milestone": "M6",
+      "title": "Handler overdue obligation has consequences",
+      "expected": "Staged or explicitly breached, never erased by model.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M6-006",
+      "milestone": "M6",
+      "title": "GM and Handler voice/authority distinct",
+      "expected": "Discord projections labeled; provenance checks.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M6-007",
+      "milestone": "M6",
+      "title": "Handler can be mistaken without changing canon",
+      "expected": "False assertion not world event unless witnessed/validated.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M7-001",
+      "milestone": "M7",
+      "title": "Three real human players, complete mission",
+      "expected": "Independent acceptance, Plays and mission-end rewards/punishments.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M7-002",
+      "milestone": "M7",
+      "title": "Complete Off-Duty with Strain cascade",
+      "expected": "No incomplete mandatory followups.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M7-003",
+      "milestone": "M7",
+      "title": "Mid-game restart and player offlining",
+      "expected": "All pending choices, scenes and rolls recover.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M7-004",
+      "milestone": "M7",
+      "title": "Conflict remains human-generated",
+      "expected": "No fake consent, player speech or forced interpersonal resolution.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M7-005",
+      "milestone": "M7",
+      "title": "Canonical event/replay audit",
+      "expected": "Every mechanical value traces to receipts and choices.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M7-006",
+      "milestone": "M7",
+      "title": "Security, retention, backup and cost review",
+      "expected": "Export/delete, access permissions, spending caps, abuse handling.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M7-007",
+      "milestone": "M7",
+      "title": "Usability/mobile pilot report",
+      "expected": "3\u20135 human player feedback, major UI blockers resolved.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    },
+    {
+      "id": "M7-008",
+      "milestone": "M7",
+      "title": "Public-release restrictions explicitly documented",
+      "expected": "No rights/age-policy claims unless reviewed.",
+      "evidence_required": [
+        "test_name",
+        "executed_command",
+        "actual_result",
+        "log_or_trace",
+        "git_commit"
+      ],
+      "status": "NOT_RUN",
+      "severity_if_failed": "HIGH"
+    }
+  ]
+}

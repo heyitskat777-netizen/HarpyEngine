@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/girlframe/contracts/pending_choice.schema.json",
+  "title": "pending_choice",
+  "description": "A player-facing or GM/Handler decision must be fulfilled only by its authorized owner.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "choice_id",
+    "campaign_id",
+    "action_id",
+    "required_principal_id",
+    "choice_owner",
+    "status",
+    "legal_option_ids",
+    "based_on_revision"
+  ],
+  "properties": {
+    "choice_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "campaign_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "action_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "required_principal_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "choice_owner": {
+      "type": "string",
+      "enum": [
+        "girl_player",
+        "gm",
+        "handler",
+        "facilitator"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "submitted",
+        "blocked",
+        "resolved",
+        "cancelled"
+      ]
+    },
+    "legal_option_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "based_on_revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "question": {
+      "type": "string"
+    },
+    "scene_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "submitted_option_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "created_utc": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
