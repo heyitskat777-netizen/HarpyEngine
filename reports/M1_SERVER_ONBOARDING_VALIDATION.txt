@@ -1,0 +1,43 @@
+$ .venv/bin/ruff check .
+All checks passed!
+Exit: 0
+
+$ .venv/bin/ruff format --check .
+56 files already formatted
+Exit: 0
+
+$ .venv/bin/mypy
+Success: no issues found in 34 source files
+Exit: 0
+
+$ .venv/bin/python -m alembic check
+No new upgrade operations detected.
+Exit: 0
+
+$ .venv/bin/python GIRLFRAME_Discord_Codex_Handoff_v0.2/verification/verify_handoff.py
+Planning package check: 34 required files, 86 planned cases, 4 JSON Schemas and 4 synthetic fixtures.
+PASS: files present, example contracts validated, milestones covered, examples synthetic, and no forbidden PDFs.
+IMPORTANT: This verifies PLANNING PACKAGE ONLY. It DOES NOT assert any running bot, game engine or Discord integration passes.
+Exit: 0
+
+$ .venv/bin/python tools/check_repository.py
+Repository check: 115 publishable files; 40 manifest entries; 0 findings.
+Exit: 0
+
+Final offline suite executed with local asyncio socketpair support and outbound network blocked:
+$ .venv/bin/pytest -q --junitxml=var/pytest.xml
+92 passed in 1.18s
+Exit: 0
+
+Additional observed checks:
+Additive Alembic migration generated/reviewed; fresh/repeated upgrade, check, downgrade verified in temporary databases.
+Pre-upgrade local SQLite backup saved before migration; no application tables dropped in the live DB.
+Wheel: 38 entries; source distribution: 116 entries; migration included, no private assets.
+Private engine template: all 120 original file hashes unchanged.
+Live Gateway READY after graceful shutdown/restart.
+Guild command registry read-back: campaign, campaign_status, character, health, help, server, sheet.
+Initial live permission preflight: View Channels true, Send Messages true, Manage Channels false.
+Administrator request to grant Manage Channels and run preview/confirm + synthetic onboarding is pending.
+
+Subsequent owner confirmation: setup and draft flow functions as expected.
+Observed metadata: 10 setup resources, one joined member, one saved draft.

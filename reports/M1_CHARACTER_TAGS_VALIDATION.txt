@@ -1,0 +1,42 @@
+$ .venv/bin/ruff check .
+All checks passed!
+Exit: 0
+
+$ .venv/bin/ruff format --check .
+64 files already formatted
+Exit: 0
+
+$ .venv/bin/mypy
+Success: no issues found in 37 source files
+Exit: 0
+
+$ .venv/bin/python -m alembic check
+No new upgrade operations detected.
+Exit: 0
+
+$ .venv/bin/python GIRLFRAME_Discord_Codex_Handoff_v0.2/verification/verify_handoff.py
+Planning package check: 34 required files, 86 planned cases, 4 JSON Schemas and 4 synthetic fixtures.
+PASS: files present, example contracts validated, milestones covered, examples synthetic, and no forbidden PDFs.
+IMPORTANT: This verifies PLANNING PACKAGE ONLY. It DOES NOT assert any running bot, game engine or Discord integration passes.
+Exit: 0
+
+$ .venv/bin/python tools/check_repository.py
+Repository check: 125 publishable files; 40 manifest entries; 0 findings.
+Exit: 0
+
+Final offline test command executed with local asyncio socketpair support and outbound network blocked by fixtures:
+$ .venv/bin/pytest -q --junitxml=var/pytest.xml
+111 passed in 1.72s
+Exit: 0
+
+Live and additional verification:
+Bot permission flags: Manage Channels, Manage Roles, Manage Nicknames all available.
+Local SQLite backup saved before additive migration 0002; migration check reports no changes.
+Gateway READY after update; character subcommands create and sync read back.
+Owner confirmed dropdowns and visible character tags.
+Durable profile job recorded, revision advanced, two owned roles present on member.
+Independent nickname readback: saved callsign does not match nickname because character belongs to server owner; terminal owner warning recorded correctly.
+No claim of a successful bot rename for the server owner.
+Ordinary-member nickname success verified offline, not with a second live account.
+Wheel 41 entries / source distribution 126 entries; migration and catalog included; private data assets excluded.
+All 120 original engine-template file hashes unchanged.

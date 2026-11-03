@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "scope": "Cosmetic roles/nickname and validated labels only; mechanics remain unverified",
+  "cases": [
+    {
+      "id": "CHOICE-01",
+      "requirement": "Native dropdowns replace playbook text inputs",
+      "automated_status": "PASS",
+      "test": "tests/test_character_tags.py::test_dropdowns_and_details_modal_have_no_free_text_playbook_fields",
+      "manual_status": "OWNER_CONFIRMED"
+    },
+    {
+      "id": "CHOICE-02",
+      "requirement": "Forged choices and other owners rejected",
+      "automated_status": "PASS",
+      "test": "tests/test_character_tags.py::test_dropdown_rejects_forged_choices_and_other_owner",
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "TAG-01",
+      "requirement": "SORROW / MOCKINGBIRD / JANUS-B exact safe role/nickname request",
+      "automated_status": "PASS",
+      "test": "tests/test_character_tags.py::test_sorrow_sync_creates_safe_roles_and_nickname_preserves_unrelated_roles",
+      "manual_status": "ROLES_CONFIRMED_NICKNAME_OWNER_RESTRICTED"
+    },
+    {
+      "id": "TAG-02",
+      "requirement": "Changes replace only app-owned labels",
+      "automated_status": "PASS",
+      "test": "tests/test_character_tags.py::test_edit_replaces_only_owned_labels",
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "TAG-03",
+      "requirement": "Missing permission preserves draft and retries",
+      "automated_status": "PASS",
+      "test": "tests/test_character_tags.py::test_permissions_failure_does_not_lose_draft_and_retry_recovers",
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "TAG-04",
+      "requirement": "Server owner restriction never reported as nickname success",
+      "automated_status": "PASS",
+      "test": "tests/test_character_tags.py::test_owner_cannot_be_renamed_but_roles_succeed_without_false_success",
+      "manual_status": "VERIFIED_OWNER_RESTRICTION"
+    },
+    {
+      "id": "TAG-05",
+      "requirement": "Hierarchy restriction is retryable",
+      "automated_status": "PASS",
+      "test": "tests/test_character_tags.py::test_nickname_hierarchy_failure_is_retryable",
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "TAG-06",
+      "requirement": "Ambiguous creation does not duplicate or adopt by name",
+      "automated_status": "PASS",
+      "test": "tests/test_character_tags.py::test_unknown_role_create_never_duplicates_and_does_not_adopt_by_name",
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "TAG-07",
+      "requirement": "Privileged or repurposed owned roles rejected",
+      "automated_status": "PASS",
+      "test": "tests/test_character_tags.py::test_changed_managed_role_permissions_are_not_granted",
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "TAG-08",
+      "requirement": "Old acknowledgements cannot clear newer revision",
+      "automated_status": "PASS",
+      "test": "tests/test_character_tags.py::test_old_acknowledgement_cannot_clear_newer_draft_job",
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "TAG-09",
+      "requirement": "Durable queue resumes after store reconstruction",
+      "automated_status": "PASS",
+      "test": "tests/test_character_tags.py::test_pending_role_job_survives_reconstructed_store",
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "TAG-10",
+      "requirement": "Reconnect creates one worker; shutdown cancels it",
+      "automated_status": "PASS",
+      "test": "tests/test_character_tags.py::test_reconnect_does_not_duplicate_retry_worker_and_close_cancels_it",
+      "manual_status": "NOT_RUN"
+    }
+  ]
+}

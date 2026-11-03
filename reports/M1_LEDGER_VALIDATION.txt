@@ -1,0 +1,91 @@
+M1 ledger validation — 2026-11-02 America/Chicago
+Implementation: bced5ab70aca34c207e7d7cb37e47edb88bf1382
+All test data synthetic; network blocking fixture enabled.
+
+$ bash tools/install.sh
+Resolved 36 packages in 2ms
+Checked 35 packages in 0.99ms
+Exit: 0
+
+$ .venv/bin/ruff check .
+All checks passed!
+Exit: 0
+
+$ .venv/bin/ruff format --check .
+76 files already formatted
+Exit: 0
+
+$ .venv/bin/mypy
+Success: no issues found in 42 source files
+Exit: 0
+
+$ .venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml
+........................................................................ [ 52%]
+.................................................................        [100%]
+137 passed in 3.47s
+Exit: 0
+
+$ .venv/bin/python GIRLFRAME_Discord_Codex_Handoff_v0.2/verification/verify_handoff.py
+Planning package check: 34 required files, 86 planned cases, 4 JSON Schemas and 4 synthetic fixtures.
+PASS: files present, example contracts validated, milestones covered, examples synthetic, and no forbidden PDFs.
+IMPORTANT: This verifies PLANNING PACKAGE ONLY. It DOES NOT assert any running bot, game engine or Discord integration passes.
+Exit: 0
+
+$ .venv/bin/python tools/check_repository.py
+Repository check: 140 publishable files; 40 manifest entries; 0 findings.
+Exit: 0
+
+$ .venv/bin/python -m girlframe start --config var/discord-dev/policy.json --check
+{"mode": "m1_draft_ledger", "guild_scoped": true, "commands": 11}
+Exit: 0
+
+$ .venv/bin/python -m girlframe health
+{"database_checked": true, "discord_connected": false, "milestone": "M0", "rules_implemented": false, "status": "foundation_ok"}
+Exit: 0
+
+$ git diff --check
+Exit: 0
+
+Previously observed local/live evidence (not simulated test results):
+- Private SQLite backup created before migration 0003, integrity/FK verified.
+- Existing row counts and draft-byte digest preserved; one baseline snapshot, zero rolls immediately after migration.
+- Gateway READY on saved test policy; secure DiscordBot binding used without printing token.
+- REST guild roots: campaign,campaign_status,character,girl,health,help,ledger,roll,safety,server,sheet.
+- REST nested campaign=create/join/status; roll=basic/show; safety=pause/resume.
+- REST global command list empty.
+- Human dice/status/safety smoke requested; PENDING.
+- Recovered private engine template hashes: 120/120 unchanged.
+- GitHub visibility observed PUBLIC; owner explicitly authorized retaining PUBLIC and pushing sanitized bot source.
+- Original handoff unchanged. Private PDFs/archive/state/DB/policy/backups/token excluded.
+- Remote CI: subsequent observation PASS for commit 8f50b2a, run 41574768248.
+  https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/41574768248
+  All install/lint/format/types/tests/CLI/planning/repository/artifact steps succeeded.
+
+Final distribution inspection:
+girlframe_discord-0.1.0-py3-none-any.whl: 46 entries; 0 forbidden paths.
+girlframe_discord-0.1.0.tar.gz: 141 entries; 0 forbidden paths.
+
+Public-default follow-up — 2026-11-02 America/Chicago
+Owner confirmed basic roll, receipt lookup, ledger and explicit public receipt.
+Owner confirmed safety pause, blocked roll, resume and campaign status.
+Owner requested publish:true by default. Slash omission now publishes; explicit false remains private.
+Existing private receipts are unchanged; local service/seeding remains private by default.
+$ bash tools/install.sh
+Resolved 36 packages; checked 35 packages. Exit 0.
+$ .venv/bin/pytest -q --junitxml=var/m1-public-default-pytest.xml
+137 passed in 3.13s; 0 failed/skipped/xfailed.
+Fake-Discord regression checks omitted-option public visibility/outbox and explicit-false private visibility/no extra outbox.
+$ .venv/bin/ruff check .
+All checks passed!
+$ .venv/bin/ruff format --check .
+76 files already formatted
+$ .venv/bin/mypy
+Success: no issues found in 42 source files
+$ .venv/bin/python GIRLFRAME_Discord_Codex_Handoff_v0.2/verification/verify_handoff.py
+PASS: 34 required files, 86 planned cases, 4 schemas and 4 synthetic fixtures.
+$ .venv/bin/python tools/check_repository.py
+Repository check: 140 publishable files; 40 manifest entries; 0 findings.
+Live update: prior bot stopped gracefully; replacement Gateway READY observed.
+Discord REST readback: optional publish flag; public-default/private-opt-out descriptions present.
+No live roll was executed by Codex. Human smoke confirmation predates the default change; no second human default-roll test claimed.
+No schema migration or existing receipt publication was performed.

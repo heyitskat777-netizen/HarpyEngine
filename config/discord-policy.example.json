@@ -1,0 +1,9 @@
+{
+  "application_id": 1566951910601269268,
+  "guild_id": 1566954229535608913,
+  "campaign_id": "00000000-0000-4000-8000-000000000001",
+  "sandbox": "/absolute/path/to/disposable/runtime/dev",
+  "status_user_ids": [],
+  "allow_guild_administrators": true,
+  "status_audience_approved": false
+}

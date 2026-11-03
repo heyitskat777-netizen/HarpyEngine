@@ -1,0 +1,48 @@
+$ .venv/bin/ruff check .
+All checks passed!
+Exit: 0
+
+$ .venv/bin/ruff format --check .
+44 files already formatted
+Exit: 0
+
+$ .venv/bin/mypy
+Success: no issues found in 29 source files
+Exit: 0
+
+$ .venv/bin/python -m girlframe start --config var/discord-dev/policy.json --check
+{"mode": "read_only", "guild_scoped": true, "commands": 3}
+Exit: 0
+
+$ .venv/bin/python GIRLFRAME_Discord_Codex_Handoff_v0.2/verification/verify_handoff.py
+Planning package check: 34 required files, 86 planned cases, 4 JSON Schemas and 4 synthetic fixtures.
+PASS: files present, example contracts validated, milestones covered, examples synthetic, and no forbidden PDFs.
+IMPORTANT: This verifies PLANNING PACKAGE ONLY. It DOES NOT assert any running bot, game engine or Discord integration passes.
+Exit: 0
+
+$ .venv/bin/python tools/check_repository.py
+Repository check: 101 publishable files; 40 manifest entries; 0 findings.
+Exit: 0
+
+Previously executed final offline suite:
+$ .venv/bin/pytest -q --junitxml=var/pytest.xml
+74 passed in 0.63s
+Exit: 0
+No skipped/failed/xfailed tests.
+
+Live checks (sanitized):
+DiscordBot binding became ready after owner applied the draft.
+Token login and application identity check succeeded.
+Initial guild lookup failed: HTTP 404 / Discord code 10004.
+After owner fixed installation, Gateway READY succeeded.
+Guild command read-back: campaign_status, health, help.
+Global command read-back: empty.
+Live status source is synthetic turn-zero fixture, not private campaign data.
+
+Offline packaging:
+Wheel/source distribution built with TLS/checksum bypasses: none.
+Wheel entries: 33; source distribution entries: 102.
+No private data assets, credentials, database, campaign JSON, var/cache/venv paths in artifacts.
+
+Human Discord smoke: owner confirmed all three commands worked with private replies.
+Private engine-template integrity: 120/120 files unchanged versus intake baseline.
