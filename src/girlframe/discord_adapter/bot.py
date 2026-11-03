@@ -169,7 +169,7 @@ class ReadOnlyDiscordBot(discord.Client):
                         "/server setup — administrator setup preview\n"
                         "/campaign create, /campaign join, /campaign status\n"
                         "/character create (or /girl create), /character sync, /sheet\n"
-                        "/roll basic — recorded raw 2d6, private unless publish is selected\n"
+                        "/roll basic — raw 2d6, public by default; publish:false is private\n"
                         "/roll show — retrieve a permitted receipt\n/ledger — permitted events\n"
                         "/safety pause, /safety resume — save or clear your own OOC pause\n"
                         "/health — configured administrators only\n"

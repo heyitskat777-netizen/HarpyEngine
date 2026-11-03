@@ -73,12 +73,12 @@ def register_ledger(
     roll = app_commands.Group(name="roll", description="Recorded raw dice tests", guild_only=True)
 
     @roll.command(
-        name="basic", description="Record raw 2d6; optionally publish to rolls-and-ledger"
+        name="basic", description="Record raw 2d6 and publish; use publish:false for a private roll"
     )
     @app_commands.describe(
-        publish="Post the receipt publicly to the managed ledger (default: private)"
+        publish="Post the receipt to the managed ledger (default: public; false keeps it private)"
     )
-    async def basic(interaction: discord.Interaction, publish: bool = False) -> None:
+    async def basic(interaction: discord.Interaction, publish: bool = True) -> None:
         def operation() -> str:
             viewer = viewer_from_interaction(interaction)
             receipt = ledger.roll_basic(

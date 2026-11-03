@@ -64,3 +64,28 @@ Previously observed local/live evidence (not simulated test results):
 Final distribution inspection:
 girlframe_discord-0.1.0-py3-none-any.whl: 46 entries; 0 forbidden paths.
 girlframe_discord-0.1.0.tar.gz: 141 entries; 0 forbidden paths.
+
+Public-default follow-up — 2026-11-02 America/Chicago
+Owner confirmed basic roll, receipt lookup, ledger and explicit public receipt.
+Owner confirmed safety pause, blocked roll, resume and campaign status.
+Owner requested publish:true by default. Slash omission now publishes; explicit false remains private.
+Existing private receipts are unchanged; local service/seeding remains private by default.
+$ bash tools/install.sh
+Resolved 36 packages; checked 35 packages. Exit 0.
+$ .venv/bin/pytest -q --junitxml=var/m1-public-default-pytest.xml
+137 passed in 3.13s; 0 failed/skipped/xfailed.
+Fake-Discord regression checks omitted-option public visibility/outbox and explicit-false private visibility/no extra outbox.
+$ .venv/bin/ruff check .
+All checks passed!
+$ .venv/bin/ruff format --check .
+76 files already formatted
+$ .venv/bin/mypy
+Success: no issues found in 42 source files
+$ .venv/bin/python GIRLFRAME_Discord_Codex_Handoff_v0.2/verification/verify_handoff.py
+PASS: 34 required files, 86 planned cases, 4 schemas and 4 synthetic fixtures.
+$ .venv/bin/python tools/check_repository.py
+Repository check: 140 publishable files; 40 manifest entries; 0 findings.
+Live update: prior bot stopped gracefully; replacement Gateway READY observed.
+Discord REST readback: optional publish flag; public-default/private-opt-out descriptions present.
+No live roll was executed by Codex. Human smoke confirmation predates the default change; no second human default-roll test claimed.
+No schema migration or existing receipt publication was performed.

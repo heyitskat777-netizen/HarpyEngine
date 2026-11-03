@@ -74,7 +74,11 @@ are already authoritative immutable records and are never regenerated.
 
 ## Delivery and maintenance
 
-Only `publish:true` enqueues a public roll. Outbox references the exact managed
+The owner requested public-by-default slash rolls after confirming the smoke tests.
+`/roll basic` defaults to `publish:true`; `publish:false` keeps the receipt private.
+The internal service retains a private default for non-Discord callers, including
+synthetic seeding. Only an effective `publish:true` enqueues delivery; older private
+receipts remain private. The outbox references the exact managed
 ledger ID, receipt/event and stable nonce. A worker claims with a 120-second lease
 and random claim token, outside any HTTP transaction, with bounded retry backoff.
 Only the matching claim can record the message ID. Reconnect does not create extra

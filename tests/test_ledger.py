@@ -500,12 +500,27 @@ def test_fake_discord_command_sequence(ledger, monkeypatch):
                     notes="CANARY",
                 ),
             )
+            channel(bot.ledger)
             roll = interaction(1003)
             await bot.tree.get_command("roll", guild=guild).get_command("basic").callback(roll)
             text = roll.edit_original_response.call_args.kwargs["content"]
             assert "Raw 2d6 test" in text and "CANARY" not in text
+            assert "Public ledger delivery queued." in text
             assert roll.response.defer.call_args.kwargs["ephemeral"]
-            page = interaction(1004)
+            assert count(bot.ledger, t.outbox) == 1
+            private = interaction(1004)
+            await (
+                bot.tree.get_command("roll", guild=guild)
+                .get_command("basic")
+                .callback(private, publish=False)
+            )
+            assert "Private receipt." in private.edit_original_response.call_args.kwargs["content"]
+            assert count(bot.ledger, t.outbox) == 1
+            with bot.ledger.engine.connect() as connection:
+                assert connection.execute(
+                    sa.select(t.rolls.c.visibility).order_by(t.rolls.c.command_key)
+                ).scalars().all() == ["campaign", "private"]
+            page = interaction(1005)
             await bot.tree.get_command("ledger", guild=guild).callback(page)
             assert "dice.rolled" in page.edit_original_response.call_args.kwargs["content"]
 

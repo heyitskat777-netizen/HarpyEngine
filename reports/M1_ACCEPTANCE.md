@@ -1,11 +1,11 @@
 # M1 persistence and ledger acceptance
 
-**Status: offline gates PASS; Gateway and registry PASS; new human dice/safety smoke PENDING.**
+**Status: M1 pilot validation PASS; offline gates, Gateway/registry and human dice/safety smoke passed.**
 **Date:** 2026-11-02 (America/Chicago). **Branch:** `codex/m1-ledger`.
 **Implementation:** `bced5ab` (code commit; later commits record evidence only).
 
-M0 was accepted by the owner. This continues M1 only. Full M1 acceptance remains
-pending the new human Discord smoke; no M2 work, official Plays or AI were started.
+M0 was accepted by the owner. This continues M1 only. The owner confirmed the new dice/ledger/publication and safety smoke. No M2 work,
+official Plays or AI were started; a separate go-ahead is required for M2.
 Earlier evidence is retained in [M1_READ_ONLY_ACCEPTANCE.md](M1_READ_ONLY_ACCEPTANCE.md),
 [M1_SERVER_ONBOARDING.md](M1_SERVER_ONBOARDING.md) and
 [M1_CHARACTER_TAGS.md](M1_CHARACTER_TAGS.md). Their counts describe earlier phases.
@@ -27,7 +27,8 @@ changed semantic payload conflicts. Expected revision is a first-execution
 precondition excluded from the ledger semantic hash. Draft wizard revision behavior
 is retained. A stale new command performs no RNG or state changes.
 
-Rolls are private by default. Only `publish:true` queues a receipt to the known
+After successful human smoke, the owner requested `/roll basic` publish by default.
+`publish:false` keeps a roll private. Only an effective `publish:true` queues to the known
 managed ledger. Private sheets/receipts do not gain an administrator override.
 Event pages select explicit fields after server-side campaign/visibility filtering;
 private notes/snapshots and generic payload bodies are never serialized there.
@@ -76,7 +77,7 @@ Work order: [M1D_ENGINE_LEDGER.md](../docs/work_orders/M1D_ENGINE_LEDGER.md).
 | Migrated pilot additions | 1 baseline snapshot; 0 rolls at migration completion |
 | Gateway | READY observed with migration 0003 |
 | Discord command readback | Exactly 11 guild-scoped roots, expected nested campaign/roll/safety commands, zero global commands |
-| Human new-command smoke | Requested; **PENDING**, not counted as passed |
+| Human new-command smoke | **OWNER CONFIRMED**: basic roll, receipt lookup, ledger, public receipt, safety pause/block/resume and status |
 | Recovered private engine | **120/120** original template file hashes unchanged |
 | GitHub visibility | Observed PUBLIC; owner explicitly chose to retain public visibility and push sanitized bot source only |
 | Remote CI | **PASS** for pushed commit `8f50b2a`: [run 41574768248](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/41574768248); all offline gates succeeded |
@@ -119,4 +120,18 @@ evidence only. Private engine archives, official PDFs, canonical saves, local po
 member/draft data, SQLite backups and credentials remain outside Git. No recovered
 engine mutation or import, official mechanics, playable-sheet certification, v1.3.11,
 AI, production security, multi-guild activation or external exactly-once delivery
-is claimed. Stop before M2 pending owner acceptance and a separate work order.
+is claimed. Stop before M2 pending an explicit go-ahead and separate work order.
+
+## Public-default follow-up
+
+The owner reported “All good so far” for dice/receipt/ledger/publication and “Looks
+good” for safety, and requested `publish:true` by default. The slash handler and help
+now publish omitted-option rolls to the managed ledger; `publish:false` remains a
+private opt-out. Existing private receipts are not republished. The internal service
+keeps its private default for local callers such as synthetic seeding. The existing
+fake-Discord integration test verifies omitted-option publication and explicit false
+by checking saved visibility and outbox rows. No new migration or campaign data
+rewrite is needed. All 137 offline tests pass; lint, format, mypy, handoff and
+repository checks pass. The bot was restarted, Gateway READY observed, and Discord
+REST confirms the optional flag and public-default/private-opt-out description.
+A separate human default-roll re-test is not claimed.

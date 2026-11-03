@@ -17,7 +17,7 @@
       "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
       "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
       "evidence": "reports/M1_LEDGER_VALIDATION.txt",
-      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+      "manual_status": "NOT_RUN_LIVE_COVERED_OFFLINE"
     },
     {
       "id": "M1-002",
@@ -29,7 +29,7 @@
       "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
       "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
       "evidence": "reports/M1_LEDGER_VALIDATION.txt",
-      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+      "manual_status": "NOT_RUN_LIVE_COVERED_OFFLINE"
     },
     {
       "id": "M1-003",
@@ -41,7 +41,7 @@
       "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
       "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
       "evidence": "reports/M1_LEDGER_VALIDATION.txt",
-      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+      "manual_status": "NOT_RUN_LIVE_COVERED_OFFLINE"
     },
     {
       "id": "M1-004",
@@ -53,7 +53,7 @@
       "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
       "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
       "evidence": "reports/M1_LEDGER_VALIDATION.txt",
-      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+      "manual_status": "NOT_RUN_LIVE_COVERED_OFFLINE"
     },
     {
       "id": "M1-005",
@@ -65,7 +65,7 @@
       "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
       "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
       "evidence": "reports/M1_LEDGER_VALIDATION.txt",
-      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+      "manual_status": "NOT_RUN_LIVE_COVERED_OFFLINE"
     },
     {
       "id": "M1-006",
@@ -77,7 +77,7 @@
       "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
       "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
       "evidence": "reports/M1_LEDGER_VALIDATION.txt",
-      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+      "manual_status": "OWNER_CONFIRMED"
     },
     {
       "id": "M1-007",
@@ -89,7 +89,7 @@
       "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
       "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
       "evidence": "reports/M1_LEDGER_VALIDATION.txt",
-      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+      "manual_status": "NOT_RUN_LIVE_COVERED_OFFLINE"
     },
     {
       "id": "M1-008",
@@ -101,7 +101,7 @@
       "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
       "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
       "evidence": "reports/M1_LEDGER_VALIDATION.txt",
-      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+      "manual_status": "NOT_RUN_LIVE_COVERED_OFFLINE"
     },
     {
       "id": "M1-009",
@@ -113,7 +113,7 @@
       "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
       "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
       "evidence": "reports/M1_LEDGER_VALIDATION.txt",
-      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+      "manual_status": "NOT_RUN_LIVE_COVERED_OFFLINE"
     },
     {
       "id": "M1-010",
@@ -125,7 +125,7 @@
       "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
       "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
       "evidence": "reports/M1_LEDGER_VALIDATION.txt",
-      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+      "manual_status": "NOT_RUN_LIVE_COVERED_OFFLINE"
     },
     {
       "id": "M1-011",
@@ -137,7 +137,7 @@
       "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
       "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
       "evidence": "reports/M1_LEDGER_VALIDATION.txt",
-      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+      "manual_status": "NOT_RUN_LIVE_COVERED_OFFLINE"
     },
     {
       "id": "M1-012",
@@ -149,7 +149,7 @@
       "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
       "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
       "evidence": "reports/M1_LEDGER_VALIDATION.txt",
-      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+      "manual_status": "NOT_RUN_LIVE_COVERED_OFFLINE"
     },
     {
       "id": "M1-018",
@@ -161,7 +161,7 @@
       "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
       "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
       "evidence": "reports/M1_LEDGER_VALIDATION.txt",
-      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+      "manual_status": "NOT_RUN_LIVE_COVERED_OFFLINE"
     },
     {
       "id": "M1-019",
@@ -173,7 +173,7 @@
       "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
       "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
       "evidence": "reports/M1_LEDGER_VALIDATION.txt",
-      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+      "manual_status": "OWNER_CONFIRMED"
     },
     {
       "id": "M1-020",
@@ -185,7 +185,14 @@
       "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
       "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
       "evidence": "reports/M1_LEDGER_VALIDATION.txt",
-      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+      "manual_status": "OWNER_CONFIRMED"
     }
-  ]
+  ],
+  "human_smoke": {
+    "source": "Owner reply in development chat",
+    "dice_receipt_lookup_ledger": "OWNER_CONFIRMED",
+    "explicit_publication": "OWNER_CONFIRMED",
+    "safety_pause_blocked_roll_resume_status": "OWNER_CONFIRMED",
+    "public_default_followup": "Owner requested publish:true by default; callback regression checks omission and explicit false. No separate live default-roll confirmation claimed."
+  }
 }

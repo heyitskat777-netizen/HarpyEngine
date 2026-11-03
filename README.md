@@ -4,8 +4,9 @@ M0 is accepted. M1 now implements server setup, persistent owner-bound drafts,
 Girl/Frame dropdowns and Discord tags, raw OS-backed 2d6 receipts, a filtered ledger,
 OOC safety pauses, retryable public delivery, and local backup/restore/rebuild tools.
 Offline acceptance and live verification are tracked in
-[reports/M1_ACCEPTANCE.md](reports/M1_ACCEPTANCE.md). Human testing of the new dice
-commands is still pending; this is not a production readiness claim.
+[reports/M1_ACCEPTANCE.md](reports/M1_ACCEPTANCE.md). The owner confirmed the dice,
+receipt/ledger, publication and safety smoke tests. This is not a production
+readiness claim.
 
 Characters remain **drafts / rules unverified**. Official Plays, modifiers, Heat,
 mechanical consequences, AI and recovered-engine writes are deferred. M1 raw dice
@@ -108,7 +109,7 @@ check installation and guild ID. Errors omit raw provider bodies and private pat
 | `/character create`, `/girl create` | Joined player; own dropdown draft wizard |
 | `/character sync` | Retry your saved label roles and nickname |
 | `/sheet [member]` | Joined player; own private sheet or another member's public sheet |
-| `/roll basic [publish]` | Joined owner with saved draft; raw 2d6, private by default |
+| `/roll basic [publish]` | Joined owner with saved draft; raw 2d6, published by default; `publish:false` keeps it private |
 | `/roll show receipt` | Own private or campaign-published receipt only |
 | `/ledger [before]` | Joined player; permitted events, eight per page |
 | `/safety pause` | Joined participant; save their own OOC pause, without a reason |
@@ -146,8 +147,9 @@ server variant label, not a separate published rules claim. See
 [character tags](docs/CHARACTER_TAGS.md).
 
 A raw roll returns two faces, their sum, timestamp and stable receipt ID. It changes
-no character resources. `publish:true` explicitly queues the receipt to the managed
-`rolls-and-ledger` channel; failures retry without rolling again. Existing saved
+no character resources. `/roll basic` defaults to `publish:true`, queuing the receipt
+to the managed `rolls-and-ledger` channel. Use `publish:false` for a private roll.
+Delivery failures retry without rolling again. Existing saved
 receipts remain retrievable while paused. `/campaign status` reports the **bot's
 stored M1 campaign**, independent of the recovered engine's paused turn counter.
 

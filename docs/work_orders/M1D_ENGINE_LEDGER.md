@@ -30,5 +30,6 @@ commit/delivery crash points, replay/rebuild and WAL restore. Supplement with sa
 public export and SDK command tests. Preserve original case catalogue unchanged.
 
 Record human dice/status/safety results separately from REST registration and offline
-success. Full M1 acceptance remains pending until human smoke is supplied. Stop at
+success. The owner has now confirmed dice/ledger/publication and safety smoke. The owner
+requested `/roll basic` publish publicly by default, with `publish:false` opting out. Stop at
 M1; no `/play`, AI or rules-certified builder work is authorized here.

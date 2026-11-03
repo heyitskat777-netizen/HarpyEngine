@@ -8,12 +8,13 @@ do not rewrite that historical package or silently drop its original M1 gates.
 | M1A_SERVER_SETUP | Persistent guild/campaign binding, permission preflight, preview/confirm channel provisioning, saved resource IDs and recovery | Current |
 | M1B_CHARACTER_ONBOARDING | New-player controls, explicit join, resumable owner-bound draft form, persistent public/private sheet projections | Current |
 | M1C_CHARACTER_TAGS | Girl/Frame dropdowns, safe owned label roles, callsign nickname and durable retry | Current |
-| M1D_ENGINE_LEDGER | Immutable raw dice receipts, filtered ledger, safety, durable delivery, backup/restore and snapshot rebuild | Implemented; live human smoke pending |
+| M1D_ENGINE_LEDGER | Immutable raw dice receipts, filtered ledger, safety, durable delivery, backup/restore and snapshot rebuild | Implemented; live human smoke owner-confirmed |
 | M2_CHARACTER_BUILDER | Complete source-audited Girl/Frame creation, legal options and derived resources, validation and playable activation | Before claiming rules-usable characters |
 
 The status commands remain available and now show stored M1 status. Original M1
-dice/inbox/outbox, crash recovery, backup and ledger tests are implemented; human
-smoke and owner acceptance remain required before calling M1 complete. Setup/character metadata does not
+dice/inbox/outbox, crash recovery, backup and ledger tests are implemented; the owner
+confirmed dice/ledger/publication and safety smoke tests. M2 still requires a separate
+go-ahead. Setup/character metadata does not
 mutate the engine or import the private canonical campaign. M2/M3 rules work must
 verify creation against the supplied official PDFs, not an invented schema.
 
