@@ -11,9 +11,11 @@ from girlframe.database import tables as t
 from girlframe.engine.creation import CreationDraft
 from girlframe.engine.frame_setup import frame_setup
 from girlframe.engine.pair_assets import PairChoice
+from girlframe.engine.shared_setup import AcceptedSetup
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.pair_assets import PairService
 from girlframe.services.read_only_bot import GuildViewer
+from girlframe.services.shared_setup import SharedSetupService
 
 
 @dataclass(frozen=True)
@@ -23,6 +25,7 @@ class CreationProgress:
     draft: CreationDraft
     playbooks_changed: bool = False
     pair_choice: PairChoice | None = None
+    shared_choices: tuple[AcceptedSetup, ...] = ()
 
 
 class CreationService:
@@ -56,6 +59,8 @@ class CreationService:
             else None
         )
         empty = empty.model_copy(update={"pair_source_token": pair.token if pair else None})
+        shared = SharedSetupService(self.store).accepted_for(connection, viewer.user_id)
+        empty = empty.model_copy(update={"shared_tokens": tuple(x.token for x in shared)})
         row = (
             connection.execute(
                 sa.select(t.creation_drafts)
@@ -70,7 +75,9 @@ class CreationService:
             .first()
         )
         if row is None:
-            return CreationProgress(0, character["revision"], empty, pair_choice=pair)
+            return CreationProgress(
+                0, character["revision"], empty, pair_choice=pair, shared_choices=shared
+            )
         draft = CreationDraft.model_validate_json(row["body_json"])
         changed = (draft.girl_playbook, draft.frame_playbook) != (
             empty.girl_playbook,
@@ -92,7 +99,10 @@ class CreationService:
                     ),
                 }
             )
-        return CreationProgress(row["revision"], character["revision"], draft, changed, pair)
+        draft = draft.model_copy(update={"shared_tokens": tuple(x.token for x in shared)})
+        return CreationProgress(
+            row["revision"], character["revision"], draft, changed, pair, shared
+        )
 
     def get(self, viewer: GuildViewer) -> CreationProgress:
         with self.store.engine.connect() as connection:
@@ -117,6 +127,8 @@ class CreationService:
             token = current.pair_choice.token if current.pair_choice else None
             if token != expected_pair_token or draft.pair_source_token != token:
                 raise WorkflowError("STALE_PAIR: reopen /character build; Pair selection changed.")
+            if draft.shared_tokens != current.draft.shared_tokens:
+                raise WorkflowError("STALE_SETUP: reopen /character build; shared choices changed.")
             names = set(current.pair_choice.names) if current.pair_choice else set()
             if not {x.name for x in draft.pair_asset_descriptions} <= names:
                 raise WorkflowError("Describe only the Girl Assets selected by your current Pair.")

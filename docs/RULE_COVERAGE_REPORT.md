@@ -65,7 +65,7 @@ reports the relationship step as pending. No AI or administrator chooses for her
 | Bonds and mutual player choices | Book PDF 13 / printed 11, individual playbooks | Private player proposals and mutual setup agreement implemented; NPC/Handler workflows pending. UI uses book “Intense”; sheet terminology discrepancy remains documented. |
 | Status hierarchy, unique Ace/Dog | Book PDF 14 / printed 12 | Handler-authorized starting order implemented; Princess first, unique Ace/Dog. In-play changes and benefits pending. |
 | Heat and Identity mechanics | Book PDF 10 / printed 8 and relevant Plays | Not initialized or resolved; verify starting Heat explicitly |
-| Newgirl Mentor / prior mission discussion | Book PDF 40 | Handler nomination and subsequent mutual proposal implemented (PDF 42 / printed 40); Mentor callsign/effective Status and Cadre discussion pending. |
+| Newgirl Mentor / prior mission discussion | Book PDF 40 | Handler nomination and subsequent mutual proposal implemented (PDF 42 / printed 40); Mentor callsign requests and effective Status comparison implemented; activation/name application and Cadre discussion pending. |
 | Oldgen's two NPC Bonds | Book PDF 45 | Exactly two sourced NPC role choices implemented; other Bond mechanics pending. |
 | Vatgrown DNA basis | Book PDF 48 | Implemented private player-authored field; creates no Bond/Tag |
 | AM jailbroken confidant | Book PDF 54 | Pending Bond choice |
@@ -74,7 +74,7 @@ reports the relationship step as pending. No AI or administrator chooses for her
 | CONSUME hunger track | Book PDF 65 | Three levels recorded; starting value and mechanics pending. |
 | JANUS Harpy Core and initial Tags | Book PDF 68 | Versioned distinct unnamed Core baseline with four prescribed Tags implemented; no Core Plays or naming. |
 | DoctorDoctor obsolescence | Book PDF 71 | Eight-box capacity recorded; starting marked count and mechanics pending. |
-| Red Queen AM roles | Book PDF 88 | Five roles and four-self/one-other default recorded; actual external role/recipient agreement pending. |
+| Red Queen AM roles | Book PDF 88 | Five roles and four-self/one-other default recorded; starting external role/recipient agreement implemented; AM mechanics pending. |
 | Optional short-game starting Requisition | Book creation guidance | Not unlocked; verify mode and exact source before implementation |
 | Core Plays, modifiers, consequences, pending choices | Original M2 work order | Not implemented; raw M1 rolls remain nonmechanical test receipts |
 
@@ -173,3 +173,28 @@ Baselines are generated from verified facts, validated against the selected Fram
 and serialized on explicit owner save with schema version and source pages. Old
 JSON remains readable. No Heat, Permissions, fictional consequences, Core choices,
 AM compulsion or initial unresolved counters are inferred by this delivery.
+
+## M2F Court and Mentor choices
+
+Rechecked book PDF 88–89 / printed 86–87: Queen, Consort, Knight, Doll, Traitor
+are the five AM roles. At creation, four belong to the Red Queen pilot and one to
+another Girl. The pilot chooses the external role/recipient and the recipient
+confirms OOC setup agreement. All five choices are tested, including assigning
+Queen externally; no controller permission, marking or compulsory action follows
+from setup acceptance. Initial NPC/Handler recipients are excluded because the
+creation note specifies another Girl, rather than the later general transfer rule.
+
+Rechecked PDF 42 / printed 40: Mentor chooses Newgirl callsign and always counts
+as higher Status. Requests require current Handler nomination plus mutually
+accepted Mentor relationship. Mentor authors and Newgirl accepts the draft name;
+it is saved for final-sheet activation, with no premature profile/nickname mutation
+that would stale the nomination itself. The comparison helper recognizes accepted
+Mentor authority in both directions without reordering physical Status. It uses
+active Handler and fresh starting ranks otherwise. Unknown/stale or reciprocal
+Mentor comparisons return unresolved, not a fabricated favorable result. These
+read-only comparisons are not authorization to commit in-play effects.
+
+Other Mentor duties (Off-Duty participation, Punishments and Tag rules) require
+later Play/scene services. No such behavior is claimed. Starting resource review,
+Cadre discussion, complete sheet validation, activation and independent rules
+review remain outstanding.

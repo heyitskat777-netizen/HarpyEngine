@@ -14,6 +14,7 @@ from girlframe.engine.creation import AssetChoice, CreationDraft, official_frame
 from girlframe.engine.creation_catalog import CATALOG
 from girlframe.engine.fanbase import Fanbase
 from girlframe.engine.pair_assets import PairChoice
+from girlframe.engine.shared_setup import AcceptedSetup
 from girlframe.services.creation import CreationProgress, CreationService
 from girlframe.services.onboarding import WorkflowError
 
@@ -22,7 +23,9 @@ def clean(value: str) -> str:
     return discord.utils.escape_markdown(discord.utils.escape_mentions(value))
 
 
-def summary(draft: CreationDraft, pair: PairChoice | None = None) -> str:
+def summary(
+    draft: CreationDraft, pair: PairChoice | None = None, shared: tuple[AcceptedSetup, ...] = ()
+) -> str:
     missing = draft.missing(pair.names if pair else ())
     return (
         "**Character creation — draft, not activated**\n"
@@ -55,6 +58,12 @@ def summary(draft: CreationDraft, pair: PairChoice | None = None) -> str:
             + ", ".join(clean(x) for x in draft.fanbase.additional_identities)
             if draft.fanbase
             else ""
+        )
+        + "".join(
+            "\nAccepted "
+            + ("Court role: " if x.kind == "court" else "Mentor callsign: ")
+            + clean(x.value)
+            for x in shared
         )
         + "\nBonds, Status, other playbook requirements and rules review remain before activation."
         "\nChoose/edit below, then **Save progress**. Reopen /character build to resume."
@@ -277,12 +286,17 @@ class CreationView(discord.ui.View):
     async def render(self, interaction: discord.Interaction, prefix: str = "") -> None:
         if not interaction.response.is_done() and interaction.message is not None:
             await interaction.response.edit_message(
-                content=prefix + summary(self.draft, self.progress.pair_choice),
+                content=prefix
+                + summary(self.draft, self.progress.pair_choice, self.progress.shared_choices),
                 view=self,
                 allowed_mentions=discord.AllowedMentions.none(),
             )
             return
-        await reply(interaction, prefix + summary(self.draft, self.progress.pair_choice), self)
+        await reply(
+            interaction,
+            prefix + summary(self.draft, self.progress.pair_choice, self.progress.shared_choices),
+            self,
+        )
 
     @discord.ui.button(label="Appearance", row=3)
     async def appearance(
@@ -341,7 +355,14 @@ class CreationView(discord.ui.View):
             lines.append(
                 "Default: four assigned to you, one to another Girl; actual assignment pending."
             )
-        lines.extend("Pending: " + x for x in baseline.pending)
+        court = next((x for x in self.progress.shared_choices if x.kind == "court"), None)
+        if court:
+            lines.extend(role + ": player " + str(user) for role, user in court.allocation.items())
+        lines.extend(
+            "Pending: " + x
+            for x in baseline.pending
+            if not (court and x.startswith("Choose external AM"))
+        )
         lines.append(
             "Use the controls below to continue. Save progress persists these facts; no Plays run."
         )
@@ -372,6 +393,7 @@ class CreationView(discord.ui.View):
                 previous.character_revision,
                 submitted,
                 pair_choice=previous.pair_choice,
+                shared_choices=previous.shared_choices,
             )
             self.generation += 1
             prefix = "Progress saved.\n"

@@ -60,6 +60,28 @@ pair_asset_revisions = sa.Table(
         ],
     ),
 )
+shared_setup_revisions = sa.Table(
+    "shared_setup_revisions",
+    metadata,
+    sa.Column("campaign_id", sa.Text, primary_key=True),
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("revision", sa.Integer, primary_key=True),
+    sa.Column("source_id", sa.Text, nullable=False),
+    sa.Column("target_id", sa.Text, nullable=False),
+    sa.Column("source_revision", sa.Integer, nullable=False),
+    sa.Column("target_revision", sa.Integer, nullable=False),
+    sa.Column("kind", sa.Text, nullable=False),
+    sa.Column("choice_json", sa.Text, nullable=False),
+    sa.Column("constraint_token", sa.Text),
+    sa.Column("state", sa.Text, nullable=False),
+    sa.Column("event_id", sa.ForeignKey("events.id"), nullable=False, unique=True),
+    sa.ForeignKeyConstraint(
+        ["campaign_id", "source_id"], ["characters.campaign_id", "characters.user_id"]
+    ),
+    sa.ForeignKeyConstraint(
+        ["campaign_id", "target_id"], ["characters.campaign_id", "characters.user_id"]
+    ),
+)
 setup_revisions = sa.Table(
     "campaign_setup_revisions",
     metadata,

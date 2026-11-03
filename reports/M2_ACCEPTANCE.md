@@ -332,3 +332,77 @@ M2E live startup reached Gateway READY. Authenticated Discord REST readback conf
 11 guild command groups, character children `create`, `sync`, `build`, `bond`,
 `bonds`, `pair_assets`, and zero global commands. Human two-player Pair selection
 and description testing remains NOT_RUN; this readback verifies registration only.
+
+## M2F continuation — Court and Mentor choices
+
+Implemented `docs/work_orders/M2F_COURT_MENTOR_CHOICES.md` after owner continuation.
+A Red Queen pilot uses `/character court member` to select one of the five AM roles
+for another Girl and confirm a private request. The recipient accepts/declines via
+`/character requests [before]`; either participant can withdraw accepted setup.
+The accepted allocation contains exactly one AM on the recipient and the other
+four on the source pilot, including when Queen is chosen externally. No Court
+controller permission, AM marking, transfer, Decree or compulsory action is run.
+
+The accepted Mentor uses `/character mentor_callsign member` to propose a name.
+The Newgirl accepts or declines the private request. Authority requires current
+Handler nomination and accepted Mentor Bond, with both profiles current. Changing
+that nomination/relationship invalidates the request, including stale replay. The
+name is intended for the final sheet at activation; public profile and Discord
+nickname are unchanged now, avoiding implicit profile edits invalidating consent.
+
+`/campaign effective_status member` compares the requester's setup Status against
+one counterpart. It recognizes the current accepted Mentor exception in both
+directions, active Handler priority and a fresh starting rank order. Stale or
+unresolved comparisons return unknown; reciprocal Mentor authority is explicitly
+unresolved. This read-only helper performs no orders, Punishments, Tag rules or
+other in-play effects. Other Mentor duties require later Play/scene workflows.
+
+Migration 0008 adds private immutable shared-request revisions. All commands use
+campaign/guild/member/party authority, exact current source roles, profile and
+request revisions, constraint tokens, idempotency and transactional checks. No
+administrator override exposes shared values. Event/outcome payloads contain
+minimal metadata; names/roles remain in private request records. Current accepted
+choices appear in the owner's builder. Save progress records provenance tokens and
+rejects a form if shared agreement changed. Requests survive restart and page in
+batches of twenty using UUID cursors. No DM or public notification is sent.
+
+Executed validation:
+
+- Final `.venv/bin/pytest -q --junitxml=var/m2-court-mentor-pytest.xml`: **226 passed
+  in 7.85 seconds**, no skips. The new 13 cases cover all five AM choices/four-one
+  mapping, legal role/recipient/source rules, Mentor authority, private acceptance,
+  decline/withdraw/revoked replay, nomination/profile staleness, provenance/forged
+  tokens, effective Status, concurrency, rollback, immutable history, actual backup
+  restoration, two-campaign isolation, pagination, native Court controls, callsign
+  forms and recipient decisions. No public profile/nickname update is asserted.
+- Before adding new tests, all 213 prior regressions passed; the first targeted
+  shared-setup module run passed 11 cases, then additional native-name/pagination
+  coverage was added. Static checks caught long UI strings and a Literal typing
+  mismatch, corrected before final validation. No unresolved automated failure.
+- Ruff lint/format: PASS (115 files). Mypy: PASS (63 source files). Handoff verifier:
+  PASS (34 required files, 86 historical cases, four schemas/four synthetic fixtures).
+  All 40 manifest entries intact; repository check zero findings. `git diff --check`
+  passed. Private official source PDF pages 42 and 88–89 were rechecked directly.
+- No prior bot process remained at this deployment check. Private backup succeeded
+  before migration; schema is 0008 and schema comparison detected no changes.
+  All original values in the 18 pre-existing application tables matched backup;
+  integrity/foreign keys PASS, new request history empty. No setup choice was made
+  by deployment. Development-session hosting remains temporary.
+
+Human Court/callsign/Status smoke remains NOT_RUN, distinct from offline and
+registration evidence. The owner deferred earlier live builder testing and asked
+to continue. Remaining work includes starting counters/resources, Cadre discussion,
+complete validation, activation/name application, further Mentor duties, original
+M2 Play workflows and independent official-rules review. BUILDER-01 through
+BUILDER-04 remain NOT_RUN for complete official creation. Only sanitized code and
+synthetic evidence enter Git. Private PDFs/engine, data, policy, backups and tokens
+remain outside Git. Canonical engine and environment configuration were not changed;
+no environment publication was attempted.
+
+M2F live startup reached Gateway READY. Authenticated Discord REST readback confirms
+11 guild command groups, character commands `create`, `sync`, `build`, `bond`,
+`bonds`, `pair_assets`, `court`, `mentor_callsign`, `requests`, and campaign commands
+`join`, `create`, `status`, `handler`, `mentor`, `status_setup`, `setup`,
+`effective_status`, with zero global commands. Source finalization hides the unrelated
+callsign button from the Court form; the process was reloaded for that UI change.
+Human multiplayer request/Status acceptance remains NOT_RUN.

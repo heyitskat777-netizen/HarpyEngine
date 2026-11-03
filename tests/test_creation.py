@@ -54,7 +54,9 @@ def test_source_catalog_and_starting_identities(girl):
     assert len(data.identities) == 4 and len(set(data.identities)) == 4
     assert len(CATALOG[girl]["assets"]) == 5
     assert CATALOG[girl]["book_printed_page"] == CATALOG[girl]["book_pdf_page"] - 2
-    if girl != "BONDED":
+    if girl == "NEWGIRL":
+        assert data.missing() == ["accepted Mentor callsign"]
+    elif girl != "BONDED":
         assert data.missing() == []
     else:
         assert any("Pair-owned" in item for item in data.missing())

@@ -37,6 +37,8 @@ class CreationDraft(BaseModel):
     frame_setup: FrameSetup | None = None
     pair_source_token: str | None = Field(default=None, max_length=160)
 
+    shared_tokens: tuple[str, ...] = Field(default=(), max_length=2)
+
     npc_bonds: tuple[NpcBond, ...] = Field(default=(), max_length=2)
 
     dna_basis: str = Field(default="", max_length=300)
@@ -129,4 +131,12 @@ class CreationDraft(BaseModel):
             missing.append(
                 "two NPC Bonds" if self.girl_playbook == "OLDGEN" else "one or two NPC Bonds"
             )
+        if self.frame_playbook == "THE RED QUEEN" and not any(
+            x.startswith("court:") for x in self.shared_tokens
+        ):
+            missing.append("accepted external Court assignment")
+        if self.girl_playbook == "NEWGIRL" and not any(
+            x.startswith("callsign:") for x in self.shared_tokens
+        ):
+            missing.append("accepted Mentor callsign")
         return missing
