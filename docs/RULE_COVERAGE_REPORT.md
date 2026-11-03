@@ -198,3 +198,37 @@ Other Mentor duties (Off-Duty participation, Punishments and Tag rules) require
 later Play/scene services. No such behavior is claimed. Starting resource review,
 Cadre discussion, complete sheet validation, activation and independent rules
 review remain outstanding.
+
+## M2I creation-review audit
+
+Rechecked book PDF 7/10/13/14/40/42/60/65/71 and corresponding official sheets.
+PDF 7 / printed 5 explicitly lists the room/bunk, knife, clothing and neural link;
+these are starting-access facts on the private review sheet, without invented Asset
+bonuses. PDF 40 / printed 38 requires Newgirl to tell each Cadre member whether
+zero or one mission has been shared. Saved declarations now cover current Pilot
+counterparts and the appointed Handler, with an explicit owner discussion attestation.
+The bot does not claim a private form itself told the table or secured consent.
+
+PDF 13 states that Bonds are mutual. An ordinary Personal-Bond playbook can now
+explicitly count a current accepted incoming Personal Bond instead of attempting a
+duplicate reverse proposal. Mentor and Pair selection retain their specific roles
+and required depths. Incoming Intense is not automatically weakened to Personal;
+conflicts that cannot satisfy a small roster remain unresolved. Already-originated
+eligible proposals continue to record the source owner's starting choice.
+
+No explicit general starting Heat value or starting CONSUME level was found in the
+supplied creation text. DoctorDoctor's eight-box track is visually empty but no
+numeric initialization was inferred as an engine rule. The owner explicitly approved
+Heat 0, Quiet hunger and 0 marked boxes as campaign defaults. Trusted local policy
+records owner approval provenance, separate from Handler-confirmed overrides and
+source-backed track facts. The optional initial Requisition at PDF 60 / printed 58
+remains excluded in regular mode; the short-game variant is explicitly unsupported.
+No gameplay resource pool is initialized by recording these rulings.
+
+`/character review` checks saved fields and current accepted agreements, full Status
+roster, role/depth, Newgirl history and explicit resource rulings. Review snapshots
+include received Court roles for recipients as well as the pilot's own allocation.
+All values remain draft/private. Complete official creation, NPC depth/initial
+marked states, final publication/name application, playable activation and runtime
+mechanics still require independent review/implementation. See
+`docs/M2_RULES_REVIEW_PACKET.md`. Complete-builder acceptance stays NOT_RUN.

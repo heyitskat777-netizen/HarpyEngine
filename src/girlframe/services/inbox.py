@@ -256,6 +256,25 @@ class InboxService:
             own = profiles.get(viewer.user_id)
             if (
                 own
+                and own["girl_playbook"] == "NEWGIRL"
+                and handler.current(connection)[1].handler_id != viewer.user_id
+            ):
+                progress = CreationService(self.store)._current(connection, viewer)
+                cadre = handler.cadre(connection, viewer.user_id)
+                declared = {x.user_id: x.character_revision for x in progress.draft.prior_missions}
+                if not progress.draft.cadre_discussed or not cadre or declared != cadre:
+                    task(
+                        "missions:" + str(viewer.user_id),
+                        "mentors",
+                        "Declare Cadre mission history",
+                        None,
+                        "Choose zero or one shared mission per counterpart and confirm discussion.",
+                        "Review mission history",
+                        "history",
+                        progress.revision,
+                    )
+            if (
+                own
                 and own["frame_playbook"] == "THE RED QUEEN"
                 and handler.current(connection)[1].handler_id != viewer.user_id
                 and not has_shared("court")

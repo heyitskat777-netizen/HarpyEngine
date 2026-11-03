@@ -246,6 +246,8 @@ class CreationView(discord.ui.View):
         super().__init__(timeout=600)
         self.service, self.owner, self.progress = service, owner, progress
         self.draft, self.generation = progress.draft, 0
+        if self.draft.girl_playbook != "NEWGIRL":
+            self.remove_item(self.history)
         self.refresh_selects()
         self.playbook.disabled = not (
             self.draft.girl_playbook == "VATGROWN"
@@ -369,6 +371,23 @@ class CreationView(discord.ui.View):
         await interaction.response.edit_message(
             content="\n".join(lines), view=self, allowed_mentions=discord.AllowedMentions.none()
         )
+
+    @discord.ui.button(label="Prior missions", row=4)
+    async def history(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        from girlframe.discord_adapter.cadre_history import HistoryView
+
+        if self.draft.girl_playbook != "NEWGIRL":
+            await reply(interaction, "Prior-mission declarations apply to Newgirl.")
+            return
+        try:
+            cadre = await asyncio.to_thread(
+                self.service.cadre, viewer_from_interaction(interaction)
+            )
+            await HistoryView(self, cadre).render(interaction)
+        except WorkflowError as error:
+            await reply(interaction, str(error))
 
     @discord.ui.button(label="Save progress", style=discord.ButtonStyle.primary, row=4)
     async def save(self, interaction: discord.Interaction, button: discord.ui.Button[Any]) -> None:

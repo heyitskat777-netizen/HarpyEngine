@@ -9,6 +9,7 @@ from discord import app_commands
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.onboarding import action_gate, reply
+from girlframe.engine.creation_review import CreationRulings
 from girlframe.engine.handler_setup import PilotRef
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.onboarding import WorkflowError
@@ -70,6 +71,60 @@ class ConfirmSetup(SetupView):
             )
         except WorkflowError as error:
             await reply(interaction, str(error))
+
+
+class RulingSelect(discord.ui.Select["RulingsView"]):
+    def __init__(self) -> None:
+        super().__init__(
+            placeholder="Choose campaign creation rulings",
+            options=[
+                discord.SelectOption(label="Leave starting values unresolved", value="unresolved"),
+                discord.SelectOption(
+                    label="0 Heat / Quiet / 0 boxes; long game", value="long_game"
+                ),
+                discord.SelectOption(
+                    label="Same values; short game (Requisition pending)",
+                    value="short_game_unimplemented",
+                ),
+            ],
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        parent = self.view
+        assert isinstance(parent, RulingsView)
+        value = (
+            None
+            if self.values[0] == "unresolved"
+            else CreationRulings.model_validate({"requisition_mode": self.values[0]})
+        )
+        text = (
+            "Leave starting resources unresolved. Activation remains blocked."
+            if value is None
+            else "**Review campaign rulings**\nStarting Heat: 0. CONSUME: Quiet. "
+            "DoctorDoctor: 0 marked obsolescence boxes.\n"
+            "These are explicit campaign rulings, not printed starting defaults. "
+            + (
+                "Long game: no optional initial Requisition."
+                if value.requisition_mode == "long_game"
+                else "Short-game Requisition selection is unsupported; creation remains incomplete."
+            )
+        )
+        await reply(
+            interaction,
+            text + "\nThis saves setup only; no live resources are changed.",
+            ConfirmSetup(
+                parent.service,
+                parent.owner,
+                lambda actor, key: parent.service.rulings(actor, key, parent.expected, value),
+            ),
+        )
+
+
+class RulingsView(SetupView):
+    def __init__(self, service: HandlerService, owner: int, expected: int):
+        super().__init__(service, owner)
+        self.expected = expected
+        self.add_item(RulingSelect())
 
 
 class PilotSelect(discord.ui.Select["RankView"]):
@@ -216,7 +271,7 @@ def register_handler_setup(
                 f"Previous: {prepared['handler_id']}. "
             )
             text += (
-                "Confirming clears current Mentor nominations and Status setup; "
+                "Confirming clears Mentor nominations, Status and Handler creation rulings; "
                 "history is retained. No private-sheet access is granted."
             )
             await reply(
@@ -314,6 +369,29 @@ def register_handler_setup(
                     f"Mentor {assignment['mentor']['user_id']}; stale: {assignment['stale']}."
                 )
             lines.append("Draft setup only; playable activation and remaining rules are pending.")
+            lines.append(
+                "Creation resource rulings: "
+                + ("confirmed" if result["creation_rulings"] else "unresolved")
+            )
             await reply(interaction, "\n".join(lines)[:1950])
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @campaign.command(
+        name="creation_rules",
+        description="Handler: review explicit starting-resource campaign rulings",
+    )
+    async def creation_rules(interaction: discord.Interaction) -> None:
+        if not await action_gate(interaction, "metadata"):
+            return
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        try:
+            prepared = await asyncio.to_thread(service.roster, viewer_from_interaction(interaction))
+            await reply(
+                interaction,
+                "Choose a ruling, review its effects, then confirm. "
+                "Current sheets are not activated or reset by this command.",
+                RulingsView(service, interaction.user.id, prepared["revision"]),
+            )
         except WorkflowError as error:
             await reply(interaction, str(error))

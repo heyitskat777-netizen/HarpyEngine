@@ -4,6 +4,7 @@ from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from girlframe.engine.creation_review import CreationRulings
 from girlframe.engine.identity import Snowflake
 
 
@@ -25,6 +26,8 @@ class HandlerSetup(BaseModel):
     handler_id: Snowflake | None = None
     mentors: tuple[MentorAssignment, ...] = ()
     status_order: tuple[PilotRef, ...] = ()
+    creation_rulings: CreationRulings | None = None
+    creation_rulings_explicit: bool = False
 
     @model_validator(mode="after")
     def distinct_roles(self) -> Self:

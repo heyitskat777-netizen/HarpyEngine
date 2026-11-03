@@ -471,13 +471,22 @@ class InboxView(discord.ui.View):
             prepared = await asyncio.to_thread(pair_service.resolve, viewer, item.target)
             pair_view = PairView(pair_service, self.owner, prepared)
             await open_child(pair_view.text(), pair_view)
-        elif item.task == "describe":
+        elif item.task in ("describe", "history"):
             from girlframe.discord_adapter.creation import CreationView, summary
             from girlframe.services.creation import CreationService
 
             creation = CreationService(self.service.store)
             progress = await asyncio.to_thread(creation.get, viewer)
             builder = CreationView(creation, self.owner, progress)
+            if item.task == "history":
+                from girlframe.discord_adapter.cadre_history import HistoryView
+
+                cadre = await asyncio.to_thread(creation.cadre, viewer)
+                builder.add_item(InboxBackButton(self))
+                history = HistoryView(builder, cadre)
+                history.add_item(InboxBackButton(self))
+                await history.render(interaction)
+                return
             await open_child(
                 "Use Asset descriptions, then Save progress.\n"
                 + summary(progress.draft, progress.pair_choice, progress.shared_choices),

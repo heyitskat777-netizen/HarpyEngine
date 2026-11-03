@@ -8,10 +8,13 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
+from girlframe.engine.bonds import starting_kind
 from girlframe.engine.creation import CreationDraft
 from girlframe.engine.frame_setup import frame_setup
 from girlframe.engine.pair_assets import PairChoice
 from girlframe.engine.shared_setup import AcceptedSetup
+from girlframe.services.bonds import BondService
+from girlframe.services.handler_setup import HandlerService
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.pair_assets import PairService
 from girlframe.services.read_only_bot import GuildViewer
@@ -108,6 +111,22 @@ class CreationService:
         with self.store.engine.connect() as connection:
             return self._current(connection, viewer)
 
+    def cadre(self, viewer: GuildViewer) -> dict[int, dict[str, Any]]:
+        with self.store.engine.connect() as connection:
+            connection.exec_driver_sql("BEGIN")
+            progress = self._current(connection, viewer)
+            if progress.draft.girl_playbook != "NEWGIRL":
+                raise WorkflowError("Prior-mission declarations are a Newgirl creation step.")
+            handler = HandlerService(self.store)
+            roster = handler._roster(connection)
+            return {
+                uid: {
+                    "revision": revision,
+                    "label": roster[uid]["callsign"] if uid in roster else "Handler",
+                }
+                for uid, revision in handler.cadre(connection, viewer.user_id).items()
+            }
+
     def save(
         self,
         viewer: GuildViewer,
@@ -132,6 +151,34 @@ class CreationService:
             names = set(current.pair_choice.names) if current.pair_choice else set()
             if not {x.name for x in draft.pair_asset_descriptions} <= names:
                 raise WorkflowError("Describe only the Girl Assets selected by your current Pair.")
+            if draft.girl_playbook == "NEWGIRL":
+                cadre = HandlerService(self.store).cadre(connection, viewer.user_id)
+                declarations = {x.user_id: x.character_revision for x in draft.prior_missions}
+                if any(uid not in cadre or cadre[uid] != rev for uid, rev in declarations.items()):
+                    raise WorkflowError("STALE_CADRE: reopen mission history; the roster changed.")
+                if draft.cadre_discussed and (not cadre or declarations != cadre):
+                    raise WorkflowError(
+                        "Discuss and declare history for every current Cadre counterpart."
+                    )
+            if draft.starting_bond_id:
+                bonds = BondService(self.store)
+                row = next(
+                    (
+                        x
+                        for x in bonds._latest(connection, str(viewer.user_id))
+                        if x["id"] == draft.starting_bond_id
+                    ),
+                    None,
+                )
+                if row is None or row["state"] != "accepted" or bonds._stale(connection, row):
+                    raise WorkflowError("STALE_BOND: choose a current accepted starting Bond.")
+                if starting_kind(row["girl_playbook"]) != starting_kind(draft.girl_playbook) or (
+                    draft.girl_playbook in ("NEWGIRL", "BONDED")
+                    and row["source_id"] != str(viewer.user_id)
+                ):
+                    raise WorkflowError(
+                        "This Bond does not meet your playbook's starting role/depth."
+                    )
 
         def operation(connection: Connection) -> dict[str, Any]:
             current = self._current(connection, viewer)

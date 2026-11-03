@@ -12,7 +12,8 @@ M2 has started with `/character build`: source-backed starting Identities, Asset
 choices and appearance, saved privately with revision history. Playbook details
 now include Vatgrown DNA basis and Prince fanbase demographics/demanded/rejected
 qualities, including custom choices. JANUS-B uses official
-JANUS rules and retains its server label. See [M2 evidence](reports/M2_ACCEPTANCE.md).
+JANUS rules and retains its server label. `/character review` now validates saved
+choices and assembles a private, versioned review sheet. See [M2 evidence](reports/M2_ACCEPTANCE.md).
 
 Characters remain **drafts / rules unverified**. Official Plays, modifiers, Heat,
 mechanical consequences, AI and recovered-engine writes are deferred. M1 raw dice
@@ -44,7 +45,7 @@ or outside Git. Never delete a populated database to refresh the environment.
 Before upgrading an existing database, make a new private backup, then migrate:
 
 ```bash
-python -m girlframe db backup --dest var/backups/before-0008.db
+python -m girlframe db backup --dest var/backups/before-0009.db
 python -m alembic upgrade head
 python -m alembic check
 ```
@@ -57,7 +58,8 @@ preserved. Migration `0004` adds private append-only creation progress without
 rewriting existing records. Migration `0005` adds immutable private Bond proposals. `0006` adds Handler setup
 history and nullable Mentor-nomination provenance for proposals. `0007` adds
 private immutable Pair Asset allocations. `0008` adds immutable private Court and
-Mentor-callsign setup requests. `alembic downgrade base` destroys application tables: use only on
+Mentor-callsign setup requests. `0009` adds immutable private assembled review sheets.
+`alembic downgrade base` destroys application tables: use only on
 throwaway test databases. Never downgrade real campaign data to roll back code.
 
 ## Discord application and startup
@@ -117,11 +119,13 @@ check installation and guild ID. Errors omit raw provider bodies and private pat
 | `/campaign handler [member]` | Configured administrator; review/confirm appointment, or omit member to revoke |
 | `/campaign mentor newgirl member` | Appointed Handler; review/confirm a Mentor nomination |
 | `/campaign status_setup` | Appointed Handler; select, review and confirm the starting rank order |
+| `/campaign creation_rules` | Appointed Handler; review and explicitly confirm starting-resource rulings or leave them unresolved |
 | `/campaign setup` | Joined member; saved starting Status, Handler and permitted Mentor information |
 | `/campaign status` | Joined member or configured administrator; stored M1 status |
 | `/campaign_status` | Stored M1 status alias, retaining the earlier approved audience restriction |
 | `/character create`, `/girl create` | Joined player; own dropdown draft wizard |
-| `/character build` | Joined owner; private starting Assets, Identities and appearance; save/reopen progress |
+| `/character build` | Joined owner; private starting Assets, Identities, appearance and Newgirl mission history |
+| `/character review` | Joined owner; validation, paged private sheet and explicit immutable review snapshot |
 | `/character bond member` | Joined player; privately review and confirm a starting Bond proposal |
 | `/character bonds [before]` | Participants only; resume saved proposals and accept/decline/withdraw |
 | `/character pair_assets member` | Accepted Pair; choose two starting Girl Assets for that Bonded player |
@@ -178,8 +182,8 @@ read or edit the owner's private draft. Starting
 Identities are derived from the official playbook. **Save progress** persists a
 partial form; reopen the command after a timeout or restart to continue. Unsaved
 edits are temporary. Saving changed Girl/Frame playbooks starts new choices while
-retaining earlier private history. Creation details are currently available only
-through this owner-only builder; `/sheet` still shows the M1 profile. Bonds, Status,
+retaining earlier private history. Creation details are available through the owner-only builder and review;
+`/sheet` still shows the M1 profile. Bonds, Status,
 special resources, independent review and playable activation remain unfinished.
 The **NPC Bonds** button selects one or two playbook NPC roles (exactly two for
 Oldgen). Names and written feelings are optional and private. Return and Save
@@ -203,7 +207,7 @@ members active. Any profile revision change makes old agreement/proposal data st
 withdraw or decline it and make a new proposal. Duplicate live outgoing proposals
 and duplicate live proposals between the same pair are rejected. Accepted proposals
 remain draft setup agreements; NPC mechanics, remaining Mentor duties
-and full creation validation remain pending. Private context/history stays in the database
+and playable activation remain pending. Private context/history stays in the database
 and backups, outside public sheets, exports and ledger payloads.
 
 Appoint the Handler explicitly: a configured administrator runs `/campaign handler
@@ -249,6 +253,46 @@ role/recipient agreement uses the Court request flow below. No Frame Plays, cont
 the Core, or mechanical consequences are enabled by these draft facts. Old saved
 JSON loads with the new fields absent; reopening derives current source-backed
 facts, and only an explicit save appends a new snapshot.
+
+Use `/character review` after saving creation progress. The native section dropdown
+shows Validation, Assets, Appearance, Relationships and Frame/resources, with paging
+for long descriptions. The report checks the complete current Status roster,
+starting-Bond role/depth, source choices, accepted agreements and campaign rulings.
+An eligible outgoing proposal records its owner's starting choice. A player can
+explicitly select an eligible accepted incoming Personal Bond from the review,
+then confirm; mutual Bonds do not require a duplicate reverse proposal. Newgirl and
+Bonded retain their own Mentor/Pair requirements. Clear an obsolete explicit choice
+from the same dropdown before selecting a fresh agreement.
+
+**Save review snapshot** stores the saved form and current dependencies privately,
+even when incomplete, with immutable revision history. It never saves unsaved builder
+edits or activates a character. Reopen/Refresh reports whether the latest snapshot
+still matches current choices, memberships, roles, roster and rules. Received Court
+roles are included on recipients' sheets. Profile/relationship changes preserve old
+snapshots and require review. No administrator can read another owner's private
+review; no snapshot is posted publicly or sent to AI.
+
+Newgirl's **Prior missions** button, also available as an inbox task, lets its player
+choose zero or one prior mission with each current Cadre counterpart (including the
+Handler). Discuss those declarations in conversation, then confirm that discussion
+and return to Save progress. Edits clear the attestation; roster/profile changes
+require updated declarations. The bot sends no declaration or counterpart consent
+merely by opening or saving this private form (book PDF 40 / printed 38).
+
+Starting Heat, CONSUME hunger and marked DoctorDoctor boxes are kept separate from
+printed facts. The owner approved **0 / Quiet / 0** as this campaign's defaults.
+The trusted local policy can record `owner_creation_rulings` with provenance
+`owner_approved_campaign_ruling`; the example leaves it null. No Discord user can
+set owner provenance. `/campaign creation_rules` offers the appointed Handler an
+explicit preview/confirmation of these campaign rulings, or an unresolved override.
+No actual resource pool or playable state is initialized by this setup command.
+The regular mode has no optional initial Requisition. Selecting the short-game
+variant leaves its additional Requisition unsupported and visibly blocks readiness.
+
+**Ready for independent rules review** refers to implemented setup checks only.
+Playable activation remains disabled in both the UI and service. The independent
+[source/code review packet](docs/M2_RULES_REVIEW_PACKET.md) records the remaining
+gates and source gaps; a player's saved review is not that independent certification.
 
 A Red Queen pilot runs `/character court member`, chooses which AM goes to the
 other Girl and confirms. The recipient reviews it in `/character requests` and

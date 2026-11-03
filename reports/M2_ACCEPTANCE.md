@@ -480,3 +480,100 @@ docs and synthetic design artifacts enter the public repository. Official PDFs,
 private engine, policy, campaign state, backups and credentials remain excluded.
 The original handoff and environment configuration were preserved; no environment
 publication was attempted.
+
+## M2I — private creation validation and review-sheet snapshots
+
+The owner authorized continuation as far as prerequisites allow. Implemented
+`docs/work_orders/M2I_CREATION_REVIEW.md`: `/character review` combines saved choices,
+source-backed starting access, accepted relationships, current Status and explicit
+starting-resource rulings in an owner-only paged sheet. Validation covers every
+Girl and Frame branch plus combined special cases. A review snapshot can be saved
+while incomplete; it is always `draft_rules_unverified`, never a playable character.
+Reviewing does not save unsaved builder edits, publish private descriptions or
+create game events/effects. Snapshot saves append private revision history and
+minimal metadata audit events, with consistent read snapshots, expected revisions,
+dependency fingerprints and owner/membership checks. A stale/rapid control cannot
+save an unreviewed replacement snapshot.
+
+Newgirl can declare zero or one prior mission with each current Cadre counterpart
+(including the appointed Handler) through native selectors, then attest that those
+declarations were discussed in conversation. Edits clear the attestation. Roster or
+profile changes require updated references. This step is available from the builder
+and unified inbox; saving the completed declaration removes the derived task. No
+conversation, counterpart response, consent or notification is fabricated.
+
+Found and corrected a creation dead end: requiring all Pilots to originate their
+starting Bond conflicts with mutual Bonds and the existing prohibition on reverse
+duplicate proposals. A player may explicitly select and confirm an eligible accepted
+incoming Personal Bond as the starting choice. Source-owned eligible proposals
+remain the default for their owners. Exact depth and Newgirl/Bonded role checks
+remain enforced. Obsolete explicit choices can be cleared. No automatic Intense-to-
+Personal conversion is invented. Received Court roles now appear on recipients'
+review sheets; withdrawal invalidates current review freshness without deleting
+history. Source/recipient private creation bodies remain isolated.
+
+The owner explicitly approved starting **Heat 0, CONSUME Quiet, DoctorDoctor 0
+marked boxes**. Applied those as `owner_approved_campaign_ruling` in the existing
+private local policy, preserving every other setting and backing up the original.
+The public example leaves owner defaults null. Appointed Handler controls can
+preview/confirm their own explicit ruling or unresolved override, with different
+provenance; a Discord caller cannot forge owner approval. No synthetic Handler
+command or user identity was created, and no actual character resource pool was
+initialized. Regular mode has no optional starting Requisition; the short-game
+variant remains unsupported and visibly blocks readiness.
+
+Source audit: book PDF 7/10/13/14/40/42/60/65/71 and corresponding official sheets,
+plus the existing source-linked playbook catalogues. Initial Heat/hunger values
+were not inferred from absent text; the numeric values above are campaign rulings.
+Details and remaining source gaps are in `docs/RULE_COVERAGE_REPORT.md` and the new
+`docs/M2_RULES_REVIEW_PACKET.md`. Independent source/code review, final publication,
+Newgirl profile/name application, NPC depth/initial marked-state verification,
+transactional playable activation, game-service consumption and official Plays
+remain pending. UI activation is disabled; the service also returns
+`UNSUPPORTED_RULE` if called directly. BUILDER-01–04 and LOCK-01–12 remain NOT_RUN.
+
+Executed validation:
+
+- `bash tools/install.sh`: resolved 36 packages / checked 35, committed lock unchanged.
+- Final `.venv/bin/pytest -q --junitxml=var/m2-creation-review-pytest.xml`:
+  **283 passed in 13.80 seconds**, no skips. Forty-one new cases include all ten
+  Girls, all nine Frames plus JANUS-B, combined Newgirl/Court/Prince and Pair/Prince/
+  Wyvern branches, missing/unsupported choices, current-role and depth enforcement,
+  stale source/roster/ruling dependencies, owner-only projections, explicit native
+  confirmation, old clicks, long-text paging, unchanged mutation throttles,
+  exact replay, immutable history, rollback, concurrency, actual private backup
+  restoration, membership revocation and two-campaign isolation.
+- Intermediate targeted review run: 30 passed in 4.29 seconds; review + prior inbox
+  suite after mutual-choice/default-provenance additions: 51 passed in 7.73 seconds.
+  Full run before additional cross-playbook cases: 278 passed in 18.43 seconds.
+  Lint caught long strings/import ordering, and mypy caught literal/default type
+  annotations; corrected before final checks. No unresolved automated failures.
+- Final Ruff lint/format: PASS (135 files); mypy: PASS (71 source files).
+  Planning verifier: PASS (34 required files, 86 historical cases, four schemas and
+  four synthetic fixtures). Repository check: 213 publishable files, all 40 handoff
+  manifest entries intact, zero findings. `git diff --check`: PASS.
+- Stopped the single matching development bot gracefully. Private pre-migration
+  database backup succeeded; additive migration **0009** applied. `alembic check`:
+  no new upgrade operations. Read-only comparison against backup confirmed every
+  value in all **19 pre-existing application tables unchanged**. Integrity/foreign
+  keys PASS; new review history empty. No fake request or review record was created.
+- Updated startup `--check` PASS; Gateway reached READY. Authenticated Discord REST
+  readback confirms eleven guild command groups, zero global commands, all prior
+  commands, new `/character review` and `/campaign creation_rules` with no arguments.
+  Existing inbox and ordinary dice/safety flows remain registered. Local health PASS.
+  Runtime is still temporary development-session hosting.
+
+Native-client multiplayer review/history/Bond-selection/ruling smoke remains
+**NOT_RUN**. Existing owner-deferred M2 live checks remain pending. Automated tests,
+live login/registration and human acceptance are distinct. Acceptance mapping:
+`docs/acceptance/m2_creation_review.json`. No real campaign content entered tests,
+logs or public source; official PDFs, engine, policy and backups remain excluded.
+
+Recovery: retain migrated schema and prefer a forward fix. Older code/policy parsers
+may not understand newly saved draft/setup fields or owner-default configuration;
+a blind code rollback after feature use is not a compatibility guarantee. Private
+pre-migration data/policy backups are available. Restore only to a new offline path
+for deliberate recovery; do not downgrade/delete a populated database. Original
+handoff and canonical engine were preserved; no environment configuration was
+published or repinned. This step does not claim production security, complete
+creation certification, activation, AI, `/play` or scene-chat locking.

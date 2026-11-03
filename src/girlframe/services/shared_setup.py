@@ -151,6 +151,28 @@ class SharedSetupService:
                 )
         return tuple(sorted(choices, key=lambda x: x.token))
 
+    def received_court(self, connection: Connection, owner: int) -> tuple[AcceptedSetup, ...]:
+        return tuple(
+            sorted(
+                (
+                    AcceptedSetup(
+                        id=row["id"],
+                        revision=row["revision"],
+                        kind="court",
+                        source_id=int(row["source_id"]),
+                        target_id=owner,
+                        value=json.loads(row["choice_json"])["role"],
+                    )
+                    for row in self._latest(connection, owner)
+                    if row["kind"] == "court"
+                    and row["target_id"] == str(owner)
+                    and row["state"] == "accepted"
+                    and not self._stale(connection, row)
+                ),
+                key=lambda x: x.token,
+            )
+        )
+
     def propose(
         self,
         viewer: GuildViewer,

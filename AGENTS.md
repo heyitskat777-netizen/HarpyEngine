@@ -14,7 +14,7 @@ M1 dice/ledger, safety, durable delivery and local backup/rebuild foundation.
 The owner subsequently authorized continuation into M2 and confirmed that JANUS-B
 uses official JANUS rules while keeping its Discord label. M2A starting choices are implemented and verified. The owner requested further
 continuation; M2B and M2C are implemented. Handler/NPC setup is implemented; the owner authorized further M2 continuation. The active step is
-`docs/work_orders/M2G_GUIDED_INBOX.md`, within
+`docs/work_orders/M2I_CREATION_REVIEW.md`, within
 `M2_CHARACTER_BUILDER.md`.
 Complete its source audit, private resumable choices and acceptance evidence before
 expanding to relationships, Status, special resources, playable activation or Plays.

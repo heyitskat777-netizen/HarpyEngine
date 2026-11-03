@@ -17,6 +17,7 @@ do not rewrite that historical package or silently drop its original M1 gates.
 | M2F_COURT_MENTOR_CHOICES | Court role/recipient agreements, Mentor-chosen callsigns and read-only effective Status | Implemented; activation/rename and human smoke pending |
 | M2G_GUIDED_INBOX | Five-item private overview, version-bound guided review, source filters and authorized coordination tasks | Implemented; human multiplayer smoke pending |
 | M2H_PLAY_CHANNEL_LOCK | Confirmed Play locks only its scene until choices, effects and outcome delivery complete; durable recovery and staff unlock | Specified; NOT_IMPLEMENTED, depends on audited Plays and pending actions |
+| M2I_CREATION_REVIEW | Source-backed validation, Newgirl history, explicit starting Bond choice and immutable private review sheets | Implemented; activation/independent review and human smoke pending |
 | M2_CHARACTER_BUILDER | Complete source-audited Girl/Frame creation, legal options and derived resources, validation and playable activation | Before claiming rules-usable characters |
 
 The status commands remain available and now show stored M1 status. Original M1
@@ -27,7 +28,7 @@ verify creation against the supplied official PDFs, not an invented schema.
 
 Acceptance cases and their executable-test mappings are maintained in
 `docs/acceptance/server_onboarding.json`, `character_tags.json`, and
-`m1_ledger.json`, `m2_starting_choices.json` and `m2_request_inbox.json`. Complete-builder cases remain
+`m1_ledger.json`, `m2_starting_choices.json` and `m2_request_inbox.json` and `m2_creation_review.json`. Complete-builder cases remain
 NOT_RUN until full creation and independent rules review are complete.
 
 ## Provisioned layout v1

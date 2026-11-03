@@ -9,6 +9,7 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
+from girlframe.engine.creation_review import CreationRulings
 from girlframe.engine.handler_setup import HandlerSetup, MentorAssignment, PilotRef
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
@@ -86,17 +87,55 @@ class HandlerService:
             self.authorize(connection, viewer)
             return {"revision": self.current(connection)[0], "pilots": self._roster(connection)}
 
+    def cadre(self, connection: Connection, owner: int) -> dict[int, int | None]:
+        result: dict[int, int | None] = {
+            uid: data["revision"] for uid, data in self._roster(connection).items() if uid != owner
+        }
+        handler = self.current(connection)[1].handler_id
+        if handler is not None and handler != owner and self._member(connection, handler):
+            result[handler] = None
+        return result
+
+    def rulings(
+        self, viewer: GuildViewer, key: str, expected: int, value: CreationRulings | None
+    ) -> dict[str, Any]:
+        if value is not None:
+            value = CreationRulings.model_validate_json(value.model_dump_json())
+            if value.provenance != "handler_confirmed_campaign_ruling":
+                raise WorkflowError("Handler changes must record Handler confirmation provenance.")
+        return self._save(
+            viewer,
+            key,
+            expected,
+            "campaign.creation_rulings",
+            {"rulings": value.model_dump(mode="json") if value else None},
+            lambda c: self.authorize(c, viewer),
+            lambda c, previous: previous.model_copy(
+                update={"creation_rulings": value, "creation_rulings_explicit": True}
+            ),
+        )
+
+    def effective_rulings(self, connection: Connection) -> CreationRulings | None:
+        setup = self.current(connection)[1]
+        if setup.creation_rulings_explicit or setup.creation_rulings is not None:
+            return setup.creation_rulings
+        return self.store.policy.owner_creation_rulings
+
     def view(self, viewer: GuildViewer) -> dict[str, Any]:
         with self.store.engine.connect() as connection:
             self.store.guild_member(viewer)
             self.store._membership(connection, viewer)
             revision, setup = self.current(connection)
             roster = self._roster(connection)
+            rulings = self.effective_rulings(connection)
             return {
                 "revision": revision,
                 "handler_id": setup.handler_id,
                 "handler_active": setup.handler_id is not None
                 and self._member(connection, setup.handler_id),
+                "creation_rulings": (
+                    rulings.model_dump(mode="json") if rulings is not None else None
+                ),
                 "status_order": [x.model_dump(mode="json") for x in setup.status_order],
                 "status_stale": (
                     setup.handler_id is None or not self._member(connection, setup.handler_id)

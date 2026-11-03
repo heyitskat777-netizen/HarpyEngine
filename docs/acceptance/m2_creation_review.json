@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "scope": "M2I creation-review snapshots and explicit setup choices; no playable activation",
+  "command": ".venv/bin/pytest -q --junitxml=var/m2-creation-review-pytest.xml",
+  "evidence": "reports/M2_ACCEPTANCE.md",
+  "cases": [
+    {
+      "id": "REVIEW-01",
+      "title": "Every Girl and Frame review branch, special fields and activation gate",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation_review.py::test_all_girl_review_branches_and_activation_gate",
+        "tests/test_creation_review.py::test_all_frame_review_branches_explicit_rulings_and_extra_identities",
+        "tests/test_creation_review.py::test_cross_playbook_review_dependencies_and_native_component_limits"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "REVIEW-02",
+      "title": "Missing choices, rulings and unsupported short-game mode",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation_review.py::test_missing_choices_rulings_and_short_game_are_explicit"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "REVIEW-03",
+      "title": "Exact replay, immutable private history and stale dependency detection",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation_review.py::test_review_fingerprint_staleness_exact_replay_and_private_history",
+        "tests/test_creation_review.py::test_dependency_changes_withdrawal_roster_and_handler_rulings_stale_reviews"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "REVIEW-04",
+      "title": "Handler authority and owner-approved policy provenance",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation_review.py::test_rules_authority_stale_versions_replay_and_reset",
+        "tests/test_creation_review.py::test_owner_approved_defaults_are_trusted_policy_not_synthetic_handler_consent"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "REVIEW-05",
+      "title": "Newgirl mission declarations, current roster and attestation",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation_review.py::test_newgirl_history_authority_stale_roster_and_missing_discussion",
+        "tests/test_creation_review.py::test_native_newgirl_mission_choices_reset_attestation_and_save",
+        "tests/test_creation_review.py::test_newgirl_inbox_routes_history_and_removes_task_after_saved_attestation"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "REVIEW-06",
+      "title": "Mutual incoming starting choice, exact role/depth and obsolete choice recovery",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation_review.py::test_mutual_incoming_bond_can_be_explicitly_selected_in_two_pilot_cadre",
+        "tests/test_creation_review.py::test_starting_bond_selection_rejects_wrong_depth_unknown_and_stale_version",
+        "tests/test_creation_review.py::test_native_starting_bond_choice_requires_confirmation_and_old_review_rejected"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "REVIEW-07",
+      "title": "Concurrency, rollback, real backup restoration and membership/campaign isolation",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation_review.py::test_review_concurrency_rollback_backup_and_isolation"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "REVIEW-08",
+      "title": "Native private review, explicit save, stale click, pagination and ruling confirmation",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation_review.py::test_native_review_sections_private_save_old_click_and_close",
+        "tests/test_creation_review.py::test_native_ruling_dropdown_requires_confirmation",
+        "tests/test_creation_review.py::test_review_pages_preserve_long_private_text_without_discord_overflow"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "REVIEW-09",
+      "title": "Received Court role and withdrawal freshness on recipient sheet",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation_review.py::test_received_court_role_is_in_recipient_sheet_and_withdrawal_stales_it"
+      ],
+      "manual_status": "NOT_RUN"
+    }
+  ],
+  "complete_builder": {
+    "BUILDER-01": "NOT_RUN",
+    "BUILDER-02": "NOT_RUN",
+    "BUILDER-03": "NOT_RUN",
+    "BUILDER-04": "NOT_RUN"
+  },
+  "independent_rules_review": "PENDING",
+  "playable_activation": "NOT_IMPLEMENTED"
+}

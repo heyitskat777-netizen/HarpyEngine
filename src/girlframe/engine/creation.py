@@ -4,6 +4,7 @@ from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from girlframe.engine.cadre_history import PriorMission
 from girlframe.engine.creation_catalog import CATALOG
 from girlframe.engine.fanbase import Fanbase
 from girlframe.engine.frame_setup import FrameSetup, frame_setup
@@ -43,6 +44,9 @@ class CreationDraft(BaseModel):
 
     dna_basis: str = Field(default="", max_length=300)
     fanbase: Fanbase | None = None
+    prior_missions: tuple[PriorMission, ...] = Field(default=(), max_length=25)
+    cadre_discussed: bool = False
+    starting_bond_id: str | None = Field(default=None, min_length=36, max_length=36)
 
     @field_validator("girl_playbook")
     @classmethod
@@ -56,6 +60,10 @@ class CreationDraft(BaseModel):
 
     @model_validator(mode="after")
     def legal_choices(self) -> Self:
+        if len({x.user_id for x in self.prior_missions}) != len(self.prior_missions):
+            raise ValueError("Declare each Cadre counterpart only once")
+        if (self.prior_missions or self.cadre_discussed) and self.girl_playbook != "NEWGIRL":
+            raise ValueError("Prior-mission declarations belong to Newgirl")
         if self.frame_setup is not None and self.frame_setup != frame_setup(self.frame_playbook):
             raise ValueError("Frame baseline must match the verified starting facts")
         if self.pair_source_token is not None and self.girl_playbook != "BONDED":

@@ -8,6 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, SecretStr, field_validator
 
+from girlframe.engine.creation_review import CreationRulings
 from girlframe.engine.identity import Snowflake
 
 
@@ -21,6 +22,14 @@ class BotPolicy(BaseModel):
     status_user_ids: frozenset[Snowflake] = frozenset()
     allow_guild_administrators: bool = False
     status_audience_approved: bool = False
+    owner_creation_rulings: CreationRulings | None = None
+
+    @field_validator("owner_creation_rulings")
+    @classmethod
+    def owner_rulings(cls, value: CreationRulings | None) -> CreationRulings | None:
+        if value is not None and value.provenance != "owner_approved_campaign_ruling":
+            raise ValueError("Trusted owner policy must record owner approval provenance")
+        return value
 
     @field_validator("sandbox")
     @classmethod

@@ -169,6 +169,11 @@ class ReadOnlyDiscordBot(discord.Client):
 
             register_shared_setup(self.tree, policy.guild_id, SharedSetupService(store))
 
+            from girlframe.discord_adapter.creation_review import register_creation_review
+            from girlframe.services.creation_review import CreationReviewService
+
+            register_creation_review(self.tree, policy.guild_id, CreationReviewService(store))
+
     def _callback(
         self, name: ReadOnlyCommand
     ) -> Callable[[discord.Interaction[discord.Client]], Coroutine[Any, Any, None]]:
@@ -190,11 +195,13 @@ class ReadOnlyDiscordBot(discord.Client):
                         "/campaign create, /campaign join, /campaign status\n"
                         "/character create (or /girl create), /character sync, /sheet\n"
                         "/character build — save starting Assets and appearance\n"
+                        "/character review — validate and save a private review sheet\n"
                         "/character pair_assets — accepted Pair chooses Bonded Assets\n"
                         "/character court, mentor_callsign, requests — shared starting choices\n"
                         "/campaign effective_status — private setup comparison\n"
                         "/character bond, /character bonds — propose/review private setup Bonds\n"
                         "/campaign handler, mentor, status_setup, setup — explicit starting setup\n"
+                        "/campaign creation_rules — Handler-confirmed starting resource rulings\n"
                         "/roll basic — raw 2d6, public by default; publish:false is private\n"
                         "/roll show — retrieve a permitted receipt\n/ledger — permitted events\n"
                         "/safety pause, /safety resume — save or clear your own OOC pause\n"
