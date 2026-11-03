@@ -123,7 +123,9 @@ The local policy/snapshot `--check` remains an offline configuration check, not 
 database migration or live Discord readiness claim.
 
 Grant the bot **Manage Channels**, View Channels and Send Messages for provisioning;
-do not grant Administrator. No role creation or Manage Roles permission is needed.
+do not grant Administrator. Server setup itself creates no roles. Character label
+assignment additionally needs **Manage Roles** and **Manage Nicknames**, with the
+bot's role above its labels and members it should rename.
 An administrator invokes `/server setup`, reviews the versioned layout, then
 confirms within ten minutes. Preview creates no Discord resources. Confirmation
 is bound to that administrator and campaign, and rechecks bot permissions.
@@ -146,8 +148,8 @@ Saved own-message IDs are reused without acquiring Read Message History or readi
 transcripts; a deleted onboarding message requires repair, while slash fallbacks
 remain available. No automatic teardown/delete command exists.
 
-In `new-players`, choose **Join campaign**, then **Create/Edit draft**. The private
-form collects a callsign, proposed Girl/Frame playbook labels and optional private
+In `new-players`, choose **Join campaign**, then **Create/Edit draft**. Choose Girl
+and Frame from dropdowns, then Continue to enter callsign and optional private
 notes. Review the private preview and press **Save draft**. **My sheet**, `/sheet`,
 and `/character create` retrieve that same saved character and stable ID. Reopen
 the form to edit/resume; old forms cannot overwrite newer revisions. Repeating
@@ -157,8 +159,19 @@ and must be reopened; persistent entry controls restore after the bot restarts.
 Interactive metadata actions are limited to three per ten seconds per guild/user;
 this process-local throttle resets on restart and does not replace authorization.
 
+Saving also queues the selected Girl/Frame Discord label roles and uses the
+callsign as server nickname. For example, SORROW + Mockingbird + JANUS-B requests
+roles **MOCKINGBIRD**, **JANUS-B** and nickname **SORROW**. Only app-owned, permission-free
+roles are created/reused; unrelated roles remain untouched. `/character sync`
+retries your own request, and pending jobs resume in the background after restart.
+The draft remains saved even if a Discord change is denied. A bot cannot rename
+the server owner, and hierarchy restrictions still apply; the private result
+explains a blocked or pending change. See [character tags](docs/CHARACTER_TAGS.md).
+
 These are **drafts / rules unverified**, not mechanically playable official sheets.
-No stats or legal playbook combinations are invented. The full verified builder
+Dropdown names are verified, but no stats or legal combinations are invented.
+JANUS-B is an owner-requested server label of JANUS, not a separate rules claim.
+The full verified builder
 has its own work order and NOT_RUN acceptance cases. Private notes appear only to
 their owner through the application, even when another administrator requests a
 public sheet. Long escaped notes are truncated in Discord display but retained
@@ -266,7 +279,8 @@ foreign keys and a five-second busy timeout. This is a single-writer pilot desig
 not multi-process coordination. Health may create the database and parent folder;
 it never runs migrations. M0's historical empty scaffold is now extended by
 revision `0001`: campaigns, membership, drafts, command inbox, audit events, setup
-plans and resource mappings. Fresh/repeated upgrade, metadata check and downgrade
+plans and resource mappings. Revision `0002` adds owned roles and the durable
+character-role/nickname queue. Fresh/repeated upgrade, metadata check and downgrade
 are tested against disposable synthetic databases.
 
 Only delete disposable synthetic DBs to reset M0. Do not apply reset instructions

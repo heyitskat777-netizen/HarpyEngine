@@ -38,3 +38,6 @@ Live Gateway READY after graceful shutdown/restart.
 Guild command registry read-back: campaign, campaign_status, character, health, help, server, sheet.
 Initial live permission preflight: View Channels true, Send Messages true, Manage Channels false.
 Administrator request to grant Manage Channels and run preview/confirm + synthetic onboarding is pending.
+
+Subsequent owner confirmation: setup and draft flow functions as expected.
+Observed metadata: 10 setup resources, one joined member, one saved draft.

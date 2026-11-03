@@ -72,3 +72,25 @@ resources = sa.Table(
     sa.Column("state", sa.Text, nullable=False),
     sa.UniqueConstraint("campaign_id", "discord_id"),
 )
+managed_roles = sa.Table(
+    "managed_roles",
+    metadata,
+    sa.Column("campaign_id", sa.ForeignKey("campaigns.id"), primary_key=True),
+    sa.Column("key", sa.Text, primary_key=True),
+    sa.Column("discord_id", sa.Text),
+    sa.Column("state", sa.Text, nullable=False),
+    sa.UniqueConstraint("campaign_id", "discord_id"),
+)
+character_sync = sa.Table(
+    "character_discord_sync",
+    metadata,
+    sa.Column("campaign_id", sa.Text, primary_key=True),
+    sa.Column("user_id", sa.Text, primary_key=True),
+    sa.Column("revision", sa.Integer, nullable=False),
+    sa.Column("desired_json", sa.Text, nullable=False),
+    sa.Column("state", sa.Text, nullable=False),
+    sa.Column("warning", sa.Text, nullable=False, server_default=""),
+    sa.ForeignKeyConstraint(
+        ["campaign_id", "user_id"], ["characters.campaign_id", "characters.user_id"]
+    ),
+)

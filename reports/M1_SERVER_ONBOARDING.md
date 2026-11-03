@@ -1,6 +1,6 @@
 # M1 server setup and draft onboarding acceptance
 
-**Status: automated checks PASS; live administrator setup/onboarding verification PENDING.**
+**Status: automated checks PASS; owner confirmed the primary live setup/draft flow.**
 **Scope:** owner-requested M1 additions. Full original M1 and rules-certified
 character creation are not complete. M0 and earlier read-only M1 evidence remains
 historical and unchanged.
@@ -50,8 +50,8 @@ See [validation output](M1_SERVER_ONBOARDING_VALIDATION.txt) and
 | Private engine | 120/120 original template hashes unchanged |
 | Live registration | Seven top-level commands/groups read back; Gateway READY observed |
 | Graceful process restart | SIGTERM closed prior process with exit 0; updated process became ready |
-| Live permission preflight | Bot initially lacks Manage Channels; administrator action requested |
-| Live create/save interaction | Pending; not counted as passed from offline or registration checks |
+| Live permission preflight | Initially missing Manage Channels; corrected by owner |
+| Live create/save interaction | Owner confirmed it functions; 10 resource mappings, one member and one draft observed |
 | Remote CI | Workflow available; current remote outcome not yet observed |
 
 ## Boundaries and remaining work

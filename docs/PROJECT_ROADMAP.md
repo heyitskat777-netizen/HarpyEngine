@@ -7,6 +7,7 @@ do not rewrite that historical package or silently drop its original M1 gates.
 |---|---|---|
 | M1A_SERVER_SETUP | Persistent guild/campaign binding, permission preflight, preview/confirm channel provisioning, saved resource IDs and recovery | Current |
 | M1B_CHARACTER_ONBOARDING | New-player controls, explicit join, resumable owner-bound draft form, persistent public/private sheet projections | Current |
+| M1C_CHARACTER_TAGS | Girl/Frame dropdowns, safe owned label roles, callsign nickname and durable retry | Current |
 | M2_CHARACTER_BUILDER | Complete source-audited Girl/Frame creation, legal options and derived resources, validation and playable activation | Before claiming rules-usable characters |
 
 The current read-only commands remain available. Original M1 dice/inbox/outbox,

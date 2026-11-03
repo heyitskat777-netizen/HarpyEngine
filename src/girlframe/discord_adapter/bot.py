@@ -9,6 +9,7 @@ import discord
 from discord import app_commands
 
 from girlframe.discord_adapter.config import BotPolicy
+from girlframe.services.character_tags import CharacterTagSynchronizer
 from girlframe.services.engine_status import EngineStatusUnavailable
 from girlframe.services.onboarding import OnboardingStore
 from girlframe.services.read_only_bot import (
@@ -112,6 +113,8 @@ class ReadOnlyDiscordBot(discord.Client):
         self.policy = policy
         self.service = service
         self.store = store
+        self.tag_sync = CharacterTagSynchronizer(store) if store else None
+        self._tag_worker: asyncio.Task[None] | None = None
         self.tree = ReadOnlyCommandTree(self, fallback_to_global=False)
         guild = discord.Object(id=policy.guild_id)
         commands: tuple[tuple[ReadOnlyCommand, str], ...] = (
@@ -135,7 +138,9 @@ class ReadOnlyDiscordBot(discord.Client):
             from girlframe.discord_adapter.onboarding import register_onboarding
             from girlframe.services.provisioning import Provisioner
 
-            register_onboarding(self.tree, policy.guild_id, store, Provisioner(store))
+            register_onboarding(
+                self.tree, policy.guild_id, store, Provisioner(store), self.tag_sync
+            )
 
     def _callback(
         self, name: ReadOnlyCommand
@@ -157,15 +162,41 @@ class ReadOnlyDiscordBot(discord.Client):
         if self.store is not None:
             from girlframe.discord_adapter.onboarding import NewPlayerView
 
-            self.add_view(NewPlayerView(self.store))
+            self.add_view(NewPlayerView(self.store, self.tag_sync))
         await self.fetch_guild(self.policy.guild_id)
         await self.tree.sync(guild=discord.Object(id=self.policy.guild_id))
 
     async def on_ready(self) -> None:
+        if self.store is not None and (self._tag_worker is None or self._tag_worker.done()):
+            self._tag_worker = asyncio.create_task(self._sync_character_tags())
         print(
             "HarpyEngine ready: commands registered in the configured test guild.",
             flush=True,
         )
+
+    async def _sync_character_tags(self) -> None:
+        from girlframe.discord_adapter.character_tags import DiscordCharacterTagGateway
+
+        assert self.store is not None and self.tag_sync is not None
+        while not self.is_closed():
+            guild = self.get_guild(self.policy.guild_id)
+            if guild is not None:
+                try:
+                    owners = await asyncio.to_thread(self.store.pending_sync_users)
+                    for owner in owners:
+                        viewer = GuildViewer(owner, self.policy.guild_id, True, False)
+                        await self.tag_sync.sync(viewer, DiscordCharacterTagGateway(guild))
+                except Exception:
+                    pass  # Keep durable jobs pending; never log provider/member payloads.
+            await asyncio.sleep(30)
+
+    async def close(self) -> None:
+        task = self._tag_worker
+        self._tag_worker = None
+        if task is not None and task is not asyncio.current_task() and not task.done():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+        await super().close()
 
     async def on_error(self, event_method: str, *args: object, **kwargs: object) -> None:
         print("A Discord event was interrupted. Check saved state before retrying.", flush=True)

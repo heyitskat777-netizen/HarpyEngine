@@ -13,7 +13,10 @@ from discord import app_commands
 from pydantic import ValidationError
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.character_tags import DiscordCharacterTagGateway
 from girlframe.engine.drafts import DraftInput
+from girlframe.engine.playbooks import FRAME_TYPES, GIRL_TYPES, canonical_frame, canonical_girl
+from girlframe.services.character_tags import CharacterTagSynchronizer
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.provisioning import (
     TEMPLATE,
@@ -99,42 +102,175 @@ def sheet_text(data: dict[str, Any] | None) -> str:
 
 
 class SaveDraftView(discord.ui.View):
-    def __init__(self, store: OnboardingStore, owner: int, revision: int, draft: DraftInput):
+    def __init__(
+        self,
+        store: OnboardingStore,
+        owner: int,
+        revision: int,
+        draft: DraftInput,
+        tags: CharacterTagSynchronizer | None = None,
+    ):
         super().__init__(timeout=300)
         self.store, self.owner, self.revision, self.draft = store, owner, revision, draft
+        self.tags = tags
 
     @discord.ui.button(label="Save draft", style=discord.ButtonStyle.success)
     async def save(
         self, interaction: discord.Interaction, button: discord.ui.Button[SaveDraftView]
     ) -> None:
+        if not await action_gate(interaction, "metadata"):
+            return
+        await interaction.response.defer(ephemeral=True, thinking=True)
         viewer = viewer_from_interaction(interaction)
-
-        def operation() -> str:
+        try:
             if viewer.user_id != self.owner:
                 raise WorkflowError("This draft confirmation belongs to another player.")
-            result = self.store.save_draft(viewer, str(interaction.id), self.revision, self.draft)
-            return (
+            result = await asyncio.to_thread(
+                self.store.save_draft, viewer, str(interaction.id), self.revision, self.draft
+            )
+            text = (
                 f"Saved draft {result['id']} (revision {result['revision']}). "
                 "Use /sheet to view or /character create to resume. Rules remain unverified."
             )
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+            return
+        except Exception:
+            await reply(
+                interaction,
+                "Draft save unavailable. Reopen your sheet to check its current revision.",
+            )
+            return
+        if self.tags is not None and interaction.guild is not None:
+            try:
+                text += "\n" + await self.tags.sync(
+                    viewer, DiscordCharacterTagGateway(interaction.guild)
+                )
+            except Exception:
+                text += (
+                    "\nDraft is saved; Discord tags remain queued. Use /character sync to retry."
+                )
+        await reply(interaction, text)
 
-        await private_operation(interaction, operation)
+
+class PlaybookSelect(discord.ui.Select["CharacterSelectionView"]):
+    def __init__(self, family: str, selected: str | None):
+        self.family = family
+        catalog = GIRL_TYPES if family == "girl" else FRAME_TYPES
+        super().__init__(
+            placeholder="Choose Girl type" if family == "girl" else "Choose Frame type",
+            options=[
+                discord.SelectOption(label=label, value=value, default=value == selected)
+                for value, label in catalog.items()
+            ],
+            min_values=1,
+            max_values=1,
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        assert self.view is not None
+        await self.view.choose(self.family, self.values[0], interaction)
+
+
+class ContinueCharacterButton(discord.ui.Button["CharacterSelectionView"]):
+    def __init__(self, disabled: bool):
+        super().__init__(
+            label="Continue: callsign and notes",
+            style=discord.ButtonStyle.primary,
+            disabled=disabled,
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        assert self.view is not None
+        await self.view.details(interaction)
+
+
+class CharacterSelectionView(discord.ui.View):
+    def __init__(
+        self,
+        store: OnboardingStore,
+        owner: int,
+        existing: dict[str, Any] | None,
+        tags: CharacterTagSynchronizer | None = None,
+    ):
+        super().__init__(timeout=600)
+        self.store, self.owner, self.existing, self.tags = store, owner, existing, tags
+        data = existing or {}
+        try:
+            self.girl: str | None = canonical_girl(data.get("girl_playbook", ""))
+        except ValueError:
+            self.girl = None
+        try:
+            self.frame: str | None = canonical_frame(data.get("frame_playbook", ""))
+        except ValueError:
+            self.frame = None
+        self.add_item(PlaybookSelect("girl", self.girl))
+        self.add_item(PlaybookSelect("frame", self.frame))
+        self.continue_button = ContinueCharacterButton(disabled=not (self.girl and self.frame))
+        self.add_item(self.continue_button)
+
+    def owner_check(self, interaction: discord.Interaction) -> None:
+        viewer = viewer_from_interaction(interaction)
+        self.store.guild_member(viewer)
+        if viewer.user_id != self.owner:
+            raise WorkflowError("This character selector belongs to another player.")
+
+    def summary(self) -> str:
+        return (
+            "**Choose character labels**\n"
+            f"Girl: {self.girl or 'not selected'}\nFrame: {self.frame or 'not selected'}\n"
+            "Continue to enter the callsign and private notes. Saving assigns cosmetic Girl/Frame "
+            "roles and requests the callsign as your server nickname. Rules remain unverified."
+        )
+
+    async def choose(self, family: str, value: str, interaction: discord.Interaction) -> None:
+        try:
+            self.owner_check(interaction)
+            if family == "girl":
+                self.girl = canonical_girl(value)
+            elif family == "frame":
+                self.frame = canonical_frame(value)
+            else:
+                raise ValueError("Unknown choice")
+        except (WorkflowError, ValueError):
+            await reply(interaction, "Use the listed choices on your own character selector.")
+            return
+        self.continue_button.disabled = not (self.girl and self.frame)
+        await interaction.response.edit_message(
+            content=self.summary(), view=self, allowed_mentions=discord.AllowedMentions.none()
+        )
+
+    async def details(self, interaction: discord.Interaction) -> None:
+        try:
+            self.owner_check(interaction)
+            if not self.girl or not self.frame:
+                raise WorkflowError("Choose both dropdowns first.")
+            await interaction.response.send_modal(
+                DraftModal(self.store, self.owner, self.existing, self.girl, self.frame, self.tags)
+            )
+        except WorkflowError as error:
+            await reply(interaction, str(error))
 
 
 class DraftModal(discord.ui.Modal, title="Character draft — rules unverified"):
-    def __init__(self, store: OnboardingStore, owner: int, existing: dict[str, Any] | None):
+    def __init__(
+        self,
+        store: OnboardingStore,
+        owner: int,
+        existing: dict[str, Any] | None,
+        girl: str | None = None,
+        frame: str | None = None,
+        tags: CharacterTagSynchronizer | None = None,
+    ):
         super().__init__(timeout=300)
         self.store, self.owner = store, owner
         data = existing or {}
+        self.girl_value = canonical_girl(girl or data.get("girl_playbook", ""))
+        self.frame_value = canonical_frame(frame or data.get("frame_playbook", ""))
+        self.tags = tags
         self.revision = int(data.get("revision", 0))
         self.callsign: discord.ui.TextInput[Any] = discord.ui.TextInput(
-            label="Callsign", max_length=40, default=data.get("callsign")
-        )
-        self.girl: discord.ui.TextInput[Any] = discord.ui.TextInput(
-            label="Proposed Girl playbook", max_length=60, default=data.get("girl_playbook")
-        )
-        self.frame: discord.ui.TextInput[Any] = discord.ui.TextInput(
-            label="Proposed Frame playbook", max_length=60, default=data.get("frame_playbook")
+            label="Callsign / server nickname", max_length=32, default=data.get("callsign", "")[:32]
         )
         self.notes: discord.ui.TextInput[Any] = discord.ui.TextInput(
             label="Private notes (optional)",
@@ -143,7 +279,7 @@ class DraftModal(discord.ui.Modal, title="Character draft — rules unverified")
             required=False,
             default=data.get("notes"),
         )
-        for item in (self.callsign, self.girl, self.frame, self.notes):
+        for item in (self.callsign, self.notes):
             self.add_item(item)
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
@@ -156,8 +292,8 @@ class DraftModal(discord.ui.Modal, title="Character draft — rules unverified")
                 raise WorkflowError("This form belongs to another player.")
             draft = DraftInput(
                 callsign=str(self.callsign),
-                girl_playbook=str(self.girl),
-                frame_playbook=str(self.frame),
+                girl_playbook=self.girl_value,
+                frame_playbook=self.frame_value,
                 notes=str(self.notes),
             )
         except (WorkflowError, ValidationError):
@@ -167,17 +303,25 @@ class DraftModal(discord.ui.Modal, title="Character draft — rules unverified")
             {**draft.model_dump(), "id": "pending save", "revision": self.revision + 1}
         )
         await reply(
-            interaction, preview, SaveDraftView(self.store, self.owner, self.revision, draft)
+            interaction,
+            preview + "\nSaving applies the selected label roles and server nickname.",
+            SaveDraftView(self.store, self.owner, self.revision, draft, self.tags),
         )
 
 
-async def open_draft(interaction: discord.Interaction, store: OnboardingStore) -> None:
+async def open_draft(
+    interaction: discord.Interaction,
+    store: OnboardingStore,
+    tags: CharacterTagSynchronizer | None = None,
+) -> None:
     if not await action_gate(interaction, "draft_form"):
         return
     viewer = viewer_from_interaction(interaction)
+    await interaction.response.defer(ephemeral=True, thinking=True)
     try:
         existing = await asyncio.wait_for(asyncio.to_thread(store.draft, viewer), timeout=2)
-        await interaction.response.send_modal(DraftModal(store, viewer.user_id, existing))
+        view = CharacterSelectionView(store, viewer.user_id, existing, tags)
+        await reply(interaction, view.summary(), view)
     except WorkflowError as error:
         await reply(interaction, str(error))
     except Exception:
@@ -185,9 +329,10 @@ async def open_draft(interaction: discord.Interaction, store: OnboardingStore) -
 
 
 class NewPlayerView(discord.ui.View):
-    def __init__(self, store: OnboardingStore):
+    def __init__(self, store: OnboardingStore, tags: CharacterTagSynchronizer | None = None):
         super().__init__(timeout=None)
         self.store = store
+        self.tags = tags
 
     @discord.ui.button(
         label="Join campaign", style=discord.ButtonStyle.success, custom_id="harpyengine:join:v1"
@@ -205,7 +350,7 @@ class NewPlayerView(discord.ui.View):
     async def draft(
         self, interaction: discord.Interaction, button: discord.ui.Button[NewPlayerView]
     ) -> None:
-        await open_draft(interaction, self.store)
+        await open_draft(interaction, self.store, self.tags)
 
     @discord.ui.button(label="My sheet", custom_id="harpyengine:sheet:v1")
     async def sheet(
@@ -317,9 +462,16 @@ class DiscordProvisioningGateway:
 
 
 class SetupConfirmView(discord.ui.View):
-    def __init__(self, provisioner: Provisioner, plan: str, guild: discord.Guild):
+    def __init__(
+        self,
+        provisioner: Provisioner,
+        plan: str,
+        guild: discord.Guild,
+        tags: CharacterTagSynchronizer | None = None,
+    ):
         super().__init__(timeout=600)
         self.provisioner, self.plan, self.guild = provisioner, plan, guild
+        self.tags = tags
 
     @discord.ui.button(label="Create missing setup resources", style=discord.ButtonStyle.success)
     async def confirm(
@@ -330,7 +482,7 @@ class SetupConfirmView(discord.ui.View):
         await interaction.response.defer(ephemeral=True, thinking=True)
         try:
             store = self.provisioner.store
-            gateway = DiscordProvisioningGateway(self.guild, NewPlayerView(store))
+            gateway = DiscordProvisioningGateway(self.guild, NewPlayerView(store, self.tags))
             count = await self.provisioner.apply(
                 viewer_from_interaction(interaction), self.plan, gateway
             )
@@ -350,7 +502,11 @@ class SetupConfirmView(discord.ui.View):
 
 
 def register_onboarding(
-    tree: app_commands.CommandTree, guild_id: int, store: OnboardingStore, provisioner: Provisioner
+    tree: app_commands.CommandTree,
+    guild_id: int,
+    store: OnboardingStore,
+    provisioner: Provisioner,
+    tags: CharacterTagSynchronizer | None = None,
 ) -> None:
     guild = discord.Object(id=guild_id)
     server = app_commands.Group(
@@ -372,7 +528,7 @@ def register_onboarding(
             if interaction.guild is None:
                 raise WorkflowError("Guild context unavailable.")
             result = await asyncio.to_thread(store.create_plan, viewer, str(interaction.id))
-            gateway = DiscordProvisioningGateway(interaction.guild, NewPlayerView(store))
+            gateway = DiscordProvisioningGateway(interaction.guild, NewPlayerView(store, tags))
             missing = gateway.missing_permissions()
             layout = "\n".join(f"• {spec.name}" for spec in TEMPLATE if spec.kind != "message")
             text = (
@@ -390,7 +546,7 @@ def register_onboarding(
                 await reply(
                     interaction,
                     text,
-                    SetupConfirmView(provisioner, result["plan_id"], interaction.guild),
+                    SetupConfirmView(provisioner, result["plan_id"], interaction.guild, tags),
                 )
         except WorkflowError as error:
             await reply(interaction, str(error))
@@ -415,7 +571,31 @@ def register_onboarding(
 
     @character.command(name="create", description="Create or resume your private character draft")
     async def create(interaction: discord.Interaction) -> None:
-        await open_draft(interaction, store)
+        await open_draft(interaction, store, tags)
+
+    @character.command(
+        name="sync", description="Retry your saved character roles and server nickname"
+    )
+    async def sync(interaction: discord.Interaction) -> None:
+        if not await action_gate(interaction, "metadata"):
+            return
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        try:
+            viewer = viewer_from_interaction(interaction)
+            await asyncio.to_thread(store.queue_sync, viewer, str(interaction.id))
+            if tags is None or interaction.guild is None:
+                raise WorkflowError(
+                    "Character tags are queued; the Discord synchronizer is unavailable."
+                )
+            message = await tags.sync(viewer, DiscordCharacterTagGateway(interaction.guild))
+            await reply(interaction, message)
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+        except Exception:
+            await reply(
+                interaction,
+                "The draft is saved; Discord tags are pending. Try /character sync later.",
+            )
 
     @app_commands.command(
         name="sheet", description="Show your private sheet or another member's public sheet"

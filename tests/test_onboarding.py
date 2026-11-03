@@ -83,7 +83,7 @@ def make_plan(store, key="plan"):
 
 def draft(name="Synthetic A", notes="PRIVATE_CANARY"):
     return DraftInput(
-        callsign=name, girl_playbook="proposed", frame_playbook="proposed", notes=notes
+        callsign=name, girl_playbook="MOCKINGBIRD", frame_playbook="JANUS-B", notes=notes
     )
 
 

@@ -154,5 +154,6 @@
       "test": null,
       "manual_status": "NOT_RUN"
     }
-  ]
+  ],
+  "owner_confirmed_primary_setup_and_draft_flow": true
 }

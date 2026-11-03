@@ -18,6 +18,7 @@ from sqlalchemy import Connection, Engine
 from girlframe.database import tables as t
 from girlframe.discord_adapter.config import BotPolicy
 from girlframe.engine.drafts import DraftInput
+from girlframe.engine.playbooks import FRAME_TYPES, GIRL_TYPES
 from girlframe.services.read_only_bot import GuildViewer
 
 
@@ -245,6 +246,7 @@ class OnboardingStore:
                         **values,
                     )
                 )
+            self._enqueue_sync(connection, viewer.user_id, revision + 1, draft)
             return {"id": identity, "revision": revision + 1, "status": "draft_rules_unverified"}
 
         return self._write(
@@ -254,6 +256,199 @@ class OnboardingStore:
             {"expected_revision": expected_revision, **draft.model_dump()},
             operation,
         )
+
+    def _enqueue_sync(
+        self, connection: Connection, owner: int, revision: int, draft: DraftInput
+    ) -> None:
+        where = (
+            t.character_sync.c.campaign_id == self.campaign_id,
+            t.character_sync.c.user_id == str(owner),
+        )
+        values = {
+            "revision": revision,
+            "desired_json": json.dumps(draft.model_dump(exclude={"notes"})),
+            "state": "pending",
+            "warning": "",
+        }
+        if connection.execute(sa.select(t.character_sync).where(*where)).first():
+            connection.execute(t.character_sync.update().where(*where).values(**values))
+        else:
+            connection.execute(
+                t.character_sync.insert().values(
+                    campaign_id=self.campaign_id, user_id=str(owner), **values
+                )
+            )
+
+    def queue_sync(self, viewer: GuildViewer, key: str) -> dict[str, Any]:
+        def operation(connection: Connection) -> dict[str, Any]:
+            self._membership(connection, viewer)
+            row = (
+                connection.execute(
+                    sa.select(t.characters).where(
+                        t.characters.c.campaign_id == self.campaign_id,
+                        t.characters.c.user_id == str(viewer.user_id),
+                    )
+                )
+                .mappings()
+                .first()
+            )
+            if not row:
+                raise WorkflowError("Save a draft first.")
+            try:
+                desired = DraftInput.model_validate(json.loads(row["public_json"]))
+            except ValueError:
+                raise WorkflowError(
+                    "Reopen /character create and choose listed playbooks first."
+                ) from None
+            self._enqueue_sync(connection, viewer.user_id, row["revision"], desired)
+            return {"id": row["id"], "revision": row["revision"]}
+
+        return self._write(viewer, key, "character.discord_sync_requested", {}, operation)
+
+    def sync_job(self, viewer: GuildViewer) -> dict[str, Any] | None:
+        self.guild_member(viewer)
+        with self.engine.connect() as connection:
+            self._membership(connection, viewer)
+            row = (
+                connection.execute(
+                    sa.select(t.character_sync).where(
+                        t.character_sync.c.campaign_id == self.campaign_id,
+                        t.character_sync.c.user_id == str(viewer.user_id),
+                    )
+                )
+                .mappings()
+                .first()
+            )
+            return dict(row) if row else None
+
+    def pending_sync_users(self) -> list[int]:
+        with self.engine.connect() as connection:
+            self._binding_matches(connection)
+            return [
+                int(value)
+                for value in connection.execute(
+                    sa.select(t.character_sync.c.user_id)
+                    .where(
+                        t.character_sync.c.campaign_id == self.campaign_id,
+                        t.character_sync.c.state == "pending",
+                    )
+                    .limit(100)
+                ).scalars()
+            ]
+
+    def finish_sync(self, viewer: GuildViewer, revision: int, complete: bool, warning: str) -> bool:
+        self.guild_member(viewer)
+        with self.transaction() as connection:
+            self._membership(connection, viewer)
+            where = (
+                t.character_sync.c.campaign_id == self.campaign_id,
+                t.character_sync.c.user_id == str(viewer.user_id),
+            )
+            current = (
+                connection.execute(sa.select(t.character_sync).where(*where)).mappings().first()
+            )
+            if not current or current["revision"] != revision:
+                return False
+            state = "complete" if complete else "pending"
+            if current["state"] == state and current["warning"] == warning:
+                return True
+            result = connection.execute(
+                t.character_sync.update()
+                .where(
+                    t.character_sync.c.campaign_id == self.campaign_id,
+                    t.character_sync.c.user_id == str(viewer.user_id),
+                    t.character_sync.c.revision == revision,
+                )
+                .values(state="complete" if complete else "pending", warning=warning)
+            )
+            if result.rowcount:
+                self._audit(
+                    connection,
+                    viewer.user_id,
+                    str(uuid4()),
+                    "character.discord_sync_result",
+                    {"revision": revision, "complete": complete},
+                )
+            return bool(result.rowcount)
+
+    def invalidate_role(self, viewer: GuildViewer, key: str, expected: int) -> None:
+        self.guild_member(viewer)
+        with self.transaction() as connection:
+            self._membership(connection, viewer)
+            connection.execute(
+                t.managed_roles.update()
+                .where(
+                    t.managed_roles.c.campaign_id == self.campaign_id,
+                    t.managed_roles.c.key == key,
+                    t.managed_roles.c.discord_id == str(expected),
+                    t.managed_roles.c.state == "ready",
+                )
+                .values(state="pending", discord_id=None)
+            )
+
+    def claim_role(self, viewer: GuildViewer, key: str) -> tuple[str, int | None]:
+        family, _, label = key.partition(":")
+        if not (
+            (family == "girl" and label in GIRL_TYPES)
+            or (family == "frame" and label in FRAME_TYPES)
+        ):
+            raise WorkflowError("Only listed character-tag roles may be created.")
+        self.guild_member(viewer)
+        with self.transaction() as connection:
+            self._membership(connection, viewer)
+            where = (
+                t.managed_roles.c.campaign_id == self.campaign_id,
+                t.managed_roles.c.key == key,
+            )
+            row = connection.execute(sa.select(t.managed_roles).where(*where)).mappings().first()
+            if row:
+                if row["state"] == "ready":
+                    return "ready", int(row["discord_id"])
+                if row["state"] == "creating":
+                    return "uncertain", None
+                connection.execute(t.managed_roles.update().where(*where).values(state="creating"))
+            else:
+                connection.execute(
+                    t.managed_roles.insert().values(
+                        campaign_id=self.campaign_id, key=key, state="creating"
+                    )
+                )
+            self._audit(
+                connection, viewer.user_id, str(uuid4()), "character.role_reserved", {"key": key}
+            )
+            return "create", None
+
+    def record_role(self, viewer: GuildViewer, key: str, identity: int | None) -> None:
+        self.guild_member(viewer)
+        with self.transaction() as connection:
+            self._membership(connection, viewer)
+            connection.execute(
+                t.managed_roles.update()
+                .where(
+                    t.managed_roles.c.campaign_id == self.campaign_id, t.managed_roles.c.key == key
+                )
+                .values(
+                    state="ready" if identity else "pending",
+                    discord_id=str(identity) if identity else None,
+                )
+            )
+            self._audit(
+                connection, viewer.user_id, str(uuid4()), "character.role_recorded", {"key": key}
+            )
+
+    def managed_role_labels(self, viewer: GuildViewer) -> dict[int, str]:
+        self.guild_member(viewer)
+        with self.engine.connect() as connection:
+            self._membership(connection, viewer)
+            return {
+                int(row[0]): str(row[1]).split(":", 1)[1]
+                for row in connection.execute(
+                    sa.select(t.managed_roles.c.discord_id, t.managed_roles.c.key).where(
+                        t.managed_roles.c.campaign_id == self.campaign_id,
+                        t.managed_roles.c.state == "ready",
+                    )
+                )
+            }
 
     def create_plan(self, viewer: GuildViewer, key: str) -> dict[str, Any]:
         self.administrator(viewer)
