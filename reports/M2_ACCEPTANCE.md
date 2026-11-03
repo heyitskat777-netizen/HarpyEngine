@@ -119,3 +119,71 @@ were detected. A fresh private backup was taken before deployment. No prior bot
 process remained when deployment checked; development-session hosting is temporary.
 Conflicting fanbase selections retain the existing form and unsaved choices while
 showing the error. The fake interaction test verifies that behavior.
+
+## M2C continuation — mutual starting-Bond setup
+
+Implemented `docs/work_orders/M2C_BOND_PROPOSALS.md`: `/character bond member`
+uses Discord's member picker and a native playbook-prompt selector, optional shared
+context, review and explicit confirmation. `/character bonds [before]` privately
+lists up to twenty participant proposals and opens accept/decline/withdraw controls.
+The recipient must accept; either participant may withdraw an accepted setup
+agreement. A source can cancel a pending proposal. No public/DM notification is
+sent; saved proposals resume through the slash command after restart.
+
+Nine Girl branches are supported: eight Personal and Bonded's Intense Pair. The
+Newgirl source review found the additional Handler-assignment restriction at book
+PDF 42 / printed 40; player-selected Mentor proposals are blocked with
+UNSUPPORTED_RULE until that authority workflow exists. AM's review tells the
+counterpart that the Girl is Jailbroken. Prompt labels are short paraphrases with
+source anchors in the coverage report, not copied source passages.
+
+Migration 0005 adds private immutable proposal revisions. Mutations require
+campaign/guild/member/party authority, stable IDs, current profile/proposal revisions
+and command idempotency, with minimal audit metadata committed atomically. Both
+profiles and memberships must be current at acceptance. A change to either profile
+revision or inactive membership marks the saved proposal/agreement stale. Source
+outgoing duplicates and duplicate live proposals between the same pair are blocked.
+Shared context is visible to both parties and private backup operators, never to a
+third-party administrator through bot commands, generic event payloads, public
+sheets or exports. History remains sensitive and subject to the outstanding wider
+retention-policy work.
+
+Executed checks:
+
+- `.venv/bin/pytest -q --junitxml=var/m2-bond-proposals-pytest.xml`: **181 passed in
+  6.16 seconds**, no skips. The new 16 cases cover all ten branches (including the
+  blocked Mentor branch), two-party authority, state transitions, withdrawal,
+  revoked membership on replay, duplicate/hash conflict, stale revisions, private
+  data nonleakage, immutable history, campaign isolation, concurrent decisions,
+  rollback, actual backup restoration, native review/acceptance and pagination.
+- Ruff lint and format: PASS, 94 files formatted. Mypy: PASS, 51 source files.
+- Original planning verifier: PASS, 34 required files, 86 historical cases,
+  four schemas and four synthetic fixtures. All 40 handoff manifest entries intact.
+- Repository check: zero findings. `git diff --check`: PASS.
+- Private backup before upgrade: succeeded. Schema now 0005; `alembic check`
+  detected no new operations. All 15 pre-existing application tables' contents
+  matched the backup exactly; new proposal table empty. Integrity/foreign keys PASS.
+
+Intermediate test failures were synthetic assertion mistakes: Markdown-escaped
+canary comparison and a nonexistent test helper method. Both were corrected before
+the final full run. The Newgirl authority restriction was corrected during source
+review, before deployment. No unresolved automated failure is known.
+
+These records are draft setup agreements only. They do not activate playable
+characters, apply Bond mechanics, determine NPC Bonds, assign Mentors/Status,
+complete Pair Asset selection, or imply fictional intimacy/actions. The full
+creation validator must reconcile incoming/outgoing starting relationships before
+activation. Independent rules review, BUILDER-01 through BUILDER-04 and original
+M2 Play acceptance remain outstanding. Two-account human Bond smoke is NOT_RUN;
+the owner previously deferred builder smoke and requested continued development.
+
+No bot process remained at this deployment check, consistent with temporary
+session hosting. Gateway/registry results are separate from offline tests. The
+public branch contains sanitized source and synthetic evidence only; private PDFs,
+engine, campaign data, policy, backups and credentials remain outside Git. No
+environment configuration change or publication was attempted.
+
+Live M2C startup reached Gateway READY. Authenticated Discord REST readback confirms
+11 guild command groups, character children `create`, `sync`, `build`, `bond`,
+`bonds`, and zero global commands. This confirms startup/registration only; human
+Bond acceptance, decline and withdrawal remain unverified live.

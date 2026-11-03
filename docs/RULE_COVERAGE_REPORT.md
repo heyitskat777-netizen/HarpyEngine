@@ -62,14 +62,14 @@ reports the relationship step as pending. No AI or administrator chooses for her
 
 | Requirement | Source anchor | Current state / next work |
 |---|---|---|
-| Bonds and mutual player choices | Book PDF 13 / printed 11, individual playbooks | Pending authorized multi-user workflow; reconcile sheet “Intimate” vs book “Intense” wording |
+| Bonds and mutual player choices | Book PDF 13 / printed 11, individual playbooks | Private player proposals and mutual setup agreement implemented; NPC/Handler workflows pending. UI uses book “Intense”; sheet terminology discrepancy remains documented. |
 | Status hierarchy, unique Ace/Dog | Book PDF 14 / printed 12 | Pending Handler-authorized assignment; Princess starts Ace |
 | Heat and Identity mechanics | Book PDF 10 / printed 8 and relevant Plays | Not initialized or resolved; verify starting Heat explicitly |
-| Newgirl Mentor / prior mission discussion | Book PDF 40 | Pending relationship/context step |
+| Newgirl Mentor / prior mission discussion | Book PDF 40 | Mentor assignment is Handler-controlled (PDF 42 / printed 40); blocked until Handler workflow. Cadre prior-mission discussion also pending. |
 | Oldgen's two NPC Bonds | Book PDF 45 | Pending Bond validation |
 | Vatgrown DNA basis | Book PDF 48 | Implemented private player-authored field; creates no Bond/Tag |
 | AM jailbroken confidant | Book PDF 54 | Pending Bond choice |
-| Bonded Pair and Intense Bond | Book PDF 57 | Pending Pair consent and Pair-selected Assets |
+| Bonded Pair and Intense Bond | Book PDF 57 | Private Pair proposal/acceptance implemented; Pair-selected Assets remain pending |
 | Prince fanbase | Book PDF 61–62, sheet PDF 18 | Implemented two demographics, two demanded and two rejected qualities, with printed custom slots |
 | CONSUME hunger track | Book PDF 65 | Pending special-state audit; do not infer starting value |
 | JANUS Harpy Core and initial Tags | Book PDF 68 | Pending distinct Core record and prescribed Tags; pilot does not author Core choices |
@@ -100,3 +100,24 @@ Vatgrown's PDF 48 DNA-basis choice is a private descriptive field. It does not c
 a mutual relationship, apply a Tag, or certify another player's consent. Saved JSON
 from M2A remains readable with these optional fields absent. Existing private records
 are not rewritten. No new database migration is required.
+
+## M2C starting-Bond audit
+
+Book PDF 13 / printed 11 defines Bonds as shared mutual ties, at Personal or Intense
+depth. The ten Girl creation pages above were checked for starting player-Bond
+requirements and short paraphrased prompt labels. Nine branches support owner
+proposals, with Bonded using Intense and the other eight Personal. AM's counterpart
+knows she is Jailbroken; this is explicitly disclosed during review.
+
+Newgirl's initial creation page alone is insufficient to determine who chooses the
+Mentor. PDF 42 / printed 40 explicitly assigns that choice to the Handler. Her
+player-selected proposals are therefore blocked with UNSUPPORTED_RULE. A later
+Handler-authorized assignment flow must establish that relationship. The sheet's
+“Intimate” wording does not override the rulebook's “Intense” label in this UI.
+
+The new records represent mutually reviewed draft setup agreements only. They do
+not resolve Bond weakening/strengthening, Heat, modifier rules, fictional actions,
+NPC/Handler control, Mentor duties or Pair Asset authority. Incoming agreements
+are not automatically counted as a completed outgoing creation choice; the future
+full creation validator must reconcile all starting requirements. Either party
+can withdraw OOC setup agreement without performing a fictional Bond Play.

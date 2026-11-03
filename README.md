@@ -44,7 +44,7 @@ or outside Git. Never delete a populated database to refresh the environment.
 Before upgrading an existing database, make a new private backup, then migrate:
 
 ```bash
-python -m girlframe db backup --dest var/backups/before-0004.db
+python -m girlframe db backup --dest var/backups/before-0005.db
 python -m alembic upgrade head
 python -m alembic check
 ```
@@ -54,7 +54,7 @@ and never migrates automatically. Migration `0003` adds the ledger and captures 
 current revision of older drafts as a private baseline; earlier overwritten draft
 revisions cannot be recovered. Existing campaigns, channels, roles and drafts are
 preserved. Migration `0004` adds private append-only creation progress without
-rewriting existing records. `alembic downgrade base` destroys application tables: use only on
+rewriting existing records. Migration `0005` adds immutable private Bond proposals. `alembic downgrade base` destroys application tables: use only on
 throwaway test databases. Never downgrade real campaign data to roll back code.
 
 ## Discord application and startup
@@ -115,6 +115,8 @@ check installation and guild ID. Errors omit raw provider bodies and private pat
 | `/campaign_status` | Stored M1 status alias, retaining the earlier approved audience restriction |
 | `/character create`, `/girl create` | Joined player; own dropdown draft wizard |
 | `/character build` | Joined owner; private starting Assets, Identities and appearance; save/reopen progress |
+| `/character bond member` | Joined player; privately review and confirm a starting Bond proposal |
+| `/character bonds [before]` | Participants only; resume saved proposals and accept/decline/withdraw |
 | `/character sync` | Retry your saved label roles and nickname |
 | `/sheet [member]` | Joined player; own private sheet or another member's public sheet |
 | `/roll basic [publish]` | Joined owner with saved draft; raw 2d6, published by default; `publish:false` keeps it private |
@@ -164,6 +166,26 @@ edits are temporary. Saving changed Girl/Frame playbooks starts new choices whil
 retaining earlier private history. Creation details are currently available only
 through this owner-only builder; `/sheet` still shows the M1 profile. Bonds, Status,
 special resources, independent review and playable activation remain unfinished.
+
+Use `/character bond member` to choose another player from Discord's member picker,
+select a starting playbook prompt and review optional context shared with that
+player. Confirm saves a pending proposal. The recipient opens `/character bonds`,
+chooses it from a dropdown and accepts or declines. Either participant can withdraw
+an accepted setup agreement; a source can cancel a pending proposal. No DM or public
+notification is sent. Reopen the command after timeout/restart to resume saved
+proposals. Unsubmitted forms expire after ten minutes. Private listings show up to
+20 proposals, with a `before` cursor for another page; IDs determine page order.
+
+Most Girl branches propose Personal Bonds; Bonded proposes an Intense Pair Bond.
+AM's review explicitly tells the counterpart she is Jailbroken. Newgirl's Mentor
+must be assigned by the Handler, so her starting proposal is blocked with
+`UNSUPPORTED_RULE` until that workflow exists. Both profiles must be saved and both
+members active. Any profile revision change makes old agreement/proposal data stale;
+withdraw or decline it and make a new proposal. Duplicate live outgoing proposals
+and duplicate live proposals between the same pair are rejected. Accepted proposals
+remain draft setup agreements; NPC Bonds, Handler assignment, Pair Assets and full
+creation validation remain pending. Private context/history stays in the database
+and backups, outside public sheets, exports and ledger payloads.
 
 A raw roll returns two faces, their sum, timestamp and stable receipt ID. It changes
 no character resources. `/roll basic` defaults to `publish:true`, queuing the receipt

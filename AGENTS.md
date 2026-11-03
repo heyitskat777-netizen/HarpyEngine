@@ -13,7 +13,8 @@ The owner explicitly authorized these Discord tags and continuation of the remai
 M1 dice/ledger, safety, durable delivery and local backup/rebuild foundation.
 The owner subsequently authorized continuation into M2 and confirmed that JANUS-B
 uses official JANUS rules while keeping its Discord label. M2A starting choices are implemented and verified. The owner requested further
-continuation; the active step is `docs/work_orders/M2B_PLAYBOOK_DETAILS.md`, within
+continuation; M2B is implemented. The active step is
+`docs/work_orders/M2C_BOND_PROPOSALS.md`, within
 `M2_CHARACTER_BUILDER.md`.
 Complete its source audit, private resumable choices and acceptance evidence before
 expanding to relationships, Status, special resources, playable activation or Plays.

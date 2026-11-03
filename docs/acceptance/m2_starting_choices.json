@@ -71,6 +71,53 @@
         "tests/test_creation.py::test_playbook_detail_controls_save_and_private_restore"
       ],
       "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "BOND-01",
+      "title": "Source branch rules and blocked Handler-only Mentor",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_bonds.py::test_starting_branch_and_source_depth"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "BOND-02",
+      "title": "Two-party authority, private immutable history and replay",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_bonds.py::test_two_party_decisions_replay_history_and_privacy",
+        "tests/test_bonds.py::test_recipient_withdrawal_and_revoked_replay"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "BOND-03",
+      "title": "Profile staleness, revocation and campaign isolation",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_bonds.py::test_profile_staleness_revocation_and_isolation"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "BOND-04",
+      "title": "Concurrency, atomic rollback, backup and restart",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_bonds.py::test_concurrent_decisions_atomic_failure_and_restart_backup"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "BOND-05",
+      "title": "Private native review/acceptance and pagination",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_bonds.py::test_private_ui_review_and_recipient_accept",
+        "tests/test_bonds.py::test_private_pagination_cursor_has_no_duplicates"
+      ],
+      "manual_status": "NOT_RUN"
     }
   ],
   "complete_builder": {

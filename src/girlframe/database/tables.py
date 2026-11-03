@@ -19,6 +19,28 @@ creation_drafts = sa.Table(
         ["campaign_id", "user_id"], ["characters.campaign_id", "characters.user_id"]
     ),
 )
+bond_revisions = sa.Table(
+    "creation_bond_revisions",
+    metadata,
+    sa.Column("campaign_id", sa.Text, primary_key=True),
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("revision", sa.Integer, primary_key=True),
+    sa.Column("source_id", sa.Text, nullable=False),
+    sa.Column("target_id", sa.Text, nullable=False),
+    sa.Column("source_revision", sa.Integer, nullable=False),
+    sa.Column("target_revision", sa.Integer, nullable=False),
+    sa.Column("girl_playbook", sa.Text, nullable=False),
+    sa.Column("prompt", sa.Integer, nullable=False),
+    sa.Column("context", sa.Text, nullable=False),
+    sa.Column("state", sa.Text, nullable=False),
+    sa.Column("event_id", sa.ForeignKey("events.id"), nullable=False, unique=True),
+    sa.ForeignKeyConstraint(
+        ["campaign_id", "source_id"], ["characters.campaign_id", "characters.user_id"]
+    ),
+    sa.ForeignKeyConstraint(
+        ["campaign_id", "target_id"], ["characters.campaign_id", "characters.user_id"]
+    ),
+)
 campaigns = sa.Table(
     "campaigns",
     metadata,

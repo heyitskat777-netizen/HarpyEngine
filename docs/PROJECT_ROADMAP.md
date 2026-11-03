@@ -11,6 +11,7 @@ do not rewrite that historical package or silently drop its original M1 gates.
 | M1D_ENGINE_LEDGER | Immutable raw dice receipts, filtered ledger, safety, durable delivery, backup/restore and snapshot rebuild | Implemented; live human smoke owner-confirmed |
 | M2A_STARTING_CHOICES | Source-backed Identities, starting Assets and appearance, private saved progress | Implemented first M2 step; human smoke pending |
 | M2B_PLAYBOOK_DETAILS | Vatgrown DNA basis; Prince fanbase demographics, demands, rejections and custom options | Implemented; owner deferred live smoke |
+| M2C_BOND_PROPOSALS | Private proposals, participant agreement/withdrawal and durable resume; Newgirl deferred to Handler workflow | Implemented; two-user human smoke pending |
 | M2_CHARACTER_BUILDER | Complete source-audited Girl/Frame creation, legal options and derived resources, validation and playable activation | Before claiming rules-usable characters |
 
 The status commands remain available and now show stored M1 status. Original M1
