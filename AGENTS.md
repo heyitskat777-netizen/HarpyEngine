@@ -5,9 +5,11 @@ under `GIRLFRAME_Discord_Codex_Handoff_v0.2/`. References to `planning/` in that
 handoff mean this retained directory; do not duplicate or regenerate it.
 
 Follow the handoff's authority, privacy, and engineering boundaries throughout
-this repository. The owner accepted M0 and authorized **M1 read-only Discord bot**.
-Implement only /help, /campaign_status and administrator /health with access checks.
-The broader M1 ledgers/dice work is still deferred. Stop before engine writes or M2.
+this repository. M0 is accepted. The owner authorized **M1 server setup and saved
+character onboarding** after the read-only phase. Read `docs/PROJECT_ROADMAP.md`
+and the additive work orders under `docs/work_orders/`. Build resumable setup,
+membership and saved draft sheets. Full rules-certified creation, engine writes,
+M2 Plays and AI remain outside this phase. Record acceptance evidence and limits.
 
 - Run `bash tools/install.sh`, then the checks in `README.md`.
 - Use the existing checkout. Cloud tasks are isolated; create no worktree unless requested.

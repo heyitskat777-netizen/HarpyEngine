@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "girlframe-discord"
 version = "0.1.0"
-description = "Private GIRL FRAME guild-scoped read-only Discord bot"
+description = "Private HarpyEngine server provisioning and saved character drafts"
 requires-python = ">=3.12,<3.13"
 readme = "README.md"
 dependencies = [

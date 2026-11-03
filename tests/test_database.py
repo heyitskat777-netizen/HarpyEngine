@@ -30,7 +30,7 @@ def test_sqlite_settings_and_foreign_keys(tmp_path: Path) -> None:
         engine.dispose()
 
 
-def test_alembic_empty_scaffold_is_repeatable(
+def test_alembic_migrations_upgrade_check_and_downgrade(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     db = tmp_path / "migration.sqlite"
@@ -40,7 +40,7 @@ def test_alembic_empty_scaffold_is_repeatable(
     command.upgrade(config, "head")
     command.check(config)
     command.downgrade(config, "base")
-    assert not Base.metadata.tables
+    assert len(Base.metadata.tables) == 7
     engine = create_database_engine(Settings(database_url=f"sqlite:///{db}"))
     try:
         assert inspect(engine).get_table_names() == ["alembic_version"]

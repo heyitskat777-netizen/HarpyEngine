@@ -50,10 +50,13 @@ class ReadOnlyBotService:
         self.authorize(command, viewer)
         if command == "help":
             return (
-                "HarpyFrame — private read-only test bot.\n"
+                "HarpyEngine — private campaign test bot.\n"
                 "/help — usage\n/campaign_status — approved campaign status\n"
                 "/health — configured administrators only\n"
-                "No rolls, state changes, AI, or player actions are enabled. "
+                "/server setup — administrator preview and confirmation\n"
+                "/campaign join — join as yourself\n/character create — save or resume a draft\n"
+                "/sheet — your private sheet or another member's public sheet\n"
+                "No rolls, engine writes, AI, or player actions are enabled. "
                 "Contact your server administrator for access."
             )
         status = get_engine_status(self.source)

@@ -1,3 +1,3 @@
-"""GIRL FRAME read-only Discord bot. Game rules and mutations are deferred."""
+"""HarpyEngine Discord setup and draft sheets. Engine writes and rules remain deferred."""
 
 __version__ = "0.1.0"

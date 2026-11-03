@@ -10,6 +10,7 @@ from discord import app_commands
 
 from girlframe.discord_adapter.config import BotPolicy
 from girlframe.services.engine_status import EngineStatusUnavailable
+from girlframe.services.onboarding import OnboardingStore
 from girlframe.services.read_only_bot import (
     CommandDenied,
     GuildViewer,
@@ -93,7 +94,13 @@ class ReadOnlyCommandTree(app_commands.CommandTree[discord.Client]):
 
 
 class ReadOnlyDiscordBot(discord.Client):
-    def __init__(self, policy: BotPolicy, service: ReadOnlyBotService, proxy: str | None) -> None:
+    def __init__(
+        self,
+        policy: BotPolicy,
+        service: ReadOnlyBotService,
+        proxy: str | None,
+        store: OnboardingStore | None = None,
+    ) -> None:
         intents = discord.Intents.none()
         intents.guilds = True
         super().__init__(
@@ -104,6 +111,7 @@ class ReadOnlyDiscordBot(discord.Client):
         )
         self.policy = policy
         self.service = service
+        self.store = store
         self.tree = ReadOnlyCommandTree(self, fallback_to_global=False)
         guild = discord.Object(id=policy.guild_id)
         commands: tuple[tuple[ReadOnlyCommand, str], ...] = (
@@ -123,6 +131,11 @@ class ReadOnlyDiscordBot(discord.Client):
             if name == "health":
                 command.default_permissions = discord.Permissions(administrator=True)
             self.tree.add_command(command, guild=guild)
+        if store is not None:
+            from girlframe.discord_adapter.onboarding import register_onboarding
+            from girlframe.services.provisioning import Provisioner
+
+            register_onboarding(self.tree, policy.guild_id, store, Provisioner(store))
 
     def _callback(
         self, name: ReadOnlyCommand
@@ -141,17 +154,21 @@ class ReadOnlyDiscordBot(discord.Client):
         info = await self.application_info()
         if info.id != self.policy.application_id:
             raise RuntimeError("Configured application does not match bot credentials")
+        if self.store is not None:
+            from girlframe.discord_adapter.onboarding import NewPlayerView
+
+            self.add_view(NewPlayerView(self.store))
         await self.fetch_guild(self.policy.guild_id)
         await self.tree.sync(guild=discord.Object(id=self.policy.guild_id))
 
     async def on_ready(self) -> None:
         print(
-            "Discord bot ready: read-only commands registered in the configured test guild.",
+            "HarpyEngine ready: commands registered in the configured test guild.",
             flush=True,
         )
 
     async def on_error(self, event_method: str, *args: object, **kwargs: object) -> None:
-        print("A Discord event could not be handled; no game state was changed.", flush=True)
+        print("A Discord event was interrupted. Check saved state before retrying.", flush=True)
 
 
 def quiet_sdk_logging() -> None:

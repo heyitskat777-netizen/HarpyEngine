@@ -23,12 +23,12 @@ from girlframe.services.health import foundation_health
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="GIRL FRAME read-only Discord bot and local checks"
+        description="HarpyEngine server setup, saved drafts and local checks"
     )
     parser.add_argument("--version", action="version", version=__version__)
     commands = parser.add_subparsers(dest="command")
     commands.add_parser("health", help="Check local SQLite access without tokens or network")
-    start = commands.add_parser("start", help="Run the guild-scoped read-only Discord bot")
+    start = commands.add_parser("start", help="Run the guild-scoped Discord bot")
     start.add_argument(
         "--config", type=Path, help="Trusted local JSON policy (never a player input)"
     )

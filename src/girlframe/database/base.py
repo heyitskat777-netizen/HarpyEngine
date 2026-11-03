@@ -1,4 +1,4 @@
-"""Shared metadata; intentionally empty until M1 migrations are reviewed."""
+"""Shared metadata; application tables are registered by database.tables."""
 
 from sqlalchemy.orm import DeclarativeBase
 

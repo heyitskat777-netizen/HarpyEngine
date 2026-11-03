@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "scope": "M1 setup and saved drafts; builder is future work",
+  "cases": [
+    {
+      "id": "SETUP-01",
+      "requirement": "Administrator and bot permission preflight",
+      "automated_status": "PASS",
+      "test": "tests/test_onboarding.py::test_setup_requires_admin_and_permissions_before_creating",
+      "manual_status": "PENDING"
+    },
+    {
+      "id": "SETUP-02",
+      "requirement": "Caller/guild-bound expiring confirmation",
+      "automated_status": "PASS",
+      "test": "tests/test_onboarding.py::test_confirmation_is_bound_to_actor_guild_and_expiry",
+      "manual_status": "PENDING"
+    },
+    {
+      "id": "SETUP-03",
+      "requirement": "Repeat and restart reuse saved resource IDs",
+      "automated_status": "PASS",
+      "test": "tests/test_onboarding.py::test_setup_replay_restart_reuses_saved_resources",
+      "manual_status": "PENDING",
+      "related_tests": [
+        "tests/test_onboarding.py::test_concurrent_confirmations_do_not_duplicate_resources"
+      ]
+    },
+    {
+      "id": "SETUP-04",
+      "requirement": "Known partial failure resumes without duplicates",
+      "automated_status": "PASS",
+      "test": "tests/test_onboarding.py::test_partial_setup_resumes_without_duplicate_successes",
+      "manual_status": "PENDING"
+    },
+    {
+      "id": "SETUP-05",
+      "requirement": "Unknown API result pauses rather than duplicates",
+      "automated_status": "PASS",
+      "test": "tests/test_onboarding.py::test_unknown_create_outcome_pauses_instead_of_duplicating",
+      "manual_status": "PENDING"
+    },
+    {
+      "id": "SETUP-06",
+      "requirement": "No name-based adoption; missing saved resource stops for repair",
+      "automated_status": "PASS",
+      "test": "tests/test_onboarding.py::test_missing_saved_resource_requires_repair_not_unrelated_adoption",
+      "manual_status": "PENDING",
+      "related_tests": [
+        "tests/test_onboarding.py::test_fixture_with_unrelated_same_name_channel_is_not_adopted"
+      ]
+    },
+    {
+      "id": "SETUP-07",
+      "requirement": "Staff permission overwrites and persistent entry controls",
+      "automated_status": "PASS",
+      "test": "tests/test_onboarding.py::test_staff_overwrites_and_persistent_controls_are_explicit",
+      "manual_status": "PENDING"
+    },
+    {
+      "id": "SETUP-08",
+      "requirement": "Schema upgraded and checked; guild binding isolated",
+      "automated_status": "PASS",
+      "test": "tests/test_onboarding.py::test_rebinding_same_campaign_to_another_guild_cannot_read_or_confirm",
+      "manual_status": "PENDING"
+    },
+    {
+      "id": "CHAR-01",
+      "requirement": "Explicit join and owner-bound saved draft",
+      "automated_status": "PASS",
+      "test": "tests/test_onboarding.py::test_join_and_draft_replay_restart_and_stale_forms",
+      "manual_status": "PENDING",
+      "related_tests": [
+        "tests/test_onboarding.py::test_save_button_cannot_be_used_by_another_player"
+      ]
+    },
+    {
+      "id": "CHAR-02",
+      "requirement": "Idempotent duplicate submit; changed request conflicts",
+      "automated_status": "PASS",
+      "test": "tests/test_onboarding.py::test_join_and_draft_replay_restart_and_stale_forms",
+      "manual_status": "PENDING"
+    },
+    {
+      "id": "CHAR-03",
+      "requirement": "Private notes absent from public/admin sheet and audit",
+      "automated_status": "PASS",
+      "test": "tests/test_onboarding.py::test_other_admin_has_only_public_sheet_and_audit_has_no_notes",
+      "manual_status": "PENDING"
+    },
+    {
+      "id": "CHAR-04",
+      "requirement": "Same owner and callsign isolated across campaigns",
+      "automated_status": "PASS",
+      "test": "tests/test_onboarding.py::test_two_campaigns_with_same_owner_and_callsign_are_isolated",
+      "manual_status": "PENDING"
+    },
+    {
+      "id": "CHAR-05",
+      "requirement": "Concurrent stale forms cannot overwrite newer revisions",
+      "automated_status": "PASS",
+      "test": "tests/test_onboarding.py::test_concurrent_draft_saves_commit_only_one_revision",
+      "manual_status": "PENDING"
+    },
+    {
+      "id": "CHAR-06",
+      "requirement": "Saved character ID and notes survive service restart",
+      "automated_status": "PASS",
+      "test": "tests/test_onboarding.py::test_join_and_draft_replay_restart_and_stale_forms",
+      "manual_status": "PENDING"
+    },
+    {
+      "id": "CHAR-07",
+      "requirement": "Form resume and bounded, draft-labelled sheet",
+      "automated_status": "PASS",
+      "test": "tests/test_onboarding.py::test_draft_form_resumes_owner_fields_and_display_stays_bounded",
+      "manual_status": "PENDING"
+    },
+    {
+      "id": "CHAR-08",
+      "requirement": "Guild-scoped command registration and persistent routing IDs",
+      "automated_status": "PASS",
+      "test": "tests/test_onboarding.py::test_bot_registers_setup_join_character_sheet_when_store_enabled",
+      "manual_status": "PENDING",
+      "related_tests": [
+        "tests/test_onboarding.py::test_staff_overwrites_and_persistent_controls_are_explicit"
+      ]
+    },
+    {
+      "id": "BUILDER-01",
+      "requirement": "All creation rules and branches source-audited",
+      "automated_status": "NOT_RUN",
+      "test": null,
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "BUILDER-02",
+      "requirement": "Illegal options and derived resources rejected",
+      "automated_status": "NOT_RUN",
+      "test": null,
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "BUILDER-03",
+      "requirement": "Persistent multi-step resume, edit and no rerolls",
+      "automated_status": "NOT_RUN",
+      "test": null,
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "BUILDER-04",
+      "requirement": "Validated activation and engine-referenced playable sheet",
+      "automated_status": "NOT_RUN",
+      "test": null,
+      "manual_status": "NOT_RUN"
+    }
+  ]
+}

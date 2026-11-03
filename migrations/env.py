@@ -1,8 +1,9 @@
-"""Migration scaffold only; M0 has no application revisions or tables."""
+"""Explicit application migrations; runtime startup never invokes this module."""
 
 from alembic import context
 
 from girlframe.config import load_settings
+from girlframe.database import tables  # noqa: F401 -- register migration metadata
 from girlframe.database.base import Base
 from girlframe.database.connection import create_database_engine
 

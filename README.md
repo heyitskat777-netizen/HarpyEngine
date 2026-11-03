@@ -1,13 +1,15 @@
 # HarpyEngine — GIRL FRAME read-only Discord bot
 
-M0 is accepted. M1's first phase adds a real, guild-scoped read-only Discord bot
-with `/help`, `/campaign_status`, and administrator `/health`. No rolls, engine
-writes, AI, character actions or campaign creation are enabled. The broader M1
-ledger/dice work is not complete.
+M0 is accepted. M1 includes the guild-scoped status bot, administrator-confirmed
+server setup, explicit campaign joining and saved owner-bound character drafts.
+No rolls, recovered-engine writes, AI or rules-certified characters are enabled.
+The broader M1 ledger/dice work is not complete. Current work orders and acceptance
+cases are indexed in [PROJECT_ROADMAP.md](docs/PROJECT_ROADMAP.md).
 
 Read `AGENTS.md` first when developing. The original planning handoff remains in
 `GIRLFRAME_Discord_Codex_Handoff_v0.2/`; its `planning/` references refer to that
-directory. The owner authorized the read-only M1 phase; stop before adding writes.
+directory. The owner authorized M1 server setup and draft onboarding; stop before
+recovered-engine writes, official Plays or AI.
 
 ## Install
 
@@ -28,7 +30,7 @@ to create or refresh the development environment. It does not start services.
 The local cache location supports cloud machines with read-only home directories.
 `uv.lock` pins transitive dependencies and hashes. Do not regenerate the lock as
 part of normal installation. Python is constrained to 3.12 for this tested M0
-baseline; widen support only with validation. No tokens are required. The recovered
+baseline; widen support only with validation. Offline checks need no token. The recovered
 private engine supplies its own bootstrap/verification tools outside this checkout;
 see [engine source inventory](docs/ENGINE_SOURCE_INVENTORY.md).
 
@@ -68,7 +70,7 @@ reports turn 0, paused. The real private engine remains external and unchanged.
 
 `start --check` validates policy and readable sandbox offline without a token.
 Actual startup verifies token/application identity and access to the configured
-guild, then registers exactly three commands **in that guild only**. Sync replaces
+guild, then registers seven top-level commands/groups **in that guild only**. Sync replaces
 this application's command set in that test guild; no global command sync occurs.
 Gateway reconnects do not re-register commands. `Ctrl-C` and SIGTERM close the
 client. Processes must be restarted after environment restoration/publication.
@@ -80,12 +82,17 @@ All replies are ephemeral with mentions disabled. Authorization runs server-side
 | `/help` | Authenticated members of the configured guild |
 | `/campaign_status` | Explicit `status_user_ids`, or guild administrators if enabled, with audience approval |
 | `/health` | Guild administrators only, and only when explicitly enabled by policy |
+| `/server setup` | Configured administrator; preview and caller-bound confirmation |
+| `/campaign join` | Guild member explicitly joining as themselves |
+| `/character create` | Joined player; create or resume their own draft |
+| `/sheet [member]` | Joined player; own private sheet or another member's public sheet |
 
 DMs, wrong guilds, and users without guild-member proof are denied before snapshot
 access. Roles are derived from Discord's member permissions, never display names
 or slash options. There are no player-supplied path/campaign selectors. SDK command
 visibility is supplementary; changing Discord command permissions does not bypass
-backend checks. Each command has a per-guild/user cooldown of 3 uses per 10 seconds.
+backend checks. Status commands have a per-user/guild cooldown of three uses per
+ten seconds; setup previews have a ten-second per-user/guild cooldown.
 
 The local JSON policy persists membership/access settings across process restarts;
 changes require restart. See `config/discord-policy.example.json`. It is a trusted
@@ -104,7 +111,65 @@ logging; it may include interaction credentials.
 If startup reports `404/10004`, Discord cannot see that guild: install the bot or
 verify the server ID. Invalid credentials, permission failures and other errors
 produce sanitized messages. No response bodies, raw state or private paths are
-printed to users. The bot does not post proactively in any channel.
+printed to users. Only an explicitly confirmed setup publishes the generic
+new-player entry message; no unsolicited gameplay or roleplay messages are sent.
+
+## Server setup and character onboarding
+
+Run `python -m alembic upgrade head` explicitly before starting this version.
+Back up existing SQLite data before upgrading; installation and bot startup do
+not run migrations automatically. Startup refuses an unmigrated database.
+The local policy/snapshot `--check` remains an offline configuration check, not a
+database migration or live Discord readiness claim.
+
+Grant the bot **Manage Channels**, View Channels and Send Messages for provisioning;
+do not grant Administrator. No role creation or Manage Roles permission is needed.
+An administrator invokes `/server setup`, reviews the versioned layout, then
+confirms within ten minutes. Preview creates no Discord resources. Confirmation
+is bound to that administrator and campaign, and rechecks bot permissions.
+
+The template creates two categories and seven text channels, then posts reusable
+new-player controls. Welcome, character directory, mission board and rolls/ledger
+are read-only to ordinary members. Staff category/review deny @everyone visibility.
+Reserved mission/scene/ledger channels do not imply gameplay is implemented.
+
+This private-pilot version serves one explicitly configured guild per process.
+Joining another server does not activate it there or create channels automatically;
+that server needs a trusted guild/campaign policy first. Multi-guild self-service
+installation is a later deployment extension, not a global command enabled here.
+
+Resource IDs are persisted. Repeat or restart reuses known IDs and resumes known
+partial failures, without adopting same-name unrelated channels. Existing managed
+permission drift or deleted resources stops for administrator review; nothing is
+silently overwritten. An ambiguous create response pauses to avoid duplicates.
+Saved own-message IDs are reused without acquiring Read Message History or reading
+transcripts; a deleted onboarding message requires repair, while slash fallbacks
+remain available. No automatic teardown/delete command exists.
+
+In `new-players`, choose **Join campaign**, then **Create/Edit draft**. The private
+form collects a callsign, proposed Girl/Frame playbook labels and optional private
+notes. Review the private preview and press **Save draft**. **My sheet**, `/sheet`,
+and `/character create` retrieve that same saved character and stable ID. Reopen
+the form to edit/resume; old forms cannot overwrite newer revisions. Repeating
+the same submitted interaction returns its original result, not another character.
+Only confirmed saves persist. Unsubmitted forms and unconfirmed previews expire
+and must be reopened; persistent entry controls restore after the bot restarts.
+Interactive metadata actions are limited to three per ten seconds per guild/user;
+this process-local throttle resets on restart and does not replace authorization.
+
+These are **drafts / rules unverified**, not mechanically playable official sheets.
+No stats or legal playbook combinations are invented. The full verified builder
+has its own work order and NOT_RUN acceptance cases. Private notes appear only to
+their owner through the application, even when another administrator requests a
+public sheet. Long escaped notes are truncated in Discord display but retained
+for owner editing. Discord messages are views; SQLite owns these metadata records.
+The private engine's canonical JSON is neither imported nor changed.
+
+Campaign joining and draft ownership are database-backed. The existing status
+command retains its separate approved-user/admin policy; joining does not silently
+grant additional status or administrator permissions. Actual policy, member IDs,
+drafts and backups stay under ignored `var/` or outside Git. A human server admin
+can see Discord's staff area; that does not confer access to another PC's notes.
 
 ## Read-only engine integration
 
@@ -199,14 +264,16 @@ M0 only supports plain local SQLite URLs, without URI parameters. `.env.example`
 documents the setting; `.env` is not auto-loaded. SQLite connections enable WAL,
 foreign keys and a five-second busy timeout. This is a single-writer pilot design,
 not multi-process coordination. Health may create the database and parent folder;
-it never runs migrations. Alembic has **zero revisions** in M0: `upgrade head`
-only initializes its own version table; no campaign schema exists. Empty-scaffold
-repeatability is tested, not future application migration correctness.
+it never runs migrations. M0's historical empty scaffold is now extended by
+revision `0001`: campaigns, membership, drafts, command inbox, audit events, setup
+plans and resource mappings. Fresh/repeated upgrade, metadata check and downgrade
+are tested against disposable synthetic databases.
 
 Only delete disposable synthetic DBs to reset M0. Do not apply reset instructions
-to campaign data. M1 must provide reviewed migrations, backups and restore tests
-before persistent campaigns are introduced. `downgrade base` presently has no
-application revisions to reverse and leaves Alembic's empty version table.
+to campaign data. `downgrade base` now **drops application tables**; run it only on
+disposable test databases. A local pre-upgrade SQLite backup was retained before
+applying the additive migration. Full backup/restore automation and event replay
+remain part of the unfinished broader M1 work before real gameplay data.
 
 ## Boundaries and next milestone
 
