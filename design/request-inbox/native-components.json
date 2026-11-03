@@ -1,0 +1,441 @@
+{
+  "inbox": {
+    "component_count": 14,
+    "components": [
+      {
+        "type": 1,
+        "components": [
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Pending",
+            "custom_id": "b5851aa19627ac508f66017cce77f287"
+          },
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Needs you",
+            "custom_id": "c0a4e3e8823153269c25a0074ffe78a9"
+          },
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Waiting",
+            "custom_id": "8e3953fc4d401bbda6d168abbf20ffa9"
+          },
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "History",
+            "custom_id": "69c5b89d0c658536484b76bc8ee4cbbd"
+          }
+        ]
+      },
+      {
+        "type": 1,
+        "components": [
+          {
+            "type": 3,
+            "custom_id": "741b767153fd732af643c04b3a5568c1",
+            "min_values": 1,
+            "max_values": 1,
+            "disabled": false,
+            "required": true,
+            "placeholder": "All request types",
+            "options": [
+              {
+                "label": "Synthetic request",
+                "value": "demo",
+                "default": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": 1,
+        "components": [
+          {
+            "type": 3,
+            "custom_id": "71d58418dc55cfaf6475834d1495825e",
+            "min_values": 1,
+            "max_values": 1,
+            "disabled": false,
+            "required": true,
+            "placeholder": "Choose a request",
+            "options": [
+              {
+                "label": "Synthetic request",
+                "value": "demo",
+                "default": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": 1,
+        "components": [
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Previous",
+            "custom_id": "e6c1f080468953fccb32e814c9ad5d0c"
+          },
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Next",
+            "custom_id": "d5fbf5a7db76bf05fa90cb26bdeb1b94"
+          },
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Refresh",
+            "custom_id": "07c34def0ee64e0a202f9e76f2fc8e94"
+          },
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Close",
+            "custom_id": "627a0520ea61a8676f140b2d4a0a649e"
+          }
+        ]
+      }
+    ]
+  },
+  "guided": {
+    "component_count": 16,
+    "components": [
+      {
+        "type": 1,
+        "components": [
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Pending",
+            "custom_id": "dddf19670d5413bb590838f8e7bd8f64"
+          },
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Needs you",
+            "custom_id": "010ffacb75b288c1db57a7c2adaadf72"
+          },
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Waiting",
+            "custom_id": "9d93d64328de2862eadd6fbe7beed44f"
+          },
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "History",
+            "custom_id": "6c157ef4c62d26b241f38125f04b8804"
+          }
+        ]
+      },
+      {
+        "type": 1,
+        "components": [
+          {
+            "type": 3,
+            "custom_id": "8403e7cfa5e427b245c8a9bd063421ff",
+            "min_values": 1,
+            "max_values": 1,
+            "disabled": false,
+            "required": true,
+            "placeholder": "All request types",
+            "options": [
+              {
+                "label": "Synthetic request",
+                "value": "demo",
+                "default": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": 1,
+        "components": [
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Accept Bond",
+            "custom_id": "20b3d3f913444eb8987543ca47e19e4f"
+          },
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Decline",
+            "custom_id": "5e76cf6c4f097ddcf078c02ee942c1d7"
+          },
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Back to inbox",
+            "custom_id": "47545f1b4f79d823261d09a4160a8159"
+          }
+        ]
+      },
+      {
+        "type": 1,
+        "components": [
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Previous request",
+            "custom_id": "780ce1eb7bbbbfbb580352610c26f9f0"
+          },
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Next request",
+            "custom_id": "bf6962d76970e924ceac10ee109060f8"
+          },
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Refresh",
+            "custom_id": "294a43a1eb0f15a55912f0729d737509"
+          },
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Close",
+            "custom_id": "d54227017eb9b078cfb8bcbee7ff3070"
+          }
+        ]
+      }
+    ]
+  },
+  "cards_v2": {
+    "component_count": 29,
+    "components": [
+      {
+        "type": 17,
+        "accent_color": 10458879,
+        "spoiler": false,
+        "components": [
+          {
+            "type": 10,
+            "content": "## Your requests\n6 need you \u00b7 2 waiting on others"
+          }
+        ]
+      },
+      {
+        "type": 1,
+        "components": [
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Pending",
+            "custom_id": "00bb1cdea14ad8b4b11668a899f063eb"
+          },
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Needs you",
+            "custom_id": "862a379536d114b0bf6b3788d0af4abc"
+          },
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Waiting",
+            "custom_id": "5a3f8113137e5a515f348c8f85fb904a"
+          },
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "History",
+            "custom_id": "209f8fe9aca0dd86e1c709a338c32472"
+          }
+        ]
+      },
+      {
+        "type": 1,
+        "components": [
+          {
+            "type": 3,
+            "custom_id": "bf3ae6748c562adec817360a96492ccf",
+            "min_values": 1,
+            "max_values": 1,
+            "disabled": false,
+            "required": true,
+            "placeholder": "All request types",
+            "options": [
+              {
+                "label": "Synthetic request",
+                "value": "demo",
+                "default": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": 17,
+        "accent_color": 10458879,
+        "spoiler": false,
+        "components": [
+          {
+            "type": 9,
+            "components": [
+              {
+                "type": 10,
+                "content": "### Starting Bond"
+              },
+              {
+                "type": 10,
+                "content": "Synthetic task. Review before making a choice."
+              }
+            ],
+            "accessory": {
+              "type": 2,
+              "style": 2,
+              "disabled": false,
+              "label": "Review",
+              "custom_id": "c99194b25dc69e901bf09a37f4bddb2f"
+            }
+          }
+        ]
+      },
+      {
+        "type": 17,
+        "accent_color": 10458879,
+        "spoiler": false,
+        "components": [
+          {
+            "type": 9,
+            "components": [
+              {
+                "type": 10,
+                "content": "### Red Queen's Court"
+              },
+              {
+                "type": 10,
+                "content": "Synthetic task. Review before making a choice."
+              }
+            ],
+            "accessory": {
+              "type": 2,
+              "style": 2,
+              "disabled": false,
+              "label": "Review",
+              "custom_id": "7d6f20bfbf9f2e6fbd957fe54989379d"
+            }
+          }
+        ]
+      },
+      {
+        "type": 17,
+        "accent_color": 10458879,
+        "spoiler": false,
+        "components": [
+          {
+            "type": 9,
+            "components": [
+              {
+                "type": 10,
+                "content": "### Mentor agreement"
+              },
+              {
+                "type": 10,
+                "content": "Synthetic task. Review before making a choice."
+              }
+            ],
+            "accessory": {
+              "type": 2,
+              "style": 2,
+              "disabled": false,
+              "label": "Review",
+              "custom_id": "fbffac3e278b002df04190d1c638e1e4"
+            }
+          }
+        ]
+      },
+      {
+        "type": 1,
+        "components": [
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Previous",
+            "custom_id": "4f156306140cda6f029c48e58ad69a26"
+          },
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Next",
+            "custom_id": "09599ae84a55d090274f62e072d6a33f"
+          },
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Refresh",
+            "custom_id": "0519ed385f81c43d132ec1c805f016f9"
+          },
+          {
+            "type": 2,
+            "style": 2,
+            "disabled": false,
+            "label": "Close",
+            "custom_id": "26681c06170ea6c5aa4e3d294a562545"
+          }
+        ]
+      }
+    ]
+  },
+  "classic_embed": {
+    "fields": [
+      {
+        "inline": true,
+        "name": "Pending",
+        "value": "**8**"
+      },
+      {
+        "inline": true,
+        "name": "Needs you",
+        "value": "**6**"
+      },
+      {
+        "inline": true,
+        "name": "Waiting",
+        "value": "**2**"
+      }
+    ],
+    "flags": 0,
+    "color": 10458879,
+    "type": "rich",
+    "description": "Synthetic pending request overview",
+    "title": "Your requests"
+  }
+}

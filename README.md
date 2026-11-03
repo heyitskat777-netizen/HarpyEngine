@@ -127,7 +127,7 @@ check installation and guild ID. Errors omit raw provider bodies and private pat
 | `/character pair_assets member` | Accepted Pair; choose two starting Girl Assets for that Bonded player |
 | `/character court member` | Red Queen pilot; select one external AM role and confirm a private request |
 | `/character mentor_callsign member` | Accepted Mentor; propose a Newgirl callsign privately |
-| `/character requests [before]` | Participants; accept, decline, withdraw or resume shared setup choices |
+| `/character requests` | Private overview and guided review for Bonds, Court, Mentor and Pair coordination |
 | `/campaign effective_status member` | Joined participant; compare own setup Status to the selected participant |
 | `/character sync` | Retry your saved label roles and nickname |
 | `/sheet [member]` | Joined player; own private sheet or another member's public sheet |
@@ -265,14 +265,33 @@ invalidate this choice. Mentor effective Status is computed from the current
 accepted relationship, overriding the physical starting rank between those two
 characters. Stale/cyclic/unavailable comparisons remain unresolved.
 
-Shared request lists are private to participants, with no administrator override,
-no DM/public notification, and twenty entries per page using `before` in UUID order.
-Saved requests survive restart; unsubmitted forms expire after ten minutes.
+`/character requests` opens a private overview with five summaries per page.
+Use Pending, Needs you, Waiting or History, filter by request type and select a
+request to review its effects and permitted actions. Back returns to the overview;
+Previous/Next and Refresh avoid typed IDs or cursors. Counts cover all eligible
+records across sources. Starting Bonds, Court and callsign requests share this
+inbox; `/character bonds` remains a fallback. It also routes nominated Newgirl
+agreements, Mentor callsign choices, Court assignment, Pair Asset names and owner
+descriptions to the existing authorized wizards. Downstream requests replace tasks
+instead of duplicating them. Bond elevation and other in-play mechanics await their
+rule-backed resolvers.
+
+The inbox is private to participants, with no administrator override and no DM or
+public notification. Sender and recipient actions differ; stale versions cannot
+be accepted. Saved requests survive restart; ephemeral forms expire after ten
+minutes. Reopen the command to reconstruct the current queue.
 Accepted choices appear in the owner's builder. Save progress captures their
 provenance tokens and rejects a form if shared agreement changed while it was open.
 Withdrawal or changed profiles removes invalid choices from the current view while
 retaining immutable private history. Starting counters, Cadre discussion, other
 Mentor duties, complete validation and playable activation remain pending.
+
+The intended `/play` interface uses guided category/Play selectors, legal targets
+and resource choices, review, then Confirm & Roll and result-specific choices.
+See [Play interface](design/play-picker/README.md). The requested scene-chat lock
+is [specified with acceptance cases](docs/work_orders/M2H_PLAY_CHANNEL_LOCK.md),
+pending a real Play resolver and durable pending actions. Neither setup requests
+nor raw dice lock chat; no chat permissions change in the current inbox feature.
 
 A raw roll returns two faces, their sum, timestamp and stable receipt ID. It changes
 no character resources. `/roll basic` defaults to `publish:true`, queuing the receipt

@@ -321,26 +321,17 @@ def register_shared_setup(
         await open_choice(interaction, member, "callsign")
 
     @character.command(
-        name="requests", description="Privately resume Court and Mentor-callsign setup requests"
+        name="requests", description="Open your guided private request and coordination inbox"
     )
-    async def requests(interaction: discord.Interaction, before: str | None = None) -> None:
+    async def requests(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.inbox import InboxView
+        from girlframe.services.inbox import InboxService
+
         if not await action_gate(interaction, "metadata"):
             return
         await interaction.response.defer(ephemeral=True, thinking=True)
         try:
-            rows = await asyncio.to_thread(
-                service.list, viewer_from_interaction(interaction), before
-            )
-            text = (
-                "Choose a private setup request to review."
-                if rows
-                else "No setup requests on this page."
-            )
-            if len(rows) == 20:
-                text += "\nNext page: /character requests before:" + rows[-1]["id"]
-            await reply(
-                interaction, text, RequestList(service, interaction.user.id, rows) if rows else None
-            )
+            await InboxView(InboxService(service.store), interaction.user.id).present(interaction)
         except WorkflowError as error:
             await reply(interaction, str(error))
 

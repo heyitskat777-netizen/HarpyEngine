@@ -406,3 +406,77 @@ M2F live startup reached Gateway READY. Authenticated Discord REST readback conf
 `effective_status`, with zero global commands. Source finalization hides the unrelated
 callsign button from the Court form; the process was reloaded for that UI change.
 Human multiplayer request/Status acceptance remains NOT_RUN.
+
+## M2G — recommended overview inbox and guided review
+
+The owner selected the recommendation: A overview inbox opening B detailed review,
+superseding the earlier B-only choice. `/character requests` now opens five private
+summaries per page. Pending / Needs you / Waiting / History, category filtering,
+request dropdown, Previous / Next / Refresh / Close and Back require no typed IDs
+or cursors. A selected source identity/revision is revalidated before review;
+role-specific decision buttons are bound to their rendered request and generation.
+A rapid click from an older panel cannot accept the next request.
+
+The service projects all eligible starting Bond, Court and Mentor-callsign records
+in one read transaction, including more than the earlier twenty-record limit.
+Only the current participant sees shared context. Counts and paging operate over
+the combined eligible set; stale pending outgoing requests require the sender's
+review rather than appearing as ordinary waiting work. No administrator bypass
+exposes private content. Existing services own decisions, expected revisions,
+permissions and idempotency. No new mechanical effects or automatic assignments.
+
+Derived tasks cover nominated Newgirl agreement, accepted Mentor callsign choice,
+Red Queen external assignment, Pair-selected Asset names and owner-only Asset
+descriptions. They open the existing authorized wizards; opening saves nothing.
+Fresh downstream requests/accepted choices replace tasks rather than duplicating
+them. A dedicated read-navigation budget permits paging without weakening metadata
+mutation limits. The legacy `/character bonds` flow remains available.
+
+Executed validation:
+
+- `bash tools/install.sh`: resolved 36 packages, checked 35; pinned lock unchanged.
+- `.venv/bin/pytest -q --junitxml=var/m2-request-inbox-pytest.xml`: **242 passed in
+  12.12 seconds**, no skips. Sixteen inbox cases cover mixed sources and more than
+  twenty records, categories/scopes, role actions, exact replay, membership/profile
+  changes, two-campaign isolation, task deduplication, private Pair descriptions,
+  native task routing/Back, stale and rapid clicks, reopening, five-item overview
+  paging and version-bound overview-to-detail selection. Targeted inbox run:
+  **16 passed in 3.23 seconds**. Existing service/storage regression evidence remains
+  applicable; no schema or source-service mutation behavior changed.
+- Ruff lint/format: PASS (126 files); mypy: PASS (66 source files).
+  Planning verifier: PASS (34 required files, 86 historical cases, four schemas and
+  four synthetic fixtures). Repository scanner: 203 publishable files, all 40
+  original manifest entries intact, zero findings. `git diff --check`: PASS.
+- Local health and startup `--check`: PASS; eleven guild command groups configured.
+  `alembic check`: no new upgrade operations. No migration required (schema 0008).
+- No existing development bot process remained. A new private database backup
+  succeeded before startup. Updated bot reached Gateway READY. Authenticated REST
+  readback confirms eleven guild command groups, zero global commands, all nine
+  existing character subcommands and `/character requests` with no arguments and
+  its new inbox description. No fake campaign request or gameplay action was
+  created for deployment verification. Hosting remains a temporary session process.
+
+Human multiplayer/native-client smoke is **NOT_RUN**, distinct from the automated
+fake-adapter tests and real login/registration. Earlier owner-deferred creation
+checks remain pending. See `docs/acceptance/m2_request_inbox.json`. The synthetic
+browser mockup, SDK layout proof and rendered screenshots are retained under
+`design/request-inbox/`; they are design references, not real campaign records.
+
+The intended `/play` selectors and guided Confirm & Roll/result-choice flow are
+recorded in `design/play-picker/README.md`. The owner additionally requested scene
+chat freezing while a real Play is pending. `M2H_PLAY_CHANNEL_LOCK.md` specifies
+permission preflight, durable acquisition before RNG/spend, required-response
+controls, safe restoration, staff unlock and restart recovery. It explicitly
+records administrator bypass and temporary-hosting limitations. That extension
+is **SPECIFIED / NOT_IMPLEMENTED**; LOCK-01 through LOCK-12 are **NOT_RUN**. It
+depends on an audited Play resolver and durable pending actions. Current setup
+requests and raw dice do not lock chat. Bond elevation/change and other in-play
+responses need their rule-specific adapters. No actual `/play`, permission lock,
+AI, playable activation or engine writes are claimed.
+
+Rollback is a code revert and process restart; saved requests remain in the existing
+schema. No downgrade or database reset is necessary. Only sanitized source, tests,
+docs and synthetic design artifacts enter the public repository. Official PDFs,
+private engine, policy, campaign state, backups and credentials remain excluded.
+The original handoff and environment configuration were preserved; no environment
+publication was attempted.

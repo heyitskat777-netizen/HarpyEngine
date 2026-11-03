@@ -35,7 +35,8 @@ def allow_action(guild: int | None, user: int, action: str, now: float | None = 
     start, count = _action_buckets.get(key, (current, 0))
     if current - start >= 10:
         start, count = current, 0
-    if count >= 3:
+    limit = 20 if action == "inbox_read" else 3
+    if count >= limit:
         return False
     _action_buckets[key] = (start, count + 1)
     _action_buckets.move_to_end(key)

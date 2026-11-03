@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "scope": "M2G overview inbox plus guided request review; no Play resolution or chat lock",
+  "command": ".venv/bin/pytest -q --junitxml=var/m2-request-inbox-pytest.xml",
+  "evidence": "reports/M2_ACCEPTANCE.md",
+  "cases": [
+    {
+      "id": "INBOX-01",
+      "title": "Mixed-source totals, role actions, history and exact replay",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_inbox.py::test_mixed_source_counts_roles_history_and_exact_replay",
+        "tests/test_inbox.py::test_inbox_counts_beyond_individual_twenty_item_limits"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "INBOX-02",
+      "title": "Derived Mentor, callsign and Court tasks avoid duplicates",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_inbox.py::test_nomination_and_callsign_tasks_deduplicate_downstream_requests",
+        "tests/test_inbox.py::test_court_task_disappears_when_request_exists_and_returns_after_decline"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "INBOX-03",
+      "title": "Pair chooses names while owner supplies private descriptions",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_inbox.py::test_pair_names_and_owner_descriptions_are_different_private_tasks"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "INBOX-04",
+      "title": "Stale profiles, membership revocation and campaign isolation",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_inbox.py::test_stale_versions_revoked_membership_and_campaign_isolation"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "INBOX-05",
+      "title": "Role-specific native actions, refresh, close and stale click protection",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_inbox.py::test_guided_view_mutations_rapid_click_guard_filters_refresh_and_close",
+        "tests/test_inbox.py::test_old_accept_button_cannot_approve_the_next_incoming_request"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "INBOX-06",
+      "title": "Authorized task wizards and return navigation",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_inbox.py::test_stale_accept_disabled_and_court_task_opens_authorized_recipient_picker",
+        "tests/test_inbox.py::test_guided_task_routes_and_back_keep_existing_service_boundaries"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "INBOX-07",
+      "title": "Read navigation budget preserves mutation limits",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_inbox.py::test_inbox_navigation_has_separate_budget_without_weakening_mutations"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "INBOX-08",
+      "title": "Recommended overview opens a version-bound guided review",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_inbox.py::test_recommended_overview_opens_version_bound_review_and_returns"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "INBOX-09",
+      "title": "Five-item overview pages and detail Back navigation",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_inbox.py::test_overview_pages_five_requests_with_native_next_previous"
+      ],
+      "manual_status": "NOT_RUN"
+    }
+  ],
+  "future_play_channel_lock": {
+    "work_order": "docs/work_orders/M2H_PLAY_CHANNEL_LOCK.md",
+    "implementation_status": "NOT_IMPLEMENTED",
+    "cases": {
+      "LOCK-01": "NOT_RUN",
+      "LOCK-02": "NOT_RUN",
+      "LOCK-03": "NOT_RUN",
+      "LOCK-04": "NOT_RUN",
+      "LOCK-05": "NOT_RUN",
+      "LOCK-06": "NOT_RUN",
+      "LOCK-07": "NOT_RUN",
+      "LOCK-08": "NOT_RUN",
+      "LOCK-09": "NOT_RUN",
+      "LOCK-10": "NOT_RUN",
+      "LOCK-11": "NOT_RUN",
+      "LOCK-12": "NOT_RUN"
+    }
+  }
+}
