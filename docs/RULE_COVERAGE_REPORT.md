@@ -67,10 +67,10 @@ reports the relationship step as pending. No AI or administrator chooses for her
 | Heat and Identity mechanics | Book PDF 10 / printed 8 and relevant Plays | Not initialized or resolved; verify starting Heat explicitly |
 | Newgirl Mentor / prior mission discussion | Book PDF 40 | Pending relationship/context step |
 | Oldgen's two NPC Bonds | Book PDF 45 | Pending Bond validation |
-| Vatgrown DNA basis | Book PDF 48 | Pending player choice |
+| Vatgrown DNA basis | Book PDF 48 | Implemented private player-authored field; creates no Bond/Tag |
 | AM jailbroken confidant | Book PDF 54 | Pending Bond choice |
 | Bonded Pair and Intense Bond | Book PDF 57 | Pending Pair consent and Pair-selected Assets |
-| Prince fan demographics | Book PDF 61 | Pending choice of two demographics |
+| Prince fanbase | Book PDF 61–62, sheet PDF 18 | Implemented two demographics, two demanded and two rejected qualities, with printed custom slots |
 | CONSUME hunger track | Book PDF 65 | Pending special-state audit; do not infer starting value |
 | JANUS Harpy Core and initial Tags | Book PDF 68 | Pending distinct Core record and prescribed Tags; pilot does not author Core choices |
 | DoctorDoctor obsolescence | Book PDF 71 | Pending eight-box track |
@@ -82,3 +82,21 @@ No automatic starting Heat, numeric Status, Harpy Core state, Bond consent or pl
 activation is inferred from catalogue completeness. Independent review and the full
 BUILDER acceptance cases remain outstanding. Tests in `tests/test_creation.py` cover
 this implemented step; they cannot certify the entire published ruleset.
+
+## M2B source follow-up
+
+Book PDF 61–62 and sheet 18 agree on Prince's five printed demographics, one custom
+demographic space, ten printed qualities and two custom quality spaces. The sheet
+capitalizes some labels differently; book labels are retained. The fanbase requires
+two demographics, two demanded qualities and two rejected qualities. Native selectors
+support partial progress and explicit custom slots. Validation forbids a quality
+being both demanded and rejected and prevents duplicate custom labels. This
+consistency check does not invent a consequence for an invalid form. Custom labels
+remain owner-authored descriptions. Demographics are represented as additional
+Identities separately from the Girl's four starting Identities; marking, replacing,
+demand checks, Permission and Play effects remain unimplemented.
+
+Vatgrown's PDF 48 DNA-basis choice is a private descriptive field. It does not create
+a mutual relationship, apply a Tag, or certify another player's consent. Saved JSON
+from M2A remains readable with these optional fields absent. Existing private records
+are not rewritten. No new database migration is required.

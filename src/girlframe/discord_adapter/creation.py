@@ -12,6 +12,7 @@ from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.onboarding import action_gate, reply
 from girlframe.engine.creation import CreationDraft, official_frame
 from girlframe.engine.creation_catalog import CATALOG
+from girlframe.engine.fanbase import Fanbase
 from girlframe.services.creation import CreationProgress, CreationService
 from girlframe.services.onboarding import WorkflowError
 
@@ -42,6 +43,12 @@ def summary(draft: CreationDraft) -> str:
             "This step still needs: " + "; ".join(missing)
             if missing
             else "This starting-choice step is filled in."
+        )
+        + (
+            "\nPrince fanbase Identities: "
+            + ", ".join(clean(x) for x in draft.fanbase.additional_identities)
+            if draft.fanbase
+            else ""
         )
         + "\nBonds, Status, other playbook requirements and rules review remain before activation."
         "\nChoose/edit below, then **Save progress**. Reopen /character build to resume."
@@ -117,11 +124,31 @@ class DetailsModal(discord.ui.Modal):
     ) -> None:
         await reply(interaction, "Could not update this form. Reopen /character build to resume.")
 
-    def __init__(self, parent: "CreationView", assets: bool):
-        super().__init__(title="Describe selected Assets" if assets else "Character appearance")
+    def __init__(self, parent: "CreationView", assets: bool, playbook: bool = False):
+        super().__init__(
+            title="Playbook details"
+            if playbook
+            else ("Describe selected Assets" if assets else "Character appearance")
+        )
         self.parent_view, self.assets, self.generation = parent, assets, parent.generation
+        self.playbook = playbook
+        self.detail_keys: list[str] = []
         self.fields: list[discord.ui.TextInput[Any]] = []
-        if assets:
+        if playbook:
+            items = []
+            if parent.draft.girl_playbook == "VATGROWN":
+                items.append(("Person who is your DNA basis", parent.draft.dna_basis, 300))
+                self.detail_keys.append("dna_basis")
+            if official_frame(parent.draft.frame_playbook) == "THE PRINCE":
+                fanbase = parent.draft.fanbase or Fanbase()
+                for key, label in (
+                    ("custom_demographic", "Custom fan demographic"),
+                    ("custom_quality_1", "Custom quality 1"),
+                    ("custom_quality_2", "Custom quality 2"),
+                ):
+                    items.append((label, getattr(fanbase, key), 80))
+                    self.detail_keys.append(key)
+        elif assets:
             items = [
                 (a.name[:45], a.description, 700)
                 for a in parent.draft.girl_assets + parent.draft.frame_assets
@@ -151,7 +178,23 @@ class DetailsModal(discord.ui.Modal):
                 interaction, "Choices changed while this form was open. Reopen the details form."
             )
             return
-        if self.assets:
+        if self.playbook:
+            details = dict(zip(self.detail_keys, (str(x) for x in self.fields), strict=True))
+            update: dict[str, Any] = {}
+            if "dna_basis" in details:
+                update["dna_basis"] = details.pop("dna_basis")
+            if details:
+                update["fanbase"] = (self.parent_view.draft.fanbase or Fanbase()).model_dump(
+                    mode="json"
+                ) | details
+            try:
+                self.parent_view.update(**update)
+            except ValueError:
+                await reply(
+                    interaction, "Use distinct custom labels that differ from the printed options."
+                )
+                return
+        elif self.assets:
             draft = self.parent_view.draft
             values = [
                 {"name": asset.name, "description": str(field)}
@@ -176,6 +219,10 @@ class CreationView(discord.ui.View):
         self.service, self.owner, self.progress = service, owner, progress
         self.draft, self.generation = progress.draft, 0
         self.refresh_selects()
+        self.playbook.disabled = not (
+            self.draft.girl_playbook == "VATGROWN"
+            or official_frame(self.draft.frame_playbook) == "THE PRINCE"
+        )
 
     async def on_error(
         self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[Any]
@@ -232,6 +279,22 @@ class CreationView(discord.ui.View):
             await reply(interaction, "Select Assets first, then describe them.")
             return
         await interaction.response.send_modal(DetailsModal(self, assets=True))
+
+    @discord.ui.button(label="Playbook details", row=3)
+    async def playbook(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        if official_frame(self.draft.frame_playbook) == "THE PRINCE":
+            from girlframe.discord_adapter.fanbase import FanbaseView
+
+            view = FanbaseView(self)
+            await view.render(interaction)
+        elif self.draft.girl_playbook == "VATGROWN":
+            await interaction.response.send_modal(DetailsModal(self, assets=False, playbook=True))
+        else:
+            await reply(
+                interaction, "No owner-authored details are available for these playbooks yet."
+            )
 
     @discord.ui.button(label="Save progress", style=discord.ButtonStyle.primary, row=4)
     async def save(self, interaction: discord.Interaction, button: discord.ui.Button[Any]) -> None:

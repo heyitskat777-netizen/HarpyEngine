@@ -12,8 +12,9 @@ membership, dropdown draft sheets, and owner-confirmed cosmetic role/nickname sy
 The owner explicitly authorized these Discord tags and continuation of the remaining
 M1 dice/ledger, safety, durable delivery and local backup/rebuild foundation.
 The owner subsequently authorized continuation into M2 and confirmed that JANUS-B
-uses official JANUS rules while keeping its Discord label. The active first step is
-`docs/work_orders/M2A_STARTING_CHOICES.md`, within `M2_CHARACTER_BUILDER.md`.
+uses official JANUS rules while keeping its Discord label. M2A starting choices are implemented and verified. The owner requested further
+continuation; the active step is `docs/work_orders/M2B_PLAYBOOK_DETAILS.md`, within
+`M2_CHARACTER_BUILDER.md`.
 Complete its source audit, private resumable choices and acceptance evidence before
 expanding to relationships, Status, special resources, playable activation or Plays.
 Recovered-engine writes and AI remain deferred. Record partial scope honestly.

@@ -37,6 +37,7 @@ def selected(girl="MOCKINGBIRD", frame="JANUS-B"):
             for a in CATALOG[official_frame(frame)]["assets"][:2]
         ),
         void_asset=CATALOG[girl]["assets"][0] if girl == "MOCKINGBIRD" else None,
+        dna_basis="Synthetic donor" if girl == "VATGROWN" else "",
         frame_name="Synthetic Frame",
         girl_appearance="Synthetic pilot",
         frame_appearance="Synthetic frame",
@@ -260,5 +261,117 @@ def test_builder_save_callback_and_stale_modal(ledger, monkeypatch):
         error = interaction(105)
         await view.on_error(error, ValueError("PRIVATE_CANARY"), view.save)
         assert "PRIVATE_CANARY" not in str(error.edit_original_response.call_args)
+
+    asyncio.run(run())
+
+
+def test_playbook_details_branch_validation_and_legacy_json():
+    from girlframe.engine.fanbase import Fanbase
+
+    # JSON saved before M2B still reads; it never acquires invented choices.
+    old = selected().model_dump(mode="json", exclude={"fanbase", "dna_basis"})
+    import json
+
+    assert CreationDraft.model_validate_json(json.dumps(old)).fanbase is None
+    fanbase = Fanbase(
+        demographics=("Young girls", "custom:1"),
+        demanded=("Kind", "custom:1"),
+        rejected=("Dangerous", "custom:2"),
+        custom_demographic="Synthetic fan group",
+        custom_quality_1="Patient",
+        custom_quality_2="Cruel",
+    )
+    assert fanbase.missing() == []
+    assert fanbase.additional_identities == ("Young girls", "Synthetic fan group")
+    assert Fanbase(demographics=("custom:1",)).missing()
+    for change in [
+        {"demographics": ("Invented",)},
+        {"demographics": ("Young girls", "Young girls")},
+        {"demanded": ("Dangerous",)},
+        {"custom_quality_2": "PATIENT"},
+        {"custom_quality_1": " Kind "},
+    ]:
+        with pytest.raises(ValueError):
+            Fanbase.model_validate(fanbase.model_dump() | change)
+    with pytest.raises(ValueError):
+        CreationDraft.model_validate(selected().model_dump() | {"fanbase": fanbase})
+    with pytest.raises(ValueError):
+        CreationDraft.model_validate(selected().model_dump() | {"dna_basis": "Synthetic"})
+    prince = CreationDraft.model_validate(
+        selected(frame="THE PRINCE").model_dump() | {"fanbase": fanbase}
+    )
+    assert prince.missing() == []
+    assert len(prince.identities) == 4
+
+
+def test_playbook_detail_controls_save_and_private_restore(ledger, monkeypatch):
+    from girlframe.discord_adapter import onboarding
+    from girlframe.discord_adapter.fanbase import FanbaseView
+
+    monkeypatch.setattr(onboarding, "allow_action", lambda *a, **kw: True)
+    seed(ledger)
+    ledger.save_draft(
+        PLAYER,
+        "special-profile",
+        1,
+        DraftInput(callsign="SYNTH", girl_playbook="VATGROWN", frame_playbook="THE PRINCE"),
+    )
+    service = CreationService(ledger)
+
+    async def run():
+        parent = CreationView(service, PLAYER.user_id, service.get(PLAYER))
+        assert not parent.playbook.disabled
+        modal = DetailsModal(parent, assets=False, playbook=True)
+        assert len(modal.fields) == 4
+        for field, value in zip(
+            modal.fields, ("PRIVATE_DNA_CANARY", "Synthetic fans", "Patient", "Cruel"), strict=True
+        ):
+            field._value = value
+        member = MagicMock(spec=discord.Member)
+        member.id, member.guild_permissions = PLAYER.user_id, discord.Permissions.none()
+        request = MagicMock()
+        request.user, request.guild_id, request.id = member, 200, 201
+        request.response.is_done.return_value = True
+        request.edit_original_response = AsyncMock()
+        request.response.edit_message = AsyncMock()
+        await modal.on_submit(request)
+        assert parent.draft.dna_basis == "PRIVATE_DNA_CANARY"
+        fans = FanbaseView(parent)
+        assert len([x for x in fans.children if isinstance(x, discord.ui.Select)]) == 3
+        menus = sorted(
+            (x for x in fans.children if isinstance(x, discord.ui.Select)), key=lambda x: x.row
+        )
+        for menu, values in zip(
+            menus,
+            (("Young girls", "custom:1"), ("Kind", "custom:1"), ("Dangerous", "custom:2")),
+            strict=True,
+        ):
+            menu._values = list(values)
+            await menu.callback(request)
+        assert parent.draft.fanbase.missing() == []
+        saved = service.save(
+            PLAYER, "special-save", 0, parent.progress.character_revision, parent.draft
+        )
+        assert saved["revision"] == 1
+        restored = CreationService(OnboardingStore(ledger.engine, ledger.policy)).get(PLAYER)
+        assert restored.draft == parent.draft
+        assert restored.draft.fanbase.additional_identities == ("Young girls", "Synthetic fans")
+        assert "PRIVATE_DNA_CANARY" not in str(ledger.public_export())
+        # Old selected controls cannot submit an impossible demand/rejection pair.
+        menus[2]._values = ["Kind", "Dangerous"]
+        await menus[2].callback(request)
+        assert parent.draft.fanbase.rejected == ("Dangerous", "custom:2")
+        assert "cannot be both" in request.response.edit_message.call_args.kwargs["content"]
+        assert request.response.edit_message.call_args.kwargs["view"] is fans
+        owner_check = MagicMock()
+        owner_check.user.id = OTHER.user_id
+        owner_check.response.is_done.return_value = True
+        owner_check.edit_original_response = AsyncMock()
+        assert not await fans.interaction_check(owner_check)
+        # Drafts for other playbooks have no misleading special-detail controls.
+        default_view = CreationView(
+            service, PLAYER.user_id, service.get(PLAYER).__class__(0, 1, selected())
+        )
+        assert default_view.playbook.disabled
 
     asyncio.run(run())

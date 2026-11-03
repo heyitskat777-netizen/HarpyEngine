@@ -52,7 +52,25 @@
       "tests": [
         "tests/test_database.py::test_alembic_migrations_upgrade_check_and_downgrade"
       ],
-      "manual_status": "PENDING_OWNER_SAVE_REOPEN_SMOKE"
+      "manual_status": "OWNER_DEFERRED_TEST"
+    },
+    {
+      "id": "DETAIL-01",
+      "title": "Playbook applicability, custom labels and legacy JSON",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation.py::test_playbook_details_branch_validation_and_legacy_json"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "DETAIL-02",
+      "title": "Private selectors, modal details, authorization and restart reads",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation.py::test_playbook_detail_controls_save_and_private_restore"
+      ],
+      "manual_status": "NOT_RUN"
     }
   ],
   "complete_builder": {

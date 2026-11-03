@@ -73,8 +73,8 @@ Discord REST readback confirms 11 guild command groups, character children
 registration, not human interaction acceptance. The process remains temporary
 session hosting. Environment configuration was neither changed nor published.
 
-Human save/reopen smoke was requested for Mockingbird + JANUS-B and is **pending**
-at this report's creation. No successful human builder interaction is claimed.
+Human save/reopen smoke was requested for Mockingbird + JANUS-B. The owner replied
+“I’ll test later” and requested continued development; it is **deferred by the owner**. No successful human builder interaction is claimed.
 START-01 through START-04 have offline evidence; START-05 has offline migration,
 actual preserved-database migration and registry evidence, with human smoke pending.
 See `docs/acceptance/m2_starting_choices.json`.
@@ -91,3 +91,31 @@ and sanitized documentation are publishable. Official PDFs, extracted source tex
 private engine packages, real character data, policy, database, backup and token
 remain outside Git. Original handoff files are unchanged. GitHub CI evidence is
 available on the branch's commits, separately from the local/live results above.
+
+## M2B continuation — owner-authored playbook details
+
+The owner requested continued development while deferring live smoke. This adds
+Vatgrown's DNA-basis field and Prince's three native fanbase selectors: two
+demographics, two demanded qualities, and two rejected qualities. The printed
+custom spaces are supported with private text fields. Applicability, distinctness
+and contradictory choices are checked before saving. Demographics are kept as
+additional Identities; the Girl's four starting Identities are preserved. These are
+draft choices, with no automatic Tags, Bonds, Heat changes or Play effects.
+
+The source comparison was extended to rulebook PDF 48 and 61–62 and official sheet
+18. See the coverage report and `M2B_PLAYBOOK_DETAILS.md`. The new optional fields
+read old M2A JSON without rewriting stored history. No migration was added.
+
+Targeted builder tests: **28 passed in 1.11 seconds**. These add legacy JSON, branch
+applicability, custom choices, conflicting choices, native menu/modal interaction,
+private restart reads, export nonleakage and owner denial. The first source commit
+`88a235f` passed GitHub CI run 41602967309. The next full run and live restart are
+recorded below; human M2A and M2B smoke remain unverified.
+
+Final M2B regression: `.venv/bin/pytest -q --junitxml=var/m2-playbook-details-pytest.xml`
+reported **165 passed in 3.85 seconds**. Lint, format (88 files), mypy (48 source
+files), repository checks and schema drift check passed. No new migration operations
+were detected. A fresh private backup was taken before deployment. No prior bot
+process remained when deployment checked; development-session hosting is temporary.
+Conflicting fanbase selections retain the existing form and unsaved choices while
+showing the error. The fake interaction test verifies that behavior.

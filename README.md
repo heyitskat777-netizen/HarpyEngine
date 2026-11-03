@@ -9,7 +9,9 @@ receipt/ledger, publication and safety smoke tests. This is not a production
 readiness claim.
 
 M2 has started with `/character build`: source-backed starting Identities, Asset
-choices and appearance, saved privately with revision history. JANUS-B uses official
+choices and appearance, saved privately with revision history. Playbook details
+now include Vatgrown DNA basis and Prince fanbase demographics/demanded/rejected
+qualities, including custom choices. JANUS-B uses official
 JANUS rules and retains its server label. See [M2 evidence](reports/M2_ACCEPTANCE.md).
 
 Characters remain **drafts / rules unverified**. Official Plays, modifiers, Heat,

@@ -5,6 +5,7 @@ from typing import Self
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from girlframe.engine.creation_catalog import CATALOG
+from girlframe.engine.fanbase import Fanbase
 from girlframe.engine.playbooks import canonical_frame, canonical_girl
 
 
@@ -29,6 +30,9 @@ class CreationDraft(BaseModel):
     frame_name: str = Field(default="", max_length=80)
     girl_appearance: str = Field(default="", max_length=700)
     frame_appearance: str = Field(default="", max_length=700)
+
+    dna_basis: str = Field(default="", max_length=300)
+    fanbase: Fanbase | None = None
 
     @field_validator("girl_playbook")
     @classmethod
@@ -56,6 +60,10 @@ class CreationDraft(BaseModel):
             or self.void_asset not in {a.name for a in self.girl_assets}
         ):
             raise ValueError("Only a selected Mockingbird Girl Asset can start Void-altered")
+        if self.dna_basis and self.girl_playbook != "VATGROWN":
+            raise ValueError("DNA basis is a Vatgrown creation choice")
+        if self.fanbase is not None and official_frame(self.frame_playbook) != "THE PRINCE":
+            raise ValueError("Fanbase is a Prince creation choice")
         return self
 
     @property
@@ -85,4 +93,8 @@ class CreationDraft(BaseModel):
         ):
             if not field.strip():
                 missing.append(label)
+        if self.girl_playbook == "VATGROWN" and not self.dna_basis.strip():
+            missing.append("DNA basis")
+        if official_frame(self.frame_playbook) == "THE PRINCE":
+            missing.extend((self.fanbase or Fanbase()).missing())
         return missing
