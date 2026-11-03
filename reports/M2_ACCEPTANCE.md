@@ -187,3 +187,81 @@ Live M2C startup reached Gateway READY. Authenticated Discord REST readback conf
 11 guild command groups, character children `create`, `sync`, `build`, `bond`,
 `bonds`, and zero global commands. This confirms startup/registration only; human
 Bond acceptance, decline and withdrawal remain unverified live.
+
+## M2D continuation — Handler authority and NPC setup
+
+Implemented `docs/work_orders/M2D_HANDLER_NPC_SETUP.md` after owner authorization.
+Configured administrators can preview/confirm Handler appointment or revocation
+with `/campaign handler [member]`. The appointee must be an active joined member;
+no appointment happens automatically. Appointments grant application setup authority,
+not Discord permissions or access to private sheets/notes. Changing the Handler
+clears current setup with a visible warning, retaining immutable history. Handler
+accounts are outside Pilot ranking and starting player-Bond selection, even if an
+account retains a test Pilot draft; affected proposals become stale.
+
+The Handler nominates a Newgirl Mentor with `/campaign mentor newgirl member`.
+A nomination unlocks Newgirl's existing private proposal only for that Mentor;
+Newgirl confirms and the Mentor accepts. Nomination changes get a fresh token,
+including reassignment to the same person, so old consent cannot be reused. Profile
+changes, revoked membership and lost Handler authority block stale operations.
+Mentor-chosen callsign and effective higher-Status behavior remain pending; no
+automatic callsign or nickname change occurs.
+
+`/campaign status_setup` selects all active Pilot profiles in order, reviews and
+confirms the entire roster. First is Ace, last Dog, others Wings. Princess must
+lead; multiple Princesses and fewer than two Pilots stop with UNSUPPORTED_RULE
+rather than inventing an endpoint rule. The selector supports 2–25 Pilots. Reviewed
+submission is captured before acknowledgement so a later UI edit cannot alter it.
+Roster/profile changes mark stored order stale. No mission rewards, punishments,
+orders or in-play rank shifts run. `/campaign setup` shows saved setup/staleness;
+Mentor nominations are visible only to the Handler and the affected participants.
+
+The creation wizard's NPC Bonds button supplies four sourced role options for
+each Girl. Select 1–2, exactly 2 for Oldgen. Optional names and written feelings
+stay in the owner's private creation history, never Handler views, public sheets,
+exports or ledger payloads. Partial saves are supported; the wizard reports missing
+required counts. The rules permit unwritten feelings. These descriptions neither
+assign an unsupported starting NPC Bond depth nor merge NPCs into world canon.
+
+Validation executed:
+
+- Final `.venv/bin/pytest -q --junitxml=var/m2-handler-npc-pytest.xml`: **199 passed
+  in 6.67 seconds**, no skips. New tests cover ten NPC branches, counts/duplicates,
+  old JSON, private NPC modal/save, stale forms, explicit admin/Handler separation,
+  appointment/revocation and revoked replay, complete/unique ranking, Princess,
+  stale profiles, Mentor nomination plus mutual proposal/acceptance, fresh consent
+  tokens, private view filtering, rollback, concurrent saves, immutable history,
+  actual backup restoration, two-campaign isolation, native confirmation and late
+  UI edits, and Handler-account exclusion from Pilot Bonds.
+- A separate synthetic migration test populated schema 0005 with an existing
+  private Bond proposal, upgraded it to 0006, and verified every original column
+  value unchanged with nullable nomination provenance. Foreign keys and schema
+  comparison passed. Existing tests also exercise fresh upgrade/downgrade.
+- Ruff lint/format: PASS (102 files). Mypy: PASS (56 source files). Original handoff
+  verifier: PASS (34 required files, 86 historical cases, four schemas/four synthetic
+  fixtures); all 40 manifest entries intact. Repository check: zero findings.
+  `git diff --check`: PASS.
+- Before live migration, one prior test-bot process was signaled to stop. Private
+  backup succeeded. Upgrade to 0006 and schema comparison passed. All original
+  column values in all 16 pre-existing application tables matched the backup;
+  new setup history was empty and old proposal nomination tokens NULL. Integrity
+  and foreign keys passed. No Handler appointment was created by deployment.
+
+An early fixture assertion incorrectly expected Bonded's entire creation to be
+complete after NPC choices; it was corrected to check only NPC completeness while
+leaving Pair-owned Assets pending. Static checks caught long SQL/string lines and
+an unused test variable; all were corrected. The final suite above passed.
+
+This is starting setup only. Pair Asset selection, remaining special Frame state,
+Mentor callsign/effective Status, Cadre discussion, starting resources, playable
+activation, original M2 Plays and independent full-rule review remain outstanding.
+BUILDER-01 through BUILDER-04 remain NOT_RUN for complete official creation. Human
+smoke for these new workflows is NOT_RUN; existing owner-deferred builder/Bond
+smoke remains distinct from automated evidence. No environment configuration was
+changed or published. Private sources, data, backups, policy and credentials stay
+outside Git; canonical private engine files remain untouched.
+
+M2D live startup reached Gateway READY. Authenticated Discord REST readback shows
+11 guild command groups, campaign children `join`, `create`, `status`, `handler`,
+`mentor`, `status_setup`, `setup`, and zero global commands. This is startup and
+registration evidence, not human acceptance of authority, ranking or NPC forms.

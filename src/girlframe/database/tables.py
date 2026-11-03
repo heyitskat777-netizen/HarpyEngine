@@ -29,6 +29,7 @@ bond_revisions = sa.Table(
     sa.Column("target_id", sa.Text, nullable=False),
     sa.Column("source_revision", sa.Integer, nullable=False),
     sa.Column("target_revision", sa.Integer, nullable=False),
+    sa.Column("mentor_assignment_id", sa.Text),
     sa.Column("girl_playbook", sa.Text, nullable=False),
     sa.Column("prompt", sa.Integer, nullable=False),
     sa.Column("context", sa.Text, nullable=False),
@@ -40,6 +41,14 @@ bond_revisions = sa.Table(
     sa.ForeignKeyConstraint(
         ["campaign_id", "target_id"], ["characters.campaign_id", "characters.user_id"]
     ),
+)
+setup_revisions = sa.Table(
+    "campaign_setup_revisions",
+    metadata,
+    sa.Column("campaign_id", sa.ForeignKey("campaigns.id"), primary_key=True),
+    sa.Column("revision", sa.Integer, primary_key=True),
+    sa.Column("body_json", sa.Text, nullable=False),
+    sa.Column("event_id", sa.ForeignKey("events.id"), nullable=False, unique=True),
 )
 campaigns = sa.Table(
     "campaigns",

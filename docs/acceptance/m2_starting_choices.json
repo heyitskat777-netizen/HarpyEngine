@@ -118,6 +118,63 @@
         "tests/test_bonds.py::test_private_pagination_cursor_has_no_duplicates"
       ],
       "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "SETUP-01",
+      "title": "NPC roles, Oldgen count and legacy drafts",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_handler_setup.py::test_npc_choice_branches_optional_feelings_and_legacy",
+        "tests/test_handler_setup.py::test_npc_native_controls_private_save_and_stale_form"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "SETUP-02",
+      "title": "Explicit authority and revoked replay",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_handler_setup.py::test_appointment_authority_and_revocation_including_replay",
+        "tests/test_handler_setup.py::test_handler_account_is_outside_starting_pilot_bond_roster"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "SETUP-03",
+      "title": "Starting hierarchy and Princess",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_handler_setup.py::test_status_roster_princess_revision_and_unique_ranks"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "SETUP-04",
+      "title": "Mentor authority, mutual agreement and fresh nomination tokens",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_handler_setup.py::test_handler_mentor_nomination_mutual_setup_and_reassignment"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "SETUP-05",
+      "title": "Atomicity, immutable history, backup and campaign isolation",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_handler_setup.py::test_setup_transaction_rollback_concurrency_immutability_and_backup",
+        "tests/test_handler_setup.py::test_migration_preserves_existing_0005_proposals"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "SETUP-06",
+      "title": "Owner-bound native rank review and explicit confirmation",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_handler_setup.py::test_setup_native_review_confirm_and_owner_guards"
+      ],
+      "manual_status": "NOT_RUN"
     }
   ],
   "complete_builder": {

@@ -44,7 +44,7 @@ or outside Git. Never delete a populated database to refresh the environment.
 Before upgrading an existing database, make a new private backup, then migrate:
 
 ```bash
-python -m girlframe db backup --dest var/backups/before-0005.db
+python -m girlframe db backup --dest var/backups/before-0006.db
 python -m alembic upgrade head
 python -m alembic check
 ```
@@ -54,7 +54,8 @@ and never migrates automatically. Migration `0003` adds the ledger and captures 
 current revision of older drafts as a private baseline; earlier overwritten draft
 revisions cannot be recovered. Existing campaigns, channels, roles and drafts are
 preserved. Migration `0004` adds private append-only creation progress without
-rewriting existing records. Migration `0005` adds immutable private Bond proposals. `alembic downgrade base` destroys application tables: use only on
+rewriting existing records. Migration `0005` adds immutable private Bond proposals. `0006` adds Handler setup
+history and nullable Mentor-nomination provenance for proposals. `alembic downgrade base` destroys application tables: use only on
 throwaway test databases. Never downgrade real campaign data to roll back code.
 
 ## Discord application and startup
@@ -111,6 +112,10 @@ check installation and guild ID. Errors omit raw provider bodies and private pat
 | `/server setup` | Configured administrator; preview, then caller-bound confirmation |
 | `/campaign create name` | Configured administrator; initialize once without resetting data |
 | `/campaign join` | Explicit self-enrollment as a player |
+| `/campaign handler [member]` | Configured administrator; review/confirm appointment, or omit member to revoke |
+| `/campaign mentor newgirl member` | Appointed Handler; review/confirm a Mentor nomination |
+| `/campaign status_setup` | Appointed Handler; select, review and confirm the starting rank order |
+| `/campaign setup` | Joined member; saved starting Status, Handler and permitted Mentor information |
 | `/campaign status` | Joined member or configured administrator; stored M1 status |
 | `/campaign_status` | Stored M1 status alias, retaining the earlier approved audience restriction |
 | `/character create`, `/girl create` | Joined player; own dropdown draft wizard |
@@ -166,6 +171,9 @@ edits are temporary. Saving changed Girl/Frame playbooks starts new choices whil
 retaining earlier private history. Creation details are currently available only
 through this owner-only builder; `/sheet` still shows the M1 profile. Bonds, Status,
 special resources, independent review and playable activation remain unfinished.
+The **NPC Bonds** button selects one or two playbook NPC roles (exactly two for
+Oldgen). Names and written feelings are optional and private. Return and Save
+progress to persist; these draft NPCs are not merged into shared world canon.
 
 Use `/character bond member` to choose another player from Discord's member picker,
 select a starting playbook prompt and review optional context shared with that
@@ -177,15 +185,40 @@ proposals. Unsubmitted forms expire after ten minutes. Private listings show up 
 20 proposals, with a `before` cursor for another page; IDs determine page order.
 
 Most Girl branches propose Personal Bonds; Bonded proposes an Intense Pair Bond.
-AM's review explicitly tells the counterpart she is Jailbroken. Newgirl's Mentor
-must be assigned by the Handler, so her starting proposal is blocked with
-`UNSUPPORTED_RULE` until that workflow exists. Both profiles must be saved and both
+AM's review explicitly tells the counterpart she is Jailbroken. Newgirl's Mentor must first be nominated with `/campaign mentor` by the appointed
+Handler. Her proposal is then restricted to that current Mentor; unassigned or stale
+nominations return `UNSUPPORTED_RULE`. Newgirl confirms and the Mentor accepts
+using the same private proposal flow. Both profiles must be saved and both
 members active. Any profile revision change makes old agreement/proposal data stale;
 withdraw or decline it and make a new proposal. Duplicate live outgoing proposals
 and duplicate live proposals between the same pair are rejected. Accepted proposals
-remain draft setup agreements; NPC Bonds, Handler assignment, Pair Assets and full
-creation validation remain pending. Private context/history stays in the database
+remain draft setup agreements; NPC mechanics, Pair Assets, remaining Mentor duties
+and full creation validation remain pending. Private context/history stays in the database
 and backups, outside public sheets, exports and ledger payloads.
+
+Appoint the Handler explicitly: a configured administrator runs `/campaign handler
+member`, reviews the reset warning and confirms. The member must have joined the
+campaign. Omit `member` to revoke. Appointment grants setup authority only; it does
+not grant private-sheet access or Discord permissions. Changing the Handler clears
+current starting Status and Mentor nominations while retaining immutable history.
+An account acting as Handler is excluded from the Pilot roster, even if it has a
+saved test draft. No appointment or game assignment happens on bot startup.
+
+The Handler uses `/campaign status_setup` to select every active Pilot with a saved
+profile, highest to lowest, then reviews and confirms. First is Ace, last Dog, and
+intermediate positions are Wings. Princess must begin Ace. Multiple Princesses or
+fewer than two Pilots require review and are blocked; the native selector supports
+up to 25 Pilots. Profile/roster changes make the saved order stale. This is starting
+setup, without rewards, punishments or in-play Status changes. `/campaign setup`
+shows the stored order and staleness, with Mentor nominations visible only to the
+Handler and the affected players.
+
+`/campaign mentor newgirl member` nominates a Mentor for a saved Newgirl profile.
+It does not write either player's private creation choices. Changing the nomination
+creates a new token and stales old proposals even if the same Mentor is nominated
+again. Both profiles and the Handler appointment must remain current. Mentor-chosen
+callsign and the Mentor's effective higher-Status rule remain pending before
+playable activation. No automatic nickname change follows nomination.
 
 A raw roll returns two faces, their sum, timestamp and stable receipt ID. It changes
 no character resources. `/roll basic` defaults to `publish:true`, queuing the receipt

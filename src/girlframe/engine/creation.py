@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from girlframe.engine.creation_catalog import CATALOG
 from girlframe.engine.fanbase import Fanbase
+from girlframe.engine.npc_bonds import NpcBond
 from girlframe.engine.playbooks import canonical_frame, canonical_girl
 
 
@@ -31,6 +32,8 @@ class CreationDraft(BaseModel):
     girl_appearance: str = Field(default="", max_length=700)
     frame_appearance: str = Field(default="", max_length=700)
 
+    npc_bonds: tuple[NpcBond, ...] = Field(default=(), max_length=2)
+
     dna_basis: str = Field(default="", max_length=300)
     fanbase: Fanbase | None = None
 
@@ -46,6 +49,8 @@ class CreationDraft(BaseModel):
 
     @model_validator(mode="after")
     def legal_choices(self) -> Self:
+        if len({x.slot for x in self.npc_bonds}) != len(self.npc_bonds):
+            raise ValueError("Choose distinct NPC roles")
         for choices, name in (
             (self.girl_assets, self.girl_playbook),
             (self.frame_assets, official_frame(self.frame_playbook)),
@@ -97,4 +102,8 @@ class CreationDraft(BaseModel):
             missing.append("DNA basis")
         if official_frame(self.frame_playbook) == "THE PRINCE":
             missing.extend((self.fanbase or Fanbase()).missing())
+        if len(self.npc_bonds) < (2 if self.girl_playbook == "OLDGEN" else 1):
+            missing.append(
+                "two NPC Bonds" if self.girl_playbook == "OLDGEN" else "one or two NPC Bonds"
+            )
         return missing

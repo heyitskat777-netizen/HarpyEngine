@@ -296,6 +296,12 @@ class CreationView(discord.ui.View):
                 interaction, "No owner-authored details are available for these playbooks yet."
             )
 
+    @discord.ui.button(label="NPC Bonds", row=4)
+    async def npc(self, interaction: discord.Interaction, button: discord.ui.Button[Any]) -> None:
+        from girlframe.discord_adapter.npc_bonds import NpcView
+
+        await NpcView(self).render(interaction)
+
     @discord.ui.button(label="Save progress", style=discord.ButtonStyle.primary, row=4)
     async def save(self, interaction: discord.Interaction, button: discord.ui.Button[Any]) -> None:
         if not await self.interaction_check(interaction):

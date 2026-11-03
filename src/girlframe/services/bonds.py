@@ -9,6 +9,7 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine.bonds import PROMPTS, BondProposal
+from girlframe.services.handler_setup import HandlerService
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -54,6 +55,11 @@ class BondService:
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         if source == target:
             raise WorkflowError("Choose another joined player with a saved character profile.")
+        handler = HandlerService(self.store).current(connection)[1].handler_id
+        if handler in (source, target):
+            raise WorkflowError(
+                "Starting player Bonds require Pilot accounts; Handler is outside that roster."
+            )
         own, other = self._profile(connection, str(source)), self._profile(connection, str(target))
         if own is None or other is None:
             raise WorkflowError("Both players must be active campaign members with saved profiles.")
@@ -64,9 +70,14 @@ class BondService:
             self._authorize(connection, viewer)
             own, other = self._profiles(connection, viewer.user_id, target)
             girl = json.loads(own["public_json"])["girl_playbook"]
-            if girl == "NEWGIRL":
+            assignment = (
+                HandlerService(self.store).mentor_for(connection, viewer.user_id)
+                if girl == "NEWGIRL"
+                else None
+            )
+            if girl == "NEWGIRL" and (assignment is None or assignment.mentor.user_id != target):
                 raise WorkflowError(
-                    "UNSUPPORTED_RULE: Newgirl Mentor assignment requires the Handler workflow."
+                    "UNSUPPORTED_RULE: propose only to your currently Handler-assigned Mentor."
                 )
             return {
                 "source_revision": own["revision"],
@@ -95,6 +106,13 @@ class BondService:
         ]
 
     def _stale(self, connection: Connection, row: dict[str, Any]) -> bool:
+        handler = HandlerService(self.store).current(connection)[1].handler_id
+        if handler is not None and str(handler) in (row["source_id"], row["target_id"]):
+            return True
+        if row["girl_playbook"] == "NEWGIRL":
+            assignment = HandlerService(self.store).mentor_for(connection, int(row["source_id"]))
+            if assignment is None or assignment.assignment_id != row["mentor_assignment_id"]:
+                return True
         for party in ("source", "target"):
             profile = self._profile(connection, row[party + "_id"])
             if profile is None or profile["revision"] != row[party + "_revision"]:
@@ -149,9 +167,16 @@ class BondService:
             if (own["revision"], other["revision"]) != (source_revision, target_revision):
                 raise WorkflowError("STALE_REVISION: reopen the proposal; profiles changed.")
             girl = json.loads(own["public_json"])["girl_playbook"]
-            if girl == "NEWGIRL":
+            assignment = (
+                HandlerService(self.store).mentor_for(connection, viewer.user_id)
+                if girl == "NEWGIRL"
+                else None
+            )
+            if girl == "NEWGIRL" and (
+                assignment is None or assignment.mentor.user_id != proposal.target_id
+            ):
                 raise WorkflowError(
-                    "UNSUPPORTED_RULE: Newgirl Mentor assignment requires the Handler workflow."
+                    "UNSUPPORTED_RULE: propose only to your currently Handler-assigned Mentor."
                 )
             if proposal.prompt >= len(PROMPTS[girl]):
                 raise WorkflowError("Choose a starting prompt from your current Girl playbook.")
@@ -178,6 +203,7 @@ class BondService:
                     source_revision=source_revision,
                     target_revision=target_revision,
                     girl_playbook=girl,
+                    mentor_assignment_id=assignment.assignment_id if assignment else None,
                     prompt=proposal.prompt,
                     context=proposal.context,
                     event_id=event,

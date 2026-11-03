@@ -132,6 +132,7 @@ class OnboardingStore:
         operation: Callable[[Connection], dict[str, Any]],
         *,
         auto_audit: bool = True,
+        authorize: Callable[[Connection], None] | None = None,
     ) -> dict[str, Any]:
         self.guild_member(viewer)
         digest = hashlib.sha256(
@@ -141,6 +142,8 @@ class OnboardingStore:
         ).hexdigest()
         with self.transaction() as connection:
             self._bind(connection)
+            if authorize is not None:
+                authorize(connection)
             existing = (
                 connection.execute(
                     sa.select(t.commands).where(

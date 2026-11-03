@@ -63,10 +63,10 @@ reports the relationship step as pending. No AI or administrator chooses for her
 | Requirement | Source anchor | Current state / next work |
 |---|---|---|
 | Bonds and mutual player choices | Book PDF 13 / printed 11, individual playbooks | Private player proposals and mutual setup agreement implemented; NPC/Handler workflows pending. UI uses book “Intense”; sheet terminology discrepancy remains documented. |
-| Status hierarchy, unique Ace/Dog | Book PDF 14 / printed 12 | Pending Handler-authorized assignment; Princess starts Ace |
+| Status hierarchy, unique Ace/Dog | Book PDF 14 / printed 12 | Handler-authorized starting order implemented; Princess first, unique Ace/Dog. In-play changes and benefits pending. |
 | Heat and Identity mechanics | Book PDF 10 / printed 8 and relevant Plays | Not initialized or resolved; verify starting Heat explicitly |
-| Newgirl Mentor / prior mission discussion | Book PDF 40 | Mentor assignment is Handler-controlled (PDF 42 / printed 40); blocked until Handler workflow. Cadre prior-mission discussion also pending. |
-| Oldgen's two NPC Bonds | Book PDF 45 | Pending Bond validation |
+| Newgirl Mentor / prior mission discussion | Book PDF 40 | Handler nomination and subsequent mutual proposal implemented (PDF 42 / printed 40); Mentor callsign/effective Status and Cadre discussion pending. |
+| Oldgen's two NPC Bonds | Book PDF 45 | Exactly two sourced NPC role choices implemented; other Bond mechanics pending. |
 | Vatgrown DNA basis | Book PDF 48 | Implemented private player-authored field; creates no Bond/Tag |
 | AM jailbroken confidant | Book PDF 54 | Pending Bond choice |
 | Bonded Pair and Intense Bond | Book PDF 57 | Private Pair proposal/acceptance implemented; Pair-selected Assets remain pending |
@@ -121,3 +121,30 @@ NPC/Handler control, Mentor duties or Pair Asset authority. Incoming agreements
 are not automatically counted as a completed outgoing creation choice; the future
 full creation validator must reconcile all starting requirements. Either party
 can withdraw OOC setup agreement without performing a fictional Bond Play.
+
+## M2D Handler and NPC source follow-up
+
+PDF 14 / printed 12 gives four Status levels: Handler, Ace, Wings, Dog. Only one
+Pilot can be Ace and one Dog; positions are strictly ordered. The Handler assigns
+starting order. This delivery records a complete reviewed starting order and enforces
+Princess's starting Ace requirement (PDF 31 / printed 29). A one-Pilot Cadre cannot
+receive two distinct endpoint labels without an additional rule decision, so setup
+returns UNSUPPORTED_RULE. Multiple Princesses likewise require a source/roster
+decision. The UI supports 2–25 Pilots. Handler is outside Pilot ranks. This does not
+implement in-play shifting, Permissions, orders or Punishments.
+
+Handler appointment is application governance, explicitly confirmed by a configured
+administrator; it is not an invented game mechanic. It grants no private character
+access. Handler changes clear current setup with a visible confirmation warning.
+The Newgirl rule at PDF 42 / printed 40 now authorizes a Handler nomination. That
+nomination gates the existing voluntary two-player setup proposal; reassignment
+invalidates old consent tokens. The same source also requires Mentor-chosen callsign
+and effective higher Status. Those remain pending, not silently implemented as an
+automatic rename or roster reorder. Cadre prior-mission discussion is also pending.
+
+NPC choices were checked against each Girl creation page in the source table. Each
+has four listed NPC roles; most choose 1–2, Oldgen exactly 2. Dropdown labels are
+short paraphrases tied to stable source-order slots. Optional NPC names and feelings
+remain private draft descriptions. PDF 13 / printed 11 explicitly allows feelings
+to remain unwritten; written feelings are never mandatory. No unstated starting
+NPC Bond depth, shared NPC identity, world canon or NPC control behavior is inferred.

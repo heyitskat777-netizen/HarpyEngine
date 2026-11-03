@@ -156,6 +156,10 @@ class ReadOnlyDiscordBot(discord.Client):
             from girlframe.services.bonds import BondService
 
             register_bonds(self.tree, policy.guild_id, BondService(store))
+            from girlframe.discord_adapter.handler_setup import register_handler_setup
+            from girlframe.services.handler_setup import HandlerService
+
+            register_handler_setup(self.tree, policy.guild_id, HandlerService(store))
 
     def _callback(
         self, name: ReadOnlyCommand
@@ -179,6 +183,7 @@ class ReadOnlyDiscordBot(discord.Client):
                         "/character create (or /girl create), /character sync, /sheet\n"
                         "/character build — save starting Assets and appearance\n"
                         "/character bond, /character bonds — propose/review private setup Bonds\n"
+                        "/campaign handler, mentor, status_setup, setup — explicit starting setup\n"
                         "/roll basic — raw 2d6, public by default; publish:false is private\n"
                         "/roll show — retrieve a permitted receipt\n/ledger — permitted events\n"
                         "/safety pause, /safety resume — save or clear your own OOC pause\n"
