@@ -50,4 +50,4 @@ def load_bot_token(environ: Mapping[str, str] | None = None) -> SecretStr:
 
 def policy_summary(policy: BotPolicy) -> str:
     """Safe startup evidence; no filesystem paths or roster IDs."""
-    return json.dumps({"mode": "setup_and_drafts", "guild_scoped": True, "commands": 7})
+    return json.dumps({"mode": "m1_draft_ledger", "guild_scoped": True, "commands": 11})

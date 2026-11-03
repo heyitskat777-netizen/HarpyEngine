@@ -1,1 +1,1 @@
-"""Reserved for transactional outbox delivery in M1."""
+"""Transactional outbox delivery for explicitly published M1 dice receipts."""

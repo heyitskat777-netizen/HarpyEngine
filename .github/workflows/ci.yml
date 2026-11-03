@@ -1,4 +1,4 @@
-name: Read-only Discord bot
+name: M1 Discord pilot
 
 on: [push, pull_request]
 

@@ -84,8 +84,18 @@ class OnboardingStore:
             )
 
     def _audit(
-        self, connection: Connection, actor: int, key: str, kind: str, payload: dict[str, Any]
-    ) -> None:
+        self,
+        connection: Connection,
+        actor: int | str,
+        key: str,
+        kind: str,
+        payload: dict[str, Any],
+        *,
+        event_index: int = 0,
+        visibility: str = "private",
+        event_id: str | None = None,
+    ) -> str:
+        identity = event_id or str(uuid4())
         revision = (
             connection.execute(
                 sa.select(t.campaigns.c.revision).where(t.campaigns.c.id == self.campaign_id)
@@ -102,14 +112,16 @@ class OnboardingStore:
                 campaign_id=self.campaign_id,
                 seq=revision,
                 command_key=key,
-                event_index=0,
+                event_index=event_index,
                 actor_id=str(actor),
                 kind=kind,
                 payload_json=json.dumps(payload, sort_keys=True),
-                id=str(uuid4()),
+                id=identity,
                 created_utc=datetime.now(UTC).isoformat(),
+                visibility=visibility,
             )
         )
+        return identity
 
     def _write(
         self,
@@ -118,6 +130,8 @@ class OnboardingStore:
         kind: str,
         payload: dict[str, Any],
         operation: Callable[[Connection], dict[str, Any]],
+        *,
+        auto_audit: bool = True,
     ) -> dict[str, Any]:
         self.guild_member(viewer)
         digest = hashlib.sha256(
@@ -151,17 +165,51 @@ class OnboardingStore:
                 )
             )
             # Draft notes remain only in private storage; never in generic audit payloads.
-            self._audit(
-                connection,
-                viewer.user_id,
-                key,
-                kind,
-                {k: v for k, v in result.items() if k not in {"notes", "private"}},
-            )
+            event_id = None
+            if auto_audit:
+                event_id = self._audit(
+                    connection,
+                    viewer.user_id,
+                    key,
+                    kind,
+                    {k: v for k, v in result.items() if k not in {"notes", "private"}},
+                )
+            if kind == "character.draft_saved":
+                row = (
+                    connection.execute(
+                        sa.select(t.characters).where(
+                            t.characters.c.campaign_id == self.campaign_id,
+                            t.characters.c.user_id == str(viewer.user_id),
+                        )
+                    )
+                    .mappings()
+                    .one()
+                )
+                connection.execute(
+                    t.snapshots.insert().values(
+                        campaign_id=self.campaign_id,
+                        user_id=str(viewer.user_id),
+                        revision=row["revision"],
+                        character_id=row["id"],
+                        event_id=event_id,
+                        public_json=row["public_json"],
+                        private_json=row["private_json"],
+                    )
+                )
             return result
 
     def join(self, viewer: GuildViewer, key: str) -> dict[str, Any]:
         def operation(connection: Connection) -> dict[str, Any]:
+            if not connection.execute(
+                sa.select(t.principals).where(t.principals.c.user_id == str(viewer.user_id))
+            ).first():
+                connection.execute(
+                    t.principals.insert().values(
+                        user_id=str(viewer.user_id),
+                        id=str(uuid4()),
+                        created_utc=datetime.now(UTC).isoformat(),
+                    )
+                )
             found = connection.execute(
                 sa.select(t.members).where(
                     t.members.c.campaign_id == self.campaign_id,
@@ -174,6 +222,8 @@ class OnboardingStore:
                         campaign_id=self.campaign_id, user_id=str(viewer.user_id), role="player"
                     )
                 )
+            elif not found.active:
+                raise WorkflowError("Campaign membership is inactive. Contact the administrator.")
             return {"joined": True}
 
         return self._write(viewer, key, "campaign.joined", {}, operation)
@@ -184,6 +234,7 @@ class OnboardingStore:
             sa.select(t.members).where(
                 t.members.c.campaign_id == self.campaign_id,
                 t.members.c.user_id == str(viewer.user_id),
+                t.members.c.active.is_(True),
             )
         ).first():
             raise WorkflowError("Join this campaign before creating or viewing sheets.")

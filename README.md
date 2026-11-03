@@ -1,60 +1,73 @@
-# HarpyEngine — GIRL FRAME read-only Discord bot
+# HarpyEngine — GIRL FRAME private Discord pilot
 
-M0 is accepted. M1 includes the guild-scoped status bot, administrator-confirmed
-server setup, explicit campaign joining and saved owner-bound character drafts.
-No rolls, recovered-engine writes, AI or rules-certified characters are enabled.
-The broader M1 ledger/dice work is not complete. Current work orders and acceptance
-cases are indexed in [PROJECT_ROADMAP.md](docs/PROJECT_ROADMAP.md).
+M0 is accepted. M1 now implements server setup, persistent owner-bound drafts,
+Girl/Frame dropdowns and Discord tags, raw OS-backed 2d6 receipts, a filtered ledger,
+OOC safety pauses, retryable public delivery, and local backup/restore/rebuild tools.
+Offline acceptance and live verification are tracked in
+[reports/M1_ACCEPTANCE.md](reports/M1_ACCEPTANCE.md). Human testing of the new dice
+commands is still pending; this is not a production readiness claim.
 
-Read `AGENTS.md` first when developing. The original planning handoff remains in
-`GIRLFRAME_Discord_Codex_Handoff_v0.2/`; its `planning/` references refer to that
-directory. The owner authorized M1 server setup and draft onboarding; stop before
-recovered-engine writes, official Plays or AI.
+Characters remain **drafts / rules unverified**. Official Plays, modifiers, Heat,
+mechanical consequences, AI and recovered-engine writes are deferred. M1 raw dice
+are a test primitive and never resolve a GIRL FRAME Play.
 
-## Install
+Read `AGENTS.md` and [the roadmap](docs/PROJECT_ROADMAP.md) before development. The
+original planning package remains unchanged in `GIRLFRAME_Discord_Codex_Handoff_v0.2/`;
+its historical `planning/` paths refer to that directory.
 
-Use Python **3.12.14** and **uv 0.12.23**. Both are available in the prepared cloud
-environment. On another machine, install Python 3.12.14 and use
-`python -m pip install uv==0.12.23`. From the repository root:
+## Install and check
+
+Use Python **3.12.14**, **uv 0.12.23** and the committed lockfile. On a new machine,
+install that Python and `python -m pip install uv==0.12.23`. From the repo root:
 
 ```bash
-uv --cache-dir .cache/uv sync --locked --all-groups
+bash tools/install.sh
 source .venv/bin/activate
 python -m girlframe --help
 python -m girlframe health
 ```
 
-The same install command is saved in `tools/install.sh`; run `bash tools/install.sh`
-to create or refresh the development environment. It does not start services.
+The installer runs `uv --cache-dir .cache/uv sync --locked --all-groups`. It does
+not migrate data or start services. Health checks local SQLite, not live Discord
+readiness. `.env` is not auto-loaded. `GIRLFRAME_DATABASE_URL` defaults to
+`sqlite:///./var/girlframe.db`; only plain local SQLite URLs are supported. Run
+from the repository root. Keep databases, backups and policy under ignored `var/`
+or outside Git. Never delete a populated database to refresh the environment.
 
-The local cache location supports cloud machines with read-only home directories.
-`uv.lock` pins transitive dependencies and hashes. Do not regenerate the lock as
-part of normal installation. Python is constrained to 3.12 for this tested M0
-baseline; widen support only with validation. Offline checks need no token. The recovered
-private engine supplies its own bootstrap/verification tools outside this checkout;
-see [engine source inventory](docs/ENGINE_SOURCE_INVENTORY.md).
-
-`health` executes a local SQL query and reports `discord_connected: false` and
-`rules_implemented: false`. Health success is not live bot/game readiness.
-
-## Run the read-only Discord bot
-
-Use the private test guild only. In the Discord Developer Portal, install this
-application with `bot` and `applications.commands` scopes. View Channels and Send
-Messages are sufficient for this test bot; do not grant Administrator. No
-privileged message-content, member-list or presence intents are used. This bot
-uses the Gateway, not an HTTP interactions endpoint; its public key is not needed
-by this runtime. Do not configure a competing HTTP interactions endpoint.
-
-Supply the raw bot token through the secure environment variable **`DiscordBot`**.
-Do not put it in policy JSON, source, commands, screenshots or logs. `.env` files
-are not auto-loaded. The runtime preserves the inherited HTTPS proxy for Discord
-REST and Gateway traffic and keeps TLS verification enabled.
-
-For a reproducible synthetic test (no private campaign required), from the root:
+Before upgrading an existing database, make a new private backup, then migrate:
 
 ```bash
-source .venv/bin/activate
+python -m girlframe db backup --dest var/backups/before-0003.db
+python -m alembic upgrade head
+python -m alembic check
+```
+
+For a fresh database, skip backup and run migration. Startup refuses missing schema
+and never migrates automatically. Migration `0003` adds the ledger and captures the
+current revision of older drafts as a private baseline; earlier overwritten draft
+revisions cannot be recovered. Existing campaigns, channels, roles and drafts are
+preserved. `alembic downgrade base` destroys application tables: use only on
+throwaway test databases. Never downgrade real campaign data to roll back code.
+
+## Discord application and startup
+
+This Gateway pilot activates **one configured guild per process**, with no global
+commands. Install the application with `bot` and `applications.commands` scopes.
+Supply the raw bot token only through secure environment variable **`DiscordBot`**.
+Never put it in policy, source, commands or logs. The application public key is not
+used by Gateway mode; do not configure a competing HTTP interactions endpoint.
+
+View Channels and Send Messages support commands and explicit ledger delivery.
+Setup additionally needs Manage Channels. Character tags need Manage Roles and
+Manage Nicknames, with the bot's role above label roles and members it should
+rename. Read Message History is optional for bounded delivery reconciliation in
+the managed ledger. No Administrator bot permission or privileged intents are
+required. Changing portal default install permissions does not update existing
+server role grants automatically.
+
+For the owner's private test guild, create the synthetic policy once:
+
+```bash
 python tools/setup_discord_dev.py \
   --application-id 1566951910601269268 \
   --guild-id 1566954229535608913 \
@@ -63,172 +76,153 @@ python -m girlframe start --config var/discord-dev/policy.json --check
 bash tools/run_discord_dev.sh
 ```
 
-Setup refuses an existing destination. On subsequent starts, reuse the policy;
-do not rerun setup or delete a configured sandbox to reset it. The generated
-`sandbox` is a **status-only synthetic fixture**, not a runnable game engine. It
-reports turn 0, paused. The real private engine remains external and unchanged.
+Setup refuses an existing destination; retain and reuse the policy. Its sandbox
+is a synthetic **read-only engine-status fixture**, not a runnable game engine.
+Policy examples are in `config/discord-policy.example.json`. The offline `--check`
+validates policy/sandbox only, not schema, credentials or live guild access.
 
-`start --check` validates policy and readable sandbox offline without a token.
-Actual startup verifies token/application identity and access to the configured
-guild, then registers seven top-level commands/groups **in that guild only**. Sync replaces
-this application's command set in that test guild; no global command sync occurs.
-Gateway reconnects do not re-register commands. `Ctrl-C` and SIGTERM close the
-client. Processes must be restarted after environment restoration/publication.
+Actual startup checks the authenticated application and guild, then synchronizes
+11 top-level commands/groups in that guild only. Reconnect does not resync commands
+or duplicate workers. Responses are ephemeral, with mentions disabled. Only an
+explicit confirmed setup posts onboarding controls; only `publish:true` on a roll
+queues a public receipt. SDK DEBUG logging must stay disabled because it can
+include interaction credentials. HTTP/Gateway use the inherited HTTPS proxy and
+verified TLS. SIGTERM and Ctrl-C close the bot.
 
-All replies are ephemeral with mentions disabled. Authorization runs server-side:
+A process in a development session is temporary hosting and must be restarted after
+environment restoration. This work does not publish environment configuration.
+HTTP 404 / Discord 10004 at startup means the application cannot access the guild:
+check installation and guild ID. Errors omit raw provider bodies and private paths.
 
-| Command | Access |
+## Commands and player flow
+
+| Command | Access and behavior |
 |---|---|
-| `/help` | Authenticated members of the configured guild |
-| `/campaign_status` | Explicit `status_user_ids`, or guild administrators if enabled, with audience approval |
-| `/health` | Guild administrators only, and only when explicitly enabled by policy |
-| `/server setup` | Configured administrator; preview and caller-bound confirmation |
-| `/campaign join` | Guild member explicitly joining as themselves |
-| `/character create` | Joined player; create or resume their own draft |
+| `/help` | Configured guild member; private usage |
+| `/health` | Explicitly enabled guild administrators; local service/sandbox check |
+| `/server setup` | Configured administrator; preview, then caller-bound confirmation |
+| `/campaign create name` | Configured administrator; initialize once without resetting data |
+| `/campaign join` | Explicit self-enrollment as a player |
+| `/campaign status` | Joined member or configured administrator; stored M1 status |
+| `/campaign_status` | Stored M1 status alias, retaining the earlier approved audience restriction |
+| `/character create`, `/girl create` | Joined player; own dropdown draft wizard |
+| `/character sync` | Retry your saved label roles and nickname |
 | `/sheet [member]` | Joined player; own private sheet or another member's public sheet |
+| `/roll basic [publish]` | Joined owner with saved draft; raw 2d6, private by default |
+| `/roll show receipt` | Own private or campaign-published receipt only |
+| `/ledger [before]` | Joined player; permitted events, eight per page |
+| `/safety pause` | Joined participant; save their own OOC pause, without a reason |
+| `/safety resume` | Clear only your own pause; other pauses continue blocking rolls |
 
-DMs, wrong guilds, and users without guild-member proof are denied before snapshot
-access. Roles are derived from Discord's member permissions, never display names
-or slash options. There are no player-supplied path/campaign selectors. SDK command
-visibility is supplementary; changing Discord command permissions does not bypass
-backend checks. Status commands have a per-user/guild cooldown of three uses per
-ten seconds; setup previews have a ten-second per-user/guild cooldown.
+DMs, wrong guilds, nonmember identities and inactive campaign membership are denied
+server-side. Admin status never authorizes reading another player's private notes
+or private receipts. Ownership comes from authenticated numeric IDs, not names,
+Discord tags, slash options or claims in messages. Players cannot select arbitrary
+campaigns, files, channels or another roll actor. The bot does not consume passive
+roleplay transcripts or interpret edited messages as state changes.
 
-The local JSON policy persists membership/access settings across process restarts;
-changes require restart. See `config/discord-policy.example.json`. It is a trusted
-operator configuration, not a public API. Store real rosters under ignored `var/`
-or outside Git. The generated development policy deliberately approves status
-only for test-guild administrators; ordinary members are denied until their
-numeric Discord IDs are added to `status_user_ids`. This is read-only access, not
-permission to act for any player character.
+Run `/server setup`, review the layout, and confirm within ten minutes. It creates
+two categories, seven text channels, and reusable new-player controls. Public
+welcome/directory/mission/ledger channels are read-only to ordinary members. Staff
+resources deny @everyone visibility. Backend secrets are never posted in staff
+channels. Setup saves resource IDs, resumes known partial results, checks permission
+drift and never adopts unrelated same-name channels. An ambiguous create pauses
+for operator review to avoid duplicates; no teardown command deletes channels.
 
-To select an actual disposable engine runtime later, set the policy's `sandbox`
-to its absolute path and review audience approval. Do not point it at canonical
-state. `GIRLFRAME_ENGINE_SANDBOX` controls the separate local `engine-status` CLI;
-the live bot reads only the sandbox bound in its policy. Do not enable SDK DEBUG
-logging; it may include interaction credentials.
+In `new-players`, join and choose **Create/Edit draft**. Choose Girl and Frame from
+dropdowns; enter callsign and optional private notes, review, then **Save draft**.
+Only confirmed saves persist. Stable IDs and revisions survive restart. Stale forms
+cannot overwrite newer saves. Unsubmitted forms expire; reopen to continue from the
+last saved draft. Persistent entry buttons are restored at startup; slash fallbacks
+remain available if the entry message is deleted.
 
-If startup reports `404/10004`, Discord cannot see that guild: install the bot or
-verify the server ID. Invalid credentials, permission failures and other errors
-produce sanitized messages. No response bodies, raw state or private paths are
-printed to users. Only an explicitly confirmed setup publishes the generic
-new-player entry message; no unsolicited gameplay or roleplay messages are sent.
+Saving queues the Girl/Frame label roles and callsign nickname. SORROW + Mockingbird
++ JANUS-B requests **MOCKINGBIRD**, **JANUS-B** and **SORROW**. Only app-owned,
+permission-free label roles are managed; unrelated roles are preserved. A blocked
+Discord update leaves the draft saved and can be retried. Discord forbids renaming
+the server owner; that test account must set its own nickname manually. Other
+hierarchy and permissions restrictions also apply. JANUS-B is an owner-requested
+server variant label, not a separate published rules claim. See
+[character tags](docs/CHARACTER_TAGS.md).
 
-## Server setup and character onboarding
+A raw roll returns two faces, their sum, timestamp and stable receipt ID. It changes
+no character resources. `publish:true` explicitly queues the receipt to the managed
+`rolls-and-ledger` channel; failures retry without rolling again. Existing saved
+receipts remain retrievable while paused. `/campaign status` reports the **bot's
+stored M1 campaign**, independent of the recovered engine's paused turn counter.
 
-Run `python -m alembic upgrade head` explicitly before starting this version.
-Back up existing SQLite data before upgrading; installation and bot startup do
-not run migrations automatically. Startup refuses an unmigrated database.
-The local policy/snapshot `--check` remains an offline configuration check, not a
-database migration or live Discord readiness claim.
+Ordinary metadata and ledger commands have bounded per-user throttles. OOC safety
+pause bypasses that throttle and does not lose a race to unrelated revisions.
+Resume clears the caller's request only. No fictional penalty or reason is recorded.
 
-Grant the bot **Manage Channels**, View Channels and Send Messages for provisioning;
-do not grant Administrator. Server setup itself creates no roles. Character label
-assignment additionally needs **Manage Roles** and **Manage Nicknames**, with the
-bot's role above its labels and members it should rename.
-An administrator invokes `/server setup`, reviews the versioned layout, then
-confirms within ten minutes. Preview creates no Discord resources. Confirmation
-is bound to that administrator and campaign, and rechecks bot permissions.
+## Persistence and recovery
 
-The template creates two categories and seven text channels, then posts reusable
-new-player controls. Welcome, character directory, mission board and rolls/ledger
-are read-only to ordinary members. Staff category/review deny @everyone visibility.
-Reserved mission/scene/ledger channels do not imply gameplay is implemented.
+SQLite WAL is the authority for M1 metadata and raw receipts. The recovered engine's
+canonical JSON is not imported, synchronized or modified. The schema has principals,
+campaign membership, drafts, command inbox, append-only events/snapshots/receipts,
+setup resources, managed roles, tag jobs, safety pauses and a transactional outbox.
+Numeric Discord IDs remain membership natural keys; principals additionally have
+stable UUIDs. See [M1 ledger design](docs/M1_LEDGER.md).
 
-This private-pilot version serves one explicitly configured guild per process.
-Joining another server does not activate it there or create channels automatically;
-that server needs a trusted guild/campaign policy first. Multi-guild self-service
-installation is a later deployment extension, not a global command enabled here.
+Each raw roll transaction checks membership, expected campaign revision, pause and
+own draft before sampling OS randomness. It commits one receipt, two distinct
+indexed events, the command outcome and optional outbox together. An identical
+interaction retry returns that receipt, including after restart; changed semantic
+payload conflicts. Expected revision is a first-execution precondition, not part of
+the roll's semantic hash, so refreshed retries still retrieve the original receipt.
+A stale new command samples no dice. Failed transactions expose no receipt.
 
-Resource IDs are persisted. Repeat or restart reuses known IDs and resumes known
-partial failures, without adopting same-name unrelated channels. Existing managed
-permission drift or deleted resources stops for administrator review; nothing is
-silently overwritten. An ambiguous create response pauses to avoid duplicates.
-Saved own-message IDs are reused without acquiring Read Message History or reading
-transcripts; a deleted onboarding message requires repair, while slash fallbacks
-remain available. No automatic teardown/delete command exists.
+Delivery is **at least once**, not externally exactly once. Durable leases and claim
+tokens prevent ordinary concurrent sends and stale acknowledgements. Retries reuse
+a nonce and, with Read Message History, reconcile the last 50 posts in the managed
+ledger by bot author and receipt marker. Missing history permission, an older post,
+or an acknowledgement race can produce duplicate messages. Each shows the same
+saved receipt; delivery never creates another roll or game event. Reconciliation
+never scans roleplay channels. Discord edits/deletions do not change stored records.
 
-In `new-players`, choose **Join campaign**, then **Create/Edit draft**. Choose Girl
-and Frame from dropdowns, then Continue to enter callsign and optional private
-notes. Review the private preview and press **Save draft**. **My sheet**, `/sheet`,
-and `/character create` retrieve that same saved character and stable ID. Reopen
-the form to edit/resume; old forms cannot overwrite newer revisions. Repeating
-the same submitted interaction returns its original result, not another character.
-Only confirmed saves persist. Unsubmitted forms and unconfirmed previews expire
-and must be reopened; persistent entry controls restore after the bot restarts.
-Interactive metadata actions are limited to three per ten seconds per guild/user;
-this process-local throttle resets on restart and does not replace authorization.
-
-Saving also queues the selected Girl/Frame Discord label roles and uses the
-callsign as server nickname. For example, SORROW + Mockingbird + JANUS-B requests
-roles **MOCKINGBIRD**, **JANUS-B** and nickname **SORROW**. Only app-owned, permission-free
-roles are created/reused; unrelated roles remain untouched. `/character sync`
-retries your own request, and pending jobs resume in the background after restart.
-The draft remains saved even if a Discord change is denied. A bot cannot rename
-the server owner, and hierarchy restrictions still apply; the private result
-explains a blocked or pending change. See [character tags](docs/CHARACTER_TAGS.md).
-
-These are **drafts / rules unverified**, not mechanically playable official sheets.
-Dropdown names are verified, but no stats or legal combinations are invented.
-JANUS-B is an owner-requested server label of JANUS, not a separate rules claim.
-The full verified builder
-has its own work order and NOT_RUN acceptance cases. Private notes appear only to
-their owner through the application, even when another administrator requests a
-public sheet. Long escaped notes are truncated in Discord display but retained
-for owner editing. Discord messages are views; SQLite owns these metadata records.
-The private engine's canonical JSON is neither imported nor changed.
-
-Campaign joining and draft ownership are database-backed. The existing status
-command retains its separate approved-user/admin policy; joining does not silently
-grant additional status or administrator permissions. Actual policy, member IDs,
-drafts and backups stay under ignored `var/` or outside Git. A human server admin
-can see Discord's staff area; that does not confer access to another PC's notes.
-
-## Read-only engine integration
-
-M0 now includes a reviewed copy of the v1.3.10 read-only bridge and a local
-`engine-status` service/CLI. This code is installed by the normal locked setup;
-it does not import or execute the private engine's Python scripts. No private
-archive is required for the synthetic CI suite.
-
-Keep the supplied PRIVATE archive outside the checkout. From its extracted root
-(containing its own `AGENTS.md`), follow its private setup instructions:
+Trusted local maintenance (not player commands):
 
 ```bash
-python tools/package_probe.py
-python tools/verify_engine.py --require-full
-python tools/bootstrap_dev.py
-python runtime/dev/scripts/gm.py validate
+python -m girlframe db backup --dest var/backups/pilot-unique.db
+python -m girlframe db restore --source var/backups/pilot-unique.db --dest var/restored.db
+python -m girlframe db export --config var/discord-dev/policy.json --dest var/public-export.json
+python -m girlframe db rebuild --config var/discord-dev/policy.json
+python tools/seed_synthetic.py --dest var/offline-synthetic.db
 ```
 
-Bootstrap creates a disposable runtime with a noncanonical marker and refuses to
-overwrite an existing destination. Do not run mutating commands against the
-packaged canonical template. Back in this application's root, configure the
-absolute location of that disposable runtime:
+Backup uses SQLite's backup API, includes committed WAL data, and verifies integrity
+and foreign keys. Backups contain private data and are created mode 0600. Restore
+always creates a **new offline file**, refusing any existing destination. Stop the
+bot before deliberately switching `GIRLFRAME_DATABASE_URL` to a verified restore;
+keep the old database and policy. Restored pending outbox work may retry delivery.
+Public export excludes notes, private receipts and actor/membership IDs. It is a
+view, not a full restore source. Export and seed also refuse existing destinations.
 
-```bash
-export GIRLFRAME_ENGINE_SANDBOX=/absolute/private/path/runtime/dev
-python -m girlframe engine-status
-```
+Rebuild restores current character public/private projections from immutable
+versioned snapshots, and appends local-operator audit provenance; it neither rolls
+nor changes recorded receipts/events. It does not reconstruct setup IDs, membership,
+safety or delivery operational state from text events; use a full backup for those.
+The old pre-0003 draft baseline is explicit, not invented historical revisions.
+Run backup before repair. Synthetic seed creates a separate fresh offline DB with
+fixed fake identity IDs, one draft and one real OS dice test; do not run it as a live
+server database.
 
-Output contains exactly `turn` (nonnegative integer) and `paused` (boolean). These
-fields still need GM approval for their audience before Discord exposure. The
-command does not create a DB, write state, launch the engine, or call Discord. No
-path option can be supplied by a player; only trusted local configuration selects
-the sandbox. Without configuration it exits 1; it never searches for campaign data.
+## Recovered engine reference
 
-The source must have the bootstrap marker, `scripts/gm.py`, and `state/campaign.json`.
-The adapter rejects symlinked roots, scripts/state directories, or required files,
-invalid status types, malformed JSON and snapshots larger than 4 MiB. The marker
-is an accident-prevention check, not cryptographic proof of isolation. Use a
-trusted local sandbox and filesystem; M0 does not guarantee consistent reads while
-another process is rewriting files. Errors omit underlying paths and raw data.
-Public-facing Discord commands and user/campaign authorization remain M1 work.
+The full private engine and PDFs remain outside Git. The reviewed read-only bridge
+reads only strict `turn` and `paused` fields from an explicitly selected disposable
+sandbox, without importing/executing private scripts. Configure a trusted absolute
+`GIRLFRAME_ENGINE_SANDBOX`, then `python -m girlframe engine-status`. The source must
+have the noncanonical marker, `scripts/gm.py` and `state/campaign.json`; symlinks,
+malformed types and snapshots over 4 MiB are refused. No sandbox is auto-discovered.
 
-## Validate
+The corrected private package was independently checked with `package_probe.py`,
+`verify_engine.py --require-full`, `bootstrap_dev.py`, and its runtime `gm.py validate`.
+See [engine inventory](docs/ENGINE_SOURCE_INVENTORY.md). That verification is separate
+from bot acceptance and does not certify every mechanic. No v1.3.11 implementation
+is claimed. Never run a mutating command against its packaged canonical template.
 
-After activation, run these commands from the repository root (CI uses the same
-tools through `uv run --no-sync`):
+## Validation and limits
 
 ```bash
 ruff check .
@@ -239,84 +233,26 @@ python GIRLFRAME_Discord_Codex_Handoff_v0.2/verification/verify_handoff.py
 python tools/check_repository.py
 ```
 
-Tests use synthetic data and block in-process network connections. They exercise
-identity validation, the service/fake-transport seam, CLI success/failure paths,
-SQLite WAL and foreign keys, and repeatable empty migration setup. No live Discord
-or model integration is tested. Engine-status tests also verify allowlisting,
-strict types, sandbox selection, bounded reads and byte-for-byte nonmutation with
-synthetic files. The historical 86-case catalog remains NOT_RUN;
-it is not the executable M0 suite. Coverage percentage is not currently measured.
+Tests use synthetic data and block outbound network. They cover migrations, private
+views, IDs, two-campaign isolation, real SQLite concurrency, fixed injected test RNG,
+commit/delivery crash points, restart replay, immutable records, backup/restore,
+projection rebuild and fake Discord interactions. Production has no seeded RNG
+configuration. In this managed shell, pytest needs supported command escalation
+for asyncio worker-thread wakeups; its network block stays enabled. CI performs
+offline checks, not live Discord tests. Coverage percentage is not measured.
 
-M1 tests also cover the Discord command surface, permission matrix, private
-deferral/response transport, strict policy, app/guild checks, restart configuration,
-cooldowns and sanitized failures. In the managed command sandbox, asyncio worker
-thread wakeups may be blocked; run pytest with supported command escalation when
-needed. Its network-blocking fixture remains enabled, so these are offline tests.
-Python 3.12's known discord.py `audioop` import deprecation is narrowly filtered;
-all other warnings remain errors. Voice is not enabled.
+The historical 86-case catalogue is unchanged; current test mappings are additive in
+`docs/acceptance/`. Full rules-certified creation and M2 Plays require a separate
+source audit and acceptance. Multi-guild self-service, continuous hosting, retention/
+erasure workflows and production security remain unfinished. SQLite and in-process
+workers are a private single-writer pilot design. Immutable private draft snapshots
+are sensitive history; multi-user release needs a retention policy first.
 
-The original handoff is excluded from Ruff so historical files and hashes remain
-unchanged. Its validator is run separately; `tools/check_repository.py` also checks
-its manifest and scans publishable files for limited credential patterns/private
-paths. This is not comprehensive secret detection or a production security audit.
+## Rights and private references
 
-## Database scaffold
-
-The default database is `sqlite:///./var/girlframe.db`, relative to the current
-directory. Run from the root. To isolate a local database:
-
-```bash
-export GIRLFRAME_DATABASE_URL=sqlite:////absolute/path/to/synthetic.db
-python -m girlframe health
-python -m alembic upgrade head
-python -m alembic check
-python -m alembic downgrade base
-```
-
-M0 only supports plain local SQLite URLs, without URI parameters. `.env.example`
-documents the setting; `.env` is not auto-loaded. SQLite connections enable WAL,
-foreign keys and a five-second busy timeout. This is a single-writer pilot design,
-not multi-process coordination. Health may create the database and parent folder;
-it never runs migrations. M0's historical empty scaffold is now extended by
-revision `0001`: campaigns, membership, drafts, command inbox, audit events, setup
-plans and resource mappings. Revision `0002` adds owned roles and the durable
-character-role/nickname queue. Fresh/repeated upgrade, metadata check and downgrade
-are tested against disposable synthetic databases.
-
-Only delete disposable synthetic DBs to reset M0. Do not apply reset instructions
-to campaign data. `downgrade base` now **drops application tables**; run it only on
-disposable test databases. A local pre-upgrade SQLite backup was retained before
-applying the additive migration. Full backup/restore automation and event replay
-remain part of the unfinished broader M1 work before real gameplay data.
-
-## Boundaries and next milestone
-
-- `engine`: transport-independent typed identity and status projection; rules deferred.
-- `engine_adapter`: read-only sandbox adapter; no subprocess or mutation methods.
-- `_vendor/harpyframe`: reviewed minimal bridge, with source provenance documented.
-- `discord_adapter`: private-response protocol and in-memory test fake.
-- `services`: offline health and read-only engine status; no authorization or mutations.
-- `database`: connection setup and empty metadata.
-- `scenes`, `gm`, `handler`, `ai`, `delivery`: reserved namespaces only.
-
-The current M1 phase implements trusted local read-only membership policy and real
-Discord transport. Later M1 work adds database-backed campaigns, sheets, raw dice,
-idempotency, event journal, outbox and crash/replay tests. Live testing requires
-an authorized private test guild and securely provided bot credentials. Before
-mutable rolls/finalization, resolve the legacy JSON/database authority boundary
-and implement transactions, revisions, serialization and idempotency. The full
-engine has been recovered and privately verified, but mechanics integration and
-all official Plays are deferred. There is no claim of v1.3.11 implementation.
-
-## Source and game rights
-
-This is private development. No open-source license is granted for the new
-application code by this repository; rights remain with their respective holders
-pending an explicit licensing decision. GIRL FRAME is authored by Isabelle M.
-Ruebsaat. The game, rulebook, official sheets, names and other third-party material
-retain their own rights; this project does not relicense them or assert affiliation.
-Third-party dependencies retain their respective licenses.
-
-Do not commit official PDFs, real campaign saves, messages, credentials, or private
-reference archives. Keep them outside the checkout. `.gitignore` is an aid, not
-permission to commit sensitive content with `git add -f`.
+Private development grants no open-source license. GIRL FRAME is authored by
+Isabelle M. Ruebsaat; the game, official sheets, names and other third-party material
+retain their respective rights. This project does not assert affiliation or relicense
+them. Dependencies retain their own licenses. Do not commit official PDFs, private
+engine archives, campaign saves, real messages or credentials. `.gitignore` is an aid,
+not permission to force-add private material.

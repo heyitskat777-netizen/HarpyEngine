@@ -8,16 +8,18 @@ do not rewrite that historical package or silently drop its original M1 gates.
 | M1A_SERVER_SETUP | Persistent guild/campaign binding, permission preflight, preview/confirm channel provisioning, saved resource IDs and recovery | Current |
 | M1B_CHARACTER_ONBOARDING | New-player controls, explicit join, resumable owner-bound draft form, persistent public/private sheet projections | Current |
 | M1C_CHARACTER_TAGS | Girl/Frame dropdowns, safe owned label roles, callsign nickname and durable retry | Current |
+| M1D_ENGINE_LEDGER | Immutable raw dice receipts, filtered ledger, safety, durable delivery, backup/restore and snapshot rebuild | Implemented; live human smoke pending |
 | M2_CHARACTER_BUILDER | Complete source-audited Girl/Frame creation, legal options and derived resources, validation and playable activation | Before claiming rules-usable characters |
 
-The current read-only commands remain available. Original M1 dice/inbox/outbox,
-crash recovery, backups and ledger acceptance remain required before M1 is complete
-and before mutating the recovered game engine. Setup/character metadata does not
+The status commands remain available and now show stored M1 status. Original M1
+dice/inbox/outbox, crash recovery, backup and ledger tests are implemented; human
+smoke and owner acceptance remain required before calling M1 complete. Setup/character metadata does not
 mutate the engine or import the private canonical campaign. M2/M3 rules work must
 verify creation against the supplied official PDFs, not an invented schema.
 
 Acceptance cases and their executable-test mappings are maintained in
-`docs/acceptance/server_onboarding.json`; future builder cases remain NOT_RUN.
+`docs/acceptance/server_onboarding.json`, `character_tags.json`, and
+`m1_ledger.json`; future builder cases remain NOT_RUN.
 
 ## Provisioned layout v1
 
@@ -29,7 +31,8 @@ Welcome/directory/mission/ledger are read-only to ordinary members. New-player a
 scene channels allow conversation. Staff resources deny @everyone visibility and
 explicitly permit the bot; Discord administrators retain platform-level access.
 Backend character secrets never rely on channel privacy and are not posted there.
-Mission/scene/ledger channels are reserved surfaces, not implemented gameplay.
+Mission/scene channels remain reserved. The ledger supports explicitly published
+raw dice tests, without official Play resolution.
 
 Use `/server setup` to preflight and preview, then a caller-bound confirmation to
 apply. No resources are created on joining a server or during startup. No roles

@@ -11,6 +11,7 @@ from discord import app_commands
 from girlframe.discord_adapter.config import BotPolicy
 from girlframe.services.character_tags import CharacterTagSynchronizer
 from girlframe.services.engine_status import EngineStatusUnavailable
+from girlframe.services.ledger import CampaignLedger
 from girlframe.services.onboarding import OnboardingStore
 from girlframe.services.read_only_bot import (
     CommandDenied,
@@ -113,8 +114,10 @@ class ReadOnlyDiscordBot(discord.Client):
         self.policy = policy
         self.service = service
         self.store = store
+        self.ledger = CampaignLedger(store) if store else None
         self.tag_sync = CharacterTagSynchronizer(store) if store else None
         self._tag_worker: asyncio.Task[None] | None = None
+        self._delivery_worker: asyncio.Task[None] | None = None
         self.tree = ReadOnlyCommandTree(self, fallback_to_global=False)
         guild = discord.Object(id=policy.guild_id)
         commands: tuple[tuple[ReadOnlyCommand, str], ...] = (
@@ -141,11 +144,44 @@ class ReadOnlyDiscordBot(discord.Client):
             register_onboarding(
                 self.tree, policy.guild_id, store, Provisioner(store), self.tag_sync
             )
+            from girlframe.discord_adapter.ledger import register_ledger
+
+            assert self.ledger is not None
+            register_ledger(self.tree, policy.guild_id, self.ledger, self.tag_sync)
 
     def _callback(
         self, name: ReadOnlyCommand
     ) -> Callable[[discord.Interaction[discord.Client]], Coroutine[Any, Any, None]]:
         async def callback(interaction: discord.Interaction[discord.Client]) -> None:
+            if self.ledger is not None and name in {"help", "campaign_status"}:
+                from girlframe.discord_adapter.ledger import status_text
+                from girlframe.discord_adapter.onboarding import private_operation
+
+                viewer = viewer_from_interaction(interaction)
+                try:
+                    self.service.authorize(name, viewer)
+                except CommandDenied as error:
+                    await PrivateInteractionResponder(interaction).send(str(error))
+                    return
+                if name == "help":
+                    await PrivateInteractionResponder(interaction).send(
+                        "HarpyEngine M1 draft sandbox\n"
+                        "/server setup — administrator setup preview\n"
+                        "/campaign create, /campaign join, /campaign status\n"
+                        "/character create (or /girl create), /character sync, /sheet\n"
+                        "/roll basic — recorded raw 2d6, private unless publish is selected\n"
+                        "/roll show — retrieve a permitted receipt\n/ledger — permitted events\n"
+                        "/safety pause, /safety resume — save or clear your own OOC pause\n"
+                        "/health — configured administrators only\n"
+                        "Drafts are rules unverified. Official Plays, recovered-engine writes "
+                        "and AI are disabled."
+                    )
+                else:
+                    await private_operation(
+                        interaction,
+                        lambda: status_text(self.ledger.status(viewer) if self.ledger else {}),
+                    )
+                return
             await dispatch_read_only(
                 name,
                 viewer_from_interaction(interaction),
@@ -169,6 +205,10 @@ class ReadOnlyDiscordBot(discord.Client):
     async def on_ready(self) -> None:
         if self.store is not None and (self._tag_worker is None or self._tag_worker.done()):
             self._tag_worker = asyncio.create_task(self._sync_character_tags())
+        if self.ledger is not None and (
+            self._delivery_worker is None or self._delivery_worker.done()
+        ):
+            self._delivery_worker = asyncio.create_task(self._deliver_rolls())
         print(
             "HarpyEngine ready: commands registered in the configured test guild.",
             flush=True,
@@ -190,12 +230,30 @@ class ReadOnlyDiscordBot(discord.Client):
                     pass  # Keep durable jobs pending; never log provider/member payloads.
             await asyncio.sleep(30)
 
+    async def _deliver_rolls(self) -> None:
+        from girlframe.delivery.outbox import OutboxWorker
+        from girlframe.discord_adapter.ledger import DiscordRollGateway
+
+        assert self.ledger is not None
+        worker = OutboxWorker(self.ledger)
+        while not self.is_closed():
+            guild = self.get_guild(self.policy.guild_id)
+            if guild is not None:
+                try:
+                    for _ in range(10):
+                        if not await worker.deliver_one(DiscordRollGateway(guild)):
+                            break
+                except Exception:
+                    pass  # Durable lease/retry; no provider payload logging.
+            await asyncio.sleep(5)
+
     async def close(self) -> None:
-        task = self._tag_worker
-        self._tag_worker = None
-        if task is not None and task is not asyncio.current_task() and not task.done():
-            task.cancel()
-            await asyncio.gather(task, return_exceptions=True)
+        tasks = [self._tag_worker, self._delivery_worker]
+        self._tag_worker = self._delivery_worker = None
+        for task in tasks:
+            if task is not None and task is not asyncio.current_task() and not task.done():
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
         await super().close()
 
     async def on_error(self, event_method: str, *args: object, **kwargs: object) -> None:

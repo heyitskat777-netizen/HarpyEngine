@@ -1,4 +1,4 @@
-"""Read-only Discord startup and local offline checks."""
+"""M1 Discord startup, local checks and trusted database maintenance."""
 
 import argparse
 import asyncio
@@ -23,7 +23,7 @@ from girlframe.services.health import foundation_health
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="HarpyEngine server setup, saved drafts and local checks"
+        description="HarpyEngine M1 drafts, raw dice ledger and local maintenance"
     )
     parser.add_argument("--version", action="version", version=__version__)
     commands = parser.add_subparsers(dest="command")
@@ -38,9 +38,54 @@ def main(argv: Sequence[str] | None = None) -> int:
     commands.add_parser(
         "engine-status", help="Read turn/paused from an explicitly configured sandbox"
     )
+    database = commands.add_parser("db", help="Trusted local backup, restore, export or rebuild")
+    actions = database.add_subparsers(dest="action", required=True)
+    backup = actions.add_parser("backup", help="WAL-consistent private backup to a new file")
+    backup.add_argument("--dest", type=Path, required=True)
+    restore = actions.add_parser(
+        "restore", help="Restore to a new offline file; never replace data"
+    )
+    restore.add_argument("--source", type=Path, required=True)
+    restore.add_argument("--dest", type=Path, required=True)
+    export = actions.add_parser("export", help="Export public sheets and published receipts only")
+    export.add_argument("--config", type=Path, required=True)
+    export.add_argument("--dest", type=Path, required=True)
+    rebuild = actions.add_parser("rebuild", help="Rebuild character views from private snapshots")
+    rebuild.add_argument("--config", type=Path, required=True)
     args = parser.parse_args(argv)
     if args.command is None:
         parser.print_help()
+        return 0
+    if args.command == "db":
+        from girlframe.database.connection import create_database_engine
+        from girlframe.database.maintenance import copy_database, database_path, write_export
+        from girlframe.services.ledger import CampaignLedger
+        from girlframe.services.onboarding import OnboardingStore
+
+        try:
+            settings = load_settings()
+            if args.action in {"backup", "restore"}:
+                source = args.source if args.action == "restore" else database_path(settings)
+                copy_database(source, args.dest)
+            else:
+                policy = load_bot_policy(args.config)
+                engine = create_database_engine(settings)
+                try:
+                    ledger = CampaignLedger(OnboardingStore(engine, policy))
+                    if args.action == "export":
+                        write_export(args.dest, ledger.public_export())
+                    else:
+                        ledger.rebuild_projections()
+                finally:
+                    engine.dispose()
+        except Exception:
+            print(
+                "Database maintenance failed. Check inputs, migrations and new destination; "
+                "existing files are never replaced.",
+                file=sys.stderr,
+            )
+            return 1
+        print(json.dumps({"operation": args.action, "ok": True}))
         return 0
     if args.command == "start":
         configured_path = args.config or os.environ.get("GIRLFRAME_DISCORD_CONFIG")

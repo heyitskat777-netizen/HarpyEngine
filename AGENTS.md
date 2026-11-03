@@ -9,8 +9,10 @@ this repository. M0 is accepted. The owner authorized **M1 server setup and save
 character onboarding** after the read-only phase. Read `docs/PROJECT_ROADMAP.md`
 and the additive work orders under `docs/work_orders/`. Build resumable setup,
 membership, dropdown draft sheets, and owner-confirmed cosmetic role/nickname sync.
-The owner explicitly authorized these Discord tags. Full rules-certified creation, engine writes,
-M2 Plays and AI remain outside this phase. Record acceptance evidence and limits.
+The owner explicitly authorized these Discord tags and continuation of the remaining
+M1 dice/ledger, safety, durable delivery and local backup/rebuild foundation.
+Full rules-certified creation, recovered-engine writes, M2 Plays and AI remain outside
+this phase. Record acceptance evidence and limits.
 
 - Run `bash tools/install.sh`, then the checks in `README.md`.
 - Use the existing checkout. Cloud tasks are isolated; create no worktree unless requested.
