@@ -2,7 +2,7 @@
 
 **Status: offline gates PASS; Gateway and registry PASS; new human dice/safety smoke PENDING.**
 **Date:** 2026-11-02 (America/Chicago). **Branch:** `codex/m1-ledger`.
-**Implementation:** `bced5ab` (the implementation parent of the final evidence commit).
+**Implementation:** `bced5ab` (code commit; later commits record evidence only).
 
 M0 was accepted by the owner. This continues M1 only. Full M1 acceptance remains
 pending the new human Discord smoke; no M2 work, official Plays or AI were started.
@@ -79,7 +79,7 @@ Work order: [M1D_ENGINE_LEDGER.md](../docs/work_orders/M1D_ENGINE_LEDGER.md).
 | Human new-command smoke | Requested; **PENDING**, not counted as passed |
 | Recovered private engine | **120/120** original template file hashes unchanged |
 | GitHub visibility | Observed PUBLIC; owner explicitly chose to retain public visibility and push sanitized bot source only |
-| Remote CI | Configured; result not observed |
+| Remote CI | **PASS** for pushed commit `8f50b2a`: [run 41574768248](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/41574768248); all offline gates succeeded |
 
 Original M1-007's “one event” is interpreted as one `dice.rolled` event, plus the
 separate indexed `dice.recorded` event. This preserves the handoff's multi-event

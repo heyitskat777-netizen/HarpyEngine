@@ -57,7 +57,9 @@ Previously observed local/live evidence (not simulated test results):
 - Recovered private engine template hashes: 120/120 unchanged.
 - GitHub visibility observed PUBLIC; owner explicitly authorized retaining PUBLIC and pushing sanitized bot source.
 - Original handoff unchanged. Private PDFs/archive/state/DB/policy/backups/token excluded.
-- Remote CI result not observed.
+- Remote CI: subsequent observation PASS for commit 8f50b2a, run 41574768248.
+  https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/41574768248
+  All install/lint/format/types/tests/CLI/planning/repository/artifact steps succeeded.
 
 Final distribution inspection:
 girlframe_discord-0.1.0-py3-none-any.whl: 46 entries; 0 forbidden paths.
