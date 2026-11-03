@@ -1,0 +1,191 @@
+{
+  "schema_version": 1,
+  "scope": "M1 raw dice and metadata only; no official Plays",
+  "clarifications": [
+    "M1-007 records one dice.rolled event plus a separate dice.recorded event with index 1.",
+    "M1-012 rebuild restores character projections from versioned snapshots; immutable recorded receipts are reused, never rerolled. Full operational state recovery uses backup."
+  ],
+  "cases": [
+    {
+      "id": "M1-001",
+      "title": "Fresh database migration",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_database.py::test_alembic_migrations_upgrade_check_and_downgrade",
+        "tests/test_ledger.py::test_upgrade_populated_0002_preserves_data_and_backfills_snapshots"
+      ],
+      "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
+      "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
+      "evidence": "reports/M1_LEDGER_VALIDATION.txt",
+      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+    },
+    {
+      "id": "M1-002",
+      "title": "New campaign and member bind guild/user snowflakes",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_ledger.py::test_m1_002_campaign_ids_principals_and_preserved_drafts"
+      ],
+      "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
+      "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
+      "evidence": "reports/M1_LEDGER_VALIDATION.txt",
+      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+    },
+    {
+      "id": "M1-003",
+      "title": "Create Girl draft and own private sheet",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_ledger.py::test_m1_003_004_sheets_and_private_ledger_pagination"
+      ],
+      "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
+      "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
+      "evidence": "reports/M1_LEDGER_VALIDATION.txt",
+      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+    },
+    {
+      "id": "M1-004",
+      "title": "Other user cannot inspect owner private sheet",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_ledger.py::test_m1_003_004_sheets_and_private_ledger_pagination"
+      ],
+      "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
+      "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
+      "evidence": "reports/M1_LEDGER_VALIDATION.txt",
+      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+    },
+    {
+      "id": "M1-005",
+      "title": "Two campaigns with identical callsign are isolated",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_ledger.py::test_m1_005_same_callsign_two_campaigns_and_user_are_isolated"
+      ],
+      "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
+      "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
+      "evidence": "reports/M1_LEDGER_VALIDATION.txt",
+      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+    },
+    {
+      "id": "M1-006",
+      "title": "Basic 2d6 real dice receipt",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_ledger.py::test_m1_006_os_dice_and_strict_receipt"
+      ],
+      "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
+      "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
+      "evidence": "reports/M1_LEDGER_VALIDATION.txt",
+      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+    },
+    {
+      "id": "M1-007",
+      "title": "Duplicate interaction retries exactly same roll",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_ledger.py::test_m1_007_008_duplicate_restart_and_changed_payload_no_rng"
+      ],
+      "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
+      "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
+      "evidence": "reports/M1_LEDGER_VALIDATION.txt",
+      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+    },
+    {
+      "id": "M1-008",
+      "title": "Same interaction ID with different payload rejected",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_ledger.py::test_m1_007_008_duplicate_restart_and_changed_payload_no_rng"
+      ],
+      "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
+      "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
+      "evidence": "reports/M1_LEDGER_VALIDATION.txt",
+      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+    },
+    {
+      "id": "M1-009",
+      "title": "Concurrent expected-revision mutation",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_ledger.py::test_m1_009_concurrent_revision_only_winner_samples"
+      ],
+      "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
+      "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
+      "evidence": "reports/M1_LEDGER_VALIDATION.txt",
+      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+    },
+    {
+      "id": "M1-010",
+      "title": "Crash after commit before Discord send",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_ledger.py::test_m1_010_crash_after_commit_worker_restart"
+      ],
+      "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
+      "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
+      "evidence": "reports/M1_LEDGER_VALIDATION.txt",
+      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+    },
+    {
+      "id": "M1-011",
+      "title": "Crash after Discord send before ACK persistence",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_ledger.py::test_m1_011_send_before_ack_crash_reconciles_or_duplicates_only_delivery"
+      ],
+      "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
+      "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
+      "evidence": "reports/M1_LEDGER_VALIDATION.txt",
+      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+    },
+    {
+      "id": "M1-012",
+      "title": "Rebuild projections after restart",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_ledger.py::test_m1_012_rebuild_private_snapshots_without_reroll"
+      ],
+      "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
+      "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
+      "evidence": "reports/M1_LEDGER_VALIDATION.txt",
+      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+    },
+    {
+      "id": "M1-018",
+      "title": "Backup restore and migration smoke",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_ledger.py::test_backup_restore_wal_receipts_and_cli_refuse_existing"
+      ],
+      "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
+      "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
+      "evidence": "reports/M1_LEDGER_VALIDATION.txt",
+      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+    },
+    {
+      "id": "M1-019",
+      "title": "No fake official Play claim",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_ledger.py::test_m1_006_os_dice_and_strict_receipt"
+      ],
+      "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
+      "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
+      "evidence": "reports/M1_LEDGER_VALIDATION.txt",
+      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+    },
+    {
+      "id": "M1-020",
+      "title": "Safety pause command works without AI",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_ledger.py::test_safety_pause_persists_self_clear_only_and_replay_works"
+      ],
+      "implementation_commit": "bced5ab70aca34c207e7d7cb37e47edb88bf1382",
+      "executed_command": ".venv/bin/pytest -q --junitxml=var/m1-ledger-pytest.xml",
+      "evidence": "reports/M1_LEDGER_VALIDATION.txt",
+      "manual_status": "PENDING_FOR_NEW_DISCORD_COMMANDS"
+    }
+  ]
+}
