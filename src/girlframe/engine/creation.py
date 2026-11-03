@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from girlframe.engine.creation_catalog import CATALOG
 from girlframe.engine.fanbase import Fanbase
+from girlframe.engine.frame_setup import FrameSetup, frame_setup
 from girlframe.engine.npc_bonds import NpcBond
 from girlframe.engine.playbooks import canonical_frame, canonical_girl
 
@@ -32,6 +33,10 @@ class CreationDraft(BaseModel):
     girl_appearance: str = Field(default="", max_length=700)
     frame_appearance: str = Field(default="", max_length=700)
 
+    pair_asset_descriptions: tuple[AssetChoice, ...] = Field(default=(), max_length=2)
+    frame_setup: FrameSetup | None = None
+    pair_source_token: str | None = Field(default=None, max_length=160)
+
     npc_bonds: tuple[NpcBond, ...] = Field(default=(), max_length=2)
 
     dna_basis: str = Field(default="", max_length=300)
@@ -49,6 +54,17 @@ class CreationDraft(BaseModel):
 
     @model_validator(mode="after")
     def legal_choices(self) -> Self:
+        if self.frame_setup is not None and self.frame_setup != frame_setup(self.frame_playbook):
+            raise ValueError("Frame baseline must match the verified starting facts")
+        if self.pair_source_token is not None and self.girl_playbook != "BONDED":
+            raise ValueError("Pair provenance applies only to Bonded")
+        pair_names = [x.name for x in self.pair_asset_descriptions]
+        if pair_names and (
+            self.girl_playbook != "BONDED"
+            or len(set(pair_names)) != len(pair_names)
+            or not set(pair_names) <= set(CATALOG["BONDED"]["assets"])
+        ):
+            raise ValueError("Pair descriptions must use distinct Bonded Asset names")
         if len({x.slot for x in self.npc_bonds}) != len(self.npc_bonds):
             raise ValueError("Choose distinct NPC roles")
         for choices, name in (
@@ -59,7 +75,9 @@ class CreationDraft(BaseModel):
             if len(set(names)) != len(names) or not set(names) <= set(CATALOG[name]["assets"]):
                 raise ValueError("Choose distinct Assets from the selected playbook")
         if self.girl_playbook == "BONDED" and self.girl_assets:
-            raise ValueError("Bonded Girl Assets must be selected by the Pair; workflow pending")
+            raise ValueError(
+                "Bonded Girl Assets must be selected by the Pair, outside owner choice fields"
+            )
         if self.void_asset is not None and (
             self.girl_playbook != "MOCKINGBIRD"
             or self.void_asset not in {a.name for a in self.girl_assets}
@@ -79,10 +97,15 @@ class CreationDraft(BaseModel):
     def intrinsic_frame_assets(self) -> tuple[str, ...]:
         return ("Enormous",) if official_frame(self.frame_playbook) == "WYVERN 0.4" else ()
 
-    def missing(self) -> list[str]:
+    def missing(self, pair_names: tuple[str, ...] = ()) -> list[str]:
         missing = []
         if self.girl_playbook == "BONDED":
-            missing.append("Pair-owned Girl Asset selection (pending relationship workflow)")
+            if len(pair_names) != 2:
+                missing.append("Pair-owned Girl Asset selection")
+            elif set(pair_names) != {x.name for x in self.pair_asset_descriptions} or any(
+                not x.description.strip() for x in self.pair_asset_descriptions
+            ):
+                missing.append("owner descriptions for Pair-selected Girl Assets")
         elif len(self.girl_assets) != 2:
             missing.append("two Girl Assets")
         if len(self.frame_assets) != 2:

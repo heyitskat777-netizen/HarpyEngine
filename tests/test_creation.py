@@ -15,6 +15,7 @@ from girlframe.discord_adapter.creation import CreationView, DetailsModal, summa
 from girlframe.engine.creation import AssetChoice, CreationDraft, official_frame
 from girlframe.engine.creation_catalog import CATALOG
 from girlframe.engine.drafts import DraftInput
+from girlframe.engine.frame_setup import frame_setup
 from girlframe.engine.npc_bonds import NpcBond
 from girlframe.services.creation import CreationService
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
@@ -40,6 +41,7 @@ def selected(girl="MOCKINGBIRD", frame="JANUS-B"):
         void_asset=CATALOG[girl]["assets"][0] if girl == "MOCKINGBIRD" else None,
         npc_bonds=tuple(NpcBond(slot=i) for i in range(2 if girl == "OLDGEN" else 1)),
         dna_basis="Synthetic donor" if girl == "VATGROWN" else "",
+        frame_setup=frame_setup(frame),
         frame_name="Synthetic Frame",
         girl_appearance="Synthetic pilot",
         frame_appearance="Synthetic frame",

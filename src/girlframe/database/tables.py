@@ -42,6 +42,24 @@ bond_revisions = sa.Table(
         ["campaign_id", "target_id"], ["characters.campaign_id", "characters.user_id"]
     ),
 )
+pair_asset_revisions = sa.Table(
+    "pair_asset_revisions",
+    metadata,
+    sa.Column("campaign_id", sa.Text, primary_key=True),
+    sa.Column("bond_id", sa.Text, primary_key=True),
+    sa.Column("revision", sa.Integer, primary_key=True),
+    sa.Column("bond_revision", sa.Integer, nullable=False),
+    sa.Column("names_json", sa.Text, nullable=False),
+    sa.Column("event_id", sa.ForeignKey("events.id"), nullable=False, unique=True),
+    sa.ForeignKeyConstraint(
+        ["campaign_id", "bond_id", "bond_revision"],
+        [
+            "creation_bond_revisions.campaign_id",
+            "creation_bond_revisions.id",
+            "creation_bond_revisions.revision",
+        ],
+    ),
+)
 setup_revisions = sa.Table(
     "campaign_setup_revisions",
     metadata,

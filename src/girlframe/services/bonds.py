@@ -31,7 +31,12 @@ class BondService:
     def _profile(self, connection: Connection, user: str) -> dict[str, Any] | None:
         row = (
             connection.execute(
-                sa.select(t.characters)
+                sa.select(
+                    t.characters.c.campaign_id,
+                    t.characters.c.user_id,
+                    t.characters.c.revision,
+                    t.characters.c.public_json,
+                )
                 .join(
                     t.members,
                     sa.and_(

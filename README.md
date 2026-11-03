@@ -44,7 +44,7 @@ or outside Git. Never delete a populated database to refresh the environment.
 Before upgrading an existing database, make a new private backup, then migrate:
 
 ```bash
-python -m girlframe db backup --dest var/backups/before-0006.db
+python -m girlframe db backup --dest var/backups/before-0007.db
 python -m alembic upgrade head
 python -m alembic check
 ```
@@ -55,7 +55,8 @@ current revision of older drafts as a private baseline; earlier overwritten draf
 revisions cannot be recovered. Existing campaigns, channels, roles and drafts are
 preserved. Migration `0004` adds private append-only creation progress without
 rewriting existing records. Migration `0005` adds immutable private Bond proposals. `0006` adds Handler setup
-history and nullable Mentor-nomination provenance for proposals. `alembic downgrade base` destroys application tables: use only on
+history and nullable Mentor-nomination provenance for proposals. `0007` adds
+private immutable Pair Asset allocations. `alembic downgrade base` destroys application tables: use only on
 throwaway test databases. Never downgrade real campaign data to roll back code.
 
 ## Discord application and startup
@@ -122,6 +123,7 @@ check installation and guild ID. Errors omit raw provider bodies and private pat
 | `/character build` | Joined owner; private starting Assets, Identities and appearance; save/reopen progress |
 | `/character bond member` | Joined player; privately review and confirm a starting Bond proposal |
 | `/character bonds [before]` | Participants only; resume saved proposals and accept/decline/withdraw |
+| `/character pair_assets member` | Accepted Pair; choose two starting Girl Assets for that Bonded player |
 | `/character sync` | Retry your saved label roles and nickname |
 | `/sheet [member]` | Joined player; own private sheet or another member's public sheet |
 | `/roll basic [publish]` | Joined owner with saved draft; raw 2d6, published by default; `publish:false` keeps it private |
@@ -163,8 +165,11 @@ server label using official JANUS rules, as confirmed by the owner. See
 
 After saving the profile, use `/character build` to select two Girl Assets and two
 Frame Assets, describe them, and fill in appearance/Frame name. Mockingbird chooses
-one selected Girl Asset as Void-altered. Wyvern's Enormous is additional. Bonded's
-Girl Asset selection waits for a Pair-authorized relationship workflow. Starting
+one selected Girl Asset as Void-altered. Wyvern's Enormous is additional. Bonded's Girl Asset names are selected by the accepted Pair, using
+`/character pair_assets member` or **Choose Pair Assets** on an accepted proposal.
+The Bonded owner sees the selected names in a disabled selector and supplies their
+descriptions through **Asset descriptions**, then **Save progress**. The Pair cannot
+read or edit the owner's private draft. Starting
 Identities are derived from the official playbook. **Save progress** persists a
 partial form; reopen the command after a timeout or restart to continue. Unsaved
 edits are temporary. Saving changed Girl/Frame playbooks starts new choices while
@@ -192,7 +197,7 @@ using the same private proposal flow. Both profiles must be saved and both
 members active. Any profile revision change makes old agreement/proposal data stale;
 withdraw or decline it and make a new proposal. Duplicate live outgoing proposals
 and duplicate live proposals between the same pair are rejected. Accepted proposals
-remain draft setup agreements; NPC mechanics, Pair Assets, remaining Mentor duties
+remain draft setup agreements; NPC mechanics, remaining Mentor duties
 and full creation validation remain pending. Private context/history stays in the database
 and backups, outside public sheets, exports and ledger payloads.
 
@@ -219,6 +224,25 @@ creates a new token and stales old proposals even if the same Mentor is nominate
 again. Both profiles and the Handler appointment must remain current. Mentor-chosen
 callsign and the Mentor's effective higher-Status rule remain pending before
 playable activation. No automatic nickname change follows nomination.
+
+Pair allocations require a current accepted Intense Pair proposal from the Bonded
+player. Only the other participant selects the names. Owner saves check a current
+allocation token and record it with descriptions. Changed selections, withdrawn
+agreement, inactive membership or changed profiles block stale forms; reopen the
+builder to review. Incompatible descriptions are removed from the current view,
+while immutable private history is retained. Reused matching names can retain
+description text for owner review and explicit saving against the new allocation.
+
+**Frame setup** in `/character build` shows verified starting facts and preserves
+the existing form. Save progress persists a schema-versioned baseline with source
+PDF pages. JANUS/JANUS-B has a separate unnamed Harpy Core with its four prescribed
+starting Tags. DoctorDoctor has eight-box obsolescence capacity; CONSUME has three
+starvation levels; Wyvern has fixed Enormous. Red Queen records five AM roles and
+the default four-self/one-other split. Unverified starting counters and actual AM
+role/recipient assignment remain explicitly pending. No Frame Plays, control over
+the Core, or mechanical consequences are enabled by these draft facts. Old saved
+JSON loads with the new fields absent; reopening derives current source-backed
+facts, and only an explicit save appends a new snapshot.
 
 A raw roll returns two faces, their sum, timestamp and stable receipt ID. It changes
 no character resources. `/roll basic` defaults to `publish:true`, queuing the receipt

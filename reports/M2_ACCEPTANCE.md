@@ -265,3 +265,70 @@ M2D live startup reached Gateway READY. Authenticated Discord REST readback show
 11 guild command groups, campaign children `join`, `create`, `status`, `handler`,
 `mentor`, `status_setup`, `setup`, and zero global commands. This is startup and
 registration evidence, not human acceptance of authority, ranking or NPC forms.
+
+## M2E continuation — Pair-owned Assets and Frame baselines
+
+Implemented `docs/work_orders/M2E_PAIR_FRAME_SETUP.md` after the owner's continued
+M2 authorization. The accepted Pair uses `/character pair_assets member` or
+**Choose Pair Assets** on an accepted Bonded proposal. A native selector requires
+two distinct sourced Girl Asset names and explicit confirmation. The Bonded owner
+sees those names in a disabled selector, supplies descriptions in their private
+builder and explicitly saves. Pair selection does not read or write the owner's
+private creation body; Bond profile checks now select only public profile columns.
+
+Migration 0007 adds immutable allocation revisions tied by FK to the authorizing
+accepted Bond revision. Every save checks current membership, Pair identity and
+fresh agreement inside the transaction, including inbox replay. Owner saves carry
+an allocation token and record it with their descriptions. Changed choices or
+withdrawn/stale agreements block old forms; incompatible descriptions disappear
+from the current view without deleting immutable history. Matching descriptions
+can be retained for owner review and explicit saving against the new allocation.
+The Pair can never choose Frame Assets or write descriptions for the Bonded owner.
+
+Saved creation progress also records a schema-versioned Frame baseline with source
+PDF anchors. JANUS/JANUS-B includes a distinct unnamed Harpy Core with its four
+prescribed starting Tags. This is a nested draft record, not a fully implemented
+targetable game entity. DoctorDoctor records eight-box capacity; CONSUME records
+Quiet/Gnawing/Ravenous; Wyvern records fixed Enormous; Red Queen records five AM roles
+and default four-self/one-other split. Starting starvation/marked-box values and
+actual external AM role/recipient selection/agreement remain explicit pending
+requirements. No Heat, Core naming/choices, Plays, rewards or consequences run.
+The Frame setup button retains the creation form and unsaved edits. Legacy JSON
+remains readable; deriving facts on reopen does not write until Save progress.
+
+Executed validation:
+
+- Final `.venv/bin/pytest -q --junitxml=var/m2-pair-frame-pytest.xml`: **213 passed in
+  9.75 seconds**, no skips. The 14 new cases exercise every Frame branch/JANUS-B,
+  serialization and rejected baseline/Core forgery, illegal/duplicate names, Pair
+  vs owner/administrator authority, owner descriptions and provenance, changed
+  selection/withdrawal, revoked replay, privacy, concurrent choices, transaction
+  rollback, immutable history, actual backup restoration, campaign isolation,
+  profile changes, native Pair controls and retained Frame-facts form.
+- Ruff lint/format: PASS (109 files). Mypy: PASS (60 source files). Original
+  planning verifier: PASS (34 required files, 86 historical cases, four schemas and
+  four synthetic fixtures). All 40 handoff manifest entries unchanged. Repository
+  check: zero findings. `git diff --check`: PASS.
+- One prior test-bot process was signaled to stop. Private backup succeeded before
+  upgrade. Schema 0007 and `alembic check` passed. Original values in all 17 prior
+  application tables matched the backup exactly. Integrity and foreign keys PASS;
+  the new allocation table was empty. Deployment made no Pair selection.
+
+Targeted existing workflow checks passed 64 tests; the new Pair/Frame module passed
+14 tests before full regressions. Explicit provenance was added and revalidated in
+the final run above. Static checks caught one long response string; corrected. No
+unresolved automated failure is known.
+
+Human Pair/Frame smoke remains NOT_RUN, distinct from offline evidence and command
+registration. The owner previously deferred builder testing and requested continued
+work. Remaining M2 work includes actual Court assignment, starting counters, Mentor
+callsign/effective Status, Cadre discussion, complete sheet validation and activation,
+original Play workflows and independent rules review. BUILDER-01 through BUILDER-04
+remain NOT_RUN for complete official creation. Private source PDFs/engine, campaign
+state, policy, backups and credentials remain outside Git; canonical engine files
+are untouched. No environment configuration change or publication was attempted.
+
+M2E live startup reached Gateway READY. Authenticated Discord REST readback confirms
+11 guild command groups, character children `create`, `sync`, `build`, `bond`,
+`bonds`, `pair_assets`, and zero global commands. Human two-player Pair selection
+and description testing remains NOT_RUN; this readback verifies registration only.

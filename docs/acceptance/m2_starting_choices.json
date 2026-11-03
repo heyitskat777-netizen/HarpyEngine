@@ -175,6 +175,51 @@
         "tests/test_handler_setup.py::test_setup_native_review_confirm_and_owner_guards"
       ],
       "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "PAIR-01",
+      "title": "Pair names vs owner descriptions and illegal options",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_pair_assets.py::test_pair_option_and_owner_authority"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "PAIR-02",
+      "title": "Provenance, stale selection, withdrawal and privacy",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_pair_assets.py::test_owner_descriptions_staleness_withdrawal_and_private_restart"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "PAIR-03",
+      "title": "Concurrency, replay, atomicity, immutable backup and isolation",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_pair_assets.py::test_pair_concurrency_rollback_immutability_isolation_and_backup"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "PAIR-04",
+      "title": "Native Pair selection and read-only owner names",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_pair_assets.py::test_native_pair_selection_owner_descriptions_and_member_guards"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "FRAME-01",
+      "title": "Verified baselines, serialization and rejected Core forgery",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_pair_assets.py::test_verified_frame_baselines_and_roundtrip"
+      ],
+      "manual_status": "NOT_RUN"
     }
   ],
   "complete_builder": {

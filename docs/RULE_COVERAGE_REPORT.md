@@ -69,12 +69,12 @@ reports the relationship step as pending. No AI or administrator chooses for her
 | Oldgen's two NPC Bonds | Book PDF 45 | Exactly two sourced NPC role choices implemented; other Bond mechanics pending. |
 | Vatgrown DNA basis | Book PDF 48 | Implemented private player-authored field; creates no Bond/Tag |
 | AM jailbroken confidant | Book PDF 54 | Pending Bond choice |
-| Bonded Pair and Intense Bond | Book PDF 57 | Private Pair proposal/acceptance implemented; Pair-selected Assets remain pending |
+| Bonded Pair and Intense Bond | Book PDF 57 | Private Pair proposal/acceptance and Pair-only Asset naming implemented; owner supplies descriptions. |
 | Prince fanbase | Book PDF 61–62, sheet PDF 18 | Implemented two demographics, two demanded and two rejected qualities, with printed custom slots |
-| CONSUME hunger track | Book PDF 65 | Pending special-state audit; do not infer starting value |
-| JANUS Harpy Core and initial Tags | Book PDF 68 | Pending distinct Core record and prescribed Tags; pilot does not author Core choices |
-| DoctorDoctor obsolescence | Book PDF 71 | Pending eight-box track |
-| Red Queen AM roles | Book PDF 88 | Pending five-role allocation |
+| CONSUME hunger track | Book PDF 65 | Three levels recorded; starting value and mechanics pending. |
+| JANUS Harpy Core and initial Tags | Book PDF 68 | Versioned distinct unnamed Core baseline with four prescribed Tags implemented; no Core Plays or naming. |
+| DoctorDoctor obsolescence | Book PDF 71 | Eight-box capacity recorded; starting marked count and mechanics pending. |
+| Red Queen AM roles | Book PDF 88 | Five roles and four-self/one-other default recorded; actual external role/recipient agreement pending. |
 | Optional short-game starting Requisition | Book creation guidance | Not unlocked; verify mode and exact source before implementation |
 | Core Plays, modifiers, consequences, pending choices | Original M2 work order | Not implemented; raw M1 rolls remain nonmechanical test receipts |
 
@@ -148,3 +148,28 @@ short paraphrases tied to stable source-order slots. Optional NPC names and feel
 remain private draft descriptions. PDF 13 / printed 11 explicitly allows feelings
 to remain unwritten; written feelings are never mandatory. No unstated starting
 NPC Bond depth, shared NPC identity, world canon or NPC control behavior is inferred.
+
+## M2E Pair authority and Frame baselines
+
+PDF 57 / printed 55 explicitly delegates two Girl Asset names to the Pair and
+descriptions to the Bonded player. The allocation service writes names only, tied
+to a current accepted Pair proposal. It reads no private creation body. Owner
+descriptions are separately stored with the exact allocation token and validated
+against those names on every save. Stale/withdrawn agreements cannot authorize
+new choices or replay old allocation commands. Historical records remain immutable.
+
+Frame baseline schema 1 records only these audited facts: PDF 68 / printed 66 gives
+a separate unnamed Harpy Core with Drugged, Restrained, Muzzled, Recovering from
+Surgery as explicit starting Tags. Naming the Core is prohibited; no name field is
+accepted. This is a nested draft entity, not a fully implemented targetable game
+character. PDF 71 / printed 69 shows eight obsolescence boxes; PDF 65 / printed 63
+defines Quiet, Gnawing, Ravenous. Starting marked-box and starvation values are not
+guessed. PDF 74 / printed 72 provides Wyvern's fixed extra Enormous. PDF 88–89 /
+printed 86–87 provides Queen, Consort, Knight, Doll, Traitor AM roles and default
+four assigned to self, one to another Girl. Actual role/recipient selection and
+agreement remain pending, rather than assigning arbitrary characters.
+
+Baselines are generated from verified facts, validated against the selected Frame
+and serialized on explicit owner save with schema version and source pages. Old
+JSON remains readable. No Heat, Permissions, fictional consequences, Core choices,
+AM compulsion or initial unresolved counters are inferred by this delivery.

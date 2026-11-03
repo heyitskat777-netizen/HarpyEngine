@@ -13,6 +13,7 @@ do not rewrite that historical package or silently drop its original M1 gates.
 | M2B_PLAYBOOK_DETAILS | Vatgrown DNA basis; Prince fanbase demographics, demands, rejections and custom options | Implemented; owner deferred live smoke |
 | M2C_BOND_PROPOSALS | Private proposals, participant agreement/withdrawal and durable resume; Newgirl deferred to Handler workflow | Implemented; two-user human smoke pending |
 | M2D_HANDLER_NPC_SETUP | Explicit Handler appointment, starting Status, Mentor nominations and saved private NPC Bond choices | Implemented; live human smoke pending |
+| M2E_PAIR_FRAME_SETUP | Pair-only starting Asset names, owner-only descriptions and source-backed Frame baselines | Implemented; live human smoke pending, counters/Court assignment pending |
 | M2_CHARACTER_BUILDER | Complete source-audited Girl/Frame creation, legal options and derived resources, validation and playable activation | Before claiming rules-usable characters |
 
 The status commands remain available and now show stored M1 status. Original M1

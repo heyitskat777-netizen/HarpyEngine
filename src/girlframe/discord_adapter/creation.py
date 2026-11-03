@@ -10,9 +10,10 @@ from pydantic import ValidationError
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.onboarding import action_gate, reply
-from girlframe.engine.creation import CreationDraft, official_frame
+from girlframe.engine.creation import AssetChoice, CreationDraft, official_frame
 from girlframe.engine.creation_catalog import CATALOG
 from girlframe.engine.fanbase import Fanbase
+from girlframe.engine.pair_assets import PairChoice
 from girlframe.services.creation import CreationProgress, CreationService
 from girlframe.services.onboarding import WorkflowError
 
@@ -21,14 +22,19 @@ def clean(value: str) -> str:
     return discord.utils.escape_markdown(discord.utils.escape_mentions(value))
 
 
-def summary(draft: CreationDraft) -> str:
-    missing = draft.missing()
+def summary(draft: CreationDraft, pair: PairChoice | None = None) -> str:
+    missing = draft.missing(pair.names if pair else ())
     return (
         "**Character creation — draft, not activated**\n"
         f"{clean(draft.girl_playbook)} / {clean(draft.frame_playbook)}\n"
         "Starting Identities: " + ", ".join(clean(x) for x in draft.identities) + "\n"
         "Girl Assets: "
-        + (", ".join(clean(x.name) for x in draft.girl_assets) or "not selected")
+        + (
+            ", ".join(
+                clean(x) for x in (pair.names if pair else tuple(a.name for a in draft.girl_assets))
+            )
+            or "not selected"
+        )
         + "\n"
         "Frame Assets: "
         + (", ".join(clean(x.name) for x in draft.frame_assets) or "not selected")
@@ -55,12 +61,25 @@ def summary(draft: CreationDraft) -> str:
     )
 
 
+def description_assets(view: "CreationView") -> tuple[AssetChoice, ...]:
+    if view.draft.girl_playbook != "BONDED":
+        return view.draft.girl_assets + view.draft.frame_assets
+    descriptions = {x.name: x.description for x in view.draft.pair_asset_descriptions}
+    names = view.progress.pair_choice.names if view.progress.pair_choice else ()
+    return (
+        tuple(AssetChoice(name=name, description=descriptions.get(name, "")) for name in names)
+        + view.draft.frame_assets
+    )
+
+
 class AssetSelect(discord.ui.Select["CreationView"]):
     def __init__(self, parent: "CreationView", family: str, row: int):
         self.parent_view, self.family = parent, family
         draft = parent.draft
         key = draft.girl_playbook if family == "girl" else official_frame(draft.frame_playbook)
         selected = {x.name for x in getattr(draft, family + "_assets")}
+        if family == "girl" and draft.girl_playbook == "BONDED" and parent.progress.pair_choice:
+            selected = set(parent.progress.pair_choice.names)
         super().__init__(
             placeholder=f"Choose two {family.title()} Assets",
             min_values=0,
@@ -149,10 +168,7 @@ class DetailsModal(discord.ui.Modal):
                     items.append((label, getattr(fanbase, key), 80))
                     self.detail_keys.append(key)
         elif assets:
-            items = [
-                (a.name[:45], a.description, 700)
-                for a in parent.draft.girl_assets + parent.draft.frame_assets
-            ]
+            items = [(a.name[:45], a.description, 700) for a in description_assets(parent)]
         else:
             items = [
                 ("Frame name", parent.draft.frame_name, 80),
@@ -199,11 +215,14 @@ class DetailsModal(discord.ui.Modal):
             values = [
                 {"name": asset.name, "description": str(field)}
                 for asset, field in zip(
-                    draft.girl_assets + draft.frame_assets, self.fields, strict=True
+                    description_assets(self.parent_view), self.fields, strict=True
                 )
             ]
-            split = len(draft.girl_assets)
-            self.parent_view.update(girl_assets=values[:split], frame_assets=values[split:])
+            split = len(description_assets(self.parent_view)) - len(draft.frame_assets)
+            girl_key = (
+                "pair_asset_descriptions" if draft.girl_playbook == "BONDED" else "girl_assets"
+            )
+            self.parent_view.update(**{girl_key: values[:split], "frame_assets": values[split:]})
         else:
             self.parent_view.update(
                 frame_name=str(self.fields[0]),
@@ -258,12 +277,12 @@ class CreationView(discord.ui.View):
     async def render(self, interaction: discord.Interaction, prefix: str = "") -> None:
         if not interaction.response.is_done() and interaction.message is not None:
             await interaction.response.edit_message(
-                content=prefix + summary(self.draft),
+                content=prefix + summary(self.draft, self.progress.pair_choice),
                 view=self,
                 allowed_mentions=discord.AllowedMentions.none(),
             )
             return
-        await reply(interaction, prefix + summary(self.draft), self)
+        await reply(interaction, prefix + summary(self.draft, self.progress.pair_choice), self)
 
     @discord.ui.button(label="Appearance", row=3)
     async def appearance(
@@ -275,7 +294,7 @@ class CreationView(discord.ui.View):
     async def descriptions(
         self, interaction: discord.Interaction, button: discord.ui.Button[Any]
     ) -> None:
-        if not self.draft.girl_assets and not self.draft.frame_assets:
+        if not description_assets(self):
             await reply(interaction, "Select Assets first, then describe them.")
             return
         await interaction.response.send_modal(DetailsModal(self, assets=True))
@@ -302,6 +321,34 @@ class CreationView(discord.ui.View):
 
         await NpcView(self).render(interaction)
 
+    @discord.ui.button(label="Frame setup", row=4)
+    async def frame_details(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        baseline = self.draft.frame_setup
+        assert baseline is not None
+        lines = ["**Verified starting Frame facts — draft only**", clean(baseline.frame)]
+        if baseline.harpy_core:
+            lines.append("Separate unnamed Harpy Core: " + ", ".join(baseline.harpy_core.tags))
+        if baseline.obsolescence_capacity:
+            lines.append(f"Obsolescence capacity: {baseline.obsolescence_capacity} boxes.")
+        if baseline.starvation_levels:
+            lines.append("Starvation levels: " + ", ".join(baseline.starvation_levels))
+        if baseline.intrinsic_assets:
+            lines.append("Additional fixed Asset: " + ", ".join(baseline.intrinsic_assets))
+        if baseline.am_roles:
+            lines.append("AM roles: " + ", ".join(baseline.am_roles))
+            lines.append(
+                "Default: four assigned to you, one to another Girl; actual assignment pending."
+            )
+        lines.extend("Pending: " + x for x in baseline.pending)
+        lines.append(
+            "Use the controls below to continue. Save progress persists these facts; no Plays run."
+        )
+        await interaction.response.edit_message(
+            content="\n".join(lines), view=self, allowed_mentions=discord.AllowedMentions.none()
+        )
+
     @discord.ui.button(label="Save progress", style=discord.ButtonStyle.primary, row=4)
     async def save(self, interaction: discord.Interaction, button: discord.ui.Button[Any]) -> None:
         if not await self.interaction_check(interaction):
@@ -318,9 +365,13 @@ class CreationView(discord.ui.View):
                 previous.revision,
                 previous.character_revision,
                 submitted,
+                expected_pair_token=previous.pair_choice.token if previous.pair_choice else None,
             )
             self.progress = CreationProgress(
-                result["revision"], previous.character_revision, submitted
+                result["revision"],
+                previous.character_revision,
+                submitted,
+                pair_choice=previous.pair_choice,
             )
             self.generation += 1
             prefix = "Progress saved.\n"

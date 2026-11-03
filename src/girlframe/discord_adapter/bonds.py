@@ -171,6 +171,12 @@ class DecisionView(OwnerView):
         self.row = row
         recipient = str(owner) == row["target_id"]
         self.accept.disabled = not (recipient and row["state"] == "pending" and not row["stale"])
+        self.assets.disabled = not (
+            recipient
+            and row["girl_playbook"] == "BONDED"
+            and row["state"] == "accepted"
+            and not row["stale"]
+        )
         self.decline.disabled = not (recipient and row["state"] == "pending")
         self.withdraw.disabled = not (
             row["state"] == "accepted" or (not recipient and row["state"] == "pending")
@@ -199,6 +205,22 @@ class DecisionView(OwnerView):
             )
         except WorkflowError as error:
             await reply(interaction, str(error))
+
+    @discord.ui.button(label="Choose Pair Assets", row=1)
+    async def assets(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        from girlframe.discord_adapter.pair_assets import PairView
+        from girlframe.services.pair_assets import PairService
+
+        service = PairService(self.service.store)
+        prepared = await asyncio.to_thread(
+            service.prepare, viewer_from_interaction(interaction), self.row["id"]
+        )
+        view = PairView(service, interaction.user.id, prepared)
+        await interaction.response.edit_message(
+            content=view.text(), view=view, allowed_mentions=discord.AllowedMentions.none()
+        )
 
     @discord.ui.button(label="Accept setup", style=discord.ButtonStyle.primary)
     async def accept(
