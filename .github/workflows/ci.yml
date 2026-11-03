@@ -1,4 +1,4 @@
-name: M1 Discord pilot
+name: Discord pilot offline checks
 
 on: [push, pull_request]
 

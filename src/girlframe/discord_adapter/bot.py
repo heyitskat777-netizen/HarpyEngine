@@ -148,6 +148,10 @@ class ReadOnlyDiscordBot(discord.Client):
 
             assert self.ledger is not None
             register_ledger(self.tree, policy.guild_id, self.ledger, self.tag_sync)
+            from girlframe.discord_adapter.creation import register_creation
+            from girlframe.services.creation import CreationService
+
+            register_creation(self.tree, policy.guild_id, CreationService(store))
 
     def _callback(
         self, name: ReadOnlyCommand
@@ -169,6 +173,7 @@ class ReadOnlyDiscordBot(discord.Client):
                         "/server setup — administrator setup preview\n"
                         "/campaign create, /campaign join, /campaign status\n"
                         "/character create (or /girl create), /character sync, /sheet\n"
+                        "/character build — save starting Assets and appearance\n"
                         "/roll basic — raw 2d6, public by default; publish:false is private\n"
                         "/roll show — retrieve a permitted receipt\n/ledger — permitted events\n"
                         "/safety pause, /safety resume — save or clear your own OOC pause\n"

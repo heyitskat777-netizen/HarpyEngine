@@ -1,6 +1,8 @@
 # M2 addition — complete, rules-validated character creation
 
-This work order is specified, not implemented by the M1 draft workflow.
+This work order is in progress. M1 provided saved profiles;
+[M2A_STARTING_CHOICES.md](M2A_STARTING_CHOICES.md) implements the first creation step.
+It does not complete this work order or activate playable characters.
 
 Before implementation, audit official rulebook/sheet creation steps and record
 verified page anchors, required vs optional choices, dependencies and derived

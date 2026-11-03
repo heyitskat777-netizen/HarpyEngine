@@ -8,6 +8,10 @@ Offline acceptance and live verification are tracked in
 receipt/ledger, publication and safety smoke tests. This is not a production
 readiness claim.
 
+M2 has started with `/character build`: source-backed starting Identities, Asset
+choices and appearance, saved privately with revision history. JANUS-B uses official
+JANUS rules and retains its server label. See [M2 evidence](reports/M2_ACCEPTANCE.md).
+
 Characters remain **drafts / rules unverified**. Official Plays, modifiers, Heat,
 mechanical consequences, AI and recovered-engine writes are deferred. M1 raw dice
 are a test primitive and never resolve a GIRL FRAME Play.
@@ -38,7 +42,7 @@ or outside Git. Never delete a populated database to refresh the environment.
 Before upgrading an existing database, make a new private backup, then migrate:
 
 ```bash
-python -m girlframe db backup --dest var/backups/before-0003.db
+python -m girlframe db backup --dest var/backups/before-0004.db
 python -m alembic upgrade head
 python -m alembic check
 ```
@@ -47,7 +51,8 @@ For a fresh database, skip backup and run migration. Startup refuses missing sch
 and never migrates automatically. Migration `0003` adds the ledger and captures the
 current revision of older drafts as a private baseline; earlier overwritten draft
 revisions cannot be recovered. Existing campaigns, channels, roles and drafts are
-preserved. `alembic downgrade base` destroys application tables: use only on
+preserved. Migration `0004` adds private append-only creation progress without
+rewriting existing records. `alembic downgrade base` destroys application tables: use only on
 throwaway test databases. Never downgrade real campaign data to roll back code.
 
 ## Discord application and startup
@@ -107,6 +112,7 @@ check installation and guild ID. Errors omit raw provider bodies and private pat
 | `/campaign status` | Joined member or configured administrator; stored M1 status |
 | `/campaign_status` | Stored M1 status alias, retaining the earlier approved audience restriction |
 | `/character create`, `/girl create` | Joined player; own dropdown draft wizard |
+| `/character build` | Joined owner; private starting Assets, Identities and appearance; save/reopen progress |
 | `/character sync` | Retry your saved label roles and nickname |
 | `/sheet [member]` | Joined player; own private sheet or another member's public sheet |
 | `/roll basic [publish]` | Joined owner with saved draft; raw 2d6, published by default; `publish:false` keeps it private |
@@ -143,8 +149,19 @@ permission-free label roles are managed; unrelated roles are preserved. A blocke
 Discord update leaves the draft saved and can be retried. Discord forbids renaming
 the server owner; that test account must set its own nickname manually. Other
 hierarchy and permissions restrictions also apply. JANUS-B is an owner-requested
-server variant label, not a separate published rules claim. See
+server label using official JANUS rules, as confirmed by the owner. See
 [character tags](docs/CHARACTER_TAGS.md).
+
+After saving the profile, use `/character build` to select two Girl Assets and two
+Frame Assets, describe them, and fill in appearance/Frame name. Mockingbird chooses
+one selected Girl Asset as Void-altered. Wyvern's Enormous is additional. Bonded's
+Girl Asset selection waits for a Pair-authorized relationship workflow. Starting
+Identities are derived from the official playbook. **Save progress** persists a
+partial form; reopen the command after a timeout or restart to continue. Unsaved
+edits are temporary. Saving changed Girl/Frame playbooks starts new choices while
+retaining earlier private history. Creation details are currently available only
+through this owner-only builder; `/sheet` still shows the M1 profile. Bonds, Status,
+special resources, independent review and playable activation remain unfinished.
 
 A raw roll returns two faces, their sum, timestamp and stable receipt ID. It changes
 no character resources. `/roll basic` defaults to `publish:true`, queuing the receipt

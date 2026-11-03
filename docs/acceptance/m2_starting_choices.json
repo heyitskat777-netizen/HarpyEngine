@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "scope": "M2 first creation step only; no playable activation or Plays",
+  "command": ".venv/bin/pytest -q --junitxml=var/m2-starting-choices-pytest.xml",
+  "evidence": "reports/M2_ACCEPTANCE.md",
+  "cases": [
+    {
+      "id": "START-01",
+      "title": "Source-anchored catalogues and official JANUS alias",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation.py::test_source_catalog_and_starting_identities",
+        "tests/test_creation.py::test_frame_assets_and_owner_approved_janus_alias"
+      ],
+      "manual_status": "NOT_RUN_LIVE_COVERED_OFFLINE"
+    },
+    {
+      "id": "START-02",
+      "title": "Legal choices, Void and Pair authority",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation.py::test_invalid_assets_duplicates_void_and_pair_authority"
+      ],
+      "manual_status": "NOT_RUN_LIVE_COVERED_OFFLINE"
+    },
+    {
+      "id": "START-03",
+      "title": "Private persistence, replay, concurrent saves and isolation",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation.py::test_owner_save_restart_history_and_private_audit",
+        "tests/test_creation.py::test_stale_profile_concurrency_and_two_campaign_isolation",
+        "tests/test_creation.py::test_creation_rollback_revocation_and_private_backup"
+      ],
+      "manual_status": "NOT_RUN_LIVE_COVERED_OFFLINE"
+    },
+    {
+      "id": "START-04",
+      "title": "Native controls, owner authorization, stale forms and atomic failure",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation.py::test_native_wizard_restores_choices_and_rejects_other_owner",
+        "tests/test_creation.py::test_builder_save_callback_and_stale_modal",
+        "tests/test_creation.py::test_creation_rollback_revocation_and_private_backup"
+      ],
+      "manual_status": "NOT_RUN_LIVE_COVERED_OFFLINE"
+    },
+    {
+      "id": "START-05",
+      "title": "Database upgrade and offline schema checks",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_database.py::test_alembic_migrations_upgrade_check_and_downgrade"
+      ],
+      "manual_status": "PENDING_OWNER_SAVE_REOPEN_SMOKE"
+    }
+  ],
+  "complete_builder": {
+    "BUILDER-01": "NOT_RUN",
+    "BUILDER-02": "NOT_RUN",
+    "BUILDER-03": "NOT_RUN",
+    "BUILDER-04": "NOT_RUN"
+  }
+}

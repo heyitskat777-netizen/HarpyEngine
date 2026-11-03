@@ -11,8 +11,12 @@ and the additive work orders under `docs/work_orders/`. Build resumable setup,
 membership, dropdown draft sheets, and owner-confirmed cosmetic role/nickname sync.
 The owner explicitly authorized these Discord tags and continuation of the remaining
 M1 dice/ledger, safety, durable delivery and local backup/rebuild foundation.
-Full rules-certified creation, recovered-engine writes, M2 Plays and AI remain outside
-this phase. Record acceptance evidence and limits.
+The owner subsequently authorized continuation into M2 and confirmed that JANUS-B
+uses official JANUS rules while keeping its Discord label. The active first step is
+`docs/work_orders/M2A_STARTING_CHOICES.md`, within `M2_CHARACTER_BUILDER.md`.
+Complete its source audit, private resumable choices and acceptance evidence before
+expanding to relationships, Status, special resources, playable activation or Plays.
+Recovered-engine writes and AI remain deferred. Record partial scope honestly.
 
 - Run `bash tools/install.sh`, then the checks in `README.md`.
 - Use the existing checkout. Cloud tasks are isolated; create no worktree unless requested.
@@ -25,5 +29,5 @@ this phase. Record acceptance evidence and limits.
   Engine mutation/reconstruction is deferred; empty namespaces are intentional.
   Do not turn planning examples into implemented game mechanics.
 - Record actual commands, output, counts, failures, and limitations in
-  `reports/M1_ACCEPTANCE.md`. Preserve M0's historical evidence. Keep offline,
+  `reports/M2_ACCEPTANCE.md` for current work. Preserve M0/M1 historical evidence. Keep offline,
   live login/registration and human slash-command outcomes distinct.

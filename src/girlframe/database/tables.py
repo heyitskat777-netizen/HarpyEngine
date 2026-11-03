@@ -5,6 +5,20 @@ import sqlalchemy as sa
 from girlframe.database.base import Base
 
 metadata = Base.metadata
+creation_drafts = sa.Table(
+    "creation_drafts",
+    metadata,
+    sa.Column("campaign_id", sa.Text, primary_key=True),
+    sa.Column("user_id", sa.Text, primary_key=True),
+    sa.Column("revision", sa.Integer, primary_key=True),
+    sa.Column("character_revision", sa.Integer, nullable=False),
+    sa.Column("event_id", sa.ForeignKey("events.id"), nullable=False, unique=True),
+    sa.Column("schema_version", sa.Integer, nullable=False, server_default="1"),
+    sa.Column("body_json", sa.Text, nullable=False),
+    sa.ForeignKeyConstraint(
+        ["campaign_id", "user_id"], ["characters.campaign_id", "characters.user_id"]
+    ),
+)
 campaigns = sa.Table(
     "campaigns",
     metadata,
