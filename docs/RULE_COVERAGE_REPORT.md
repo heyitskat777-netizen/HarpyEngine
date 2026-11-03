@@ -232,3 +232,37 @@ All values remain draft/private. Complete official creation, NPC depth/initial
 marked states, final publication/name application, playable activation and runtime
 mechanics still require independent review/implementation. See
 `docs/M2_RULES_REVIEW_PACKET.md`. Complete-builder acceptance stays NOT_RUN.
+
+## M2J additional mandatory playbook audit
+
+The next-pass source audit found creation requirements outside the first Assets/
+Bonds page. Book PDF 32 / printed 30, sheet 6: Princess selects one standard, a
+bonded Girl selects one, Handler selects one; the Handler's counts as an order.
+The source does not require distinctness across these three roles. Native choices
+retain role attribution and private owner review, including the custom source slot.
+No order or compulsory consequence runs during draft setup.
+
+Book PDF 46 / printed 44, sheet 11: Oldgen selects two maxims. Book PDF 49 / printed
+47, sheet 12: Vatgrown's Handler and starting NPC Bonds are Investors; each has one
+or two desires, with the Handler choosing its own. Owner chooses NPC-role desires;
+the Handler authors its own request without needing a fictional Pilot sheet.
+Removing an NPC role filters incompatible current choices, preserving prior history.
+
+Book PDF 82 / printed 80 explicitly says CHANGELING's starting bonded characters
+have Psych Strings. Draft review anchors now include every current accepted player
+Bond plus selected NPC roles. NPC anchors remain owner-local role references, not
+new world-canon NPC IDs. The sheet's shortened rule is not used to erase the book's
+explicit starting note. No Psych String use/control or Bond-depth mechanics run.
+
+Book PDF 44 / printed 42 lists Casualty's nine body parts. PDF 58 / printed 56 gives
+Bonded the protected Paired Identity Hers. These facts appear on the owner review.
+
+The owner separately approved unmarked Identities/maxims, undamaged Assets/body
+parts, Personal NPC Bonds, 0 Permissions, no acquired Requisitions and no extra Tags
+as campaign defaults, retaining printed exceptions. They are stored as trusted
+owner-approved policy and private review inputs, not asserted to be numeric defaults
+printed in the book. No fictional resources are automatically initialized.
+
+Review source version 2 adds these checks; version 1 remains readable history.
+Independent full-source review and playable activation remain pending. Earlier
+implemented-step checks were not certification of these formerly missing branches.

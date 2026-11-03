@@ -1,5 +1,6 @@
 """Complete private aggregation with derived role-specific coordination tasks."""
 
+import hashlib
 import json
 from datetime import datetime
 
@@ -7,9 +8,11 @@ import sqlalchemy as sa
 
 from girlframe.database import tables as t
 from girlframe.engine.bonds import starting_kind
+from girlframe.engine.creation_details import GirlDetails
 from girlframe.engine.inbox import CATEGORIES, SCOPES, InboxItem, InboxPage
 from girlframe.services.bonds import BondService, Decision
 from girlframe.services.creation import CreationService
+from girlframe.services.creation_coordination import CoordinationService
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.pair_assets import PairService
@@ -21,6 +24,7 @@ class InboxService:
     def __init__(self, store: OnboardingStore):
         self.store = store
         self.bonds, self.shared = BondService(store), SharedSetupService(store)
+        self.coordination = CoordinationService(store)
 
     def items(self, viewer: GuildViewer) -> tuple[InboxItem, ...]:
         with self.store.engine.connect() as connection:
@@ -29,7 +33,8 @@ class InboxService:
             user = str(viewer.user_id)
             bonds = self.bonds._latest(connection, user)
             shared = self.shared._latest(connection, viewer.user_id)
-            events = [x["event_id"] for x in bonds + shared]
+            coordinated = self.coordination._latest(connection, viewer.user_id)
+            events = [x["event_id"] for x in bonds + shared + coordinated]
             times = {
                 str(identity): str(stamp)
                 for identity, stamp in connection.execute(
@@ -134,6 +139,41 @@ class InboxService:
                         effect,
                         value,
                         "Accept setup" if pending and incoming else None,
+                        "decline"
+                        if pending and incoming
+                        else "withdraw"
+                        if pending or row["state"] == "accepted"
+                        else None,
+                        sort_time=times.get(row["event_id"], ""),
+                    )
+                )
+
+            for row in coordinated:
+                incoming = row["owner_id"] == user
+                pending = row["state"] == "pending"
+                parsed = self.coordination.parsed(row)
+                title = (
+                    "Handler investor desires"
+                    if row["role"] == "vatgrown_handler"
+                    else "Princess Handler standard"
+                    if row["role"] == "princess_handler"
+                    else "Princess bonded-Girl standard"
+                )
+                items.append(
+                    InboxItem(
+                        "coordination:" + row["id"],
+                        "coordination",
+                        row["id"],
+                        row["revision"],
+                        "playbook",
+                        title,
+                        label(row["author_id"] if incoming else row["owner_id"]),
+                        row["state"],
+                        incoming,
+                        self.coordination._stale(connection, row),
+                        "Save this chooser's setup choice. No Play or fictional consequence runs.",
+                        parsed.label,
+                        "Accept choice" if pending and incoming else None,
                         "decline"
                         if pending and incoming
                         else "withdraw"
@@ -254,6 +294,48 @@ class InboxService:
                                 choice.revision,
                             )
             own = profiles.get(viewer.user_id)
+            for entry in self.coordination.tasks(connection, viewer):
+                digest = hashlib.sha256(
+                    json.dumps(entry["context"], sort_keys=True).encode()
+                ).hexdigest()[:24]
+                task(
+                    "coordination:" + entry["role"] + ":" + str(entry["owner"]) + ":" + digest,
+                    "playbook",
+                    "Choose Handler investor desires"
+                    if entry["role"] == "vatgrown_handler"
+                    else "Choose Princess standard",
+                    entry["owner"],
+                    "Choose your required playbook option for the owner's private review.",
+                    "Choose options",
+                    "coordinate",
+                )
+            if (
+                own
+                and own["girl_playbook"] in ("PRINCESS", "OLDGEN", "VATGROWN")
+                and handler.current(connection)[1].handler_id != viewer.user_id
+            ):
+                progress = CreationService(self.store)._current(connection, viewer)
+                details = progress.draft.girl_details or GirlDetails()
+                missing = (
+                    details.own_standard is None
+                    if own["girl_playbook"] == "PRINCESS"
+                    else len(details.maxims) != 2
+                    if own["girl_playbook"] == "OLDGEN"
+                    else not progress.draft.npc_bonds
+                    or {x.npc_slot for x in details.investors}
+                    != {x.slot for x in progress.draft.npc_bonds}
+                )
+                if missing:
+                    task(
+                        "details:" + str(viewer.user_id),
+                        "playbook",
+                        "Complete your Girl setup",
+                        None,
+                        "Choose your standard, maxims or NPC desires; then Save progress.",
+                        "Open Girl setup",
+                        "girl_details",
+                        progress.revision,
+                    )
             if (
                 own
                 and own["girl_playbook"] == "NEWGIRL"
@@ -358,5 +440,7 @@ class InboxService:
             self.bonds.decide(viewer, interaction, item.identity, item.revision, decision)
         elif item.source == "shared":
             self.shared.decide(viewer, interaction, item.identity, item.revision, decision)
+        elif item.source == "coordination":
+            self.coordination.decide(viewer, interaction, item.identity, item.revision, decision)
         else:
             raise WorkflowError("Open the task's authorized wizard instead.")

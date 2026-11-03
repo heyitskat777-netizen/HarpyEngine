@@ -2,7 +2,7 @@
 
 import asyncio
 import hashlib
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 import discord
@@ -10,6 +10,7 @@ import discord
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.creation import clean
 from girlframe.discord_adapter.onboarding import action_gate, reply
+from girlframe.engine.creation_details import Role
 from girlframe.engine.inbox import CATEGORIES, InboxItem, InboxPage
 from girlframe.services.inbox import InboxService
 from girlframe.services.onboarding import WorkflowError
@@ -20,6 +21,7 @@ CATEGORY_LABELS = {
     "mentors": "Mentor coordination",
     "court": "Red Queen's Court",
     "pair": "Pair agreements & Assets",
+    "playbook": "Standards, maxims & Investors",
 }
 
 
@@ -471,13 +473,31 @@ class InboxView(discord.ui.View):
             prepared = await asyncio.to_thread(pair_service.resolve, viewer, item.target)
             pair_view = PairView(pair_service, self.owner, prepared)
             await open_child(pair_view.text(), pair_view)
-        elif item.task in ("describe", "history"):
+        elif item.task == "coordinate" and item.target is not None:
+            from girlframe.discord_adapter.creation_coordination import ChooserView
+
+            role = cast(Role, item.identity.split(":")[1])
+            prepared = await asyncio.to_thread(
+                self.service.coordination.prepare, viewer, item.target, role
+            )
+            child = ChooserView(self.service.coordination, self.owner, item.target, role, prepared)
+            child.add_item(InboxBackButton(self))
+            await child.render(interaction)
+        elif item.task in ("describe", "history", "girl_details"):
             from girlframe.discord_adapter.creation import CreationView, summary
             from girlframe.services.creation import CreationService
 
             creation = CreationService(self.service.store)
             progress = await asyncio.to_thread(creation.get, viewer)
             builder = CreationView(creation, self.owner, progress)
+            if item.task == "girl_details":
+                from girlframe.discord_adapter.creation_details import DetailsView
+
+                builder.add_item(InboxBackButton(self))
+                details = DetailsView(builder)
+                details.add_item(InboxBackButton(self))
+                await details.render(interaction)
+                return
             if item.task == "history":
                 from girlframe.discord_adapter.cadre_history import HistoryView
 

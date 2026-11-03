@@ -18,10 +18,13 @@ A saved player review snapshot is not an independent source/code review.
 | Optional initial Requisition | Book PDF 60 / printed 58 | Regular mode excludes optional initial Requisition; short-game option explicitly unsupported |
 | CONSUME and DoctorDoctor tracks | Book PDF 65/71 / printed 63/69; sheet PDF 19/21 | Track labels/capacity verified; 0 Heat / Quiet / 0 boxes are owner-approved campaign defaults, not claims of explicit printed defaults |
 | Court and separate Core | Book PDF 68/88–89 / printed 66/86–87 | Separate unnamed Core and prescribed Tags; exact five-role/four-one Court allocation, recipient role visibility, no controller mechanics |
+| Additional mandatory choices | Book PDF 32/46/49/82; sheets 6/11/12/24 | Princess own/bonded-Girl/Handler standards; Oldgen two maxims; Vatgrown NPC and Handler desires; CHANGELING draft Psych Strings |
 | Other playbook-specific fields | `docs/RULE_COVERAGE_REPORT.md` and `engine/creation_catalog.py` | Source-linked asset/Identity catalogues, NPC role counts, Mockingbird Void choice, Wyvern extra Asset, Vatgrown DNA and Prince fanbase |
 
 The owner approved the three starting-resource campaign defaults in this development
-conversation. Trusted policy records owner approval without forging a Discord actor
+conversation. The owner also approved unmarked Identities/maxims, undamaged Assets/body parts,
+Personal NPC Bonds, zero Permissions, no acquired Requisitions and no extra Tags,
+with printed exceptions preserved. Trusted policy records owner approval without forging a Discord actor
 or Handler confirmation. Appointed Handler overrides remain explicit, versioned
 and separately labelled. No startup change writes fictional resources.
 
@@ -37,9 +40,10 @@ No offline test certifies unpublished assumptions or human Discord behavior.
 - Check the exact official PDF versions/page anchors and reconcile all supported
   creation branches against the book/sheets, including any remaining terminology
   discrepancies (such as sheet “Intimate” versus book “Intense”).
-- Review starting NPC Bond depth, marked/unmarked Identity/Asset state, Permissions,
-  other counters and any special starting condition that still lacks an explicit
-  source or owner ruling. The review sheet deliberately initializes none of these.
+- Review the owner-approved initial-state rulings and their printed exceptions.
+  Confirm the extra Princess/Oldgen/Vatgrown choices and CHANGELING anchors against
+  their full source clauses. Review sheets record these as draft inputs, without
+  initializing canonical resources or executing any Play.
 - Review conflicting starting Bond depth/role cases. An incoming Intense Pair Bond
   is not silently downgraded to satisfy a different playbook's Personal requirement.
   Small-roster conflicts remain unresolved rather than invented away.
@@ -61,3 +65,8 @@ Heat/Identity/Tag/Status mechanics and resume/recovery. The scene-chat lock exte
 has its own LOCK-01–12 cases. No `/play` or automatic lock is enabled by this work.
 AI and recovered-engine writes remain deferred. A review cannot grant player consent
 or substitute a guessed rule for an unsupported branch.
+
+M2J source audit corrected gaps in the earlier creation checklist. Source-version-1
+reviews do not constitute verification of the new mandatory choices. Their history
+remains readable; current version-2 readiness must be checked afresh. New evidence
+is in `tests/test_creation_coordination.py` and `docs/acceptance/m2_playbook_creation.json`.

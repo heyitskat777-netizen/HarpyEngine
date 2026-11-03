@@ -45,7 +45,7 @@ or outside Git. Never delete a populated database to refresh the environment.
 Before upgrading an existing database, make a new private backup, then migrate:
 
 ```bash
-python -m girlframe db backup --dest var/backups/before-0009.db
+python -m girlframe db backup --dest var/backups/before-0010.db
 python -m alembic upgrade head
 python -m alembic check
 ```
@@ -59,6 +59,8 @@ rewriting existing records. Migration `0005` adds immutable private Bond proposa
 history and nullable Mentor-nomination provenance for proposals. `0007` adds
 private immutable Pair Asset allocations. `0008` adds immutable private Court and
 Mentor-callsign setup requests. `0009` adds immutable private assembled review sheets.
+`0010` adds immutable party-private Princess/Vatgrown chooser requests, including
+Handlers without Pilot profiles.
 `alembic downgrade base` destroys application tables: use only on
 throwaway test databases. Never downgrade real campaign data to roll back code.
 
@@ -101,6 +103,13 @@ explicit confirmed setup posts onboarding controls; only `publish:true` on a rol
 queues a public receipt. SDK DEBUG logging must stay disabled because it can
 include interaction credentials. HTTP/Gateway use the inherited HTTPS proxy and
 verified TLS. SIGTERM and Ctrl-C close the bot.
+
+To keep ongoing source edits separate from the live process, an operator may copy
+the tested `src/` into a private ignored release directory and set
+`GIRLFRAME_RUNTIME_SOURCE` to that copy of `src/` when running the startup script.
+The directory must contain the tested `girlframe` package. Keep policy/data in their
+existing locations; do not copy private state into a public release. This freezes
+code for that process, without making hosting continuous.
 
 A process in a development session is temporary hosting and must be restarted after
 environment restoration. This work does not publish environment configuration.
@@ -255,7 +264,7 @@ JSON loads with the new fields absent; reopening derives current source-backed
 facts, and only an explicit save appends a new snapshot.
 
 Use `/character review` after saving creation progress. The native section dropdown
-shows Validation, Assets, Appearance, Relationships and Frame/resources, with paging
+shows Validation, Assets, Appearance, Relationships, Girl setup and Frame/resources, with paging
 for long descriptions. The report checks the complete current Status roster,
 starting-Bond role/depth, source choices, accepted agreements and campaign rulings.
 An eligible outgoing proposal records its owner's starting choice. A player can
@@ -288,6 +297,36 @@ explicit preview/confirmation of these campaign rulings, or an unresolved overri
 No actual resource pool or playable state is initialized by this setup command.
 The regular mode has no optional initial Requisition. Selecting the short-game
 variant leaves its additional Requisition unsupported and visibly blocks readiness.
+
+**Girl setup** in `/character build` now covers additional mandatory creation
+choices: Oldgen selects two maxims; Princess selects its own standard; Vatgrown
+selects one or two desires for each chosen starting NPC investor. Custom Princess
+standards use an explicit text form. Return and Save progress to persist. Removing
+an NPC role clears only that role's incompatible investor choices from the current
+form; earlier saved history remains private and immutable.
+
+A bonded Girl and the appointed Handler each choose a separate Princess standard.
+The Handler also chooses its own investor desires for Vatgrown. Those choosers open
+`/character requests`, filter **Standards, maxims & Investors**, open the appropriate
+task, select options and confirm sending them for private owner review. The owner
+accepts or declines through the same inbox. Handler authors require appointment
+and membership, without a fake Pilot profile. Roles, profile changes, appointment
+replacement and relevant Bond withdrawal invalidate old requests. No administrator
+can choose in place of the actual actor. The printed text does not require the
+three Princess standards to be distinct; no such constraint is invented.
+
+The review includes source-backed Casualty body parts and Bonded's protected
+Paired Identity. CHANGELING records draft Psych String anchors for each current
+starting Bond and selected NPC role (book PDF 82), without creating shared NPCs or
+running control Plays. Review source version 2 adds these facts and choices; old
+version-1 snapshots remain readable history and need refreshing for current checks.
+
+The owner additionally approved unmarked Identities/maxims, undamaged Assets/body
+parts, Personal NPC Bonds, zero Permissions, no acquired Requisitions and no extra
+Tags as campaign initial conditions. Trusted policy records these under
+`owner_initial_conditions`; the public example leaves them unresolved. Printed
+exceptions, including JANUS's Core Tags and Mockingbird's Void choice, remain.
+These facts are review inputs; no gameplay state is initialized automatically.
 
 **Ready for independent rules review** refers to implemented setup checks only.
 Playable activation remains disabled in both the UI and service. The independent

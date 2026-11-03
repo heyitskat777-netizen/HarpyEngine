@@ -253,6 +253,8 @@ class CreationView(discord.ui.View):
             self.draft.girl_playbook == "VATGROWN"
             or official_frame(self.draft.frame_playbook) == "THE PRINCE"
         )
+        if self.draft.girl_playbook not in ("PRINCESS", "OLDGEN", "VATGROWN"):
+            self.remove_item(self.girl_setup)
 
     async def on_error(
         self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[Any]
@@ -336,6 +338,17 @@ class CreationView(discord.ui.View):
         from girlframe.discord_adapter.npc_bonds import NpcView
 
         await NpcView(self).render(interaction)
+
+    @discord.ui.button(label="Girl setup", row=3)
+    async def girl_setup(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        from girlframe.discord_adapter.creation_details import DetailsView
+
+        if self.draft.girl_playbook not in ("PRINCESS", "OLDGEN", "VATGROWN"):
+            await reply(interaction, "No owner choices are available in this panel.")
+            return
+        await DetailsView(self).render(interaction)
 
     @discord.ui.button(label="Frame setup", row=4)
     async def frame_details(

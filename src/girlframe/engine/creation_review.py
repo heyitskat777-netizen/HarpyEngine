@@ -5,10 +5,15 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from girlframe.engine.creation import CreationDraft
+from girlframe.engine.creation_details import (
+    AcceptedCoordination,
+    InitialConditions,
+    PsychStringAnchor,
+)
 from girlframe.engine.identity import Snowflake
 from girlframe.engine.shared_setup import AcceptedSetup
 
-SOURCE_VERSION: Literal["m2-creation-review-1"] = "m2-creation-review-1"
+SOURCE_VERSION: Literal["m2-creation-review-2"] = "m2-creation-review-2"
 STARTING_ACCESS = (
     "Room with a bunk",
     "Combat knife",
@@ -50,7 +55,7 @@ class SheetBond(BaseModel):
 class ReviewSheet(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
     schema_version: Literal[1] = 1
-    source_version: Literal["m2-creation-review-1"] = SOURCE_VERSION
+    source_version: Literal["m2-creation-review-1", "m2-creation-review-2"] = SOURCE_VERSION
     state: Literal["draft_rules_unverified"] = "draft_rules_unverified"
     owner: Snowflake
     callsign: str
@@ -62,6 +67,9 @@ class ReviewSheet(BaseModel):
     bonds: tuple[SheetBond, ...] = ()
     shared: tuple[AcceptedSetup, ...] = ()
     received_court: tuple[AcceptedSetup, ...] = ()
+    coordination: tuple[AcceptedCoordination, ...] = ()
+    psych_strings: tuple[PsychStringAnchor, ...] = ()
+    initial_conditions: InitialConditions | None = None
     status: str | None = None
     rulings: CreationRulings | None = None
     access: tuple[str, ...] = STARTING_ACCESS

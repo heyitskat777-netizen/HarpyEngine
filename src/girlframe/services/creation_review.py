@@ -11,9 +11,11 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine.bonds import starting_kind
 from girlframe.engine.creation import CreationDraft
+from girlframe.engine.creation_details import GirlDetails, PsychStringAnchor
 from girlframe.engine.creation_review import ReviewIssue, ReviewSheet, SheetBond
 from girlframe.services.bonds import BondService
 from girlframe.services.creation import CreationService
+from girlframe.services.creation_coordination import CoordinationService
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
@@ -67,6 +69,52 @@ class CreationReviewService:
                 progress.pair_choice.names if progress.pair_choice else ()
             )
         ]
+        details = progress.draft.girl_details or GirlDetails()
+        coordination = CoordinationService(self.store).accepted(connection, viewer.user_id)
+        roles = {x.role for x in coordination}
+        girl = progress.draft.girl_playbook
+        if girl == "OLDGEN" and len(details.maxims) != 2:
+            issues.append(
+                ReviewIssue(code="maxims", message="Choose Oldgen's two starting maxims.")
+            )
+        if girl == "PRINCESS":
+            if details.own_standard is None:
+                issues.append(
+                    ReviewIssue(code="own_standard", message="Choose your Princess standard.")
+                )
+            for role, label in (("princess_peer", "bonded Girl"), ("princess_handler", "Handler")):
+                if role not in roles:
+                    issues.append(
+                        ReviewIssue(
+                            code=role,
+                            message="Review a Princess standard chosen by your " + label + ".",
+                        )
+                    )
+        if girl == "VATGROWN":
+            if {x.npc_slot for x in details.investors} != {
+                x.slot for x in progress.draft.npc_bonds
+            } or not progress.draft.npc_bonds:
+                issues.append(
+                    ReviewIssue(
+                        code="npc_investors",
+                        message="Choose desires for each starting NPC investor.",
+                    )
+                )
+            if "vatgrown_handler" not in roles:
+                issues.append(
+                    ReviewIssue(
+                        code="handler_investor",
+                        message="Review the Handler's own investor desires.",
+                    )
+                )
+        if self.store.policy.owner_initial_conditions is None:
+            issues.append(
+                ReviewIssue(
+                    code="initial_conditions",
+                    category="unresolved",
+                    message="Initial marks, damage, NPC depth and Permissions are unresolved.",
+                )
+            )
         if progress.revision == 0 or progress.playbooks_changed:
             issues.append(
                 ReviewIssue(code="save_creation", message="Save current creation progress.")
@@ -197,6 +245,32 @@ class CreationReviewService:
             received_court=SharedSetupService(self.store).received_court(
                 connection, viewer.user_id
             ),
+            coordination=coordination,
+            initial_conditions=self.store.policy.owner_initial_conditions,
+            psych_strings=(
+                tuple(
+                    PsychStringAnchor(
+                        kind="pilot",
+                        reference=str(
+                            x["target_id"]
+                            if x["source_id"] == str(viewer.user_id)
+                            else x["source_id"]
+                        ),
+                        source_token=x["id"] + ":" + str(x["revision"]),
+                    )
+                    for x in sorted(current_bonds, key=lambda x: x["id"])
+                )
+                + tuple(
+                    PsychStringAnchor(
+                        kind="npc_role",
+                        reference=f"npc:{viewer.user_id}:{x.slot}",
+                        source_token=f"creation:{progress.revision}",
+                    )
+                    for x in progress.draft.npc_bonds
+                )
+            )
+            if progress.draft.frame_playbook == "CHANGELING"
+            else (),
             status=status,
             rulings=rulings,
             issues=tuple(issues),

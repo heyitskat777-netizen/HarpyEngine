@@ -11,11 +11,19 @@ from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.creation import clean
 from girlframe.discord_adapter.onboarding import action_gate, reply
 from girlframe.engine.bonds import starting_kind
+from girlframe.engine.creation_details import BODY_PARTS, MAXIMS
 from girlframe.engine.npc_bonds import NPC_ROLES
 from girlframe.services.creation_review import CreationReviewService, CurrentReview
 from girlframe.services.onboarding import WorkflowError
 
-SECTIONS = ("Validation", "Assets", "Appearance", "Relationships", "Frame and resources")
+SECTIONS = (
+    "Validation",
+    "Assets",
+    "Appearance",
+    "Relationships",
+    "Girl setup",
+    "Frame and resources",
+)
 
 
 def pages(review: CurrentReview, section: str) -> list[str]:
@@ -92,6 +100,31 @@ def pages(review: CurrentReview, section: str) -> list[str]:
             lines.append("Cadre discussion confirmed: " + str(draft.cadre_discussed))
         if not lines:
             lines = ["No current relationship choices."]
+    elif section == "Girl setup":
+        details = draft.girl_details
+        lines = []
+        if details:
+            if details.own_standard:
+                lines.append("Your Princess standard: " + details.own_standard.label)
+            if details.maxims:
+                lines.append("Oldgen maxims: " + ", ".join(MAXIMS[x] for x in details.maxims))
+            lines.extend(
+                "NPC investor "
+                + NPC_ROLES[draft.girl_playbook][x.npc_slot]
+                + ": "
+                + x.desires.label
+                for x in details.investors
+            )
+        lines.extend(
+            x.role.replace("_", " ") + " (player " + str(x.author) + "): " + x.label
+            for x in sheet.coordination
+        )
+        if draft.girl_playbook == "CASUALTY":
+            lines.append("Body parts (book PDF 44): " + ", ".join(BODY_PARTS))
+        if draft.girl_playbook == "BONDED":
+            lines.append("Protected Paired Identity: Hers (book PDF 58).")
+        if not lines:
+            lines = ["No additional Girl setup choices saved."]
     else:
         lines = [
             "Starting Status: " + (sheet.status or "unresolved"),
@@ -113,6 +146,20 @@ def pages(review: CurrentReview, section: str) -> list[str]:
             lines.append(
                 "Starting resource values unresolved: Handler must confirm campaign rulings."
             )
+        if sheet.initial_conditions:
+            lines.extend(
+                (
+                    "Owner-approved initial conditions:",
+                    "Identities/maxims unmarked; Assets/body parts undamaged.",
+                    "NPC Bonds Personal; Permissions 0; no acquired Requisitions or extra Tags.",
+                    "Printed exceptions apply. Initial conditions remain draft facts.",
+                )
+            )
+        else:
+            lines.append("Initial marks/damage/NPC depth/Permissions remain unresolved.")
+        if sheet.psych_strings:
+            lines.append("CHANGELING starting Psych Strings (draft anchors, book PDF 82):")
+            lines.extend(x.kind + ": " + x.reference for x in sheet.psych_strings)
         baseline = draft.frame_setup
         if baseline:
             if baseline.harpy_core:

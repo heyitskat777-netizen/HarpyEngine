@@ -27,7 +27,16 @@ class NpcSelect(discord.ui.Select["NpcView"]):
         parent = self.parent_view.parent
         previous = {x.slot: x.model_dump(mode="json") for x in parent.draft.npc_bonds}
         try:
-            parent.update(npc_bonds=[previous.get(int(i), {"slot": int(i)}) for i in self.values])
+            values: dict[str, Any] = {
+                "npc_bonds": [previous.get(int(i), {"slot": int(i)}) for i in self.values]
+            }
+            if parent.draft.girl_details is not None:
+                details = parent.draft.girl_details.model_dump(mode="json")
+                details["investors"] = [
+                    x for x in details["investors"] if str(x["npc_slot"]) in self.values
+                ]
+                values["girl_details"] = details
+            parent.update(**values)
         except ValueError:
             await self.parent_view.render(interaction, "Choose distinct legal NPC roles.\n")
             return

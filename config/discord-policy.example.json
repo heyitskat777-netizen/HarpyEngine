@@ -6,5 +6,6 @@
   "status_user_ids": [],
   "allow_guild_administrators": true,
   "status_audience_approved": false,
-  "owner_creation_rulings": null
+  "owner_creation_rulings": null,
+  "owner_initial_conditions": null
 }

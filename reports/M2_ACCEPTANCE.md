@@ -577,3 +577,105 @@ for deliberate recovery; do not downgrade/delete a populated database. Original
 handoff and canonical engine were preserved; no environment configuration was
 published or repinned. This step does not claim production security, complete
 creation certification, activation, AI, `/play` or scene-chat locking.
+
+## M2J — mandatory playbook choices and coordinated authorship
+
+The owner requested continued work while keeping the bot available. The next source
+audit found mandatory creation choices outside the first playbook creation page:
+Princess standards (book PDF 32 / printed 30), Oldgen maxims (46 / 44), Vatgrown
+Investor desires (49 / 47), and CHANGELING's explicit starting Psych String note
+(82 / 80). Added these requirements before allowing readiness to treat the relevant
+branches as filled. The earlier source-version-1 review was not certification of
+these missing requirements. Independent complete-source review remains pending.
+
+`/character build` now includes **Girl setup** for Princess/Oldgen/Vatgrown. Owners
+choose their own standard, two maxims, or one/two desires for each selected NPC
+investor, with custom standard text where the source allows it. Save progress is
+explicit. Changing selected NPC roles filters incompatible investor choices from
+the current form and retains immutable saved history. No unprinted requirement
+forces the three Princess standards to be distinct.
+
+Bonded Girls and appointed Handlers author their own Princess standards; the
+Handler authors its own Vatgrown investor desires. Derived inbox tasks open native
+dropdowns and a private confirmed proposal. The character owner reviews the result
+through the same source-unified inbox, with accept/decline/withdraw as authorized.
+The owner cannot fill another chooser's role. Handler authors require membership
+and explicit appointment, without requiring a fake Pilot profile. Authority binds
+current profiles, relevant accepted Bond and the actual appointment event, rather
+than a reusable Handler name. Reappointing the same account after revocation cannot
+revive old consent. Unrelated rank/ruling changes do not rewrite author authority.
+All parties have private history; other administrators have no private-data override.
+
+New immutable coordination storage uses membership FK for authors and character FK
+for owners. Writes use campaign identity, current authority/version, idempotency and
+transactional audit. Old/stale accept replays revalidate authority; stale old chooser
+buttons cannot send a newer selection. Duplicate current requests replace tasks
+instead of duplicating them. No DM/public notification, order, punishment, consent
+for fictional behavior or runtime Play is emitted by setup acceptance.
+
+Review source version **2** adds the new requirements and private choices. Version
+1 remains readable historical data and is not considered a fresh current snapshot.
+CHANGELING records draft anchors for current accepted player Bonds and owner-local
+NPC roles, without creating world NPCs or using Psych Strings. Casualty's nine
+source body parts and Bonded's protected Paired Identity are visible as draft facts.
+The owner additionally approved unmarked Identities/maxims, undamaged Assets/body
+parts, Personal NPC Bonds, 0 Permissions, no acquired Requisitions and no extra Tags,
+with printed exceptions preserved. These are `owner_initial_conditions` in trusted
+private policy, not claimed printed defaults or initialized gameplay pools. Earlier
+0 Heat / Quiet / 0 obsolescence rulings remain unchanged.
+
+Executed validation:
+
+- Locked install: resolved 36 / checked 35 packages, dependency lock unchanged.
+- Initial existing creation/inbox/database targeted regression: **87 passed in
+  7.18 seconds**. New coordination module initially **18 passed in 2.19 seconds**;
+  then additional distinct-author/source-contract and stale-send cases were added.
+- Final `.venv/bin/pytest -q --junitxml=var/m2-playbook-creation-pytest.xml`:
+  **304 passed in 16.32 seconds**, no skips. Twenty-one new cases cover all chooser
+  roles, Handler without Pilot profile, source choice models, profile/Bond/Handler
+  replacement, revoked replay, duplication, decision states, private immutable
+  history, rollback/concurrency, actual backup restoration, isolation, missing
+  readiness, old review compatibility, owner progress, custom text, NPC edits,
+  native inbox routing and version-bound explicit sending.
+- The first full run had **302 passes / one failure**: a new test reused the fixture's
+  prior interaction key for a different replacement request, correctly producing
+  IDEMPOTENCY_CONFLICT. Corrected that synthetic key and added stale-send coverage
+  before the final passing run. Static literal/string/import issues were corrected.
+  No unresolved automated failure or skipped automated case.
+- Ruff lint/format PASS (142 files); mypy PASS (75 source files). Shell startup syntax
+  PASS. Planning verifier PASS (34 required files, 86 historical cases, four schemas/
+  four synthetic fixtures); all 40 manifest entries intact. Repository scanner:
+  221 publishable files, zero findings. `git diff --check` PASS.
+- Verified one incumbent bot process during development and left it running through
+  editing/testing. Created a private frozen source release; verified actual module
+  resolution and offline startup from that source. Optional trusted
+  `GIRLFRAME_RUNTIME_SOURCE` in the startup wrapper selects this tested copy without
+  copying data/policy into source. Later checkout edits cannot change this process's
+  package files. A prior source copy is retained privately for recovery reference.
+- During the brief controlled cutover, stopped the incumbent gracefully, created a
+  private database backup, then applied additive migration **0010**. Alembic schema
+  comparison found no new upgrade operations. Every value in all **20 pre-existing
+  application tables matched backup**. Integrity/foreign keys PASS; new coordination
+  history empty. No real request, choice or snapshot was fabricated for deployment.
+- Backed up private policy and applied the owner's explicit initial-state rulings,
+  preserving all other settings. New runtime reached Discord Gateway READY. Follow-up
+  confirms one bot process, frozen source hashes matching tested checkout and the
+  approved configuration. Authenticated REST readback confirms eleven guild command
+  groups, build/inbox/review present, zero global commands. Local health PASS.
+
+Human native-client Princess/Oldgen/Vatgrown/CHANGELING smoke is **NOT_RUN**, distinct
+from offline tests and live login/registration. Earlier owner-deferred M2 live checks
+remain pending. Mapping: `docs/acceptance/m2_playbook_creation.json`. The source/code
+review packet and coverage report include the new anchors and approved rulings.
+
+Playable activation, final public-sheet publication, safe Newgirl name/profile
+transition, gameplay-service consumption and original M2 official Plays remain
+unfinished. Independent complete-source review is still required; no certification
+or activation was enabled. Complete-builder and scene-lock cases remain NOT_RUN.
+This is development-session hosting, not continuous hosting across machine shutdown.
+The frozen source protects against edits, not host loss. No environment publication
+or repinning was attempted. Private PDFs/engine, policy, campaign records, backups
+and credentials remain outside Git; original handoff and canonical engine preserved.
+Recovery favors a forward fix: older parsers may not accept new saved choice fields,
+source-version-2 reviews or policy fields after feature use. Preserve schema/history;
+restore backups only to deliberate new offline recovery paths, not by deleting data.

@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from girlframe.engine.cadre_history import PriorMission
 from girlframe.engine.creation_catalog import CATALOG
+from girlframe.engine.creation_details import GirlDetails
 from girlframe.engine.fanbase import Fanbase
 from girlframe.engine.frame_setup import FrameSetup, frame_setup
 from girlframe.engine.npc_bonds import NpcBond
@@ -47,6 +48,7 @@ class CreationDraft(BaseModel):
     prior_missions: tuple[PriorMission, ...] = Field(default=(), max_length=25)
     cadre_discussed: bool = False
     starting_bond_id: str | None = Field(default=None, min_length=36, max_length=36)
+    girl_details: GirlDetails | None = None
 
     @field_validator("girl_playbook")
     @classmethod
@@ -60,6 +62,17 @@ class CreationDraft(BaseModel):
 
     @model_validator(mode="after")
     def legal_choices(self) -> Self:
+        details = self.girl_details
+        if details is not None:
+            if details.own_standard is not None and self.girl_playbook != "PRINCESS":
+                raise ValueError("Only Princess chooses an own standard")
+            if details.maxims and self.girl_playbook != "OLDGEN":
+                raise ValueError("Only Oldgen chooses maxims")
+            if details.investors and (
+                self.girl_playbook != "VATGROWN"
+                or not {x.npc_slot for x in details.investors} <= {x.slot for x in self.npc_bonds}
+            ):
+                raise ValueError("Investor desires must match selected Vatgrown NPC roles")
         if len({x.user_id for x in self.prior_missions}) != len(self.prior_missions):
             raise ValueError("Declare each Cadre counterpart only once")
         if (self.prior_missions or self.cadre_discussed) and self.girl_playbook != "NEWGIRL":

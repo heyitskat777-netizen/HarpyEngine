@@ -8,6 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, SecretStr, field_validator
 
+from girlframe.engine.creation_details import InitialConditions
 from girlframe.engine.creation_review import CreationRulings
 from girlframe.engine.identity import Snowflake
 
@@ -23,6 +24,7 @@ class BotPolicy(BaseModel):
     allow_guild_administrators: bool = False
     status_audience_approved: bool = False
     owner_creation_rulings: CreationRulings | None = None
+    owner_initial_conditions: InitialConditions | None = None
 
     @field_validator("owner_creation_rulings")
     @classmethod

@@ -23,6 +23,13 @@ from girlframe.engine.bonds import BondProposal
 from girlframe.engine.cadre_history import PriorMission
 from girlframe.engine.creation import AssetChoice, CreationDraft
 from girlframe.engine.creation_catalog import CATALOG
+from girlframe.engine.creation_details import (
+    DesireChoice,
+    GirlDetails,
+    InitialConditions,
+    NpcInvestor,
+    StandardChoice,
+)
 from girlframe.engine.creation_review import CreationRulings
 from girlframe.engine.drafts import DraftInput
 from girlframe.engine.fanbase import Fanbase
@@ -31,6 +38,7 @@ from girlframe.engine.pair_assets import PairNames
 from girlframe.engine.shared_setup import CallsignChoice, CourtChoice
 from girlframe.services.bonds import BondService
 from girlframe.services.creation import CreationService
+from girlframe.services.creation_coordination import CoordinationService
 from girlframe.services.creation_review import CreationReviewService
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
@@ -42,6 +50,7 @@ ledger = ledger_fixture
 
 
 def ready(store, girl="MOCKINGBIRD", frame="JANUS-B"):
+    store.policy = store.policy.model_copy(update={"owner_initial_conditions": InitialConditions()})
     seed(store)
     seed(store, OTHER)
     store.save_draft(
@@ -122,6 +131,38 @@ def ready(store, girl="MOCKINGBIRD", frame="JANUS-B"):
             demanded=("Kind", "Intelligent"),
             rejected=("Dangerous", "Girly"),
         )
+    if girl == "OLDGEN":
+        update["girl_details"] = GirlDetails(maxims=(0, 1))
+    elif girl == "PRINCESS":
+        update["girl_details"] = GirlDetails(own_standard=StandardChoice(slot=0))
+        coordinated = CoordinationService(store)
+        for actor, role in ((OTHER, "princess_peer"), (ADMIN, "princess_handler")):
+            request = coordinated.propose(
+                actor,
+                "standard-" + role,
+                PLAYER.user_id,
+                role,
+                coordinated.prepare(actor, PLAYER.user_id, role),
+                StandardChoice(slot=1),
+            )
+            coordinated.decide(PLAYER, "accept-" + role, request["id"], 1, "accept")
+    elif girl == "VATGROWN":
+        update["girl_details"] = GirlDetails(
+            investors=tuple(
+                NpcInvestor(npc_slot=x.slot, desires=DesireChoice(slots=(0,)))
+                for x in data.npc_bonds
+            )
+        )
+        coordinated = CoordinationService(store)
+        request = coordinated.propose(
+            ADMIN,
+            "handler-desires",
+            PLAYER.user_id,
+            "vatgrown_handler",
+            coordinated.prepare(ADMIN, PLAYER.user_id, "vatgrown_handler"),
+            DesireChoice(slots=(1,)),
+        )
+        coordinated.decide(PLAYER, "accept-handler-desires", request["id"], 1, "accept")
     data = data.model_copy(update=update)
     creation.save(PLAYER, "creation", 0, 2, data, expected_pair_token=data.pair_source_token)
     expected = handler.roster(ADMIN)["revision"]
