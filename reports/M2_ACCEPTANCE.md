@@ -1,4 +1,44 @@
 # M2 acceptance — pilot implementation ready for owner review
+
+## Authorized live M2 deployment — 2026-11-04 UTC
+
+The owner explicitly instructed: “Yes, begin migration and bot restart.” The earlier
+automatic approval block is resolved by that authorization. The deployment below
+succeeded; implementation evidence and the earlier blocked attempt are retained
+in the next section as history.
+
+- Source: frozen tested `f97dd2ce0b69df726e8ef8ca540b33edec82e72c`, matching the
+  reviewed candidate and current source SHA256 hashes. The source CI run passed:
+  https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/41749655289.
+- Read-only authenticated application/guild preflight passed before interruption.
+- The single incumbent bot was gracefully stopped. New private WAL-consistent
+  database and policy backups were created with mode 0600, outside Git.
+- Live `alembic upgrade head` applied **0010 → 0011**. `alembic check` reported
+  **No new upgrade operations detected.** All **21 existing application tables**
+  exactly matched the pre-migration backup. Ten empty M2 tables were added.
+- SQLite integrity: **ok**; foreign-key errors: **0**.
+- Live policy now records the owner's Intense Tag modifier ruling as **2** and
+  preserves all other prior settings. `m2_approval` remains **null**.
+- Frozen-source offline startup check passed: `m2_review_gated`, 13 guild groups.
+  Actual startup reached **HarpyEngine ready: commands registered in the configured
+  test guild.** Exactly **one bot process** remains running.
+- Authenticated Discord REST confirms **13 guild command groups, zero global
+  commands**, including `play`, `choice`, character activation/state/follow-through/
+  recovery, and campaign scene/order/recovery commands.
+- Post-start data readback: **0 active M2 characters, 0 M2 actions, 0 M2 locks**.
+  Startup and migration created no fictional effects or changed channel permissions.
+
+No application source changed during this deployment; the established **433-test**
+offline and CI evidence remains applicable. These checks establish startup,
+registration and preservation, not human slash-command/mobile acceptance or
+independent rules certification. Gameplay remains gated pending release review.
+The environment draft was not changed or published; M3/AI work has not started.
+Bot hosting remains temporary to the running session. Private deployment evidence
+and backups are under ignored `var/`; no credentials, campaign data or PDFs are
+included in the public documentation update.
+
+## Earlier implementation and blocked-deployment evidence (retained)
+
 ## Current M2K evidence — 2026-11-04 UTC
 
 **Implementation complete for the documented pilot subset; STOP for owner review.**

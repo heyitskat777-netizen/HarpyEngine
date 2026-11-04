@@ -7,13 +7,21 @@ No M3 or AI is authorized by completion of these automated checks.
 
 ## Deployment state
 
-The code and offline candidate are ready; the live bot remains on the prior M2J
-build, schema 0010, with 11 guild command groups. Automatic approval review rejected
-the proposed live restart/migration/policy update, so those changes were not applied.
-A private migrated-copy rehearsal preserved all 21 existing application tables and
-added ten empty M2 tables. Owner approval is needed for the controlled deployment;
-independent release review is still required before gameplay is enabled. The current
-bot remains running. No environment draft was modified or published.
+The owner explicitly approved the live migration and bot restart. On 2026-11-04
+UTC, a fresh private database/policy backup was created, schema 0011 was applied,
+and all 21 prior application tables were verified unchanged before restart. Ten
+new empty M2 tables were added; integrity and foreign-key checks passed.
+
+The frozen tested M2 source (`f97dd2c`) reached Discord Gateway READY. Read-only REST
+verification confirms 13 guild command groups, including the new Play/choice/scene
+commands, and zero global commands. Exactly one bot process is running. The approved
+Intense ±2 ruling is now recorded in live policy. Release approval remains null;
+no M2 characters, actions or scene locks were created. Independent rules review and
+human play-testing are still pending. No environment draft was changed or published.
+
+The earlier automatic deployment rejection was resolved by the owner's subsequent
+explicit authorization. Private backups, policy and source snapshots remain outside
+Git. Hosting remains temporary to this session.
 
 ## Implemented scope
 
