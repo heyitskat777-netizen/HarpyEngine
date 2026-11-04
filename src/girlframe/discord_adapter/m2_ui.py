@@ -9,6 +9,7 @@ from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.labels import entity_label
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm, threaded
+from girlframe.discord_adapter.m2_receipt_text import expression
 from girlframe.discord_adapter.onboarding import private_operation, reply
 from girlframe.engine.m2 import (
     FLIRT_QUESTIONS,
@@ -712,16 +713,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
             lines = [str(data["play"]).replace("_", " ") + " · " + data["state"]]
             receipt = data["receipt"]
             if receipt:
-                lines.append(
-                    "Receipt "
-                    + receipt["id"]
-                    + " · "
-                    + " + ".join(str(x) for x in receipt["faces"])
-                    + " + "
-                    + str(receipt.get("base_modifier", receipt["heat"]))
-                    + " "
-                    + str(receipt.get("modifier_source", "Heat"))
-                )
+                lines.append("Receipt " + receipt["id"] + " · " + expression(receipt))
             if data["result"]:
                 for key, value in data["result"].items():
                     lines.append(str(key).replace("_", " ") + ": " + str(value))

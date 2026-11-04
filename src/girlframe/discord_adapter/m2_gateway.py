@@ -5,6 +5,7 @@ from typing import Any
 import discord
 
 from girlframe.discord_adapter.ledger import clean
+from girlframe.discord_adapter.m2_receipt_text import expression
 from girlframe.services.m2_game import GameService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
@@ -103,12 +104,9 @@ class DiscordGameGateway:
             view = SceneControls(self.game)
         elif kind == "receipt":
             receipt = payload["receipt"]
-            faces = receipt["faces"]
-            modifier = receipt.get("base_modifier", receipt["heat"])
-            source = receipt.get("modifier_source", "Heat")
             text = (
                 f"**{clean(payload['callsign'])} — {clean(payload['play'].replace('_', ' '))}**"
-                f"\n{faces[0]} + {faces[1]} + {modifier} {source}"
+                f"\n{clean(expression(receipt))}"
                 f" = {receipt['pre_total']} before Tags."
                 f"\nReceipt `{receipt['id']}`\nHuman responses pending."
             )

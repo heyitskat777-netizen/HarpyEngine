@@ -764,6 +764,27 @@
           "limitation": "Other Requisitions, Casualty body-part recovery, remaining playbook/world/economy interactions and independent/human acceptance remain incomplete."
         }
       ]
+    },
+    {
+      "id": "M3F-SUPPLY-001",
+      "title": "Actual random supply-loss assignment and separate pre-roll recovery penalty",
+      "expected": "One source-proven uniform draw from the actual character-bound Cadre; no recipient picker; preserve the -2 through ordinary/Observation tiers, Tags and known-roll recovery without redrawing or double application.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_supply.py",
+        "tests/rules/test_supply_service.py",
+        "tests/rules/test_off_duty_roll_service.py",
+        "tests/rules/test_observation_service.py"
+      ],
+      "evidence": [
+        {
+          "scope": "offline_supply_assignment_and_pre_roll_modifier_integration",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-supply-pytest.xml",
+          "result": "1011 passed in 252.42s; no failures/errors/skips",
+          "artifact": "var/m3-supply-pytest.xml",
+          "limitation": "Other temporary modifiers and remaining Strain, playbook, world, economy, career and independent/human acceptance remain incomplete."
+        }
+      ]
     }
   ],
   "enabled_modules": [

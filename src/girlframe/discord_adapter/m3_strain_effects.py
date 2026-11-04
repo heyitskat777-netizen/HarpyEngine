@@ -302,6 +302,8 @@ async def open_effect(
                         25,
                     )
                 )
+        elif rule == "strain.budget.low.3.2":
+            fields.append(Field("missing_resource", "What resource is missing?"))
         elif rule == "strain.budget.low.5.2":
             for uid in state.order:
                 fields.append(
@@ -459,6 +461,8 @@ async def open_effect(
             payload["rooms"] = tuple(tuple(x) for x in grouped.values())
         elif rule == "strain.budget.low.6.2":
             payload.update(target=values["target"][0], npc_jobs=tuple(values["jobs"]))
+        elif rule == "strain.budget.low.3.2":
+            payload["missing_resource"] = values["missing_resource"]
         elif rule == "strain.budget.high.2.2":
             payload["tags"] = tuple(
                 TagChoice(owner=uid, label=values["tag:" + str(uid)])
@@ -475,6 +479,16 @@ async def open_effect(
             data["game_revision"],
             Choice(**payload),
         )
+        if rule == "strain.budget.low.3.2":
+            saved = await asyncio.to_thread(service.get, viewer_from_interaction(current), identity)
+            outcome = saved["supply_outcome"]
+            return (
+                "Missing supply assigned to "
+                + str(outcome["recipient"])
+                + ": "
+                + str(outcome["resource"])
+                + "."
+            )
         return "Event effects committed once. Reopen Off-Duty for remaining work."
 
     form = DependentForm(

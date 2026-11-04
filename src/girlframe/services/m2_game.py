@@ -979,18 +979,29 @@ class GameService:
             faces = self.dice.roll()
             if len(faces) != 2 or any(type(x) is not int or not 1 <= x <= 6 for x in faces):
                 raise ValueError("Dice source returned invalid faces")
+            pre_modifiers = (
+                [
+                    {"source": x["source"], "amount": x["amount"]}
+                    for x in m3.get("pre_modifiers", [])
+                ]
+                if m3
+                else []
+            )
             receipt = {
                 "id": str(uuid4()),
                 "action_id": identity,
                 "faces": list(faces),
                 "heat": prepared.heat,
-                "pre_total": sum(faces) + (m3["modifier"] if m3 is not None else prepared.heat),
+                "pre_total": sum(faces)
+                + (m3["modifier"] if m3 is not None else prepared.heat)
+                + sum(x["amount"] for x in pre_modifiers),
                 "rng_source": self.rng_source,
                 "rolled_utc": datetime.now(UTC).isoformat(),
                 "ruleset": M3_RULESET if m3 is not None else RULESET,
             }
             if m3 is not None:
                 receipt.update(
+                    pre_modifiers=pre_modifiers,
                     base_modifier=m3["modifier"],
                     modifier_source="Void Assets"
                     if m3.get("modifier_source") == "void_assets"

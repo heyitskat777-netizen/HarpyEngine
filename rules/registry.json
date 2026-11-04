@@ -513,6 +513,22 @@
       "change_impact": "Changing the interpretation needs explicit migration of unanchored/mission-bound restrictions and pending quotes. Preserve prior recovery and payment receipts; never retroactively charge or damage an Asset.",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "supply-penalty-observation",
+      "policy_key": "supply_observation",
+      "summary": "The current-period missed-supply -2 applies to the selected Girl's actual Off-Duty roll, including Void Observation when it replaces Go Off-Duty.",
+      "source": "Book PDF 150 / printed p.148 and PDF 28 / printed p.26; owner delegated authority",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "The loss concerns this recovery period, while Observation replaces the ordinary roll. Carrying the same pre-roll consequence through the replacement avoids erasing an already assigned loss by switching routes.",
+      "alternatives": [
+        "Apply the -2 only to ordinary Go Off-Duty and omit it under Void Observation"
+      ],
+      "implementation_note": "Use the actual complete character-bound Cadre population and one OS-backed uniform draw. Preserve assignment and source event. Apply once before dice/Tags and retain separate base/supply/Tag modifiers, receipt, restart and generation ownership.",
+      "change_impact": "Revising this interpretation needs treatment of unrolled Observation reservations and assigned losses. Never alter known dice/tier receipts, redraw a committed recipient or apply the effect to a new character.",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -8698,14 +8714,17 @@
         "heading": "Budget low: die 3, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_supply.py",
+        "tests/rules/test_supply_service.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

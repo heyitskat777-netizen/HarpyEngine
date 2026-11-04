@@ -1,7 +1,8 @@
 """Source-bound Strain effects; selection/description never substitutes for mechanics."""
 
 import json
-from typing import Any
+from typing import Any, Literal
+from uuid import uuid4
 
 import sqlalchemy as sa
 from pydantic import ValidationError
@@ -9,6 +10,9 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_strain_effects as rules
+from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_supply_state import SupplyLoss
+from girlframe.engine.rolls import IndexSource, OsIndex
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_strain import StrainService
 from girlframe.services.onboarding import WorkflowError
@@ -16,8 +20,12 @@ from girlframe.services.read_only_bot import GuildViewer
 
 
 class EffectService:
-    def __init__(self, strain: StrainService):
+    def __init__(self, strain: StrainService, *, selector: IndexSource | None = None):
         self.strain, self.store, self.game = strain, strain.store, strain.game
+        self.selector = selector if selector is not None else OsIndex()
+        self.selection_source: Literal["os", "test_injected"] = (
+            "os" if selector is None else "test_injected"
+        )
 
     def _row(self, c: Connection, identity: str) -> dict[str, Any]:
         table = t.m3["m3_required_work"]
@@ -43,11 +51,32 @@ class EffectService:
             if row["owner_id"] != str(viewer.user_id):
                 raise WorkflowError("This effect belongs to its assigned Handler.")
             body = json.loads(row["body_json"])
+            state = load_state(c, self.store.campaign_id)
+            supply = next((x for x in state.supply_losses if x.id == identity), None)
+            label = "Original character"
+            if supply is not None:
+                try:
+                    owner = int(supply.owner.entity)
+                    if (
+                        self.game.character_binding(c, state, owner, require_current_profile=False)
+                        == supply.owner.incarnation
+                    ):
+                        label = state.sheets[str(owner)].callsign
+                except WorkflowError:
+                    pass
             return {
                 **{k: row[k] for k in ("id", "revision", "state", "off_duty_id")},
                 "rule_id": body["rule_id"],
                 "supported": body["rule_id"] in rules.SUPPORTED,
-                "game_revision": load_state(c, self.store.campaign_id).revision,
+                "game_revision": state.revision,
+                "supply_outcome": {
+                    "recipient": label,
+                    "resource": supply.resource,
+                    "rng_source": supply.rng_source,
+                    "population_size": len(supply.population),
+                }
+                if supply is not None
+                else None,
             }
 
     def apply(
@@ -74,13 +103,53 @@ class EffectService:
                 raise WorkflowError(
                     "The selected effect does not match this actual saved Strain event."
                 )
-            updated = rules.apply(state, choice, identity, period_id=row["off_duty_id"])
+            event_id = str(uuid4())
+            supply = None
+            if choice.rule_id == "strain.budget.low.3.2":
+                rules.fields(choice, {"missing_resource"})
+                if not choice.missing_resource or not choice.missing_resource.strip():
+                    raise WorkflowError("Describe the actual resource missing from the shipment.")
+                period = self.strain.periods._get(c, row["off_duty_id"])
+                if period.phase != "preparing" or any(
+                    x.roll is not None or x.action_id is not None for x in period.progress.values()
+                ):
+                    raise WorkflowError(
+                        "The random supply loss must be bound before this period's Plays."
+                    )
+                population = tuple(
+                    ActorRef(
+                        kind="pilot",
+                        entity=str(uid),
+                        incarnation=self.game.character_binding(
+                            c, state, uid, require_current_profile=False
+                        ),
+                    )
+                    for uid in period.pilots
+                )
+                if any(period.character_ids.get(x.entity) != x.incarnation for x in population):
+                    raise WorkflowError(
+                        "Recover the actual unchanged period characters before drawing."
+                    )
+                index = self.selector.choose(len(population))
+                supply = SupplyLoss(
+                    id=identity,
+                    period=period.id,
+                    source_event=event_id,
+                    population=population,
+                    index=index,
+                    rng_source=self.selection_source,
+                    resource=choice.missing_resource,
+                )
+            updated = rules.apply(
+                state, choice, identity, period_id=row["off_duty_id"], supply=supply
+            )
             event = self.game.event(
                 c,
                 viewer.user_id,
                 key,
                 "m3.strain_effect_applied",
                 updated,
+                event_id=event_id,
                 work_id=identity,
                 rule_id=choice.rule_id,
             )

@@ -26,6 +26,17 @@ class OsD6:
         return secrets.randbelow(6) + 1
 
 
+class IndexSource(Protocol):
+    def choose(self, size: int) -> int: ...
+
+
+class OsIndex:
+    def choose(self, size: int) -> int:
+        if type(size) is not int or size < 1:
+            raise ValueError("Choose from an actual nonempty population")
+        return secrets.randbelow(size)
+
+
 class RollReceipt(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 

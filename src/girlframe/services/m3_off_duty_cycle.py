@@ -630,6 +630,14 @@ class CycleService:
                     (str(uid), state.sheets[str(uid)].callsign) for uid in period.pilots
                 ),
                 "own": own.model_dump(mode="json") if own else None,
+                "pre_modifiers": [
+                    {"source": "missed_supply", "amount": x.amount, "resource": x.resource}
+                    for x in state.supply_losses
+                    if x.period == identity
+                    and x.action is None
+                    and x.owner.entity == str(viewer.user_id)
+                    and x.owner.incarnation == period.character_ids.get(str(viewer.user_id))
+                ],
                 "sheet": state.sheets[str(viewer.user_id)].model_dump(mode="json")
                 if viewer.user_id in period.pilots
                 else None,

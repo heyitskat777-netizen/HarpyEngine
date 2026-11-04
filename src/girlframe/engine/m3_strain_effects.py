@@ -6,6 +6,7 @@ from pydantic import Field
 
 from girlframe.engine import m3_world as world_rules
 from girlframe.engine.m2 import GameState, Model, TagState, pair_key
+from girlframe.engine.m3_supply_state import SupplyLoss
 from girlframe.engine.m3_world_state import (
     Asset,
     CorePlan,
@@ -27,6 +28,7 @@ SUPPORTED = frozenset(
         "strain.rebellion.low.6.1",
         "strain.budget.low.5.2",
         "strain.budget.low.4.2",
+        "strain.budget.low.3.2",
         "strain.budget.low.6.2",
         "strain.budget.high.2.2",
         "strain.budget.high.3.2",
@@ -54,6 +56,7 @@ class Choice(Model):
     rooms: tuple[tuple[int, ...], ...] = ()
     npc_jobs: tuple[str, ...] = ()
     tags: tuple[TagChoice, ...] = ()
+    missing_resource: str | None = Field(default=None, max_length=120)
 
 
 def fields(choice: Choice, allowed: set[str]) -> None:
@@ -68,7 +71,12 @@ def fields(choice: Choice, allowed: set[str]) -> None:
 
 
 def apply(
-    original: GameState, choice: Choice, source_work: str, *, period_id: str | None = None
+    original: GameState,
+    choice: Choice,
+    source_work: str,
+    *,
+    period_id: str | None = None,
+    supply: SupplyLoss | None = None,
 ) -> GameState:
     if choice.rule_id not in SUPPORTED:
         raise ValueError("UNSUPPORTED_RULE: this Strain effect has no complete typed resolver")
@@ -77,7 +85,18 @@ def apply(
     if world is None or state.handler is None:
         raise ValueError("Initialize the actual world and appointed Handler first")
     rule = choice.rule_id
-    if rule == "strain.budget.low.4.2":
+    if rule == "strain.budget.low.3.2":
+        fields(choice, {"missing_resource"})
+        if (
+            supply is None
+            or supply.id != source_work
+            or supply.period != period_id
+            or supply.resource != choice.missing_resource
+            or any(x.id == source_work for x in state.supply_losses)
+        ):
+            raise ValueError("The missing shipment needs its actual random draw and period")
+        state.supply_losses.append(supply)
+    elif rule == "strain.budget.low.4.2":
         from girlframe.engine.m3_repairs import schedule
 
         fields(choice, set())

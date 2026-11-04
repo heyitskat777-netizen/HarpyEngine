@@ -191,3 +191,13 @@ period immediately. Preserve each source and actual dispatch/end/period provenan
 overlap retains the one-Asset limit without extra free quotas. Revision requires
 explicit treatment of armed scopes and pending quotes, preserving prior recoveries
 and payments without retroactive damage or charges.
+
+
+`supply_observation`: apply an assigned current-period missed-supply −2 to both
+ordinary Go Off-Duty and its Void Observation replacement. Book PDF 150 / printed
+p.148 names this Off-Duty roll; PDF 28 / printed p.26 replaces it. This delegated
+recommendation requires clarity review. Alternative: ordinary rolls only. The
+same period consequence should survive replacement, with one source-proven OS
+random recipient, actual character binding and separate pre-roll modifier. Changing
+the policy requires review of unrolled reservations and assigned losses, preserving
+known dice, receipts and recipients without redrawing or moving it to a new body.

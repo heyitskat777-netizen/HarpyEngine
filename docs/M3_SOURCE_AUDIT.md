@@ -192,3 +192,14 @@ revisions, character/Frame incarnations, safety, affordability, chat restoration
 rollback/replay and actual period closure are covered offline. Other Requisitions,
 Casualty body parts and remaining playbook/world/economy interactions remain
 unfinished. See `work_orders/M3_SHORTAGE_REPAIRS.md` and the central timing ruling.
+
+
+Low Budget 3/2 (PDF 150 / printed p.148) now draws a source-bound actual Cadre
+recipient with an OS uniform primitive and records a separate −2 pre-roll recovery
+modifier. It retains original character/population provenance privately, consumes
+once at the real roll and survives known-roll recovery without redrawing. Base
+Status/Void Assets and later Tag/Bond modifiers remain separate in receipts and
+period history. Observation uses the recorded delegated interpretation. Native
+controls never let the Handler select the random recipient. Other temporary
+modifiers and remaining Strain/playbook/world/economy rules remain unfinished.
+See `work_orders/M3_SUPPLY_LOSS.md` and the central ruling register.

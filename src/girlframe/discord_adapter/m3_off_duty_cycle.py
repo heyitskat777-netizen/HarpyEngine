@@ -153,6 +153,18 @@ async def open_action(
                 else "Your current Status sets the modifier. Chat locks before dice are rolled, "
                 "then participants make their Tag choices."
             )
+            if data.get("pre_modifiers"):
+                instructions += (
+                    " Pre-roll effects: "
+                    + ", ".join(
+                        str(x["amount"])
+                        + " "
+                        + x["source"].replace("_", " ")
+                        + (": " + x["resource"] if x.get("resource") else "")
+                        for x in data["pre_modifiers"]
+                    )
+                    + "."
+                )
 
             async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
                 prepared = PlayInput(

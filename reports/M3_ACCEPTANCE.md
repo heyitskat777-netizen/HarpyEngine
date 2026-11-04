@@ -907,3 +907,49 @@ M2 process remained observed (PID47656). No live migration/policy change, M3 dep
 environment publication, independent/human acceptance or M3-ready claim applies.
 Shared actor-aware Plays, playbooks/economy/careers, five Punishments, 59 remaining
 Strain cells, all Endgames and other world interactions still require work.
+
+
+## Random missed supply and actual pre-roll modifiers
+
+Low Budget 3/2 now records the current Handler's actual missing resource and one
+OS-backed uniform draw from the complete actual Cadre population. The canonical
+assignment retains original character references, source event and period; the
+Handler cannot select a recipient or redraw through replay/reopening. A separate
+−2 pre-roll modifier is consumed with the actual locked roll. It is shown before
+confirmation and retained separately from base Status/Void Assets and later
+Tag/Bond adjustments in public-minimal and private receipts and period history.
+Void Observation uses the logged delegated interpretation with an alternative and
+clarity-review/change-impact notes. Private resource/population data is excluded
+from generic event/command payloads and unrelated players.
+
+Unrolled cancellation preserves the assignment; known-roll recovery retains the
+same recipient, dice, penalty and prior human responses. Character replacement
+before or after assignment cannot transfer the loss. Strict draw bounds, stale
+inputs, explicit resource, no forged target, pause/policy, transactional rollback,
+concurrency, Observation and all three tiers are covered. A real post-roll Personal
+Bond adjustment retains both −2 supply and +2 Tag components. A failure after
+receipt creation rolls back consumption/receipt together, without redrawing the
+already committed recipient. Native input has no recipient picker and receipt
+presentation shows actual base and supply arithmetic.
+
+Full suite: **1011 passed in 252.42s**, no failures/errors/skips;
+`var/m3-supply-pytest.xml`. Focused supply/ordinary/Observation run: **41 passed in
+30.33s**, `var/m3-supply-broad.xml`. Subsequent focused supply run: **22 passed in
+12.33s**, before the final extra before/after generation parameter; the full suite
+includes both cases. Initial focused run had **1 failed, 24 passed** because the
+new Observation fixture supplied its hiding flag/account in reverse order. The
+fixture now supplies the real typed arguments; no implementation gate was waived.
+
+Final Ruff passed; **310 files** formatted; mypy passed for **163 source files**.
+Registry remains RULES_SUBSET: 473 entries, 436 required core, **51 subsets, 422
+unimplemented**, zero independent verifications. Final source scan:
+**392 files**, all **40 original manifest entries**, zero findings. Source/fixture
+matrices, other temporary modifiers, remaining core Plays/playbooks/economy/careers,
+five Punishments, 58 Strain cells, Endgames and world interactions remain unfinished.
+The next scientific Observation work is explicitly planned in its additive order.
+
+The sanitized prior repair checkpoint **4e30161ab927bc4644b286795e25549228eee7a2**
+was pushed; GitHub CI passed, run **41837328257**. Exactly one frozen M2 bot remained
+observed (PID47656); all **88 frozen source hashes matched**, source 88cd237. No live
+migration, policy change, M3 deploy, environment publication, independent/human
+acceptance or M3-ready claim applies. Work continues within M3.

@@ -12,6 +12,7 @@ from girlframe.engine.m3_regulation_state import Regulation
 from girlframe.engine.m3_repair_state import Quote as RepairQuote
 from girlframe.engine.m3_repair_state import Shortage as RepairShortage
 from girlframe.engine.m3_strain_state import State as StrainState
+from girlframe.engine.m3_supply_state import SupplyLoss
 from girlframe.engine.m3_world_state import World
 
 RULESET: Literal["girlframe-m2-pilot-1"] = "girlframe-m2-pilot-1"
@@ -174,6 +175,7 @@ class GameState(Model):
     regulations: list[Regulation] = Field(default_factory=list)
     repair_shortages: list[RepairShortage] = Field(default_factory=list)
     repair_quotes: list[RepairQuote] = Field(default_factory=list)
+    supply_losses: list[SupplyLoss] = Field(default_factory=list)
 
 
 class PlayInput(Model):

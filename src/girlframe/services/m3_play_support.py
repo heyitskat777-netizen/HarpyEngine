@@ -6,9 +6,12 @@ from typing import TYPE_CHECKING, Any, Literal
 from sqlalchemy import Connection
 
 from girlframe.engine.m2 import GameState, PlayInput
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_choices import off_duty_modifier
 from girlframe.engine.m3_off_duty import Adjustment, Period, Progress, Roll, clone, ordinary_roll
 from girlframe.engine.m3_policy import RULESET
+from girlframe.engine.m3_supply import consume as consume_supply
+from girlframe.engine.m3_supply import modifiers as supply_modifiers
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_missions import MissionService
@@ -103,6 +106,17 @@ def prepare(
         "status": status,
         "modifier": off_duty_modifier(status) if amount is None else amount,
         "modifier_source": "status" if amount is None else "void_assets",
+        "pre_modifiers": supply_modifiers(
+            state,
+            period.id,
+            ActorRef(
+                kind="pilot",
+                entity=str(viewer.user_id),
+                incarnation=game.character_binding(
+                    c, state, viewer.user_id, require_current_profile=False
+                ),
+            ),
+        ),
         "registry": approval.registry_sha256,
         "ruleset": RULESET,
     }
@@ -149,6 +163,19 @@ def pre_roll(
         raise WorkflowError(
             "STALE_STATUS: recover the unrolled action and confirm current Status first."
         )
+    consume_supply(
+        state,
+        period.id,
+        ActorRef(
+            kind="pilot",
+            entity=str(viewer.user_id),
+            incarnation=game.character_binding(
+                c, state, viewer.user_id, require_current_profile=False
+            ),
+        ),
+        meta.get("pre_modifiers", []),
+        action["id"],
+    )
     if action["data"]["play"] == "void_observation":
         from girlframe.engine.m2 import shift_status
         from girlframe.engine.m3_observation import lower_before_roll, modifier
@@ -191,7 +218,16 @@ def save_raw_roll(
     updated.progress[str(actor)].reward_source_event = event
     saved = updated.progress[str(actor)].roll
     assert saved is not None
-    saved.stage = "tag_window"
+    updated.progress[str(actor)].roll = Roll(
+        faces=saved.faces,
+        modifier=saved.modifier,
+        total=receipt["pre_total"],
+        source=saved.source,
+        stage="tag_window",
+        adjustments=tuple(
+            Adjustment.model_validate_json(json.dumps(x)) for x in receipt.get("pre_modifiers", [])
+        ),
+    )
     service._save(c, updated, event)
     from girlframe.services.m3_observation import synchronize as observation_work
 
@@ -226,8 +262,11 @@ def sync_finished_roll(
         total=action["data"]["result"]["total"],
         source=raw.source,
         stage="choices",
-        adjustments=tuple(
-            Adjustment.model_validate_json(json.dumps(x)) for x in action["data"]["modifiers"]
+        adjustments=(
+            *raw.adjustments,
+            *tuple(
+                Adjustment.model_validate_json(json.dumps(x)) for x in action["data"]["modifiers"]
+            ),
         ),
     )
     updated.revision += 1
