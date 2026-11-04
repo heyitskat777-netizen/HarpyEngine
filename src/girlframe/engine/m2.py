@@ -154,7 +154,7 @@ def pair_key(first: int, second: int) -> str:
     return ":".join(str(x) for x in sorted((first, second)))
 
 
-def tier(total: int) -> str:
+def tier(total: int) -> Literal["low", "mid", "high"]:
     return "low" if total <= 7 else "mid" if total <= 10 else "high"
 
 

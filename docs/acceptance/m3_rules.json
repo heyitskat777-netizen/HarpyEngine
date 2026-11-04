@@ -1,6 +1,6 @@
 {
   "milestone": "M3",
-  "status": "SCOPED_NOT_IMPLEMENTED",
+  "status": "IN_PROGRESS",
   "rules_coverage": "RULES_SUBSET",
   "owner_authorization": "Begin M3 development; no fabricated M2/M3 review or live release approval",
   "required_evidence": [
@@ -23,9 +23,20 @@
       "id": "M3-002",
       "title": "Go Off-Duty Status modifiers and 7\u2212 scene",
       "expected": "Dog/Wing/Ace and on-screen harsh scene.",
-      "status": "NOT_RUN",
-      "planned_tests": [],
-      "evidence": []
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_shared_choices.py::test_off_duty_harsh_scene_is_required_and_status_modifiers_are_not_heat",
+        "tests/rules/test_core.py::test_off_duty_only_unmarks_one_and_preserves_sedation_locks"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_foundation_only",
+          "command": ".venv/bin/pytest -q tests/rules",
+          "result": "62 passed in 4.79s",
+          "artifact": "var/m3-foundation-pytest.xml",
+          "limitation": "No complete mechanical service/Discord/independent case acceptance is claimed"
+        }
+      ]
     },
     {
       "id": "M3-003",
@@ -39,9 +50,19 @@
       "id": "M3-004",
       "title": "Dog mission-end Punishment",
       "expected": "Applies even if not in mission; absent PC choice respected.",
-      "status": "NOT_RUN",
-      "planned_tests": [],
-      "evidence": []
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_missions.py::test_absent_dog_punishment_remains_real_pending_work"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_foundation_only",
+          "command": ".venv/bin/pytest -q tests/rules",
+          "result": "62 passed in 4.79s",
+          "artifact": "var/m3-foundation-pytest.xml",
+          "limitation": "No complete mechanical service/Discord/independent case acceptance is claimed"
+        }
+      ]
     },
     {
       "id": "M3-005",
@@ -95,9 +116,20 @@
       "id": "M3-011",
       "title": "Requisitions and Permissions triggers",
       "expected": "All participants and Ace bonuses exact.",
-      "status": "NOT_RUN",
-      "planned_tests": [],
-      "evidence": []
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_core.py::test_requisition_costs_are_exact_and_do_not_charge_input",
+        "tests/rules/test_core.py::test_extra_repair_uses_current_handler_quote_not_an_invented_default"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_foundation_only",
+          "command": ".venv/bin/pytest -q tests/rules",
+          "result": "62 passed in 4.79s",
+          "artifact": "var/m3-foundation-pytest.xml",
+          "limitation": "No complete mechanical service/Discord/independent case acceptance is claimed"
+        }
+      ]
     },
     {
       "id": "M3-012",
@@ -111,17 +143,37 @@
       "id": "M3-013",
       "title": "All published table rows tracked",
       "expected": "Each Low/High Strain table branch has source fixture.",
-      "status": "NOT_RUN",
-      "planned_tests": [],
-      "evidence": []
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_registry.py::test_inventory_is_not_certification_and_strain_columns_are_distinct"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_foundation_only",
+          "command": ".venv/bin/pytest -q tests/rules",
+          "result": "62 passed in 4.79s",
+          "artifact": "var/m3-foundation-pytest.xml",
+          "limitation": "No complete mechanical service/Discord/independent case acceptance is claimed"
+        }
+      ]
     },
     {
       "id": "M3-014",
       "title": "Full rule registry coverage report",
       "expected": "No unsupported Play incorrectly marked verified.",
-      "status": "NOT_RUN",
-      "planned_tests": [],
-      "evidence": []
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_registry.py::test_registry_rejects_invalid_sources_and_false_verification"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_foundation_only",
+          "command": ".venv/bin/pytest -q tests/rules",
+          "result": "62 passed in 4.79s",
+          "artifact": "var/m3-foundation-pytest.xml",
+          "limitation": "No complete mechanical service/Discord/independent case acceptance is claimed"
+        }
+      ]
     },
     {
       "id": "RUL-001",
@@ -154,9 +206,19 @@
     {
       "id": "RUL-005",
       "title": "Harsh Off-Duty scene and Princess Show Dog choices",
-      "status": "NOT_RUN",
-      "planned_tests": [],
-      "evidence": []
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_shared_choices.py::test_off_duty_harsh_scene_is_required_and_status_modifiers_are_not_heat"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_foundation_only",
+          "command": ".venv/bin/pytest -q tests/rules",
+          "result": "62 passed in 4.79s",
+          "artifact": "var/m3-foundation-pytest.xml",
+          "limitation": "No complete mechanical service/Discord/independent case acceptance is claimed"
+        }
+      ]
     },
     {
       "id": "RUL-006",
@@ -182,9 +244,19 @@
     {
       "id": "RUL-009",
       "title": "Mission-end Dog Punishment even when not participating",
-      "status": "NOT_RUN",
-      "planned_tests": [],
-      "evidence": []
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_missions.py::test_absent_dog_punishment_remains_real_pending_work"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_foundation_only",
+          "command": ".venv/bin/pytest -q tests/rules",
+          "result": "62 passed in 4.79s",
+          "artifact": "var/m3-foundation-pytest.xml",
+          "limitation": "No complete mechanical service/Discord/independent case acceptance is claimed"
+        }
+      ]
     },
     {
       "id": "RUL-010",
@@ -196,9 +268,19 @@
     {
       "id": "M3-ADD-001",
       "title": "Every registered Play has complete source/owner/tier/follow-up contract",
-      "status": "NOT_RUN",
-      "planned_tests": [],
-      "evidence": []
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_registry.py::test_registry_rejects_invalid_sources_and_false_verification"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_foundation_only",
+          "command": ".venv/bin/pytest -q tests/rules",
+          "result": "62 passed in 4.79s",
+          "artifact": "var/m3-foundation-pytest.xml",
+          "limitation": "No complete mechanical service/Discord/independent case acceptance is claimed"
+        }
+      ]
     },
     {
       "id": "M3-ADD-002",
@@ -249,5 +331,14 @@
       "planned_tests": [],
       "evidence": []
     }
+  ],
+  "enabled_modules": [
+    "core"
+  ],
+  "deferred_modules": [
+    "ancillary"
+  ],
+  "pending_owner_rulings": [
+    "absent_ace_permission_bonus"
   ]
 }

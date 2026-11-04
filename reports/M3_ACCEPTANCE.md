@@ -1,6 +1,6 @@
 # M3 acceptance — scoped, implementation not yet certified
 
-Status: SCOPED_NOT_IMPLEMENTED / RULES_SUBSET. Date: 2026-11-04 UTC.
+Status: IN_PROGRESS / RULES_SUBSET. Date: 2026-11-04 UTC.
 
 The owner authorized beginning M3 and requested its completion requirements. The
 initial planning delivery (`4d2813b`) is the additive work order `docs/work_orders/M3_RULES_COMPLETION.md`,
@@ -70,3 +70,43 @@ A future live shutdown/reconnect display and human mobile/desktop rendering rema
 unverified; their offline lifecycle/failure behavior is covered by tests. M3 rules,
 independent certification and M2 human acceptance remain pending. No environment
 configuration was modified or published. Private runtime/backup artifacts stay ignored.
+
+
+## M3 source/core foundation checkpoint — 2026-11-04 UTC
+
+The owner authorized continuing until a genuine intervention point or M3 completion.
+The source audit established the supplied 205-page book and 56-page sheets, added
+`rules/registry.json` and its strict validation, and began pure core/economy/shared
+Play/mission components. `docs/M3_SOURCE_AUDIT.md` details actual scope and gaps.
+Ancillary playbooks are deferred/disabled by explicit owner instruction. The owner
+also approved the reprogramming fallback, three 1-Permission Requisition prices,
+and per-repair Handler quotes. The absent Ace reward policy is still awaiting input.
+No assumption is made on that branch; no M3-complete claim is made.
+
+Executed validation:
+
+| Check | Actual result |
+|---|---|
+| `.venv/bin/ruff check .` | All checks passed |
+| `.venv/bin/ruff format --check .` | 172 files already formatted |
+| `.venv/bin/mypy` | No issues in 92 source files |
+| `.venv/bin/pytest -q tests/rules` | **62 passed in 4.79s** |
+| Full suite, `--junitxml=var/m3-foundation-pytest.xml` | **500 tests, zero failures/errors/skips**, JUnit time 38.521s |
+| `python tools/check_rules_registry.py` | RULES_SUBSET; 473 inventory entries, 436 core required, 37 deferred; zero independent verification |
+| Repository check before documentation update | 254 publishable files, 40 manifest entries intact, zero findings |
+| `git diff --check` | Passed |
+
+The initial extraction hit an image-block serialization error and a test used the
+wrong registry file parent; both were corrected. A tier return type was narrowed
+to its existing literal values for mypy, without changing M2 runtime behavior.
+
+Full M3 regression cases remain NOT_RUN or IN_PROGRESS, not PASS. A choice contract
+is not a complete mechanical resolver. Further branch audit, all playbook effects,
+state/service/migration/UI integration, Strain resolution, world entities and
+independent/human acceptance remain. No M3 schema or live policy changes occurred.
+
+The environment restarted during the work. The uncommitted checkpoint and completed
+500-test JUnit evidence survived; the temporary bot process did not. The previously
+tested frozen presence build was restarted after hash/offline-check verification,
+without loading the developing M3 source. Its live READY/presence output is checked
+separately from the rules tests. No environment configuration was published.

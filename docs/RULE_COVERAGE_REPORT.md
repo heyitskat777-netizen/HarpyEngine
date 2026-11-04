@@ -276,3 +276,16 @@ Orders and the selected Handler briefing are diceless. The registry records sour
 pages, tiers, supported exceptions, interface contracts and executable test symbols.
 See `M2_REVIEW_HANDOFF.md` for exact scope and unsupported rules. Independent review
 and human playtest are pending. No complete published-rule claim is made.
+
+
+## M3 initial source inventory and reducers
+
+See `M3_SOURCE_AUDIT.md` and `rules/registry.json`. The current inventory has 473
+named-source/table entries: 436 in the default core scope and 37 in the deferred,
+disabled ancillary module. This is not a total count of verified Plays. All 72
+Strain cells and 22 endgame slots have distinct inventory identities; their full
+mechanical effects and nested branches are not yet implemented. Independent
+verification remains zero. The approved reprogramming fallback and economy
+rulings are recorded with owner provenance. Initial pure reducers, shared decision
+contracts and mission lifecycle tests are partial evidence only. Coverage remains
+RULES_SUBSET; M3 acceptance and the absent Ace ruling are still pending.
