@@ -1,7 +1,7 @@
 # Independent creation-rules review packet
 
-Status: READY FOR REVIEW MATERIALS, NOT CERTIFIED. Complete-builder acceptance and
-playable activation remain NOT_RUN / NOT_IMPLEMENTED. Review this sanitized code,
+Status: READY FOR REVIEW MATERIALS, NOT CERTIFIED. Complete-builder independent acceptance remains NOT_RUN. Activation and the M2 pilot
+subset are implemented behind a trusted approval gate; see M2_REVIEW_HANDOFF.md. Review this sanitized code,
 tests and the separately supplied official PDFs; no real campaign sheets are needed.
 A saved player review snapshot is not an independent source/code review.
 
@@ -55,7 +55,7 @@ No offline test certifies unpublished assumptions or human Discord behavior.
   Resolve findings in code/tests before changing any certification/activation gate.
 - Implement and verify transactional playable-sheet activation, gameplay-service
   consumption, restart/rebuild and a two-player native-client creation walkthrough.
-  These are future work, not features unlocked merely by saving a review snapshot.
+  These are acceptance gates, not approval granted by saving a player snapshot.
 
 ## Play prerequisites retained
 
@@ -70,3 +70,12 @@ M2J source audit corrected gaps in the earlier creation checklist. Source-versio
 reviews do not constitute verification of the new mandatory choices. Their history
 remains readable; current version-2 readiness must be checked afresh. New evidence
 is in `tests/test_creation_coordination.py` and `docs/acceptance/m2_playbook_creation.json`.
+
+## M2K review update
+
+The implementation requested above now exists and has synthetic automated evidence.
+`M2_REVIEW_HANDOFF.md` supersedes earlier implementation-pending descriptions in
+this packet. Independent certification remains absent. Review the canonical source,
+source registry, gameplay tests and official PDFs before approving the digest.
+The owner ruled that Intense retains Personal's ±2 Tag adjustment. That is an
+explicit campaign interpretation, not a claim that the printed text resolves it.

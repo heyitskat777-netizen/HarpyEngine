@@ -14,10 +14,12 @@ M1 dice/ledger, safety, durable delivery and local backup/rebuild foundation.
 The owner subsequently authorized continuation into M2 and confirmed that JANUS-B
 uses official JANUS rules while keeping its Discord label. M2A starting choices are implemented and verified. The owner requested further
 continuation; M2B and M2C are implemented. Handler/NPC setup is implemented; the owner authorized further M2 continuation. The active step is
-`docs/work_orders/M2J_PLAYBOOK_CREATION.md`, within
+`docs/work_orders/M2K_GAMEPLAY_COMPLETION.md`, within
 `M2_CHARACTER_BUILDER.md`.
-Complete its source audit, private resumable choices and acceptance evidence before
-expanding to relationships, Status, special resources, playable activation or Plays.
+The owner now authorizes all remaining M2 implementation before review, with human
+play-testing deferred to its end. Complete activation, audited pilot Plays, core
+mechanics, durable responses and scene locking; stop for owner review after M2.
+Do not fabricate independent certification or advance to M3.
 Recovered-engine writes and AI remain deferred. Record partial scope honestly.
 
 - Run `bash tools/install.sh`, then the checks in `README.md`.

@@ -118,6 +118,10 @@ class ReadOnlyDiscordBot(discord.Client):
         self.tag_sync = CharacterTagSynchronizer(store) if store else None
         self._tag_worker: asyncio.Task[None] | None = None
         self._delivery_worker: asyncio.Task[None] | None = None
+        self._game_worker: asyncio.Task[None] | None = None
+        from girlframe.services.m2_game import GameService
+
+        self.game = GameService(store) if store else None
         self.tree = ReadOnlyCommandTree(self, fallback_to_global=False)
         guild = discord.Object(id=policy.guild_id)
         commands: tuple[tuple[ReadOnlyCommand, str], ...] = (
@@ -173,6 +177,10 @@ class ReadOnlyDiscordBot(discord.Client):
             from girlframe.services.creation_review import CreationReviewService
 
             register_creation_review(self.tree, policy.guild_id, CreationReviewService(store))
+            from girlframe.discord_adapter.m2_ui import register_game
+
+            assert self.game is not None
+            register_game(self.tree, policy.guild_id, self.game)
 
     def _callback(
         self, name: ReadOnlyCommand
@@ -206,8 +214,11 @@ class ReadOnlyDiscordBot(discord.Client):
                         "/roll show — retrieve a permitted receipt\n/ledger — permitted events\n"
                         "/safety pause, /safety resume — save or clear your own OOC pause\n"
                         "/health — configured administrators only\n"
-                        "Drafts are rules unverified. Official Plays, recovered-engine writes "
-                        "and AI are disabled."
+                        "/play, /choice resume — M2 guided Plays and pending human responses\n"
+                        "/character activate, /character followthrough — M2 character state\n"
+                        "/campaign scene_bind, scene_join, scene_close, order, play_recovery\n"
+                        "M2 gameplay requires the end-of-milestone release approval. "
+                        "Recovered-engine writes and AI remain disabled."
                     )
                 else:
                     await private_operation(
@@ -232,6 +243,10 @@ class ReadOnlyDiscordBot(discord.Client):
             from girlframe.discord_adapter.onboarding import NewPlayerView
 
             self.add_view(NewPlayerView(self.store, self.tag_sync))
+            from girlframe.discord_adapter.m2_ui import SceneControls
+
+            assert self.game is not None
+            self.add_view(SceneControls(self.game))
         await self.fetch_guild(self.policy.guild_id)
         await self.tree.sync(guild=discord.Object(id=self.policy.guild_id))
 
@@ -242,6 +257,8 @@ class ReadOnlyDiscordBot(discord.Client):
             self._delivery_worker is None or self._delivery_worker.done()
         ):
             self._delivery_worker = asyncio.create_task(self._deliver_rolls())
+        if self.game is not None and (self._game_worker is None or self._game_worker.done()):
+            self._game_worker = asyncio.create_task(self._advance_game())
         print(
             "HarpyEngine ready: commands registered in the configured test guild.",
             flush=True,
@@ -280,9 +297,24 @@ class ReadOnlyDiscordBot(discord.Client):
                     pass  # Durable lease/retry; no provider payload logging.
             await asyncio.sleep(5)
 
+    async def _advance_game(self) -> None:
+        from girlframe.delivery.m2_worker import GameWorker
+        from girlframe.discord_adapter.m2_gateway import DiscordGameGateway
+
+        assert self.game is not None
+        worker = GameWorker(self.game)
+        while not self.is_closed():
+            guild = self.get_guild(self.policy.guild_id)
+            if guild is not None:
+                try:
+                    await worker.tick(DiscordGameGateway(guild, self.game))
+                except Exception:
+                    pass  # Durable jobs remain pending; never log provider/private payloads.
+            await asyncio.sleep(5)
+
     async def close(self) -> None:
-        tasks = [self._tag_worker, self._delivery_worker]
-        self._tag_worker = self._delivery_worker = None
+        tasks = [self._tag_worker, self._delivery_worker, self._game_worker]
+        self._tag_worker = self._delivery_worker = self._game_worker = None
         for task in tasks:
             if task is not None and task is not asyncio.current_task() and not task.done():
                 task.cancel()

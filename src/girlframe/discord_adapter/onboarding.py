@@ -89,6 +89,39 @@ def sheet_text(data: dict[str, Any] | None) -> str:
     def clean(value: object) -> str:
         return discord.utils.escape_markdown(discord.utils.escape_mentions(str(value)))
 
+    if data.get("status") == "active_m2_subset":
+        lines = [
+            "**" + clean(data["callsign"]) + " — active M2 sheet**",
+            clean(data["girl_playbook"]) + " / " + clean(data["frame_playbook"]),
+            "Status: " + str(data.get("rank", "unavailable")),
+        ]
+        sheet = data.get("canonical")
+        if sheet:
+            lines.extend(
+                [
+                    "Heat: " + str(sheet["heat"]) + " · Permissions: " + str(sheet["permissions"]),
+                    "Identities: "
+                    + ", ".join(
+                        clean(x["name"]) + (" [marked]" if x["marked"] else "")
+                        for x in sheet["identities"]
+                    ),
+                    "Assets: "
+                    + ", ".join(
+                        clean(x["name"]) + (" [damaged]" if x["damaged"] else "")
+                        for x in sheet["assets"]
+                    ),
+                    "Tags: "
+                    + ", ".join(
+                        clean(x["label"]) + (" [marked]" if x["marked"] else "")
+                        for x in sheet["tags"]
+                    ),
+                ]
+            )
+        else:
+            for key in ("frame_name", "appearance", "frame_appearance", "identities", "assets"):
+                if key in data:
+                    lines.append(key.replace("_", " ") + ": " + clean(data[key]))
+        return "\n".join(lines)[:1900]
     text = (
         "**Character draft — rules unverified**\n"
         f"ID: {data['id']} | revision {data['revision']}\n"

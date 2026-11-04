@@ -3,8 +3,10 @@
 import sqlalchemy as sa
 
 from girlframe.database.base import Base
+from girlframe.database.m2_schema import define
 
 metadata = Base.metadata
+m2 = define(metadata)
 coordination_revisions = sa.Table(
     "creation_coordination_revisions",
     metadata,

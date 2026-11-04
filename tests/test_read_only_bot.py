@@ -225,7 +225,7 @@ def test_policy_restart_and_cli_check_without_token(policy, tmp_path, monkeypatc
     assert load_bot_policy(path) == policy == load_bot_policy(path)
     monkeypatch.delenv("DiscordBot", raising=False)
     assert main(["start", "--config", str(path), "--check"]) == 0
-    assert json.loads(capsys.readouterr().out)["mode"] == "m1_draft_ledger"
+    assert json.loads(capsys.readouterr().out)["mode"] == "m2_review_gated"
     assert main(["start", "--config", str(path)]) == 1
     assert "DiscordBot" in capsys.readouterr().err
 

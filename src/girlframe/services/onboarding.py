@@ -259,7 +259,18 @@ class OnboardingStore:
             )
             if not row:
                 return None
-            result: dict[str, Any] = dict(json.loads(row["public_json"]))
+            from girlframe.services.m2_state import load_state, public_sheet
+
+            state = load_state(connection, self.campaign_id)
+            sheet = state.sheets.get(str(owner))
+            if sheet:
+                result = public_sheet(sheet, state)
+                result.update(id=row["id"], revision=row["revision"])
+                if owner == viewer.user_id:
+                    result["notes"] = json.loads(row["private_json"])["notes"]
+                    result["canonical"] = sheet.model_dump(mode="json")
+                return result
+            result = dict(json.loads(row["public_json"]))
             result.update(id=row["id"], revision=row["revision"], status="draft_rules_unverified")
             if owner == viewer.user_id:
                 result["notes"] = json.loads(row["private_json"])["notes"]
@@ -275,6 +286,12 @@ class OnboardingStore:
 
         def operation(connection: Connection) -> dict[str, Any]:
             self._membership(connection, viewer)
+            from girlframe.services.m2_state import active
+
+            if active(connection, self.campaign_id, viewer.user_id):
+                raise WorkflowError(
+                    "ACTIVE_CHARACTER: creation editors cannot reset an activated character."
+                )
             where = (
                 t.characters.c.campaign_id == self.campaign_id,
                 t.characters.c.user_id == str(viewer.user_id),
@@ -354,6 +371,11 @@ class OnboardingStore:
                 raise WorkflowError(
                     "Reopen /character create and choose listed playbooks first."
                 ) from None
+            from girlframe.services.m2_state import load_state
+
+            sheet = load_state(connection, self.campaign_id).sheets.get(str(viewer.user_id))
+            if sheet:
+                desired = desired.model_copy(update={"callsign": sheet.callsign})
             self._enqueue_sync(connection, viewer.user_id, row["revision"], desired)
             return {"id": row["id"], "revision": row["revision"]}
 

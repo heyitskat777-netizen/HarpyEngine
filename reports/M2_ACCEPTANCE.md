@@ -1,4 +1,77 @@
-# M2 acceptance — first character-creation step
+# M2 acceptance — pilot implementation ready for owner review
+## Current M2K evidence — 2026-11-04 UTC
+
+**Implementation complete for the documented pilot subset; STOP for owner review.**
+Independent certification and live human/mobile acceptance remain **NOT_RUN**.
+The owner deferred play-testing to this end-of-M2 review. No M3/AI work started.
+Current source follows tested M2J baseline `491f164` on `codex/m2-character-builder`.
+Earlier sections below are retained historical evidence, not current deployment claims.
+
+Implemented canonical activation/public visibility, immutable private state history,
+Heat/Identities/Tags/Bonds/Status, five rolled Plays, diceless orders and the selected
+Handler briefing, durable owned responses, future follow-through, nested escape
+Plays, scene locking, recovery, projection rebuild and filtered public export.
+Exact scope, source anchors, gates and human checklist are in
+`docs/M2_REVIEW_HANDOFF.md`. The executable source registry links each Play to tests;
+`docs/acceptance/m2_gameplay.json` maps M2-001..015 and additive LOCK/BUILDER cases.
+The owner's Intense ±2 ruling is documented and in the private candidate policy;
+it has not been applied to the running policy. Release approval remains absent.
+
+| Executed check | Observed result |
+|---|---|
+| `bash tools/install.sh` | Locked install: resolved 36 packages, checked 35 |
+| `.venv/bin/ruff check .` | All checks passed |
+| `.venv/bin/ruff format --check .` | 158 files already formatted |
+| `.venv/bin/mypy` | No issues in 86 source files |
+| `.venv/bin/pytest -q --junitxml=var/m2k-pytest.xml` | **433 passed in 33.06s**, no failures/skips |
+| Dedicated M2 suite | **129 passed in 14.37s** before final full run |
+| Fresh disposable migration to head / `alembic check` | Schema 0011; no new upgrade operations |
+| Offline copy of real DB, migrate 0010 → 0011 / check | All **21** original application tables exactly preserved; ten new empty M2 tables |
+| Offline candidate integrity / foreign keys | `ok`; zero FK errors |
+| CLI `--help`, `health`, `start --config ... --check` | Passed; source registers 13 guild-scoped groups; health remains M0 foundation evidence |
+| Handoff verifier | 34 required files, 86 historical cases, four schemas/four synthetic fixtures; PASS |
+| Publishable-file/manifest check | 238 publishable files, all 40 original manifest entries intact, zero findings |
+| `git diff --check` | Passed |
+
+Tests retain all 304 baseline cases and add 129 M2 cases, using synthetic records,
+fake Discord and injected test dice. They cover all ten Girl and nine official
+Frame activation branches plus JANUS-B, exact Play tiers/counts, ownership, public
+projection, forced Heat, post-roll Tags, duplicate/concurrent actions, low Disobey,
+all high Flirt branches, nested response Plays, mutual follow-through, permissions,
+OOC pause, transaction rollback, restart/backup/rebuild and native selector/modal
+controls. Production dice remain OS-backed. Source exceptions and future rules
+outside the subset remain unsupported; these tests are not independent certification.
+
+During development, full regression caught an incorrect `.scalars()` projection in
+the revised public export. It was corrected to row iteration; the final 433-test
+run passed. Fixture import/label issues, formatting and type errors were also fixed.
+No unresolved automated failure is known. Human client behavior remains untested.
+
+### Deployment status and approval block
+
+A live restart/migration/policy update was attempted through the supported command
+approval flow. **Automatic approval review rejected it** because it judged the
+current authorization to cover M2 implementation and review, not this disruptive
+live deployment. The rejected command did not execute. No process was stopped and
+no live database/policy was changed. The remaining deployment requires owner approval.
+
+A safer offline candidate was then prepared under ignored private `var/`: frozen
+source with matching SHA256 hashes, a WAL-consistent backup, a separately migrated
+copy, and a separate candidate policy with the approved Intense ruling. These
+private artifacts are excluded from Git. Live DB stays schema **0010**; read-only
+process verification confirms exactly **one incumbent M2J bot**. Discord REST still
+reports **11 guild command groups, zero global commands**. Live M2 approval is absent.
+No new M2 command registration, live permission mutation, activation, mechanical
+roll or human smoke is claimed. The environment draft was not changed or published.
+
+Review the concrete implementation and approve a controlled restart/migration when
+ready. The bot remains on its previous working frozen build in this temporary
+session. New M2 gameplay remains separately gated until independent release review.
+
+---
+
+## Historical M2A evidence (retained)
+
 
 **Status: first starting-choice step implemented and offline verified; M2 incomplete.**
 **Date:** 2026-11-03 UTC. **Branch:** `codex/m2-character-builder`.

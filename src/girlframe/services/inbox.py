@@ -370,6 +370,32 @@ class InboxService:
                     "Choose recipient",
                     "court",
                 )
+            table = t.m2["m2_choices"]
+            for play_row in connection.execute(
+                sa.select(table).where(
+                    table.c.campaign_id == self.store.campaign_id,
+                    table.c.actor_id == user,
+                    table.c.state == "pending",
+                )
+            ).mappings():
+                items.append(
+                    InboxItem(
+                        "m2:" + play_row["id"],
+                        "m2",
+                        play_row["id"],
+                        play_row["revision"],
+                        "plays",
+                        play_row["kind"].replace("_", " ").title(),
+                        "Scene Play",
+                        "pending",
+                        True,
+                        False,
+                        "Resolve only your owned mechanical response.",
+                        "Saved response survives restart; no timeout chooses for you.",
+                        "Respond",
+                        task="m2_choice",
+                    )
+                )
         return tuple(
             sorted(
                 items,

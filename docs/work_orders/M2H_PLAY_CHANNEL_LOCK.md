@@ -67,4 +67,5 @@ Discord's enforceable limits. No visibility or unrelated channel changes occur.
 LOCK-12 Human two-player + staff smoke, failure/restart recovery and independent rule
 review are required before claiming this works live.
 
-Current status: SPECIFIED, NOT_IMPLEMENTED. All LOCK acceptance cases NOT_RUN.
+Current status: implemented with offline evidence in `docs/acceptance/m2_gameplay.json`.
+LOCK-12 human/independent acceptance remains NOT_RUN. See `docs/M2_REVIEW_HANDOFF.md`.

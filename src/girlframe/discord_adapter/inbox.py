@@ -17,6 +17,7 @@ from girlframe.services.onboarding import WorkflowError
 
 CATEGORY_LABELS = {
     "all": "All request types",
+    "plays": "Pending Plays",
     "bonds": "Starting Bonds",
     "mentors": "Mentor coordination",
     "court": "Red Queen's Court",
@@ -442,7 +443,12 @@ class InboxView(discord.ui.View):
                 allowed_mentions=discord.AllowedMentions.none(),
             )
 
-        if item.task == "court":
+        if item.task == "m2_choice":
+            from girlframe.discord_adapter.m2_ui import open_choice
+            from girlframe.services.m2_game import GameService
+
+            await open_choice(interaction, GameService(self.service.store), item.identity)
+        elif item.task == "court":
             await open_child(
                 "Choose another joined Girl, then review the external AM role.",
                 CourtRecipient(self.service, self.owner, item, self),

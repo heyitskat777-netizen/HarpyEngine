@@ -8,16 +8,12 @@ Offline acceptance and live verification are tracked in
 receipt/ledger, publication and safety smoke tests. This is not a production
 readiness claim.
 
-M2 has started with `/character build`: source-backed starting Identities, Asset
-choices and appearance, saved privately with revision history. Playbook details
-now include Vatgrown DNA basis and Prince fanbase demographics/demanded/rejected
-qualities, including custom choices. JANUS-B uses official
-JANUS rules and retains its server label. `/character review` now validates saved
-choices and assembles a private, versioned review sheet. See [M2 evidence](reports/M2_ACCEPTANCE.md).
-
-Characters remain **drafts / rules unverified**. Official Plays, modifiers, Heat,
-mechanical consequences, AI and recovered-engine writes are deferred. M1 raw dice
-are a test primitive and never resolve a GIRL FRAME Play.
+M2 implementation is ready for owner review: source-backed character creation,
+explicit canonical activation, guided pilot Plays, durable human responses and scene
+chat locks. New gameplay remains release-gated; independent rules review and human
+play-testing are pending. See [the review handoff](docs/M2_REVIEW_HANDOFF.md) and
+[M2 evidence](reports/M2_ACCEPTANCE.md). The live policy does not activate characters
+or certify rules automatically. M1 raw dice remain a separate test primitive.
 
 Read `AGENTS.md` and [the roadmap](docs/PROJECT_ROADMAP.md) before development. The
 original planning package remains unchanged in `GIRLFRAME_Discord_Codex_Handoff_v0.2/`;
@@ -45,7 +41,7 @@ or outside Git. Never delete a populated database to refresh the environment.
 Before upgrading an existing database, make a new private backup, then migrate:
 
 ```bash
-python -m girlframe db backup --dest var/backups/before-0010.db
+python -m girlframe db backup --dest var/backups/before-0011.db
 python -m alembic upgrade head
 python -m alembic check
 ```
@@ -60,7 +56,9 @@ history and nullable Mentor-nomination provenance for proposals. `0007` adds
 private immutable Pair Asset allocations. `0008` adds immutable private Court and
 Mentor-callsign setup requests. `0009` adds immutable private assembled review sheets.
 `0010` adds immutable party-private Princess/Vatgrown chooser requests, including
-Handlers without Pilot profiles.
+Handlers without Pilot profiles. `0011` adds canonical M2 state/history, scenes,
+actions, receipts, human decisions, orders, locks and delivery. Existing records
+are preserved; migration creates no active character or fictional effect.
 `alembic downgrade base` destroys application tables: use only on
 throwaway test databases. Never downgrade real campaign data to roll back code.
 
@@ -97,10 +95,9 @@ Policy examples are in `config/discord-policy.example.json`. The offline `--chec
 validates policy/sandbox only, not schema, credentials or live guild access.
 
 Actual startup checks the authenticated application and guild, then synchronizes
-11 top-level commands/groups in that guild only. Reconnect does not resync commands
+13 top-level commands/groups in that guild only. Reconnect does not resync commands
 or duplicate workers. Responses are ephemeral, with mentions disabled. Only an
-explicit confirmed setup posts onboarding controls; only `publish:true` on a roll
-queues a public receipt. SDK DEBUG logging must stay disabled because it can
+explicit confirmed setup posts onboarding controls; raw rolls publish by default unless `publish:false`; approved M2 Plays post minimal scene controls and receipts. SDK DEBUG logging must stay disabled because it can
 include interaction credentials. HTTP/Gateway use the inherited HTTPS proxy and
 verified TLS. SIGTERM and Ctrl-C close the bot.
 
@@ -120,6 +117,12 @@ check installation and guild ID. Errors omit raw provider bodies and private pat
 
 | Command | Access and behavior |
 |---|---|
+| `/play` | Owner-bound Play/resource selectors, trigger details, Confirm & Roll; release approval required |
+| `/choice resume`, `/choice show` | Own durable responses; permitted saved action/receipt |
+| `/character activate`, `/character state` | Explicit activation/public fields; current private state with paging |
+| `/character followthrough`, `/character recover` | Owner follow-through and source-backed moment-alone recovery |
+| `/campaign scene_bind`, `scene_join`, `scene_leave`, `scene_close` | Staff-bound scenes, explicit participation and safe close |
+| `/campaign order`, `/campaign play_recovery` | Recorded superior orders; confirmed staff recovery |
 | `/help` | Configured guild member; private usage |
 | `/health` | Explicitly enabled guild administrators; local service/sandbox check |
 | `/server setup` | Configured administrator; preview, then caller-bound confirmation |
@@ -192,8 +195,7 @@ Identities are derived from the official playbook. **Save progress** persists a
 partial form; reopen the command after a timeout or restart to continue. Unsaved
 edits are temporary. Saving changed Girl/Frame playbooks starts new choices while
 retaining earlier private history. Creation details are available through the owner-only builder and review;
-`/sheet` still shows the M1 profile. Bonds, Status,
-special resources, independent review and playable activation remain unfinished.
+`/sheet` shows the M1 profile until explicit activation, then the permitted canonical view; `/character state` pages the owner’s full current resources. Creation review assembles the remaining setup inputs; independently approved activation initializes canonical M2 state.
 The **NPC Bonds** button selects one or two playbook NPC roles (exactly two for
 Oldgen). Names and written feelings are optional and private. Return and Save
 progress to persist; these draft NPCs are not merged into shared world canon.
@@ -329,7 +331,7 @@ exceptions, including JANUS's Core Tags and Mockingbird's Void choice, remain.
 These facts are review inputs; no gameplay state is initialized automatically.
 
 **Ready for independent rules review** refers to implemented setup checks only.
-Playable activation remains disabled in both the UI and service. The independent
+Playable activation is implemented behind trusted release approval, absent in live policy. The independent
 [source/code review packet](docs/M2_RULES_REVIEW_PACKET.md) records the remaining
 gates and source gaps; a player's saved review is not that independent certification.
 
@@ -373,8 +375,7 @@ The intended `/play` interface uses guided category/Play selectors, legal target
 and resource choices, review, then Confirm & Roll and result-specific choices.
 See [Play interface](design/play-picker/README.md). The requested scene-chat lock
 is [specified with acceptance cases](docs/work_orders/M2H_PLAY_CHANNEL_LOCK.md),
-pending a real Play resolver and durable pending actions. Neither setup requests
-nor raw dice lock chat; no chat permissions change in the current inbox feature.
+pending a real Play resolver and durable pending actions. Neither setup requests nor raw dice lock chat. The M2 implementation binds scene locks to confirmed supported Plays; see the review handoff.
 
 A raw roll returns two faces, their sum, timestamp and stable receipt ID. It changes
 no character resources. `/roll basic` defaults to `publish:true`, queuing the receipt

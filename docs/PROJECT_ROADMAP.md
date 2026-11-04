@@ -16,9 +16,10 @@ do not rewrite that historical package or silently drop its original M1 gates.
 | M2E_PAIR_FRAME_SETUP | Pair-only starting Asset names, owner-only descriptions and source-backed Frame baselines | Implemented; live human smoke pending, counters/Court assignment pending |
 | M2F_COURT_MENTOR_CHOICES | Court role/recipient agreements, Mentor-chosen callsigns and read-only effective Status | Implemented; activation/rename and human smoke pending |
 | M2G_GUIDED_INBOX | Five-item private overview, version-bound guided review, source filters and authorized coordination tasks | Implemented; human multiplayer smoke pending |
-| M2H_PLAY_CHANNEL_LOCK | Confirmed Play locks only its scene until choices, effects and outcome delivery complete; durable recovery and staff unlock | Specified; NOT_IMPLEMENTED, depends on audited Plays and pending actions |
+| M2H_PLAY_CHANNEL_LOCK | Confirmed Play locks only its scene until choices, effects and outcome delivery complete; durable recovery and staff unlock | Implemented offline; independent review and human smoke pending |
 | M2I_CREATION_REVIEW | Source-backed validation, Newgirl history, explicit starting Bond choice and immutable private review sheets | Implemented; activation/independent review and human smoke pending |
 | M2J_PLAYBOOK_CREATION | Princess three-party standards, Oldgen maxims, Vatgrown investor choices, CHANGELING draft anchors and explicit initial conditions | Implemented; independent review, activation and human smoke pending |
+| M2K_GAMEPLAY_COMPLETION | Canonical activation, audited pilot Plays, durable choices and scene locking | Implementation complete; STOP for owner review |
 | M2_CHARACTER_BUILDER | Complete source-audited Girl/Frame creation, legal options and derived resources, validation and playable activation | Before claiming rules-usable characters |
 
 The status commands remain available and now show stored M1 status. Original M1
@@ -55,3 +56,10 @@ claiming this command becomes available automatically on arbitrary server joins.
 Discord creates and database commits are not atomic: an unknown API outcome pauses
 that resource for review, rather than claiming exactly-once creation or duplicating
 it on retry. Known completed resources resume from saved IDs.
+
+## Current stop point — M2K
+
+All authorized M2 implementation is ready for owner review within the documented
+pilot subset. See `M2_REVIEW_HANDOFF.md` and `acceptance/m2_gameplay.json`.
+Independent certification and human/mobile playtests remain pending; live release
+approval is absent. No M3/AI work follows without an explicit owner instruction.

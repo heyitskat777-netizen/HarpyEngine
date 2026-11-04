@@ -76,6 +76,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                         write_export(args.dest, ledger.public_export())
                     else:
                         ledger.rebuild_projections()
+                        from girlframe.services.m2_game import GameService
+
+                        GameService(ledger).rebuild()
                 finally:
                     engine.dispose()
         except Exception:

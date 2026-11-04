@@ -266,3 +266,13 @@ printed in the book. No fictional resources are automatically initialized.
 Review source version 2 adds these checks; version 1 remains readable history.
 Independent full-source review and playable activation remain pending. Earlier
 implemented-step checks were not certification of these formerly missing branches.
+
+## M2K pilot runtime subset
+
+Activation now initializes versioned canonical pilot state from current complete
+saved review input, with explicit public fields and no reactivation reset. Core
+Heat/Identities/Tags/Bonds/Status and the five rolled Plays are implemented; Receive
+Orders and the selected Handler briefing are diceless. The registry records source
+pages, tiers, supported exceptions, interface contracts and executable test symbols.
+See `M2_REVIEW_HANDOFF.md` for exact scope and unsupported rules. Independent review
+and human playtest are pending. No complete published-rule claim is made.

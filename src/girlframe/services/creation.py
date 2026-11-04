@@ -142,6 +142,12 @@ class CreationService:
         draft = draft.model_copy(update={"frame_setup": frame_setup(draft.frame_playbook)})
 
         def authorize(connection: Connection) -> None:
+            from girlframe.services.m2_state import active
+
+            if active(connection, self.store.campaign_id, viewer.user_id):
+                raise WorkflowError(
+                    "ACTIVE_CHARACTER: creation editors cannot reset an activated character."
+                )
             current = self._current(connection, viewer)
             token = current.pair_choice.token if current.pair_choice else None
             if token != expected_pair_token or draft.pair_source_token != token:
