@@ -8,6 +8,7 @@ from typing import Any
 import discord
 from discord import app_commands
 
+from girlframe.discord_adapter import presence
 from girlframe.discord_adapter.config import BotPolicy
 from girlframe.services.character_tags import CharacterTagSynchronizer
 from girlframe.services.engine_status import EngineStatusUnavailable
@@ -110,7 +111,12 @@ class ReadOnlyDiscordBot(discord.Client):
             application_id=policy.application_id,
             allowed_mentions=discord.AllowedMentions.none(),
             proxy=proxy,
+            activity=presence.activity("starting"),
+            status=presence.status("starting"),
         )
+        self._last_presence: presence.Phase | None = None
+        self._shutdown_phase: presence.Phase | None = None
+        self._closing_started = False
         self.policy = policy
         self.service = service
         self.store = store
@@ -250,7 +256,38 @@ class ReadOnlyDiscordBot(discord.Client):
         await self.fetch_guild(self.policy.guild_id)
         await self.tree.sync(guild=discord.Object(id=self.policy.guild_id))
 
+    async def _publish_presence(self, phase: presence.Phase) -> None:
+        activity, status = presence.activity(phase), presence.status(phase)
+        self.activity, self.status = activity, status
+        if not self.is_ready() or self._last_presence == phase:
+            return
+        try:
+            async with asyncio.timeout(2):
+                await self.change_presence(activity=activity, status=status)
+            self._last_presence = phase
+            print(f"HarpyEngine presence: {activity.name}", flush=True)
+        except Exception:
+            # Presence is best effort; it must never block serving or clean shutdown.
+            print("HarpyEngine presence update unavailable.", flush=True)
+
+    async def on_disconnect(self) -> None:
+        self._last_presence = None
+        if not self._closing_started:
+            self.activity = presence.activity("reconnecting")
+            self.status = presence.status("reconnecting")
+
+    async def on_resumed(self) -> None:
+        if not self._closing_started:
+            await self._publish_presence("running")
+
+    async def close_for_restart(self) -> None:
+        self._shutdown_phase = "restarting"
+        await self.close()
+
     async def on_ready(self) -> None:
+        if self._closing_started:
+            return
+        await self._publish_presence("running")
         if self.store is not None and (self._tag_worker is None or self._tag_worker.done()):
             self._tag_worker = asyncio.create_task(self._sync_character_tags())
         if self.ledger is not None and (
@@ -313,6 +350,9 @@ class ReadOnlyDiscordBot(discord.Client):
             await asyncio.sleep(5)
 
     async def close(self) -> None:
+        if not self._closing_started:
+            self._closing_started = True
+            await self._publish_presence(self._shutdown_phase or "stopping")
         tasks = [self._tag_worker, self._delivery_worker, self._game_worker]
         self._tag_worker = self._delivery_worker = self._game_worker = None
         for task in tasks:

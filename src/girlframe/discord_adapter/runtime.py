@@ -55,7 +55,9 @@ async def _connect(
         loop = asyncio.get_running_loop()
         installed_signal = False
         try:
-            loop.add_signal_handler(signal.SIGTERM, lambda: asyncio.create_task(bot.close()))
+            loop.add_signal_handler(
+                signal.SIGTERM, lambda: asyncio.create_task(bot.close_for_restart())
+            )
             installed_signal = True
         except (NotImplementedError, RuntimeError):
             # Windows / non-main-thread loops still support normal context cleanup.

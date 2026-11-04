@@ -108,6 +108,20 @@ The directory must contain the tested `girlframe` package. Keep policy/data in t
 existing locations; do not copy private state into a public release. This freezes
 code for that process, without making hosting continuous.
 
+Discord presence shows the actual package version: **Starting v0.1.0** while
+connecting, **Running v0.1.0** when ready, and **Restarting v0.1.0** during a
+controlled SIGTERM restart. A normal graceful close uses **Stopping v0.1.0**.
+Reconnect restores the running presence. The version comes from the application,
+so future release version changes update presence automatically. Presence reports
+process lifecycle, not campaign readiness or rules certification. It includes no
+campaign state or private character details.
+
+After disconnection Discord controls the offline indicator. A stopped/crashed bot
+cannot publish an offline activity message; abrupt failures can take a heartbeat
+timeout to appear offline. Presence updates are best effort and cannot prevent a
+clean shutdown. No extra privileged presence intent is required to publish the
+bot's own presence.
+
 A process in a development session is temporary hosting and must be restarted after
 environment restoration. This work does not publish environment configuration.
 HTTP 404 / Discord 10004 at startup means the application cannot access the guild:
