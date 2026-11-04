@@ -1193,3 +1193,51 @@ fixtures**; this is separate from implementation evidence. Exactly one bot remai
 running, PID47656; all **88 frozen source hashes** match. No live migration,
 M3 deployment, environment publication, independent/human acceptance or M3-ready
 claim applies. Development continues toward the remaining gameplay consumers.
+
+
+## Actual Gorgon Attack against an ordinary NPC
+
+The first Gorgon Attack consumer records an actual living NPC's printed death
+from an actual living Gorgon's chosen undamaged Assets and confirmed attack
+account. It uses original actor/target fingerprints and a canonical private source,
+without proxy Pilot sheets, RNG, Heat spending, movement or changing the Girl of
+the human who controls that NPC. Payment, transport, replacement or other player
+choices are not invented. The bounded implemented branch covers co-located ordinary
+NPCs. Benevolent Gorgons cannot Attack; dormant awakening, ranged reach, Director
+replacement, Directed-goal death and remaining Girl/Gorgon/Harpy branches fail
+closed. Other Handlers are ordinary NPCs (PDF188 / printed p.186), distinct from
+the actual campaign Handler and the Director's special rules. Source review caught
+and corrected an initially overbroad block on the NPC Handler job before release.
+
+Private world-management dropdowns select the actual Gorgon, NPC and Assets and
+require explicit death confirmation. Both world and Plays scopes, current actual
+Handler appointment/membership, safety, pending known rolls and restored chat guard
+the command. The appointed world facilitator retains only this narrow command
+while their separate fictional Handler uses Girl rules around a Director. No
+in-character knowledge or authority is transferred to a Director's human. Saved
+history remains private and survives rebuild and actual database backup/restore.
+
+Full suite: **1191 passed in 326.98s**, no failures/errors/skips;
+`var/m3-gorgon-attack-pytest.xml`. Corrected-source/registry focused run: **36 passed
+in 10.58s**, `var/m3-gorgon-attack-source-corrected.xml`. Earlier broad run: **54
+passed in 22.03s**, `var/m3-gorgon-attack-final-focused.xml`; prior broad run **54
+passed in 24.03s**, initial pure run **14 passed in 3.83s**. Initial service run
+had **1 failed / 23 passed** because a test referenced a nonexistent outbox column;
+the check now inspects both real outbox tables. A later command used the wrong
+registry-test filename and ran no tests; the corrected path is
+`tests/rules/test_registry.py` and the corrected-source run above passed. These
+failures were not hidden or converted into acceptance. Ruff passes, **343 files**
+are formatted, and mypy passes for **179 source files**.
+
+Tests cover same-controller Girl/NPC separation, actual source/replay/conflict,
+stale control/resources, revoked scopes, two-campaign isolation, pause, rollback
+after event insertion, concurrency, native controls, rebuild/backup and blocking
+an Attack after known rolled abort and acknowledged chat restoration. No new human
+acceptance or independently reviewed rule is claimed. Registry: 473 entries, 436
+required core, **58 subsets / 415 unimplemented**, zero independent verifications.
+Public scan: **425 publishable files**, original **40 manifest entries**, zero
+findings. Scene-context checkpoint **e6b9a44** is pushed. The original frozen M2
+bot remains PID47656; no live migration, policy change, M3 deployment or environment
+publication applies. M3 remains in progress and is not yet a player-testing
+candidate. Next work continues actual combat/physical/Core/control/playbook and
+remaining consequence integration; this Attack branch does not complete them.

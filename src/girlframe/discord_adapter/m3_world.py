@@ -218,6 +218,12 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
         if action == "map":
             await MapPages(service, viewer.user_id).show(current)
             return
+        if action == "gorgon_attack":
+            from girlframe.discord_adapter.m3_gorgon import open_gorgon_attack
+            from girlframe.services.m3_gorgon import GorgonService
+
+            await open_gorgon_attack(current, GorgonService(service))
+            return
         if action in ("npc", "npc_invite"):
             npc_identity = str(uuid4())
             from girlframe.services.m3_npc_roles import NpcRoleService
@@ -318,6 +324,7 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
             ("npc", "Introduce an NPC"),
             ("npc_invite", "Invite someone to play an NPC / Director"),
             ("reveal", "Reveal a Gorgon encountered by the Cadre"),
+            ("gorgon_attack", "Gorgon Attack on an ordinary NPC"),
         ),
         choose,
     )

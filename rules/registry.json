@@ -9919,14 +9919,48 @@
         "heading": "Attack"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
-      "dependencies": [],
-      "test_evidence": [],
+      "contract": {
+        "trigger": "An actual living Gorgon attacks with its specified actual Assets; enforce Class exceptions.",
+        "actor_type": "Actual canonical Gorgon controlled by the appointed world facilitator; no proxy Pilot.",
+        "pre_roll_sources": [
+          "Original actor and target references/fingerprints, actual undamaged Assets, actual reach/account, current Handler appointment and canonical world revision."
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "diceless": [
+            "Girl: actual owned response Play or Asset damage (remaining integration).",
+            "Ordinary NPC: actual death; implemented bounded co-located branch.",
+            "Gorgon or Harpy: pit actual Assets, Handler chooses winner, destroy losing Asset (remaining integration)."
+          ]
+        },
+        "choice_ownership": "World facilitator declares the actual Attack; Girl responses and specified choices remain with their actual humans. Opposing Gorgon/Harpy winner is the Handler choice.",
+        "target_policy": "Actual living canonical actors, source-legal reach and Class exceptions. Ordinary NPC controller is not the target Girl. Director and Directed-goal death require their actual follow-ups before enabling those branches.",
+        "post_roll_effects": [
+          "Ordinary NPC branch records canonical death and a private original source; does not charge or damage its human controller's Girl.",
+          "Remaining target branches retain their printed response/damage/destruction rules and fail closed."
+        ],
+        "mandatory_followups": [
+          "Do not waive required Director replacement, Directed goal consequences, dormancy/awakening, player responses or last-Asset consequences."
+        ],
+        "handler_or_gm_intervention": "Actual appointed world facilitator chooses attack and Assets; private review does not grant in-character Handler omniscience. Benevolent Gorgons cannot Attack.",
+        "test_fixture_ids": [
+          "tests/rules/test_gorgon_attack.py",
+          "tests/rules/test_gorgon_service.py"
+        ]
+      },
+      "dependencies": [
+        "gorgon.gorgon.class-0-benevolent"
+      ],
+      "test_evidence": [
+        "tests/rules/test_gorgon_attack.py",
+        "tests/rules/test_gorgon_service.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
