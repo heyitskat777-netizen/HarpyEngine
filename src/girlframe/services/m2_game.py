@@ -520,7 +520,17 @@ class GameService:
                 sa.select(actions.c.id)
                 .where(
                     actions.c.campaign_id == self.store.campaign_id,
-                    actions.c.state.not_in(("complete", "aborted")),
+                    sa.or_(
+                        actions.c.state.not_in(("complete", "aborted")),
+                        sa.and_(
+                            actions.c.state == "aborted",
+                            sa.func.json_extract(actions.c.body_json, "$.actor_basic").is_not(None),
+                            sa.func.json_extract(actions.c.body_json, "$.receipt").is_not(None),
+                            sa.func.json_extract(actions.c.body_json, "$.actor_recovery").is_not(
+                                None
+                            ),
+                        ),
+                    ),
                 )
                 .limit(1)
             )
@@ -942,6 +952,16 @@ class GameService:
         return dict(row)
 
     def roll(self, viewer: GuildViewer, key: str, identity: str) -> dict[str, Any]:
+        def authorize(c: Connection) -> None:
+            self.authorize(c, viewer, game=False)
+            action = self.action(c, identity)
+            if action["data"].get("actor_basic"):
+                from girlframe.services.m3_actor_plays import ActorPlayService
+
+                ActorPlayService(self).authorize(c, viewer, action)
+            else:
+                self.authorize(c, viewer)
+
         def operation(c: Connection) -> dict[str, Any]:
             action = self.action(c, identity)
             if action["actor_id"] != str(viewer.user_id):
@@ -956,6 +976,10 @@ class GameService:
                 or action["state"] not in ("acquiring", "ready_to_roll")
             ):
                 raise WorkflowError("LOCK_NOT_ACKNOWLEDGED: no dice or Heat were consumed.")
+            if action["data"].get("actor_basic"):
+                from girlframe.services.m3_actor_plays import ActorPlayService
+
+                return ActorPlayService(self).roll(c, viewer, key, action)
             if action["data"]["play"] not in (*PLAY_IDS, *M3_ROLL_IDS):
                 raise WorkflowError("This action is diceless.")
             state = load_state(c, self.store.campaign_id)
@@ -1053,7 +1077,7 @@ class GameService:
                 {"action_id": identity},
                 operation,
                 auto_audit=False,
-                authorize=lambda c: self.authorize(c, viewer),
+                authorize=authorize,
             )
         except ValidationError:
             raise WorkflowError(
@@ -1085,7 +1109,7 @@ class GameService:
         answer = ChoiceAnswer.model_validate_json(answer.model_dump_json())
 
         def owned(c: Connection) -> dict[str, Any]:
-            self.authorize(c, viewer)
+            self.authorize(c, viewer, game=False)
             table = t.m2["m2_choices"]
             row = (
                 c.execute(
@@ -1101,6 +1125,12 @@ class GameService:
             if row is None:
                 raise WorkflowError("This decision belongs to another player or is unavailable.")
             action = self.action(c, row["action_id"])
+            if action["data"].get("actor_basic"):
+                from girlframe.services.m3_actor_plays import ActorPlayService
+
+                ActorPlayService(self).authorize(c, viewer, action)
+            else:
+                self.authorize(c, viewer)
             if action["data"].get("m3"):
                 from girlframe.services.m3_play_support import authorize as authorize_m3
 
@@ -1127,7 +1157,8 @@ class GameService:
             if not lock or lock["state"] != "held":
                 raise WorkflowError("SCENE_LOCK_RECOVERY: decisions await a confirmed scene lock.")
             state = load_state(c, self.store.campaign_id)
-            self.action_characters(c, action, state)
+            if not action["data"].get("actor_basic"):
+                self.action_characters(c, action, state)
             table = t.m2["m2_choices"]
             c.execute(
                 table.update()
@@ -1137,13 +1168,20 @@ class GameService:
             action["data"]["choices"][row["kind"] + ":" + row["actor_id"]] = answer.model_dump(
                 mode="json"
             )
-            ChoiceEngine(self).apply(c, state, action, row, answer)
+            if action["data"].get("actor_basic"):
+                from girlframe.services.m3_actor_plays import ActorPlayService
+
+                ActorPlayService(self).apply(c, state, action, row, answer)
+            else:
+                ChoiceEngine(self).apply(c, state, action, row, answer)
             self.save_action(c, action)
             event = self.event(
                 c,
                 viewer.user_id,
                 key,
-                "m3.choice_resolved" if action["data"].get("m3") else "m2.choice_resolved",
+                "m3.choice_resolved"
+                if action["data"].get("m3") or action["data"].get("actor_basic")
+                else "m2.choice_resolved",
                 state,
                 action_id=action["id"],
                 choice_id=choice_id,
@@ -1335,8 +1373,11 @@ class GameService:
             for row in rows:
                 child = self.action(c, row["id"])
                 choices = t.m2["m2_choices"]
-                if action["data"].get("m3"):
-                    child["data"]["m3_recovery"] = {
+                if action["data"].get("m3") or action["data"].get("actor_basic"):
+                    recovery_key = (
+                        "actor_recovery" if action["data"].get("actor_basic") else "m3_recovery"
+                    )
+                    child["data"][recovery_key] = {
                         "root": identity,
                         "state": child["state"],
                         "choices": [
@@ -1723,6 +1764,10 @@ class GameService:
             if row is None:
                 raise WorkflowError("This decision is no longer available to you.")
             action = self.action(c, row["action_id"])
+            if action["data"].get("actor_basic"):
+                from girlframe.services.m3_actor_plays import ActorPlayService
+
+                return ActorPlayService(self).decision(c, viewer, action, dict(row))
             state = load_state(c, self.store.campaign_id)
             self.action_characters(c, action, state)
             actor = state.sheets[str(action["actor_id"])]

@@ -48,6 +48,7 @@ class ProfileBinding(Model):
     character_id: str = Field(min_length=1, max_length=100)
     profile_revision: int = Field(ge=1)
     source_character_id: str | None = Field(default=None, min_length=1, max_length=100)
+    source_profile_revision: int | None = Field(default=None, ge=1)
 
 
 class CastRole(Model):
@@ -64,6 +65,7 @@ class SceneCast(Model):
     roles: tuple[CastRole, ...] = ()
     facilitator: Snowflake | None = None
     facilitator_source: str | None = None
+    adjudicator: ActorRef | None = None
 
     @model_validator(mode="after")
     def actual_roles(self) -> "SceneCast":
@@ -74,6 +76,11 @@ class SceneCast(Model):
             raise ValueError("A Handler's changed rules context does not create another body")
         if (self.facilitator is None) != (self.facilitator_source is None):
             raise ValueError("A facilitator needs their actual explicit join provenance")
+        if self.adjudicator is not None and (
+            self.adjudicator.kind != "npc"
+            or not any(x.actor == self.adjudicator for x in self.roles)
+        ):
+            raise ValueError("A Director adjudicator needs its actual NPC cast role")
         return self
 
 

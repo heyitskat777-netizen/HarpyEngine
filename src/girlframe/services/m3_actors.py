@@ -17,31 +17,35 @@ from girlframe.services.read_only_bot import GuildViewer
 
 
 def profiles(c: Connection, campaign: str) -> tuple[ProfileBinding, ...]:
+    canon = load_state(c, campaign)
+    originals = {
+        (uid, revision): identity
+        for uid, revision, identity in c.execute(
+            sa.select(
+                t.snapshots.c.user_id, t.snapshots.c.revision, t.snapshots.c.character_id
+            ).where(t.snapshots.c.campaign_id == campaign)
+        )
+    }
     return tuple(
         ProfileBinding(
             owner=int(uid),
             character_id=identity,
             profile_revision=revision,
-            source_character_id=source,
+            source_character_id=originals.get(
+                (str(uid), canon.sheets[str(uid)].source_profile_revision)
+            )
+            if str(uid) in canon.sheets
+            else None,
+            source_profile_revision=canon.sheets[str(uid)].source_profile_revision
+            if str(uid) in canon.sheets
+            else None,
         )
-        for uid, identity, revision, source in c.execute(
+        for uid, identity, revision in c.execute(
             sa.select(
                 t.characters.c.user_id,
                 t.characters.c.id,
                 t.characters.c.revision,
-                t.snapshots.c.character_id,
-            )
-            .select_from(
-                t.characters.outerjoin(
-                    t.snapshots,
-                    sa.and_(
-                        t.characters.c.campaign_id == t.snapshots.c.campaign_id,
-                        t.characters.c.user_id == t.snapshots.c.user_id,
-                        t.characters.c.revision == t.snapshots.c.revision,
-                    ),
-                )
-            )
-            .where(t.characters.c.campaign_id == campaign)
+            ).where(t.characters.c.campaign_id == campaign)
         )
     )
 
@@ -137,6 +141,13 @@ class ActorService:
                     and x.owner == int(perspective.entity)
                     and x.character_id == perspective.incarnation
                 }
+                if perspective.kind == "handler":
+                    linked.update(
+                        entity
+                        for context in state.director_contexts
+                        if context.active and context.id == perspective.incarnation
+                        for entity in context.directors
+                    )
                 refs.extend(
                     ActorRef(kind="npc", entity=x.id)
                     for x in state.world.npcs

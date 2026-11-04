@@ -257,6 +257,28 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
             flags("Did this fulfill what you requested?"),
             text("text", "Confirm or explain your response"),
         ]
+    if kind == "actor_tag_selection":
+        fields = [
+            Field(
+                "options",
+                "Propose a Tag for scene discussion",
+                tuple(
+                    (x["id"], x["label"][:85] + " " + str(x["direction"]))
+                    for x in decision["proposals"]
+                ),
+            )
+        ]
+    elif kind == "actor_tag_agreement":
+        fields = [flags("Do you agree to this saved Tag proposal?")]
+    if decision.get("actor_basic") and kind == "tag_window":
+        fields.append(
+            Field(
+                "fields.as_actor",
+                "Your actual role (for a Tag proposal)",
+                tuple((x["token"], x["label"]) for x in decision["roles"]),
+                required=False,
+            )
+        )
     return [f for f in fields if not (f.options == () and f.key in ("denied", "member"))]
 
 
@@ -309,6 +331,25 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         "Choose only your own response. Nothing is submitted until Confirm. "
         "Safety pause remains available."
     )
+    if decision.get("actor_basic"):
+        instructions += (
+            "\nTag proposals and their relevance are shared with all scene participants. "
+            "Pass without selecting a role or modifier."
+        )
+        if decision["kind"] == "tag_resolution":
+            instructions += (
+                " Embracing adds an Identity; choose a replacement only if you already have four. "
+                "Rejecting requires an actual later action."
+            )
+        for proposal in decision.get("proposals", ()):
+            instructions += (
+                "\nProposal: "
+                + clean(proposal["label"])
+                + " "
+                + str(proposal["direction"])
+                + ". "
+                + clean(proposal["account"])
+            )
     if decision["kind"] == "handler_sensors":
         instructions += "\nQuestions: " + "; ".join(decision["result"]["questions"])
     if decision["kind"] == "target_flirt":
@@ -332,6 +373,21 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
 async def open_play(
     interaction: discord.Interaction, game: GameService, *, parent: dict[str, Any] | None = None
 ) -> None:
+    if parent is None and game.store.policy.m3_approval is not None:
+        from girlframe.discord_adapter.m3_actor_plays import open_actor_play
+        from girlframe.engine.m3_actor_state import ActorRef
+        from girlframe.services.m3_actors import ActorService
+        from girlframe.services.m3_missions import MissionService
+
+        roles = await threaded(
+            lambda: ActorService(MissionService(game.store)).choices(
+                viewer_from_interaction(interaction)
+            )
+        )
+        actual = next((x for x in roles["actors"] if x["rules"] == "handler_girl"), None)
+        if actual is not None:
+            await open_actor_play(interaction, game, ActorRef.model_validate(actual["ref"]))
+            return
     viewer = viewer_from_interaction(interaction)
     game.gate()
     sheet = await threaded(lambda: game.sheet(viewer))
@@ -423,6 +479,30 @@ async def open_play(
 
 async def open_pending(interaction: discord.Interaction, game: GameService) -> None:
     rows = await threaded(lambda: game.choices(viewer_from_interaction(interaction)))
+    from girlframe.services.m3_actor_plays import ActorPlayService
+
+    saved = await threaded(
+        lambda: ActorPlayService(game).saved(viewer_from_interaction(interaction))
+    )
+    if saved:
+        from girlframe.discord_adapter.m3_actor_plays import open_recovery
+        from girlframe.discord_adapter.m3_punishments import Picker
+
+        entries = {"recover:" + x["id"]: x for x in saved}
+        options = tuple((x["id"], x["kind"].replace("_", " ").title()) for x in rows) + tuple(
+            (key, "Recover your saved actual-role Play") for key in entries
+        )
+
+        async def choose(current: discord.Interaction, token: str) -> None:
+            if token in entries:
+                await open_recovery(current, game, entries[token])
+            else:
+                await open_choice(current, game, token)
+
+        await Picker(
+            interaction.user.id, "**Your pending Plays and saved recovery**", options, choose
+        ).show(interaction)
+        return
     if not rows:
         await reply(
             interaction,

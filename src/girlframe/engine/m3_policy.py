@@ -30,6 +30,8 @@ class Rulings(BaseModel):
     director_overlap: Literal["one_presence_episode"]
     director_exit_resources: Literal["retain_without_recovery"]
     director_controller: Literal["separate_from_handler"]
+    director_adjudicator: Literal["explicit_cast_director"]
+    actor_tag_disputes: Literal["scene_unanimous_discussion"]
     punishment_details: Literal["inflictor_selects"]
     regulation_breach_review: Literal["informed_handler"]
     failure_dog_overlap: Literal["one_punishment_both_causes"]

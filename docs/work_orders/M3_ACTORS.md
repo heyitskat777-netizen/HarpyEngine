@@ -67,3 +67,35 @@ legacy Play/order/follow-through path until actual actor-aware consumers exist.
 This is deliberate partial coverage, not an implementation of those Plays. Actor
 aware target/location/resource ports, Director Girl Plays, NPC/Gorgon Plays,
 career/lifecycle archives and full runtime interactions remain required.
+
+## Actual resource and Keep Your Head consumer
+
+The resource port reads/spends actual canonical Pilot Heat/Identities and actual
+Handler-in-Director-presence Heat/Identities; other roles have no invented Girl
+resources. Pilot Paired sharing uses the real Pair and generation; last-Identity
+Ankou feedback is emitted as required follow-up, not silently discarded. The
+baseline Pilot port is not a complete playbook runtime.
+
+A separate actual Director cast selection supplies Handler-rule responses without
+changing OOC facilitation or granting global GM authority. The first actual-role
+consumer implements the Handler's ordinary Keep Your Head, including all tiers,
+actual-context Identity commitments, forced spending, shared locks/OS dice,
+post-roll Tags and actual-role Bond lookup. Other shared Plays and all other
+non-Pilot consumers remain unfinished. No proxy Pilot sheet, Cadre membership,
+Frame abilities, Status or borrowed player traits are created.
+
+Competing Tags use the registered explicit-discussion ruling, with one response
+per actual human. Silence/timeouts do not select or agree. Repeated marked Tags
+require the affected human's embrace/reject choice; embracing adds up to the real
+ordinary cap, rejection creates an actual owed action. That owned action uses the
+same scene lock and erases the actual Tag without new dice. Private native
+selectors, `/choice resume` and the requests inbox expose saved decisions and
+interrupted actor Plays. Known-roll recovery preserves resources, dice and prior
+answers; only an unrolled reservation can cancel. Known interrupted actor Plays
+also block cast/world/Director-context changes while awaiting recovery.
+
+Still required: all other shared Plays, every required special resource/passive
+interaction, physical position/control/Core ports, Gorgon/NPC/Harpy consumers,
+career/body generation archives, replacement/controller recovery and pending
+future effects across Director-context exit. These are coverage gaps, not
+recommendations that waive implementation. No M3-ready or live deployment claim.

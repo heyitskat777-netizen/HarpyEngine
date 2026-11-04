@@ -41,6 +41,10 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
     if data["own_facilitator"]:
         options.append(("withdraw_facilitator", "Stop facilitating this scene"))
         actions["withdraw_facilitator"] = ("withdraw_facilitator", None)
+    for role in data["adjudicator_options"]:
+        key = "adjudicate:" + role["token"]
+        options.append((key, "Offer " + role["label"][:55] + " for Handler-rule responses"))
+        actions[key] = ("adjudicate", ActorRef.model_validate(role["ref"]))
 
     async def choose(current: discord.Interaction, token: str) -> None:
         action, ref = actions[token]
@@ -70,6 +74,8 @@ async def open_cast(interaction: discord.Interaction, service: CastService) -> N
 
     text = "**Scene roles**\n" + "\n".join(x["label"] for x in data["roles"])
     text += "\nFacilitating and playing the Handler are separate roles."
+    if data["adjudicator_selected"]:
+        text += "\nA Director is selected for Handler-rule responses."
     if not options:
         await reply(interaction, text[:1800])
         return

@@ -24,14 +24,18 @@ class CastService:
     def _safe(self, c: Connection, channel: int) -> None:
         lock = self.game.lock(c, channel)
         actions = t.m2["m2_actions"]
-        if (lock and lock["state"] != "released") or c.scalar(
-            sa.select(actions.c.id)
-            .where(
-                actions.c.campaign_id == self.store.campaign_id,
-                actions.c.channel_id == str(channel),
-                actions.c.state.not_in(("complete", "aborted")),
+        if (
+            self.game.pending_actions(c)
+            or (lock and lock["state"] != "released")
+            or c.scalar(
+                sa.select(actions.c.id)
+                .where(
+                    actions.c.campaign_id == self.store.campaign_id,
+                    actions.c.channel_id == str(channel),
+                    actions.c.state.not_in(("complete", "aborted")),
+                )
+                .limit(1)
             )
-            .limit(1)
         ):
             raise WorkflowError(
                 "Restore chat and resolve the pending Play before changing its cast."
@@ -134,6 +138,8 @@ class CastService:
             cast, legacy = self._current(c, state, channel)
             bindings = profiles(c, self.store.campaign_id)
             visible = []
+            offers = []
+            known_refs = set()
             for role in cast.roles:
                 try:
                     actor = m3_actors.resolve(state, role.actor, bindings)
@@ -168,7 +174,16 @@ class CastService:
                         "gorgon": {x.id for x in state.world.gorgons if x.revealed},
                     }[actor.ref.kind]
                     known = known or actor.ref.entity in revealed
+                    known |= bool(
+                        viewer.user_id == state.handler
+                        and actor.rules == "director"
+                        and any(
+                            x.active and actor.ref.entity in x.directors
+                            for x in state.director_contexts
+                        )
+                    )
                 if known:
+                    known_refs.add(actor.ref)
                     visible.append(
                         {
                             "ref": actor.ref.model_dump(mode="json"),
@@ -176,6 +191,19 @@ class CastService:
                             "label": actor.label,
                             "stale": role.controller != actor.controller,
                             "own": role.controller == viewer.user_id,
+                        }
+                    )
+                if (
+                    actor.controller == role.controller == viewer.user_id
+                    and actor.rules == "director"
+                    and viewer.user_id != state.handler
+                    and cast.adjudicator != actor.ref
+                ):
+                    offers.append(
+                        {
+                            "ref": actor.ref.model_dump(mode="json"),
+                            "token": actor.ref.token,
+                            "label": actor.label,
                         }
                     )
             return {
@@ -188,6 +216,11 @@ class CastService:
                 "facilitator": cast.facilitator,
                 "own_facilitator": cast.facilitator == viewer.user_id,
                 "may_facilitate": state.handler == viewer.user_id,
+                "adjudicator": cast.adjudicator.model_dump(mode="json")
+                if cast.adjudicator in known_refs
+                else None,
+                "adjudicator_selected": cast.adjudicator is not None,
+                "adjudicator_options": offers,
             }
 
     def change(
@@ -238,6 +271,10 @@ class CastService:
                     )
                 elif action == "withdraw" and ref is not None:
                     updated = m3_cast.withdraw(cast, ref, viewer.user_id)
+                elif action == "adjudicate" and ref is not None:
+                    updated = m3_cast.choose_adjudicator(
+                        state, cast, ref, viewer.user_id, profiles(c, self.store.campaign_id)
+                    )
                 elif (
                     action == "withdraw_facilitator"
                     and ref is None

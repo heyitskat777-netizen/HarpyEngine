@@ -185,7 +185,7 @@ unimplemented mechanics, player responses or an M3 release.
 | `/mission world`, `/mission map` | Handler setup/management and a player map that omits private world records |
 | `/mission repairs` | Actual shortage recovery, private per-Asset Handler quotes and owner-confirmed optional paid repairs |
 | `/mission regulations` | Private known behavioural rules; informed Handler explicitly records breaches and separate current/next-period discipline |
-| `/mission actors`, `/mission cast` | Owned actual-role previews and explicit scene casting; mixed-role Plays still require actor-aware consumers |
+| `/mission actors`, `/mission cast` | Owned actual-role previews, explicit scene casting and Director selection for Handler-rule responses; actual Handler Girl-rules Keep Your Head uses `/play` |
 | `/mission npc`, `/mission npc_bond` | Explicit NPC role claim or owner-confirmed link of a saved starting NPC Bond |
 | `/character activate`, `/character state` | Explicit activation/public fields; current private state with paging |
 | `/character followthrough`, `/character recover` | Owner follow-through and source-backed moment-alone recovery |

@@ -43,6 +43,8 @@ def service(store, girl="MOCKINGBIRD", frame="JANUS-B"):
                 supply_observation="both_off_duty_routes",
                 scientific_observation_selection="handler_represents_demand",
                 scientific_observation_overlap="one_roll_distinct_causes",
+                director_adjudicator="explicit_cast_director",
+                actor_tag_disputes="scene_unanimous_discussion",
                 reprogramming_fallback="owner_selects_ordinary_slot",
                 reprogramming_reset_marks="baseline_preserve_protected_locks",
                 identity_duplicate_labels="distinct_ids",

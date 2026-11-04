@@ -563,6 +563,38 @@
       "change_impact": "Changing overlap behavior needs treatment of unrolled orders and owed causes. Never duplicate a known roll/Status loss, overwrite prior human responses or silently discard provenance.",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "director-adjudicator",
+      "policy_key": "director_adjudicator",
+      "summary": "A currently controlled, explicitly cast Director supplies Handler-rule replies to the actual Handler acting under Girl rules. OOC scene facilitation remains separate.",
+      "source": "Book PDF 192 / printed p.190; owner delegated authority",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "The Director uses Handler rules while the physical Handler uses Girl rules. Keeping the two roles distinct prevents self-adjudication or granting the Director player global GM knowledge.",
+      "alternatives": [
+        "Keep every Handler-rule reply assigned to the original OOC facilitator"
+      ],
+      "implementation_note": "Director offers its actual cast role. The acting Handler confirms that Director when reserving a Play. Persist both actual actor references and controllers, and revalidate current presence and control on every response.",
+      "change_impact": "Changed adjudication needs explicit recovery of outstanding decisions with preserved receipts and prior owned answers; no silent controller transfer.",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "actor-tag-disputes",
+      "policy_key": "actor_tag_disputes",
+      "summary": "When mixed-role Tag proposals compete, the adjudicator proposes one actual proposal and all scene humans explicitly agree before its modifier applies. A rejection returns to discussion.",
+      "source": "Book PDF 11 / printed p.9; owner delegated authority",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "The source permits discussion as an alternative to Status or rock-paper-scissors. Unanimous recorded discussion handles roles outside Pilot Status without inventing NPC, Harpy or Director ranks.",
+      "alternatives": [
+        "Use the printed expanded Status hierarchy with explicit current fictional exceptions"
+      ],
+      "implementation_note": "One response per real human, not per controlled character. Only other humans may propose a Girl Tag, through one actual cast role. Preserve the original proposals and never infer agreement from timeout or silence.",
+      "change_impact": "A revised dispute procedure needs explicit pending-proposal migration and source-correct actual actor ranks. Preserve applied modifiers and already recorded human decisions.",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -578,14 +610,18 @@
         "heading": "Heat"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_actor_resources.py",
+        "tests/rules/test_actor_plays.py",
+        "tests/rules/test_actor_play_service.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -601,14 +637,18 @@
         "heading": "Identities"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_actor_resources.py",
+        "tests/rules/test_actor_plays.py",
+        "tests/rules/test_actor_play_service.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -647,14 +687,18 @@
         "heading": "Tags"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_actor_resources.py",
+        "tests/rules/test_actor_plays.py",
+        "tests/rules/test_actor_play_service.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -1175,7 +1219,11 @@
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_actor_resources.py",
+        "tests/rules/test_actor_plays.py",
+        "tests/rules/test_actor_play_service.py"
+      ],
       "m2_play_id": "keep_your_head",
       "module": "core"
     },
@@ -11470,7 +11518,10 @@
       "test_evidence": [
         "tests/rules/test_director.py",
         "tests/rules/test_director_service.py",
-        "tests/rules/test_director_ui.py"
+        "tests/rules/test_director_ui.py",
+        "tests/rules/test_actor_resources.py",
+        "tests/rules/test_actor_plays.py",
+        "tests/rules/test_actor_play_service.py"
       ],
       "m2_play_id": null,
       "module": "core"

@@ -491,6 +491,62 @@ class InboxService:
                         task="m2_choice",
                     )
                 )
+            actions = t.m2["m2_actions"]
+            for saved in connection.execute(
+                sa.select(actions).where(
+                    actions.c.campaign_id == self.store.campaign_id,
+                    actions.c.actor_id == user,
+                    actions.c.state == "aborted",
+                )
+            ).mappings():
+                body = json.loads(saved["body_json"])
+                if not body.get("actor_basic") or not body.get("actor_recovery"):
+                    continue
+                items.append(
+                    InboxItem(
+                        "actor-recovery:" + saved["id"],
+                        "actor-recovery",
+                        saved["id"],
+                        saved["revision"],
+                        "plays",
+                        "Recover your actual-role Play",
+                        "Scene Play",
+                        "pending",
+                        True,
+                        False,
+                        "Resume saved responses after staff restores chat.",
+                        "Known dice, resource spending and human answers remain saved. "
+                        "An unrolled reservation may be cancelled; "
+                        "a known roll cannot be discarded.",
+                        "Review recovery",
+                        task="m3_actor_recovery",
+                    )
+                )
+            for item in canon.obligations:
+                if (
+                    item.owner == viewer.user_id
+                    and item.kind == "actor_reject_tag"
+                    and item.state == "pending"
+                ):
+                    items.append(
+                        InboxItem(
+                            "actor-rejection:" + item.id,
+                            "actor-rejection",
+                            item.id,
+                            canon.revision,
+                            "plays",
+                            "Take action to reject your Tag",
+                            "Your actual Handler role",
+                            "pending",
+                            True,
+                            False,
+                            "An owned action erases the actual pending Tag.",
+                            "Open in your bound scene channel. "
+                            "Merely promising rejection does not erase the Tag.",
+                            "Choose your owned action",
+                            task="m3_actor_rejection",
+                        )
+                    )
             from girlframe.engine.m3_missions import Mission
 
             current_handler = handler.current(connection)[1].handler_id

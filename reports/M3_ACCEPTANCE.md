@@ -996,3 +996,61 @@ other world/scene/resource interactions still require work.
 The original frozen M2 process remained observed as exactly one PID47656. No live
 migration, policy change, M3 deployment, environment publication or independent/
 human acceptance applies. This is another tested source checkpoint, not M3-ready.
+
+## Actual-role resources and Handler Girl-rules Keep Your Head
+
+The canonical actor port now validates actual Heat/Identity commitments for Pilots
+and Handler Director contexts. Legacy known choices use immutable original snapshot
+proof after same-body draft changes; a new body cannot borrow the original sheet.
+Paired sharing uses the actual Pair; Ankou feedback is emitted as required work.
+This baseline is not a complete Pilot/playbook resource implementation.
+
+The actual Handler Girl-rules consumer implements every Keep Your Head tier through
+the existing lock, dice, receipt, event, response and outbox tables. No proxy Pilot,
+Cadre/Frame membership, Status or playbook traits are created. An explicitly cast,
+current-controller Director supplies Handler-rule replies; OOC facilitation remains
+separate. The actor confirms that specific Director at reservation. Current roles,
+body bindings, Director presence and controllers are rechecked on responses.
+
+Actual-role Tags use the proposing role's real Bond, rather than a different Girl
+played by the same human. Competing proposals use recorded scene discussion with
+one explicit agreement per human. Repeated Tags have owned embrace/reject choices;
+embracing adds up to the real ordinary Identity cap. Rejection creates an owned
+future action; that action acquires the real scene lock and erases the actual Tag
+without another roll. Native controls and the requests inbox expose choices,
+rejections and interrupted actor Plays. Known recovery preserves receipts, spending
+and answered humans. Only unrolled reservations can cancel. Pending known actor
+rolls block cast/world/context changes until explicitly recovered. Policy, safety,
+staleness, transaction rollback, concurrency and private projection checks remain.
+The Director adjudicator/discussion recommendations, alternatives and change impact
+are recorded centrally and in the machine registry for clarity review.
+
+Full suite: **1063 passed in 258.67s**, no failures/errors/skips;
+`var/m3-actor-play-pytest.xml`. Focused actor/inbox run: **86 passed in 25.37s**,
+`var/m3-actor-play-broad.xml`; preceding actor run **68 passed in 20.91s**.
+Development failures were retained and corrected: a new resource test file initially
+missed its imported ledger fixture (**36 passed, 10 errors**, then **46 passed in
+11.94s**); an early integration run had **6 passed, 2 failed** from replacing the
+fixture NPC list and expecting the wrong tier after actual Heat. A subsequent run
+had **57 passed, 2 failed, 1 error** from an overly specific expected error and a
+nested test event loop. Another had **67 passed, 1 failed** from sequential assignment
+violating a strict Director-context invariant. Fixtures now retain real NPCs, use
+the actual resulting tiers, await the async worker, and change coupled fixture
+fields atomically. No rules, ownership or required work gates were waived.
+
+Ruff passes; **320 files** formatted; mypy passes for **168 source files**. Source
+registry remains RULES_SUBSET: 473 entries, 436 required core, **55 subsets, 418
+unimplemented**, zero independent verification. Public scan: **402 publishable
+files**, all **40 original manifest entries**, zero findings. The handoff verifier
+passed its actual 34 files/86 planned cases/4 schemas/4 synthetic fixtures. An
+initial invocation of nonexistent `tools/verify_planning.py` failed with exit 2;
+it was corrected to the retained original verifier. Planning checks do not certify
+running mechanics or independent source review.
+
+Prior scientific checkpoint **51c255d5b0013631cee6dcf9cb312d1551e9d1b0** is pushed;
+GitHub CI passed, run **41851525447**. Exactly one original frozen M2 process
+remains observed, PID47656; all **88** frozen hashes match source 88cd237. No live
+migration, M3 policy change/deploy, environment publication, independent/human
+acceptance or M3-ready claim applies. Other shared Plays, NPC/Gorgon/Harpy consumers,
+physical/control/Core state, full passives, Requisitions/careers, five Punishments,
+remaining Strain/Endgames and cross-context obligations still require work.

@@ -45,6 +45,7 @@ def resolve(
     profiles: tuple[ProfileBinding, ...],
     *,
     require_alive: bool = True,
+    require_current_profile: bool = True,
 ) -> ActorView:
     ref = ActorRef.model_validate_json(ref.model_dump_json())
     if ref.kind == "pilot":
@@ -59,7 +60,18 @@ def resolve(
             or (sheet.character_id or (profile.source_character_id if profile else None))
             != ref.incarnation
             or profile.character_id != ref.incarnation
-            or profile.profile_revision != sheet.source_profile_revision
+            or (
+                require_current_profile
+                and profile.profile_revision != sheet.source_profile_revision
+            )
+            or (
+                sheet.character_id is None
+                and profile.source_profile_revision != sheet.source_profile_revision
+                and not (
+                    profile.source_profile_revision is None
+                    and profile.profile_revision == sheet.source_profile_revision
+                )
+            )
         ):
             raise ValueError("STALE_ACTOR: use the actual current character/profile incarnation")
         return ActorView(

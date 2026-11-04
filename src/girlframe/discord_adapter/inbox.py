@@ -562,6 +562,30 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_missions import MissionService
 
             await open_mission(interaction, MissionService(self.service.store), item.identity)
+        elif item.task == "m3_actor_recovery":
+            from girlframe.discord_adapter.m3_actor_plays import open_recovery
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_actor_plays import ActorPlayService
+
+            game = GameService(self.service.store)
+            saved = await asyncio.to_thread(ActorPlayService(game).saved, viewer)
+            record = next((x for x in saved if x["id"] == item.identity), None)
+            if record is None:
+                raise WorkflowError("Refresh your actual saved Play recovery.")
+            await open_recovery(interaction, game, record)
+        elif item.task == "m3_actor_rejection":
+            from girlframe.discord_adapter.m3_actor_plays import open_actor_play
+            from girlframe.engine.m3_actor_state import ActorRef
+            from girlframe.services.m2_game import GameService
+
+            game = GameService(self.service.store)
+            owed = await asyncio.to_thread(game.own_obligations, viewer)
+            record = next((x for x in owed if x["id"] == item.identity), None)
+            if record is None:
+                raise WorkflowError("Refresh your actual owned Tag action.")
+            await open_actor_play(
+                interaction, game, ActorRef.model_validate_json(record["details"]["actor"])
+            )
         elif item.task == "m2_choice":
             from girlframe.discord_adapter.m2_ui import open_choice
             from girlframe.services.m2_game import GameService
