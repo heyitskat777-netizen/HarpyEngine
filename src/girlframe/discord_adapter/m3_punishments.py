@@ -7,6 +7,7 @@ from typing import Any
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.labels import entity_label
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
@@ -107,7 +108,9 @@ async def open_details(
             raise WorkflowError(
                 "This Punishment has too few eligible choices; select another type."
             )
-        return Field(key, label, tuple((x["id"], x["name"]) for x in entries), minimum, maximum)
+        return Field(
+            key, label, tuple((x["id"], entity_label(x)) for x in entries), minimum, maximum
+        )
 
     fields = []
     if kind == "sedation":

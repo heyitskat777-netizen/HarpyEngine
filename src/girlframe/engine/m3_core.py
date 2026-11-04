@@ -6,6 +6,7 @@ from pydantic import Field
 
 from girlframe.engine.creation_catalog import CATALOG
 from girlframe.engine.m2 import AssetState, IdentityState, Model, PilotSheet
+from girlframe.engine.m3_identity_slots import replacement_slot
 
 
 class Followup(Model):
@@ -32,6 +33,7 @@ class Recovery(Model):
     replace_identity: str | None = None
     replacement_id: str | None = None
     repair_assets: bool = True
+    allow_duplicate_labels: bool = False
     sedation_locked: frozenset[str] = frozenset()
     repair_limit: int | None = Field(default=None, ge=0)
     repairs: RepairSelection | None = None
@@ -132,7 +134,9 @@ def recover_off_duty(sheet: PilotSheet, choice: Recovery) -> Result:
             raise ValueError(
                 "Replace an ordinary unprotected Identity only when the four-slot cap requires it"
             )
-        if any(x.name.casefold() == tag.label.casefold() for x in updated.identities):
+        if not choice.allow_duplicate_labels and any(
+            x.name.casefold() == tag.label.casefold() for x in updated.identities
+        ):
             raise ValueError("Choose a Tag that does not duplicate a current Identity label")
         marked = replaced is not None and replaced.id in locks
         if replaced is not None:
@@ -141,7 +145,12 @@ def recover_off_duty(sheet: PilotSheet, choice: Recovery) -> Result:
                 locks = frozenset(x for x in locks if x != replaced.id) | {choice.replacement_id}
                 updated.sedation_locked = tuple(sorted(locks))
         updated.identities.append(
-            IdentityState(id=choice.replacement_id, name=tag.label, marked=marked)
+            IdentityState(
+                id=choice.replacement_id,
+                name=tag.label,
+                marked=marked,
+                slot=replaced.slot if replaced else replacement_slot(updated, None),
+            )
         )
         updated.tags = [x for x in updated.tags if x.id != tag.id]
     elif choice.replace_identity is not None or choice.replacement_id is not None:
@@ -180,7 +189,9 @@ def recover_off_duty(sheet: PilotSheet, choice: Recovery) -> Result:
     return Result(sheet=updated)
 
 
-def reprogram_labels(sheet: PilotSheet, retain_id: str, slot: str | None = None) -> tuple[str, ...]:
+def reprogram_labels(
+    sheet: PilotSheet, retain_id: str, slot: str | None = None, *, allow_duplicates: bool = False
+) -> tuple[str, ...]:
     """Resolve labels; applying marks and reset follow-ups is a separate effect."""
     default = list(CATALOG[sheet.girl]["identities"])
     current = next((x for x in sheet.identities if x.id == retain_id and not x.protected), None)
@@ -202,7 +213,7 @@ def reprogram_labels(sheet: PilotSheet, retain_id: str, slot: str | None = None)
         default[default.index("Hers")] = paired.name
     default[default.index(replacement)] = current.name
     default.extend(x.name for x in sheet.identities if x.protected and not x.paired)
-    if len(set(x.casefold() for x in default)) != len(default):
+    if not allow_duplicates and len(set(x.casefold() for x in default)) != len(default):
         raise ValueError(
             "Choose a retained Identity and slot that do not create duplicate Identities"
         )

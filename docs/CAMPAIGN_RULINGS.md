@@ -102,3 +102,27 @@ inventory correction rather than a new campaign archetype.
 Future entries must include the ambiguous source, recommendation and rationale,
 reasonable alternatives, authority, implementation status and change impact.
 Log unknown/missing implementations separately rather than inventing outcomes.
+
+
+Additional observation/reset interpretations adopted under delegated authority:
+
+- `reprogramming_reset_marks`: restore ordinary starting slots as fresh, unmarked
+  Identities, copying the selected current label into the printed Malfunctioning
+  slot (or the approved player-selected fallback). Preserve the actual protected
+  extras and Paired Identity, including their marks. Active Sedation follows its
+  stable replacement slot; an explicit printed removal still removes the Identity
+  and its restriction. The book's reset wording does not state mark/ID handling.
+  Alternatives are retaining the selected card's old mark, or resetting even
+  protected/locked resources. This recommendation uses the existing starting
+  baseline and the accepted protection/lock decisions. Slot metadata adds no card,
+  Heat or recovery. Changes apply to future resets and require explicit review of
+  pending work; old receipts are retained.
+- `identity_duplicate_labels`: allow matching labels on separate stable cards in
+  M3, using their IDs and slots for choices and marks. Reprogramming can retain a
+  default label that is restored elsewhere, and the book does not forbid that.
+  Rejecting it or merging the cards would change legal choices/resource counts.
+  The four ordinary/Paired slot cap and protected extras still apply. Trusted M3
+  policy controls this; a client cannot enable it. Existing M2-only policy retains
+  its prior behavior. A future uniqueness change must explicitly address existing
+  distinct cards, marks and pending choices. Both decisions require printed-rule
+  clarity review; neither makes the full Observation flow implemented or reviewed.

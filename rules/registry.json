@@ -281,6 +281,40 @@
       "revision": 1,
       "implementation_note": "Typed Strain revival validates the defeated target, exactly two new owned Assets, an additional Type and new Core plan.",
       "change_impact": "Revise future revivals only; do not rewrite defeated incarnations, past damage, or already committed rewards."
+    },
+    {
+      "id": "observation-reprogramming-mark-baseline",
+      "summary": "Reprogram ordinary starting slots to fresh unmarked defaults with the chosen current label in the prescribed/fallback slot; preserve protected extras/Paired identity state and transfer active Sedation restrictions by stable slot. Printed explicit removals remain separate.",
+      "source": "Book PDF 28 / printed p.26; protected/Paired PDF 58; Sedation PDF 17; owner delegated authority",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "Reset implies the established starting baseline, but cannot erase protected resources or bypass the accepted current-period Sedation replacement restriction.",
+      "alternatives": [
+        "Retain the chosen current card with its old mark while resetting others",
+        "Unmark every Identity, including protected/locked resources"
+      ],
+      "policy_key": "reprogramming_reset_marks",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Stable ordinary slot metadata is bound in a real M3 period event without adding/removing resources. New ordinary reset IDs are source-derived; protected/Paired objects retain IDs and marks.",
+      "change_impact": "Changing mark semantics affects future resets. Preserve historical outcomes; review pending resets and scoped Sedation locks explicitly rather than rewriting existing receipts."
+    },
+    {
+      "id": "identity-label-collisions",
+      "summary": "M3 Identities with matching labels remain distinct cards identified by stable IDs/slots; enforce the actual four ordinary/Paired slot cap.",
+      "source": "Book PDF 10 / printed p.8 and PDF 28 / printed p.26; owner delegated authority",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "Printed reprogramming can retain a current default label while restoring the same default elsewhere. The book does not forbid duplicate labels; merging or rejecting them would change source-owned choices and resource counts.",
+      "alternatives": [
+        "Reject any retained label already in the starting set",
+        "Merge matching labels into one card, reducing available Identities"
+      ],
+      "policy_key": "identity_duplicate_labels",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Trusted M3 policy enables duplicate labels in shared Tag/Paired replacement, core Off-Duty recovery, Correctional Programming and reset. Selection and marking remain ID/slot based; clients cannot choose the policy. Existing M2-only behavior remains unchanged.",
+      "change_impact": "A revised uniqueness policy needs explicit treatment of existing distinct cards and pending choices; never silently merge identities, marks or protected resources."
     }
   ],
   "entries": [
@@ -1186,14 +1220,18 @@
         "heading": "Void Observation"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_reprogram.py",
+        "tests/rules/test_core.py",
+        "tests/rules/test_shared_choices.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

@@ -7,6 +7,7 @@ from typing import Any, cast
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.labels import entity_label
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_strain_effects import WAIT, DependentForm
 from girlframe.discord_adapter.m3_world import coordinates
@@ -103,7 +104,9 @@ async def open_action(
                 Field(
                     "identity",
                     "Optional Identity to mark",
-                    tuple((x["id"], x["name"]) for x in sheet["identities"] if not x["marked"]),
+                    tuple(
+                        (x["id"], entity_label(x)) for x in sheet["identities"] if not x["marked"]
+                    ),
                     0,
                     1,
                     required=False,
@@ -222,7 +225,9 @@ async def open_action(
             Field(
                 "replace",
                 "Identity replaced only if at the cap",
-                tuple((x["id"], x["name"]) for x in sheet["identities"] if not x["protected"]),
+                tuple(
+                    (x["id"], entity_label(x)) for x in sheet["identities"] if not x["protected"]
+                ),
                 0,
                 1,
                 required=False,
@@ -231,7 +236,7 @@ async def open_action(
                 "unmark",
                 "Optional marked Identity to unmark",
                 tuple(
-                    (x["id"], x["name"])
+                    (x["id"], entity_label(x))
                     for x in sheet["identities"]
                     if x["marked"] and x["id"] not in sheet["sedation_locked"]
                 ),

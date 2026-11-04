@@ -353,6 +353,11 @@ class CycleService:
                 )
             trusted = Recovery(
                 **choice.model_dump(),
+                allow_duplicate_labels=bool(
+                    self.store.policy.owner_m3_rulings
+                    and self.store.policy.owner_m3_rulings.identity_duplicate_labels
+                    == "distinct_ids"
+                ),
                 replacement_id=str(
                     uuid5(NAMESPACE_URL, identity + ":embrace:" + str(viewer.user_id))
                 )

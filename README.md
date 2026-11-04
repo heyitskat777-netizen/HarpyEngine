@@ -147,6 +147,12 @@ so future release version changes update presence automatically. Presence report
 process lifecycle, not campaign readiness or rules certification. It includes no
 campaign state or private character details.
 
+Before diagnosing a stopped bot or launching another copy, run
+`python tools/check_bot_process.py --expect-one`. It recognizes the supported
+launcher including Python's `-u` option, prints only process count/PIDs and changes
+nothing. Check the existing execution session and Discord readiness as well;
+process count alone does not prove a working Gateway connection.
+
 After disconnection Discord controls the offline indicator. A stopped/crashed bot
 cannot publish an offline activity message; abrupt failures can take a heartbeat
 timeout to appear offline. Presence updates are best effort and cannot prevent a

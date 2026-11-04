@@ -624,12 +624,15 @@ correcting that fixture led to the passing full run above. Earlier tests also
 caught a synthetic event-key collision, wrong scene ID, Picker attribute and strict
 fixture/type errors; these were corrected, not waived.
 
-The prior saved bot process had stopped during this long-running development
-session. All 88 recorded frozen-source hashes matched. The same approved M2
-snapshot was restarted without changing the live `0011` database or private policy;
-it reported `Running v0.1.0` and test-guild commands registered. No M3 gameplay was
-deployed or approved, and no environment publication was attempted. This is still
-session hosting, not continuous production hosting.
+Correction to the earlier hosting diagnosis: the original frozen M2 bot was still
+running. The ad hoc process filter missed Python's `-u` option and led to an extra
+copy being started. Both tracked execution sessions were then checked. Only the
+extra process was stopped with SIGTERM, after checking its module and start time;
+the original process was preserved. A flag-aware check now verifies exactly one
+bot. All 88 frozen-source hashes matched. The live `0011` database and private
+policy were not changed; no M3 gameplay or environment publication occurred.
+Process count is not a Discord/client readiness test. Session hosting remains
+temporary, rather than continuous production hosting.
 
 Void Observation, source-specific modifiers/shortages/economy, remaining playbook
 and world runtime, remaining Strain/Endgame effects, independent audit and human
@@ -643,3 +646,31 @@ formatted, and mypy passed for 129 source files. The planning verifier passed;
 A Status review binds the current game revision: intervening state requires an
 explicit fresh performance review, and transitions wait for acknowledged chat
 permission restoration.
+
+
+## Identity reset preparation and operational-check correction
+
+Source: book PDF 10–11, 17, 28 and 58; the reset and matching-label interpretations
+are recorded in `docs/CAMPAIGN_RULINGS.md` and the machine registry under delegated
+authority, with alternatives and change notes. Existing explicit removal/Paired/
+protected-resource decisions are preserved. Ordinary Identity slots are normalized
+in a real M3 period event without adding cards or unmarking resources. Replacement
+keeps the slot and active Sedation mark; explicit printed removal remains separate.
+A Correctional Programming replacement previously cleared that lock and now retains
+it. Runtime selectors and sheets distinguish matching labels by stable card slot.
+The new pure reset reducer preserves protected extras/Paired state, restores the
+actual Girl's starting set and carries scoped locks. This is preparation for
+Observation, not a completed Observation command or all playbook interactions.
+
+Executed evidence: **816 passed in 102.94s** in the full suite, artifact
+`var/m3-identity-reset-pytest.xml`; later interrupted same-label Tag/reset regression
+**22 passed in 6.63s**. The flag-aware process-check fixtures passed **9 tests in
+0.02s**, covering `-u`, other supported Python flags and non-bot commands. The
+read-only check returned one original bot. Mypy passed for 132 source files; Ruff
+and format checks passed before the last operational-only tool addition. The
+publishable check at that point covered 331 files, all 40 original manifest entries,
+and zero findings. GitHub CI passed commit `73b6481`, run `41794354250`.
+
+An early reset fixture mistakenly parameterized Frame catalog entries as Girls;
+it was restricted to the ten base Girl entries. A moved helper import was corrected
+before the passing full run. No skipped tests or waived errors are claimed.

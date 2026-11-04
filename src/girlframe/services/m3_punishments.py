@@ -146,8 +146,10 @@ class PunishmentService:
         return result
 
     def _context(self, c: Connection, row: dict[str, Any]) -> dict[str, Any]:
+        policy = self.store.policy.owner_m3_rulings
+        duplicate_labels = policy is not None and policy.identity_duplicate_labels == "distinct_ids"
         if row["off_duty_id"] is None:
-            return {"off_duty": False}
+            return {"off_duty": False, "allow_duplicate_labels": duplicate_labels}
         period = OffDutyService(self.missions)._get(c, row["off_duty_id"])
         if period.phase not in (
             "preparing",
@@ -181,7 +183,11 @@ class PunishmentService:
             raise WorkflowError(
                 "Complete an on-screen Punishment scene with subject and inflictor first."
             )
-        return {"off_duty": True, "off_duty_period": period.id}
+        return {
+            "off_duty": True,
+            "off_duty_period": period.id,
+            "allow_duplicate_labels": duplicate_labels,
+        }
 
     def get(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
         with self.store.engine.connect() as c:
@@ -243,9 +249,11 @@ class PunishmentService:
                 # No descriptions, notes, review snapshots, private NPCs or raw state.
                 if row["owner_id"] == str(viewer.user_id) and sheet:
                     result["choices"] = {
-                        "identities": [{"id": x.id, "name": x.name} for x in sheet.identities],
+                        "identities": [
+                            {"id": x.id, "name": x.name, "slot": x.slot} for x in sheet.identities
+                        ],
                         "removable_identities": [
-                            {"id": x.id, "name": x.name}
+                            {"id": x.id, "name": x.name, "slot": x.slot}
                             for x in sheet.identities
                             if not x.protected or (x.paired and subject == viewer.user_id)
                         ],

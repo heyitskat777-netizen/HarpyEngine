@@ -43,6 +43,7 @@ class IdentityState(Model):
     marked: bool = False
     protected: bool = False
     paired: bool = False
+    slot: int | None = Field(default=None, ge=0, le=3)
 
 
 class AssetState(Model):
@@ -99,6 +100,13 @@ class PilotSheet(Model):
                 raise ValueError("Canonical entity IDs must be distinct")
         if len([x for x in self.identities if not x.protected or x.paired]) > 4:
             raise ValueError("A Girl has at most four ordinary/Paired Identities")
+        slots = [x.slot for x in self.identities if x.slot is not None]
+        if len(set(slots)) != len(slots) or any(
+            x.slot is not None and x.protected and not x.paired for x in self.identities
+        ):
+            raise ValueError(
+                "Ordinary/Paired Identity slots are distinct; protected extras are separate"
+            )
         return self
 
 

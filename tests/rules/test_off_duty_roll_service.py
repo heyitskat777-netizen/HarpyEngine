@@ -185,3 +185,41 @@ def test_period_write_failure_rolls_back_receipt_identity_spend_and_history(ledg
     assert game.roll(PLAYER, "roll", action) == result
     assert state(game).sheets["2"].heat == before.heat + 1
     assert saved(periods, identity).progress["2"].roll.stage == "tag_window"
+
+
+def test_m3_repeated_tag_embrace_keeps_same_named_cards_distinct_and_slot_bound(ledger):
+    periods, game, worker, gateway, identity = active(ledger, (1, 1))
+    before = state(game).sheets["2"]
+    label = before.identities[0].name
+    replaced = before.identities[1]
+    with ledger.transaction() as c:
+        current = state(game)
+        current.sheets["2"].tags.append(
+            TagState(id="repeat", label=label, giver=3, observers=(1, 2, 3), marked=True)
+        )
+        game.event(c, 1, "duplicate-label-source", "synthetic.tag", current)
+    action = start(game, play="go_off_duty", off_duty_id=identity)
+    tick(worker, gateway)
+    answer(game, PLAYER, "tag_window", options=("pass",))
+    answer(
+        game,
+        OTHER,
+        "tag_window",
+        options=("tag",),
+        denied=("repeat",),
+        number=1,
+        text="A relevant known Tag",
+    )
+    answer(game, ADMIN, "tag_window", options=("pass",))
+    game.abort(ADMIN, "interrupt-after-tag", action)
+    tick(worker, gateway, 5)
+    resume(game, PLAYER, "resume-after-tag", action, game.inspect(PLAYER, action)["revision"])
+    tick(worker, gateway, 2)
+    answer(game, PLAYER, "tag_resolution", options=("embrace",), denied=(replaced.id,))
+    final = state(game).sheets["2"]
+    cards = [x for x in final.identities if x.name == label]
+    assert len(cards) == 2 and len({x.id for x in cards}) == 2
+    assert any(x.slot == replaced.slot for x in cards)
+    assert periods.get(PLAYER, identity)["revision"] > 1
+    assert saved(periods, identity).progress["2"].roll.stage == "choices"
+    assert game.dice.calls == 1

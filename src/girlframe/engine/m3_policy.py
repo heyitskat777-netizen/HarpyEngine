@@ -14,6 +14,8 @@ class Rulings(BaseModel):
     standard_unpriced_cost: Literal[1]
     extra_repairs: Literal["handler_quote"]
     reprogramming_fallback: Literal["owner_selects_ordinary_slot"]
+    reprogramming_reset_marks: Literal["baseline_preserve_protected_locks"]
+    identity_duplicate_labels: Literal["distinct_ids"]
     punishment_details: Literal["inflictor_selects"]
     failure_dog_overlap: Literal["one_punishment_both_causes"]
     sedation_small_set: Literal["mark_all_remaining"]

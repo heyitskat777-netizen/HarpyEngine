@@ -13,6 +13,7 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
+from girlframe.engine.m3_identity_slots import bind as bind_identity_slots
 from girlframe.engine.m3_off_duty import Period, doctor_credit
 from girlframe.engine.m3_policy import RULESET
 from girlframe.services.handler_setup import HandlerService
@@ -171,8 +172,19 @@ class OffDutyService:
                 pilots=state.order,
                 character_ids=characters,
             )
+            changed = False
+            for uid in state.order:
+                original = state.sheets[str(uid)]
+                normalized = bind_identity_slots(original)
+                changed |= normalized != original
+                state.sheets[str(uid)] = normalized
             event = self.game.event(
-                c, viewer.user_id, key, "m3.off_duty_preparing", period_id=period.id
+                c,
+                viewer.user_id,
+                key,
+                "m3.off_duty_preparing",
+                state if changed else None,
+                period_id=period.id,
             )
             self._save(c, period, event)
             from girlframe.services.m3_debts import synchronize

@@ -6,6 +6,7 @@ import discord
 from discord import app_commands
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.labels import entity_label
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm, threaded
 from girlframe.discord_adapter.onboarding import private_operation, reply
@@ -67,7 +68,7 @@ def entities(
     return Field(
         key,
         label,
-        tuple((x["id"], x.get("label", x.get("name", "Choice"))) for x in values),
+        tuple((x["id"], entity_label(x)) for x in values),
         minimum,
         maximum,
         required=required,
@@ -558,7 +559,7 @@ class StatePages(discord.ui.View):
             "Permissions: " + str(sheet["permissions"]),
         ]
         lines += [
-            "Identity: " + x["name"] + (" [marked]" if x["marked"] else "")
+            "Identity: " + entity_label(x) + (" [marked]" if x["marked"] else "")
             for x in sheet["identities"]
         ]
         lines += [

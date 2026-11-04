@@ -47,6 +47,14 @@ class ChoiceEngine:
     def __init__(self, game: "GameService"):
         self.game = game
 
+    def duplicate_labels(self) -> bool:
+        policy = self.game.store.policy
+        return bool(
+            policy.m3_approval is not None
+            and policy.owner_m3_rulings is not None
+            and policy.owner_m3_rulings.identity_duplicate_labels == "distinct_ids"
+        )
+
     def add_tag(
         self, state: GameState, action: dict[str, Any], owner: int, giver: int, label: str
     ) -> TagState:
@@ -133,13 +141,17 @@ class ChoiceEngine:
             else:
                 picks(answer.denied, {x.id for x in acting.identities if not x.protected}, 1)
                 require(
-                    not any(x.name.casefold() == tag.label.casefold() for x in acting.identities),
+                    self.duplicate_labels()
+                    or not any(
+                        x.name.casefold() == tag.label.casefold() for x in acting.identities
+                    ),
                     "UNSUPPORTED_RULE: duplicate Identity labels need explicit review.",
                 )
                 replacement = IdentityState(
                     id=str(uuid4()),
                     name=tag.label,
                     marked=bool(set(answer.denied) & set(acting.sedation_locked)),
+                    slot=next(x.slot for x in acting.identities if x.id == answer.denied[0]),
                 )
                 acting.identities = [x for x in acting.identities if x.id not in answer.denied] + [
                     replacement
@@ -163,7 +175,8 @@ class ChoiceEngine:
                 require(paired is not None, "The Paired Identity is unavailable.")
                 assert paired is not None
                 require(
-                    not any(
+                    self.duplicate_labels()
+                    or not any(
                         x.name.casefold() == tag.label.casefold() and not x.paired
                         for x in acting.identities
                     ),

@@ -14,6 +14,7 @@ from pydantic import ValidationError
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.character_tags import DiscordCharacterTagGateway
+from girlframe.discord_adapter.labels import entity_label
 from girlframe.engine.drafts import DraftInput
 from girlframe.engine.playbooks import FRAME_TYPES, GIRL_TYPES, canonical_frame, canonical_girl
 from girlframe.services.character_tags import CharacterTagSynchronizer
@@ -102,7 +103,7 @@ def sheet_text(data: dict[str, Any] | None) -> str:
                     "Heat: " + str(sheet["heat"]) + " · Permissions: " + str(sheet["permissions"]),
                     "Identities: "
                     + ", ".join(
-                        clean(x["name"]) + (" [marked]" if x["marked"] else "")
+                        clean(entity_label(x)) + (" [marked]" if x["marked"] else "")
                         for x in sheet["identities"]
                     ),
                     "Assets: "

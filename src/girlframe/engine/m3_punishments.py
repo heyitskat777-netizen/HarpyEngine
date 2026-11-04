@@ -13,6 +13,7 @@ from girlframe.engine.m2 import (
     pair_key,
     shift_status,
 )
+from girlframe.engine.m3_identity_slots import replacement_slot
 
 KINDS = {
     "sedation": ("Sedation", "minor"),
@@ -126,6 +127,7 @@ def apply(
     off_duty: bool,
     handler_consulted: bool = False,
     off_duty_period: str | None = None,
+    allow_duplicate_labels: bool = False,
 ) -> Applied:
     severity = validate(details)
     if inflictor != original.handler and str(inflictor) not in original.sheets:
@@ -250,10 +252,22 @@ def apply(
                     raise ValueError("Choose the Identity replaced at the cap")
             elif details.identities:
                 raise ValueError("Do not erase another Identity when below the cap")
-            if tag.label.casefold() in {x.name.casefold() for x in sheet.identities}:
+            if not allow_duplicate_labels and tag.label.casefold() in {
+                x.name.casefold() for x in sheet.identities
+            }:
                 raise ValueError("The embraced Tag would duplicate an Identity")
             sheet.tags.remove(tag)
-            sheet.identities.append(IdentityState(id=entity_id, name=tag.label))
+            locked = bool(set(details.identities) & set(sheet.sedation_locked))
+            sheet.identities.append(
+                IdentityState(
+                    id=entity_id,
+                    name=tag.label,
+                    marked=locked,
+                    slot=replacement_slot(
+                        sheet, details.identities[0] if details.identities else None
+                    ),
+                )
+            )
         elif len(details.identities) != 1:
             raise ValueError("Choose one Identity to remove, or a Tag to embrace")
         if details.identities:
@@ -267,6 +281,8 @@ def apply(
                 sheet.identities[-1].protected = True
             sheet.identities.remove(selected)
             sheet.sedation_locked = tuple(x for x in sheet.sedation_locked if x != selected.id)
+            if details.embrace_tag and sheet.identities[-1].marked:
+                sheet.sedation_locked += (entity_id,)
     elif kind == "libido_inhibitor":
         sheet.libido_inhibited = True
     if kind in ("beating", "quality_time"):
