@@ -110,6 +110,36 @@ class PilotSheet(Model):
         return self
 
 
+class DirectorContext(Model):
+    id: str
+    handler: Snowflake
+    directors: tuple[str, ...]
+    source_works: tuple[str, ...]
+    identities: list[IdentityState]
+    source_event: str
+    active: bool = True
+    revision: int = 1
+
+    @model_validator(mode="after")
+    def choices(self) -> "DirectorContext":
+        if (
+            len(self.identities) > 4
+            or any(x.protected or x.paired for x in self.identities)
+            or len({x.id for x in self.identities}) != len(self.identities)
+        ):
+            raise ValueError(
+                "A Director context retains distinct ordinary Identity cards up to the Girl cap"
+            )
+        if (
+            not self.source_works
+            or len(set(self.source_works)) != len(self.source_works)
+            or len(set(self.directors)) != len(self.directors)
+            or self.active != bool(self.directors)
+        ):
+            raise ValueError("The actual Director presence and its source work remain explicit")
+        return self
+
+
 class Obligation(Model):
     id: str
     kind: str
@@ -134,6 +164,7 @@ class GameState(Model):
     intense_tag_bonus: int | None = None
     strain: StrainState | None = None
     world: World | None = None
+    director_contexts: list[DirectorContext] = Field(default_factory=list)
 
 
 class PlayInput(Model):

@@ -145,3 +145,25 @@ Observation nested choices (book PDF 28 / printed p.26), adopted under delegated
 - `observation_populace_controller`: The Handler plays the general populace for its actual public-display Tag and is recorded as that Tag's human giver. The source specifies the populace as giver but supplies no separate player role; the existing core Tag system identifies the human controller. Alternatives: Invite another explicit human to play the populace. Implementation: Public-display Tag detail is a separate Handler-owned request. Harpy Candidate uses its printed fixed label; neither is automatically marked. Change impact: Changing controller representation affects future Tag authority and pending choices, and requires an explicit migration for existing giver provenance.
 
 These require printed-rule clarity review. NPC role invitations and appearance responses now have offline implementations. Director rule-mode, world triggers and remaining battle interactions are implementation gaps; these rulings do not waive them.
+
+
+Director context interpretations (book PDF 192 / printed p.190), adopted under delegated authority:
+
+- `director_overlap`: Overlapping Directors share one continuous Handler Girl-rules episode; additional arrivals do not restart Heat or grant another starting Identity set. The source defines a state while in the Director's presence, without stacking/reset rules for several Directors. One continuous context preserves its actual resources. Alternatives: Reset Heat and replace the Identities for every arriving Director; Create simultaneous independent Girl sheets. Implementation: The actual Handler selects two ordinary starting cards once; later overlapping presence binds its own source work to the existing context. The Handler stays outside the Pilot roster. Change impact: A change needs explicit treatment of active contexts and pending work; never reset spent Heat or duplicate existing cards silently.
+- `director_exit_resources`: The final actual Director departure ends this rule authority without unmarking cards, granting Heat or restoring an older Heat balance. A later new presence starts its printed zero-Heat/two-Identity context. The source specifies the start but no exit recovery or resource restoration. Preserving actual resources prevents an inferred free recovery or banked reset. Alternatives: Restore the Handler's earlier Heat balance; Discard all Heat immediately on departure. Implementation: Departure is an actual separately owned human action. Context history and resource marks remain private canonical evidence; no timeout ends it. Shared Girl Play integration remains pending. Change impact: Revised exit behavior affects future episodes and active-context review, preserving prior receipts and actual resource changes.
+
+Both require printed-rule clarity review. The printed zero-Heat/two-Identity start is separate from these interpretations. Actual presence is source-reviewed; merely introducing an NPC does not establish that the Handler is present.
+
+
+- `director_controller`: use someone different from the current Handler to play
+  the Director throughout this campaign. **Source distinction:** High Budget 1/1
+  explicitly requires someone else (book PDF 151 / printed p.149). Generic NPC
+  principles allow broad control (PDF 188–189); PDF 192's Director rules do not
+  impose a universal separate-player restriction. The global restriction is a
+  delegated campaign recommendation, keeping the opposed roles and their actual
+  decisions distinct. The alternative is separation only for that Budget scene.
+  Introductions, invitations and claims currently enforce the global policy. A
+  Girl player may play the Director; actor identity must still distinguish those
+  roles. A future relaxation requires scene-specific binding and preservation of
+  the explicit Budget requirement, not silent reassignment of saved decisions.
+  This remains a printed-rule clarity-review item.

@@ -154,9 +154,15 @@ class MissionService:
         payload: dict[str, Any],
         operation: Callable[[Connection], dict[str, Any]],
         authorize: Callable[[Connection], None] | None = None,
+        *,
+        director_response: bool = False,
     ) -> dict[str, Any]:
         def access(c: Connection) -> None:
-            self._authorize(c, viewer)
+            if director_response:
+                self.access.authorize(c, viewer, "missions", director_response=True)
+                self.game.unpaused(c)
+            else:
+                self._authorize(c, viewer)
             if authorize:
                 authorize(c)
 

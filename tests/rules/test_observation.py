@@ -224,3 +224,18 @@ def test_actual_selected_or_harsh_scene_and_all_effects_are_required_before_reco
         period, period.revision, 2, canon.sheets["2"], Recovery(), pending_effects=frozenset()
     )
     assert result.progress["2"].recovered
+
+
+def test_harsh_scene_keeps_its_printed_girl_or_handler_requirement_with_extra_npc_controller(canon):
+    period, _ = rolled(canon, (1, 1))
+    period = rules.choose(period, period.revision, 2, 2, ("director_or_rival_arrives",), "choice")
+    with pytest.raises(ValueError, match="another Girl or the Handler"):
+        rules.scene(
+            period,
+            period.revision,
+            2,
+            "cell",
+            (2, 4),
+            "Only an NPC",
+            extra_participants=frozenset({4}),
+        )

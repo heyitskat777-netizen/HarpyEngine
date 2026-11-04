@@ -373,6 +373,38 @@ class InboxService:
             from girlframe.services.m2_state import load_state
 
             canon = load_state(connection, self.store.campaign_id)
+            for context in canon.director_contexts:
+                controlled = bool(
+                    canon.world
+                    and any(
+                        x.id in context.directors and x.controller == viewer.user_id
+                        for x in canon.world.npcs
+                    )
+                )
+                if not context.active or (context.handler != viewer.user_id and not controlled):
+                    continue
+                items.append(
+                    InboxItem(
+                        "director-context:" + context.id,
+                        "director_context",
+                        context.id,
+                        context.revision,
+                        "world",
+                        "Handler: Girl rules"
+                        if context.handler == viewer.user_id
+                        else "Director: current presence",
+                        "Your rule context"
+                        if context.handler == viewer.user_id
+                        else "Your Director role",
+                        "pending",
+                        controlled,
+                        False,
+                        "Preserve the actual context until the Directors leave.",
+                        "Each controller records only their own Director's actual departure.",
+                        "Review current context",
+                        task="m3_director_context",
+                    )
+                )
             if canon.world is not None:
                 for offer in canon.world.npc_role_offers:
                     if viewer.user_id not in (offer.proposer, offer.npc.controller, canon.handler):
@@ -596,6 +628,8 @@ class InboxService:
                     primary, task_name = "Record credit sharing", "m3_off_duty_credit"
                 elif kind in ("observation_choice", "observation_effect"):
                     primary, task_name = "Review Observation", "m3_observation"
+                elif kind == "director_presence":
+                    primary, task_name = "Review actual presence", "m3_director_review"
                 elif kind in (
                     "frame_off_duty_reward",
                     "frame_reward_court",

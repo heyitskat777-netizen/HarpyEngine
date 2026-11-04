@@ -446,7 +446,16 @@ class InboxView(discord.ui.View):
                 allowed_mentions=discord.AllowedMentions.none(),
             )
 
-        if item.task == "m3_npc_role":
+        if item.task in ("m3_director_review", "m3_director_context"):
+            from girlframe.discord_adapter.m3_director import open_context, open_review
+            from girlframe.services.m3_director import DirectorService
+            from girlframe.services.m3_missions import MissionService
+
+            function = open_review if item.task == "m3_director_review" else open_context
+            await function(
+                interaction, DirectorService(MissionService(self.service.store)), item.identity
+            )
+        elif item.task == "m3_npc_role":
             from girlframe.discord_adapter.m3_npc_roles import open_invitation
             from girlframe.services.m3_missions import MissionService
             from girlframe.services.m3_npc_roles import NpcRoleService

@@ -26,7 +26,9 @@ the ordinary low-result on-screen discipline restriction is not copied onto it.
 Actual NPC assignment/arrival uses a living, available, appropriate role. A
 separately controlled NPC receives its own saved question. Declining returns the
 proposal without an appearance; accepting applies it once. Director introductions
-require an invited human different from the Handler. Invitations preserve the
+use an invited human different from the Handler under the recorded campaign
+default. The printed separate-player requirement is specific to High Budget 1/1;
+generic NPC control is broader. Invitations preserve the
 proposed private NPC and require actual acceptance before introduction. Accepting
 a role, accepting an appearance and confirming a played scene are separate actions.
 Non-Pilot members can own these roles without fabricated Pilot sheets. Individual
@@ -40,12 +42,12 @@ debts. Pending Frame bonuses, other effects and the Handler review remain requir
 Native private controls and the inbox expose orders, suspicion review, own choices,
 actual details, separate roles and scene invitations.
 
-Still required: Director presence's Handler/Girl mode and price rules; automatic
+Still required: complete Girl Play ports for Director presence and price rules; automatic
 world-trigger/reprimand and future-period ordering; all battle/last-Asset,
 playbook, Defeat, shortage and economy interactions; explicit recovery for a changed
 NPC controller. A Director arrival creates blocking `director_presence` work.
-The Handler cannot keep using its ordinary rule authority while that required
-context is unresolved. There is no generic acknowledgement/waiver for it.
+The Handler cannot keep using ordinary Handler rule authority while its presence
+review is unresolved or its actual Girl-rules context is active. There is no generic acknowledgement/waiver for it.
 This is an honest coverage gap, not a new campaign ruling or full M3 release.
 
 Acceptance: all final tier counts, Void family/damage count, pre-roll commitment,

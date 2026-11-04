@@ -430,6 +430,56 @@
       "revision": 1,
       "implementation_note": "Public-display Tag detail is a separate Handler-owned request. Harpy Candidate uses its printed fixed label; neither is automatically marked.",
       "change_impact": "Changing controller representation affects future Tag authority and pending choices, and requires an explicit migration for existing giver provenance."
+    },
+    {
+      "id": "director-overlapping-presence",
+      "policy_key": "director_overlap",
+      "summary": "Overlapping Directors share one continuous Handler Girl-rules episode; additional arrivals do not restart Heat or grant another starting Identity set.",
+      "source": "Book PDF 192 / printed p.190; owner delegated authority",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "The source defines a state while in the Director's presence, without stacking/reset rules for several Directors. One continuous context preserves its actual resources.",
+      "alternatives": [
+        "Reset Heat and replace the Identities for every arriving Director",
+        "Create simultaneous independent Girl sheets"
+      ],
+      "implementation_note": "The actual Handler selects two ordinary starting cards once; later overlapping presence binds its own source work to the existing context. The Handler stays outside the Pilot roster.",
+      "change_impact": "A change needs explicit treatment of active contexts and pending work; never reset spent Heat or duplicate existing cards silently.",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "director-departure-resources",
+      "policy_key": "director_exit_resources",
+      "summary": "The final actual Director departure ends this rule authority without unmarking cards, granting Heat or restoring an older Heat balance. A later new presence starts its printed zero-Heat/two-Identity context.",
+      "source": "Book PDF 192 / printed p.190; owner delegated authority",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "The source specifies the start but no exit recovery or resource restoration. Preserving actual resources prevents an inferred free recovery or banked reset.",
+      "alternatives": [
+        "Restore the Handler's earlier Heat balance",
+        "Discard all Heat immediately on departure"
+      ],
+      "implementation_note": "Departure is an actual separately owned human action. Context history and resource marks remain private canonical evidence; no timeout ends it. Shared Girl Play integration remains pending.",
+      "change_impact": "Revised exit behavior affects future episodes and active-context review, preserving prior receipts and actual resource changes.",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "director-controller-separation",
+      "policy_key": "director_controller",
+      "summary": "Use a human different from the current Handler to play the Director throughout this campaign.",
+      "source": "Book PDF 151 / printed p.149 explicitly requires another human for High Budget 1/1; PDF 188\u2013189 permits broad NPC control and PDF 192 defines Director rules.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "Generalizing the explicit High Budget separation keeps the opposed Director/Handler roles and their actual decisions distinct. This is a campaign recommendation, not a universal restriction printed in the generic NPC rules.",
+      "alternatives": [
+        "Require a different human only for High Budget 1/1 and allow self-play in other Director scenes"
+      ],
+      "implementation_note": "NPC introductions, invitations, claims and Observation presence enforce the trusted implemented separation. A Director may still be played by a Girl player; roles must stay distinct from their Pilot identity.",
+      "change_impact": "Relaxing the global default needs actual scene-specific actor binding and tests so the explicit High Budget requirement remains enforced. Preserve existing role/control and response provenance.",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -11313,14 +11363,18 @@
         "heading": "The Director\u2019s Rules"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_director.py",
+        "tests/rules/test_director_service.py",
+        "tests/rules/test_director_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

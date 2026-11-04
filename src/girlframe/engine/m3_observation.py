@@ -362,6 +362,10 @@ def scene(
     legal = set(OFF_DUTY["low"]) | {"observation:" + x.kind for x in observation.outcomes}
     if kind not in legal:
         raise ValueError("Choose one selected consequence as your scene or a printed harsh scene")
+    if kind in OFF_DUTY["low"] and not (set(participants) - {actor}) & (
+        set(period.pilots) | {period.handler}
+    ):
+        raise ValueError("A printed harsh scene requires another Girl or the Handler")
     updated = clone(period)
     updated.progress[str(actor)].scene = Scene(
         kind=kind, participants=participants, summary=summary

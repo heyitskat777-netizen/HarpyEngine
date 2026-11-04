@@ -155,7 +155,12 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
             await open_action(current, cycle, data["id"], identity.removeprefix("action:"))
             return
         row = rows[identity]
-        if row["kind"] in ("observation_choice", "observation_effect"):
+        if row["kind"] == "director_presence":
+            from girlframe.discord_adapter.m3_director import open_review as open_director
+            from girlframe.services.m3_director import DirectorService
+
+            await open_director(current, DirectorService(service.missions), identity)
+        elif row["kind"] in ("observation_choice", "observation_effect"):
             from girlframe.discord_adapter.m3_observation import open_work as open_observation
             from girlframe.services.m3_observation import ObservationService
 

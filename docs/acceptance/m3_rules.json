@@ -673,6 +673,33 @@
           "command": ".venv/bin/pytest -q tests/rules/test_observation_service.py tests/rules/test_npc_roles.py tests/rules/test_observation.py tests/rules/test_observation_ui.py",
           "result": "42 passed in 19.01s before the final Director-context guard; later source interactions receive a new full-suite artifact.",
           "limitation": "Director Handler/Girl mode/prices, automatic world triggers, future-period ordering and full playbook/battle/economy interactions remain incomplete; no independent or human acceptance."
+        },
+        {
+          "scope": "partial_offline_observation_and_roles_final_checkpoint",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-observation-pytest.xml",
+          "result": "907 passed in 139.24s; zero failures/errors/skips",
+          "artifact": "var/m3-observation-pytest.xml",
+          "git_commit": "6d76c44",
+          "limitation": "Director context work remains required; no M3-complete, independent review, human play-test or live-deployment claim."
+        }
+      ]
+    },
+    {
+      "id": "M3G-DIRECTOR-CONTEXT-001",
+      "title": "Actual Director context and owned resources/departure",
+      "expected": "Source-reviewed Handler presence, own two starting Identities and zero Heat without Pilot/rank fabrication; actual overlap/departure and scene absence evidence.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_director.py",
+        "tests/rules/test_director_service.py",
+        "tests/rules/test_director_ui.py"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_director_context",
+          "command": ".venv/bin/pytest -q tests/rules/test_director.py tests/rules/test_director_service.py tests/rules/test_director_ui.py tests/rules/test_observation.py tests/rules/test_observation_service.py tests/rules/test_off_duty_handler_scenes.py",
+          "result": "53 passed in 28.35s",
+          "limitation": "Shared Girl Play ports, Director Handler Plays/prices/phone calls, broader cast integration and independent/human acceptance remain incomplete."
         }
       ]
     }

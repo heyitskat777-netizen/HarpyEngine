@@ -513,6 +513,11 @@ class GameService:
         )
 
     def director_mode_pending(self, c: Connection, owner: int) -> bool:
+        if any(
+            x.active and x.handler == owner
+            for x in load_state(c, self.store.campaign_id).director_contexts
+        ):
+            return True
         table = t.m3["m3_required_work"]
         rows = {
             row["id"]: row

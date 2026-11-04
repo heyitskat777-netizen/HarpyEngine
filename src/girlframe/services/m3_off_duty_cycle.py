@@ -143,6 +143,8 @@ class CycleService:
             [Connection, rules.Period, GameState],
             tuple[rules.Period, GameState, list[dict[str, Any]], dict[str, Any]],
         ],
+        *,
+        director_response: bool = False,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             period, state = self._current(c, viewer, identity, game_revision)
@@ -184,7 +186,10 @@ class CycleService:
             kind,
             {"id": identity, "expected": expected, "game_revision": game_revision, **payload},
             operation,
-            lambda c: self.missions.access.authorize(c, viewer, "plays"),
+            lambda c: self.missions.access.authorize(
+                c, viewer, "plays", director_response=director_response
+            ),
+            director_response=director_response,
         )
 
     def activate(
@@ -399,6 +404,7 @@ class CycleService:
             "m3.off_duty_scene_attested",
             {"scene_owner": scene_owner},
             change,
+            director_response=scene_owner is not None,
         )
 
     def recover(

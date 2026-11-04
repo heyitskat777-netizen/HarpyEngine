@@ -143,3 +143,15 @@ allowing ordinary Handler authority. Full Director rules/prices, automatic world
 triggers/reprimands, future-period ordering and remaining battle/playbook/economy
 interactions remain incomplete. See `work_orders/M3_OBSERVATION.md`; this is not
 full M3 acceptance or a live gameplay release.
+
+
+Director context now has an actual Handler presence review, two owned ordinary
+starting Identities, the printed zero-Heat start and separately controlled
+departures. No Pilot sheet or Cadre Status is fabricated. Overlapping Directors
+share one episode; the final departure grants no recovery. Actual completed scene
+cast/attestations can establish the Handler was absent. Own scene confirmations
+have a narrow path separate from Handler powers. Shared Girl Play integration,
+Director Handler Plays, prices/phone calls and broader cast/world interactions
+remain incomplete. The global separate-Director-player rule is a campaign
+recommendation: the explicit printed requirement is High Budget 1/1 (PDF 151),
+while generic NPC control is broader. See the central rulings and M3_DIRECTOR.md.

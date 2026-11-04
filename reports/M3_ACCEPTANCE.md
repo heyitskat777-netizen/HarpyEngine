@@ -761,3 +761,47 @@ Error. Retrying succeeded; CI passed `ee93568`, run 41812260571. Exactly one ori
 frozen M2 process was observed running (PID47656); its source deployment remains
 88cd237. No live database/policy migration, M3 deployment, environment publication,
 independent audit, human play-test or M3-ready claim has occurred.
+
+## Scoped Director context and source distinction
+
+Book PDF 192 / printed p.190: the Handler now has an actual source-reviewed Girl-rules
+context with two owned ordinary starting Identities and zero Heat. It creates no
+Pilot sheet, Frame, Cadre rank or mission membership. Reopening/replay cannot grant
+another baseline. Overlapping Directors preserve the same resources; each actual
+NPC controller records only its own departure, with no clock supplying a response.
+The last departure closes the context without unmarking cards, adding Heat or
+restoring an older balance. Private context views and native requests keep the
+Handler's card labels from other participants.
+
+Merely introducing/accepting an NPC role does not establish the Handler is in its
+presence. The actual Handler records that presence. A completed actual Observation
+scene with the Director and without the Handler can instead prove absence; a
+client boolean alone cannot waive the source review. Ordinary Handler powers stay
+gated during an unresolved review or active Girl-rules context. Its own actual
+scene attestations have a narrow response path that grants no Handler power.
+Shared Girl Play ports, Director Handler Plays/prices/phone calls, broader actor/cast
+integration and other world interactions remain incomplete. See M3_DIRECTOR.md and
+M3_ACTORS.md; the milestone is still RULES_SUBSET.
+
+Source correction: the explicit instruction to use a different Director player is
+High Budget 1/1, book PDF 151 / printed p.149. Generic NPC principles are broader.
+The global separate-controller restriction is now clearly recorded as a delegated
+campaign recommendation with an alternative and change-impact notes, rather than
+presented as a universal printed rule. Overlap and exit interpretations have their
+own clarity-review records. The printed start remains separate from those rulings.
+
+Executed full suite: **920 passed in 167.53s**, no failures/errors/skips;
+`var/m3-director-context-pytest.xml`. Final focused context/Observation/Handler-scene
+run: **53 passed in 28.35s**. Ruff passed, **278 Python files** formatted; mypy passed
+for **145 source files**. Planning verifier passed. Public check: **360 files, all
+40 original manifest entries, zero findings**. Registry: 473 entries, 436 required
+core, 48 subsets, 425 unimplemented, zero independently verified. Earlier typed
+proof-dictionary and tuple inference errors were fixed before these passing checks.
+An added regression keeps the printed Girl/Handler co-participant requirement for
+harsh scenes even when an extra NPC controller is invited.
+
+The prior Observation push again received a GitHub Internal Server Error; the
+retry succeeded. CI passed `6d76c44`, run 41816188782. The original frozen bot was
+observed as exactly one process; all **88 frozen source hashes matched**. No live
+migration/policy change, M3 deployment, environment publication, independent review,
+human play-test or M3-ready claim applies to this checkpoint.

@@ -43,10 +43,12 @@ class Access:
             else None
         )
 
-    def authorize(self, c: Connection, viewer: GuildViewer, subsystem: str) -> None:
+    def authorize(
+        self, c: Connection, viewer: GuildViewer, subsystem: str, *, director_response: bool = False
+    ) -> None:
         game = GameService(self.store)
         game.authorize(c, viewer, game=False)
-        if game.director_mode_pending(c, viewer.user_id):
+        if not director_response and game.director_mode_pending(c, viewer.user_id):
             raise WorkflowError(
                 "UNSUPPORTED_RULE: resolve the Director's Handler/Girl rules context first."
             )
@@ -68,4 +70,7 @@ class Access:
             raise WorkflowError(
                 "UNRESOLVED_RULING: record the approved M3 campaign rulings in trusted policy."
             )
-        game.authorize(c, viewer)
+        if director_response:
+            game.gate()
+        else:
+            game.authorize(c, viewer)
