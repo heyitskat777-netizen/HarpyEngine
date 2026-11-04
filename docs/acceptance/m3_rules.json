@@ -598,6 +598,29 @@
           "limitation": "Table/Endgame effects and deferred world triggers remain unsupported blocking work. Source selection coverage is not effect implementation or independent/human acceptance."
         }
       ]
+    },
+    {
+      "id": "M3G-WORLD-001",
+      "title": "Canonical world and source-specific initial Strain consequences",
+      "expected": "Source-legal actual entities, owned NPC links, private projection, condition/custody provenance and typed source-bound effect transactions.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_world.py",
+        "tests/rules/test_world_service.py",
+        "tests/rules/test_world_ui.py",
+        "tests/rules/test_strain_effects.py",
+        "tests/rules/test_strain_effect_service.py",
+        "tests/rules/test_strain_effect_ui.py"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_world_and_12_initial_strain_effects",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-world-strain-effects-pytest.xml",
+          "result": "775 passed in 80.73s; subsequent counter hardening 32 passed in 5.36s",
+          "artifact": "var/m3-world-strain-effects-pytest.xml",
+          "limitation": "World combat/scene/period integration, all other table effects and independent/human acceptance remain pending."
+        }
+      ]
     }
   ],
   "enabled_modules": [

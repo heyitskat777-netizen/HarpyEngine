@@ -8,6 +8,7 @@ from girlframe.engine.creation_review import ReviewSheet
 from girlframe.engine.identity import Snowflake
 from girlframe.engine.m3_frame_state import FrameRuntime
 from girlframe.engine.m3_strain_state import State as StrainState
+from girlframe.engine.m3_world_state import World
 
 RULESET: Literal["girlframe-m2-pilot-1"] = "girlframe-m2-pilot-1"
 PLAY_IDS = ("keep_your_head", "check_sensors", "engage", "disobey_orders", "flirt")
@@ -124,6 +125,7 @@ class GameState(Model):
     facts: list[dict[str, str]] = Field(default_factory=list)
     intense_tag_bonus: int | None = None
     strain: StrainState | None = None
+    world: World | None = None
 
 
 class PlayInput(Model):

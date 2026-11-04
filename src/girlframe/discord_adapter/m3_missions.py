@@ -319,4 +319,48 @@ def register_missions(
         except WorkflowError as error:
             await reply(interaction, str(error))
 
+    @group.command(name="world", description="Set up or manage the canonical world (Handler)")
+    async def world(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_world import open_world
+        from girlframe.services.m3_world import WorldService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_world(interaction, WorldService(service))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @group.command(name="map", description="Read the player map with only revealed Gorgons")
+    async def map_view(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_world import MapPages
+        from girlframe.services.m3_world import WorldService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await MapPages(WorldService(service), interaction.user.id).show(interaction)
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @group.command(name="npc", description="Explicitly take the role of an introduced NPC")
+    async def npc_role(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_world import open_npc_role
+        from girlframe.services.m3_world import WorldService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_npc_role(interaction, WorldService(service), bond=False)
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @group.command(name="npc_bond", description="Link your own saved starting NPC Bond")
+    async def npc_bond(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_world import open_npc_role
+        from girlframe.services.m3_world import WorldService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_npc_role(interaction, WorldService(service), bond=True)
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
     tree.add_command(group, guild=discord.Object(id=guild_id))

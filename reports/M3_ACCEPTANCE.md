@@ -524,3 +524,72 @@ period/recovery foundation, 622-test checkpoint) and `d42ca3e` (Strain schedulin
 native preparation and context-aware replacement, 733-test checkpoint).
 The additive M3F-SCHED-001 case records the latter as IN_PROGRESS, not full rule
 acceptance. Independent review and human Discord testing are still NOT_RUN.
+
+
+## Canonical world and actual Strain consequences — 2026-11-04
+
+The owner explicitly requested continuing until M3 implementation is finished and
+ready for player testing. Work continues; this checkpoint is not the requested
+final player-testing candidate, milestone sign-off or independent review.
+
+World now lives in the existing GameState authority/history. Map setup validates
+printed counts and distinct squares, hiding the initial Class 0 from players.
+Typed locations/allegiances, NPC roles/controllers/Bonds, factions, Gorgons with
+owned Assets/Core conditions, external Pilot custody and persistent territory
+support source-specific mutations. Growth and Parasite appear as actual Types
+from PDF 175–176 despite omission from the PDF 168 outline. New grid/Class-change/
+revival interpretations are recorded under delegated authority with alternatives
+and clarity/change notes. No previous explicit owner ruling was overridden.
+
+Native `/mission world`, `/mission map`, `/mission npc`, `/mission npc_bond` and
+private inbox/Off-Duty consequence forms are added to development source. Setup
+requires explicit confirmation; private Core/Type/role records do not appear in the
+player map. NPCs are actually claimed by the human playing them. Starting NPC
+Bonds link only from their owner's saved slot/current character; unnamed legacy
+slots can be linked later without inventing their name or copying private feelings.
+World introductions cannot choose another Player's starting Bond. Native multiple
+selections now survive option paging while retaining the total selection limit.
+
+Twelve Strain branches apply actual typed initial consequences: Void Low 1/1,
+2/1, 4/1, 5/1 and High 3/1; Rebellion Low 1/1, 6/1; Budget Low 5/2, 6/2 and High
+2/2, 3/2, 5/1. These include real source-legal Gorgon introduction/NPC capture or
+death, revived Assets/Type/Core, next-NPC affiliation with a real consumer, a real
+Rebel Base, room Bonds/overflow, NPC firing, shortage Tags and political/anarchy
+state. Choice ownership, exact saved rule identity, work/state revisions, current
+Handler, pause and subsystem approvals remain enforced. Backend effect/work
+commits roll back together and replay does not duplicate resources.
+
+The city threat's two-use Collateral condition is stored and tested with actual
+interruption/once-only completion. Gorgon Play service/scene integration remains
+pending; selection or initial entity creation does not finish that subsystem.
+Pure helpers cover Class Asset baselines, Sprite inheritance, guarded damage,
+exposed-Core defeat, explicit one-square/period-end behavior, territory, owned
+all-base-loss work and custody-required transport without automatic conversion.
+World/Strain state survives actual backup and canonical history rebuild.
+
+Validation executed:
+
+| Check | Actual result |
+|---|---|
+| First pure world rules | 13 passed in 0.14s |
+| World and initial Strain consequences | 35 passed in 6.42s before later UI/city hardening |
+| Native world/NPC ownership regression | 10 passed in 2.70s |
+| Native effect/dependent-choice controls | 2 passed in 1.46s |
+| Full offline suite | **775 passed in 80.73s**, no failures/errors/skips; `var/m3-world-strain-effects-pytest.xml` |
+| Post-full counter/resource hardening regression | 32 passed in 5.36s |
+| Ruff / format | All checks passed; 234 Python files formatted |
+| Mypy | No issues in 124 source files |
+| Source registry | RULES_SUBSET; 473 entries, 436 required core; 33 subset / 440 unimplemented; zero independent verification |
+| Publishable check before work-order addition | 316 files, all 40 original manifest entries intact, zero findings |
+
+Early tests exposed unnamed saved NPCs; the import path and synthetic fixture were
+corrected to support the actual existing contract rather than requiring a guessed
+name. Static checks corrected typing/import/line-length findings. A followup
+counter check prevents a completed threat from destroying a rebuilt city again;
+new Gorgons cannot import forged previous combat conditions. All failures were
+resolved by the passing checks above. Tests are synthetic and offline.
+
+One frozen bot process was verified at the start. No M3 live migration, private
+policy edit, command registration or environment publication occurred. Remaining
+work, including full world combat/scene/period integration and all other core
+rules, is retained in `docs/work_orders/M3_WORLD.md`; M3 stays IN_PROGRESS.

@@ -233,6 +233,54 @@
       "revision": 1,
       "implementation_note": "The preparation service waits for actual owner credit records, marks Obsolescence atomically, and queues context-bound compulsory replacement at eight.",
       "change_impact": "Changing the ordering requires explicit migration of pending old-Frame credit work and origin-bound replacement tasks; do not recalculate historical Permission grants."
+    },
+    {
+      "id": "world-grid-adjacency",
+      "summary": "One square permits any of eight neighbors; Directed steps reduce distance to the actual current goal.",
+      "source": "Book PDF 121\u2013123 / printed pp.119\u2013121; delegated owner authority",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "The map uses squares and eight surrounding territory squares without an explicit diagonal travel rule.",
+      "alternatives": [
+        "Orthogonal-only movement"
+      ],
+      "policy_key": "world_grid_steps",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Pure movement validates the Handler-selected adjacent step; world end remains under source-specific period integration.",
+      "change_impact": "Revise future legal destinations explicitly; do not move old entities retroactively."
+    },
+    {
+      "id": "aggressive-gorgon-class-change",
+      "summary": "Outside a surviving location, an Aggressive Gorgon changes behavior Class while preserving its existing body, Assets/damage, archetype Types, Core and visibility.",
+      "source": "Book PDF 123,165 / printed pp.121,163; delegated owner authority",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "Aggressive is a Class; interpreting the loose word type as behavior change allows the named escalation without inventing free repairs or deleting Assets.",
+      "alternatives": [
+        "Change the archetype Type instead of behavior Class"
+      ],
+      "policy_key": "gorgon_class_change",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Pure period-end requires an exact Handler choice and validates all preserved state. New-Class counts apply only to creation.",
+      "change_impact": "Pending world moves require fresh review if this interpretation changes; preserve historical resources and reveal provenance."
+    },
+    {
+      "id": "returning-gorgon-body",
+      "summary": "Preserve existing Assets/damage, add two intact Assets and a distinct additional Type, and specify the rebuilt unexposed Core conditions. Existing Types remain; Sprite followers inherit current leader Types.",
+      "source": "Book PDF 145,164,166 / printed pp.143,162,164; delegated owner authority",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "The return result specifies new Assets/Type but not a free refresh or repeated multi-Type fallback; an explicit Core plan preserves the normal exposure procedure.",
+      "alternatives": [
+        "Refresh all old Assets or replace an existing secondary Type"
+      ],
+      "policy_key": "gorgon_reappearance",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Typed Strain revival validates the defeated target, exactly two new owned Assets, an additional Type and new Core plan.",
+      "change_impact": "Revise future revivals only; do not rewrite defeated incarnations, past damage, or already committed rewards."
     }
   ],
   "entries": [
@@ -5640,14 +5688,18 @@
         "heading": "Quadrant map setup"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_world.py",
+        "tests/rules/test_world_service.py",
+        "tests/rules/test_world_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -5663,14 +5715,18 @@
         "heading": "Gorgon Territory"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_world.py",
+        "tests/rules/test_world_service.py",
+        "tests/rules/test_world_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -5732,14 +5788,18 @@
         "heading": "Gorgon Movements"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_world.py",
+        "tests/rules/test_world_service.py",
+        "tests/rules/test_world_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -6679,14 +6739,18 @@
         "heading": "Void low: die 1, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_effects.py",
+        "tests/rules/test_strain_effect_service.py",
+        "tests/rules/test_strain_effect_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -6725,14 +6789,18 @@
         "heading": "Void low: die 2, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_effects.py",
+        "tests/rules/test_strain_effect_service.py",
+        "tests/rules/test_strain_effect_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -6817,14 +6885,18 @@
         "heading": "Void low: die 4, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_effects.py",
+        "tests/rules/test_strain_effect_service.py",
+        "tests/rules/test_strain_effect_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -6863,14 +6935,18 @@
         "heading": "Void low: die 5, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_effects.py",
+        "tests/rules/test_strain_effect_service.py",
+        "tests/rules/test_strain_effect_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -7047,14 +7123,18 @@
         "heading": "Void high: die 3, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_effects.py",
+        "tests/rules/test_strain_effect_service.py",
+        "tests/rules/test_strain_effect_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -7392,14 +7472,18 @@
         "heading": "Rebellion low: die 1, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_effects.py",
+        "tests/rules/test_strain_effect_service.py",
+        "tests/rules/test_strain_effect_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -7622,14 +7706,18 @@
         "heading": "Rebellion low: die 6, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_effects.py",
+        "tests/rules/test_strain_effect_service.py",
+        "tests/rules/test_strain_effect_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -8335,14 +8423,18 @@
         "heading": "Budget low: die 5, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_effects.py",
+        "tests/rules/test_strain_effect_service.py",
+        "tests/rules/test_strain_effect_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -8381,14 +8473,18 @@
         "heading": "Budget low: die 6, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_effects.py",
+        "tests/rules/test_strain_effect_service.py",
+        "tests/rules/test_strain_effect_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -8473,14 +8569,18 @@
         "heading": "Budget high: die 2, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_effects.py",
+        "tests/rules/test_strain_effect_service.py",
+        "tests/rules/test_strain_effect_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -8519,14 +8619,18 @@
         "heading": "Budget high: die 3, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_effects.py",
+        "tests/rules/test_strain_effect_service.py",
+        "tests/rules/test_strain_effect_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -8588,14 +8692,18 @@
         "heading": "Budget high: die 5, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain_effects.py",
+        "tests/rules/test_strain_effect_service.py",
+        "tests/rules/test_strain_effect_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -9393,14 +9501,18 @@
         "heading": "Exposing a Core"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_world.py",
+        "tests/rules/test_world_service.py",
+        "tests/rules/test_world_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -9508,14 +9620,18 @@
         "heading": "Class IV: Directed"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_world.py",
+        "tests/rules/test_world_service.py",
+        "tests/rules/test_world_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -9531,14 +9647,18 @@
         "heading": "Class V: Sprite"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_world.py",
+        "tests/rules/test_world_service.py",
+        "tests/rules/test_world_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

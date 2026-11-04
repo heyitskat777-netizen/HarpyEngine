@@ -20,6 +20,10 @@ M2 implementation/deployment is complete, but independent rules review and human
 play-testing remain pending. Do not fabricate certification or remove a release gate.
 Keep the frozen running bot available while developing; stop after M3 for review.
 AI and M4 remain outside the authorized milestone.
+The current owner target is to continue until M3 implementation and automated
+checks are complete and the candidate is ready for player testing. Do not end work
+merely after another partial foundation checkpoint. Keep review/testing pending
+until actual human outcomes exist; preserve the frozen live bot during development.
 The owner now delegates future ambiguous-rule decisions to Codex's reasoned
 recommendations. Apply them without repeatedly asking, preserve earlier explicit
 owner choices, and record source/rationale/adjustment notes in

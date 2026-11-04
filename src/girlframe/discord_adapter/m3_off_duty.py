@@ -107,6 +107,12 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
             from girlframe.services.m3_replacement import ReplacementService
 
             await open_replacement(current, ReplacementService(service.missions), identity)
+        elif row["kind"] == "strain_event":
+            from girlframe.discord_adapter.m3_strain_effects import open_effect
+            from girlframe.services.m3_strain import StrainService
+            from girlframe.services.m3_strain_effects import EffectService
+
+            await open_effect(current, EffectService(StrainService(service)), identity)
         else:
             await reply(
                 current,

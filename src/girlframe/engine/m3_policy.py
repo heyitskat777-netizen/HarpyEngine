@@ -27,6 +27,9 @@ class Rulings(BaseModel):
     strain_repeat_timing: Literal["next_period_start"]
     strain_cascade_count: Literal["prior_occurrences_same_track"]
     doctor_start_order: Literal["credit_before_budget"]
+    world_grid_steps: Literal["eight_neighbors"]
+    gorgon_class_change: Literal["preserve_body"]
+    gorgon_reappearance: Literal["preserve_old_assets_new_core_plan"]
 
 
 class Approval(BaseModel):

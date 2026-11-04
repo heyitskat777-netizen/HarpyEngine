@@ -176,6 +176,8 @@ unimplemented mechanics, player responses or an M3 release.
 | `/mission replacement` | Player proposal, Handler-defined free package, separate Court recipient response and exact player confirmation |
 | `/mission off_duty` | Saved preparation, owned credit declarations and required-work selectors; M3 effects remain gated |
 | `/mission strain` | Handler chooses starting scenario, reviews triggers, confirms saved d6 rolls and chooses event columns; unsupported effects stay pending |
+| `/mission world`, `/mission map` | Handler setup/management and a player map that omits private world records |
+| `/mission npc`, `/mission npc_bond` | Explicit NPC role claim or owner-confirmed link of a saved starting NPC Bond |
 | `/character activate`, `/character state` | Explicit activation/public fields; current private state with paging |
 | `/character followthrough`, `/character recover` | Owner follow-through and source-backed moment-alone recovery |
 | `/campaign scene_bind`, `scene_join`, `scene_leave`, `scene_close` | Staff-bound scenes, explicit participation and safe close |

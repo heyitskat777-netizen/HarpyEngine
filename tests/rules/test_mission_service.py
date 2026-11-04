@@ -53,6 +53,9 @@ def service(store, girl="MOCKINGBIRD", frame="JANUS-B"):
                 strain_repeat_timing="next_period_start",
                 strain_cascade_count="prior_occurrences_same_track",
                 doctor_start_order="credit_before_budget",
+                world_grid_steps="eight_neighbors",
+                gorgon_class_change="preserve_body",
+                gorgon_reappearance="preserve_old_assets_new_core_plan",
             ),
         }
     )

@@ -1,0 +1,354 @@
+"""Typed application of supported Strain consequences, with no acknowledge fallback."""
+
+from uuid import NAMESPACE_URL, uuid5
+
+from pydantic import Field
+
+from girlframe.engine import m3_world as world_rules
+from girlframe.engine.m2 import GameState, Model, TagState, pair_key
+from girlframe.engine.m3_world_state import (
+    Asset,
+    CorePlan,
+    Faction,
+    Gorgon,
+    GorgonType,
+    Location,
+    NpcRecruitment,
+)
+
+SUPPORTED = frozenset(
+    {
+        "strain.void.low.1.1",
+        "strain.void.low.2.1",
+        "strain.void.low.4.1",
+        "strain.void.low.5.1",
+        "strain.void.high.3.1",
+        "strain.rebellion.low.1.1",
+        "strain.rebellion.low.6.1",
+        "strain.budget.low.5.2",
+        "strain.budget.low.6.2",
+        "strain.budget.high.2.2",
+        "strain.budget.high.3.2",
+        "strain.budget.high.5.1",
+    }
+)
+
+
+class TagChoice(Model):
+    owner: int = Field(ge=1)
+    label: str = Field(min_length=1, max_length=120)
+
+
+class Choice(Model):
+    rule_id: str
+    account: str = Field(min_length=1, max_length=2400)
+    target: str | None = None
+    gorgon: Gorgon | None = None
+    faction: Faction | None = None
+    location: Location | None = None
+    victim: str | None = None
+    new_assets: tuple[Asset, ...] = ()
+    new_type: GorgonType | None = None
+    core_plan: CorePlan | None = None
+    rooms: tuple[tuple[int, ...], ...] = ()
+    npc_jobs: tuple[str, ...] = ()
+    tags: tuple[TagChoice, ...] = ()
+
+
+def fields(choice: Choice, allowed: set[str]) -> None:
+    defaults = Choice(rule_id=choice.rule_id, account=choice.account)
+    for field in type(choice).model_fields:
+        if field not in allowed | {"rule_id", "account"} and getattr(choice, field) != getattr(
+            defaults, field
+        ):
+            raise ValueError("This Strain event includes unrelated choices")
+    if not choice.account.strip():
+        raise ValueError("Record the actual source-specific event context")
+
+
+def apply(original: GameState, choice: Choice, source_work: str) -> GameState:
+    if choice.rule_id not in SUPPORTED:
+        raise ValueError("UNSUPPORTED_RULE: this Strain effect has no complete typed resolver")
+    state = GameState.model_validate_json(original.model_dump_json())
+    world = state.world
+    if world is None or state.handler is None:
+        raise ValueError("Initialize the actual world and appointed Handler first")
+    rule = choice.rule_id
+    if rule in {
+        "strain.void.low.1.1",
+        "strain.void.low.2.1",
+        "strain.void.low.4.1",
+        "strain.void.low.5.1",
+    }:
+        fields(
+            choice,
+            {"gorgon", "victim"}
+            if rule in {"strain.void.low.4.1", "strain.void.low.5.1"}
+            else {"gorgon"},
+        )
+        incoming = choice.gorgon
+        if incoming is None:
+            raise ValueError("Choose the actual Gorgon, its Assets, Core conditions and map square")
+        bases = [x for x in world.locations if x.kind == "base" and x.condition != "destroyed"]
+        cities = [x for x in world.locations if x.kind == "city" and x.condition != "destroyed"]
+        if rule == "strain.void.low.1.1":
+            if (
+                incoming.gorgon_class != "directed"
+                or incoming.goal is None
+                or incoming.goal.kind != "location"
+                or incoming.goal.entity_id not in {x.id for x in cities}
+                or not any(
+                    incoming.cell[i] in (world.board.minimum[i], world.board.maximum[i])
+                    for i in (0, 1)
+                )
+            ):
+                raise ValueError(
+                    "This Directed Gorgon enters at a map edge and targets a real city"
+                )
+        elif rule == "strain.void.low.2.1":
+            if incoming.gorgon_class not in ("dormant", "erratic") or not any(
+                world_rules.distance(incoming.cell, x.cell) == 1 for x in bases
+            ):
+                raise ValueError("Place a Dormant or Erratic Gorgon in a square beside a real base")
+        elif rule == "strain.void.low.4.1":
+            if incoming.gorgon_class != "aggressive" or incoming.cell not in {
+                x.cell for x in cities
+            }:
+                raise ValueError("This Aggressive Gorgon emerges in a city")
+        else:
+            if (
+                incoming.gorgon_class != "sprite"
+                or incoming.sprite_group
+                or incoming.cell not in {x.cell for x in bases}
+            ):
+                raise ValueError("A single Sprite has entered an actual base")
+        outcome = world_rules.introduce_gorgon(world, incoming)
+        world = outcome.world
+        if rule == "strain.void.low.4.1":
+            event_city = next(x for x in cities if x.cell == incoming.cell)
+            world = world_rules.update(
+                world,
+                gorgons=tuple(
+                    x.model_copy(
+                        update={
+                            "collateral_city": event_city.id,
+                            "collateral_successes": 0,
+                            "collateral_resolved": False,
+                        }
+                    )
+                    if x.id == incoming.id
+                    else x
+                    for x in world.gorgons
+                ),
+            )
+        if rule in {"strain.void.low.4.1", "strain.void.low.5.1"}:
+            victim = next(
+                (
+                    x
+                    for x in world.npcs
+                    if x.id == choice.victim and x.alive and x.cell == incoming.cell
+                ),
+                None,
+            )
+            if victim is None:
+                raise ValueError("Choose an actual living NPC at the event's location")
+            changes = (
+                {"alive": False} if rule == "strain.void.low.4.1" else {"captive_of": incoming.id}
+            )
+            world = world_rules.update(
+                world,
+                npcs=tuple(
+                    x.model_copy(update=changes) if x.id == victim.id else x for x in world.npcs
+                ),
+            )
+    elif rule == "strain.void.high.3.1":
+        fields(choice, {"target", "new_assets", "new_type", "core_plan"})
+        target = next((x for x in world.gorgons if x.id == choice.target and not x.alive), None)
+        if (
+            target is None
+            or choice.new_type is None
+            or choice.new_type in target.types
+            or choice.core_plan is None
+        ):
+            raise ValueError(
+                "Choose a defeated Gorgon, a distinct additional Type and new Core conditions"
+            )
+        if len(choice.new_assets) != 2 or any(
+            x.family != "gorgon" or x.damaged for x in choice.new_assets
+        ):
+            raise ValueError("The returning Gorgon gains exactly two distinct intact new Assets")
+        returned = target.model_copy(
+            update={
+                "alive": True,
+                "exposed": False,
+                "core_strike_failed": False,
+                "types": target.types + (choice.new_type,),
+                "assets": target.assets + choice.new_assets,
+                "core_plan": choice.core_plan,
+            }
+        )
+        world = world_rules.update(
+            world,
+            gorgons=tuple(
+                returned
+                if x.id == target.id
+                else x.model_copy(update={"types": returned.types})
+                if x.follows == target.id
+                else x
+                for x in world.gorgons
+            ),
+        )
+    elif rule == "strain.rebellion.low.1.1":
+        fields(choice, {"target", "faction"})
+        city = next(
+            (
+                x
+                for x in world.locations
+                if x.id == choice.target and x.kind == "city" and x.condition != "destroyed"
+            ),
+            None,
+        )
+        faction = choice.faction
+        if (
+            city is None
+            or faction is None
+            or faction.kind != "rebel"
+            or not faction.active
+            or faction.cells != (city.cell,)
+        ):
+            raise ValueError("Introduce an active Rebel Group in the selected real city")
+        world = world_rules.update(
+            world,
+            factions=world.factions + (faction,),
+            npc_recruitment=world.npc_recruitment
+            + (
+                NpcRecruitment(
+                    id=source_work, source_work=source_work, city=city.id, faction=faction.id
+                ),
+            ),
+        )
+    elif rule == "strain.rebellion.low.6.1":
+        fields(choice, {"location", "faction"})
+        location, faction = choice.location, choice.faction
+        if (
+            location is None
+            or faction is None
+            or location.kind != "base"
+            or location.allegiance != "rebel"
+            or location.condition != "intact"
+            or faction.kind != "rebel"
+            or not faction.active
+            or faction.cells != (location.cell,)
+        ):
+            raise ValueError(
+                "Create an actual Rebel Base and the active Rebel Group controlling its square"
+            )
+        world = world_rules.update(
+            world, locations=world.locations + (location,), factions=world.factions + (faction,)
+        )
+    elif rule == "strain.budget.low.5.2":
+        fields(choice, {"rooms"})
+        occupants = [uid for room in choice.rooms for uid in room]
+        if (
+            any(len(room) < 2 for room in choice.rooms)
+            or len(set(occupants)) != len(occupants)
+            or set(occupants) != set(state.order)
+        ):
+            raise ValueError("Assign every current Girl to one room with at least one other Girl")
+        for room in choice.rooms:
+            for i, first in enumerate(room):
+                for second in room[i + 1 :]:
+                    key = pair_key(first, second)
+                    depth = state.bonds.get(key, 0)
+                    if depth == 2:
+                        for uid in (first, second):
+                            state.sheets[str(uid)].heat += 2
+                            state.sheets[str(uid)].revision += 1
+                    else:
+                        state.bonds[key] = depth + 1
+        world = world_rules.update(world, rooms=choice.rooms)
+    elif rule == "strain.budget.low.6.2":
+        fields(choice, {"target", "npc_jobs"})
+        npc = next((x for x in world.npcs if x.id == choice.target and x.alive and x.bonds), None)
+        if npc is None or not choice.npc_jobs or choice.npc_jobs == npc.jobs:
+            raise ValueError(
+                "Select an actual living NPC Bond and its changed post-firing playbook"
+            )
+        world = world_rules.update(
+            world,
+            npcs=tuple(
+                x.model_copy(update={"jobs": choice.npc_jobs}) if x.id == npc.id else x
+                for x in world.npcs
+            ),
+        )
+    elif rule == "strain.budget.high.2.2":
+        fields(choice, {"tags"})
+        expected = set(state.order) | {state.handler}
+        if len(choice.tags) != len(expected) or {x.owner for x in choice.tags} != expected:
+            raise ValueError(
+                "Every current Girl and the Handler receive one human-authored shortage Tag"
+            )
+        for selected in choice.tags:
+            if not selected.label.strip():
+                raise ValueError("Describe each actual supply-shortage Tag")
+            tag = TagState(
+                id=str(uuid5(NAMESPACE_URL, source_work + ":tag:" + str(selected.owner))),
+                label=selected.label,
+                giver=state.handler,
+                observers=tuple(state.order) + (state.handler,),
+            )
+            if selected.owner == state.handler:
+                state.handler_tags.append(tag)
+            else:
+                state.sheets[str(selected.owner)].tags.append(tag)
+                state.sheets[str(selected.owner)].revision += 1
+    elif rule == "strain.budget.high.3.2":
+        fields(choice, {"faction"})
+        faction = choice.faction
+        if (
+            faction is None
+            or faction.kind != "political"
+            or not faction.active
+            or not faction.cells
+        ):
+            raise ValueError(
+                "Define the actual political faction, its map area and sanction problems"
+            )
+        world = world_rules.update(
+            world,
+            factions=world.factions
+            + (faction.model_copy(update={"description": choice.account.strip()}),),
+        )
+    elif rule == "strain.budget.high.5.1":
+        fields(choice, {"target"})
+        city = next(
+            (
+                x
+                for x in world.locations
+                if x.id == choice.target and x.kind == "city" and x.condition != "destroyed"
+            ),
+            None,
+        )
+        if city is None:
+            raise ValueError("Choose an actual surviving city to fall into anarchy")
+        world = world_rules.update(
+            world,
+            locations=tuple(
+                x.model_copy(update={"blocked_by": x.blocked_by + (source_work,)})
+                if x.id == city.id
+                else x
+                for x in world.locations
+            ),
+        )
+    else:
+        raise ValueError("UNSUPPORTED_RULE: missing Strain effect application")
+    state.world = world
+    state.facts.append(
+        {
+            "kind": "strain_effect_applied",
+            "source_work": source_work,
+            "rule_id": rule,
+            "account": choice.account.strip(),
+        }
+    )
+    return state

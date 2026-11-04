@@ -55,6 +55,34 @@ saved dice or discard a recursive request. All table labels are selection aids,
 not claims that the selected effects are implemented. Exhaustion of all enabled
 unused Endgames remains a source gap; the system does not recycle slots or reroll.
 
+Additional world interpretations adopted under delegated authority:
+
+- `world_grid_steps`: a one-square move may use any of the eight neighboring
+  squares, and a Directed step must reduce grid distance toward its goal. The
+  Handler chooses among legal steps; arriving at an existing goal does not invent
+  a new destination. Book PDF 121–123 describes squares and eight neighboring
+  territory squares without defining diagonal travel. Orthogonal-only movement is
+  the alternative. Changing this affects future movement, not historical positions.
+- `gorgon_class_change`: “change type” for an Aggressive Gorgon outside a location
+  means an explicit behavior-Class change, retaining its body, existing Asset
+  damage/count, archetype Types, Core and reveal status. Book PDF 123 calls this
+  a type despite Aggressive being a Class on PDF 165. Literal archetype-Type
+  replacement is an alternative. New-Class Asset counts apply to creation, not
+  free retroactive resets; revised policy needs explicit pending-move review.
+- `gorgon_reappearance`: the returning Gorgon keeps existing Assets/damage and
+  gains exactly two intact Assets plus a distinct additional archetype Type. Its
+  rebuilt Core begins unexposed with an explicitly specified current Core plan.
+  Already multi-Type bodies retain their Types; Sprite followers inherit current
+  leader Types. Book PDF 145 omits old repair/Core timing and repeated multi-Type
+  cases. Fully refreshing the old body or replacing a secondary Type are
+  alternatives. Changes affect future revivals, preserving prior death receipts.
+
+These remain clarity-review items. Private world persistence of the initial Class
+0 is hidden from the player map, preserving the secrecy instruction on PDF 122.
+Actual Type headings include Growth and Parasite on PDF 175–176, even though the
+outline on PDF 168 lists only six. All eight are represented; this is a source
+inventory correction rather than a new campaign archetype.
+
 ## Changing a ruling
 
 1. Identify its stable registry ID/policy key and official source. Record the new

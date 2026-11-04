@@ -476,6 +476,11 @@ class InboxService:
                     primary, task_name = "Review Strain", "m3_strain"
                 elif kind == "doctor_credit":
                     primary, task_name = "Record credit sharing", "m3_off_duty_credit"
+                elif kind == "strain_event":
+                    from girlframe.engine.m3_strain_effects import SUPPORTED
+
+                    if json.loads(work["body_json"])["rule_id"] in SUPPORTED:
+                        primary, task_name = "Apply Strain consequences", "m3_strain_effect"
                 title = {
                     "punishment": "Required Punishment",
                     "doctor_frame_replacement": "Choose replacement Frame",

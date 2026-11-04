@@ -31,7 +31,7 @@ class FormSelect(discord.ui.Select["NativeForm"]):
         options = field.options[parent.option_page * 25 : parent.option_page * 25 + 25]
         super().__init__(
             placeholder=field.label[:100],
-            min_values=field.minimum,
+            min_values=0 if field.maximum > 1 and len(field.options) > 25 else field.minimum,
             max_values=min(field.maximum, len(options)),
             row=0,
             options=[
@@ -41,7 +41,22 @@ class FormSelect(discord.ui.Select["NativeForm"]):
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        self.parent_form.values[self.field.key] = tuple(self.values)
+        selected = tuple(self.values)
+        if self.field.maximum > 1 and len(self.field.options) > 25:
+            window = {x.value for x in self.options}
+            # Selections on another option page remain part of the same human choice.
+            previous = tuple(
+                x for x in self.parent_form.values.get(self.field.key, ()) if x not in window
+            )
+            selected = previous + selected
+            if len(selected) > self.field.maximum:
+                await reply(
+                    interaction,
+                    f"Choose at most {self.field.maximum} options across all pages.",
+                    self.parent_form,
+                )
+                return
+        self.parent_form.values[self.field.key] = selected
         await interaction.response.defer()
         await self.parent_form.present(interaction)
 

@@ -445,7 +445,19 @@ class InboxView(discord.ui.View):
                 allowed_mentions=discord.AllowedMentions.none(),
             )
 
-        if item.task == "m3_strain":
+        if item.task == "m3_strain_effect":
+            from girlframe.discord_adapter.m3_strain_effects import open_effect
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_strain import StrainService
+            from girlframe.services.m3_strain_effects import EffectService
+
+            await open_effect(
+                interaction,
+                EffectService(StrainService(OffDutyService(MissionService(self.service.store)))),
+                item.identity,
+            )
+        elif item.task == "m3_strain":
             from girlframe.discord_adapter.m3_strain import open_work
             from girlframe.services.m3_missions import MissionService
             from girlframe.services.m3_off_duty import OffDutyService
