@@ -184,7 +184,7 @@ unimplemented mechanics, player responses or an M3 release.
 | `/mission strain` | Handler chooses starting scenario, reviews triggers, confirms saved d6 rolls and chooses event columns; unsupported effects stay pending |
 | `/mission world`, `/mission map` | Handler setup/management and a player map that omits private world records |
 | `/mission repairs` | Actual shortage recovery, private per-Asset Handler quotes and owner-confirmed optional paid repairs |
-| `/mission requisitions` | Owned Asset Installment source/custom dropdowns, explicit one-Permission payment and private purchase receipts; further Requisitions remain unfinished |
+| `/mission requisitions` | Owned Asset Installment and Creature Comforts purchases, private receipts, actual qualifying Off-Duty opportunities and owned improvement scenes; further Requisitions remain unfinished |
 | `/mission regulations` | Private known behavioural rules; informed Handler explicitly records breaches and separate current/next-period discipline |
 | `/mission actors`, `/mission cast` | Owned actual-role previews, explicit scene casting and Director selection for Handler-rule responses; actual Handler Girl-rules Keep Your Head uses `/play` |
 | `/mission npc`, `/mission npc_bond` | Explicit NPC role claim or owner-confirmed link of a saved starting NPC Bond |

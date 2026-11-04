@@ -48,7 +48,9 @@ class RequisitionService:
                     x.model_dump(mode="json") for x in actor.assets if x.family == "frame"
                 ],
                 "purchases": [
-                    x.model_dump(mode="json") for x in state.requisitions if x.actor == actor.ref
+                    x.model_dump(mode="json")
+                    for x in state.requisitions
+                    if x.actor == actor.ref and x.kind == "asset_installment"
                 ],
                 "catalog": [
                     dict(key=frame + ":" + str(index), frame=frame, index=index, name=name)
@@ -123,9 +125,11 @@ class RequisitionService:
                 requisition_id=identity,
                 cost=1,
             )
+            receipt = state.requisitions[-1]
+            assert receipt.kind == "asset_installment"
             return {
                 "id": identity,
-                "asset_id": state.requisitions[-1].asset_id,
+                "asset_id": receipt.asset_id,
                 "permissions": state.sheets[actor.entity].permissions,
             }
 

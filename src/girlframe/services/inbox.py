@@ -547,6 +547,60 @@ class InboxService:
                             task="m3_actor_rejection",
                         )
                     )
+            from girlframe.engine.m3_requisition_state import ComfortBenefit
+
+            comfort_work = t.m3["m3_required_work"]
+            comforts = {
+                row["id"]: dict(row)
+                for row in connection.execute(
+                    sa.select(comfort_work)
+                    .where(
+                        comfort_work.c.campaign_id == self.store.campaign_id,
+                        comfort_work.c.kind == "creature_comforts",
+                    )
+                    .order_by(comfort_work.c.revision)
+                ).mappings()
+            }
+            for row in comforts.values():
+                try:
+                    benefit = ComfortBenefit.model_validate_json(
+                        json.dumps(json.loads(row["body_json"])["benefit"])
+                    )
+                except (ValueError, KeyError):
+                    raise WorkflowError(
+                        "Saved Creature Comforts work needs source recovery."
+                    ) from None
+                owner = row["owner_id"] == user
+                humans = {x.controller for x in benefit.scene.roles} if benefit.scene else set()
+                if not owner and viewer.user_id not in humans:
+                    continue
+                answered = benefit.scene and viewer.user_id in benefit.scene.acknowledgements
+                needs = row["state"] != "resolved" and (owner or not answered)
+                items.append(
+                    InboxItem(
+                        "comforts:" + row["id"],
+                        "comforts",
+                        row["id"],
+                        row["revision"],
+                        "off_duty",
+                        "Your Creature Comforts benefit"
+                        if owner
+                        else "Your improvement scene attendance",
+                        "Owned Off-Duty opportunity",
+                        "pending"
+                        if needs
+                        else "resolved"
+                        if row["state"] == "resolved"
+                        else "waiting",
+                        needs,
+                        False,
+                        "Record only your own scene choice, attendance or Asset.",
+                        "The paid source and actual qualifying roll remain saved. "
+                        "Other humans supply their own attendance.",
+                        "Review your next step" if needs else None,
+                        task="m3_comforts" if needs else None,
+                    )
+                )
             from girlframe.engine.m3_missions import Mission
 
             current_handler = handler.current(connection)[1].handler_id
@@ -690,6 +744,8 @@ class InboxService:
                     continue
                 primary, task_name = None, None
                 kind = work["kind"]
+                if kind == "creature_comforts":
+                    continue
                 context_scene = (
                     json.loads(work["body_json"]).get("context_scene")
                     if kind == "punishment"

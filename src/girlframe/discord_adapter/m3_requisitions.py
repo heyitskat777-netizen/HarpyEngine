@@ -9,22 +9,87 @@ from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.labels import entity_label
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
+from girlframe.discord_adapter.m3_comforts import open_comfort
 from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_requisition_state import Installation
+from girlframe.services.m3_comforts import ComfortService
 from girlframe.services.m3_requisitions import RequisitionService
 
 
 async def open_requisitions(interaction: discord.Interaction, service: RequisitionService) -> None:
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.view, viewer)
+    comforts = ComfortService(service.game)
+    opportunities = await asyncio.to_thread(comforts.list, viewer)
+    paid = {x["id"]: x for x in await asyncio.to_thread(comforts.receipts, viewer)}
     purchases = {x["id"]: x for x in data["purchases"]}
     options = (("install", "Buy an Asset Installment — 1 Permission"),) + tuple(
         (key, "Saved Asset purchase " + key[:8]) for key in purchases
     )
+    options += (("buy-comforts", "Buy Creature Comforts — 1 Permission"),)
+    options += tuple(
+        (
+            "comfort:" + x["id"],
+            "Creature Comforts — " + ("your benefit" if x["own"] else "your scene attendance"),
+        )
+        for x in opportunities
+    )
+    options += tuple(
+        ("paid-comfort:" + key, "Paid Creature Comforts — " + x["state"].replace("_", " "))
+        for key, x in paid.items()
+        if x["benefit_id"] is None
+    )
 
     async def choose(current: discord.Interaction, token: str) -> None:
+        if token.startswith("comfort:"):
+            await open_comfort(current, comforts, token[8:])
+            return
+        if token.startswith("paid-comfort:"):
+            receipt = paid[token[13:]]
+            await reply(
+                current,
+                "**Your paid Creature Comforts request**\n"
+                "1 Permission paid. Waiting for your next actual 8+ ordinary Go Off-Duty roll.\n"
+                + clean(receipt["account"]),
+            )
+            return
+        if token == "buy-comforts":
+
+            async def pay(response: discord.Interaction, values: dict[str, Any]) -> str:
+                outcome = await asyncio.to_thread(
+                    comforts.buy_comforts,
+                    viewer_from_interaction(response),
+                    str(response.id),
+                    ActorRef.model_validate(data["actor"]),
+                    data["source_sha256"],
+                    values["account"],
+                )
+                return (
+                    "Creature Comforts paid: 1 Permission. Your saved request waits "
+                    "for your next actual 8+ Go Off-Duty roll. Receipt: " + str(outcome["id"])
+                )
+
+            form = NativeForm(
+                viewer.user_id,
+                "Buy Creature Comforts",
+                "Pay 1 Permission for the optional improvement scene "
+                "on your next actual 8+ ordinary Go Off-Duty roll. "
+                "The actual scene precedes writing a new Girl Asset. "
+                "An unused opportunity can be declined without a refund.",
+                [
+                    Field("account", "What improvement are you requesting?", paragraph=True),
+                    Field(
+                        "confirm",
+                        "Confirm payment",
+                        (("yes", "Pay 1 Permission for Creature Comforts"),),
+                    ),
+                ],
+                pay,
+            )
+            await reply(current, form.text(), form)
+            return
         if token in purchases:
             receipt = purchases[token]
             actual = next((x for x in data["frame_assets"] if x["id"] == receipt["asset_id"]), None)
@@ -48,6 +113,15 @@ async def open_requisitions(interaction: discord.Interaction, service: Requisiti
         ) + (("custom", "Write my own ordinary Frame Asset"),)
 
         async def select_asset(selected: discord.Interaction, source: str) -> None:
+            if len(data["frame_assets"]) >= 5 and not any(
+                not x["void"] for x in data["frame_assets"]
+            ):
+                await reply(
+                    selected,
+                    "Your Frame is at its Asset limit and every Frame Asset is Void. "
+                    "Asset Installment needs a non-Void Frame Asset to replace.",
+                )
+                return
             custom = source == "custom"
             fields = [Field("name", "Name your new Frame Asset")] if custom else []
             fields += [

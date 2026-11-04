@@ -276,6 +276,10 @@ def sync_finished_roll(
 
     synchronize(c, game.store, updated, event)
 
+    from girlframe.services.m3_comforts import synchronize as comfort_opportunities
+
+    comfort_opportunities(c, game.store, updated, event)
+
 
 def resume(
     game: "GameService", viewer: GuildViewer, key: str, identity: str, expected: int

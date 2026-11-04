@@ -595,6 +595,55 @@
       "change_impact": "A revised dispute procedure needs explicit pending-proposal migration and source-correct actual actor ranks. Preserve applied modifiers and already recorded human decisions.",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "comforts-qualification",
+      "policy_key": "comforts_qualification",
+      "summary": "Creature Comforts waits for an actual future ordinary Go Off-Duty roll of 8 or more after post-roll modifiers. Void Observation does not consume that opportunity.",
+      "source": "Book PDF 16 / printed p.14; PDF 28 / printed p.26; owner delegated authority",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "The source expressly names rolling 8+ to Go Off-Duty. Observation has its own replacement Play and result table, so retaining the paid benefit until the named roll preserves that trigger.",
+      "alternatives": [
+        "Treat an 8+ Void Observation replacement as qualifying too"
+      ],
+      "implementation_note": "Use actual raw-roll state to prove the purchase existed before dice, the actual final receipt/action and original character. Low rolls and Observation leave the paid purchase waiting; a queued opportunity requires the owners actual scene or explicit decline.",
+      "change_impact": "Changing this interpretation needs review of waiting purchases and unfinished opportunities. Preserve known qualifying receipts, actual scenes, paid costs, granted Assets and human decisions.",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "comforts-stacking",
+      "policy_key": "comforts_stacking",
+      "summary": "Each separately paid Creature Comforts purchase has one optional opportunity on its next actual qualifying ordinary Go Off-Duty roll. Multiple paid purchases may qualify on the same roll.",
+      "source": "Book PDF 16 / printed p.14; PDF 28 / printed p.26; owner delegated authority",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "Each receipt pays for its own future benefit. The text gives no limit of one outstanding purchase or one benefit irrespective of how many Permissions were paid. Asset limits still apply to every actual grant.",
+      "alternatives": [
+        "Limit the player to one pending purchase or one opportunity per recovery period"
+      ],
+      "implementation_note": "Bind each immutable paid source once to one real roll and one owned improvement scene. Never multiply an unpaid source; each granted Asset records its purchase and remains subject to the Girl Asset cap and non-Void replacement rule.",
+      "change_impact": "A new stacking limit must address already paid waiting purchases explicitly, without deleting costs, fabricating refunds or reusing known rolls for extra grants.",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "comforts-decline",
+      "policy_key": "comforts_decline",
+      "summary": "Declining the optional Creature Comforts scene at its actual next qualifying roll consumes that paid opportunity without refund; it grants no Asset or scene.",
+      "source": "Book PDF 16 / printed p.14; owner delegated authority",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "The purchase pays for an opportunity at the next named qualifying roll, and the scene is optional. The source provides no refund or repeated opportunity after an explicit decline. Silence still leaves the decision pending.",
+      "alternatives": [
+        "Keep an unused paid benefit waiting for a later qualifying roll",
+        "Refund a declined optional scene"
+      ],
+      "implementation_note": "Disclose the cost and no-refund consequence before the owner confirms decline. Preserve the original cost, qualification and explicit owned decision. Never infer decline from absent humans or a timer.",
+      "change_impact": "A different campaign interpretation needs explicit treatment of declined opportunities, preserving their real costs and decisions. Do not fabricate refunds or retroactively grant Assets.",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -953,14 +1002,17 @@
         "heading": "Girl Requisitions"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_comforts.py",
+        "tests/rules/test_comfort_service.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -987,7 +1039,9 @@
         "tests/rules/test_mission_service.py",
         "tests/rules/test_repair_service.py",
         "tests/rules/test_requisitions.py",
-        "tests/rules/test_requisition_service.py"
+        "tests/rules/test_requisition_service.py",
+        "tests/rules/test_comforts.py",
+        "tests/rules/test_comfort_service.py"
       ],
       "m2_play_id": null,
       "module": "core"

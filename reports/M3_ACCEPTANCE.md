@@ -1090,3 +1090,66 @@ checkpoint **707b6e8d8ffe1d4741a80f6c1e3272d3129b2a24** is pushed; GitHub CI pas
 run **41860328516**. The original frozen M2 process remains the only observed bot,
 PID47656. No live migration, policy change, M3 deployment, environment publication,
 independent/human acceptance or M3-ready claim applies. Development continues.
+
+## Creature Comforts: paid sources, actual qualifiers and owned improvement scenes
+
+Creature Comforts now charges the approved one Permission for an immutable original
+character-bound request. Each source waits for its actual next ordinary Go Off-Duty
+8+ after post-roll modifiers. The hook proves the request existed in the raw-roll
+canonical snapshot, has a real matching payment event/actor/cost, and matches the
+actual completed action, stable receipt and final period total. Low rolls and Void
+Observation leave it waiting. Separate paid sources can qualify once on one real
+roll; buying after known dice cannot retroactively use that roll, including after
+abort/resume. This queues actual owned optional decisions, not free Assets.
+
+The owner declines the unused opportunity, or records an actual improvement scene
+in its bound cast at a surviving Foundation base. Selected existing world actors
+must already be at that base; no movement/custody/consent is invented. Each human
+attests their own historical participation. One human with two actual roles does
+not produce another human response. Only after actual attendance does the owner
+confirm a fresh ordinary Girl Asset reflecting the scene, with real caps and
+non-Void replacement. A recorded scene requires the Asset decision before more
+owned Plays. OOC attendance can be saved during safety pause; mechanical grants
+wait for resume. Paid cost, pending opportunity and prior human responses survive
+pause, stale forms, failure, concurrency, restart and rebuild.
+
+Native purchase, scene/role/location, attendance, explicit decline and Asset
+controls plus the requests inbox provide the owned workflow. Counterparties get
+the shared scene and their own role/attendance, without another sheet, purchase
+account, exact qualifying total, unknown role references or private Asset details.
+A same-body draft edit does not erase an earned opportunity; a new body cannot take
+it. Completed history remains readable after period close. Ordinary-roll reading,
+per-paid-source stacking and explicit decline without refund are recorded centrally
+and in the registry as delegated recommendations requiring clarity review.
+
+Full suite: **1122 passed in 272.98s**, no failures/errors/skips;
+`var/m3-creature-comforts-pytest.xml`. Final focused integration/ordinary/Observation/
+inbox run: **95 passed in 56.83s**, `var/m3-comforts-final-focused.xml`, before the
+final extension that also closes the second period and reads completed history.
+Boundary run: **19 passed in 21.80s**, `var/m3-comforts-boundaries.xml`; preceding
+broad run **64 passed in 30.88s**, initial service/reducer/purchase run **35 passed
+in 19.53s**, initial reducer/purchase run **38 passed in 8.53s**. No failing pytest
+case preceded these Creature Comforts checks. Type annotations and formatting were
+corrected before the full suite; Ruff passed, **332 files** formatted, mypy passed
+for **175 source files**.
+
+The full suite includes the extended actual two-period trace: paid request, low
+roll, real harsh scene and each own attendance, recovery/Handler review/world end,
+an intervening mission with each actual acceptance/dispatch/end and real Dog
+Punishment, next actual Strain preparation and qualifying roll, improvement/Asset,
+recovery and second period close, then historical review. Other cases prove Tag
+modifiers crossing either side of 8+, an extra purchase after a known aborted roll,
+rollback after the second queued opportunity, one concurrent grant, policy removal,
+OOC safety attendance and source/character preservation. These are synthetic human
+inputs and offline evidence, not fabricated player acceptance.
+
+Registry remains RULES_SUBSET: 473 entries, 436 required core, **57 subsets, 416
+unimplemented**, zero independent verifications. Public scan: **414 publishable
+files**, all **40 original manifest entries**, zero findings. Asset Installment
+checkpoint **1d3d1a66409964a2a7715b44a5a946e14eec1f2a** is pushed; GitHub CI passed,
+run **41863436331**. The original bot session still reports Running v0.1.0, with
+exactly one observed PID47656; all **88 frozen source hashes** match. No live
+migration, M3 policy/deployment, environment publication or human/independent
+acceptance applies. M3 still needs the remaining shared Plays, full playbooks,
+physical/Core/control/career state, further Requisitions, five Punishments,
+remaining Strain cells/Endgames and source/recovery/migration acceptance work.

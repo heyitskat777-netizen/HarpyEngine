@@ -55,11 +55,22 @@ class ActorService:
         self.missions, self.store, self.game = missions, missions.store, missions.game
 
     def _actor(
-        self, c: Connection, viewer: GuildViewer, state: GameState, ref: ActorRef
+        self,
+        c: Connection,
+        viewer: GuildViewer,
+        state: GameState,
+        ref: ActorRef,
+        *,
+        require_current_profile: bool = True,
     ) -> ActorView:
         self.game.authorize(c, viewer, game=False)
         try:
-            actor = rules.resolve(state, ref, profiles(c, self.store.campaign_id))
+            actor = rules.resolve(
+                state,
+                ref,
+                profiles(c, self.store.campaign_id),
+                require_current_profile=require_current_profile,
+            )
         except ValueError:
             raise WorkflowError(
                 "This actual actor is unavailable or needs source/profile recovery."
@@ -118,12 +129,20 @@ class ActorService:
                 "actor": self._actor(c, viewer, state, ref).model_dump(mode="json"),
             }
 
-    def known(self, viewer: GuildViewer, perspective: ActorRef) -> dict[str, Any]:
+    def known(
+        self,
+        viewer: GuildViewer,
+        perspective: ActorRef,
+        *,
+        require_current_profile: bool = True,
+    ) -> dict[str, Any]:
         """Known references only; the particular Play must still validate legal targets."""
         with self.store.engine.connect() as c:
             self.game.authorize(c, viewer, game=False)
             state = load_state(c, self.store.campaign_id)
-            actor = self._actor(c, viewer, state, perspective)
+            actor = self._actor(
+                c, viewer, state, perspective, require_current_profile=require_current_profile
+            )
             bindings = profiles(c, self.store.campaign_id)
             refs = [perspective]
             refs.extend(
@@ -166,7 +185,9 @@ class ActorService:
             known = []
             for ref in dict.fromkeys(refs):
                 try:
-                    target = rules.resolve(state, ref, bindings)
+                    target = rules.resolve(
+                        state, ref, bindings, require_current_profile=require_current_profile
+                    )
                 except ValueError:
                     continue
                 known.append(

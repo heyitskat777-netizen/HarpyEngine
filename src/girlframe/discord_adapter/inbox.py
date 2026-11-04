@@ -562,6 +562,14 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_missions import MissionService
 
             await open_mission(interaction, MissionService(self.service.store), item.identity)
+        elif item.task == "m3_comforts":
+            from girlframe.discord_adapter.m3_comforts import open_comfort
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_comforts import ComfortService
+
+            await open_comfort(
+                interaction, ComfortService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_actor_recovery":
             from girlframe.discord_adapter.m3_actor_plays import open_recovery
             from girlframe.services.m2_game import GameService

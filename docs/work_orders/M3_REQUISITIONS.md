@@ -40,3 +40,35 @@ policy/pause, concurrent purchase/replay, injected rollback, restart/rebuild,
 private projections and owned paginated native controls. Delayed benefits also
 need actual qualifying receipts, low rolls, known-roll recovery, per-human scene
 attestation, declined opportunities and preservation across period boundaries.
+
+## Implemented Creature Comforts checkpoint
+
+Each paid source waits for its actual next ordinary Go Off-Duty 8+ result after
+post-roll modifiers. Binding proves the purchase existed in the original raw-roll
+state and has its real paid event, then checks the actual completed action, receipt
+and final period total. Purchases after known dice cannot claim that old roll.
+Low results and Void Observation leave the paid order waiting. Separate purchases
+have separate opportunities; original source IDs remain distinct on a shared roll.
+
+The owner explicitly declines an unused opportunity, or records an actual
+improvement scene with the original Girl and known actual cast roles at a surviving
+Foundation base. Existing world actors must already be at that base. Casting does
+not move them. Each human supplies their own historical attendance; one human
+controlling two roles supplies one human response. This OOC attendance can be saved
+during safety pause; writing the actual Asset waits for resume and a separate,
+fresh owner confirmation. A recorded improvement creates immediate owned work
+before further Plays. Actual Girl Asset caps/non-Void replacement still apply.
+
+The ordinary-roll reading, per-purchase stacking and explicit decline without a
+refund are registered delegated recommendations with alternatives, clarity-review
+and change-impact notes. Private native controls and the requests inbox expose
+each owned next step without another sheet, private paid account or unknown role.
+Completed benefits remain readable after actual period close. No payment, roll,
+attendance or Asset is repeated on retry, restart, rollback or rebuild.
+
+The implementation includes an actual two-period regression: paid request, low
+roll, harsh scene and each own attestation, recovery, Handler review/world end,
+intervening accepted/dispatched/completed mission and real Dog Punishment, next
+actual Strain preparation and qualifying roll, owned improvement/Asset, recovery
+and period close, then historical review. Other Requisitions and full career,
+physical/control/playbook interactions still require work within M3.
