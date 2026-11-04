@@ -24,6 +24,9 @@ class Rulings(BaseModel):
     doctor_credit_recipients: Literal["current_pilots"]
     sedation_duration: Literal["current_off_duty_period"]
     sedation_identity_replacement: Literal["retain_slot_lock"]
+    strain_repeat_timing: Literal["next_period_start"]
+    strain_cascade_count: Literal["prior_occurrences_same_track"]
+    doctor_start_order: Literal["credit_before_budget"]
 
 
 class Approval(BaseModel):

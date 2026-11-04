@@ -17,6 +17,7 @@ from girlframe.engine.playbooks import FRAME_TYPES
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_missions import MissionService
+from girlframe.services.m3_work import related
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -283,10 +284,10 @@ class ReplacementService:
                 package_id=package_id,
                 game_revision=state.revision,
             )
-            mission = self.missions._mission(c, root["mission_id"])
-            self.missions._work(
+            related(
                 c,
-                mission,
+                self.store,
+                root,
                 package_id,
                 handler,
                 viewer.user_id,
@@ -297,9 +298,10 @@ class ReplacementService:
             if chosen.court_target:
                 court_id = str(uuid4())
                 body["court_id"] = court_id
-                self.missions._work(
+                related(
                     c,
-                    mission,
+                    self.store,
+                    root,
                     court_id,
                     chosen.court_target,
                     viewer.user_id,
@@ -531,9 +533,10 @@ class ReplacementService:
             self._save(c, quote, event, body | {"applied_event": event}, state="resolved")
             frames = [x for x in sheet.assets if x.family == "frame"]
             if frames and all(x.void for x in frames):
-                self.missions._work(
+                related(
                     c,
-                    self.missions._mission(c, root["mission_id"]),
+                    self.store,
+                    root,
                     str(uuid4()),
                     self.missions._current_handler(c),
                     viewer.user_id,

@@ -182,6 +182,57 @@
       "revision": 1,
       "implementation_note": "M2 repeated-Tag embrace and Paired rename retain the slot lock; optional unmark selectors exclude locked Identities.",
       "change_impact": "Apply a revised choice policy only to future events after updating reducers and tests; explicitly migrate pending locks if requested, keeping historical receipts unchanged."
+    },
+    {
+      "id": "strain-repeat-timing",
+      "summary": "A repeated identical chosen track/severity/row/column flags a severity switch at the next Off-Duty start; it does not reroll the saved current event.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Book PDF 142, 144\u2013145, 147\u2013148, 150\u2013151 / printed pp.140, 142\u2013143, 145\u2013146, 148\u2013149; delegated owner authority",
+      "authority": "delegated_recommendation",
+      "rationale": "Severity changes occur at a period boundary. Retaining the chosen event avoids an unprinted automatic reroll and preserves immutable receipts.",
+      "alternatives": [
+        "Switch severity immediately and reroll",
+        "Switch severity immediately while keeping the event"
+      ],
+      "policy_key": "strain_repeat_timing",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "The pure scheduler records a pending repeat flag and consumes it once at the next period start.",
+      "change_impact": "Changing timing requires migrating pending repeat flags and queue policy explicitly; preserve past rolls and already selected effects."
+    },
+    {
+      "id": "strain-cascade-event-count",
+      "summary": "High result 6 column 2 counts all prior selected occurrences on its own track across the campaign, excluding itself; two or fewer queues one Low and one High roll, otherwise an unused Endgame.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Book PDF 145, 148, 151 / printed pp.143, 146, 149; delegated owner authority",
+      "authority": "delegated_recommendation",
+      "rationale": "The text asks how many other events have occurred. Counting persistent occurrences gives a stable auditable threshold and finite recursive escalation.",
+      "alternatives": [
+        "Count only distinct table slots",
+        "Count only events in this Off-Duty cycle"
+      ],
+      "policy_key": "strain_cascade_count",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Stable parent-linked recursive requests and Endgame choices survive serialization and transactional history. Specific event effects remain required work.",
+      "change_impact": "A revised counting window affects future threshold checks; preserve already created child requests and explicitly review any changed pending queue."
+    },
+    {
+      "id": "doctor-off-duty-trigger-order",
+      "summary": "The current DoctorDoctor owner records credit/no-trigger before the Budget start review. High Budget Obsolescence applies once at the resulting starting severity.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Book PDF 71, 142, 150\u2013151 / printed pp.69, 140, 148\u2013149; delegated owner authority",
+      "authority": "delegated_recommendation",
+      "rationale": "Resolve the owner's earned credit declaration before an eight-box Budget trigger can scrap the Frame; neither a missing owner nor a replacement invents their answer.",
+      "alternatives": [
+        "Record a deferred pre-scrap credit snapshot",
+        "Resolve Budget first and separately migrate any old-frame credit task"
+      ],
+      "policy_key": "doctor_start_order",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "The preparation service waits for actual owner credit records, marks Obsolescence atomically, and queues context-bound compulsory replacement at eight.",
+      "change_impact": "Changing the ordering requires explicit migration of pending old-Frame credit work and origin-bound replacement tasks; do not recalculate historical Permission grants."
     }
   ],
   "entries": [
@@ -2968,7 +3019,8 @@
         "tests/rules/test_replacement.py",
         "tests/rules/test_replacement_service.py",
         "tests/rules/test_replacement_ui.py",
-        "tests/rules/test_off_duty_service.py"
+        "tests/rules/test_off_duty_service.py",
+        "tests/rules/test_strain_service.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -6600,14 +6652,18 @@
         "heading": "Strain"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_strain.py",
+        "tests/rules/test_strain_service.py",
+        "tests/rules/test_strain_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

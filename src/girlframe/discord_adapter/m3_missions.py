@@ -294,4 +294,29 @@ def register_missions(
         except WorkflowError as error:
             await reply(interaction, str(error))
 
+    @group.command(name="off_duty", description="Begin or resume saved Off-Duty preparation")
+    async def off_duty(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_off_duty import open_period
+        from girlframe.services.m3_off_duty import OffDutyService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_period(interaction, OffDutyService(service))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @group.command(
+        name="strain", description="Choose initial Strain or review saved start work (Handler)"
+    )
+    async def strain(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_strain import open_strain
+        from girlframe.services.m3_off_duty import OffDutyService
+        from girlframe.services.m3_strain import StrainService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_strain(interaction, StrainService(OffDutyService(service)))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
     tree.add_command(group, guild=discord.Object(id=guild_id))

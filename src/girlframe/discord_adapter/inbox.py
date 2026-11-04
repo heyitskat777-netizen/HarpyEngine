@@ -18,6 +18,7 @@ from girlframe.services.onboarding import WorkflowError
 CATEGORY_LABELS = {
     "all": "All request types",
     "missions": "Mission offers & consequences",
+    "off_duty": "Off-Duty, recovery & Strain",
     "plays": "Pending Plays",
     "bonds": "Starting Bonds",
     "mentors": "Mentor coordination",
@@ -444,7 +445,26 @@ class InboxView(discord.ui.View):
                 allowed_mentions=discord.AllowedMentions.none(),
             )
 
-        if item.task == "m3_replacement":
+        if item.task == "m3_strain":
+            from girlframe.discord_adapter.m3_strain import open_work
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_strain import StrainService
+
+            await open_work(
+                interaction,
+                StrainService(OffDutyService(MissionService(self.service.store))),
+                item.identity,
+            )
+        elif item.task == "m3_off_duty_credit":
+            from girlframe.discord_adapter.m3_off_duty import open_credit
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+
+            await open_credit(
+                interaction, OffDutyService(MissionService(self.service.store)), item.identity
+            )
+        elif item.task == "m3_replacement":
             from girlframe.discord_adapter.m3_replacement import open_replacement
             from girlframe.services.m3_missions import MissionService
             from girlframe.services.m3_replacement import ReplacementService

@@ -35,6 +35,9 @@ separate: a ruling never makes an unimplemented rule executable or verified.
 | `doctor_credit_recipients` | Current canonical Pilots only; another Pilot can receive it even when its player is offline | Book PDF 16 defines Pilot rewards, while PDF 71 says someone else; this uses the core reward scope |
 | `sedation_duration` | Locks last through that specific Off-Duty period, including pauses/restarts; clear at its explicit end | Book PDF 17 omits duration; a bounded period fits Minor discipline without inventing permanent treatment costs |
 | `sedation_identity_replacement` | A Tag replacing a Sedated Identity keeps its mark and period lock; renaming the protected Paired slot also retains it. An explicit printed removal still removes that Identity | Book PDF 17 says these Identities cannot be unmarked during Off-Duty, without addressing replacement; retaining the slot restriction prevents a cosmetic replacement from becoming an extra recovery |
+| `strain_repeat_timing` | A repeat is the same chosen track/severity/row/column. It flags a severity change at the next period start; retain the current receipt and chosen event | Book PDF 142, 144–145, 147–148 and 150–151 say severity changes at the start and list repeats, without specifying reroll timing |
+| `strain_cascade_count` | Count earlier selected occurrences on that same track across the campaign, including Low/High, repeats and recursive events, excluding the current event. At two or fewer, queue one Low and one High roll; otherwise queue an unused Endgame choice | Book PDF 145, 148 and 151 say “other” events without defining the counting window; persistent occurrences preserve a reproducible threshold |
+| `doctor_start_order` | DoctorDoctor owners record credit/no-trigger before Budget start review. Apply High Budget Obsolescence once using the resulting start severity | Book PDF 71 has simultaneous Off-Duty triggers; this preserves the earned credit record before a possible compulsory scrap changes the Frame |
 
 The DoctorDoctor recipient and Sedation duration recommendations were explicitly accepted by the owner's instruction
 to use all recommendations going forward. Runtime integration is tracked by the
@@ -43,6 +46,14 @@ The replacement interpretation uses that delegated authority and remains flagged
 for clarification. Its alternative is to let replacement create an unlocked slot.
 Changing it affects future replacement/rename events and UI selections; existing
 receipts and lock provenance must not be rewritten silently.
+The three Strain/Doctor ordering decisions also use delegated authority and remain
+flagged for clarity review. Alternatives include changing severity immediately
+after a repeat, counting only distinct events or only the current cycle, and
+capturing a deferred pre-scrap credit snapshot. Revising these changes future
+queue ordering, thresholds and pending-work interpretation; it must not reroll
+saved dice or discard a recursive request. All table labels are selection aids,
+not claims that the selected effects are implemented. Exhaustion of all enabled
+unused Endgames remains a source gap; the system does not recycle slots or reroll.
 
 ## Changing a ruling
 

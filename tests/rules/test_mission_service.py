@@ -50,6 +50,9 @@ def service(store, girl="MOCKINGBIRD", frame="JANUS-B"):
                 doctor_credit_recipients="current_pilots",
                 sedation_duration="current_off_duty_period",
                 sedation_identity_replacement="retain_slot_lock",
+                strain_repeat_timing="next_period_start",
+                strain_cascade_count="prior_occurrences_same_track",
+                doctor_start_order="credit_before_budget",
             ),
         }
     )

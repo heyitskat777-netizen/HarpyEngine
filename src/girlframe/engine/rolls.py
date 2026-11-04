@@ -17,6 +17,15 @@ class OsDice:
         return secrets.randbelow(6) + 1, secrets.randbelow(6) + 1
 
 
+class D6Source(Protocol):
+    def roll_d6(self) -> int: ...
+
+
+class OsD6:
+    def roll_d6(self) -> int:
+        return secrets.randbelow(6) + 1
+
+
 class RollReceipt(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 

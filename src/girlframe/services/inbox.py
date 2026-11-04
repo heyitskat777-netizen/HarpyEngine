@@ -472,6 +472,10 @@ class InboxService:
                     primary, task_name = "Review replacement", "m3_replacement"
                 elif kind in ("doctor_obsolescence", "princess_mission_end"):
                     primary, task_name = "Review reaction", "m3_reaction"
+                elif kind in ("off_duty_strain_start", "strain_roll", "strain_endgame"):
+                    primary, task_name = "Review Strain", "m3_strain"
+                elif kind == "doctor_credit":
+                    primary, task_name = "Record credit sharing", "m3_off_duty_credit"
                 title = {
                     "punishment": "Required Punishment",
                     "doctor_frame_replacement": "Choose replacement Frame",
@@ -479,14 +483,27 @@ class InboxService:
                     if work["state"] == "quoted"
                     else "Define replacement package",
                     "frame_replacement_court": "Confirm replacement Court role",
-                }.get(kind, "Required mission reaction")
+                    "off_duty_strain_start": "Strain start review and required effects",
+                    "strain_roll": "Saved Strain roll / event choice",
+                    "strain_endgame": "Choose an unused Strain Endgame",
+                    "strain_event": "Required Strain event effects",
+                    "strain_endgame_effect": "Required Endgame effects",
+                    "doctor_credit": "DoctorDoctor credit sharing",
+                    "off_duty_handler_scene": "Required Handler Off-Duty scene",
+                    "off_duty_status_review": "End-of-Off-Duty Status review",
+                }.get(
+                    kind,
+                    "Required Off-Duty work"
+                    if work["off_duty_id"]
+                    else "Required mission reaction",
+                )
                 items.append(
                     InboxItem(
                         "mission-work:" + work["id"],
                         "mission_work",
                         work["id"],
                         work["revision"],
-                        "missions",
+                        "off_duty" if work["off_duty_id"] else "missions",
                         title,
                         label(work["subject_id"]),
                         "pending",

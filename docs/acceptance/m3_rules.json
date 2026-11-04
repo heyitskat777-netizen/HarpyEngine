@@ -29,7 +29,10 @@
         "tests/rules/test_core.py::test_off_duty_only_unmarks_one_and_preserves_sedation_locks",
         "tests/rules/test_off_duty.py",
         "tests/rules/test_off_duty_service.py",
-        "tests/rules/test_sedation_m2.py"
+        "tests/rules/test_sedation_m2.py",
+        "tests/rules/test_strain.py",
+        "tests/rules/test_strain_service.py",
+        "tests/rules/test_strain_ui.py"
       ],
       "evidence": [
         {
@@ -45,6 +48,13 @@
           "result": "622 passed in 69.85s",
           "artifact": "var/m3-off-duty-foundation-pytest.xml",
           "limitation": "Strain preparation, full source interactions, cycle Discord integration and independent/human acceptance remain incomplete"
+        },
+        {
+          "scope": "partial_strain_scheduler_and_native_preparation_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-strain-scheduler-pytest.xml",
+          "result": "733 passed in 81.08s",
+          "artifact": "var/m3-strain-scheduler-pytest.xml",
+          "limitation": "Selecting all 72 source columns is not implementation of their effects. Typed world/sheet effects, complete Off-Duty flow, independent/human acceptance remain pending."
         }
       ]
     },

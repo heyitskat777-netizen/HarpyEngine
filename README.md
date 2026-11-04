@@ -81,8 +81,9 @@ live installation only as part of a reviewed deployment with its matching code;
 the existing frozen bot continues on `0011` during M3 development.
 `0013` adds durable Off-Duty periods and append-only period history. Required work
 belongs to exactly one real mission or Off-Duty period; existing mission records
-are preserved. This is an offline foundation, without an enabled Off-Duty command
-or a generic resolver for pending Strain. It does not migrate the running bot.
+are preserved. Development controls support Strain/Off-Duty preparation and owned
+credit declarations, with no generic resolver for pending Strain effects. These
+remain under the M3 release gate and are not deployed to the running bot.
 `alembic downgrade base` destroys application tables: use only on
 throwaway test databases. Never downgrade real campaign data to roll back code.
 
@@ -173,6 +174,8 @@ unimplemented mechanics, player responses or an M3 release.
 | `/mission discipline` | Assigned inflictor/affected player; native Punishment controls, Handler consultation and owned Paired Heat choices |
 | `/mission reactions` | Assigned Handler/affected player; saved DoctorDoctor and Princess mission-end work |
 | `/mission replacement` | Player proposal, Handler-defined free package, separate Court recipient response and exact player confirmation |
+| `/mission off_duty` | Saved preparation, owned credit declarations and required-work selectors; M3 effects remain gated |
+| `/mission strain` | Handler chooses starting scenario, reviews triggers, confirms saved d6 rolls and chooses event columns; unsupported effects stay pending |
 | `/character activate`, `/character state` | Explicit activation/public fields; current private state with paging |
 | `/character followthrough`, `/character recover` | Owner follow-through and source-backed moment-alone recovery |
 | `/campaign scene_bind`, `scene_join`, `scene_leave`, `scene_close` | Staff-bound scenes, explicit participation and safe close |

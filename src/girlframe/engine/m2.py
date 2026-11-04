@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from girlframe.engine.creation_review import ReviewSheet
 from girlframe.engine.identity import Snowflake
 from girlframe.engine.m3_frame_state import FrameRuntime
+from girlframe.engine.m3_strain_state import State as StrainState
 
 RULESET: Literal["girlframe-m2-pilot-1"] = "girlframe-m2-pilot-1"
 PLAY_IDS = ("keep_your_head", "check_sensors", "engage", "disobey_orders", "flirt")
@@ -122,6 +123,7 @@ class GameState(Model):
     obligations: list[Obligation] = Field(default_factory=list)
     facts: list[dict[str, str]] = Field(default_factory=list)
     intense_tag_bonus: int | None = None
+    strain: StrainState | None = None
 
 
 class PlayInput(Model):

@@ -11,8 +11,9 @@ must remain separate. Ancillary mechanics stay disabled.
   projection rebuild and migration `0013` preserving existing mission records.
 - Handler-only start preparation, current membership/review/pause checks, no
   overlapping period/unfinished mission/pending scene Play, and no new mission
-  offer/dispatch while a period remains open. These services are not wired into
-  a released Discord command.
+  offer/dispatch while a period remains open. Development-only native commands
+  `/mission off_duty` and `/mission strain` and the private Off-Duty inbox category
+  expose preparation/owned declarations; no live M3 release has been deployed.
 - Ordinary pure Play reducers retain actual 2d6 and current Status modifier,
   excluding Heat. No second roll after reopening. Required low/high scenes cannot
   be declined; mid routine scenes require other Girls when selected. Each actual
@@ -30,10 +31,13 @@ must remain separate. Ancillary mechanics stay disabled.
 
 ## Work still required before an Off-Duty release
 
-1. Canonical initial Strain scenario and all start-of-period severity triggers;
-   stable d6 receipts, Handler-owned event-column choices, all 72 table branches,
-   recursive rolls and endgames. Current preparation deliberately has no generic
-   acknowledge/waive method. A complete implementation must resolve actual effects.
+1. Strain scenario/trigger review, stable d6, Handler-owned column selections and
+   parent-linked recursive/unused Endgame scheduling are implemented offline.
+   Implement every selected table/Endgame's actual sheet/world effects, deadlines,
+   deferred triggers and immediate ordering. The 72 selectable branches are not
+   72 completed event resolvers. Current preparation has no generic acknowledge/
+   waive method; root work stays pending. Custom-event substitutions also remain
+   unsupported, without an automatic fallback that discards a printed result.
 2. Void Observation provenance, pre-roll Status reduction, Void-count modifier,
    exact actor/Handler selections, all outcomes and scene/recovery dependencies.
    Ordinary Go Off-Duty is not a substitute for a pending observation trigger.
@@ -46,8 +50,10 @@ must remain separate. Ancillary mechanics stay disabled.
    accept client booleans as completed work or allow a human scene acknowledgement
    to stand in for a missing mechanical resolver.
 5. Connect period-scoped Sedation in the discipline service and bind every followup
-   to its real context. Add remaining DoctorDoctor triggers and compulsory
-   replacement paths. Preserve immediate-work ordering and source ownership.
+   to its real context. High Budget now marks DoctorDoctor once and uses the same
+   context-bound compulsory replacement path as mission-failure scrapping. Add the
+   remaining DoctorDoctor triggers and replacement paths. Preserve immediate-work
+   ordering and source ownership.
 
 ## Acceptance
 

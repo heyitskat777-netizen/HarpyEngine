@@ -587,7 +587,16 @@ class MissionService:
                     k: v
                     for k, v in row.items()
                     if k
-                    in ("id", "revision", "mission_id", "owner_id", "subject_id", "kind", "state")
+                    in (
+                        "id",
+                        "revision",
+                        "mission_id",
+                        "off_duty_id",
+                        "owner_id",
+                        "subject_id",
+                        "kind",
+                        "state",
+                    )
                 }
                 for row in latest.values()
                 if row["state"] != "resolved"

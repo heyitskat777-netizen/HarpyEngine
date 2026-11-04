@@ -3,7 +3,17 @@
 from dataclasses import dataclass
 
 SCOPES = ("pending", "you", "waiting", "history")
-CATEGORIES = ("all", "bonds", "mentors", "court", "pair", "playbook", "plays", "missions")
+CATEGORIES = (
+    "all",
+    "bonds",
+    "mentors",
+    "court",
+    "pair",
+    "playbook",
+    "plays",
+    "missions",
+    "off_duty",
+)
 
 
 @dataclass(frozen=True)

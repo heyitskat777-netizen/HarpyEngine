@@ -455,3 +455,65 @@ process was verified, with all frozen release hashes unchanged. The same tested
 release was restored earlier this session and reached Gateway READY/Running v0.1.0.
 No M3 live migration, command registration, private policy edit or environment
 publication occurred. Development schema is 0013; live remains 0011.
+
+
+## Strain scheduling and private preparation controls — 2026-11-04
+
+Continued M3F after the Off-Duty checkpoint. Canonical GameState now holds an
+explicit initial scenario, all three Low/High tracks, actual d6 receipts, chosen
+columns, source-parent-linked recursive requests, repeat flags and used Endgame
+slots. No scenario is guessed for existing saves. The current Handler records an
+explicit complete factual start review; current Void/Frame damage and a claimed
+clean successful mission are checked against canonical records. Facts awaiting a
+world model remain recorded human attestations, not new world entities.
+
+The delegated rulings register records three additional interpretations with
+rationale, alternatives, implementation/change notes and clarity flags: repeat
+severity switches at the next period start without rerolling; the cascade's
+“other events” count uses prior selected occurrences on the same track across the
+campaign; DoctorDoctor credit is recorded before the Budget start review. High
+Budget then marks Obsolescence once at its resulting severity. At eight, actual
+compulsory replacement retains the Off-Duty context through proposal, Handler
+package and exact owner confirmation. Existing mission replacement also passes.
+
+Each pending track roll is separately confirmed and committed before a Handler
+chooses either source column. Reopening/replay does not draw again. The 72 short
+column labels and 22 Endgame labels are selection aids, not completed effects.
+High row 6/column 2 creates two real Low/High requests or an unused Endgame choice;
+remaining queue entries survive restart and batching. Ancillary Rebel slot 3 is
+unavailable without substitution. Duplicate/fabricated source parents and reused
+Endgames fail closed.
+
+Development-native `/mission strain`, `/mission off_duty`, owned DoctorDoctor
+credit forms and a private Off-Duty inbox category are wired. Forms require actual
+human answers/confirmation and preserve stale-state/pause/role gates. A selected
+normal event or Endgame creates separate required effect work. There is no generic
+resolve/waive API, and the period's Strain gate remains pending. Implementing
+source-specific world/sheet effects and deferred triggers is the next dependency;
+custom-event substitutions and exhausted unused-Endgame handling are also still
+source/workflow gaps. See `docs/work_orders/M3_STRAIN.md`.
+
+Validation executed:
+
+| Check | Actual result |
+|---|---|
+| Pure Strain schedule/severity/selection/cascade checks | 98 passed in 0.19s before the final provenance case |
+| Strain service plus mission/Off-Duty replacement regression | 18 passed in 6.56s |
+| Native Strain controls and existing inbox regression | 21 passed in 4.29s |
+| Combined focused scheduling/service/UI run | 110 passed in 3.81s before the final provenance case |
+| Final full offline suite | **733 passed in 81.08s**, no failures/errors/skips; `var/m3-strain-scheduler-pytest.xml` |
+| Ruff lint / format | All checks passed; 220 files already formatted |
+| Mypy | No issues in 116 source files |
+| Source registry | RULES_SUBSET; 473 entries, 436 required core; 15 subset / 458 unimplemented; zero independent verification |
+| Publishable check | 302 files, all 40 original manifest entries preserved, zero findings |
+| Handoff verifier | Planning-only PASS: 34 required files, 86 planned cases, four schemas/four synthetic fixtures |
+| Whitespace | `git diff --check` passed |
+
+Early static checks corrected shared record typing and line lengths. An initial
+service fixture used an unlisted Wyvern spelling; its test data was corrected to
+the official catalogue label, explicit Asset flags and actual replacement API
+before passing. No unresolved failure is hidden. Tests are synthetic/offline.
+The previous pushed Off-Duty commit `9de79ae` passed remote CI, run 41777455832.
+This checkpoint introduces no further SQL migration beyond 0013. No live M3
+registration, migration, policy update, environment publication or milestone
+sign-off occurred. The frozen bot remains the separate running M2 release.

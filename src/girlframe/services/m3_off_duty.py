@@ -193,6 +193,53 @@ class OffDutyService:
                 ],
             }
 
+    def current(self, viewer: GuildViewer) -> dict[str, Any] | None:
+        with self.store.engine.connect() as c:
+            self.game.authorize(c, viewer, game=False)
+            table = t.m3["m3_off_duty"]
+            identity = c.scalar(
+                sa.select(table.c.id).where(
+                    table.c.campaign_id == self.store.campaign_id, table.c.phase != "complete"
+                )
+            )
+        return self.get(viewer, identity) if identity else None
+
+    def credit_review(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            self.game.authorize(c, viewer, game=False)
+            work = t.m3["m3_required_work"]
+            row = (
+                c.execute(
+                    sa.select(work)
+                    .where(work.c.campaign_id == self.store.campaign_id, work.c.id == identity)
+                    .order_by(work.c.revision.desc())
+                    .limit(1)
+                )
+                .mappings()
+                .first()
+            )
+            if (
+                row is None
+                or row["kind"] != "doctor_credit"
+                or row["owner_id"] != str(viewer.user_id)
+            ):
+                raise WorkflowError("Resume your own DoctorDoctor credit record.")
+            period = self._get(c, row["off_duty_id"])
+            self._view(c, viewer, period)
+            state = load_state(c, self.store.campaign_id)
+            setup = HandlerService(self.store)
+            return {
+                "period_id": period.id,
+                "period_revision": period.revision,
+                "game_revision": state.revision,
+                "state": row["state"],
+                "recipients": tuple(
+                    (str(uid), state.sheets[str(uid)].callsign)
+                    for uid in state.order
+                    if uid != viewer.user_id and setup._member(c, uid)
+                ),
+            }
+
     def credit(
         self,
         viewer: GuildViewer,
