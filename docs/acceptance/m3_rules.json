@@ -577,6 +577,27 @@
       "status": "NOT_RUN",
       "planned_tests": [],
       "evidence": []
+    },
+    {
+      "id": "M3F-SCHED-001",
+      "title": "Strain start, actual dice, column choice and restart-safe cascades",
+      "expected": "Explicit scenario and factual triggers; one saved die per request, source-bound column/recursive choices and separate unresolved mechanical effect work.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_strain.py",
+        "tests/rules/test_strain_service.py",
+        "tests/rules/test_strain_ui.py"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_scheduler_and_native_preparation",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-strain-scheduler-pytest.xml",
+          "result": "733 passed in 81.08s",
+          "artifact": "var/m3-strain-scheduler-pytest.xml",
+          "git_commit": "d42ca3e",
+          "limitation": "Table/Endgame effects and deferred world triggers remain unsupported blocking work. Source selection coverage is not effect implementation or independent/human acceptance."
+        }
+      ]
     }
   ],
   "enabled_modules": [

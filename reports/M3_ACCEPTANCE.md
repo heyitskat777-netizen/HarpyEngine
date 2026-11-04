@@ -517,3 +517,10 @@ The previous pushed Off-Duty commit `9de79ae` passed remote CI, run 41777455832.
 This checkpoint introduces no further SQL migration beyond 0013. No live M3
 registration, migration, policy update, environment publication or milestone
 sign-off occurred. The frozen bot remains the separate running M2 release.
+
+
+Implementation commits for these two checkpoints: `9de79ae` (delegated register,
+period/recovery foundation, 622-test checkpoint) and `d42ca3e` (Strain scheduling,
+native preparation and context-aware replacement, 733-test checkpoint).
+The additive M3F-SCHED-001 case records the latter as IN_PROGRESS, not full rule
+acceptance. Independent review and human Discord testing are still NOT_RUN.
