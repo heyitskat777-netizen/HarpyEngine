@@ -80,6 +80,7 @@ def service(store, girl="MOCKINGBIRD", frame="JANUS-B"):
                 gorgon_reappearance="preserve_old_assets_new_core_plan",
                 gorgon_destroyed_core_guard="satisfies_asset_condition",
                 benevolent_defense="defensive_contest_only",
+                refusal_bonus_overlap="stack_on_next_refusal",
             ),
         }
     )

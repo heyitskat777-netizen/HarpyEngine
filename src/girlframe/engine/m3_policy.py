@@ -54,6 +54,7 @@ class Rulings(BaseModel):
     gorgon_reappearance: Literal["preserve_old_assets_new_core_plan"]
     gorgon_destroyed_core_guard: Literal["satisfies_asset_condition"]
     benevolent_defense: Literal["defensive_contest_only"]
+    refusal_bonus_overlap: Literal["stack_on_next_refusal"]
 
 
 class Approval(BaseModel):

@@ -805,6 +805,26 @@
           "limitation": "Remaining actor-aware core Plays, playbooks/economy/careers, Strain/Endgames/world rules and independent/human acceptance remain incomplete."
         }
       ]
+    },
+    {
+      "id": "M3-REFUSAL-RECOVERY",
+      "title": "Actual next-refusal source and original root/child recovery",
+      "expected": "Source-bound +2 consumes only on the first actual Girl refusal, with original receipts/choices and private owned recovery.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_refusal.py",
+        "tests/rules/test_refusal_service.py",
+        "tests/rules/test_shared_recovery.py"
+      ],
+      "evidence": [
+        {
+          "scope": "offline_actual_source_and_shared_response_chain",
+          "command": ".venv/bin/pytest -q --tb=short --junitxml=var/m3-shared-refusal-final-pytest.xml",
+          "result": "1309 passed in 360.67s; no failures/errors/skips",
+          "artifact": "var/m3-shared-refusal-final-pytest.xml",
+          "limitation": "Full actor-aware Plays, career/physical/runtime rules, remaining Strain and independent/human acceptance remain incomplete."
+        }
+      ]
     }
   ],
   "enabled_modules": [

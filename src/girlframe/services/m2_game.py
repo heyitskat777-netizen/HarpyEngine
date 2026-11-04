@@ -530,23 +530,17 @@ class GameService:
         return identity
 
     def pending_actions(self, c: Connection) -> bool:
+        from girlframe.services.m3_recovery import pending as pending_recovery
+
+        if pending_recovery(self, c):
+            return True
         actions = t.m2["m2_actions"]
         return (
             c.scalar(
                 sa.select(actions.c.id)
                 .where(
                     actions.c.campaign_id == self.store.campaign_id,
-                    sa.or_(
-                        actions.c.state.not_in(("complete", "aborted")),
-                        sa.and_(
-                            actions.c.state == "aborted",
-                            sa.func.json_extract(actions.c.body_json, "$.actor_basic").is_not(None),
-                            sa.func.json_extract(actions.c.body_json, "$.receipt").is_not(None),
-                            sa.func.json_extract(actions.c.body_json, "$.actor_recovery").is_not(
-                                None
-                            ),
-                        ),
-                    ),
+                    actions.c.state.not_in(("complete", "aborted")),
                 )
                 .limit(1)
             )
@@ -762,6 +756,9 @@ class GameService:
             if prepared.parent:
                 parent = self.action(c, prepared.parent)
                 self.action_characters(c, parent, state)
+                from girlframe.services.m3_recovery import authorize as authorize_shared
+
+                authorize_shared(self, c, viewer, parent)
                 if (
                     parent["channel_id"] != str(channel)
                     or not root_lock
@@ -848,6 +845,13 @@ class GameService:
             }
             if m3 is not None:
                 data["m3"] = m3
+            from girlframe.services.m3_recovery import enable as enable_recovery
+
+            enable_recovery(self, c, viewer, data)
+            if prepared.play == "disobey_orders":
+                from girlframe.services.m3_refusal import prepare as prepare_refusal
+
+                data["m3_refusal"] = prepare_refusal(self, c, viewer, state)
             c.execute(
                 t.m2["m2_actions"]
                 .insert()
@@ -977,6 +981,9 @@ class GameService:
                 ActorPlayService(self).authorize(c, viewer, action)
             else:
                 self.authorize(c, viewer)
+            from girlframe.services.m3_recovery import authorize as authorize_shared
+
+            authorize_shared(self, c, viewer, action)
 
         def operation(c: Connection) -> dict[str, Any]:
             action = self.action(c, identity)
@@ -1011,6 +1018,11 @@ class GameService:
                 from girlframe.services.m3_play_support import pre_roll
 
                 pre_roll(self, c, viewer, action, state)
+            refusal_modifiers = []
+            if prepared.play == "disobey_orders":
+                from girlframe.services.m3_refusal import pre_roll as consume_refusal
+
+                refusal_modifiers = consume_refusal(self, c, viewer, state, action)
             if prepared.identity:
                 share = mark_identity(sheet, prepared.identity, prepared.gain, prepared.pair_share)
                 if share:
@@ -1029,6 +1041,7 @@ class GameService:
                 if m3
                 else []
             )
+            pre_modifiers += refusal_modifiers
             receipt = {
                 "id": str(uuid4()),
                 "action_id": identity,
@@ -1039,7 +1052,7 @@ class GameService:
                 + sum(x["amount"] for x in pre_modifiers),
                 "rng_source": self.rng_source,
                 "rolled_utc": datetime.now(UTC).isoformat(),
-                "ruleset": M3_RULESET if m3 is not None else RULESET,
+                "ruleset": M3_RULESET if m3 is not None or refusal_modifiers else RULESET,
             }
             if m3 is not None:
                 receipt.update(
@@ -1048,6 +1061,10 @@ class GameService:
                     modifier_source="Void Assets"
                     if m3.get("modifier_source") == "void_assets"
                     else "Status",
+                )
+            elif refusal_modifiers:
+                receipt.update(
+                    pre_modifiers=pre_modifiers, base_modifier=prepared.heat, modifier_source="Heat"
                 )
             c.execute(
                 t.m2["m2_receipts"]
@@ -1074,7 +1091,7 @@ class GameService:
                 c,
                 viewer.user_id,
                 key,
-                "m3.rolled" if m3 is not None else "m2.rolled",
+                "m3.rolled" if m3 is not None or refusal_modifiers else "m2.rolled",
                 state,
                 action_id=identity,
                 receipt_id=receipt["id"],
@@ -1151,6 +1168,9 @@ class GameService:
                 from girlframe.services.m3_play_support import authorize as authorize_m3
 
                 authorize_m3(self, c, viewer, action)
+            from girlframe.services.m3_recovery import authorize as authorize_shared
+
+            authorize_shared(self, c, viewer, action)
             if (
                 str(viewer.user_id) == str(action["data"]["handler"])
                 and HandlerService(self.store).current(c)[1].handler_id != viewer.user_id
@@ -1294,6 +1314,9 @@ class GameService:
                 "result": {},
                 "choices": {},
             }
+            from girlframe.services.m3_recovery import enable as enable_recovery
+
+            enable_recovery(self, c, viewer, data)
             c.execute(
                 t.m2["m2_actions"]
                 .insert()
@@ -1386,9 +1409,17 @@ class GameService:
                     )
                 ).mappings()
             ]
+            from girlframe.services.m3_recovery import capture
+
+            interruption_event = str(uuid4())
+            interruptions = capture(self, c, action, rows, interruption_event)
             for row in rows:
                 child = self.action(c, row["id"])
                 choices = t.m2["m2_choices"]
+                if child["id"] in interruptions:
+                    child["data"]["shared_recovery"] = interruptions[child["id"]].model_dump(
+                        mode="json"
+                    )
                 if action["data"].get("m3") or action["data"].get("actor_basic"):
                     recovery_key = (
                         "actor_recovery" if action["data"].get("actor_basic") else "m3_recovery"
@@ -1428,7 +1459,14 @@ class GameService:
                 .where(locks.c.campaign_id == self.store.campaign_id, locks.c.action_id == identity)
                 .values(state="releasing", lease_until=0, claim_token=None)
             )
-            self.event(c, viewer.user_id, key, "m2.action_aborted", action_id=identity)
+            self.event(
+                c,
+                viewer.user_id,
+                key,
+                "m2.action_aborted",
+                action_id=identity,
+                event_id=interruption_event,
+            )
             return {
                 "action_id": identity,
                 "state": "aborted",
@@ -1556,6 +1594,9 @@ class GameService:
                 "result": {},
                 "choices": {},
             }
+            from girlframe.services.m3_recovery import enable as enable_recovery
+
+            enable_recovery(self, c, viewer, data)
             c.execute(
                 t.m2["m2_actions"]
                 .insert()
@@ -1717,6 +1758,8 @@ class GameService:
                 )
             ):
                 saved = json.loads(body)
+                if saved.get("shared_recovery"):
+                    raise WorkflowError("Resume or cancel the saved Play before closing its scene.")
                 if saved.get("receipt") and (
                     saved.get("m3_recovery") or saved.get("actor_recovery")
                 ):

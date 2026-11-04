@@ -391,6 +391,9 @@ async def open_play(
     viewer = viewer_from_interaction(interaction)
     game.gate()
     sheet = await threaded(lambda: game.sheet(viewer))
+    from girlframe.services.m3_refusal import view as refusal_preview
+
+    refusal_modifiers = await threaded(lambda: refusal_preview(game, viewer))
     channel = parent["channel"] if parent else interaction.channel_id
     if channel is None:
         raise WorkflowError("Use a joined scene channel.")
@@ -469,6 +472,13 @@ async def open_play(
         (
             "Choose resources, describe the trigger, then Confirm & Roll. No "
             "dice are sampled before the channel lock is acknowledged."
+        )
+        + (
+            " Your next Disobey Orders roll has +"
+            + str(sum(x["amount"] for x in refusal_modifiers))
+            + " from control slips, separate from Heat and later Tags."
+            if refusal_modifiers
+            else ""
         ),
         [x for x in fields if not (x.key in ("target", "identity") and not x.options)],
         submit,
@@ -484,17 +494,30 @@ async def open_pending(interaction: discord.Interaction, game: GameService) -> N
     saved = await threaded(
         lambda: ActorPlayService(game).saved(viewer_from_interaction(interaction))
     )
-    if saved:
+    from girlframe.services.m3_recovery import RecoveryService
+
+    shared = await threaded(
+        lambda: RecoveryService(game).saved(viewer_from_interaction(interaction))
+    )
+    if saved or shared:
         from girlframe.discord_adapter.m3_actor_plays import open_recovery
         from girlframe.discord_adapter.m3_punishments import Picker
+        from girlframe.discord_adapter.m3_recovery import open_recovery as open_shared_recovery
 
         entries = {"recover:" + x["id"]: x for x in saved}
+        shared_entries = {"shared:" + x["id"]: x for x in shared}
         options = tuple((x["id"], x["kind"].replace("_", " ").title()) for x in rows) + tuple(
             (key, "Recover your saved actual-role Play") for key in entries
         )
+        options += tuple(
+            (key, "Recover your saved " + x["play"].replace("_", " "))
+            for key, x in shared_entries.items()
+        )
 
         async def choose(current: discord.Interaction, token: str) -> None:
-            if token in entries:
+            if token in shared_entries:
+                await open_shared_recovery(current, game, shared_entries[token])
+            elif token in entries:
                 await open_recovery(current, game, entries[token])
             else:
                 await open_choice(current, game, token)

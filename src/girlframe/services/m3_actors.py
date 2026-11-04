@@ -213,12 +213,22 @@ class ActorService:
             state = load_state(c, self.store.campaign_id)
             sheet = state.sheets.get(str(viewer.user_id))
             locks = t.m2["m2_locks"]
+            actions = t.m2["m2_actions"]
             if (
                 state.revision != expected
                 or sheet is None
                 or sheet.owner != viewer.user_id
                 or sheet.character_id is not None
-                or self.game.pending_actions(c)
+                # This proves an existing character identity without changing
+                # resources. It may be required to resume a known aborted roll.
+                or c.scalar(
+                    sa.select(actions.c.id)
+                    .where(
+                        actions.c.campaign_id == self.store.campaign_id,
+                        actions.c.state.not_in(("complete", "aborted")),
+                    )
+                    .limit(1)
+                )
                 or c.scalar(
                     sa.select(locks.c.channel_id)
                     .where(

@@ -513,13 +513,25 @@ async def open_effect(
                 + str(outcome["resource"])
                 + "."
             )
+        if rule == "strain.rebellion.low.1.2":
+            return (
+                "Control slip recorded. The next actual Girl Disobey Orders roll "
+                "gets +2, separate from Heat and later Tags. No recipient was chosen."
+            )
         return "Event effects committed once. Reopen Off-Duty for remaining work."
 
     form = DependentForm(
         viewer.user_id,
         "Apply the saved Strain event",
-        "Review " + rule + ". "
-        "Confirming applies its named world and character consequences. "
+        "Review "
+        + rule
+        + ". "
+        + (
+            "The next actual Girl refusal gets +2; you do not choose its recipient. "
+            if rule == "strain.rebellion.low.1.2"
+            else ""
+        )
+        + "Confirming applies its named world and character consequences. "
         "If no legal NPC/target exists, introduce it through /mission world, then reopen.",
         build,
         submit,

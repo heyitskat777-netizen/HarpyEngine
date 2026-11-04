@@ -261,6 +261,8 @@ def test_legacy_known_roll_proves_original_generation_after_metadata_binding_and
     game.abort(ADMIN, "abort-legacy-roll", action)
     tick(worker, gateway, 5)
     actors.bind_legacy(PLAYER, "bind-after-safe-abort", state(game).revision)
+    with ledger.engine.connect() as c:
+        assert game.pending_actions(c)  # Metadata repair does not waive the known outcome.
     resume(game, PLAYER, "resume-original-roll", action, game.inspect(PLAYER, action)["revision"])
     tick(worker, gateway, 2)
     pass_tags(game)

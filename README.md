@@ -33,6 +33,10 @@ disabled by default. M3 world prototypes also provide actual Gorgon NPC/Asset
 Attacks, separate Core exposure, and private `/mission position` plus inbox controls
 for original body/Frame facts. Unknown legacy positions stay unknown; physical
 travel/control and further runtime mechanics remain in development.
+The next-refusal Low Rebellion adjustment now uses actual source-bound +2
+consumption. Shared Plays under the M3 protocol expose owned root/child recovery
+through `/choice resume` and the requests inbox, preserving known dice and prior
+answers. Neither feature is deployed to the frozen running M2 bot.
 
 Read `AGENTS.md` and [the roadmap](docs/PROJECT_ROADMAP.md) before development. The
 original planning package remains unchanged in `GIRLFRAME_Discord_Codex_Handoff_v0.2/`;

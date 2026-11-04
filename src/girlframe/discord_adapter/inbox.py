@@ -582,6 +582,17 @@ class InboxView(discord.ui.View):
             await open_physical_review(
                 interaction, PhysicalService(self.service.store), item.identity
             )
+        elif item.task == "m3_shared_recovery":
+            from girlframe.discord_adapter.m3_recovery import open_recovery as open_shared_recovery
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_recovery import RecoveryService
+
+            game = GameService(self.service.store)
+            saved = await asyncio.to_thread(RecoveryService(game).saved, viewer)
+            record = next((x for x in saved if x["id"] == item.identity), None)
+            if record is None:
+                raise WorkflowError("Refresh your actual saved Play recovery.")
+            await open_shared_recovery(interaction, game, record)
         elif item.task == "m3_actor_recovery":
             from girlframe.discord_adapter.m3_actor_plays import open_recovery
             from girlframe.services.m2_game import GameService

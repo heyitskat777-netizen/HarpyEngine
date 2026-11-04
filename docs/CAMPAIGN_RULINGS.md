@@ -241,3 +241,15 @@ consequences, without silently discarding or doubling them.
 
 
 `benevolent_defense`: Benevolent Gorgons cannot initiate Attack or Collateral Damage, but can defend when another Gorgon pits Assets against them. The Handler chooses the actual contest winner. Source: Book PDF 162, 167 / printed pp.160, 165; delegated owner authority. Delegated recommendation; printed-rule clarity review required. The Attack rule explicitly includes a Gorgon target and a Handler-chosen Asset contest. The Benevolent restriction forbids initiating its attack, without requiring it to lose an opponent-initiated contest; a defensive result can follow from the attacker striking its protection. Alternatives: Require Benevolent Gorgons always to lose or avoid any Asset contest.; Permit defense but require a separate bespoke defensive outcome rather than the printed contest.. Implementation: Reject Benevolent initiators in both NPC and Gorgon Attack commands. Permit it only as the actual defender of another Gorgon, with the actual Handler winner and chosen losing pitted Asset. Change impact: Review pending defensive contests when changing this ruling. Preserve prior actual winner decisions and destroyed-Asset history rather than silently undoing consequences.
+
+
+`refusal_bonus_overlap`: every waiting Low Rebellion 1/2 occurrence supplies its own
++2 to the next actual Girl Disobey Orders roll; that one roll consumes all waiting
+occurrences. Source: book PDF 147 / printed p.145; delegated owner recommendation,
+printed-rule clarity review required. Each occurrence names the next refusal;
+there is no printed non-stacking limit or permission to postpone one source.
+Alternatives: use only one queued bonus per refusal, or collapse overlaps to a
+single +2. Keep distinct actual source works/events and consumption in the same
+transaction as the roll, separately from Heat and post-roll Tags. A later policy
+change must review unrolled reservations and waiting sources, preserving known
+dice, receipts and consumed sources without refunds, reuse or silent postponement.

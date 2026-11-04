@@ -678,6 +678,23 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "overlapping-control-slip-bonuses",
+      "summary": "Every unconsumed Low Rebellion 1/2 occurrence adds its own +2 to the next actual Girl Disobey Orders roll; that one roll consumes all waiting occurrences.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Book PDF 147 / printed p.145; delegated owner authority",
+      "authority": "delegated_recommendation",
+      "policy_key": "refusal_bonus_overlap",
+      "clarity_review": true,
+      "revision": 1,
+      "rationale": "Each occurrence refers to the next actual refusal, without a non-stacking limit or permission to postpone one occurrence to a later roll.",
+      "alternatives": [
+        "Consume only one queued +2 per refusal.",
+        "Treat repeated occurrences as a single non-stacking +2."
+      ],
+      "implementation_note": "Keep distinct source works/events and consume every waiting bonus atomically with the actual receipt. Heat and later Tag adjustments remain separate.",
+      "change_impact": "Review unrolled reservations and waiting occurrences before changing the interpretation. Preserve known dice, original receipts and consumed sources; do not silently refund, reuse or postpone a recorded bonus."
     }
   ],
   "entries": [
@@ -1422,7 +1439,11 @@
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_refusal_service.py",
+        "tests/rules/test_shared_recovery.py",
+        "tests/test_m2_game.py::test_disobey_requires_recorded_superior_order_and_low_halts"
+      ],
       "m2_play_id": "disobey_orders",
       "module": "core"
     },
@@ -8166,14 +8187,55 @@
         "heading": "Rebellion low: die 1, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
-      "dependencies": [],
-      "test_evidence": [],
+      "contract": {
+        "trigger": "Actual Low Rebellion die 1, selected column 2 schedules the next actual Girl refusal bonus.",
+        "actor_type": "Actual current Cadre Girl with its original character; actor-aware non-Pilot Disobey Orders remains unported.",
+        "pre_roll_sources": [
+          "Actual selected Strain die/column and originating period",
+          "Resolved original source work and matching actual effect event",
+          "Current original Handler and canonical pending source list",
+          "Explicit actual Girl refusal with its recorded direct order and acknowledged chat lock"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [
+          "Schedules +2 for the actual next Disobey Orders roll, separate from Heat and post-roll Tags"
+        ],
+        "tier_options": {},
+        "choice_ownership": "Actual Handler selects the Strain column and supplies its account; no human chooses which Girl is next. The actual next refusal consumes it. Human-owned responses stay with their original participants.",
+        "target_policy": "No invented recipient or reroll. Only the first actual committed refusal receives each source. Overlapping source occurrences stack under the registered campaign recommendation.",
+        "post_roll_effects": [
+          "Persist source-bound bonus without choosing a recipient",
+          "Freeze the actual pending list at reservation",
+          "Validate source and consume alongside canonical roll, receipt and outbox",
+          "Actual receipt shows +2 separately",
+          "Concurrent later stale reservations stop before RNG",
+          "Known-roll recovery retains the receipt, spending, source and prior answers"
+        ],
+        "mandatory_followups": [
+          "Native original Disobey Orders choices and Handler responses remain mandatory",
+          "Known aborted chains remain blocking until actual owned recovery",
+          "Full actor-aware Disobey Orders and Handler/career transitions remain unfinished"
+        ],
+        "handler_or_gm_intervention": "No passive chat inference. An unknown original source or Handler transition fails closed. A cancelled unrolled reservation retains the bonus.",
+        "test_fixture_ids": [
+          "tests/rules/test_refusal.py",
+          "tests/rules/test_refusal_service.py",
+          "tests/rules/test_shared_recovery.py"
+        ]
+      },
+      "dependencies": [
+        "play.basic.disobey_orders"
+      ],
+      "test_evidence": [
+        "tests/rules/test_refusal.py",
+        "tests/rules/test_refusal_service.py",
+        "tests/rules/test_shared_recovery.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

@@ -1394,3 +1394,66 @@ Physical checkpoint **dffd5a4b18d4998c9feeec8ae4c4833aed0b5680** is pushed and i
 GitHub CI passed, run **41899662008**. No live migration, bot restart, gameplay
 deployment, environment publication, independent/human acceptance or M3-ready
 claim applies. The existing frozen bot remains running; development continues.
+
+
+## Actual next-refusal source and shared response-chain recovery
+
+Low Rebellion 1/2 (book PDF 147 / printed p.145) now schedules a source-bound
++2 for the next actual Cadre Girl Disobey Orders roll. Source work, selected
+die/column, originating period, original Handler and actual effect event are
+validated before RNG. The Handler cannot choose a recipient. The actual receipt
+keeps this adjustment separate from Heat and later Tags. Two reserved refusals
+consume only on the first actual committed roll; the other stops before sampling
+dice. Unrolled cancellation retains the source. The delegated overlap reading
+is recorded centrally with alternatives, clarity review and change impact.
+
+Shared Plays under the approved M3 protocol now capture actual root/descendant
+interruption states, pending decision IDs/revisions/body hashes, original receipt
+evidence and the distinct abort event atomically. Only the root actor resumes
+after chat restoration; each original participant retains their own decisions.
+Known dice, spending and prior answers survive. A known child makes even a
+diceless parent non-cancellable. Only an unanswered unrolled single reservation
+can cancel, including during safety pause. Native `/choice resume` and the
+requests inbox expose owned recovery. Original aborts without evidence get no
+invented reconstruction. Known actor, period and shared interruptions block
+world mutation after chat restoration; safe unrolled reservations do not. An
+actual source-proven legacy metadata bind may enable known-roll recovery without
+waiving the roll or altering its mechanical resources.
+
+Full regression: **1309 passed in 360.67s**, no failures/errors/skips;
+`var/m3-shared-refusal-final-pytest.xml`. The initial full attempt was deliberately
+interrupted after **5 failed / 574 passed in 267.29s**, artifact
+`var/m3-shared-refusal-pytest.xml`. Its failures identified an overly broad
+unrolled-reservation guard, a blocked legitimate legacy metadata repair, and a
+previous test that purchased while a known Off-Duty roll was aborted. The guards
+now distinguish known outcomes from safe unrolled reservations and source-only
+metadata repair. New purchases remain blocked during known recovery; the old
+late-payment scenario is retained as a synthetic historical paid-source fixture,
+proving it cannot retroactively qualify on that earlier raw roll. Corrected
+affected-services run: **100 passed in 81.57s**,
+`var/m3-shared-refusal-regressions.xml`.
+
+Focused evidence: **47 passed in 25.83s**,
+`var/m3-shared-refusal-final-boundaries.xml`; **68 passed in 30.07s**,
+`var/m3-shared-refusal-final-focused.xml`; **44 passed in 20.74s**,
+`var/m3-refusal-boundaries.xml`; **145 passed in 55.88s**,
+`var/m3-shared-recovery-boundaries.xml`. Initial fixture corrections are retained
+in `var/m3-shared-recovery-focused.xml` (**3 failed / 12 passed in 6.95s**, the
+baseline preceded a saved pass response), `var/m3-refusal-initial.xml` (**1 failed /
+30 passed in 18.75s**, duplicate Heat keyword in the test helper), and
+`var/m3-recovery-refusal-preservation.xml` (**1 failed / 38 passed in 22.12s**,
+missing synthetic membership role). Lint/import/formatting and one native tuple
+type annotation were corrected before final static checks.
+
+Ruff passes; **368 files** formatted, mypy **192 source files**. Public scan for
+this checkpoint: **450 publishable files / 40 original manifest entries / zero
+findings**. Original planning verifier passes 34 files / 86 planned cases /
+4 schemas / 4 synthetic fixtures; this remains planning-only evidence. Registry
+remains RULES_SUBSET: 473 entries, 436 required core, **61 subsets / 412
+unimplemented**, zero independent verifications. The refusal consumer does not
+claim actor-aware non-Pilot Disobey Orders, Handler/career transfers or complete
+Strain/shared-rule coverage. WYVERN checkpoint **0e34c815af03eb217c189daac0e0792c7c31d054**
+is pushed and GitHub CI passed, run **41902442991**. The frozen bot remains PID47656;
+all **88 source hashes** match its original tested M2 release. No live migration,
+restart, M3 deployment, environment publication, independent/human acceptance or
+M3-ready claim applies. Continue the agreed milestone.

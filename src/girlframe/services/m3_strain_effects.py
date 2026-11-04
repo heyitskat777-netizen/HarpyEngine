@@ -141,7 +141,12 @@ class EffectService:
                     resource=choice.missing_resource,
                 )
             updated = rules.apply(
-                state, choice, identity, period_id=row["off_duty_id"], supply=supply
+                state,
+                choice,
+                identity,
+                period_id=row["off_duty_id"],
+                supply=supply,
+                source_event=event_id,
             )
             scientific_period, scientific_events = None, []
             if choice.rule_id == "strain.budget.low.3.1":

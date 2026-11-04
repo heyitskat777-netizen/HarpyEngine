@@ -500,6 +500,30 @@ class InboxService:
                 )
             ).mappings():
                 body = json.loads(saved["body_json"])
+                if body.get("shared_recovery") and saved["parent_id"] is None:
+                    from girlframe.engine.m3_recovery_state import Interruption
+
+                    Interruption.model_validate_json(json.dumps(body["shared_recovery"]))
+                    items.append(
+                        InboxItem(
+                            "shared-recovery:" + saved["id"],
+                            "shared-recovery",
+                            saved["id"],
+                            saved["revision"],
+                            "plays",
+                            "Recover your saved Play",
+                            "Scene Play",
+                            "pending",
+                            True,
+                            False,
+                            "Resume the original response chain after staff restores chat.",
+                            "Known dice, spending and prior answers stay saved. "
+                            "Each player keeps their own choices.",
+                            "Review recovery",
+                            task="m3_shared_recovery",
+                        )
+                    )
+                    continue
                 if not body.get("actor_basic") or not body.get("actor_recovery"):
                     continue
                 items.append(

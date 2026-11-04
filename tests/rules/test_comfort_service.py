@@ -467,7 +467,38 @@ def test_paid_after_known_aborted_roll_cannot_retroactively_qualify_on_resume(le
     receipt = game.inspect(PLAYER, action)["receipt"]
     game.abort(ADMIN, "abort-known-off-duty-before-benefit", action)
     tick(worker, gateway, 5)
-    second = pay(svc)
+    with pytest.raises(WorkflowError, match="pending Plays"):
+        pay(svc)
+    # Older releases permitted this payment while a known roll was aborted.
+    # Retain an actual paid historical source to verify raw-roll provenance,
+    # while the current service correctly blocks making this new purchase.
+    from girlframe.engine import m3_comforts as comfort_rules
+    from girlframe.services.m3_actors import profiles
+
+    second = {"id": str(uuid4())}
+    source_event = str(uuid4())
+    with ledger.transaction() as c:
+        canon = state(game)
+        actor = svc._actor(c, canon, PLAYER)
+        canon = comfort_rules.purchase(
+            canon,
+            actor.ref,
+            profiles(c, ledger.campaign_id),
+            actor.source_sha256,
+            second["id"],
+            source_event,
+            "Synthetic historical late request",
+        )
+        game.event(
+            c,
+            2,
+            "synthetic-legacy-late-purchase",
+            "m3.creature_comforts_purchased",
+            canon,
+            event_id=source_event,
+            requisition_id=second["id"],
+            cost=1,
+        )
     with ledger.engine.connect() as c:
         revision = game.action(c, action)["revision"]
     resume(game, PLAYER, "resume-known-off-duty-before-benefit", action, revision)

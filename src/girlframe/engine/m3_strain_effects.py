@@ -6,6 +6,7 @@ from pydantic import Field
 
 from girlframe.engine import m3_world as world_rules
 from girlframe.engine.m2 import GameState, Model, TagState, pair_key
+from girlframe.engine.m3_refusal_state import RefusalBonus
 from girlframe.engine.m3_scientific_observation import Demand, require_orders
 from girlframe.engine.m3_supply_state import SupplyLoss
 from girlframe.engine.m3_world_state import (
@@ -26,6 +27,7 @@ SUPPORTED = frozenset(
         "strain.void.low.5.1",
         "strain.void.high.3.1",
         "strain.rebellion.low.1.1",
+        "strain.rebellion.low.1.2",
         "strain.rebellion.low.6.1",
         "strain.budget.low.5.2",
         "strain.budget.low.4.2",
@@ -80,6 +82,7 @@ def apply(
     *,
     period_id: str | None = None,
     supply: SupplyLoss | None = None,
+    source_event: str | None = None,
 ) -> GameState:
     if choice.rule_id not in SUPPORTED:
         raise ValueError("UNSUPPORTED_RULE: this Strain effect has no complete typed resolver")
@@ -88,7 +91,20 @@ def apply(
     if world is None or state.handler is None:
         raise ValueError("Initialize the actual world and appointed Handler first")
     rule = choice.rule_id
-    if rule == "strain.budget.low.3.1":
+    if rule == "strain.rebellion.low.1.2":
+        fields(choice, set())
+        if (
+            period_id is None
+            or source_event is None
+            or any(x.id == source_work for x in state.refusal_bonuses)
+        ):
+            raise ValueError("Record one actual new control-slip source and its Strain period")
+        state.refusal_bonuses.append(
+            RefusalBonus(
+                id=source_work, period=period_id, handler=state.handler, source_event=source_event
+            )
+        )
+    elif rule == "strain.budget.low.3.1":
         fields(choice, {"scientific_demand"})
         if choice.scientific_demand is None:
             raise ValueError("Record the actual scientific targets and explicit hiding reviews")

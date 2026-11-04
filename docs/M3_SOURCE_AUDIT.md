@@ -222,3 +222,23 @@ one-roll overlap interpretation. The actual Observation route, lowered Status,
 owned consequences, scene and Frame review still gate recovery; resolving the
 Strain source alone grants none of them. Two-cause settlement has a complete
 synthetic owned scene/recovery trace. See `work_orders/M3_SCIENTIFIC_OBSERVATION.md`.
+
+Low Rebellion 1/2 (book PDF 147 / printed p.145) now schedules a source-bound +2
+for the actual next Cadre Girl refusal. Its original selected event, period,
+resolved work and actual effect event are proved before dice. The Handler cannot
+select a recipient. Reservation freezes pending sources; the first actual
+committed roll consumes them, and a competing stale reservation stops before
+RNG. Receipts distinguish Heat, this pre-roll adjustment and later Tag modifiers.
+The delegated overlap ruling is logged centrally. Other actor-aware Disobey
+Orders and Handler/career transition consumers remain unfinished.
+
+Shared Pilot Plays under the approved M3 protocol now retain actual root/child
+interruption evidence. Owned resume restores pending decisions after chat
+restoration, with original dice, spending, answered choices and ownership.
+Known descendant rolls cannot be discarded through a diceless parent. Old aborts
+without evidence receive no invented recovery. Known actor/Off-Duty interruptions
+also remain blocking after chat restoration. Native controls and private backup
+preservation are checked; this is not complete M3H or full runtime certification.
+Unrolled reservations do not block otherwise safe world changes. A source-proven
+legacy metadata bind can enable recovery of a known roll without changing its
+receipt, prior answers or mechanical resources.
