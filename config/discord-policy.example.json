@@ -9,5 +9,7 @@
   "owner_creation_rulings": null,
   "owner_initial_conditions": null,
   "owner_intense_tag_bonus": null,
-  "m2_approval": null
+  "m2_approval": null,
+  "m3_approval": null,
+  "owner_m3_rulings": null
 }

@@ -79,6 +79,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                         from girlframe.services.m2_game import GameService
 
                         GameService(ledger).rebuild()
+                        from girlframe.services.m3_missions import MissionService
+
+                        MissionService(ledger).rebuild()
                 finally:
                     engine.dispose()
         except Exception:

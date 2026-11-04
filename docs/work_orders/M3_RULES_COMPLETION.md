@@ -1,6 +1,6 @@
 # M3 — published rules, missions and recovery
 
-Status: SCOPED; implementation and independent acceptance NOT_RUN.
+Status: IN_PROGRESS / RULES_SUBSET; independent and human acceptance NOT_RUN.
 The owner explicitly instructed “Lets begin on M3” after approving the M2 migration
 and restart. This authorizes M3 development; it does not record an independent M2
 rules audit, successful human play-test, or permission to remove a release gate.
@@ -153,3 +153,21 @@ price quote for each repair, not a default numeric cost. Ordinary free recovery
 and Casualty's printed body-part cost remain separate. Persist quote provenance,
 price/revision and owner confirmation; changed sheets/quotes/Handler invalidate
 stale purchase forms. No real-time expiration silently purchases or repairs.
+
+
+Owner approved the absent Ace bonus: grant the extra mission-end Permission to the
+current Ace even when it was not a mission participant. Record the reward cause
+separately from participant completion rewards; do not silently join the Ace to a
+mission.
+
+Current M3D checkpoint: private mission offers/responses/dispatch, atomic rewards,
+append-only mission/work persistence, owner-bound Discord controls and requests
+inbox integration are implemented offline. Princess/DoctorDoctor end reactions
+and required Punishments remain blocking work, with no generic waiver. Migration
+`0012` is validated on populated synthetic `0011` data; the live frozen bot and
+database remain unchanged. This does not complete M3D or M3H.
+
+Pending owner rulings before Punishment application: ownership of unspecified
+Identity/Asset selections after the inflictor chooses the type, and whether one
+actual Punishment satisfies both failure and Dog causes for the same Girl. Preserve
+each cause in the audit regardless of the eventual decision.

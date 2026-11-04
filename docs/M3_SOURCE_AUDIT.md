@@ -33,7 +33,7 @@ or unreviewed optional rules. Coverage reports identify their enabled module sco
 | Void Observation reprogramming fallback | If the starting set has no Malfunctioning, the player selects an ordinary starting slot for a retained current Identity; preserve protected/extra Identities | Book PDF 28 / printed 26; five base Girl playbooks lack that slot |
 | Unpriced standard Requisitions | Creature Comforts, Privacy and Asset Installment each cost 1 Permission | Book PDF 16 / printed 14; sheets PDF 40 omit these prices |
 | Budget shortage extra repairs | The current Handler explicitly sets the price for each extra repair; no default cost | Book PDF 150 / printed 148; sheets PDF 43 allow paid repairs without a price |
-| Absent Ace bonus | Awaiting owner decision | Book PDF 16 / printed 14 does not state whether the separate Ace bonus requires participation |
+| Absent Ace bonus | Owner approved granting it to the current Ace even when absent | Book PDF 16 / printed 14 does not state whether the separate Ace bonus requires participation |
 
 Previously approved starting conditions, JANUS-B alias and Intense ±2 modifier
 remain separate existing rulings. No new ruling is silently applied to live policy.
@@ -62,9 +62,24 @@ remain separate existing rulings. No new ruling is silently applied to live poli
 - The pure mission lifecycle requires actual invited-player responses, an active
   roster and current Handler. It plans base/explicit Ace rewards and retains
   failure/Dog consequences, including an absent Dog. Mission completion cannot
-  waive pending work. The absent Ace branch has no assumed policy while awaiting
-  the owner ruling. Transactional persistence, frame-trigger reactions, mechanical
-  Punishment resolution and Discord integration are still pending.
+  waive pending work. The approved campaign policy grants the current Ace its
+  separate bonus even when absent.
+- Transactional mission persistence now uses private projections and append-only
+  histories. Mission rewards share a transaction with canonical Pilot state and
+  required consequences. Duplicate/concurrent submissions cannot grant twice.
+  Native private mission controls and the requests inbox enforce actor ownership,
+  revision checks and explicit responses. An absent Dog sees its required work
+  without receiving the private mission objective.
+- Known Princess and DoctorDoctor mission-end reactions block rewards until their
+  source-specific work is resolved. Their resolvers, mechanical Punishments and
+  the remaining end-trigger interaction audit are still pending. There is no
+  generic acknowledgment that completes these tasks. Migration `0012` is tested
+  on populated synthetic `0011` data; no live migration or M3 activation occurred.
+
+Two Punishment interpretations await owner input: who chooses unspecified sheet
+details after the inflictor selects the type, and whether one applied Punishment
+can satisfy both mission-failure and Dog causes for the same Girl. Both causes
+are retained separately while unresolved; no fictional consequence is invented.
 
 The new rules tests are synthetic. They are useful implementation evidence, not
 finished M3 case acceptance. Required source/fixture matrices and all remaining

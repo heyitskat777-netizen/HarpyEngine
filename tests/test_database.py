@@ -40,7 +40,7 @@ def test_alembic_migrations_upgrade_check_and_downgrade(
     command.upgrade(config, "head")
     command.check(config)
     command.downgrade(config, "base")
-    assert len(Base.metadata.tables) == 31
+    assert len(Base.metadata.tables) == 34
     engine = create_database_engine(Settings(database_url=f"sqlite:///{db}"))
     try:
         assert inspect(engine).get_table_names() == ["alembic_version"]

@@ -52,7 +52,9 @@
       "expected": "Applies even if not in mission; absent PC choice respected.",
       "status": "IN_PROGRESS",
       "planned_tests": [
-        "tests/rules/test_missions.py::test_absent_dog_punishment_remains_real_pending_work"
+        "tests/rules/test_missions.py::test_absent_dog_punishment_remains_real_pending_work",
+        "tests/rules/test_mission_service.py::test_mission_rewards_and_absent_dog_are_atomic_idempotent_and_durable",
+        "tests/rules/test_mission_service.py::test_inbox_exposes_absent_dogs_work_without_the_private_mission_objective"
       ],
       "evidence": [
         {
@@ -61,6 +63,13 @@
           "result": "62 passed in 4.79s",
           "artifact": "var/m3-foundation-pytest.xml",
           "limitation": "No complete mechanical service/Discord/independent case acceptance is claimed"
+        },
+        {
+          "scope": "partial_offline_mission_subsystem_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-missions-pytest.xml",
+          "result": "520 passed in 46.41s; zero failures/errors/skips",
+          "artifact": "var/m3-missions-pytest.xml",
+          "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
         }
       ]
     },
@@ -119,7 +128,9 @@
       "status": "IN_PROGRESS",
       "planned_tests": [
         "tests/rules/test_core.py::test_requisition_costs_are_exact_and_do_not_charge_input",
-        "tests/rules/test_core.py::test_extra_repair_uses_current_handler_quote_not_an_invented_default"
+        "tests/rules/test_core.py::test_extra_repair_uses_current_handler_quote_not_an_invented_default",
+        "tests/rules/test_mission_service.py::test_current_ace_gets_bonus_even_when_absent",
+        "tests/rules/test_mission_service.py::test_source_end_reactions_precede_reward_snapshot"
       ],
       "evidence": [
         {
@@ -128,6 +139,13 @@
           "result": "62 passed in 4.79s",
           "artifact": "var/m3-foundation-pytest.xml",
           "limitation": "No complete mechanical service/Discord/independent case acceptance is claimed"
+        },
+        {
+          "scope": "partial_offline_mission_subsystem_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-missions-pytest.xml",
+          "result": "520 passed in 46.41s; zero failures/errors/skips",
+          "artifact": "var/m3-missions-pytest.xml",
+          "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
         }
       ]
     },
@@ -246,7 +264,8 @@
       "title": "Mission-end Dog Punishment even when not participating",
       "status": "IN_PROGRESS",
       "planned_tests": [
-        "tests/rules/test_missions.py::test_absent_dog_punishment_remains_real_pending_work"
+        "tests/rules/test_missions.py::test_absent_dog_punishment_remains_real_pending_work",
+        "tests/rules/test_mission_service.py::test_mission_rewards_and_absent_dog_are_atomic_idempotent_and_durable"
       ],
       "evidence": [
         {
@@ -255,6 +274,13 @@
           "result": "62 passed in 4.79s",
           "artifact": "var/m3-foundation-pytest.xml",
           "limitation": "No complete mechanical service/Discord/independent case acceptance is claimed"
+        },
+        {
+          "scope": "partial_offline_mission_subsystem_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-missions-pytest.xml",
+          "result": "520 passed in 46.41s; zero failures/errors/skips",
+          "artifact": "var/m3-missions-pytest.xml",
+          "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
         }
       ]
     },
@@ -292,37 +318,91 @@
     {
       "id": "M3-ADD-003",
       "title": "Required cascade work survives restart without lost/duplicate effects",
-      "status": "NOT_RUN",
-      "planned_tests": [],
-      "evidence": []
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_mission_service.py::test_mission_rewards_and_absent_dog_are_atomic_idempotent_and_durable",
+        "tests/rules/test_mission_service.py::test_rollback_after_permission_event_restores_all_mission_state"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_mission_subsystem_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-missions-pytest.xml",
+          "result": "520 passed in 46.41s; zero failures/errors/skips",
+          "artifact": "var/m3-missions-pytest.xml",
+          "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
+        }
+      ]
     },
     {
       "id": "M3-ADD-004",
       "title": "M2-to-M3 migration preserves existing sheets, resources and receipts",
-      "status": "NOT_RUN",
-      "planned_tests": [],
-      "evidence": []
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_mission_service.py::test_0012_preserves_populated_0011_and_does_not_activate_m3"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_mission_subsystem_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-missions-pytest.xml",
+          "result": "520 passed in 46.41s; zero failures/errors/skips",
+          "artifact": "var/m3-missions-pytest.xml",
+          "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
+        }
+      ]
     },
     {
       "id": "M3-ADD-005",
       "title": "World/mission deadlines advance only through explicit fictional triggers",
-      "status": "NOT_RUN",
-      "planned_tests": [],
-      "evidence": []
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_mission_service.py::test_mission_rewards_and_absent_dog_are_atomic_idempotent_and_durable"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_mission_subsystem_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-missions-pytest.xml",
+          "result": "520 passed in 46.41s; zero failures/errors/skips",
+          "artifact": "var/m3-missions-pytest.xml",
+          "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
+        }
+      ]
     },
     {
       "id": "M3-ADD-006",
       "title": "Native controls, scene locks, OOC pause and absence behavior",
-      "status": "NOT_RUN",
-      "planned_tests": [],
-      "evidence": []
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_mission_service.py::test_pause_revocation_and_other_campaign_do_not_leak_or_mutate",
+        "tests/rules/test_mission_service.py::test_saved_mission_reads_survive_a_vacant_handler_appointment"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_mission_subsystem_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-missions-pytest.xml",
+          "result": "520 passed in 46.41s; zero failures/errors/skips",
+          "artifact": "var/m3-missions-pytest.xml",
+          "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
+        }
+      ]
     },
     {
       "id": "M3-ADD-007",
       "title": "Campaign isolation, private projections, concurrency and backups",
-      "status": "NOT_RUN",
-      "planned_tests": [],
-      "evidence": []
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_mission_service.py::test_private_mission_and_metadata_have_no_administrator_override",
+        "tests/rules/test_mission_service.py::test_concurrent_end_never_duplicates_rewards",
+        "tests/rules/test_mission_service.py::test_immutable_history_rebuild_and_real_backup_restore"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_mission_subsystem_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-missions-pytest.xml",
+          "result": "520 passed in 46.41s; zero failures/errors/skips",
+          "artifact": "var/m3-missions-pytest.xml",
+          "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
+        }
+      ]
     },
     {
       "id": "M3-ADD-008",
@@ -339,6 +419,17 @@
     "ancillary"
   ],
   "pending_owner_rulings": [
-    "absent_ace_permission_bonus"
+    {
+      "id": "punishment-detail-owner",
+      "source": "Book PDF 17\u201318 / printed 15\u201316",
+      "question": "Who selects unspecified Identity/Asset details after the inflictor chooses the Punishment type?",
+      "status": "AWAITING_OWNER"
+    },
+    {
+      "id": "failure-dog-overlap",
+      "source": "Book PDF 16\u201317 / printed 14\u201315",
+      "question": "Does one applied Punishment satisfy both mission failure and Dog causes for the same Girl, or are two required?",
+      "status": "AWAITING_OWNER"
+    }
   ]
 }

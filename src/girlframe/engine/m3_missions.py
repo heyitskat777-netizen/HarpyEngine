@@ -19,9 +19,9 @@ class Mission(Model):
     offered_to: tuple[Snowflake, ...]
     responses: dict[str, Response] = Field(default_factory=dict)
     participants: tuple[Snowflake, ...] = ()
-    phase: Literal["offered", "active", "awaiting_consequences", "complete", "cancelled"] = (
-        "offered"
-    )
+    phase: Literal[
+        "offered", "active", "ending", "awaiting_consequences", "complete", "cancelled"
+    ] = "offered"
     success: bool | None = None
     consequence_ids: tuple[str, ...] = ()
 
@@ -124,7 +124,8 @@ def end(
     revision(mission, expected)
     handler(mission, actor, current_handler)
     if (
-        mission.phase != "active"
+        mission.phase not in ("active", "ending")
+        or (mission.phase == "ending" and mission.success != success)
         or len(status_order) < 2
         or len(set(status_order)) != len(status_order)
         or current_handler in status_order

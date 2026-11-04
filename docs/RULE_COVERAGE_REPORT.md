@@ -288,4 +288,8 @@ mechanical effects and nested branches are not yet implemented. Independent
 verification remains zero. The approved reprogramming fallback and economy
 rulings are recorded with owner provenance. Initial pure reducers, shared decision
 contracts and mission lifecycle tests are partial evidence only. Coverage remains
-RULES_SUBSET; M3 acceptance and the absent Ace ruling are still pending.
+RULES_SUBSET; M3 acceptance is still pending. The owner has approved the current
+Ace's bonus even when absent. Private transactional mission controls, replay and
+required-work persistence now have offline tests; Punishment/special-reaction
+resolvers and the remaining source interactions are unfinished. Two Punishment
+interpretations await owner input; see `M3_SOURCE_AUDIT.md`.

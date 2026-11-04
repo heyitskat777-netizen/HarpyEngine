@@ -17,6 +17,7 @@ from girlframe.services.onboarding import WorkflowError
 
 CATEGORY_LABELS = {
     "all": "All request types",
+    "missions": "Mission offers & consequences",
     "plays": "Pending Plays",
     "bonds": "Starting Bonds",
     "mentors": "Mentor coordination",
@@ -443,7 +444,12 @@ class InboxView(discord.ui.View):
                 allowed_mentions=discord.AllowedMentions.none(),
             )
 
-        if item.task == "m2_choice":
+        if item.task == "m3_mission":
+            from girlframe.discord_adapter.m3_missions import open_mission
+            from girlframe.services.m3_missions import MissionService
+
+            await open_mission(interaction, MissionService(self.service.store), item.identity)
+        elif item.task == "m2_choice":
             from girlframe.discord_adapter.m2_ui import open_choice
             from girlframe.services.m2_game import GameService
 

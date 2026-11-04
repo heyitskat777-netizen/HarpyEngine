@@ -13,6 +13,8 @@ from girlframe.engine.creation_details import InitialConditions
 from girlframe.engine.creation_review import CreationRulings
 from girlframe.engine.identity import Snowflake
 from girlframe.engine.m2 import ReleaseApproval
+from girlframe.engine.m3_policy import Approval as M3Approval
+from girlframe.engine.m3_policy import Rulings as M3Rulings
 
 
 class BotPolicy(BaseModel):
@@ -29,6 +31,8 @@ class BotPolicy(BaseModel):
     owner_initial_conditions: InitialConditions | None = None
     owner_intense_tag_bonus: Literal[1, 2] | None = None
     m2_approval: ReleaseApproval | None = None
+    m3_approval: M3Approval | None = None
+    owner_m3_rulings: M3Rulings | None = None
 
     @field_validator("owner_creation_rulings")
     @classmethod
@@ -65,4 +69,4 @@ def load_bot_token(environ: Mapping[str, str] | None = None) -> SecretStr:
 
 def policy_summary(policy: BotPolicy) -> str:
     """Safe startup evidence; no filesystem paths or roster IDs."""
-    return json.dumps({"mode": "m2_review_gated", "guild_scoped": True, "commands": 13})
+    return json.dumps({"mode": "m2_review_gated", "guild_scoped": True, "commands": 14})

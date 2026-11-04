@@ -20,7 +20,7 @@ do not rewrite that historical package or silently drop its original M1 gates.
 | M2I_CREATION_REVIEW | Source-backed validation, Newgirl history, explicit starting Bond choice and immutable private review sheets | Implemented; activation/independent review and human smoke pending |
 | M2J_PLAYBOOK_CREATION | Princess three-party standards, Oldgen maxims, Vatgrown investor choices, CHANGELING draft anchors and explicit initial conditions | Implemented; independent review, activation and human smoke pending |
 | M2K_GAMEPLAY_COMPLETION | Canonical activation, audited pilot Plays, durable choices and scene locking | Deployed; independent rules review and human acceptance pending |
-| M3_RULES_COMPLETION | Full source registry, shared/playbook rules, missions/recovery, Strain and world mechanics | In progress: inventory, core reducers and decision/mission contracts; ancillary module deferred |
+| M3_RULES_COMPLETION | Full source registry, shared/playbook rules, missions/recovery, Strain and world mechanics | In progress: inventory, core reducers, decision contracts and transactional private mission UI; Punishment/special-reaction resolvers pending; ancillary module deferred |
 | M2_CHARACTER_BUILDER | Complete source-audited Girl/Frame creation, legal options and derived resources, validation and playable activation | Before claiming rules-usable characters |
 
 The status commands remain available and now show stored M1 status. Original M1

@@ -110,3 +110,65 @@ The environment restarted during the work. The uncommitted checkpoint and comple
 tested frozen presence build was restarted after hash/offline-check verification,
 without loading the developing M3 source. Its live READY/presence output is checked
 separately from the rules tests. No environment configuration was published.
+
+
+## Transactional private mission checkpoint
+
+The owner approved granting the current Ace its separate mission-end Permission
+when absent. This is now recorded as a campaign ruling, not printed-rule certainty.
+The source branch adds a scoped, digest-bound M3 approval and explicit trusted M3
+rulings. Both default to absent; incomplete coverage cannot claim a core-complete
+release. Synthetic test approvals are not independent certification or live approval.
+
+Mission offers, individual responses, dispatch, explicit outcomes and rewards are
+persisted with private immutable histories. Permission changes and required-work
+records commit atomically through the existing canonical Pilot state. Failure and
+Dog causes remain separate auditable records, including an absent Dog. Known
+Princess/DoctorDoctor end reactions block the final reward snapshot; no generic
+acknowledgment waives consequences. Their actual resolvers and the remaining
+playbook trigger audit are unfinished.
+
+Native private `/mission offer`, `/mission inbox` and `/mission show` controls and
+the requests inbox use authenticated ownership and expected revisions. Opening a
+menu never accepts an offer. Unauthorized members/admins cannot read objectives;
+an absent Dog sees required work without the objective. Saved reads survive a
+vacant Handler appointment while writes stay blocked. Mission projections rebuild
+from immutable history; backup/restore preserves rewards and work. New source
+registers 14 guild command groups; the live frozen source still has 13.
+
+Validation executed:
+
+| Check | Actual result |
+|---|---|
+| `bash tools/install.sh` | Locked environment checked: 36 resolved / 35 installed packages; no dependency change |
+| `.venv/bin/ruff check .` | All checks passed |
+| `.venv/bin/ruff format --check .` | 181 files already formatted |
+| `.venv/bin/mypy` | No issues in 97 source files |
+| Full offline suite, `--junitxml=var/m3-missions-pytest.xml` | **520 passed in 46.41s**, zero failures/errors/skips |
+| Fresh migration/check/downgrade | Passed in the full synthetic suite; 34 application tables |
+| Populated synthetic `0011` to `0012` migration | All rows of all 31 existing application tables unchanged; three new tables empty; Alembic no pending operations; integrity `ok`, zero FK errors |
+| Registry check | RULES_SUBSET; 473 inventory entries, 436 core required, zero independently verified |
+| Handoff verifier | 34 required files, 86 planned cases, four schemas and four synthetic fixtures; PASS for planning package only |
+| Publishable-file/manifest check | 263 files, all 40 original manifest entries intact, zero findings |
+| CLI help and local health; startup wrapper `bash -n` | Passed; no Discord connection made by these smoke checks |
+| `git diff --check` | Passed |
+
+The final suite adds 20 cases over the prior 500-test baseline: service, native UI,
+migration preservation and Handler-vacancy regressions. Two initial migration-test
+assertions used the wrong action-read API/shape; both were corrected before the
+passing full run. No application failure remains from those test authoring errors.
+
+Live readback found exactly one existing bot process, schema **0011**, database
+integrity `ok` and zero FK errors. The frozen presence release, live policy and live
+database were not replaced or migrated. These are local operational observations,
+not human Discord acceptance of the M3 UI. Future M3 frozen releases must include
+the matching source registry beside `src/`; the startup wrapper binds its snapshot.
+No credentials, PDFs, private references, databases or environment configuration
+were published.
+
+M3 remains IN_PROGRESS / RULES_SUBSET. Punishment application awaits two genuine
+owner interpretations (book PDF 17–18 / printed 15–16, and PDF 16–17): who selects
+unspecified Identity/Asset details after the inflictor chooses the type, and whether
+one actual Punishment can satisfy both failure and Dog causes. No assumption on
+either has been committed. Full remaining mechanics, Strain/world rules, independent
+source/code review, human acceptance and owner milestone sign-off are still required.

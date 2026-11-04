@@ -15,6 +15,15 @@ play-testing are pending. See [the review handoff](docs/M2_REVIEW_HANDOFF.md) an
 [M2 evidence](reports/M2_ACCEPTANCE.md). The live policy does not activate characters
 or certify rules automatically. M1 raw dice remain a separate test primitive.
 
+M3 is in development and remains **RULES_SUBSET**. Its offline mission flow now
+persists private invitations, explicit player responses, dispatch and mission-end
+rewards, with required consequences blocking completion. Mechanical Punishment
+resolution and special mission-end reactions remain unfinished. These changes
+require a separate, scoped M3 release approval and are not enabled in the running
+bot. See [M3 evidence](reports/M3_ACCEPTANCE.md) and
+[source coverage](docs/M3_SOURCE_AUDIT.md). Ancillary playbooks are deferred and
+disabled by default.
+
 Read `AGENTS.md` and [the roadmap](docs/PROJECT_ROADMAP.md) before development. The
 original planning package remains unchanged in `GIRLFRAME_Discord_Codex_Handoff_v0.2/`;
 its historical `planning/` paths refer to that directory.
@@ -41,7 +50,7 @@ or outside Git. Never delete a populated database to refresh the environment.
 Before upgrading an existing database, make a new private backup, then migrate:
 
 ```bash
-python -m girlframe db backup --dest var/backups/before-0011.db
+python -m girlframe db backup --dest var/backups/before-0012.db
 python -m alembic upgrade head
 python -m alembic check
 ```
@@ -59,6 +68,10 @@ Mentor-callsign setup requests. `0009` adds immutable private assembled review s
 Handlers without Pilot profiles. `0011` adds canonical M2 state/history, scenes,
 actions, receipts, human decisions, orders, locks and delivery. Existing records
 are preserved; migration creates no active character or fictional effect.
+`0012` adds private missions and append-only mission/required-work histories. It
+preserves existing records and does not approve or enable M3 gameplay. Upgrade a
+live installation only as part of a reviewed deployment with its matching code;
+the existing frozen bot continues on `0011` during M3 development.
 `alembic downgrade base` destroys application tables: use only on
 throwaway test databases. Never downgrade real campaign data to roll back code.
 
@@ -95,7 +108,8 @@ Policy examples are in `config/discord-policy.example.json`. The offline `--chec
 validates policy/sandbox only, not schema, credentials or live guild access.
 
 Actual startup checks the authenticated application and guild, then synchronizes
-13 top-level commands/groups in that guild only. Reconnect does not resync commands
+14 top-level commands/groups in that guild only. The currently running frozen
+pre-M3 release retains 13. Reconnect does not resync commands
 or duplicate workers. Responses are ephemeral, with mentions disabled. Only an
 explicit confirmed setup posts onboarding controls; raw rolls publish by default unless `publish:false`; approved M2 Plays post minimal scene controls and receipts. SDK DEBUG logging must stay disabled because it can
 include interaction credentials. HTTP/Gateway use the inherited HTTPS proxy and
@@ -107,6 +121,11 @@ the tested `src/` into a private ignored release directory and set
 The directory must contain the tested `girlframe` package. Keep policy/data in their
 existing locations; do not copy private state into a public release. This freezes
 code for that process, without making hosting continuous.
+For M3-capable snapshots, also copy the tested `rules/registry.json` beside `src/`.
+The wrapper binds that snapshot through `GIRLFRAME_RULES_REGISTRY` unless the
+operator explicitly supplies another path. An enabled M3 service checks its
+registry digest against trusted scoped approval; a missing or changed registry
+fails closed. Default-disabled M3 needs neither a registry file nor approval.
 
 Discord presence shows the actual package version: **Starting v0.1.0** while
 connecting, **Running v0.1.0** when ready, and **Restarting v0.1.0** during a
@@ -133,6 +152,8 @@ check installation and guild ID. Errors omit raw provider bodies and private pat
 |---|---|
 | `/play` | Owner-bound Play/resource selectors, trigger details, Confirm & Roll; release approval required |
 | `/choice resume`, `/choice show` | Own durable responses; permitted saved action/receipt |
+| `/mission offer` | Current Handler; private Pilot selector, objective and explicit confirmation; M3 approval required |
+| `/mission inbox`, `/mission show` | Invited players/current Handler; saved private offers and progress, with owner-bound actions |
 | `/character activate`, `/character state` | Explicit activation/public fields; current private state with paging |
 | `/character followthrough`, `/character recover` | Owner follow-through and source-backed moment-alone recovery |
 | `/campaign scene_bind`, `scene_join`, `scene_leave`, `scene_close` | Staff-bound scenes, explicit participation and safe close |

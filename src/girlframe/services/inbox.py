@@ -396,6 +396,86 @@ class InboxService:
                         task="m2_choice",
                     )
                 )
+            from girlframe.engine.m3_missions import Mission
+
+            current_handler = handler.current(connection)[1].handler_id
+            table = t.m3["m3_missions"]
+            for mission_body in connection.scalars(
+                sa.select(table.c.body_json).where(table.c.campaign_id == self.store.campaign_id)
+            ):
+                mission = Mission.model_validate_json(mission_body)
+                if viewer.user_id not in mission.offered_to and viewer.user_id != current_handler:
+                    continue
+                needs_response = (
+                    mission.phase == "offered"
+                    and viewer.user_id in mission.offered_to
+                    and user not in mission.responses
+                )
+                handler_action = viewer.user_id == current_handler and mission.phase in (
+                    "offered",
+                    "active",
+                    "ending",
+                    "awaiting_consequences",
+                )
+                items.append(
+                    InboxItem(
+                        "mission:" + mission.id,
+                        "mission",
+                        mission.id,
+                        mission.revision,
+                        "missions",
+                        "Mission offer" if mission.phase == "offered" else "Mission progress",
+                        "Handler",
+                        "pending"
+                        if mission.phase not in ("complete", "cancelled")
+                        else mission.phase,
+                        needs_response or handler_action,
+                        False,
+                        (
+                            "Only your own acceptance/decline is recorded. "
+                            "Required effects cannot be skipped."
+                        ),
+                        mission.objective,
+                        "Review mission",
+                        task="m3_mission",
+                    )
+                )
+            table = t.m3["m3_required_work"]
+            latest_work = {
+                row["id"]: dict(row)
+                for row in connection.execute(
+                    sa.select(table)
+                    .where(
+                        table.c.campaign_id == self.store.campaign_id,
+                        sa.or_(table.c.owner_id == user, table.c.subject_id == user),
+                    )
+                    .order_by(table.c.revision)
+                ).mappings()
+            }
+            for work in latest_work.values():
+                if work["state"] == "resolved":
+                    continue
+                items.append(
+                    InboxItem(
+                        "mission-work:" + work["id"],
+                        "mission_work",
+                        work["id"],
+                        work["revision"],
+                        "missions",
+                        "Required Punishment"
+                        if work["kind"] == "punishment"
+                        else "Required mission reaction",
+                        label(work["subject_id"]),
+                        "pending",
+                        work["owner_id"] == user,
+                        False,
+                        "A required consequence remains pending.",
+                        (
+                            "Resolve this with the designated participant; "
+                            "an offline player or timer cannot waive it."
+                        ),
+                    )
+                )
         return tuple(
             sorted(
                 items,

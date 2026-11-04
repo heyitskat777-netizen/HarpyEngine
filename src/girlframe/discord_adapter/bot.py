@@ -187,6 +187,10 @@ class ReadOnlyDiscordBot(discord.Client):
 
             assert self.game is not None
             register_game(self.tree, policy.guild_id, self.game)
+            from girlframe.discord_adapter.m3_missions import register_missions
+            from girlframe.services.m3_missions import MissionService
+
+            register_missions(self.tree, policy.guild_id, MissionService(store))
 
     def _callback(
         self, name: ReadOnlyCommand
@@ -221,6 +225,7 @@ class ReadOnlyDiscordBot(discord.Client):
                         "/safety pause, /safety resume — save or clear your own OOC pause\n"
                         "/health — configured administrators only\n"
                         "/play, /choice resume — M2 guided Plays and pending human responses\n"
+                        "/mission offer, inbox, show — M3 scoped approval required\n"
                         "/character activate, /character followthrough — M2 character state\n"
                         "/campaign scene_bind, scene_join, scene_close, order, play_recovery\n"
                         "M2 gameplay requires the end-of-milestone release approval. "

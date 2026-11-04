@@ -34,6 +34,12 @@
       "summary": "The current Handler explicitly quotes the price of each extra Asset repair during the Budget shortage; no default repair price is assumed.",
       "provenance": "owner_approved_campaign_ruling",
       "source": "Owner reply in this development conversation, 2026-11-04"
+    },
+    {
+      "id": "absent-ace-permission-bonus",
+      "summary": "The current Ace receives the extra mission-end Permission even if it did not participate.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Owner approval in this development conversation"
     }
   ],
   "entries": [
