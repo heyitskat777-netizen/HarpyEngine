@@ -27,6 +27,7 @@ class Rulings(BaseModel):
     director_exit_resources: Literal["retain_without_recovery"]
     director_controller: Literal["separate_from_handler"]
     punishment_details: Literal["inflictor_selects"]
+    regulation_breach_review: Literal["informed_handler"]
     failure_dog_overlap: Literal["one_punishment_both_causes"]
     sedation_small_set: Literal["mark_all_remaining"]
     princess_ace_check: Literal["after_promotion"] | None = None

@@ -36,7 +36,6 @@ KINDS = {
 }
 SUPPORTED = frozenset(KINDS) - {
     "revoked_privileges",
-    "strict_regulations",
     "execution",
     "lobotomization",
     "indefinite_imprisonment",
@@ -54,6 +53,8 @@ class Details(Model):
     replacement_description: str = Field(default="", max_length=1200)
     embrace_tag: str | None = Field(default=None, max_length=100)
     delegate: int | None = Field(default=None, gt=0)
+    regulation: str = Field(default="", max_length=1200)
+    disclosed: bool = True
 
 
 class Followup(Model):
@@ -105,6 +106,7 @@ def validate(details: Details) -> str:
         "correctional_programming": {"identities", "embrace_tag"},
         "frame_disassembly": {"asset"},
         "compliance_surgery": {"asset", "replacement_name", "replacement_description"},
+        "strict_regulations": {"regulation", "disclosed"},
     }.get(details.kind, set())
     defaults = Details(kind=details.kind)
     for field in Details.model_fields:
@@ -128,6 +130,8 @@ def apply(
     handler_consulted: bool = False,
     off_duty_period: str | None = None,
     allow_duplicate_labels: bool = False,
+    source_event: str | None = None,
+    character_ids: dict[int, str] | None = None,
 ) -> Applied:
     severity = validate(details)
     if inflictor != original.handler and str(inflictor) not in original.sheets:
@@ -146,7 +150,22 @@ def apply(
     kind = details.kind
     if kind == "passing_responsibility":
         raise ValueError("Delegation transfers pending work; it does not apply a Punishment")
-    if kind == "sedation":
+    if kind == "strict_regulations":
+        from girlframe.engine.m3_regulations import impose
+
+        state.regulations.append(
+            impose(
+                state,
+                subject,
+                inflictor,
+                details.regulation,
+                details.disclosed,
+                entity_id,
+                source_event or "",
+                character_ids,
+            )
+        )
+    elif kind == "sedation":
         chosen = [x for x in sheet.identities if x.id in details.identities]
         count = min(2, len(sheet.identities))
         if len(details.identities) != count or len(chosen) != count:

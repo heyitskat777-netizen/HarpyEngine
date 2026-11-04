@@ -480,6 +480,23 @@
       "change_impact": "Relaxing the global default needs actual scene-specific actor binding and tests so the explicit High Budget requirement remains enforced. Preserve existing role/control and response provenance.",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "regulation-breach-review",
+      "policy_key": "regulation_breach_review",
+      "summary": "The current informed Handler explicitly records each actual breach and chooses whether its separate Punishment is due in the current actual mission/Off-Duty context or the next Off-Duty period.",
+      "source": "Book PDF 17 / printed p.15; Moderate consultation PDF 18 / printed p.16; owner delegated authority",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "The source permits concealed behavioural rules and requires further Punishment on breach, but does not define automated detection or a reporting procedure. Human adjudication preserves fictional knowledge and the printed now-or-later discipline timing.",
+      "alternatives": [
+        "The original inflictor adjudicates all later breaches",
+        "Require the affected player to confirm each breach"
+      ],
+      "implementation_note": "No passive chat ingestion, automatic judgment or inferred player response. A concealed rule remains private to its actual author and informed Handler. Every recorded occurrence has its own source event and discipline cause; next-period deferral does not become current-period work.",
+      "change_impact": "Changing the adjudicator or timing requires explicit knowledge/authority migration and treatment of pending breach causes, without replaying a Punishment or disclosing a concealed rule.",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -916,7 +933,9 @@
         "tests/rules/test_off_duty_cycle.py",
         "tests/rules/test_off_duty_cycle_ui.py",
         "tests/rules/test_off_duty_discipline.py",
-        "tests/rules/test_off_duty_handler_scenes.py"
+        "tests/rules/test_off_duty_handler_scenes.py",
+        "tests/rules/test_regulations.py",
+        "tests/rules/test_regulation_service.py"
       ],
       "m2_play_id": null,
       "module": "core"

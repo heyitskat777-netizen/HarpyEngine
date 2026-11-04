@@ -127,6 +127,8 @@ class PunishmentService:
         )
 
     def _bundle(self, c: Connection, row: dict[str, Any]) -> list[dict[str, Any]]:
+        if self._body(row).get("reason") == "strict_regulations":
+            return [row]
         if row["off_duty_id"] is not None:
             if self._body(row).get("reason") not in (
                 "m2_play",
@@ -136,10 +138,14 @@ class PunishmentService:
             ):
                 raise WorkflowError("This Off-Duty cause needs its source-specific resolver.")
             return [row]
+        if self._body(row).get("reason") not in ("mission_failure", "dog_mission_end"):
+            raise WorkflowError("This cause requires its own source-specific discipline resolver.")
         result = [
             x
             for x in self.missions._pending(c, row["mission_id"])
-            if x["kind"] == "punishment" and x["subject_id"] == row["subject_id"]
+            if x["kind"] == "punishment"
+            and x["subject_id"] == row["subject_id"]
+            and self._body(x).get("reason") in ("mission_failure", "dog_mission_end")
         ]
         if not result or any(x["owner_id"] != row["owner_id"] for x in result):
             raise WorkflowError("Resolve conflicting discipline ownership before applying effects.")
@@ -221,10 +227,16 @@ class PunishmentService:
                 result["off_duty_id"] = row["off_duty_id"]
                 result["context_scene"] = body.get("context_scene")
             if row["kind"] == "punishment_consult":
-                result["proposal"] = body["proposal"]
+                proposal = dict(body["proposal"])
+                if (
+                    proposal["kind"] == "strict_regulations"
+                    and not proposal.get("disclosed", True)
+                    and viewer.user_id not in (body["inflictor"], state.handler)
+                ):
+                    proposal["regulation"] = "Concealed behavioural rule"
+                result["proposal"] = proposal
                 result["inflictor"] = body["inflictor"]
                 result["stale"] = body["game_revision"] != state.revision
-                proposal = body["proposal"]
                 labels = {x.id: x.name for x in sheet.identities + sheet.assets} if sheet else {}
                 if sheet:
                     labels.update({x.id: x.label for x in sheet.tags})
@@ -237,7 +249,9 @@ class PunishmentService:
                         else labels.get(str(value), value)
                     )
                     for key, value in proposal.items()
-                    if key != "kind" and value
+                    if key != "kind"
+                    and (value or (key == "disclosed" and proposal["kind"] == "strict_regulations"))
+                    and (key != "disclosed" or proposal["kind"] == "strict_regulations")
                 ]
             if row["kind"] == "punishment" and row["state"] != "resolved":
                 bundle = self._bundle(c, row)
@@ -380,6 +394,12 @@ class PunishmentService:
                     "HANDLER_CONSULT_REQUIRED: submit this exact proposal for Handler "
                     "consultation first."
                 )
+            event_id = str(uuid4())
+            character_ids = {
+                uid: self.game.character_binding(c, state, uid, require_current_profile=False)
+                for uid in {int(row["subject_id"]), viewer.user_id}
+                if uid != state.handler
+            }
             result = rules.apply(
                 state,
                 int(row["subject_id"]),
@@ -388,6 +408,8 @@ class PunishmentService:
                 entity_id=str(uuid4()),
                 **self._context(c, row),
                 handler_consulted=consulted,
+                source_event=event_id,
+                character_ids=character_ids,
             )
             for item in bundle:
                 source = self._body(item).get("obligation_id")
@@ -408,7 +430,6 @@ class PunishmentService:
                             "The original discipline debt changed; recover it explicitly."
                         )
                     debt.state = "fulfilled"
-            event_id = str(uuid4())
             observation_period = None
             if self._body(row).get("reason") == "void_observation":
                 from girlframe.services.m3_observation import discipline_applied
@@ -651,6 +672,12 @@ class PunishmentService:
                 entity_id="consultation-preview",
                 **self._context(c, row),
                 handler_consulted=True,
+                source_event="consultation-preview",
+                character_ids={
+                    uid: self.game.character_binding(c, state, uid, require_current_profile=False)
+                    for uid in {int(row["subject_id"]), viewer.user_id}
+                    if uid != state.handler
+                },
             )
             bundle = self._bundle(c, row)
             previous = self._body(row).get("consult_id")

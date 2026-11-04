@@ -30,11 +30,33 @@ def synchronize(c: Connection, store: OnboardingStore, state: GameState, event: 
     for debt in state.obligations:
         if debt.kind != "punishment" or debt.state != "pending" or debt.owner not in period.pilots:
             continue
+        if debt.details.get("after_period") == period.id:
+            continue
+        if debt.details.get("mission"):
+            continue
+        character = debt.details.get("character_id")
+        if (
+            character
+            and c.scalar(
+                sa.select(t.characters.c.id).where(
+                    t.characters.c.campaign_id == store.campaign_id,
+                    t.characters.c.user_id == str(debt.owner),
+                )
+            )
+            != character
+        ):
+            continue
         identity = period.id + ":m2-punishment:" + debt.id
         if c.scalar(
-            sa.select(work.c.id).where(
-                work.c.campaign_id == store.campaign_id, work.c.id == identity
+            sa.select(work.c.id)
+            .where(
+                work.c.campaign_id == store.campaign_id,
+                sa.or_(
+                    work.c.id == identity,
+                    sa.func.json_extract(work.c.body_json, "$.obligation_id") == debt.id,
+                ),
             )
+            .limit(1)
         ):
             continue
         c.execute(
@@ -54,7 +76,8 @@ def synchronize(c: Connection, store: OnboardingStore, state: GameState, event: 
                         "reason": "m2_play",
                         "obligation_id": debt.id,
                         "source_action": debt.action,
-                        "source_pdf": 27,
+                        "source_pdf": int(debt.details.get("source_pdf", "27")),
+                        "cause": debt.details.get("cause", "m2_play"),
                         "due_stage": "active",
                     },
                     sort_keys=True,

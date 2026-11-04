@@ -805,3 +805,57 @@ retry succeeded. CI passed `6d76c44`, run 41816188782. The original frozen bot w
 observed as exactly one process; all **88 frozen source hashes matched**. No live
 migration/policy change, M3 deployment, environment publication, independent review,
 human play-test or M3-ready claim applies to this checkpoint.
+
+
+## Actual actors, scene casting and Strict Regulations
+
+Typed actor references now distinguish fictional identity from current human
+control and bind actual character generations. Resource descriptors preserve the
+actual canonical model; missing NPC/external resources stay absent. Own-role and
+scene-role native selectors do not transfer secrets, traits or a Girl's scene
+participation merely because the same human controls an NPC. Actual immutable
+legacy bind/join/state/profile evidence proves original roles; the legacy Handler
+join is a facilitator, not fictional presence. Source-bound cast joins/withdrawals,
+stale-controller withdrawal, close/archive and restored-chat checks are canonical.
+Mixed-role Plays remain blocked until actual actor-aware consumers are implemented.
+
+Existing activation and Play/order/follow-through state now records character IDs.
+Before dice or saved private choices apply, every actual original participant
+must still be that character. Genuine legacy action history proves the original
+generations without guessing; known-roll resume preserves receipts and answered
+humans. A source-proven optional metadata binding does not reset resources.
+
+Strict Regulations (PDF 17 / printed p.15) now has inflictor-owned rule/disclosure
+controls, exact Moderate consultation (PDF 18 / printed p.16), private typed rules
+and manual informed-Handler breach review. Concealed text is excluded from the
+subject's consultation, raw sheet and unrelated projections. Every actual breach
+retains a distinct event and discipline cause. Current mission/Off-Duty and next
+Off-Duty timing are explicit; future debt does not block the current recovery or
+silently become current work. A genuine two-period synthetic cycle proves later
+required work and a real separately attested Punishment fulfill the cause once.
+The recommendation, alternatives, clarity review and adjustment impact are in the
+central and machine ruling registers. No passive chat or AI judges a breach.
+
+Executed final full suite: **974 passed in 177.32s**, no failures/errors/skips;
+`var/m3-actors-regulations-pytest.xml`. Focused combined discipline/cast run:
+**64 passed in 24.00s**, followed by the review-disclosure and actual future-period
+recovery checks: **22 passed in 9.14s**. Earlier full actor/cast baseline:
+**958 passed in 179.74s**, `var/m3-actor-cast-pytest.xml`. The actor/cast first focused
+run had **1 failed, 106 passed** because the rollback fixture patched another
+service instance; corrected instance fault injection passed all **12 cast tests**
+in 4.04s. The expanded final suite includes that correction. No failure was waived.
+
+Final Ruff passed; **296 Python files** formatted; mypy passed for **156 source files**.
+Final public source check: **378 publishable files**,
+all **40 original manifest entries**, zero findings. Registry remains 473 inventory
+entries, 436 required core, 48 subsets, 425 unimplemented and zero independent
+verifications. This checkpoint does not finish M3. Shared actor-aware Plays,
+playbooks/economy, five remaining Punishments, career/lifecycle, 60 further Strain
+cells, Endgames and other world interactions still require implementation.
+
+Exactly one original frozen M2 process was observed (PID47656); all **88 frozen
+source hashes matched** at commit 88cd237. GitHub CI passed the prior Director
+checkpoint 7b34541, run 41821321860. The sanitized push path now uses the existing
+`gh auth git-credential` helper per command; no token, global credential setting or
+environment draft was changed. No live migration/policy change, M3 deployment,
+environment publication, independent/human acceptance or M3-ready claim applies.

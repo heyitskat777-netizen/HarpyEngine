@@ -148,6 +148,17 @@ async def open_details(
         fields.append(Field("bond_with", "Weaken this Bond", tuple(own["bonds"])))
     elif kind == "passing_responsibility":
         fields.append(Field("delegate", "Choose the new inflictor", tuple(own["pilots"])))
+    elif kind == "strict_regulations":
+        fields.extend(
+            [
+                Field("regulation", "Describe the behavioural rule", paragraph=True),
+                Field(
+                    "disclosed",
+                    "Inform the affected Girl?",
+                    (("yes", "Inform her of the rule"), ("no", "Keep the rule concealed")),
+                ),
+            ]
+        )
     elif kind == "correctional_programming":
         if branch == "embrace":
             fields.append(entities("embrace_tag", "Force this Tag to be embraced", own["tags"]))
@@ -201,6 +212,8 @@ async def open_details(
                 value = value[0]
             if field.key in ("bond_with", "delegate"):
                 value = int(value)
+            if field.key == "disclosed":
+                value = value == "yes"
             details[field.key] = value
         operation = (
             service.consult

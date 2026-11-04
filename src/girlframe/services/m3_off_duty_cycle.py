@@ -430,6 +430,7 @@ class CycleService:
                 x.owner == viewer.user_id
                 and x.state == "pending"
                 and x.kind in ("punishment", "void_observation", "defeat", "helpless")
+                and x.details.get("after_period") != identity
                 for x in state.obligations
             ):
                 raise WorkflowError(

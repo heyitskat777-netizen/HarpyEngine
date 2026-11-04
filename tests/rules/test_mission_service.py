@@ -53,6 +53,7 @@ def service(store, girl="MOCKINGBIRD", frame="JANUS-B"):
                 director_exit_resources="retain_without_recovery",
                 director_controller="separate_from_handler",
                 punishment_details="inflictor_selects",
+                regulation_breach_review="informed_handler",
                 failure_dog_overlap="one_punishment_both_causes",
                 sedation_small_set="mark_all_remaining",
                 princess_ace_check="after_promotion",

@@ -319,6 +319,44 @@ def register_missions(
         except WorkflowError as error:
             await reply(interaction, str(error))
 
+    @group.command(
+        name="actors", description="Review your actual Girl, NPC and other controlled roles"
+    )
+    async def actors(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_actors import open_actors
+        from girlframe.services.m3_actors import ActorService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_actors(interaction, ActorService(service))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @group.command(name="cast", description="Choose your actual roles in this bound scene")
+    async def cast_scene(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_cast import open_cast
+        from girlframe.services.m3_actors import ActorService
+        from girlframe.services.m3_cast import CastService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_cast(interaction, CastService(ActorService(service)))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @group.command(
+        name="regulations", description="Review known behavioural rules and recorded breaches"
+    )
+    async def regulations(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_regulations import open_regulations
+        from girlframe.services.m3_regulations import RegulationService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_regulations(interaction, RegulationService(service))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
     @group.command(name="world", description="Set up or manage the canonical world (Handler)")
     async def world(interaction: discord.Interaction) -> None:
         from girlframe.discord_adapter.m3_world import open_world

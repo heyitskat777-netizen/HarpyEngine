@@ -167,3 +167,15 @@ Both require printed-rule clarity review. The printed zero-Heat/two-Identity sta
   roles. A future relaxation requires scene-specific binding and preservation of
   the explicit Budget requirement, not silent reassignment of saved decisions.
   This remains a printed-rule clarity-review item.
+
+
+`regulation_breach_review`: use the current informed Handler to record an actual
+breach and choose current-context or next-Off-Duty discipline. Book PDF 17 / printed
+p.15 permits concealed rules and further Punishment but leaves the reporting
+procedure unspecified; PDF 18 requires Handler consultation for Moderate effects.
+This is a delegated recommendation requiring printed-rule clarity review. Alternatives
+are adjudication by the original inflictor, or affected-player confirmation. The
+implementation uses explicit human accounts and actual source events, with no
+passive chat judgment. Each breach retains its own cause; future-period deferral
+cannot be pulled into the current period. Changing this policy needs knowledge and
+pending-cause migration, without replaying discipline or exposing a concealed rule.

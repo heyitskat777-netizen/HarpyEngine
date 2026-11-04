@@ -6,7 +6,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from girlframe.engine.creation_review import ReviewSheet
 from girlframe.engine.identity import Snowflake
+from girlframe.engine.m3_actor_state import SceneCast
 from girlframe.engine.m3_frame_state import FrameRuntime
+from girlframe.engine.m3_regulation_state import Regulation
 from girlframe.engine.m3_strain_state import State as StrainState
 from girlframe.engine.m3_world_state import World
 
@@ -67,6 +69,7 @@ class TagState(Model):
 
 class PilotSheet(Model):
     owner: Snowflake
+    character_id: str | None = Field(default=None, min_length=1, max_length=100)
     revision: int = 1
     callsign: str
     girl: str
@@ -165,6 +168,8 @@ class GameState(Model):
     strain: StrainState | None = None
     world: World | None = None
     director_contexts: list[DirectorContext] = Field(default_factory=list)
+    scene_casts: list[SceneCast] = Field(default_factory=list)
+    regulations: list[Regulation] = Field(default_factory=list)
 
 
 class PlayInput(Model):

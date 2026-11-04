@@ -117,7 +117,6 @@ def test_disassembly_surgery_and_inhibitor_are_canonical_and_immutable_inputs(ca
     "kind",
     [
         "revoked_privileges",
-        "strict_regulations",
         "execution",
         "lobotomization",
         "indefinite_imprisonment",

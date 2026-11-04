@@ -24,7 +24,7 @@ Obsolescence and Princess mission-end standards now have private review controls
 before rewards. Last-Girl-Asset Beating reviews apply Helplessness from confirmed
 Frame context. DoctorDoctor scrapping now supports free replacement through player
 proposal, an exact Handler package and player confirmation, including required
-Court consent and safe Discord-label updates. Six further Punishment types,
+Court consent and safe Discord-label updates. Five further Punishment types,
 Defeat/recovery integration and some other follow-ups remain unfinished. These changes
 require a separate, scoped M3 release approval and are not enabled in the running
 bot. See [M3 evidence](reports/M3_ACCEPTANCE.md) and
@@ -183,6 +183,8 @@ unimplemented mechanics, player responses or an M3 release.
 | `/mission off_duty` | Saved preparation, owned credit declarations and required-work selectors; M3 effects remain gated |
 | `/mission strain` | Handler chooses starting scenario, reviews triggers, confirms saved d6 rolls and chooses event columns; unsupported effects stay pending |
 | `/mission world`, `/mission map` | Handler setup/management and a player map that omits private world records |
+| `/mission regulations` | Private known behavioural rules; informed Handler explicitly records breaches and separate current/next-period discipline |
+| `/mission actors`, `/mission cast` | Owned actual-role previews and explicit scene casting; mixed-role Plays still require actor-aware consumers |
 | `/mission npc`, `/mission npc_bond` | Explicit NPC role claim or owner-confirmed link of a saved starting NPC Bond |
 | `/character activate`, `/character state` | Explicit activation/public fields; current private state with paging |
 | `/character followthrough`, `/character recover` | Owner follow-through and source-backed moment-alone recovery |

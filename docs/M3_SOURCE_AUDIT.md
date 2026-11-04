@@ -99,7 +99,10 @@ by the affected player and commits once after Sedation. Off-duty Sedation locks
 are retained by the pure recovery reducer; the mission service applies pre-Off-Duty
 discipline only. Handler Heat from an Intense Bond is tracked in canonical state.
 
-Revoked Privileges, Strict Regulations and all four Severe types remain unavailable.
+Revoked Privileges and all four Severe types remain unavailable. Strict Regulations
+now has private typed imposition, explicit disclosure choice, exact Moderate
+consultation, informed Handler breach review and separate source-bound discipline
+causes. Current-context and future-period timing remain distinct through recovery.
 Ankou and Void-context work remain blocking until their typed resolvers
 exist; no acknowledgment waives them. The last-Girl-Asset Beating resolver now
 requires the current assigned Handler's factual Frame-context review: apply
@@ -155,3 +158,25 @@ Director Handler Plays, prices/phone calls and broader cast/world interactions
 remain incomplete. The global separate-Director-player rule is a campaign
 recommendation: the explicit printed requirement is High Budget 1/1 (PDF 151),
 while generic NPC control is broader. See the central rulings and M3_DIRECTOR.md.
+
+
+Actual actor references and source-proven scene casting now distinguish human
+controllers from their fictional roles. Saved Pilot Plays bind character
+incarnations, including legacy generations proved by immutable original state.
+The Handler's facilitator role does not claim its fictional presence. Private NPC
+information and unmodeled resources are not transferred to another role of the
+same human. The mixed-role Play/resource consumers remain unimplemented and
+fail closed. See `work_orders/M3_ACTORS.md`; this is a partial foundation.
+
+
+Strict Regulations uses book PDF 17 / printed p.15, with Moderate consultation at
+PDF 18 / printed p.16. Its rule is separate from public/Pilot-sheet resources and
+bound to the actual character incarnation, inflictor and informed Handler. Hidden
+rules stay out of the subject's consultation view and unrelated projections. The
+Handler explicitly records a real breach and its due context; no chat is ingested
+or judged automatically. Each breach creates a separate actual discipline cause,
+which cannot merge with the mission failure/Dog overlap. Future-period debt does
+not block current-period recovery but becomes required work on the next actual
+period. A synthetic two-period test applies the further Punishment once, with
+separate owned on-screen attestations. Handler knowledge-transfer, career archives,
+remaining Punishments, full economy/playbook and other M3 work still remain.

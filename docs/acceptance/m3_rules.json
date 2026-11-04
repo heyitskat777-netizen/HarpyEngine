@@ -702,6 +702,47 @@
           "limitation": "Shared Girl Play ports, Director Handler Plays/prices/phone calls, broader cast integration and independent/human acceptance remain incomplete."
         }
       ]
+    },
+    {
+      "id": "M3B-ACTORS-001",
+      "title": "Actual role references, scene cast and saved character generations",
+      "expected": "One human can own separate roles without resource/knowledge borrowing; immutable original joins/actions preserve character generations through replay and recovery.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_actors.py",
+        "tests/rules/test_actor_service.py",
+        "tests/rules/test_actor_ui.py",
+        "tests/rules/test_cast_service.py"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_actor_cast_and_legacy_action_binding",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-actors-regulations-pytest.xml",
+          "result": "974 passed in 177.32s; no failures/errors/skips",
+          "artifact": "var/m3-actors-regulations-pytest.xml",
+          "limitation": "Actor-aware shared Plays, complete location/resource consumers, career/archive and independent/human acceptance remain unfinished."
+        }
+      ]
+    },
+    {
+      "id": "M3D-REGULATIONS-001",
+      "title": "Concealed Strict Regulations and real current/future discipline causes",
+      "expected": "Inflictor-owned exact Moderate proposal, disclosure choice, informed Handler breach source, independent required Punishment and actual next-period preservation/fulfillment.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_regulations.py",
+        "tests/rules/test_regulation_service.py",
+        "tests/rules/test_off_duty_discipline.py"
+      ],
+      "evidence": [
+        {
+          "scope": "offline_strict_regulations_and_two_period_discipline",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-actors-regulations-pytest.xml",
+          "result": "974 passed in 177.32s; no failures/errors/skips",
+          "artifact": "var/m3-actors-regulations-pytest.xml",
+          "limitation": "Knowledge transfer to a replacement Handler, career lifecycle and broader discipline/playbook/mission interactions still need implementation and independent/human acceptance."
+        }
+      ]
     }
   ],
   "enabled_modules": [

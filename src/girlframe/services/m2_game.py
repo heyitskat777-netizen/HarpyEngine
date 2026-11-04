@@ -229,8 +229,19 @@ class GameService:
                 for i, name in enumerate(review.creation.intrinsic_frame_assets)
             )
             outgoing = next((x for x in review.bonds if x.outgoing), None)
+            character_id = c.scalar(
+                sa.select(t.characters.c.id).where(
+                    t.characters.c.campaign_id == self.store.campaign_id,
+                    t.characters.c.user_id == str(viewer.user_id),
+                )
+            )
+            if character_id is None:
+                raise WorkflowError(
+                    "The actual current character profile is required for activation."
+                )
             sheet = PilotSheet(
                 owner=viewer.user_id,
+                character_id=character_id,
                 callsign=review.activation_callsign,
                 girl=review.creation.girl_playbook,
                 frame=review.creation.frame_playbook,
@@ -344,6 +355,8 @@ class GameService:
             if str(viewer.user_id) not in state.sheets and viewer.user_id != state.handler:
                 raise WorkflowError("Activate a Pilot or use the appointed Handler account.")
             scene = self.scene(c, channel)
+            if any(x.id == scene["id"] and x.open for x in state.scene_casts):
+                raise WorkflowError("Choose your actual role through /mission cast.")
             lock = self.lock(c, channel)
             if lock and lock["state"] != "released":
                 raise WorkflowError(
@@ -533,6 +546,130 @@ class GameService:
         }
         return any(x["state"] != "resolved" for x in rows.values())
 
+    def character_binding(
+        self, c: Connection, state: GameState, owner: int, *, require_current_profile: bool = True
+    ) -> str:
+        sheet = state.sheets.get(str(owner))
+        profile = c.execute(
+            sa.select(t.characters.c.id, t.characters.c.revision).where(
+                t.characters.c.campaign_id == self.store.campaign_id,
+                t.characters.c.user_id == str(owner),
+            )
+        ).first()
+        if sheet is None or sheet.owner != owner or profile is None:
+            raise WorkflowError("STALE_CHARACTER: recover the actual active character.")
+        if require_current_profile and profile.revision != sheet.source_profile_revision:
+            raise WorkflowError(
+                "STALE_PROFILE: active profile changed; canonical resources were preserved."
+            )
+        original = sheet.character_id
+        if original is None:
+            original = c.scalar(
+                sa.select(t.snapshots.c.character_id).where(
+                    t.snapshots.c.campaign_id == self.store.campaign_id,
+                    t.snapshots.c.user_id == str(owner),
+                    t.snapshots.c.revision == sheet.source_profile_revision,
+                )
+            )
+        if original is None or original != profile.id:
+            raise WorkflowError(
+                "STALE_CHARACTER: original resources cannot move to another character."
+            )
+        return str(original)
+
+    def action_characters(self, c: Connection, action: dict[str, Any], state: GameState) -> None:
+        saved = action["data"].get("character_ids")
+        if saved is None:
+            saved = self.legacy_action_bindings(c, action)
+        for owner, original in saved.items():
+            if (
+                self.character_binding(c, state, int(owner), require_current_profile=False)
+                != original
+            ):
+                raise WorkflowError(
+                    "STALE_CHARACTER: this saved decision belongs to an earlier character."
+                )
+
+    def pilot_cast(self, c: Connection, state: GameState, scene: dict[str, Any]) -> None:
+        cast = next((x for x in state.scene_casts if x.id == scene["id"] and x.open), None)
+        if cast is None:
+            return
+        if any(x.actor.kind != "pilot" for x in cast.roles):
+            raise WorkflowError(
+                "UNSUPPORTED_RULE: this mixed-role scene needs its actor-aware Play controls."
+            )
+        if cast.facilitator != state.handler or set(scene["participants"]) != (
+            {x.controller for x in cast.roles} | {cast.facilitator}
+        ):
+            raise WorkflowError("STALE_CAST: recover the actual scene participation.")
+        for role in cast.roles:
+            if (
+                str(role.controller) != role.actor.entity
+                or self.character_binding(c, state, role.controller, require_current_profile=False)
+                != role.actor.incarnation
+            ):
+                raise WorkflowError("STALE_CAST: this role belongs to another character.")
+
+    def legacy_action_bindings(self, c: Connection, action: dict[str, Any]) -> dict[str, str]:
+        # Immutable pre-confirmation state and original profile snapshots prove
+        # legacy generations, even after a later metadata-only binding/restart.
+        confirmed = c.scalar(
+            sa.select(t.events.c.seq)
+            .where(
+                t.events.c.campaign_id == self.store.campaign_id,
+                t.events.c.kind.in_(
+                    (
+                        "m2.play_confirmed",
+                        "m3.play_confirmed",
+                        "m2.order_issued",
+                        "m2.followthrough_confirmed",
+                    )
+                ),
+                sa.func.json_extract(t.events.c.payload_json, "$.action_id") == action["id"],
+            )
+            .order_by(t.events.c.seq)
+            .limit(1)
+        )
+        history = t.m2["m2_state_history"]
+        body = (
+            c.scalar(
+                sa.select(history.c.body_json)
+                .select_from(history.join(t.events, history.c.event_id == t.events.c.id))
+                .where(history.c.campaign_id == self.store.campaign_id, t.events.c.seq <= confirmed)
+                .order_by(t.events.c.seq.desc())
+                .limit(1)
+            )
+            if confirmed is not None
+            else None
+        )
+        if body is None:
+            raise WorkflowError(
+                "LEGACY_ACTION_BINDING: recover the immutable original action state."
+            )
+        original = GameState.model_validate_json(body)
+        result = {}
+        for owner in action["data"]["participants"]:
+            if owner == action["data"]["handler"]:
+                continue
+            sheet = original.sheets.get(str(owner))
+            if sheet is None:
+                raise WorkflowError(
+                    "LEGACY_ACTION_BINDING: the original scene character is missing."
+                )
+            identity = sheet.character_id or c.scalar(
+                sa.select(t.snapshots.c.character_id).where(
+                    t.snapshots.c.campaign_id == self.store.campaign_id,
+                    t.snapshots.c.user_id == str(owner),
+                    t.snapshots.c.revision == sheet.source_profile_revision,
+                )
+            )
+            if identity is None:
+                raise WorkflowError(
+                    "LEGACY_ACTION_BINDING: the original character snapshot is missing."
+                )
+            result[str(owner)] = identity
+        return result
+
     def immediate_work(self, c: Connection, owner: int) -> bool:
         work = t.m3["m3_required_work"]
         latest = {
@@ -582,19 +719,11 @@ class GameService:
                 raise WorkflowError(
                     "UNSUPPORTED_RULE: recover from Helplessness before a new defensive Play."
                 )
-            profile_revision = c.scalar(
-                sa.select(t.characters.c.revision).where(
-                    t.characters.c.campaign_id == self.store.campaign_id,
-                    t.characters.c.user_id == str(viewer.user_id),
-                )
-            )
-            if profile_revision != sheet.source_profile_revision:
-                raise WorkflowError(
-                    "STALE_PROFILE: active profile changed; canonical resources were preserved."
-                )
+            self.character_binding(c, state, viewer.user_id)
             if HandlerService(self.store).current(c)[1].handler_id != state.handler:
                 raise WorkflowError("STALE_HANDLER: canonical Handler replacement needs review.")
             scene = self.scene(c, channel)
+            self.pilot_cast(c, state, scene)
             if (
                 viewer.user_id not in scene["participants"]
                 or state.handler not in scene["participants"]
@@ -604,6 +733,7 @@ class GameService:
             parent = None
             if prepared.parent:
                 parent = self.action(c, prepared.parent)
+                self.action_characters(c, parent, state)
                 if (
                     parent["channel_id"] != str(channel)
                     or not root_lock
@@ -673,6 +803,11 @@ class GameService:
             identity = str(uuid4())
             data = {
                 "prepared": prepared.model_dump(mode="json"),
+                "character_ids": {
+                    str(uid): self.character_binding(c, state, uid, require_current_profile=False)
+                    for uid in scene["participants"]
+                    if str(uid) in state.sheets
+                },
                 "sheet_revision": sheet_revision,
                 "play": prepared.play,
                 "participants": scene["participants"],
@@ -822,6 +957,7 @@ class GameService:
             if action["data"]["play"] not in (*PLAY_IDS, *M3_ROLL_IDS):
                 raise WorkflowError("This action is diceless.")
             state = load_state(c, self.store.campaign_id)
+            self.action_characters(c, action, state)
             if HandlerService(self.store).current(c)[1].handler_id != state.handler:
                 raise WorkflowError("STALE_HANDLER: staff recovery is required.")
             sheet = state.sheets[str(viewer.user_id)]
@@ -978,6 +1114,7 @@ class GameService:
             if not lock or lock["state"] != "held":
                 raise WorkflowError("SCENE_LOCK_RECOVERY: decisions await a confirmed scene lock.")
             state = load_state(c, self.store.campaign_id)
+            self.action_characters(c, action, state)
             table = t.m2["m2_choices"]
             c.execute(
                 table.update()
@@ -1046,6 +1183,7 @@ class GameService:
             self.unpaused(c)
             state = load_state(c, self.store.campaign_id)
             scene = self.scene(c, channel)
+            self.pilot_cast(c, state, scene)
             if (
                 viewer.user_id not in scene["participants"]
                 or target not in scene["participants"]
@@ -1074,6 +1212,11 @@ class GameService:
             )
             data = {
                 "play": "receive_orders",
+                "character_ids": {
+                    str(uid): self.character_binding(c, state, uid, require_current_profile=False)
+                    for uid in scene["participants"]
+                    if str(uid) in state.sheets
+                },
                 "order_id": order_id,
                 "order_text": text,
                 "participants": scene["participants"],
@@ -1300,6 +1443,7 @@ class GameService:
             self.unpaused(c)
             state = load_state(c, self.store.campaign_id)
             scene = self.scene(c, channel)
+            self.pilot_cast(c, state, scene)
             obligation = next(
                 (
                     x
@@ -1327,6 +1471,11 @@ class GameService:
             identity = str(uuid4())
             data = {
                 "play": obligation.kind,
+                "character_ids": {
+                    str(uid): self.character_binding(c, state, uid, require_current_profile=False)
+                    for uid in scene["participants"]
+                    if str(uid) in state.sheets
+                },
                 "obligation_id": obligation_id,
                 "context": text,
                 "participants": scene["participants"],
@@ -1482,7 +1631,7 @@ class GameService:
             self.store.administrator(viewer)
 
         def operation(c: Connection) -> dict[str, Any]:
-            self.scene(c, channel)
+            scene = self.scene(c, channel)
             lock = self.lock(c, channel)
             if lock and lock["state"] != "released":
                 raise WorkflowError(
@@ -1497,7 +1646,18 @@ class GameService:
                 )
                 .values(open=False)
             )
-            self.event(c, viewer.user_id, key, "m2.scene_closed", channel=channel)
+            state = load_state(c, self.store.campaign_id)
+            cast = next((x for x in state.scene_casts if x.id == scene["id"] and x.open), None)
+            if cast:
+                state.scene_casts = [
+                    x.model_copy(update={"open": False, "revision": x.revision + 1})
+                    if x.id == cast.id
+                    else x
+                    for x in state.scene_casts
+                ]
+            self.event(
+                c, viewer.user_id, key, "m2.scene_closed", state if cast else None, channel=channel
+            )
             return {"channel": channel, "closed": True}
 
         return self.store._write(
@@ -1551,6 +1711,7 @@ class GameService:
                 raise WorkflowError("This decision is no longer available to you.")
             action = self.action(c, row["action_id"])
             state = load_state(c, self.store.campaign_id)
+            self.action_characters(c, action, state)
             actor = state.sheets[str(action["actor_id"])]
             own = state.sheets.get(str(viewer.user_id))
             # Return only selectable entities needed by this decision, never another private sheet.
@@ -1637,6 +1798,9 @@ class GameService:
     def leave_scene(self, viewer: GuildViewer, key: str, channel: int) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             scene = self.scene(c, channel)
+            state = load_state(c, self.store.campaign_id)
+            if any(x.id == scene["id"] and x.open for x in state.scene_casts):
+                raise WorkflowError("Withdraw your actual role through /mission cast.")
             lock = self.lock(c, channel)
             if lock and lock["state"] != "released":
                 raise WorkflowError("Resolve the pending Play before leaving this scene.")
