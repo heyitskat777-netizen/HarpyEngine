@@ -176,10 +176,16 @@ def test_supply_delay_tags_every_pilot_and_handler_exactly_once_with_stable_ids(
         rules.apply(canon, selected.model_copy(update={"tags": selected.tags[:-1]}), "work")
 
 
+@pytest.mark.parametrize("prior_destruction", (False, True))
 def test_returning_gorgon_preserves_old_damage_and_gets_two_assets_new_type_and_core_conditions(
     canon,
+    prior_destruction,
 ):
     dead = gorgon("erratic", "dead", (1, 1)).model_copy(update={"alive": False, "exposed": True})
+    if prior_destruction:
+        dead = dead.model_copy(
+            update={"assets": dead.assets[1:], "destroyed_assets": (dead.assets[0],)}
+        )
     canon.world = world_rules.update(canon.world, gorgons=canon.world.gorgons + (dead,))
     assets = tuple(
         Asset(id="new" + str(i), name="New", description="Altered capability", family="gorgon")
@@ -199,6 +205,8 @@ def test_returning_gorgon_preserves_old_damage_and_gets_two_assets_new_type_and_
     revived = result.world.gorgons[-1]
     assert revived.alive and not revived.exposed and revived.assets[:-2] == dead.assets
     assert revived.types == ("incubus", "growth")
+    assert revived.destroyed_assets == dead.destroyed_assets
+    assert not {x.id for x in revived.destroyed_assets} & {x.id for x in revived.assets}
 
 
 def test_fired_npc_retains_bonds_and_city_anarchy_does_not_create_gorgon_territory(canon):

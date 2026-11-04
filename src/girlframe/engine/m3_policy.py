@@ -52,6 +52,8 @@ class Rulings(BaseModel):
     world_grid_steps: Literal["eight_neighbors"]
     gorgon_class_change: Literal["preserve_body"]
     gorgon_reappearance: Literal["preserve_old_assets_new_core_plan"]
+    gorgon_destroyed_core_guard: Literal["satisfies_asset_condition"]
+    benevolent_defense: Literal["defensive_contest_only"]
 
 
 class Approval(BaseModel):

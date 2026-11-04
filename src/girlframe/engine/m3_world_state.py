@@ -141,7 +141,8 @@ class CorePlan(Model):
 class Gorgon(PlacedEntity):
     gorgon_class: GorgonClass
     types: tuple[GorgonType, ...] = Field(min_length=1)
-    assets: tuple[Asset, ...] = Field(min_length=1)
+    assets: tuple[Asset, ...]
+    destroyed_assets: tuple[Asset, ...] = ()
     core_plan: CorePlan
     exposed: bool = False
     alive: bool = True
@@ -157,11 +158,12 @@ class Gorgon(PlacedEntity):
 
     @model_validator(mode="after")
     def source_shape(self) -> "Gorgon":
-        ids = {asset.id for asset in self.assets}
-        if len(ids) != len(self.assets) or len(set(self.types)) != len(self.types):
+        records = (*self.assets, *self.destroyed_assets)
+        ids = {asset.id for asset in records}
+        if len(ids) != len(records) or len(set(self.types)) != len(self.types):
             raise ValueError("Gorgon Assets and Types must be distinct")
-        if not set(self.core_plan.assets) <= ids or any(a.family != "gorgon" for a in self.assets):
-            raise ValueError("Core exposure must name current owned Gorgon Assets")
+        if not set(self.core_plan.assets) <= ids or any(a.family != "gorgon" for a in records):
+            raise ValueError("Core exposure must name current or destroyed original Gorgon Assets")
         if self.gorgon_class == "directed" and (
             self.goal is None or self.protected_asset not in ids
         ):

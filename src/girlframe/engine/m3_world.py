@@ -61,6 +61,8 @@ def create(board: Board, locations: tuple[Location, ...], secret: Gorgon) -> Wor
 
 
 def validate_initial_gorgon(gorgon: Gorgon) -> None:
+    if gorgon.destroyed_assets:
+        raise ValueError("A newly introduced Gorgon cannot import destroyed Asset history")
     if len(gorgon.assets) != CLASS_ASSETS[gorgon.gorgon_class] + int(gorgon.sprite_group):
         raise ValueError("Use the printed Class Asset count, with two for a Sprite group")
     if not gorgon.alive or gorgon.exposed or any(x.damaged for x in gorgon.assets):
@@ -280,7 +282,10 @@ def expose_gorgon(world: World, identity: str, account: str) -> World:
     target = next((x for x in world.gorgons if x.id == identity and x.alive), None)
     if target is None or target.exposed or not account.strip():
         raise ValueError("Review an actual living Gorgon's Core weakness")
-    if not all(x.damaged for x in target.assets if x.id in target.core_plan.assets):
+    dealt_with = {x.id for x in target.assets if x.damaged} | {
+        x.id for x in target.destroyed_assets
+    }
+    if not set(target.core_plan.assets) <= dealt_with:
         raise ValueError("Damage all designated Core-protecting Assets first")
     return update(
         world,

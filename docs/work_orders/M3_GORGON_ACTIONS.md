@@ -41,3 +41,21 @@ civilian/structure does not die/collapse on a wall-clock timeout. Interrupted an
 uninterrupted results remain distinct, including Directed's printed exception.
 Gorgons die only through actual exposed-Core destruction. Preserve source-specific
 death/replacement/custody/transport and player-character generations.
+
+
+The Gorgon-target branch now pits actual undamaged Assets of two real Gorgons,
+records the appointed Handler's winner and destroys one losing pitted Asset.
+Destroyed Assets retain their original records outside usable Assets; even losing
+the last Asset does not kill the Gorgon. Original guard/protection references
+remain valid historical references. Directed protection rejects a direct result
+until its actual guard is dealt with; an indirect approach needs an actual account.
+Dormant awakening, ranged reach and the Harpy branch remain unsupported.
+
+Core exposure separately requires the actual designated guards and a fresh human
+confirmation that the original conversational weakness occurred. It exposes only
+the actual Core, without death or automatic public knowledge. The destroyed-guard
+and Benevolent-defense readings are centrally registered delegated recommendations
+with alternatives and change-impact notes. Their trusted policy fields are
+`gorgon_destroyed_core_guard` and `benevolent_defense`; unreviewed alternatives
+remain unavailable. Old world JSON defaults to empty destroyed history. Rebuild
+and backup retain actual destruction sources and canonical actor identities.

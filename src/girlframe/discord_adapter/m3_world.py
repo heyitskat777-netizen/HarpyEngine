@@ -224,6 +224,14 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
 
             await open_gorgon_attack(current, GorgonService(service))
             return
+        if action in ("gorgon_contest", "gorgon_core"):
+            from girlframe.discord_adapter.m3_gorgon_combat import open_contest, open_exposure
+            from girlframe.services.m3_gorgon import GorgonService
+
+            await (open_contest if action == "gorgon_contest" else open_exposure)(
+                current, GorgonService(service)
+            )
+            return
         if action in ("npc", "npc_invite"):
             npc_identity = str(uuid4())
             from girlframe.services.m3_npc_roles import NpcRoleService
@@ -325,6 +333,8 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
             ("npc_invite", "Invite someone to play an NPC / Director"),
             ("reveal", "Reveal a Gorgon encountered by the Cadre"),
             ("gorgon_attack", "Gorgon Attack on an ordinary NPC"),
+            ("gorgon_contest", "Pit two Gorgons' actual Assets"),
+            ("gorgon_core", "Confirm actual Gorgon Core exposure"),
         ),
         choose,
     )

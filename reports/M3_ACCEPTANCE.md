@@ -1241,3 +1241,59 @@ bot remains PID47656; no live migration, policy change, M3 deployment or environ
 publication applies. M3 remains in progress and is not yet a player-testing
 candidate. Next work continues actual combat/physical/Core/control/playbook and
 remaining consequence integration; this Attack branch does not complete them.
+
+
+## Actual Gorgon Asset contests and separate Core exposure
+
+A second Attack branch now pits two actual living Gorgons' chosen undamaged
+Assets. The appointed Handler human selects the winner and one actual losing
+pitted Asset to destroy. The original Asset remains in canonical destroyed history
+and is absent from usable Assets. Even loss of the last Asset leaves the Gorgon
+alive; the original Core plan remains bound to its original Asset records. A direct
+result cannot overcome an intact Directed guard. Dormant awakening, ranged reach,
+Harpies and other special interactions remain explicit unsupported branches.
+
+Core exposure is a separate source-bound confirmation after all actual designated
+guards are damaged/destroyed and the recorded conversational weakness actually
+occurs. It exposes the actual Core without killing the Gorgon or publishing its
+private plan. Native private dropdowns select actual actors, Assets, winner and
+losing Asset; cross-owner duplicate Asset IDs get distinct bounded selector tokens.
+No fabricated player action or response, RNG, resource payment or body movement is
+introduced. Source scopes, current Handler, safety, pending known Plays, restored
+chat and current actor/world versions guard both commands. Canonical state, source
+and command commit together. Replay, concurrency and rollback cannot destroy a
+second Asset or repeat an exposure.
+
+The destroyed-guard interpretation and Benevolent defensive-contest interpretation
+are now recorded in `docs/CAMPAIGN_RULINGS.md`, `rules/registry.json` and mandatory
+trusted ruling fields, with rationale, alternatives, clarity-review and change
+impact. The latter permits a defensive contest in another Gorgon's Attack while
+still prohibiting Benevolent initiation. These recommendations do not replace
+missing Class/Type mechanics or authorize a live policy change. Old world JSON
+loads with empty destroyed history; backup/rebuild retain actual destruction.
+Returning Gorgons preserve destroyed history without resurrecting those Assets.
+
+Full suite: **1215 passed in 360.82s**, no failures/errors/skips;
+`var/m3-gorgon-combat-pytest.xml`. Broad run: **82 passed in 19.82s**,
+`var/m3-gorgon-combat-broad.xml`, before the final duplicate-ID/reappearance cases.
+Focused service run: **43 passed in 17.62s**, `var/m3-gorgon-contest-focused.xml`;
+pure/world/Strain run: **54 passed in 13.59s**,
+`var/m3-gorgon-contest-pure.xml`. No failing pytest case preceded these combat
+checks. Formatting, long-line and test lambda-style lint findings were corrected
+before the full suite; Ruff passes, **347 files** formatted, mypy **181 source
+files**. The full suite includes final native duplicate-ID and actual reappearance
+history checks. The unchanged planning verifier passes **34 files / 86 planned
+cases / 4 schemas / 4 synthetic fixtures** and is not gameplay acceptance.
+
+Registry remains RULES_SUBSET: 473 entries, 436 required core, **58 subsets / 415
+unimplemented**, zero independently verified entries. Core exposure already had
+partial pure-helper coverage; adding actual consumers does not inflate the rule
+count. Public scan: **429 publishable files**, original **40 manifest entries**,
+zero findings. NPC Attack checkpoint **d08688526f7ed81b10498a6c55d92b59aac421fc**
+is pushed and GitHub CI passed, run **41885535796**. Scene-context CI also passed,
+run **41882502798**. Exactly one frozen live bot remains PID47656; all **88 source
+hashes** match and its original session remains running. No live migration,
+M3 gameplay deployment, environment publication, independent/human acceptance or
+M3-ready claim applies. Physical/control/player-response ports, remaining shared
+Plays/playbooks/economy/discipline, Strain/Endgames and release acceptance still need
+work. Development continues toward the agreed full M3 target.

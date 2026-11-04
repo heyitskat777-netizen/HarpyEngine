@@ -78,6 +78,8 @@ def service(store, girl="MOCKINGBIRD", frame="JANUS-B"):
                 world_grid_steps="eight_neighbors",
                 gorgon_class_change="preserve_body",
                 gorgon_reappearance="preserve_old_assets_new_core_plan",
+                gorgon_destroyed_core_guard="satisfies_asset_condition",
+                benevolent_defense="defensive_contest_only",
             ),
         }
     )

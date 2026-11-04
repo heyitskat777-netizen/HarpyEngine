@@ -644,6 +644,40 @@
       "change_impact": "A different campaign interpretation needs explicit treatment of declined opportunities, preserving their real costs and decisions. Do not fabricate refunds or retroactively grant Assets.",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "destroyed-gorgon-core-guards",
+      "summary": "A destroyed original designated Gorgon guard satisfies the Asset condition for Core exposure. The actual recorded conversational weakness must still be fulfilled and explicitly confirmed.",
+      "policy_key": "gorgon_destroyed_core_guard",
+      "source": "Book PDF 162, 164 / printed pp.160, 162; delegated owner authority.",
+      "rationale": "Destruction removes the actual guarding Asset rather than restoring protection or leaving an impossible requirement to damage an Asset that no longer exists. Preserve the independent weakness condition and actual Core destruction for death.",
+      "alternatives": [
+        "Require a new explicit Core-plan review after every designated guard destruction.",
+        "Treat destruction as insufficient until the table resolves a different means of fulfilling the Asset condition."
+      ],
+      "implementation_note": "Keep destroyed actual Assets as immutable canonical history outside usable Assets. Original Core/protection references retain provenance; destruction never automatically exposes or kills the Gorgon.",
+      "change_impact": "Review existing pending Core exposures and actual destruction sources before changing this interpretation. Preserve historical Asset destruction and confirmed Core outcomes; do not resurrect an Asset or reroll a known result.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "benevolent-gorgon-defensive-contests",
+      "summary": "Benevolent Gorgons cannot initiate Attack or Collateral Damage, but can defend when another Gorgon pits Assets against them. The Handler chooses the actual contest winner.",
+      "policy_key": "benevolent_defense",
+      "source": "Book PDF 162, 167 / printed pp.160, 165; delegated owner authority.",
+      "rationale": "The Attack rule explicitly includes a Gorgon target and a Handler-chosen Asset contest. The Benevolent restriction forbids initiating its attack, without requiring it to lose an opponent-initiated contest; a defensive result can follow from the attacker striking its protection.",
+      "alternatives": [
+        "Require Benevolent Gorgons always to lose or avoid any Asset contest.",
+        "Permit defense but require a separate bespoke defensive outcome rather than the printed contest."
+      ],
+      "implementation_note": "Reject Benevolent initiators in both NPC and Gorgon Attack commands. Permit it only as the actual defender of another Gorgon, with the actual Handler winner and chosen losing pitted Asset.",
+      "change_impact": "Review pending defensive contests when changing this ruling. Preserve prior actual winner decisions and destroyed-Asset history rather than silently undoing consequences.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -9936,14 +9970,15 @@
           "diceless": [
             "Girl: actual owned response Play or Asset damage (remaining integration).",
             "Ordinary NPC: actual death; implemented bounded co-located branch.",
-            "Gorgon or Harpy: pit actual Assets, Handler chooses winner, destroy losing Asset (remaining integration)."
+            "Gorgon target: Handler pits actual Assets, chooses the winner and destroys one losing pitted Asset; bounded co-located branch implemented. Harpy target and remaining special interactions require their actual ports."
           ]
         },
         "choice_ownership": "World facilitator declares the actual Attack; Girl responses and specified choices remain with their actual humans. Opposing Gorgon/Harpy winner is the Handler choice.",
         "target_policy": "Actual living canonical actors, source-legal reach and Class exceptions. Ordinary NPC controller is not the target Girl. Director and Directed-goal death require their actual follow-ups before enabling those branches.",
         "post_roll_effects": [
           "Ordinary NPC branch records canonical death and a private original source; does not charge or damage its human controller's Girl.",
-          "Remaining target branches retain their printed response/damage/destruction rules and fail closed."
+          "Remaining target branches retain their printed response/damage/destruction rules and fail closed.",
+          "A destroyed Gorgon Asset leaves usable Assets and remains original owned history. Neither the loser nor its Core is automatically destroyed/exposed, even at zero usable Assets."
         ],
         "mandatory_followups": [
           "Do not waive required Director replacement, Directed goal consequences, dormancy/awakening, player responses or last-Asset consequences."
@@ -9959,7 +9994,9 @@
       ],
       "test_evidence": [
         "tests/rules/test_gorgon_attack.py",
-        "tests/rules/test_gorgon_service.py"
+        "tests/rules/test_gorgon_service.py",
+        "tests/rules/test_gorgon_combat.py",
+        "tests/rules/test_gorgon_combat_service.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -10069,16 +10106,44 @@
       },
       "required": true,
       "implementation": "subset",
-      "source_audit": "inventoried",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
-      "dependencies": [],
+      "contract": {
+        "trigger": "Expose the actual living Gorgon Core only after its designated original guards are damaged/destroyed and its separately recorded conversational weakness has actually occurred.",
+        "actor_type": "Actual canonical Gorgon; appointed world facilitator confirms the actual fiction.",
+        "pre_roll_sources": [
+          "Actual current actor fingerprint, original one-to-two designated guarding Assets, destroyed owned history and recorded weakness."
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "diceless": [
+            "Both actual guard condition and independently confirmed actual weakness are required."
+          ]
+        },
+        "choice_ownership": "The actual appointed Handler human sets the original plan and confirms actual fulfillment; player actions and decisions are not generated.",
+        "target_policy": "Actual living unexposed Gorgon; retain original actor/Asset provenance and special-rule protections. Frame Cores are a different source rule and are not handled by this command.",
+        "post_roll_effects": [
+          "Set actual Core exposed, with a private source event and original confirmation. Do not kill the Gorgon or reveal private plans to player knowledge."
+        ],
+        "mandatory_followups": [
+          "Actual Core destruction for death remains a separate Play consequence. Remaining Type/Class/physical interactions still require their ports."
+        ],
+        "handler_or_gm_intervention": "Private native confirmation records the actual occurred weakness; it cannot waive an intact designated guard or choose a player action.",
+        "test_fixture_ids": [
+          "tests/rules/test_gorgon_combat.py",
+          "tests/rules/test_gorgon_combat_service.py"
+        ]
+      },
+      "dependencies": [
+        "gorgon.gorgon.attack"
+      ],
       "test_evidence": [
-        "tests/rules/test_world.py",
-        "tests/rules/test_world_service.py",
-        "tests/rules/test_world_ui.py"
+        "tests/rules/test_gorgon_combat.py",
+        "tests/rules/test_gorgon_combat_service.py",
+        "tests/rules/test_world.py"
       ],
       "m2_play_id": null,
       "module": "core"
