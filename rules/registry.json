@@ -927,14 +927,17 @@
         "heading": "Frame Requisitions"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_requisitions.py",
+        "tests/rules/test_requisition_service.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -982,7 +985,9 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_mission_service.py",
-        "tests/rules/test_repair_service.py"
+        "tests/rules/test_repair_service.py",
+        "tests/rules/test_requisitions.py",
+        "tests/rules/test_requisition_service.py"
       ],
       "m2_play_id": null,
       "module": "core"

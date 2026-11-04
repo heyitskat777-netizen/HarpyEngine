@@ -415,4 +415,15 @@ def register_missions(
         except WorkflowError as error:
             await reply(interaction, str(error))
 
+    @group.command(name="requisitions", description="Review your owned Permissions and purchases")
+    async def requisitions(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_requisitions import open_requisitions
+        from girlframe.services.m3_requisitions import RequisitionService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_requisitions(interaction, RequisitionService(service.game))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
     tree.add_command(group, guild=discord.Object(id=guild_id))

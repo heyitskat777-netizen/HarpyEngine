@@ -11,6 +11,7 @@ from girlframe.engine.m3_frame_state import FrameRuntime
 from girlframe.engine.m3_regulation_state import Regulation
 from girlframe.engine.m3_repair_state import Quote as RepairQuote
 from girlframe.engine.m3_repair_state import Shortage as RepairShortage
+from girlframe.engine.m3_requisition_state import Receipt as RequisitionReceipt
 from girlframe.engine.m3_strain_state import State as StrainState
 from girlframe.engine.m3_supply_state import SupplyLoss
 from girlframe.engine.m3_world_state import World
@@ -176,6 +177,7 @@ class GameState(Model):
     repair_shortages: list[RepairShortage] = Field(default_factory=list)
     repair_quotes: list[RepairQuote] = Field(default_factory=list)
     supply_losses: list[SupplyLoss] = Field(default_factory=list)
+    requisitions: list[RequisitionReceipt] = Field(default_factory=list)
 
 
 class PlayInput(Model):

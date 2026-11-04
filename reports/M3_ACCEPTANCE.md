@@ -1054,3 +1054,39 @@ migration, M3 policy change/deploy, environment publication, independent/human
 acceptance or M3-ready claim applies. Other shared Plays, NPC/Gorgon/Harpy consumers,
 physical/control/Core state, full passives, Requisitions/careers, five Punishments,
 remaining Strain/Endgames and cross-context obligations still require work.
+
+## Asset Installment and canonical purchase receipts
+
+Asset Installment now implements an owned printed/custom selection from the nine
+base Frame lists, the approved one-Permission charge, an ordinary undamaged Asset,
+and a character/actual-Frame-bound immutable receipt. The player explicitly
+confirms the actual installation account and exact replacement. At the five-Frame-
+Asset cap, replacement must be an actual non-Void Frame Asset. Purchase grants no
+new Frame playbook, intrinsic rules, Void, custody or fictional movement, and it
+does not erase prior required consequences. Pending Plays, unrestored chat,
+immediate work, policy and safety gates remain. Payment, acquisition, canonical
+history, purchase source and command outcome commit atomically. Another body,
+Frame/profile, stale preview, another owner, replay or concurrent request cannot
+charge again. Private descriptions/accounts stay out of generic audit and outbox.
+
+`/mission requisitions` provides owned paginated printed/custom source controls,
+explicit payment and saved receipt review. The current sheet references the actual
+new Asset. This first purchase ledger does not complete Frame/Girl Requisitions,
+Revoked Privileges, delayed benefit scenes, retirement/careers or full economy.
+The next work order specifies actual qualifying future rolls and owned scenes for
+Creature Comforts and Visiting Home, plus actual Privacy participation.
+
+Full suite: **1086 passed in 259.47s**, no failures/errors/skips;
+`var/m3-asset-installment-pytest.xml`. Focused purchase/reducer/UI run: **23 passed in
+4.36s**, `var/m3-requisitions-focused.xml`. Initial pure run: **13 passed in 2.25s**,
+`var/m3-requisitions-pure.xml`. No failing pytest case preceded these purchase
+checks. Static formatting/line-length checks were corrected before the full suite;
+Ruff passed, **327 files** formatted, mypy passed for **172 source files**.
+
+Registry remains RULES_SUBSET: 473 entries, 436 required core, **56 subsets, 417
+unimplemented**, zero independent verifications. Public scan: **409 publishable
+files**, all **40 original manifest entries**, zero findings. The prior actor
+checkpoint **707b6e8d8ffe1d4741a80f6c1e3272d3129b2a24** is pushed; GitHub CI passed,
+run **41860328516**. The original frozen M2 process remains the only observed bot,
+PID47656. No live migration, policy change, M3 deployment, environment publication,
+independent/human acceptance or M3-ready claim applies. Development continues.
