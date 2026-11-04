@@ -4,6 +4,18 @@ M3 is **IN_PROGRESS / RULES_SUBSET** and is not ready for full player testing.
 This snapshot separates implemented workflows from remaining agreed scope; it
 does not narrow the milestone.
 
+The owner's subsequent cost/progress review is recorded in
+[the completion audit and bounded delivery plan](M3_COMPLETION_AUDIT.md).
+Use that plan for future implementation units. The bot is intentionally off at
+the owner's request; do not restart it automatically. The untested local Handler
+draft is excluded from completed work.
+
+Bounded units **1a (Asset Installment)** and **1b (Creature Comforts)** are now
+implemented for their purchase/benefit/receipt flows. Final automated checkpoint:
+**1,399 tests passed**, code `620e879` (1a code `af0a221`).
+See [unit contracts/evidence](acceptance/m3_units.json). Broader Requisitions,
+independent review and human acceptance remain unfinished.
+
 The registry contains 473 source/table entries: **436 required core entries** and
 37 deferred Ancillary entries. Of the required core, **62 are partial and 374 are
 unimplemented**. None is independently approved. Entries are inventory units,
@@ -11,8 +23,8 @@ not equal-size coding tasks or a completion percentage. The acceptance tracker
 currently has 44 cases: 27 in progress and 17 not run, with no completed milestone
 acceptance. Existing automated tests do not imply those full cases passed.
 
-Latest completed full test artifact: **1374 tests, zero failures/errors/skips**,
-`var/m3-frame-classification-pytest.xml`. See `reports/M3_ACCEPTANCE.md` for commands,
+Latest completed full test artifact: **1399 tests, zero failures/errors/skips**,
+`var/m3-unit-1b-full-final.xml`. See `reports/M3_ACCEPTANCE.md` for commands,
 earlier failures/corrections, checks and the difference from human acceptance.
 
 | Package | Remaining completion work |

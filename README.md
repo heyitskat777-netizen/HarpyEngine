@@ -42,6 +42,15 @@ requests inbox. The original recipient explicitly accepts or declines the
 ordinary Girl Asset. Its details stay out of public sheet views until owned
 sharing. This also remains under the M3 development release gate.
 
+The bot is currently **intentionally off** at the owner's request. See the
+[M3 completion audit and bounded plan](docs/M3_COMPLETION_AUDIT.md) for implemented
+features, unfinished systems and the next delivery units. No new completion
+percentage or credit estimate is asserted.
+Asset Installment and Creature Comforts now have closed automated workflow
+checklists, including original owned receipts. Creature Comforts scenes support
+actual city locations as well as bases. See [unit evidence](docs/acceptance/m3_units.json);
+independent and human acceptance remain pending.
+
 Read `AGENTS.md` and [the roadmap](docs/PROJECT_ROADMAP.md) before development. The
 original planning package remains unchanged in `GIRLFRAME_Discord_Codex_Handoff_v0.2/`;
 its historical `planning/` paths refer to that directory.

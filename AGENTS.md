@@ -34,6 +34,17 @@ environment or deploy M3 gameplay. Sanitized source pushes remain authorized.
 Missing implementations still fail closed; do not disguise them as rulings.
 Recovered-engine writes and AI remain deferred. Record partial scope honestly.
 
+Latest owner direction supersedes the earlier keep-running instruction: keep the
+bot off. The owner paused implementation to review cost/progress, then authorized
+a concise audit and bounded completion plan. Read `docs/M3_COMPLETION_AUDIT.md`.
+The owner subsequently authorized resuming M3 with that revised workflow.
+Keep deployment, restarts and environment publication separate from development.
+Preserve the parked Handler draft under ignored
+`var/parked-handler-creation-before-unit-1a/`; it has no feature-test acceptance yet.
+Future implementation should finish one named workflow with its source checklist
+and end-to-end evidence before opening another foundation task. Do not use registry
+entry counts, test totals or unequal unit counts as a completion percentage.
+
 - Run `bash tools/install.sh`, then the checks in `README.md`.
 - Use the existing checkout. Cloud tasks are isolated; create no worktree unless requested.
 - Keep the original planning package unchanged, including its historical reports.

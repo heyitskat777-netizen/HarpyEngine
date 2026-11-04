@@ -1,5 +1,114 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Bounded unit 1b — Creature Comforts closeout
+
+Code `620e87987daca80b87409cbd46000e52732b867e`. The complete scoped flow is paid
+request → actual future final ordinary 8+ → owned scene/attendance → legal Girl
+Asset or explicit decline. Existing tests cover low/Observation retention,
+post-Tag totals, distinct purchases, source timing, rollback/concurrent replay,
+caps, safety, original characters, recovery and real two-period continuity.
+Original paid receipts now prove their source and stay accessible before/after
+qualification, under stale profiles, with current membership checked per page.
+Full escaped requests are paginated; private data is not read from cached menus.
+
+The source audit also corrected an unprinted base-only scene restriction. Book
+PDF 16 / printed p.14 does not impose it; Go Off-Duty PDF 27 / printed p.25 supports
+nearby-city scenes. Actual surviving map locations are now selectable; known
+positions and owned attendance still apply, without creating movement/custody.
+A native city scene through the actual Girl Asset grant is exercised offline.
+
+Final focused command: `.venv/bin/pytest -q tests/rules/test_comforts.py
+tests/rules/test_comfort_service.py tests/rules/test_comfort_receipts.py
+tests/rules/test_installation_history.py --junitxml=var/m3-unit-1b-final-focused.xml`:
+**61 passed in 36.36s**. Earlier boundaries: 62 passed in 41.38s; 58 in 36.58s;
+10 receipt/payment tests in 4.99s before adding the city path. Final full command:
+`.venv/bin/pytest -q --junitxml=var/m3-unit-1b-full-final.xml`:
+**1399 passed in 389.68s**, zero failures/errors/skips. Ruff lint/format pass
+(383 files); mypy passes (197 source files). Two long-string lint failures were
+corrected; a prematurely started run was stopped (85 passed, KeyboardInterrupt,
+26.03s) before the clean sequential final checkpoint. It is not pass evidence.
+Registry/public/manifest checks pass: RULES_SUBSET, 62 core subset / 374
+unimplemented, 466 publishable files / 40 manifest entries / zero scan findings.
+Both scoped contracts validate against the existing Contract model and all test
+symbols/ruling references resolve. Broader M3 acceptance cases remain IN_PROGRESS.
+
+Units 1a/1b are IMPLEMENTED_AUTOMATED; independent review and human/mobile acceptance
+remain NOT_RUN. Bot remains off. No live state, policy, schema, M3 deployment,
+private engine, dependency pin or environment publication changed. Next bounded
+unit: Put Someone Beneath You, then Dive Deep. This does not complete all M3 rules.
+
+## Bounded unit 1a — Asset Installment closeout
+
+Code commit `af0a2213a3a23f231f0b5f002197d545ffb0b88e` closes the existing paid
+acquisition and original-receipt workflow. Source checklist and exact contract:
+`docs/acceptance/m3_units.json`. All 81 base-Frame catalogue Asset names were matched
+against normalized text in their actual supplied rulebook sections; JANUS-B retains
+JANUS source rules. This source-name check does not certify complete Frame runtimes.
+
+The identified gap was original receipt retrieval after Asset/Frame/profile changes.
+Owned history now proves the actual purchase event and original canonical snapshot,
+preserving the original Asset name/description, installation, Frame and price.
+Historical reads grant no replacement-character purchase authority. Native receipts
+page complete escaped text and recheck active membership/source on every page.
+Changed profiles expose an owned read-only history menu. Source forgery, other
+members (including administrators), other campaigns and revoked members are denied.
+
+Focused test command: `.venv/bin/pytest -q tests/rules/test_requisitions.py
+tests/rules/test_requisition_service.py tests/rules/test_installation_history.py
+tests/rules/test_asset_properties.py --junitxml=var/m3-unit-1a-focused.xml`:
+**47 passed in 11.93s**. Full checkpoint: `.venv/bin/pytest -q
+--junitxml=var/m3-unit-1a-full.xml`: **1388 passed in 387.42s**, no failures/skips.
+Ruff lint/format pass (**382 files**); mypy passes (**197 source files**). The first
+mypy check found a missing `list[str]` annotation in receipt pagination; corrected
+before the full checkpoint. Locked installation passed with no dependency changes.
+Registry remains RULES_SUBSET, 436 required / 62 subset / 374 unimplemented / zero
+verified. Added subflow evidence does not falsely complete its broad economy entry.
+Planning verifier passes (34/86/4/4, planning only); public scan passes (465 files,
+40 manifest entries, zero findings); `git diff --check` passes.
+
+The unrelated untested Handler draft is preserved with hashes, complete file copies
+and its routing patch under ignored `var/parked-handler-creation-before-unit-1a/`.
+Only those known draft routing changes were removed from active source. Bot remains
+off; no live state, policy, migration, deployment or environment publication changed.
+Independent rules review and player/mobile acceptance remain NOT_RUN. Full M3 and
+the wider Requisitions system are unfinished. Next bounded unit is Creature Comforts.
+
+## Owner cost/progress audit — 2026-11-04
+
+The owner requested a concise completion audit and bounded delivery plan after
+questioning the earlier estimate. See `docs/M3_COMPLETION_AUDIT.md`. This turn
+changed documentation only; the earlier uncommitted Handler draft/routing edits
+remain parked, untested and excluded from completed features. No gameplay unit,
+deployment, database migration or environment publication was started. The bot
+remains intentionally off; `tools/check_bot_process.py` reports zero instances.
+
+Registry/model/code inspection verifies 436 required core entries (62 subset,
+374 unimplemented, zero declared fully implemented), 37 deferred Ancillary entries,
+and 44 acceptance cases (27 IN_PROGRESS, 17 NOT_RUN). Current source lists 17 typed
+Strain cell resolvers and 12 supported Punishment routes out of 17, including
+delegation rather than a twelfth direct effect. These counts describe different
+units and are not a completion percentage. Full core Endgame implementation and
+independent acceptance remain pending.
+
+The prior full JUnit artifact was read directly: 1374 tests, zero failures/errors/
+skips, 414.360s. It is historical committed-candidate evidence, not a fresh test run
+or validation of the uncommitted Handler work. No full suite or installation was
+repeated for this documentation-only audit. Actual audit checks:
+
+- `.venv/bin/python tools/check_rules_registry.py`: RULES_SUBSET, 473 total,
+  436 required, zero verified; source branch audit pending.
+- `.venv/bin/python GIRLFRAME_Discord_Codex_Handoff_v0.2/verification/verify_handoff.py`:
+  PASS, 34 files / 86 planned cases / 4 schemas / 4 synthetic fixtures. Planning only.
+- `.venv/bin/python tools/check_repository.py`: 466 publishable files,
+  40 original manifest entries, zero findings; limited scanner only.
+- `git diff --check`: passed; audit's relative Markdown targets all exist.
+
+No billing access or measured basis supports a replacement credit forecast or the
+earlier 15–20% estimate. Future progress is reported through named complete flows,
+source branch checklists and explicit blockers. Existing accepted scope, player
+consent and release gates are unchanged. Unit 1a, Asset Installment source/behavior
+closeout, is recommended next; it was not implemented as part of this audit.
+
 Status: IN_PROGRESS / RULES_SUBSET. Date: 2026-11-04 UTC.
 
 The owner authorized beginning M3 and requested its completion requirements. The

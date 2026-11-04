@@ -44,6 +44,23 @@ private projections and owned paginated native controls. Delayed benefits also
 need actual qualifying receipts, low rolls, known-roll recovery, per-human scene
 attestation, declined opportunities and preservation across period boundaries.
 
+## Bounded unit 1a — Asset Installment
+
+The exact contract and branch/test checklist are in
+`docs/acceptance/m3_units.json`. This unit closes acquisition and original receipt
+history, rather than all Requisitions. Original source state proves the purchased
+Asset's name, description, Frame, cost and installation even after later sheet
+changes. Reads need the original human's current campaign membership; they need
+neither a current matching character nor release approval. Purchase rights still
+require the actual current character and Frame, funds, scoped approval, an unpaused
+campaign and completion of prior immediate work.
+
+Native receipts page complete escaped descriptions/accounts within Discord's
+message limit and recheck authority on every page. A changed profile opens owned
+history without purchase controls. Source data and private details never come from
+another campaign, generic audit payloads or an unverified replacement receipt.
+Independent review, live/mobile acceptance and the wider economy remain pending.
+
 ## Implemented Creature Comforts checkpoint
 
 Each paid source waits for its actual next ordinary Go Off-Duty 8+ result after
@@ -55,8 +72,8 @@ have separate opportunities; original source IDs remain distinct on a shared rol
 
 The owner explicitly declines an unused opportunity, or records an actual
 improvement scene with the original Girl and known actual cast roles at a surviving
-Foundation base. Existing world actors must already be at that base. Casting does
-not move them. Each human supplies their own historical attendance; one human
+recorded location. Existing world actors must already be at that location. Casting
+does not move them. Each human supplies their own historical attendance; one human
 controlling two roles supplies one human response. This OOC attendance can be saved
 during safety pause; writing the actual Asset waits for resume and a separate,
 fresh owner confirmation. A recorded improvement creates immediate owned work
@@ -75,3 +92,18 @@ intervening accepted/dispatched/completed mission and real Dog Punishment, next
 actual Strain preparation and qualifying roll, owned improvement/Asset, recovery
 and period close, then historical review. Other Requisitions and full career,
 physical/control/playbook interactions still require work within M3.
+
+## Bounded unit 1b — Creature Comforts
+
+The purchase → actual qualifying roll → owned scene/attendance → Girl Asset or
+explicit decline contract is in `docs/acceptance/m3_units.json`. Paid receipts remain
+separately readable before and after qualification, including after profile changes.
+They prove their actual original paid source and recheck membership on each native
+page, rather than revealing a cached request. Receipt reads never claim the benefit
+for a replacement character or grant another roll, Permission or Asset.
+
+Source correction: the former base-only scene restriction was unprinted. Book PDF
+16 / printed p.14 gives the improvement scene without that restriction; Go Off-Duty
+(PDF 27 / printed p.25) explicitly supports a nearby-city scene. Native location
+selection now accepts surviving actual map locations and still enforces known
+positions and real human attendance. It does not implement travel or custody.

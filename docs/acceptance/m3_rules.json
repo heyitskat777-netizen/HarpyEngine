@@ -173,7 +173,9 @@
         "tests/rules/test_core.py::test_extra_repair_uses_current_handler_quote_not_an_invented_default",
         "tests/rules/test_mission_service.py::test_current_ace_gets_bonus_even_when_absent",
         "tests/rules/test_mission_service.py::test_source_end_reactions_precede_reward_snapshot",
-        "tests/rules/test_reaction_service.py::test_princess_promotion_and_own_bonus_precede_the_final_ace_bonus"
+        "tests/rules/test_reaction_service.py::test_princess_promotion_and_own_bonus_precede_the_final_ace_bonus",
+        "tests/rules/test_installation_history.py",
+        "tests/rules/test_comfort_receipts.py"
       ],
       "evidence": [
         {
@@ -196,6 +198,20 @@
           "result": "574 passed in 54.24s; zero failures/errors/skips",
           "artifact": "var/m3-reactions-pytest.xml",
           "limitation": "Frame replacement and remaining M3 mechanics, source interactions, independent review and human acceptance remain pending"
+        },
+        {
+          "scope": "Asset Installment acquisition/original-receipt workflow only; broader Requisitions case remains IN_PROGRESS",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-unit-1a-full.xml",
+          "result": "1388 passed in 387.42s",
+          "artifact": "var/m3-unit-1a-full.xml",
+          "git_commit": "af0a2213a3a23f231f0b5f002197d545ffb0b88e"
+        },
+        {
+          "scope": "Creature Comforts paid-source, qualifying roll, scene/attendance, actual Asset or decline and original-receipt workflow only; broader economy remains IN_PROGRESS",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-unit-1b-full-final.xml",
+          "result": "1399 passed in 389.68s",
+          "artifact": "var/m3-unit-1b-full-final.xml",
+          "git_commit": "620e87987daca80b87409cbd46000e52732b867e"
         }
       ]
     },
