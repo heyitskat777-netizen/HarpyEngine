@@ -13,6 +13,7 @@ class Rulings(BaseModel):
     ace_bonus: Literal["current_ace"]
     standard_unpriced_cost: Literal[1]
     extra_repairs: Literal["handler_quote"]
+    repair_shortage_timing: Literal["next_dispatch_from_off_duty"]
     reprogramming_fallback: Literal["owner_selects_ordinary_slot"]
     reprogramming_reset_marks: Literal["baseline_preserve_protected_locks"]
     identity_duplicate_labels: Literal["distinct_ids"]

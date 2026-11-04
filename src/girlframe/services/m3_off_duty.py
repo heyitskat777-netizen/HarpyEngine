@@ -176,7 +176,11 @@ class OffDutyService:
                 pilots=state.order,
                 character_ids=characters,
             )
-            changed = False
+            from girlframe.engine.m3_repairs import begin_period
+
+            bound = begin_period(state, period.id)
+            changed = bound != state
+            state = bound
             for uid in state.order:
                 original = state.sheets[str(uid)]
                 normalized = bind_identity_slots(original)

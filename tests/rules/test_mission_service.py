@@ -39,6 +39,7 @@ def service(store, girl="MOCKINGBIRD", frame="JANUS-B"):
                 ace_bonus="current_ace",
                 standard_unpriced_cost=1,
                 extra_repairs="handler_quote",
+                repair_shortage_timing="next_dispatch_from_off_duty",
                 reprogramming_fallback="owner_selects_ordinary_slot",
                 reprogramming_reset_marks="baseline_preserve_protected_locks",
                 identity_duplicate_labels="distinct_ids",

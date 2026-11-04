@@ -26,6 +26,7 @@ SUPPORTED = frozenset(
         "strain.rebellion.low.1.1",
         "strain.rebellion.low.6.1",
         "strain.budget.low.5.2",
+        "strain.budget.low.4.2",
         "strain.budget.low.6.2",
         "strain.budget.high.2.2",
         "strain.budget.high.3.2",
@@ -66,7 +67,9 @@ def fields(choice: Choice, allowed: set[str]) -> None:
         raise ValueError("Record the actual source-specific event context")
 
 
-def apply(original: GameState, choice: Choice, source_work: str) -> GameState:
+def apply(
+    original: GameState, choice: Choice, source_work: str, *, period_id: str | None = None
+) -> GameState:
     if choice.rule_id not in SUPPORTED:
         raise ValueError("UNSUPPORTED_RULE: this Strain effect has no complete typed resolver")
     state = GameState.model_validate_json(original.model_dump_json())
@@ -74,7 +77,14 @@ def apply(original: GameState, choice: Choice, source_work: str) -> GameState:
     if world is None or state.handler is None:
         raise ValueError("Initialize the actual world and appointed Handler first")
     rule = choice.rule_id
-    if rule in {
+    if rule == "strain.budget.low.4.2":
+        from girlframe.engine.m3_repairs import schedule
+
+        fields(choice, set())
+        if period_id is None:
+            raise ValueError("The repair shortage needs its actual Strain period")
+        state.repair_shortages.append(schedule(state, source_work, period_id))
+    elif rule in {
         "strain.void.low.1.1",
         "strain.void.low.2.1",
         "strain.void.low.4.1",

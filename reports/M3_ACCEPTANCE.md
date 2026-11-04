@@ -859,3 +859,51 @@ checkpoint 7b34541, run 41821321860. The sanitized push path now uses the existi
 `gh auth git-credential` helper per command; no token, global credential setting or
 environment draft was changed. No live migration/policy change, M3 deployment,
 environment publication, independent/human acceptance or M3-ready claim applies.
+
+
+## Low Budget repair shortage and exact optional prices
+
+Low Budget 4/2 now saves a source-bound restriction without retroactive damage or
+repair changes. The next actual dispatched mission, its real end and following
+recovery period bind the effect. The next-dispatch interpretation and alternative
+are recorded as a delegated clarity-review ruling. Overlapping restrictions retain
+each source without granting additional free quotas. Recovery uses owner-bound
+native selectors and repairs exactly one available damaged Girl and Frame Asset,
+leaving other damage intact. Normal unrestricted recovery remains separate.
+
+The current Handler quotes each optional extra Asset repair; no price is inferred.
+The quote binds the real character, Frame incarnation, sheet/quote revision and
+actual period/restriction. Offer/reopen/reprice never spends. The player separately
+accepts or declines; charge, repair, response and history commit once together.
+Old/revised prices, changed sheets/characters/Frames/Handler, insufficient funds,
+pauses, pending Plays and unrestored chat block spending. Current-period closure
+ends its restriction and invalidates unaccepted purchases without inventing an
+answer. Pending optional quotes do not prevent actual period completion. Native
+`/mission repairs` and the private guided inbox keep other users out of the quote.
+Casualty body-part rules and all other Requisitions remain separate future work.
+
+Final full suite: **988 passed in 209.11s**, no failures/errors/skips;
+`var/m3-shortage-repairs-pytest.xml`. Focused mission/recovery/quote run:
+**43 passed in 45.10s**, `var/m3-shortage-repairs-broad-recheck.xml`. Earlier isolated
+repair run passed **11 tests in 18.87s**. Development fixture corrections are
+preserved transparently: the first run had **7 failed, 3 passed** because it assumed
+the old Ace Status after the actual review had made that player Dog. Fixture
+review also corrected a price above the actual Permission balance before reaching
+the purchase assertion. Corrected tests respect real Status and an affordable
+explicit price. The first broader run had **1 failed, 42 passed**
+because its unrelated pending-Play setup omitted mandatory spending of held Heat;
+the corrected fixture follows that rule. No gameplay guard or failure was waived.
+
+Ruff passed; **303 Python files** formatted; mypy passed for **160 source files**.
+Registry: 473 entries, 436 required core, **50 subsets, 423 unimplemented**, zero
+independent verifications. The Permissions entry now truthfully records partial
+reward/paid-repair coverage, without claiming its remaining Requisitions. Public
+source scan before this evidence update: **385 files**, all **40 original manifest
+entries**, zero findings. The original planning package is preserved.
+
+The prior checkpoint **772eb22722b4c7f65c643f79a932c48555fb5916** was pushed as
+sanitized source; GitHub CI passed, run **41833215239**. Exactly one original frozen
+M2 process remained observed (PID47656). No live migration/policy change, M3 deploy,
+environment publication, independent/human acceptance or M3-ready claim applies.
+Shared actor-aware Plays, playbooks/economy/careers, five Punishments, 59 remaining
+Strain cells, all Endgames and other world interactions still require work.

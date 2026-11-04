@@ -11,7 +11,7 @@ from pydantic import Field, model_validator
 from girlframe.engine.identity import Snowflake
 from girlframe.engine.m2 import GameState, Model, PilotSheet, tier
 from girlframe.engine.m3_choices import OFF_DUTY, off_duty_modifier
-from girlframe.engine.m3_core import Recovery, recover_off_duty
+from girlframe.engine.m3_core import Recovery, RepairSelection, recover_off_duty
 from girlframe.engine.m3_observation_state import Observation
 from girlframe.engine.rolls import Face
 
@@ -108,6 +108,7 @@ class RecoveryChoice(Model):
     embrace_tag: str | None = None
     replace_identity: str | None = None
     repair_assets: bool = True
+    repairs: RepairSelection | None = None
 
 
 HANDLER_SCENES = ("punish", "permission", "npc_employment", "prisoner", "exploit", "routine")

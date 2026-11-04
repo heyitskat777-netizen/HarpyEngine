@@ -326,6 +326,10 @@ class MissionService:
             updated = rules.dispatch(
                 mission, viewer.user_id, self._current_handler(c), expected, active
             )
+            from girlframe.engine.m3_repairs import dispatch as bind_shortages
+
+            dispatch_event = str(uuid4())
+            bound = bind_shortages(state, identity, dispatch_event)
             # A Pilot cannot be dispatched into two active missions at once.
             table = t.m3["m3_missions"]
             for other_body in c.scalars(
@@ -343,6 +347,8 @@ class MissionService:
                 viewer.user_id,
                 key,
                 "m3.mission_started",
+                bound if bound != state else None,
+                event_id=dispatch_event,
                 mission_id=identity,
                 revision=updated.revision,
             )
@@ -450,12 +456,17 @@ class MissionService:
             changed.add(str(grant.owner))
         for uid in changed:
             state.sheets[uid].revision += 1
+        from girlframe.engine.m3_repairs import mission_ended
+
+        event_id = str(uuid4())
+        state = mission_ended(state, mission.id, event_id)
         event = self.game.event(
             c,
             viewer.user_id,
             key,
             "m3.mission_rewards_committed",
             state,
+            event_id=event_id,
             mission_id=mission.id,
             revision=plan.mission.revision,
         )

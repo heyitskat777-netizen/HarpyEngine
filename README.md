@@ -183,6 +183,7 @@ unimplemented mechanics, player responses or an M3 release.
 | `/mission off_duty` | Saved preparation, owned credit declarations and required-work selectors; M3 effects remain gated |
 | `/mission strain` | Handler chooses starting scenario, reviews triggers, confirms saved d6 rolls and chooses event columns; unsupported effects stay pending |
 | `/mission world`, `/mission map` | Handler setup/management and a player map that omits private world records |
+| `/mission repairs` | Actual shortage recovery, private per-Asset Handler quotes and owner-confirmed optional paid repairs |
 | `/mission regulations` | Private known behavioural rules; informed Handler explicitly records breaches and separate current/next-period discipline |
 | `/mission actors`, `/mission cast` | Owned actual-role previews and explicit scene casting; mixed-role Plays still require actor-aware consumers |
 | `/mission npc`, `/mission npc_bond` | Explicit NPC role claim or owner-confirmed link of a saved starting NPC Bond |

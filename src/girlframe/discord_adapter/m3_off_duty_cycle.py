@@ -14,6 +14,7 @@ from girlframe.discord_adapter.m3_world import coordinates
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m2 import PlayInput, tier
 from girlframe.engine.m3_choices import OFF_DUTY
+from girlframe.engine.m3_core import RepairSelection
 from girlframe.engine.m3_off_duty import HANDLER_SCENES, HandlerContext, RecoveryChoice
 from girlframe.engine.m3_world import ClassChange, Movement, directed_steps
 from girlframe.engine.m3_world_state import Goal, Gorgon, World
@@ -280,6 +281,20 @@ async def open_action(
             Field("repairs", "Undamage your Assets?", YES_NO),
         ]
         fields = [x for x in fields if x.options]
+        if data.get("repair_limit") is not None:
+            for family in ("girl", "frame"):
+                damaged = [x for x in sheet["assets"] if x["family"] == family and x["damaged"]]
+                if damaged:
+                    fields.append(
+                        Field(
+                            "repair_" + family,
+                            "One free " + family + " Asset repair",
+                            tuple((x["id"], entity_label(x)) for x in damaged),
+                            0,
+                            1,
+                            required=False,
+                        )
+                    )
 
         async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
             return await change(
@@ -290,6 +305,12 @@ async def open_action(
                     replace_identity=one(values, "replace"),
                     unmark_identity=one(values, "unmark"),
                     repair_assets=one(values, "repairs") == "yes",
+                    repairs=RepairSelection(
+                        girl=values.get("repair_girl", ()),
+                        frame=values.get("repair_frame", ()),
+                    )
+                    if data.get("repair_limit") is not None and one(values, "repairs") == "yes"
+                    else None,
                 ),
             )
     elif action == "handler_scene":

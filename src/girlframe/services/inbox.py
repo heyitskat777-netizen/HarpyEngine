@@ -373,6 +373,43 @@ class InboxService:
             from girlframe.services.m2_state import load_state
 
             canon = load_state(connection, self.store.campaign_id)
+            current_character = connection.scalar(
+                sa.select(t.characters.c.id).where(
+                    t.characters.c.campaign_id == self.store.campaign_id,
+                    t.characters.c.user_id == user,
+                )
+            )
+            for quote in canon.repair_quotes:
+                if quote.owner.entity != user or quote.owner.incarnation != current_character:
+                    continue
+                sheet = canon.sheets.get(user)
+                stale = (
+                    sheet is None
+                    or sheet.revision != quote.sheet_revision
+                    or quote.handler != canon.handler
+                    or not any(
+                        x.id in quote.shortages and x.period == quote.period and not x.closed
+                        for x in canon.repair_shortages
+                    )
+                )
+                items.append(
+                    InboxItem(
+                        "repair-quote:" + quote.id,
+                        "repair_quote",
+                        quote.id,
+                        quote.revision,
+                        "off_duty",
+                        "Extra repair price — " + quote.asset_name,
+                        "Handler",
+                        quote.state,
+                        True,
+                        stale,
+                        "A price offer; no repair or spending until your explicit confirmation.",
+                        "Review the private price, then accept or decline for yourself.",
+                        "Review exact price" if quote.state == "pending" else None,
+                        task="m3_repair_quote",
+                    )
+                )
             for context in canon.director_contexts:
                 controlled = bool(
                     canon.world

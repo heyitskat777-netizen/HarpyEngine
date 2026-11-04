@@ -357,6 +357,20 @@ def register_missions(
         except WorkflowError as error:
             await reply(interaction, str(error))
 
+    @group.command(
+        name="repairs", description="Review exact Handler prices for extra shortage repairs"
+    )
+    async def repairs(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_repairs import open_repairs
+        from girlframe.services.m3_off_duty import OffDutyService
+        from girlframe.services.m3_repairs import RepairService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_repairs(interaction, RepairService(OffDutyService(service)))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
     @group.command(name="world", description="Set up or manage the canonical world (Handler)")
     async def world(interaction: discord.Interaction) -> None:
         from girlframe.discord_adapter.m3_world import open_world

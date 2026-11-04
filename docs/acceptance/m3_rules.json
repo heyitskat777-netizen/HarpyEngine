@@ -743,6 +743,27 @@
           "limitation": "Knowledge transfer to a replacement Handler, career lifecycle and broader discipline/playbook/mission interactions still need implementation and independent/human acceptance."
         }
       ]
+    },
+    {
+      "id": "M3F-BUDGET-REPAIRS-001",
+      "title": "Actual Low Budget repair shortage and exact optional paid repairs",
+      "expected": "Real source/dispatch/end/recovery binding, one free repair per family, private current Handler quotes, separate owner payment, no stale/duplicate/unauthorized repair.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_repairs.py",
+        "tests/rules/test_repair_service.py",
+        "tests/rules/test_off_duty_cycle.py",
+        "tests/rules/test_off_duty_cycle_ui.py"
+      ],
+      "evidence": [
+        {
+          "scope": "offline_mission_bound_shortage_and_exact_asset_repair_quotes",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-shortage-repairs-pytest.xml",
+          "result": "988 passed in 209.11s; no failures/errors/skips",
+          "artifact": "var/m3-shortage-repairs-pytest.xml",
+          "limitation": "Other Requisitions, Casualty body-part recovery, remaining playbook/world/economy interactions and independent/human acceptance remain incomplete."
+        }
+      ]
     }
   ],
   "enabled_modules": [

@@ -497,6 +497,22 @@
       "change_impact": "Changing the adjudicator or timing requires explicit knowledge/authority migration and treatment of pending breach causes, without replaying a Punishment or disclosing a concealed rule.",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "repair-shortage-mission-timing",
+      "policy_key": "repair_shortage_timing",
+      "summary": "A Low Budget 4/2 shortage rolled during Off-Duty binds to the next actual dispatched mission, then the actual recovery period following that mission. Do not retroactively restrict the already-ended mission or the current recovery.",
+      "source": "Book PDF 150 / printed p.148; owner delegated authority",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "The source says after the next or current mission. The implemented Off-Duty lifecycle starts only after actual missions finish, so a new event has no active current mission to bind. Actual dispatch/end events provide a stable next-mission anchor without guessing fictional time.",
+      "alternatives": [
+        "Treat the mission preceding this Off-Duty as current and restrict this recovery immediately"
+      ],
+      "implementation_note": "Preserve each actual source event. Bind all unanchored shortages on the next real dispatch, then its end and the following actual period. Overlapping one-Asset limits do not grant additional free quotas. Extra paid repairs still use explicit current Handler quotes and owner confirmation.",
+      "change_impact": "Changing the interpretation needs explicit migration of unanchored/mission-bound restrictions and pending quotes. Preserve prior recovery and payment receipts; never retroactively charge or damage an Asset.",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -863,14 +879,17 @@
         "heading": "Permissions & Requisitions"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_mission_service.py",
+        "tests/rules/test_repair_service.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -8725,14 +8744,17 @@
         "heading": "Budget low: die 4, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_repairs.py",
+        "tests/rules/test_repair_service.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

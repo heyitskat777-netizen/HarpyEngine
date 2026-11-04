@@ -74,7 +74,7 @@ class EffectService:
                 raise WorkflowError(
                     "The selected effect does not match this actual saved Strain event."
                 )
-            updated = rules.apply(state, choice, identity)
+            updated = rules.apply(state, choice, identity, period_id=row["off_duty_id"])
             event = self.game.event(
                 c,
                 viewer.user_id,

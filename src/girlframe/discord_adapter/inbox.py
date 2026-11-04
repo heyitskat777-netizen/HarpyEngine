@@ -466,6 +466,17 @@ class InboxView(discord.ui.View):
                 NpcRoleService(WorldService(MissionService(self.service.store))),
                 item.identity,
             )
+        elif item.task == "m3_repair_quote":
+            from girlframe.discord_adapter.m3_repairs import open_quote
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_repairs import RepairService
+
+            await open_quote(
+                interaction,
+                RepairService(OffDutyService(MissionService(self.service.store))),
+                item.identity,
+            )
         elif item.task == "m3_observation":
             from girlframe.discord_adapter.m3_observation import open_work as open_observation
             from girlframe.services.m3_missions import MissionService

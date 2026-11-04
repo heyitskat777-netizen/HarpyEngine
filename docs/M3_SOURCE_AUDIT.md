@@ -180,3 +180,15 @@ not block current-period recovery but becomes required work on the next actual
 period. A synthetic two-period test applies the further Punishment once, with
 separate owned on-screen attestations. Handler knowledge-transfer, career archives,
 remaining Punishments, full economy/playbook and other M3 work still remain.
+
+
+Low Budget 4/2 (PDF 150 / printed p.148) now has actual Strain-source, next-dispatch,
+mission-end and recovery-period provenance. Its current-period recovery remains
+unchanged when the source first arms; the following actual recovery limits free
+repairs to one damaged Asset per family. Native owner selectors preserve remaining
+damage. Optional extra repairs use exact current-Handler Permission quotes and
+separate player confirmation, with no default price or automatic spending. Quote
+revisions, character/Frame incarnations, safety, affordability, chat restoration,
+rollback/replay and actual period closure are covered offline. Other Requisitions,
+Casualty body parts and remaining playbook/world/economy interactions remain
+unfinished. See `work_orders/M3_SHORTAGE_REPAIRS.md` and the central timing ruling.

@@ -9,6 +9,8 @@ from girlframe.engine.identity import Snowflake
 from girlframe.engine.m3_actor_state import SceneCast
 from girlframe.engine.m3_frame_state import FrameRuntime
 from girlframe.engine.m3_regulation_state import Regulation
+from girlframe.engine.m3_repair_state import Quote as RepairQuote
+from girlframe.engine.m3_repair_state import Shortage as RepairShortage
 from girlframe.engine.m3_strain_state import State as StrainState
 from girlframe.engine.m3_world_state import World
 
@@ -170,6 +172,8 @@ class GameState(Model):
     director_contexts: list[DirectorContext] = Field(default_factory=list)
     scene_casts: list[SceneCast] = Field(default_factory=list)
     regulations: list[Regulation] = Field(default_factory=list)
+    repair_shortages: list[RepairShortage] = Field(default_factory=list)
+    repair_quotes: list[RepairQuote] = Field(default_factory=list)
 
 
 class PlayInput(Model):

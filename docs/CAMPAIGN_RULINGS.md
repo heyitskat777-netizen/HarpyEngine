@@ -179,3 +179,15 @@ implementation uses explicit human accounts and actual source events, with no
 passive chat judgment. Each breach retains its own cause; future-period deferral
 cannot be pulled into the current period. Changing this policy needs knowledge and
 pending-cause migration, without replaying discipline or exposing a concealed rule.
+
+
+`repair_shortage_timing`: a Low Budget 4/2 event rolled during Off-Duty binds to
+the next actual dispatched mission, its end and the following recovery period.
+Source: book PDF 150 / printed p.148; delegated recommendation, clarity review
+required. The source says next/current mission; this lifecycle starts Off-Duty
+only after all actual missions finish, so no active current mission exists at the
+new event. Alternative: treat the preceding mission as current and restrict this
+period immediately. Preserve each source and actual dispatch/end/period provenance;
+overlap retains the one-Asset limit without extra free quotas. Revision requires
+explicit treatment of armed scopes and pending quotes, preserving prior recoveries
+and payments without retroactive damage or charges.

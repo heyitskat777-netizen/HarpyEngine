@@ -425,6 +425,9 @@ class CycleService:
                 if x["subject_id"] == str(viewer.user_id)
                 and x["kind"] not in ("off_duty_handler_scene", "off_duty_status_review")
             )
+            from girlframe.engine.m3_repairs import active as repair_shortages
+
+            shortage = bool(repair_shortages(state, identity))
             # Required M2 mechanical debts are not generic narrative follow-throughs.
             if any(
                 x.owner == viewer.user_id
@@ -438,6 +441,7 @@ class CycleService:
                 )
             trusted = Recovery(
                 **choice.model_dump(),
+                repair_limit=1 if shortage else None,
                 allow_duplicate_labels=bool(
                     self.store.policy.owner_m3_rulings
                     and self.store.policy.owner_m3_rulings.identity_duplicate_labels
@@ -641,6 +645,9 @@ class CycleService:
                 "status_reviewed": period.status_review is not None
                 and period.status_review_game_revision == state.revision,
                 "rewards_need_refresh": needs_refresh(c, self.store, state, period),
+                "repair_limit": 1
+                if any(x.period == identity and not x.closed for x in state.repair_shortages)
+                else None,
             }
 
     def finish(
@@ -706,6 +713,10 @@ class CycleService:
                 updated.strain = updated.strain.model_copy(
                     update={"triggers": updated.strain.triggers + additions}
                 )
+            if not severe:
+                from girlframe.engine.m3_repairs import close_period
+
+                updated = close_period(updated, identity)
             self.game.event(
                 c,
                 viewer.user_id,
