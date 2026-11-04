@@ -118,6 +118,12 @@ class ActorView(Model):
     identities: tuple[IdentityView, ...] = ()
     jobs: tuple[str, ...] = ()
     cell: tuple[int, int] | None = None
+    vessel_id: str | None = None
+    frame_cell: tuple[int, int] | None = None
+    inside_frame: bool | None = None
+    piloting: bool | None = None
+    occupied_frame_instance: str | None = None
+    position_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     core_exposed: bool | None = None
     custody: str | None = None
     source_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")

@@ -570,6 +570,18 @@ class InboxView(discord.ui.View):
             await open_comfort(
                 interaction, ComfortService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_physical_start":
+            from girlframe.discord_adapter.m3_physical import open_initial
+            from girlframe.services.m3_physical import PhysicalService
+
+            await open_initial(interaction, PhysicalService(self.service.store))
+        elif item.task == "m3_physical":
+            from girlframe.discord_adapter.m3_physical import open_review as open_physical_review
+            from girlframe.services.m3_physical import PhysicalService
+
+            await open_physical_review(
+                interaction, PhysicalService(self.service.store), item.identity
+            )
         elif item.task == "m3_actor_recovery":
             from girlframe.discord_adapter.m3_actor_plays import open_recovery
             from girlframe.services.m2_game import GameService

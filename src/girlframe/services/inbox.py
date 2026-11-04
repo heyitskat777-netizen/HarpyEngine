@@ -601,6 +601,81 @@ class InboxService:
                         task="m3_comforts" if needs else None,
                     )
                 )
+            from girlframe.services.m3_physical import PhysicalService
+
+            physical = PhysicalService(self.store)
+            approval = self.store.policy.m3_approval
+            if (
+                approval is not None
+                and "world" in approval.subsystems
+                and canon.world is not None
+                and user in canon.sheets
+            ):
+                from girlframe.engine.m3_actor_state import ActorRef
+
+                try:
+                    initial_ref = ActorRef(
+                        kind="pilot",
+                        entity=user,
+                        incarnation=physical.game.character_binding(
+                            connection, canon, viewer.user_id, require_current_profile=False
+                        ),
+                    )
+                except WorkflowError:
+                    initial_ref = None
+                if (
+                    initial_ref is not None
+                    and not any(x.actor == initial_ref for x in canon.placements)
+                    and not any(
+                        physical._review(connection, row).proposal.actor == initial_ref
+                        for row in physical._rows(connection)
+                        if row["state"] == "pending"
+                    )
+                ):
+                    initial_identity = initial_ref.incarnation
+                    assert initial_identity is not None
+                    items.append(
+                        InboxItem(
+                            "physical-initial:" + initial_identity,
+                            "physical_initial_task",
+                            initial_identity,
+                            canon.sheets[user].revision,
+                            "world",
+                            "Record original physical facts",
+                            canon.sheets[user].callsign,
+                            "pending",
+                            True,
+                            False,
+                            "Your actual body and Frame positions are not recorded yet.",
+                            "Propose your actual first map positions and occupancy "
+                            "for facilitator review.",
+                            "Record physical facts",
+                            task="m3_physical_start",
+                        )
+                    )
+
+            for request in physical._tasks(connection, viewer, history=True):
+                pending = request["state"] != "resolved"
+                items.append(
+                    InboxItem(
+                        "physical:" + request["id"],
+                        "physical_setup",
+                        request["id"],
+                        request["revision"],
+                        "world",
+                        "Original physical facts",
+                        request["label"],
+                        "pending" if pending else "resolved",
+                        pending and request["incoming"],
+                        False,
+                        "An owned factual proposal for the original Girl and Frame.",
+                        "Review actual map positions and occupancy; "
+                        "the facilitator confirms the original facts.",
+                        "Review physical facts" if pending else "View physical facts",
+                        task="m3_physical",
+                    )
+                )
+
             from girlframe.engine.m3_missions import Mission
 
             current_handler = handler.current(connection)[1].handler_id
@@ -744,7 +819,7 @@ class InboxService:
                     continue
                 primary, task_name = None, None
                 kind = work["kind"]
-                if kind == "creature_comforts":
+                if kind in ("creature_comforts", "physical_initial"):
                     continue
                 context_scene = (
                     json.loads(work["body_json"]).get("context_scene")

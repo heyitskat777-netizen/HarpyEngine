@@ -1297,3 +1297,69 @@ M3 gameplay deployment, environment publication, independent/human acceptance or
 M3-ready claim applies. Physical/control/player-response ports, remaining shared
 Plays/playbooks/economy/discipline, Strain/Endgames and release acceptance still need
 work. Development continues toward the agreed full M3 target.
+
+
+## Original physical facts and actual body/Frame identity
+
+Original physical facts now bind the actual canonical Girl, independent physical
+vessel and assigned Frame. The owning human proposes actual map cells and
+occupancy; the actual appointed world facilitator separately accepts or declines.
+This records first known facts once, with both source events. It never resets an
+existing placement, moves another role, changes resources, grants a new ability or
+substitutes for source-required linking effects. Being outside, occupying a cockpit
+and piloting are distinct. Occupancy requires matching cells; a scrapped Frame
+cannot be piloted. Unknown legacy positions stay unknown. A new assigned Frame
+leaves its own location/control unknown while preserving the Girl's cell, vessel
+and earlier occupied Frame. Later scrapping stops piloting without ejection.
+
+`/mission position` offers actual named locations and occupancy dropdowns. The
+requests inbox derives an owned start prompt, then replaces it with the real saved
+proposal/review and keeps read-only history. Reopening resumes the actual pending
+request. Other humans get no private account or positions. Source-scoped views
+recheck actual membership/appointment and work provenance; a same-character draft
+edit does not discard the actual proposal, whereas a changed character/Frame cannot
+claim it. Proposal/decline/withdrawal are OOC during safety pause; canonical
+confirmation waits for resume, finished known Plays and restored chat. The actual
+known Girl cell now constrains an improvement scene's base; casting never moves
+her. Physical entry/exit, travel/time, linking/control, vessel transfers and their
+full source interactions still require implementation.
+
+Full suite: **1258 passed in 350.93s**, no failures/errors/skips;
+`var/m3-physical-pytest.xml`. The first full attempt was interrupted after **1
+failed / 475 passed in 225.30s**, artifact
+`var/m3-physical-first-interrupted.xml`: an existing private-Director test assumed
+an unrelated player's World inbox was completely empty. It now checks the actual
+privacy contract (no invitation/Director data; any new setup prompt belongs to
+that player's own original character). Corrected targeted run: **13 passed in
+3.95s**, `var/m3-physical-inbox-corrected.xml`. Preceding focused checks: **89 passed
+in 41.40s**, `var/m3-physical-final-focused.xml`; **78 passed in 40.38s**,
+`var/m3-physical-boundaries.xml`; **61 passed in 20.58s**,
+`var/m3-physical-native-focused.xml`; **42 passed in 12.37s**,
+`var/m3-physical-revision-focused.xml`; **48 passed in 13.25s**,
+`var/m3-physical-ui-baseline.xml`; initial service **40 passed in 9.38s**, initial
+pure **39 passed in 8.82s**. Import/long-line formatting, an optional actor-ID type
+and a callback import-name collision were corrected before final checks. Ruff
+passes, **355 files** formatted, mypy **185 source files**.
+
+Boundary checks include source/header consistency, original owner/Frame/generation,
+current/departed participants, source-creation and post-event rollback, known-roll
+abort with restored chat, native ownership, pause, concurrency/idempotence, original
+and legacy JSON, actual backup/rebuild, two-campaign isolation, saved reads when the
+registry is unavailable, and derived-task retirement without invented submissions.
+During verification one command failed with `exec-server transport disconnected`.
+Read-only provider status reported connected/running; retained diagnostic metadata
+contained no records. Command access recovered on retry, the same original bot PID
+remained active and the existing test session continued. No cause was inferred and
+no environment change or restart was used.
+
+Registry remains RULES_SUBSET: 473 entries, 436 required core, **58 subsets / 415
+unimplemented**, zero independent verifications. The map setup contract now records
+the actual original-facts scope and limits, without inflating implementation counts.
+Public scan: **437 publishable files**, original **40 manifest entries**, zero
+findings. Combat checkpoint **86156ef9008743d9647644286c7268519b82541d** is pushed;
+GitHub CI passed, run **41888657783**. The frozen M2 bot remains the only observed
+instance, PID47656. No live migration/policy change, M3 deployment, environment
+publication, independent/human acceptance or M3-ready claim applies. Continue the
+agreed milestone. The next confirmed source correction is WYVERN Enormous: it is
+additional to the five-Asset limit and cannot be a cap replacement, while existing
+package/install logic incorrectly counts it toward that limit.

@@ -74,6 +74,11 @@ def resolve(
             )
         ):
             raise ValueError("STALE_ACTOR: use the actual current character/profile incarnation")
+        frame_instance = (
+            sheet.frame_runtime.id if sheet.frame_runtime else "initial:" + profile.character_id
+        )
+        placement = next((x for x in state.placements if x.actor == ref), None)
+        same_frame = placement is not None and placement.frame_instance == frame_instance
         return ActorView(
             ref=ref,
             controller=uid,
@@ -82,13 +87,22 @@ def resolve(
             rules="girl_frame",
             girl=sheet.girl,
             frame=sheet.frame,
-            frame_instance=sheet.frame_runtime.id
-            if sheet.frame_runtime
-            else "initial:" + profile.character_id,
+            frame_instance=frame_instance,
             frame_scrapped=sheet.frame_scrapped,
             heat=sheet.heat,
             assets=assets(sheet.assets),
             identities=identities(sheet.identities),
+            cell=placement.girl_cell if placement else None,
+            vessel_id=placement.vessel_id if placement else None,
+            frame_cell=placement.frame_cell if placement and same_frame else None,
+            inside_frame=placement.mode != "outside_frame" if placement else None,
+            piloting=(placement.mode == "piloting" and not sheet.frame_scrapped)
+            if placement and same_frame
+            else None,
+            occupied_frame_instance=placement.frame_instance
+            if placement and placement.mode != "outside_frame"
+            else None,
+            position_sha256=fingerprint(placement) if placement else None,
             source_sha256=fingerprint(sheet),
         )
     if ref.kind == "handler":

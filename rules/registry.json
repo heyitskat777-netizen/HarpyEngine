@@ -6235,16 +6235,51 @@
       },
       "required": true,
       "implementation": "subset",
-      "source_audit": "inventoried",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Initialize the actual campaign quadrant once and record actual initial Pilot/Frame physical facts through owned source review.",
+        "actor_type": "Appointed world facilitator for the map; actual original Pilot human for their factual proposal and actual facilitator for its review.",
+        "pre_roll_sources": [
+          "Book PDF121-122 / printed pp.119-120, canonical board/major locations, original character/profile proof, actual assigned Frame, current world revision and factual proposal provenance."
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "diceless": [
+            "Map: three Foundation bases, at least two cities, three important locations, each in a distinct square, and a secret Benevolent Gorgon at an actual base.",
+            "Initial physical facts: original human proposes actual Girl/Frame cells and occupancy; actual facilitator separately accepts or declines. Initial recording never resets an existing placement."
+          ]
+        },
+        "choice_ownership": "Humans choose actual setup and factual positions. OOC casting never supplies fictional movement, presence, piloting or consent.",
+        "target_policy": "Actual campaign map and original canonical actor/Frame, with same-cell occupancy and no piloting a scrapped Frame. Body/vessel identity is independent of character identity. Missing legacy positions remain unknown.",
+        "post_roll_effects": [
+          "Canonical map and source history; source-bound accepted original physical placement, preserving resources, other roles and private knowledge."
+        ],
+        "mandatory_followups": [
+          "Pending original physical proposals need an actual owned review or withdrawal; no human reply is invented.",
+          "Travel, control, vessel changes, room-level facts, mandatory territory encounters and broader world lifecycle remain unfinished and require their actual ports."
+        ],
+        "handler_or_gm_intervention": "Actual world-facilitator review of actual human facts. This grants no in-character Handler knowledge or automatic fictional action.",
+        "test_fixture_ids": [
+          "tests/rules/test_world.py",
+          "tests/rules/test_world_service.py",
+          "tests/rules/test_world_ui.py",
+          "tests/rules/test_physical.py",
+          "tests/rules/test_physical_service.py",
+          "tests/rules/test_physical_ui.py"
+        ]
+      },
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_world.py",
         "tests/rules/test_world_service.py",
-        "tests/rules/test_world_ui.py"
+        "tests/rules/test_world_ui.py",
+        "tests/rules/test_physical.py",
+        "tests/rules/test_physical_service.py",
+        "tests/rules/test_physical_ui.py"
       ],
       "m2_play_id": null,
       "module": "core"

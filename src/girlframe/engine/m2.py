@@ -8,6 +8,7 @@ from girlframe.engine.creation_review import ReviewSheet
 from girlframe.engine.identity import Snowflake
 from girlframe.engine.m3_actor_state import SceneCast
 from girlframe.engine.m3_frame_state import FrameRuntime
+from girlframe.engine.m3_physical_state import Placement
 from girlframe.engine.m3_regulation_state import Regulation
 from girlframe.engine.m3_repair_state import Quote as RepairQuote
 from girlframe.engine.m3_repair_state import Shortage as RepairShortage
@@ -178,6 +179,15 @@ class GameState(Model):
     repair_quotes: list[RepairQuote] = Field(default_factory=list)
     supply_losses: list[SupplyLoss] = Field(default_factory=list)
     requisitions: list[Requisition] = Field(default_factory=list)
+    placements: list[Placement] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def distinct_original_placements(self) -> "GameState":
+        if len({x.actor for x in self.placements}) != len(self.placements) or len(
+            {x.vessel_id for x in self.placements}
+        ) != len(self.placements):
+            raise ValueError("Original physical placements have distinct actors and vessels")
+        return self
 
 
 class PlayInput(Model):

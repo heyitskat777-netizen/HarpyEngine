@@ -29,7 +29,10 @@ Defeat/recovery integration and some other follow-ups remain unfinished. These c
 require a separate, scoped M3 release approval and are not enabled in the running
 bot. See [M3 evidence](reports/M3_ACCEPTANCE.md) and
 [source coverage](docs/M3_SOURCE_AUDIT.md). Ancillary playbooks are deferred and
-disabled by default.
+disabled by default. M3 world prototypes also provide actual Gorgon NPC/Asset
+Attacks, separate Core exposure, and private `/mission position` plus inbox controls
+for original body/Frame facts. Unknown legacy positions stay unknown; physical
+travel/control and further runtime mechanics remain in development.
 
 Read `AGENTS.md` and [the roadmap](docs/PROJECT_ROADMAP.md) before development. The
 original planning package remains unchanged in `GIRLFRAME_Discord_Codex_Handoff_v0.2/`;

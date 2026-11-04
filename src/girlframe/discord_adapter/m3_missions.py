@@ -426,4 +426,17 @@ def register_missions(
         except WorkflowError as error:
             await reply(interaction, str(error))
 
+    @group.command(
+        name="position", description="Review your actual original body and Frame positions"
+    )
+    async def position(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_physical import open_initial
+        from girlframe.services.m3_physical import PhysicalService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_initial(interaction, PhysicalService(service.store))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
     tree.add_command(group, guild=discord.Object(id=guild_id))

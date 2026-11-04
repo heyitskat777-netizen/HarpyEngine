@@ -79,7 +79,9 @@ def test_private_director_invitation_and_acceptance_preserve_scene_and_controlle
     svc, game, identity = offered(ledger)
     assert not state(game).world.npcs
     assert {x[0] for x in svc.members(ADMIN)["members"]} == {"2", "3"}
-    assert not InboxService(ledger).page(OTHER, category="world").total
+    other_world = InboxService(ledger).page(OTHER, category="world")
+    assert all(x.identity != identity and x.task != "m3_npc_role" for x in other_world.window)
+    assert all(x.identity == state(game).sheets["3"].character_id for x in other_world.window)
     assert "PRIVATE_DIRECTOR" not in str(InboxService(ledger).items(OTHER))
     with pytest.raises(WorkflowError):
         svc.get(OTHER, identity)
