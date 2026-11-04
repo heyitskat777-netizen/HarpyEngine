@@ -42,8 +42,8 @@ def test_start_is_private_durable_and_requires_actual_preparation_not_a_waiver(l
     assert started["phase"] == "preparing"
     restarted = OffDutyService(svc.missions)
     assert restarted.begin(ADMIN, "begin-off-duty") == started
-    assert svc.get(PLAYER, started["id"])["pending_count"] == 3
-    assert svc.get(PLAYER, started["id"])["work"] == []
+    assert svc.get(PLAYER, started["id"])["pending_count"] == 5
+    assert {x["kind"] for x in svc.get(PLAYER, started["id"])["work"]} == {"frame_off_duty_reward"}
     assert {x["kind"] for x in svc.get(ADMIN, started["id"])["work"]} == {
         "off_duty_strain_start",
         "off_duty_handler_scene",
@@ -88,7 +88,7 @@ def test_doctor_credit_is_owner_declared_exactly_once_private_and_restart_safe(l
         restarted.credit(PLAYER, "credit", started["id"], 1, rev, 3, "PRIVATE_CREDIT_ACCOUNT")
         == result
     )
-    assert svc.get(OTHER, started["id"])["work"] == []
+    assert {x["kind"] for x in svc.get(OTHER, started["id"])["work"]} == {"frame_off_duty_reward"}
     with pytest.raises(WorkflowError):
         svc.credit(PLAYER, "again", started["id"], 2, state(game).revision, 3, "Again")
     with ledger.engine.connect() as c:
@@ -188,7 +188,7 @@ def test_work_context_is_required_exclusive_and_bound_to_campaign(ledger):
                     .insert()
                     .values(**(row | {"id": str(uuid4())} | updates))
                 )
-    assert svc.get(ADMIN, started["id"])["pending_count"] == 3
+    assert svc.get(ADMIN, started["id"])["pending_count"] == 5
 
 
 def test_0013_preserves_existing_mission_work_and_append_only_triggers(ledger):

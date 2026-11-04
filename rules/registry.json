@@ -315,6 +315,72 @@
       "revision": 1,
       "implementation_note": "Trusted M3 policy enables duplicate labels in shared Tag/Paired replacement, core Off-Duty recovery, Correctional Programming and reset. Selection and marking remain ID/slot based; clients cannot choose the policy. Existing M2-only behavior remains unchanged.",
       "change_impact": "A revised uniqueness policy needs explicit treatment of existing distinct cards and pending choices; never silently merge identities, marks or protected resources."
+    },
+    {
+      "id": "frame-off-duty-eligibility",
+      "summary": "Capture Frame and Queen-holder eligibility at the actual Off-Duty roll; DoctorDoctor keeps the approved pre-Budget start ordering.",
+      "source": "Book PDF 27\u201328, 61, 65, 68, 71, 74, 78, 81, 84, 88; sheets PDF 18\u201326.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "The printed trigger does not order later replacement/Court transfers against outstanding choices. Binding actual earned eligibility preserves its owner without restoring old resources.",
+      "alternatives": [
+        "Use the Frame and holder at the later submission time",
+        "Freeze all Frame bonuses at period start"
+      ],
+      "policy_key": "frame_reward_eligibility",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Existing immutable roll-state history is referenced and checked against the action, receipt, character and period. Only current Permissions are changed.",
+      "change_impact": "Future ordering changes require explicit pending-work review; do not move earned choices to a new holder or recalculate saved rewards."
+    },
+    {
+      "id": "frame-bonus-under-observation",
+      "summary": "The normal Frame Off-Duty triggers also apply when Void Observation replaces the ordinary roll.",
+      "source": "Book PDF 28 and Frame Permission triggers PDF 61\u201388.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "Observation replaces rolling Go Off-Duty while retaining Off-Duty recovery and the broader period; it does not expressly suspend Frame triggers.",
+      "alternatives": [
+        "Suspend bonuses during Observation"
+      ],
+      "policy_key": "frame_reward_observation",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "The common reward scheduler accepts an actual Off-Duty roll context. Full Observation integration remains pending.",
+      "change_impact": "A revised exclusion affects future Observation periods and outstanding reviews, retaining prior receipts."
+    },
+    {
+      "id": "queen-dog-self-award",
+      "summary": "The Queen holder cannot award itself while it is the Dog; it can choose another current Girl who is the Dog.",
+      "source": "Book PDF 88; sheets PDF 26.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "The parenthetical Dog restriction is attached to the self-award clause, rather than all recipients.",
+      "alternatives": [
+        "Exclude every Dog recipient"
+      ],
+      "policy_key": "queen_reward_dog",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "The actual Queen holder selects a legal current Girl; self-Dog is rejected server-side.",
+      "change_impact": "Review pending recipient selectors after a change; never revoke a completed award silently."
+    },
+    {
+      "id": "frame-prisoner-repeat",
+      "summary": "A particular character can earn a prisoner bonus only once from one actual custody/delivery record; joint contributors are not globally excluded.",
+      "source": "Book PDF 65 and 78; sheets PDF 19 and 23.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "An actual delivery should not be repeatedly re-presented as new, while the text supplies no exclusive single-captor quota.",
+      "alternatives": [
+        "Permit repeat rewards for the same delivery",
+        "Allow one bonus total across all contributing characters"
+      ],
+      "policy_key": "frame_prisoner_reward_repeat",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Consumed delivery provenance is recorded per actual character ID. Current delivery-state checks are implemented; complete custody/event-history selection remains pending.",
+      "change_impact": "New pricing/eligibility policy requires explicit treatment of pending delivery claims and preserved consumed-source receipts."
     }
   ],
   "entries": [
@@ -2447,14 +2513,18 @@
         "heading": "Prince Permission trigger"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_frame_reward_service.py",
+        "tests/rules/test_frame_reward_ui.py",
+        "tests/rules/test_frame_rewards.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -2677,14 +2747,18 @@
         "heading": "Consume Permission trigger"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_frame_reward_service.py",
+        "tests/rules/test_frame_reward_ui.py",
+        "tests/rules/test_frame_rewards.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -2953,14 +3027,18 @@
         "heading": "Janus Permission trigger"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_frame_reward_service.py",
+        "tests/rules/test_frame_reward_ui.py",
+        "tests/rules/test_frame_rewards.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -3137,14 +3215,18 @@
         "heading": "Doctordoctor Permission trigger"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_frame_reward_service.py",
+        "tests/rules/test_frame_reward_ui.py",
+        "tests/rules/test_frame_rewards.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -3376,14 +3458,18 @@
         "heading": "Wyvern Permission trigger"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_frame_reward_service.py",
+        "tests/rules/test_frame_reward_ui.py",
+        "tests/rules/test_frame_rewards.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -3606,14 +3692,18 @@
         "heading": "Enforcer Permission trigger"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_frame_reward_service.py",
+        "tests/rules/test_frame_reward_ui.py",
+        "tests/rules/test_frame_rewards.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -3859,14 +3949,18 @@
         "heading": "Changeling Permission trigger"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_frame_reward_service.py",
+        "tests/rules/test_frame_reward_ui.py",
+        "tests/rules/test_frame_rewards.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -4066,14 +4160,18 @@
         "heading": "Ankou Permission trigger"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_frame_reward_service.py",
+        "tests/rules/test_frame_reward_ui.py",
+        "tests/rules/test_frame_rewards.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -4273,14 +4371,18 @@
         "heading": "Red-queen Permission trigger"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_frame_reward_service.py",
+        "tests/rules/test_frame_reward_ui.py",
+        "tests/rules/test_frame_rewards.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

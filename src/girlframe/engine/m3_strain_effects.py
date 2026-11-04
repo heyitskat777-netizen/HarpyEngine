@@ -277,7 +277,9 @@ def apply(original: GameState, choice: Choice, source_work: str) -> GameState:
         world = world_rules.update(
             world,
             npcs=tuple(
-                x.model_copy(update={"jobs": choice.npc_jobs}) if x.id == npc.id else x
+                x.model_copy(update={"jobs": choice.npc_jobs, "employment": "unemployed"})
+                if x.id == npc.id
+                else x
                 for x in world.npcs
             ),
         )

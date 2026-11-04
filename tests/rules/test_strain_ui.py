@@ -93,7 +93,9 @@ def test_credit_dropdown_is_owner_only_and_inbox_uses_off_duty_category(ledger):
     inbox = InboxService(ledger)
     own = inbox.page(PLAYER, category="off_duty")
     assert own.item.task == "m3_off_duty_credit" and own.item.title == "DoctorDoctor credit sharing"
-    assert inbox.page(OTHER, category="off_duty").total == 0
+    other = inbox.page(OTHER, category="off_duty")
+    assert other.total == 1 and other.item.task == "m3_frame_reward"
+    assert "DoctorDoctor" not in other.item.title
     assert inbox.page(ADMIN, category="missions").total == 0
 
     async def run():

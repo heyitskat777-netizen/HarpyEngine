@@ -674,3 +674,39 @@ and zero findings. GitHub CI passed commit `73b6481`, run `41794354250`.
 An early reset fixture mistakenly parameterized Frame catalog entries as Girls;
 it was restricted to the ten base Girl entries. A moved helper import was corrected
 before the passing full run. No skipped tests or waived errors are claimed.
+
+## Frame Off-Duty reward reviews
+
+Source cross-check: book PDF 61, 65, 68, 71, 74, 78, 81, 84 and 88;
+official sheets PDF 18–26. Typed own-trigger reviews, actual Queen-holder choice
+and separate Wyvern Handler-interest replies are integrated into real periods and
+the native private inbox. Immutable real roll history binds Frame/holder eligibility;
+late changes cannot rewrite earned ownership or restore historical resources.
+Accounts, offerings and private targets stay out of generic event/outcome metadata.
+Current member/Handler/character/revision/policy, pause and restored chat are
+rechecked. Backend work/reward/receipt writes are atomic and replay-safe.
+
+The Budget firing branch now also records unemployment; changing jobs alone could
+otherwise leave an NPC eligible as a Foundation employee. A Handler-controlled
+Director introduction is rejected: its required separately played role is still
+pending. Delivery reuse is checked per actual character, without inventing a
+single-contributor quota. Historical qualifying deliveries/demonstrations, full
+custody and transport, Observation and wider playbook interactions remain open;
+these entries are deliberately recorded as subsets.
+
+Executed: focused **56 passed in 19.94s**; full **865 passed in 115.50s**, no failures,
+errors or skips, artifact `var/m3-frame-rewards-pytest.xml`. The previous full run
+had one obsolete inbox assertion (862 passed, one failed): another player now
+has their own Frame task. The corrected assertion verifies that task while still
+excluding the private DoctorDoctor credit. Additional native Wyvern two-owner and
+Director-control regressions passed in the final full run. One restricted-shell
+test process stalled during discovery and was stopped; the supported approved
+execution completed normally. No test failure was waived.
+
+Ruff, formatting (257 Python files) and mypy (135 source files) passed before the
+last two tests were added. Registry: 473 entries, 436 required core, 45 subsets,
+428 unimplemented and zero independently verified. CI passed `67cb560`, run
+41798124946. New interpretations are listed with alternatives, rationale, future
+change notes and clarity-review flags in the central rulings register and registry.
+No M3 deployment, live migration, environment publication, independent audit or
+human play-test is claimed. One original frozen M2 bot was observed running.

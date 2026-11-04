@@ -163,10 +163,14 @@ def save_raw_roll(
     receipt = action["data"]["receipt"]
     updated = ordinary_roll(period, period.revision, actor, state, tuple(receipt["faces"]))
     updated.progress[str(actor)].action_id = action["id"]
+    updated.progress[str(actor)].reward_source_event = event
     saved = updated.progress[str(actor)].roll
     assert saved is not None
     saved.stage = "tag_window"
     service._save(c, updated, event)
+    from girlframe.services.m3_frame_rewards import synchronize
+
+    synchronize(c, game.store, state, updated, event)
 
 
 def sync_finished_roll(

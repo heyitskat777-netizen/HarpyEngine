@@ -104,6 +104,7 @@ class Npc(PlacedEntity):
     captive_of: str | None = None
     secret_factions: tuple[str, ...] = ()
     employment: Literal["unrecorded", "foundation", "unemployed"] = "unrecorded"
+    custody_event: str | None = None
 
     @model_validator(mode="after")
     def known_jobs(self) -> "Npc":
@@ -194,6 +195,7 @@ class AdversaryPilot(PlacedEntity):
     assets: tuple[Asset, ...]
     faction: str | None = None
     controller: Snowflake
+    revealed: bool = False
     exposed: bool = False
     alive: bool = True
     custody: Literal["free", "captured", "transported", "converted"] = "free"

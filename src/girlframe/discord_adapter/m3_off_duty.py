@@ -86,6 +86,8 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
     cycle = CycleService(service)
     progress = await asyncio.to_thread(cycle.review, viewer, data["id"])
     actions: list[tuple[str, str]] = []
+    if progress["rewards_need_refresh"]:
+        actions.append(("refresh_rewards", "Refresh current Frame bonus tasks"))
     if data["phase"] == "preparing" and viewer.user_id == progress["handler"]:
         actions.append(("activate", "Finish preparation and begin Off-Duty"))
     elif data["phase"] == "active":
@@ -132,7 +134,12 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
             await open_action(current, cycle, data["id"], identity.removeprefix("action:"))
             return
         row = rows[identity]
-        if row["kind"] in (
+        if row["kind"] in ("frame_off_duty_reward", "frame_reward_court", "frame_reward_interest"):
+            from girlframe.discord_adapter.m3_frame_rewards import open_reward
+            from girlframe.services.m3_frame_rewards import RewardService
+
+            await open_reward(current, RewardService(service), identity)
+        elif row["kind"] in (
             "punishment",
             "punishment_consult",
             "punishment_paired_identity_heat",

@@ -56,7 +56,22 @@ async def open_action(
     instructions = (
         "Review your choices, then confirm. Saved dice and other players' decisions stay intact."
     )
-    if action == "activate":
+    if action == "refresh_rewards":
+        fields = [Field("confirm", "Confirm", (("yes", "Register current Frame reward tasks"),))]
+
+        async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+            from girlframe.services.m3_frame_rewards import RewardService
+
+            await asyncio.to_thread(
+                RewardService(service.periods).refresh,
+                viewer_from_interaction(current),
+                str(current.id),
+                identity,
+                data["revision"],
+                data["game_revision"],
+            )
+            return "Current Frame reward tasks refreshed. Reopen Off-Duty."
+    elif action == "activate":
         title = "Finish Off-Duty preparation"
         fields = [Field("confirm", "Confirm", (("activate", "Begin the active period"),))]
 

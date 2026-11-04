@@ -194,9 +194,6 @@ class OffDutyService:
             self._work(c, period, viewer.user_id, "off_duty_strain_start", event)
             self._work(c, period, viewer.user_id, "off_duty_handler_scene", event)
             self._work(c, period, viewer.user_id, "off_duty_status_review", event)
-            for uid in state.order:
-                if state.sheets[str(uid)].frame == "DOCTORDOCTOR MK. II":
-                    self._work(c, period, uid, "doctor_credit", event)
             return {"id": period.id, "revision": 1, "phase": "preparing"}
 
         return self.missions._write(

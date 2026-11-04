@@ -445,7 +445,18 @@ class InboxView(discord.ui.View):
                 allowed_mentions=discord.AllowedMentions.none(),
             )
 
-        if item.task == "m3_off_duty":
+        if item.task == "m3_frame_reward":
+            from girlframe.discord_adapter.m3_frame_rewards import open_reward
+            from girlframe.services.m3_frame_rewards import RewardService
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+
+            await open_reward(
+                interaction,
+                RewardService(OffDutyService(MissionService(self.service.store))),
+                item.identity,
+            )
+        elif item.task == "m3_off_duty":
             from girlframe.discord_adapter.m3_off_duty import open_period
             from girlframe.services.m3_missions import MissionService
             from girlframe.services.m3_off_duty import OffDutyService

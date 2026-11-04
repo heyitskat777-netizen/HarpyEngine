@@ -23,6 +23,9 @@ def synchronize(c: Connection, store: OnboardingStore, state: GameState, event: 
     if body is None:
         return
     period = Period.model_validate_json(body)
+    from girlframe.services.m3_frame_rewards import synchronize as frame_rewards
+
+    frame_rewards(c, store, state, period, event)
     work = t.m3["m3_required_work"]
     for debt in state.obligations:
         if debt.kind != "punishment" or debt.state != "pending" or debt.owner not in period.pilots:

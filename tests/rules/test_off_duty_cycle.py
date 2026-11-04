@@ -83,7 +83,7 @@ def activate(cycle, game, identity):
     return call(cycle, game, ADMIN, identity, "activate")
 
 
-def roll_for(cycle, game, identity, actor, faces=(4, 5)):
+def roll_for(cycle, game, identity, actor, faces=(4, 5), *, review_reward=True):
     game.dice = Dice(faces)
     action = game.begin(
         actor,
@@ -102,6 +102,26 @@ def roll_for(cycle, game, identity, actor, faces=(4, 5)):
     tick(worker, gateway)
     pass_tags(game)
     tick(worker, gateway, 8)
+    if review_reward:
+        from girlframe.engine.m3_frame_rewards import Claim
+        from girlframe.services.m3_frame_rewards import RewardService
+
+        service = RewardService(cycle.periods)
+        for work in cycle.periods.get(actor, identity)["work"]:
+            if work["kind"] != "frame_off_duty_reward":
+                continue
+            data = service.get(actor, work["id"])
+            if data["owner_id"] == str(actor.user_id) and data["mode"] == "conditional":
+                service.apply(
+                    actor,
+                    str(uuid4()),
+                    work["id"],
+                    data["revision"],
+                    data["game_revision"],
+                    Claim(
+                        fulfilled=False, account="The synthetic owner declares no qualifying event."
+                    ),
+                )
     return action
 
 

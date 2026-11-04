@@ -70,6 +70,12 @@ class CycleService:
             raise WorkflowError(
                 "STALE_OFF_DUTY: finish pending Plays and review the current roster and state."
             )
+        from girlframe.services.m3_frame_rewards import needs_refresh
+
+        if needs_refresh(c, self.store, state, period):
+            raise WorkflowError(
+                "Refresh the actual Frame reward tasks before advancing this period."
+            )
         return period, state
 
     def _resolve(
@@ -176,6 +182,10 @@ class CycleService:
                 not in ("off_duty_strain_start", "off_duty_handler_scene", "off_duty_status_review")
                 and not (
                     x["kind"] == "punishment"
+                    and json.loads(x["body_json"]).get("due_stage") == "active"
+                )
+                and not (
+                    x["kind"] == "frame_off_duty_reward"
                     and json.loads(x["body_json"]).get("due_stage") == "active"
                 )
             )
@@ -515,6 +525,8 @@ class CycleService:
         )
 
     def review(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
+        from girlframe.services.m3_frame_rewards import needs_refresh
+
         with self.store.engine.connect() as c:
             period = self.periods._get(c, identity)
             self.periods._view(c, viewer, period)
@@ -543,6 +555,7 @@ class CycleService:
                 else None,
                 "status_reviewed": period.status_review is not None
                 and period.status_review_game_revision == state.revision,
+                "rewards_need_refresh": needs_refresh(c, self.store, state, period),
             }
 
     def finish(

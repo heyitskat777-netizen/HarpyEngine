@@ -91,6 +91,26 @@ def test_npc_control_is_claimed_by_actual_member_and_keeps_private_records_priva
     assert state(game).world.npcs[-1].controller == 2
 
 
+def test_handler_cannot_introduce_a_self_controlled_director(ledger):
+    svc, game = ready(ledger)
+    before = state(game)
+    with pytest.raises(WorkflowError, match="different human"):
+        svc.npc(
+            ADMIN,
+            "director-needs-separate-player",
+            before.revision,
+            Npc(
+                id="director",
+                name="Director",
+                jobs=("director",),
+                detail="Authority",
+                controller=1,
+                cell=(0, 0),
+            ),
+        )
+    assert state(game) == before
+
+
 def test_concurrent_npc_claims_use_expected_state_and_do_not_both_succeed(ledger):
     svc, game = ready(ledger)
     svc.npc(

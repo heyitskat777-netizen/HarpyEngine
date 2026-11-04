@@ -564,6 +564,12 @@ class InboxService:
                     primary, task_name = "Review Strain", "m3_strain"
                 elif kind == "doctor_credit":
                     primary, task_name = "Record credit sharing", "m3_off_duty_credit"
+                elif kind in (
+                    "frame_off_duty_reward",
+                    "frame_reward_court",
+                    "frame_reward_interest",
+                ):
+                    primary, task_name = "Review Frame bonus", "m3_frame_reward"
                 elif kind in ("off_duty_handler_scene", "off_duty_status_review"):
                     primary, task_name = "Review Off-Duty", "m3_off_duty"
                 elif kind == "strain_event":
@@ -584,6 +590,9 @@ class InboxService:
                     "strain_event": "Required Strain event effects",
                     "strain_endgame_effect": "Required Endgame effects",
                     "doctor_credit": "DoctorDoctor credit sharing",
+                    "frame_off_duty_reward": "Frame Off-Duty Permission review",
+                    "frame_reward_court": "Resolve actual Queen AM holder",
+                    "frame_reward_interest": "Does this offering interest you?",
                     "off_duty_handler_scene": "Required Handler Off-Duty scene",
                     "off_duty_status_review": "End-of-Off-Duty Status review",
                 }.get(
@@ -602,7 +611,10 @@ class InboxService:
                         title,
                         label(work["subject_id"]),
                         "pending",
-                        (work["owner_id"] == user or scene_attestation)
+                        (
+                            (work["owner_id"] == user and work["state"] != "awaiting_interest")
+                            or scene_attestation
+                        )
                         and not (kind == "frame_replacement_package" and work["state"] == "quoted"),
                         False,
                         "A required consequence remains pending.",

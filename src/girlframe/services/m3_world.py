@@ -2,6 +2,7 @@
 
 from collections.abc import Callable
 from typing import Any
+from uuid import uuid4
 
 import sqlalchemy as sa
 from pydantic import ValidationError
@@ -127,12 +128,34 @@ class WorldService:
                 raise WorkflowError(
                     "Introduce the NPC under your control; another human claims their own role."
                 )
+            if "director" in npc.jobs and npc.controller == state.handler:
+                raise WorkflowError(
+                    "The Director must be played by a different human from the Handler."
+                )
             if npc.bonds:
                 raise WorkflowError(
                     "Players import their own NPC Bonds; introduction cannot choose those for them."
                 )
-            state.world = rules.introduce_npc(state.world, npc)
-            self.game.event(c, viewer.user_id, key, "m3.npc_introduced", state, entity_id=npc.id)
+            if npc.custody_event is not None:
+                raise WorkflowError("Custody provenance comes from an actual server event.")
+            event = str(uuid4())
+            introduced = npc
+            if (
+                "prisoner" in npc.jobs
+                and npc.captive_of is None
+                and any(
+                    x.cell == npc.cell
+                    and x.kind == "base"
+                    and x.allegiance == "foundation"
+                    and x.condition != "destroyed"
+                    for x in state.world.locations
+                )
+            ):
+                introduced = npc.model_copy(update={"custody_event": event})
+            state.world = rules.introduce_npc(state.world, introduced)
+            self.game.event(
+                c, viewer.user_id, key, "m3.npc_introduced", state, entity_id=npc.id, event_id=event
+            )
             return {"id": npc.id, "game_revision": state.revision}
 
         return self._write(

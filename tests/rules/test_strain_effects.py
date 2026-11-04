@@ -216,6 +216,7 @@ def test_fired_npc_retains_bonds_and_city_anarchy_does_not_create_gorgon_territo
         canon, choice("budget.low.6.2", target="npc", npc_jobs=("civilian",)), "work"
     )
     assert fired.world.npcs[0].jobs == ("civilian",) and fired.world.npcs[0].bonds == npc.bonds
+    assert fired.world.npcs[0].employment == "unemployed"
     city = rules.apply(fired, choice("budget.high.5.1", target="city0"), "anarchy")
     assert city.world.locations[3].blocked_by == ("anarchy",) and not city.world.territory
     assert city.world.locations[3].condition == "intact"

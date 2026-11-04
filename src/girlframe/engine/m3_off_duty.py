@@ -61,6 +61,7 @@ class Progress(Model):
     scene_declined: bool = False
     recovered: bool = False
     action_id: str | None = None
+    reward_source_event: str | None = None
 
 
 class HandlerContext(Model):
