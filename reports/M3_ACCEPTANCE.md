@@ -953,3 +953,46 @@ was pushed; GitHub CI passed, run **41837328257**. Exactly one frozen M2 bot rem
 observed (PID47656); all **88 frozen source hashes matched**, source 88cd237. No live
 migration, policy change, M3 deploy, environment publication, independent/human
 acceptance or M3-ready claim applies. Work continues within M3.
+
+
+## Scientific Observation and distinct actual order sources
+
+Low Budget 3/1 now records the current Handler's one/two actual scientific targets
+and explicit per-target hiding decisions. Typed required-order effects materialize
+real Observation contexts/causes, with distinct real source events and event indexes
+inside the same transaction as canonical state, period history and resolved Strain
+work. Original contexts/unbound causes survive overlap, with one real roll and one
+Status reduction. Character/period checks, exact target/answer ranges, stale inputs,
+wrong fields, policy, pause, replay and concurrent selection retain their gates.
+The selection/overlap recommendations and alternatives are centrally registered
+with clarity-review and pending-order migration notes.
+
+Resolving the Strain source alone does not grant recovery, transport, treatment,
+NPC consent or a Girl response. A synthetic full two-cause Observation flow applies
+an actual owned public-Tag outcome, records a scene and each human's own attestation,
+then settles both actual causes. Required Frame-trigger review still precedes real
+recovery. Raw dice remain one roll; ordinary Go Off-Duty remains unavailable.
+The native source form requires each exact hiding answer before confirmation.
+
+Full suite: **1029 passed in 257.16s**, no failures/errors/skips;
+`var/m3-scientific-observation-pytest.xml`. The initial scientific run had **6 failed,
+11 passed**: the gameplay audit wrapper defaulted every event to index zero and
+could not save multiple actual sources under one command. The wrapper now accepts
+explicit event indexes; child orders use distinct indexes. Rollback tests prove a
+second-order failure removes all state/period/work/event changes atomically. An
+expanded run had **49 passed, 1 failed** while the new recovery fixture chose a
+hiding-only option after explicitly recording no hiding, then used the wrong detail
+owner. It now uses a common public-Tag option and actual Handler details. The full
+recovery case passed **1 test in 1.83s** before the final full suite. No authority,
+source option or required recovery gate was waived to pass a fixture.
+
+Ruff passed; **313 files** formatted; mypy passed for **164 source files**. Registry:
+473 entries, 436 required core, **52 subsets, 421 unimplemented**, zero independent
+verifications. Public-source scan: **395 files**, all **40 original manifest entries**,
+zero findings. The milestone remains RULES_SUBSET. Five Punishments, 57 further
+Strain cells, all Endgames, actor-aware core Plays, playbooks, economy/careers and
+other world/scene/resource interactions still require work.
+
+The original frozen M2 process remained observed as exactly one PID47656. No live
+migration, policy change, M3 deployment, environment publication or independent/
+human acceptance applies. This is another tested source checkpoint, not M3-ready.

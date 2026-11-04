@@ -785,6 +785,26 @@
           "limitation": "Other temporary modifiers and remaining Strain, playbook, world, economy, career and independent/human acceptance remain incomplete."
         }
       ]
+    },
+    {
+      "id": "M3F-SCIENTIFIC-OBSERVATION-001",
+      "title": "Actual scientific Observation orders and distinct causes under one recovery roll",
+      "expected": "One/two real character-bound orders, exact hiding reviews, distinct real source events, preserved original context, no premature recovery, and actual scene/Frame-review settlement of overlapping causes.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_scientific_observation.py",
+        "tests/rules/test_scientific_observation_service.py",
+        "tests/rules/test_observation_service.py"
+      ],
+      "evidence": [
+        {
+          "scope": "offline_scientific_order_and_full_overlapping_recovery",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-scientific-observation-pytest.xml",
+          "result": "1029 passed in 257.16s; no failures/errors/skips",
+          "artifact": "var/m3-scientific-observation-pytest.xml",
+          "limitation": "Remaining actor-aware core Plays, playbooks/economy/careers, Strain/Endgames/world rules and independent/human acceptance remain incomplete."
+        }
+      ]
     }
   ],
   "enabled_modules": [

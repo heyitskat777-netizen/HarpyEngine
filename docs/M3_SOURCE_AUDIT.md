@@ -88,7 +88,7 @@ remain separate existing rulings. No new ruling is silently applied to live poli
   production triggering Plays/events still need implementation. Migration `0012` is tested
   on populated synthetic `0011` data; no live migration or M3 activation occurred.
 
-The new discipline subsystem applies ten printed types plus Passing Responsibility
+The new discipline subsystem applies eleven printed types plus Passing Responsibility
 as a transfer of pending work. It records one application against both failure/Dog
 causes, never twice. Delegated Girls must obtain the current Handler's consultation
 on the exact Moderate proposal; changed game state or choices invalidate approval.
@@ -203,3 +203,12 @@ period history. Observation uses the recorded delegated interpretation. Native
 controls never let the Handler select the random recipient. Other temporary
 modifiers and remaining Strain/playbook/world/economy rules remain unfinished.
 See `work_orders/M3_SUPPLY_LOSS.md` and the central ruling register.
+
+
+Low Budget 3/1 (PDF 150 / printed p.148) now records one or two actual scientific
+Observation orders, with explicit per-Girl hiding decisions and distinct real
+source events. It preserves original contexts and distinct causes under the logged
+one-roll overlap interpretation. The actual Observation route, lowered Status,
+owned consequences, scene and Frame review still gate recovery; resolving the
+Strain source alone grants none of them. Two-cause settlement has a complete
+synthetic owned scene/recovery trace. See `work_orders/M3_SCIENTIFIC_OBSERVATION.md`.

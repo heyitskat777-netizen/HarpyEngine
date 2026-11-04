@@ -6,6 +6,7 @@ from pydantic import Field
 
 from girlframe.engine import m3_world as world_rules
 from girlframe.engine.m2 import GameState, Model, TagState, pair_key
+from girlframe.engine.m3_scientific_observation import Demand, require_orders
 from girlframe.engine.m3_supply_state import SupplyLoss
 from girlframe.engine.m3_world_state import (
     Asset,
@@ -29,6 +30,7 @@ SUPPORTED = frozenset(
         "strain.budget.low.5.2",
         "strain.budget.low.4.2",
         "strain.budget.low.3.2",
+        "strain.budget.low.3.1",
         "strain.budget.low.6.2",
         "strain.budget.high.2.2",
         "strain.budget.high.3.2",
@@ -57,6 +59,7 @@ class Choice(Model):
     npc_jobs: tuple[str, ...] = ()
     tags: tuple[TagChoice, ...] = ()
     missing_resource: str | None = Field(default=None, max_length=120)
+    scientific_demand: Demand | None = None
 
 
 def fields(choice: Choice, allowed: set[str]) -> None:
@@ -85,7 +88,12 @@ def apply(
     if world is None or state.handler is None:
         raise ValueError("Initialize the actual world and appointed Handler first")
     rule = choice.rule_id
-    if rule == "strain.budget.low.3.2":
+    if rule == "strain.budget.low.3.1":
+        fields(choice, {"scientific_demand"})
+        if choice.scientific_demand is None:
+            raise ValueError("Record the actual scientific targets and explicit hiding reviews")
+        require_orders(state, choice.scientific_demand, source_work, choice.account)
+    elif rule == "strain.budget.low.3.2":
         fields(choice, {"missing_resource"})
         if (
             supply is None

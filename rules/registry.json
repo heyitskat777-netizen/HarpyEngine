@@ -529,6 +529,40 @@
       "change_impact": "Revising this interpretation needs treatment of unrolled Observation reservations and assigned losses. Never alter known dice/tier receipts, redraw a committed recipient or apply the effect to a new character.",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "scientific-observation-selection",
+      "policy_key": "scientific_observation_selection",
+      "summary": "The current Handler represents the Foundation scientific demand and explicitly selects one or two actual Girls, with a separate explicit hiding-suspicion review for each.",
+      "source": "Book PDF 150 / printed p.148 and PDF 28 / printed p.26; owner delegated authority",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "The event specifies one or two Girls but no player-facing selection procedure. The current Handler adjudicates the event as a Foundation demand, without inventing a Girl response or consent.",
+      "alternatives": [
+        "Ask the Cadre to choose volunteers",
+        "Use a random draw for the scientists targets"
+      ],
+      "implementation_note": "Validate distinct actual character/period targets and exact yes/no suspicion answers. Apply real source-bound Observation orders, preserving all owed recovery; this grants no transport, medical help or NPC role acceptance.",
+      "change_impact": "A revised selection owner needs its actual owned request and pending-order migration. Preserve known selections, character incarnations, receipts and separately answered humans.",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "scientific-observation-overlap",
+      "policy_key": "scientific_observation_overlap",
+      "summary": "Scientific demand overlapping an existing same-period Observation keeps one actual roll with distinct recorded causes; it does not roll or lower Status twice.",
+      "source": "Book PDF 150 / printed p.148 and PDF 28 / printed p.26; owner delegated authority",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "Observation replaces the period recovery roll, and the scientific event can require it even without another cause. The source does not require an extra independent recovery cycle for an already observed Girl.",
+      "alternatives": [
+        "Require separate additional Observation rolls and consequences",
+        "Disallow selecting a Girl already under Observation"
+      ],
+      "implementation_note": "Preserve original context/source and append a distinct real scientific cause. Before any reservation or human choice, the Handler records a fresh explicit hiding review. Actual Observation completion fulfills the bound causes once.",
+      "change_impact": "Changing overlap behavior needs treatment of unrolled orders and owed causes. Never duplicate a known roll/Status loss, overwrite prior human responses or silently discard provenance.",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -8691,14 +8725,17 @@
         "heading": "Budget low: die 3, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_scientific_observation.py",
+        "tests/rules/test_scientific_observation_service.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

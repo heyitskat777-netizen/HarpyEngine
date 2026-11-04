@@ -31,7 +31,7 @@ class Selector:
         return self.index
 
 
-def prepared(store, index=0):
+def prepared(store, index=0, *, budget_column=2):
     effects, game, period, first = pending(store)
     policy = store.policy
     store.policy = policy.model_copy(
@@ -44,7 +44,7 @@ def prepared(store, index=0):
     selector = Selector(index)
     effects = EffectService(effects.strain, selector=selector)
     effects.apply(ADMIN, "actual-void-source", first, 1, state(game).revision, selected())
-    for track, face, column in (("rebellion", 1, 1), ("budget", 3, 2)):
+    for track, face, column in (("rebellion", 1, 1), ("budget", 3, budget_column)):
         request = next(x for x in state(game).strain.requests if x.track == track)
         effects.strain.dice.face = face
         effects.strain.roll(ADMIN, "actual-d6-" + track, request.id, 1, state(game).revision)

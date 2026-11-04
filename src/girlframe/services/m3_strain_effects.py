@@ -143,6 +143,31 @@ class EffectService:
             updated = rules.apply(
                 state, choice, identity, period_id=row["off_duty_id"], supply=supply
             )
+            scientific_period, scientific_events = None, []
+            if choice.rule_id == "strain.budget.low.3.1":
+                from girlframe.engine.m3_scientific_observation import materialize
+
+                assert choice.scientific_demand is not None
+                scientific_period = self.strain.periods._get(c, row["off_duty_id"])
+                for subject in choice.scientific_demand.subjects:
+                    character = self.game.character_binding(
+                        c, updated, subject, require_current_profile=False
+                    )
+                    if scientific_period.character_ids.get(str(subject)) != character:
+                        raise WorkflowError(
+                            "Recover the actual scientific target's character first."
+                        )
+                    child_event = str(uuid4())
+                    scientific_period, updated = materialize(
+                        scientific_period,
+                        updated,
+                        viewer.user_id,
+                        subject,
+                        identity,
+                        child_event,
+                        character,
+                    )
+                    scientific_events.append((subject, child_event))
             event = self.game.event(
                 c,
                 viewer.user_id,
@@ -153,6 +178,19 @@ class EffectService:
                 work_id=identity,
                 rule_id=choice.rule_id,
             )
+            for event_index, (subject, child_event) in enumerate(scientific_events, start=1):
+                self.game.event(
+                    c,
+                    viewer.user_id,
+                    key,
+                    "m3.scientific_observation_ordered",
+                    event_id=child_event,
+                    event_index=event_index,
+                    source_work=identity,
+                    subject=subject,
+                )
+            if scientific_period is not None:
+                self.strain.periods._save(c, scientific_period, event)
             self.strain._save(
                 c,
                 row,

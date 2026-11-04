@@ -12,6 +12,7 @@ from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_world import TYPES, coordinates, squares
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_gorgon_catalog import ASSETS
+from girlframe.engine.m3_scientific_observation import Demand
 from girlframe.engine.m3_strain_effects import Choice, TagChoice
 from girlframe.engine.m3_world import CLASS_ASSETS, distance
 from girlframe.engine.m3_world_state import (
@@ -302,6 +303,24 @@ async def open_effect(
                         25,
                     )
                 )
+        elif rule == "strain.budget.low.3.1":
+            fields.append(
+                Field(
+                    "subjects",
+                    "Which Girls are required for Observation?",
+                    tuple((str(uid), state.sheets[str(uid)].callsign) for uid in state.order),
+                    1,
+                    min(2, len(state.order)),
+                )
+            )
+            fields.extend(
+                Field(
+                    "hide:" + uid,
+                    state.sheets[uid].callsign + " — suspect hiding?",
+                    (("yes", "Yes, record that suspicion"), ("no", "No hiding suspicion")),
+                )
+                for uid in values.get("subjects", ())
+            )
         elif rule == "strain.budget.low.3.2":
             fields.append(Field("missing_resource", "What resource is missing?"))
         elif rule == "strain.budget.low.5.2":
@@ -461,6 +480,11 @@ async def open_effect(
             payload["rooms"] = tuple(tuple(x) for x in grouped.values())
         elif rule == "strain.budget.low.6.2":
             payload.update(target=values["target"][0], npc_jobs=tuple(values["jobs"]))
+        elif rule == "strain.budget.low.3.1":
+            payload["scientific_demand"] = Demand(
+                subjects=tuple(int(x) for x in values["subjects"]),
+                hiding={uid: values["hide:" + uid][0] == "yes" for uid in values["subjects"]},
+            )
         elif rule == "strain.budget.low.3.2":
             payload["missing_resource"] = values["missing_resource"]
         elif rule == "strain.budget.high.2.2":

@@ -1,6 +1,6 @@
 # M3E/F — actual scientific Observation orders
 
-Status: PLANNED. Source: Low Budget 3/1, book PDF 150 / printed p.148, and the
+Status: implemented offline within RULES_SUBSET. Independent/human acceptance remains pending. Source: Low Budget 3/1, book PDF 150 / printed p.148, and the
 actual Void Observation rules at PDF 28 / printed p.26. This work does not create
 medical treatment, custody, transport, NPC role acceptance or player consent.
 
@@ -31,3 +31,17 @@ exact explicit hiding choices, existing-order overlap, rollback/replay/concurren
 new character generations, pause/policy/Handler changes, distinct actual source
 events and native confirmation. Prove the event alone cannot claim recovery or
 permit an ordinary roll. Existing source/receipt/Observation tests remain required.
+
+
+The implementation emits typed required-order obligations, then materializes actual
+Observation contexts and causes in the same transaction as the source consequence.
+Each target has a distinct real source event with an explicit event index. A fresh
+order creates one scientific cause; an existing/unbound cause is retained alongside
+one new scientific cause. Original context provenance remains intact. The source
+work resolves only after all real contexts and cause links exist. Child-event,
+period or state failure rolls the whole batch back.
+
+A synthetic full Observation flow now proves that two overlapping causes stay
+pending through selection/effects, then both settle only after an actual scene
+with each participant's own attestation. Actual Frame-trigger review still precedes
+recovery. This does not move a Girl, invent an NPC's consent or perform treatment.

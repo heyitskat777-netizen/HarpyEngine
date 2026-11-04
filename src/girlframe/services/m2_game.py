@@ -94,6 +94,7 @@ class GameService:
         state: GameState | None = None,
         *,
         event_id: str | None = None,
+        event_index: int = 0,
         **metadata: Any,
     ) -> str:
         if state is not None:
@@ -108,6 +109,7 @@ class GameService:
             kind,
             metadata,
             event_id=event_id,
+            event_index=event_index,
             ruleset_version=M3_RULESET if kind.startswith("m3.") else RULESET,
         )
         if state is not None:

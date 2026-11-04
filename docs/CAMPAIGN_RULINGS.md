@@ -201,3 +201,22 @@ same period consequence should survive replacement, with one source-proven OS
 random recipient, actual character binding and separate pre-roll modifier. Changing
 the policy requires review of unrolled reservations and assigned losses, preserving
 known dice, receipts and recipients without redrawing or moving it to a new body.
+
+
+`scientific_observation_selection`: the current Handler represents the Foundation's
+scientific demand and selects one or two actual Girls, explicitly answering each
+hiding review. Sources: book PDF 150 / printed p.148 and PDF 28 / printed p.26.
+This delegated recommendation requires clarity review. Alternatives: Cadre
+volunteers or a random draw. Validate real character/period targets; an order does
+not grant transport, treatment, NPC acceptance or a Girl's voluntary response.
+Changing selection ownership requires actual owned requests and pending-order
+migration, preserving receipts, original characters and prior human answers.
+
+`scientific_observation_overlap`: keep one actual same-period Observation roll with
+distinct causes when a scientific demand overlaps an existing order. Same sources;
+delegated clarity-review recommendation. Alternatives: extra independent rolls, or
+exclude already observed Girls. Observation replaces the period recovery; the book
+does not prescribe another cycle for an overlapping cause. Keep original provenance
+and a real additional scientific cause, with a fresh explicit pre-reservation hiding
+review. Any revision must preserve known rolls, Status loss, answers and owed
+consequences, without silently discarding or doubling them.

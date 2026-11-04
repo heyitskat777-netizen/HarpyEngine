@@ -19,7 +19,7 @@ M3 is in development and remains **RULES_SUBSET**. Its offline mission flow now
 persists private invitations, explicit player responses, dispatch and mission-end
 rewards, with required consequences blocking completion. The discipline flow adds
 inflictor-owned selectors, delegation, exact-proposal Handler consultation and
-atomic effects for ten printed Punishment types. DoctorDoctor mission-failure
+atomic effects for eleven printed Punishment types. DoctorDoctor mission-failure
 Obsolescence and Princess mission-end standards now have private review controls
 before rewards. Last-Girl-Asset Beating reviews apply Helplessness from confirmed
 Frame context. DoctorDoctor scrapping now supports free replacement through player
