@@ -79,6 +79,10 @@ are preserved; migration creates no active character or fictional effect.
 preserves existing records and does not approve or enable M3 gameplay. Upgrade a
 live installation only as part of a reviewed deployment with its matching code;
 the existing frozen bot continues on `0011` during M3 development.
+`0013` adds durable Off-Duty periods and append-only period history. Required work
+belongs to exactly one real mission or Off-Duty period; existing mission records
+are preserved. This is an offline foundation, without an enabled Off-Duty command
+or a generic resolver for pending Strain. It does not migrate the running bot.
 `alembic downgrade base` destroys application tables: use only on
 throwaway test databases. Never downgrade real campaign data to roll back code.
 
@@ -154,6 +158,11 @@ HTTP 404 / Discord 10004 at startup means the application cannot access the guil
 check installation and guild ID. Errors omit raw provider bodies and private paths.
 
 ## Commands and player flow
+
+Campaign interpretations, their authority, remaining clarity questions and how to
+change them are recorded in [the rulings register](docs/CAMPAIGN_RULINGS.md).
+The owner delegates future ambiguous-rule recommendations; this does not approve
+unimplemented mechanics, player responses or an M3 release.
 
 | Command | Access and behavior |
 |---|---|

@@ -398,3 +398,60 @@ world state and independent/human acceptance remain unfinished. Two upcoming
 Off-Duty interpretations await owner input: DoctorDoctor's credited Permission
 recipient scope and the duration of off-duty Sedation locks. Neither has been
 silently applied as a production default.
+
+
+## Delegated rulings and Off-Duty foundation — 2026-11-04
+
+The owner accepted the recommended current-canonical-Pilot DoctorDoctor credit
+scope and period-bounded Sedation duration, and delegated future ambiguous-rule
+recommendations provided they are recorded for revision/clarification. The central
+`docs/CAMPAIGN_RULINGS.md` and machine registry now distinguish explicit owner
+choices from delegated interpretations, with rationale, alternatives, policy key,
+revision and clarity-review status. A delegated interpretation retains a Sedation
+slot lock through Tag replacement or Paired rename; explicit printed removal is
+separate. Earlier explicit owner choices take precedence. No independent review,
+player response or deployment permission is inferred. Pending owner rulings: none.
+
+Added migration `0013`, private Off-Duty projection/append-only history and an
+exclusive mission-or-Off-Duty required-work context. Populated mission/work upgrade
+preserves all original column values and restores append-only triggers. Fresh
+upgrade/check/downgrade passes on disposable data. The foundation service starts
+Handler-owned preparation without inventing a mission, rejects overlapping phases,
+and saves current DoctorDoctor owner's credit/no-trigger account with atomic,
+exactly-once Permission effects. An absent player is not auto-answered.
+
+Pure ordinary Go Off-Duty reducers retain 2d6 and Status rather than Heat, prohibit
+repeated rolls, validate required scene participants and their own confirmations,
+and apply recovery once after mandatory scene effects. Sedation scope survives
+serialization/recovery and clears only at an explicit valid period end, preserving
+marks. Existing M2 Flirt and repeated-Tag/Paired replacement paths cannot bypass it;
+private unmark selectors exclude locked Identities. Legacy/unscoped locks fail
+closed rather than silently disappearing.
+
+This is **not a released complete Off-Duty flow**. Strain preparation has no generic
+resolver or activation method; unsupported start consequences remain pending.
+Handler playbook exceptions, one-use modifiers, Void Observation, optional recovery
+Tag embrace, source-specific requisition/discipline/repair work, native cycle UI,
+Gorgon movement and all end-of-period dependencies still need typed integration.
+Pure reducers' internal completion inputs are not exposed as client waiver flags.
+The explicit work/acceptance order is `docs/work_orders/M3_OFF_DUTY.md`.
+
+Validation executed:
+
+| Check | Actual result |
+|---|---|
+| Focused Off-Duty/core/service/migration tests | 20 passed in 4.70s |
+| Existing M2 lock/replacement flows | 3 passed, 67 deselected in 1.87s before the final paired-slot case |
+| Full offline suite | **622 passed in 69.85s**, no failures/errors/skips; `var/m3-off-duty-foundation-pytest.xml` |
+| Ruff lint / format | All checks passed; 209 files already formatted |
+| Mypy | No issues in 109 source files |
+| Registry | RULES_SUBSET; 473 entries, 436 required core; 14 subset / 459 unimplemented; zero independent verification |
+| Publishable files / original manifest | 291 files, all 40 entries intact, zero findings |
+| Whitespace | `git diff --check` passed |
+
+Initial lint found long lines, corrected before final passing checks. No automated
+fixture uses live Discord/network access or real campaign data. One current bot
+process was verified, with all frozen release hashes unchanged. The same tested
+release was restored earlier this session and reached Gateway READY/Running v0.1.0.
+No M3 live migration, command registration, private policy edit or environment
+publication occurred. Development schema is 0013; live remains 0011.

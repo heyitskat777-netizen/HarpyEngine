@@ -20,6 +20,14 @@ M2 implementation/deployment is complete, but independent rules review and human
 play-testing remain pending. Do not fabricate certification or remove a release gate.
 Keep the frozen running bot available while developing; stop after M3 for review.
 AI and M4 remain outside the authorized milestone.
+The owner now delegates future ambiguous-rule decisions to Codex's reasoned
+recommendations. Apply them without repeatedly asking, preserve earlier explicit
+owner choices, and record source/rationale/adjustment notes in
+`docs/CAMPAIGN_RULINGS.md` and `rules/registry.json`. Mark delegated interpretations
+as requiring printed-rule clarity review. This does not grant player consent,
+independent certification, milestone sign-off or permission to publish the
+environment or deploy M3 gameplay. Sanitized source pushes remain authorized.
+Missing implementations still fail closed; do not disguise them as rulings.
 Recovered-engine writes and AI remain deferred. Record partial scope honestly.
 
 - Run `bash tools/install.sh`, then the checks in `README.md`.

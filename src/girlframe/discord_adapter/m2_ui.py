@@ -84,7 +84,15 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
     own = decision["own"]
     result = decision["result"]
     level = result.get("tier")
-    identities = [x for x in own["identities"] if x["marked"]] if own else []
+    identities = (
+        [
+            x
+            for x in own["identities"]
+            if x["marked"] and x["id"] not in own.get("sedation_locked", ())
+        ]
+        if own
+        else []
+    )
     assets = [x for x in own["assets"] if not x["damaged"]] if own else []
 
     def unmark(n: int) -> Field:

@@ -125,6 +125,7 @@ def apply(
     entity_id: str,
     off_duty: bool,
     handler_consulted: bool = False,
+    off_duty_period: str | None = None,
 ) -> Applied:
     severity = validate(details)
     if inflictor != original.handler and str(inflictor) not in original.sheets:
@@ -137,6 +138,8 @@ def apply(
     sheet = state.sheets.get(str(subject))
     if sheet is None:
         raise ValueError("Punishment requires a current canonical Pilot")
+    if off_duty_period is not None and (not off_duty or not off_duty_period.strip()):
+        raise ValueError("A Sedation period requires an actual current Off-Duty context")
     required: list[Followup] = []
     kind = details.kind
     if kind == "passing_responsibility":
@@ -155,9 +158,15 @@ def apply(
                 required.append(Followup(kind="paired_identity_heat", owner=subject, source_pdf=58))
             identity.marked = True
         if off_duty:
+            if off_duty_period is not None and (
+                sheet.sedation_locked and sheet.sedation_period != off_duty_period
+            ):
+                raise ValueError("Resolve existing Sedation scope before applying another period")
             sheet.sedation_locked = tuple(
                 sorted(set(sheet.sedation_locked) | set(details.identities))
             )
+            if off_duty_period is not None:
+                sheet.sedation_period = off_duty_period
         if (
             sheet.frame == "PROJECT ANKOU"
             and not was_full

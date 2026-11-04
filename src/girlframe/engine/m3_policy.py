@@ -21,6 +21,9 @@ class Rulings(BaseModel):
     compulsory_frame_package: Literal["handler_defined"]
     replacement_frame_repeat: Literal["different_playbook"]
     compulsory_frame_charge: Literal["free"]
+    doctor_credit_recipients: Literal["current_pilots"]
+    sedation_duration: Literal["current_off_duty_period"]
+    sedation_identity_replacement: Literal["retain_slot_lock"]
 
 
 class Approval(BaseModel):

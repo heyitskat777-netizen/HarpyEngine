@@ -47,6 +47,9 @@ def service(store, girl="MOCKINGBIRD", frame="JANUS-B"):
                 compulsory_frame_package="handler_defined",
                 replacement_frame_repeat="different_playbook",
                 compulsory_frame_charge="free",
+                doctor_credit_recipients="current_pilots",
+                sedation_duration="current_off_duty_period",
+                sedation_identity_replacement="retain_slot_lock",
             ),
         }
     )
@@ -328,7 +331,7 @@ def test_0012_preserves_populated_0011_and_does_not_activate_m3(ledger, monkeypa
     command.upgrade(config, "head")
     command.check(config)
     after = snapshot()
-    assert len(after) == 34 and {name: after[name] for name in before} == before
+    assert len(after) == 36 and {name: after[name] for name in before} == before
     assert all(after[name] == [] for name in set(after) - set(before))
     assert game.inspect(PLAYER, action)["id"] == action
     assert MissionService(ledger).access.registry is None

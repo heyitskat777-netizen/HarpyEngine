@@ -83,6 +83,27 @@ class Ruling(Model):
     summary: str
     provenance: Literal["owner_approved_campaign_ruling"]
     source: str
+    authority: Literal["explicit_owner", "delegated_recommendation"] = "explicit_owner"
+    rationale: str = ""
+    alternatives: tuple[str, ...] = ()
+    policy_key: str | None = None
+    clarity_review: bool = True
+    revision: int = Field(default=1, ge=1)
+    implementation_note: str = ""
+    change_impact: str = ""
+
+    @model_validator(mode="after")
+    def delegated_record(self) -> "Ruling":
+        if self.authority == "delegated_recommendation" and (
+            not self.rationale.strip()
+            or not self.alternatives
+            or not self.implementation_note.strip()
+            or not self.change_impact.strip()
+        ):
+            raise ValueError(
+                "Delegated rulings need rationale, alternatives and implementation/change notes"
+            )
+        return self
 
 
 class Registry(Model):

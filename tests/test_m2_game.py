@@ -817,10 +817,15 @@ def test_independent_scenes_and_one_winner_per_channel(ledger):
         game.leave_scene(PLAYER, "leave-locked", 900)
 
 
-def test_newgirl_self_mark_and_nonrejectable_mentor_tag(ledger):
+@pytest.mark.parametrize("locked", [False, True])
+def test_newgirl_self_mark_and_nonrejectable_mentor_tag(ledger, locked):
     game, worker, gateway, dice = setup_game(ledger, girl="NEWGIRL")
     with ledger.transaction() as c:
         saved = load_state(c, ledger.campaign_id)
+        if locked:
+            saved.sheets["2"].identities[0].marked = True
+            saved.sheets["2"].sedation_locked = ("identity:0",)
+            saved.sheets["2"].sedation_period = "off-duty-test"
         saved.sheets["2"].tags.append(
             TagState(id="mentor", label="Mentored", giver=3, observers=(1, 2, 3), marked=True)
         )
@@ -843,6 +848,11 @@ def test_newgirl_self_mark_and_nonrejectable_mentor_tag(ledger):
     answer(game, PLAYER, "tag_resolution", options=("embrace",), denied=("identity:0",))
     assert any(x.name == "Mentored" for x in state(game).sheets["2"].identities)
     assert len(state(game).sheets["2"].identities) == 4
+    if locked:
+        updated = state(game).sheets["2"]
+        replacement = next(x for x in updated.identities if x.name == "Mentored")
+        assert replacement.marked and updated.sedation_locked == (replacement.id,)
+        assert updated.sedation_period == "off-duty-test"
 
 
 @pytest.mark.parametrize("consequence", ["incomplete_information", "punishment_later"])

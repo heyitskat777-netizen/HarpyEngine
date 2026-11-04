@@ -68,3 +68,18 @@ def test_owner_reprogramming_ruling_has_explicit_provenance():
         x for x in registry.campaign_rulings if x.id == "void-observation-reprogramming-fallback"
     )
     assert ruling.provenance == "owner_approved_campaign_ruling"
+
+
+def test_delegated_rulings_are_adjustable_records_not_implicit_verification():
+    registry = Registry.model_validate_json(json.dumps(data()))
+    adopted = next(
+        x for x in registry.campaign_rulings if x.id == "sedation-identity-replacement-lock"
+    )
+    assert adopted.authority == "delegated_recommendation" and adopted.clarity_review
+    assert adopted.revision == 1 and adopted.policy_key == "sedation_identity_replacement"
+    assert adopted.rationale and adopted.alternatives and adopted.change_impact
+    assert adopted.implementation_note and registry.coverage == "RULES_SUBSET"
+    with pytest.raises(ValidationError, match="Delegated rulings"):
+        type(adopted).model_validate_json(
+            adopted.model_copy(update={"rationale": ""}).model_dump_json()
+        )

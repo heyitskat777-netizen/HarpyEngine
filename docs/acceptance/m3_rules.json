@@ -2,7 +2,7 @@
   "milestone": "M3",
   "status": "IN_PROGRESS",
   "rules_coverage": "RULES_SUBSET",
-  "owner_authorization": "Begin M3 development; no fabricated M2/M3 review or live release approval",
+  "owner_authorization": "Continue M3 development; recommendations for future ambiguities delegated and logged; no inferred player consent, independent review or release approval",
   "required_evidence": [
     "test_name",
     "executed_command",
@@ -26,7 +26,10 @@
       "status": "IN_PROGRESS",
       "planned_tests": [
         "tests/rules/test_shared_choices.py::test_off_duty_harsh_scene_is_required_and_status_modifiers_are_not_heat",
-        "tests/rules/test_core.py::test_off_duty_only_unmarks_one_and_preserves_sedation_locks"
+        "tests/rules/test_core.py::test_off_duty_only_unmarks_one_and_preserves_sedation_locks",
+        "tests/rules/test_off_duty.py",
+        "tests/rules/test_off_duty_service.py",
+        "tests/rules/test_sedation_m2.py"
       ],
       "evidence": [
         {
@@ -35,6 +38,13 @@
           "result": "62 passed in 4.79s",
           "artifact": "var/m3-foundation-pytest.xml",
           "limitation": "No complete mechanical service/Discord/independent case acceptance is claimed"
+        },
+        {
+          "scope": "partial_offline_period_and_recovery_foundation",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-off-duty-foundation-pytest.xml",
+          "result": "622 passed in 69.85s",
+          "artifact": "var/m3-off-duty-foundation-pytest.xml",
+          "limitation": "Strain preparation, full source interactions, cycle Discord integration and independent/human acceptance remain incomplete"
         }
       ]
     },
@@ -565,18 +575,5 @@
   "deferred_modules": [
     "ancillary"
   ],
-  "pending_owner_rulings": [
-    {
-      "id": "doctor-credited-permission-recipient",
-      "source": "Book PDF 16 and 71 / printed pp.14 and 69",
-      "question": "Can DoctorDoctor credit-sharing grant a Permission to Handler/NPCs, or only current Pilots?",
-      "status": "AWAITING_OWNER"
-    },
-    {
-      "id": "off-duty-sedation-duration",
-      "source": "Book PDF 17 / printed p.15",
-      "question": "Do off-duty Sedation Identity locks end with that Off-Duty period or require later treatment?",
-      "status": "AWAITING_OWNER"
-    }
-  ]
+  "pending_owner_rulings": []
 }

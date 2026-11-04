@@ -48,6 +48,17 @@ class MissionService:
             raise WorkflowError("Appoint a campaign Handler first.")
         return value
 
+    def _not_off_duty(self, c: Connection) -> None:
+        table = t.m3["m3_off_duty"]
+        if c.scalar(
+            sa.select(table.c.id).where(
+                table.c.campaign_id == self.store.campaign_id, table.c.phase != "complete"
+            )
+        ):
+            raise WorkflowError(
+                "Finish the current Off-Duty period before offering or dispatching."
+            )
+
     def _mission(self, c: Connection, identity: str) -> rules.Mission:
         try:
             identity = str(UUID(identity))
@@ -166,6 +177,7 @@ class MissionService:
 
         def operation(c: Connection) -> dict[str, Any]:
             self._handler(c, viewer)
+            self._not_off_duty(c)
             state = load_state(c, self.store.campaign_id)
             if not players or len(players) > 25 or len(set(players)) != len(players):
                 raise WorkflowError("Select one to 25 distinct active Pilots.")
@@ -291,6 +303,7 @@ class MissionService:
 
     def start(self, viewer: GuildViewer, key: str, identity: str, expected: int) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
+            self._not_off_duty(c)
             if self.game.pending_actions(c):
                 raise WorkflowError("Finish the pending scene Play before dispatching a mission.")
             mission = self._mission(c, identity)

@@ -83,6 +83,7 @@ class PilotSheet(Model):
     maxims_marked: tuple[int, ...] = ()
     public_fields: tuple[str, ...] = ()
     sedation_locked: tuple[str, ...] = ()
+    sedation_period: str | None = None
     libido_inhibited: bool = False
     obsolescence_marked: int = Field(default=0, ge=0, le=8)
     frame_scrapped: bool = False

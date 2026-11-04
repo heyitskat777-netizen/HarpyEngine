@@ -21,67 +21,167 @@
       "id": "void-observation-reprogramming-fallback",
       "summary": "If starting Identities lack Malfunctioning, the player selects an ordinary starting slot to replace with a current Identity; preserve protected and extra Identities.",
       "provenance": "owner_approved_campaign_ruling",
-      "source": "Owner reply in this development conversation, 2026-11-04"
+      "source": "Owner reply in this development conversation, 2026-11-04",
+      "authority": "explicit_owner",
+      "policy_key": "reprogramming_fallback",
+      "clarity_review": true,
+      "revision": 1,
+      "rationale": "Owner explicitly resolved the source ambiguity; see docs/CAMPAIGN_RULINGS.md for context and change impact."
     },
     {
       "id": "unpriced-standard-requisitions",
       "summary": "Creature Comforts, Privacy and Asset Installment each cost 1 Permission.",
       "provenance": "owner_approved_campaign_ruling",
-      "source": "Owner reply in this development conversation, 2026-11-04"
+      "source": "Owner reply in this development conversation, 2026-11-04",
+      "authority": "explicit_owner",
+      "policy_key": "standard_unpriced_cost",
+      "clarity_review": true,
+      "revision": 1,
+      "rationale": "Owner explicitly resolved the source ambiguity; see docs/CAMPAIGN_RULINGS.md for context and change impact."
     },
     {
       "id": "budget-extra-repair-quotes",
       "summary": "The current Handler explicitly quotes the price of each extra Asset repair during the Budget shortage; no default repair price is assumed.",
       "provenance": "owner_approved_campaign_ruling",
-      "source": "Owner reply in this development conversation, 2026-11-04"
+      "source": "Owner reply in this development conversation, 2026-11-04",
+      "authority": "explicit_owner",
+      "policy_key": "extra_repairs",
+      "clarity_review": true,
+      "revision": 1,
+      "rationale": "Owner explicitly resolved the source ambiguity; see docs/CAMPAIGN_RULINGS.md for context and change impact."
     },
     {
       "id": "absent-ace-permission-bonus",
       "summary": "The current Ace receives the extra mission-end Permission even if it did not participate.",
       "provenance": "owner_approved_campaign_ruling",
-      "source": "Owner approval in this development conversation"
+      "source": "Owner approval in this development conversation",
+      "authority": "explicit_owner",
+      "policy_key": "ace_bonus",
+      "clarity_review": true,
+      "revision": 1,
+      "rationale": "Owner explicitly resolved the source ambiguity; see docs/CAMPAIGN_RULINGS.md for context and change impact."
     },
     {
       "id": "punishment-detail-owner",
       "summary": "The inflictor chooses unspecified Punishment details, including Identities and Assets. Explicit printed choice ownership overrides this default.",
       "provenance": "owner_approved_campaign_ruling",
-      "source": "Book PDF 17–18 / printed pp.15–16; owner decision"
+      "source": "Book PDF 17\u201318 / printed pp.15\u201316; owner decision",
+      "authority": "explicit_owner",
+      "policy_key": "punishment_details",
+      "clarity_review": true,
+      "revision": 1,
+      "rationale": "Owner explicitly resolved the source ambiguity; see docs/CAMPAIGN_RULINGS.md for context and change impact."
     },
     {
       "id": "failure-dog-overlap",
       "summary": "One actual Punishment may satisfy both mission-failure and Dog causes for the same Girl in the same mission; both causes remain audited.",
       "provenance": "owner_approved_campaign_ruling",
-      "source": "Book PDF 16–17 / printed pp.14–15; owner decision"
+      "source": "Book PDF 16\u201317 / printed pp.14\u201315; owner decision",
+      "authority": "explicit_owner",
+      "policy_key": "failure_dog_overlap",
+      "clarity_review": true,
+      "revision": 1,
+      "rationale": "Owner explicitly resolved the source ambiguity; see docs/CAMPAIGN_RULINGS.md for context and change impact."
     },
     {
       "id": "sedation-fewer-than-two-identities",
       "summary": "Sedation marks all remaining Identities when fewer than two remain and reduces Heat to zero. Explicit Paired Identity effects still apply.",
       "provenance": "owner_approved_campaign_ruling",
-      "source": "Book PDF 17 / printed p.15; owner approved the recommended fallback"
+      "source": "Book PDF 17 / printed p.15; owner approved the recommended fallback",
+      "authority": "explicit_owner",
+      "policy_key": "sedation_small_set",
+      "clarity_review": true,
+      "revision": 1,
+      "rationale": "Owner explicitly resolved the source ambiguity; see docs/CAMPAIGN_RULINGS.md for context and change impact."
     },
     {
       "id": "princess-mission-end-ace-check",
       "summary": "Resolve Princess Status promotion first; if now Ace, grant its Princess Permission. Normal mission completion and Ace bonuses follow separately.",
       "provenance": "owner_approved_campaign_ruling",
-      "source": "Book PDF 32 / printed p.30; owner approved checking Ace after promotion"
+      "source": "Book PDF 32 / printed p.30; owner approved checking Ace after promotion",
+      "authority": "explicit_owner",
+      "policy_key": "princess_ace_check",
+      "clarity_review": true,
+      "revision": 1,
+      "rationale": "Owner explicitly resolved the source ambiguity; see docs/CAMPAIGN_RULINGS.md for context and change impact."
     },
     {
       "id": "compulsory-frame-baseline",
       "summary": "The current Handler specifies each compulsory Frame replacement package case by case; no automatic starting Asset/ability package is assumed.",
       "provenance": "owner_approved_campaign_ruling",
-      "source": "Book PDF 71 / printed p.69 and PDF 29 / printed p.27; owner decision"
+      "source": "Book PDF 71 / printed p.69 and PDF 29 / printed p.27; owner decision",
+      "authority": "explicit_owner",
+      "policy_key": "compulsory_frame_package",
+      "clarity_review": true,
+      "revision": 1,
+      "rationale": "Owner explicitly resolved the source ambiguity; see docs/CAMPAIGN_RULINGS.md for context and change impact."
     },
     {
       "id": "compulsory-frame-repeat",
       "summary": "A compulsory replacement must use a different official Frame playbook; cosmetic aliases do not bypass the restriction.",
       "provenance": "owner_approved_campaign_ruling",
-      "source": "Book PDF 71 / printed p.69 and PDF 29 / printed p.27; owner decision"
+      "source": "Book PDF 71 / printed p.69 and PDF 29 / printed p.27; owner decision",
+      "authority": "explicit_owner",
+      "policy_key": "replacement_frame_repeat",
+      "clarity_review": true,
+      "revision": 1,
+      "rationale": "Owner explicitly resolved the source ambiguity; see docs/CAMPAIGN_RULINGS.md for context and change impact."
     },
     {
       "id": "compulsory-frame-charge",
       "summary": "Compulsory Frame replacement after scrapping or destruction costs no Permissions. The optional paid Frame Swap is separate.",
       "provenance": "owner_approved_campaign_ruling",
-      "source": "Book PDF 16, 29 and 71 / printed pp.14, 27, 69; owner decision"
+      "source": "Book PDF 16, 29 and 71 / printed pp.14, 27, 69; owner decision",
+      "authority": "explicit_owner",
+      "policy_key": "compulsory_frame_charge",
+      "clarity_review": true,
+      "revision": 1,
+      "rationale": "Owner explicitly resolved the source ambiguity; see docs/CAMPAIGN_RULINGS.md for context and change impact."
+    },
+    {
+      "id": "doctor-credited-permission-recipient",
+      "summary": "DoctorDoctor credit-sharing grants one Permission to another current canonical Pilot, including an absent Pilot, not a Handler or NPC.",
+      "source": "Book PDF 16 and 71 / printed pp.14 and 69",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "explicit_owner",
+      "rationale": "The core chapter defines Permissions as Pilot rewards; owner accepted the recommendation.",
+      "alternatives": [
+        "Allow any credited character, including Handler or NPC"
+      ],
+      "policy_key": "doctor_credit_recipients",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "off-duty-sedation-duration",
+      "summary": "Off-duty Sedation locks last through the current Off-Duty period and clear only at its explicit end, surviving pauses and restarts.",
+      "source": "Book PDF 17 / printed p.15",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "explicit_owner",
+      "rationale": "A bounded period fits Minor Punishment without inventing permanent treatment; owner accepted the recommendation.",
+      "alternatives": [
+        "Require later treatment to remove the lock"
+      ],
+      "policy_key": "sedation_duration",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "sedation-identity-replacement-lock",
+      "summary": "Retain the mark and current-period Sedation lock when an embraced Tag replaces a locked Identity or renames its Paired slot; printed explicit removal remains separate.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Book PDF 17 / printed p.15; Tag replacement PDF 11 and Paired slot PDF 58; delegated owner authority",
+      "authority": "delegated_recommendation",
+      "rationale": "Replacement must not act as an unprinted extra unmark while Sedation prohibits unmarking during the period.",
+      "alternatives": [
+        "A replacement Identity starts unmarked and unlocked",
+        "Prohibit replacement of any locked Identity"
+      ],
+      "policy_key": "sedation_identity_replacement",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "M2 repeated-Tag embrace and Paired rename retain the slot lock; optional unmark selectors exclude locked Identities.",
+      "change_impact": "Apply a revised choice policy only to future events after updating reducers and tests; explicitly migrate pending locks if requested, keeping historical receipts unchanged."
     }
   ],
   "entries": [
@@ -891,14 +991,18 @@
         "heading": "Go Off-Duty"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_off_duty.py",
+        "tests/rules/test_off_duty_service.py",
+        "tests/rules/test_sedation_m2.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -2426,14 +2530,14 @@
     },
     {
       "id": "frame.consume.human-hound",
-      "title": "‘Human’ Hound",
+      "title": "\u2018Human\u2019 Hound",
       "scope": "frame",
       "kind": "mechanic",
       "source": {
         "document": "rulebook",
         "pdf_page": 66,
         "printed_page": 64,
-        "heading": "‘Human’ Hound"
+        "heading": "\u2018Human\u2019 Hound"
       },
       "required": true,
       "implementation": "unimplemented",
@@ -2863,7 +2967,8 @@
         "tests/rules/test_reaction_ui.py",
         "tests/rules/test_replacement.py",
         "tests/rules/test_replacement_service.py",
-        "tests/rules/test_replacement_ui.py"
+        "tests/rules/test_replacement_ui.py",
+        "tests/rules/test_off_duty_service.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -3353,14 +3458,14 @@
     },
     {
       "id": "frame.enforcer.masters-dog",
-      "title": "Master’s Dog",
+      "title": "Master\u2019s Dog",
       "scope": "frame",
       "kind": "mechanic",
       "source": {
         "document": "rulebook",
         "pdf_page": 79,
         "printed_page": 77,
-        "heading": "Master’s Dog"
+        "heading": "Master\u2019s Dog"
       },
       "required": true,
       "implementation": "unimplemented",
@@ -3376,14 +3481,14 @@
     },
     {
       "id": "frame.enforcer.pavlovs-soldier",
-      "title": "Pavlov’s Soldier",
+      "title": "Pavlov\u2019s Soldier",
       "scope": "frame",
       "kind": "mechanic",
       "source": {
         "document": "rulebook",
         "pdf_page": 79,
         "printed_page": 77,
-        "heading": "Pavlov’s Soldier"
+        "heading": "Pavlov\u2019s Soldier"
       },
       "required": true,
       "implementation": "unimplemented",
@@ -3974,14 +4079,14 @@
     },
     {
       "id": "frame.red-queen.queens-court",
-      "title": "Queen’s Court",
+      "title": "Queen\u2019s Court",
       "scope": "frame",
       "kind": "mechanic",
       "source": {
         "document": "rulebook",
         "pdf_page": 88,
         "printed_page": 86,
-        "heading": "Queen’s Court"
+        "heading": "Queen\u2019s Court"
       },
       "required": true,
       "implementation": "unimplemented",
@@ -4227,14 +4332,14 @@
     },
     {
       "id": "frame.red-queen.handlers-special-girl",
-      "title": "Handler’s Special Girl",
+      "title": "Handler\u2019s Special Girl",
       "scope": "frame",
       "kind": "mechanic",
       "source": {
         "document": "rulebook",
         "pdf_page": 92,
         "printed_page": 90,
-        "heading": "Handler’s Special Girl"
+        "heading": "Handler\u2019s Special Girl"
       },
       "required": true,
       "implementation": "unimplemented",
@@ -9452,14 +9557,14 @@
     },
     {
       "id": "gorgon-type.doppleganger.doppleganger-type",
-      "title": "Dopplegänger-Type",
+      "title": "Doppleg\u00e4nger-Type",
       "scope": "gorgon-type",
       "kind": "playbook",
       "source": {
         "document": "rulebook",
         "pdf_page": 170,
         "printed_page": 168,
-        "heading": "Dopplegänger-Type"
+        "heading": "Doppleg\u00e4nger-Type"
       },
       "required": true,
       "implementation": "unimplemented",
@@ -10740,14 +10845,14 @@
     },
     {
       "id": "director.director.the-directors-rules",
-      "title": "The Director’s Rules",
+      "title": "The Director\u2019s Rules",
       "scope": "director",
       "kind": "mechanic",
       "source": {
         "document": "rulebook",
         "pdf_page": 192,
         "printed_page": 190,
-        "heading": "The Director’s Rules"
+        "heading": "The Director\u2019s Rules"
       },
       "required": true,
       "implementation": "unimplemented",

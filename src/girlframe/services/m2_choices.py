@@ -71,7 +71,12 @@ class ChoiceEngine:
                 item.state = "fulfilled"
 
     def unmark(self, sheet: PilotSheet, ids: tuple[str, ...], maximum: int) -> None:
-        picks(ids, {x.id for x in sheet.identities if x.marked}, 0, maximum)
+        picks(
+            ids,
+            {x.id for x in sheet.identities if x.marked and x.id not in sheet.sedation_locked},
+            0,
+            maximum,
+        )
         for entry in sheet.identities:
             if entry.id in ids:
                 entry.marked = False
@@ -131,9 +136,18 @@ class ChoiceEngine:
                     not any(x.name.casefold() == tag.label.casefold() for x in acting.identities),
                     "UNSUPPORTED_RULE: duplicate Identity labels need explicit review.",
                 )
+                replacement = IdentityState(
+                    id=str(uuid4()),
+                    name=tag.label,
+                    marked=bool(set(answer.denied) & set(acting.sedation_locked)),
+                )
                 acting.identities = [x for x in acting.identities if x.id not in answer.denied] + [
-                    IdentityState(id=str(uuid4()), name=tag.label)
+                    replacement
                 ]
+                if replacement.marked:
+                    acting.sedation_locked = tuple(
+                        x for x in acting.sedation_locked if x not in answer.denied
+                    ) + (replacement.id,)
                 acting.tags = [x for x in acting.tags if x.id != tag.id]
                 self.tag_resolved(state, actor, tag.id)
             acting.revision += 1
@@ -156,7 +170,7 @@ class ChoiceEngine:
                     "UNSUPPORTED_RULE: duplicate Paired Identity labels need review.",
                 )
                 paired.name = tag.label
-                paired.marked = False
+                paired.marked = paired.id in acting.sedation_locked
                 acting.tags = [x for x in acting.tags if x.id != tag.id]
                 self.tag_resolved(state, actor, tag.id)
                 acting.revision += 1

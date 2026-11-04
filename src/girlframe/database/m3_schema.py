@@ -27,13 +27,37 @@ def define(metadata: sa.MetaData) -> dict[str, sa.Table]:
         sa.Column("body_json", sa.Text, nullable=False),
         sa.Column("event_id", sa.ForeignKey("events.id"), nullable=False, unique=True),
     )
+    off_duty = sa.Table(
+        "m3_off_duty",
+        metadata,
+        sa.Column("campaign_id", sa.ForeignKey("campaigns.id"), primary_key=True),
+        sa.Column("id", sa.Text, primary_key=True),
+        sa.Column("handler_id", sa.Text, nullable=False),
+        sa.Column("revision", sa.Integer, nullable=False),
+        sa.Column("phase", sa.Text, nullable=False),
+        sa.Column("body_json", sa.Text, nullable=False),
+        sa.ForeignKeyConstraint(
+            ["campaign_id", "handler_id"],
+            ["campaign_members.campaign_id", "campaign_members.user_id"],
+        ),
+    )
+    off_duty_history = sa.Table(
+        "m3_off_duty_history",
+        metadata,
+        sa.Column("campaign_id", sa.ForeignKey("campaigns.id"), primary_key=True),
+        sa.Column("id", sa.Text, primary_key=True),
+        sa.Column("revision", sa.Integer, primary_key=True),
+        sa.Column("body_json", sa.Text, nullable=False),
+        sa.Column("event_id", sa.ForeignKey("events.id"), nullable=False, unique=True),
+    )
     work = sa.Table(
         "m3_required_work",
         metadata,
         sa.Column("campaign_id", sa.ForeignKey("campaigns.id"), primary_key=True),
         sa.Column("id", sa.Text, primary_key=True),
         sa.Column("revision", sa.Integer, primary_key=True),
-        sa.Column("mission_id", sa.Text, nullable=False),
+        sa.Column("mission_id", sa.Text),
+        sa.Column("off_duty_id", sa.Text),
         sa.Column("owner_id", sa.Text, nullable=False),
         sa.Column("subject_id", sa.Text, nullable=False),
         sa.Column("kind", sa.Text, nullable=False),
@@ -44,6 +68,16 @@ def define(metadata: sa.MetaData) -> dict[str, sa.Table]:
             ["campaign_id", "mission_id"], ["m3_missions.campaign_id", "m3_missions.id"]
         ),
         sa.ForeignKeyConstraint(
+            ["campaign_id", "off_duty_id"],
+            ["m3_off_duty.campaign_id", "m3_off_duty.id"],
+            name="fk_work_off_duty",
+        ),
+        sa.CheckConstraint(
+            "(mission_id IS NOT NULL AND off_duty_id IS NULL) OR "
+            "(mission_id IS NULL AND off_duty_id IS NOT NULL)",
+            name="ck_work_one_context",
+        ),
+        sa.ForeignKeyConstraint(
             ["campaign_id", "owner_id"],
             ["campaign_members.campaign_id", "campaign_members.user_id"],
         ),
@@ -52,4 +86,4 @@ def define(metadata: sa.MetaData) -> dict[str, sa.Table]:
             ["campaign_members.campaign_id", "campaign_members.user_id"],
         ),
     )
-    return {table.name: table for table in (missions, history, work)}
+    return {table.name: table for table in (missions, history, off_duty, off_duty_history, work)}
