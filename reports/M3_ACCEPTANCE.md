@@ -593,3 +593,53 @@ One frozen bot process was verified at the start. No M3 live migration, private
 policy edit, command registration or environment publication occurred. Remaining
 work, including full world combat/scene/period integration and all other core
 rules, is retained in `docs/work_orders/M3_WORLD.md`; M3 stays IN_PROGRESS.
+
+## Ordinary Off-Duty cycle and shared-roll checkpoint
+
+M3 remains IN_PROGRESS / RULES_SUBSET. Ordinary period activation, shared locked
+roll/Tag resolution, owned scene confirmations, canonical recovery/Tag embrace,
+all six baseline Handler scenes, period-bound discipline, explicit Status review
+and once-only world end are integrated offline. New test files are
+`test_off_duty_roll_service.py`, `test_off_duty_cycle.py`,
+`test_off_duty_cycle_ui.py`, `test_off_duty_discipline.py` and
+`test_off_duty_handler_scenes.py` under `tests/rules/`; core recovery tests were
+expanded. Actual NPC role owners can attest without gaining a Pilot sheet. Saved
+M2 debts resolve only through actual typed Punishment application. World destruction
+has canonical next-start Budget provenance; a factual review cannot deny it.
+
+Executed evidence:
+
+- Full suite: **801 passed in 98.19s**, no failures/errors/skips, artifact
+  `var/m3-off-duty-cycle-pytest.xml`.
+- Subsequent canonical Status/inbox refinement: **28 passed in 11.25s**.
+- Strict typing: no issues in **129 source files**. Ruff check passed after
+  formatting; no lint finding was suppressed.
+- Registry: 473 entries, 436 required core; **35 subset / 438 unimplemented**,
+  zero independent verification. The ordinary Play now has an explicit contract;
+  Handler Off-Duty and core Status remain partial because interactions are unfinished.
+
+The first full attempt had 791 passes and one failing test: its Stimulant Injection
+assertion mistakenly expected five Heat. The printed implementation grants seven;
+correcting that fixture led to the passing full run above. Earlier tests also
+caught a synthetic event-key collision, wrong scene ID, Picker attribute and strict
+fixture/type errors; these were corrected, not waived.
+
+The prior saved bot process had stopped during this long-running development
+session. All 88 recorded frozen-source hashes matched. The same approved M2
+snapshot was restarted without changing the live `0011` database or private policy;
+it reported `Running v0.1.0` and test-guild commands registered. No M3 gameplay was
+deployed or approved, and no environment publication was attempted. This is still
+session hosting, not continuous production hosting.
+
+Void Observation, source-specific modifiers/shortages/economy, remaining playbook
+and world runtime, remaining Strain/Endgame effects, independent audit and human
+acceptance remain open. No ready-for-player-testing claim applies to all of M3.
+
+Final checkpoint rerun after current-Status reads and review/permission freshness
+guards: **801 passed in 102.44s**, no failures/errors/skips, replacing the current
+`var/m3-off-duty-cycle-pytest.xml` artifact. Ruff passed, 245 Python files were
+formatted, and mypy passed for 129 source files. The planning verifier passed;
+327 publishable files retained all 40 original manifest entries with zero findings.
+A Status review binds the current game revision: intervening state requires an
+explicit fresh performance review, and transitions wait for acknowledged chat
+permission restoration.

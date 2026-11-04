@@ -141,6 +141,7 @@ class PlayInput(Model):
     order_id: str | None = None
     witnessed: bool = False
     parent: str | None = None
+    off_duty_id: str | None = None
 
 
 class ChoiceAnswer(Model):

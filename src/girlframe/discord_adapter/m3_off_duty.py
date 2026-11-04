@@ -81,7 +81,43 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
         await reply(interaction, form.text(), form)
         return
     rows = {row["id"]: row for row in data["work"]}
-    if not rows:
+    from girlframe.services.m3_off_duty_cycle import CycleService
+
+    cycle = CycleService(service)
+    progress = await asyncio.to_thread(cycle.review, viewer, data["id"])
+    actions: list[tuple[str, str]] = []
+    if data["phase"] == "preparing" and viewer.user_id == progress["handler"]:
+        actions.append(("activate", "Finish preparation and begin Off-Duty"))
+    elif data["phase"] == "active":
+        own = progress["own"]
+        if progress["sheet"] is not None and not (own and own["recovered"]):
+            if own is None or own["roll"] is None:
+                actions.append(("play", "Go Off-Duty / resume your saved Play"))
+            elif own["roll"]["stage"] == "tag_window":
+                actions.append(("play", "Resume your roll's Tag decisions"))
+            elif own["scene"] is None and not own["scene_declined"]:
+                actions.append(("scene", "Choose your Off-Duty scene"))
+            else:
+                actions.append(("recover", "Review your sheet recovery"))
+        for scene in progress["invitations"]:
+            if viewer.user_id not in scene["acknowledgements"]:
+                actions.append(
+                    (
+                        "ack:" + str(scene["owner"]),
+                        "Confirm your participation in an Off-Duty scene",
+                    )
+                )
+        scene = progress["handler_scene"]
+        if scene is not None and viewer.user_id not in scene["acknowledgements"]:
+            actions.append(("ack:handler", "Confirm your participation in the Handler scene"))
+        if viewer.user_id == progress["handler"]:
+            if scene is None:
+                actions.append(("handler_scene", "Set your Handler Off-Duty scene"))
+            if not progress["status_reviewed"]:
+                actions.append(("status", "Review the Cadre's Status"))
+            else:
+                actions.append(("finish", "Review world effects and end Off-Duty"))
+    if not rows and not actions:
         await reply(
             interaction,
             f"Off-Duty is {data['phase']}; {data['pending_count']} required items remain. "
@@ -90,8 +126,23 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
         return
 
     async def choose(current: discord.Interaction, identity: str) -> None:
+        if identity.startswith("action:"):
+            from girlframe.discord_adapter.m3_off_duty_cycle import open_action
+
+            await open_action(current, cycle, data["id"], identity.removeprefix("action:"))
+            return
         row = rows[identity]
-        if row["kind"] == "doctor_credit":
+        if row["kind"] in (
+            "punishment",
+            "punishment_consult",
+            "punishment_paired_identity_heat",
+            "punishment_helpless",
+        ):
+            from girlframe.discord_adapter.m3_punishments import open_discipline
+            from girlframe.services.m3_punishments import PunishmentService
+
+            await open_discipline(current, PunishmentService(service.store), identity)
+        elif row["kind"] == "doctor_credit":
             await open_credit(current, service, identity)
         elif row["kind"] in ("off_duty_strain_start", "strain_roll", "strain_endgame"):
             from girlframe.discord_adapter.m3_strain import open_work
@@ -124,7 +175,8 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
         viewer.user_id,
         f"**Off-Duty — {data['phase']}**\n"
         f"{data['pending_count']} required items remain. Choose your own saved work.",
-        tuple(
+        tuple(("action:" + key, label) for key, label in actions)
+        + tuple(
             (identity, cast(str, row["kind"]).replace("_", " ").title())
             for identity, row in rows.items()
         ),

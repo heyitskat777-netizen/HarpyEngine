@@ -300,6 +300,28 @@ class SharedSetupService:
             state = HandlerService(self.store).view(viewer)
             if state["handler_active"] and state["handler_id"] in (viewer.user_id, target):
                 return {"higher": state["handler_id"] == viewer.user_id, "basis": "Handler"}
+            from girlframe.engine.m2 import higher
+            from girlframe.services.m2_state import load_state
+
+            canonical = load_state(connection, self.store.campaign_id)
+            if str(viewer.user_id) in canonical.sheets and str(target) in canonical.sheets:
+                if canonical.handler != state["handler_id"]:
+                    return {"higher": None, "basis": "unresolved canonical Handler"}
+                try:
+                    result = higher(canonical, viewer.user_id, target)
+                except ValueError:
+                    return {
+                        "higher": None,
+                        "basis": "unresolved current Status or Mentor authority",
+                    }
+                mentor = (
+                    canonical.sheets[str(viewer.user_id)].mentor == target
+                    or canonical.sheets[str(target)].mentor == viewer.user_id
+                )
+                return {
+                    "higher": result,
+                    "basis": "Mentor exception" if mentor else "current Status",
+                }
             forward = self.mentor_bond(connection, target, viewer.user_id) is not None
             reverse = self.mentor_bond(connection, viewer.user_id, target) is not None
             if forward and reverse:

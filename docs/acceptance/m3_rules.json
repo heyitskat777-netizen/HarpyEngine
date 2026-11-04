@@ -32,7 +32,12 @@
         "tests/rules/test_sedation_m2.py",
         "tests/rules/test_strain.py",
         "tests/rules/test_strain_service.py",
-        "tests/rules/test_strain_ui.py"
+        "tests/rules/test_strain_ui.py",
+        "tests/rules/test_off_duty_roll_service.py",
+        "tests/rules/test_off_duty_cycle.py",
+        "tests/rules/test_off_duty_cycle_ui.py",
+        "tests/rules/test_off_duty_discipline.py",
+        "tests/rules/test_off_duty_handler_scenes.py"
       ],
       "evidence": [
         {
@@ -55,6 +60,13 @@
           "result": "733 passed in 81.08s",
           "artifact": "var/m3-strain-scheduler-pytest.xml",
           "limitation": "Selecting all 72 source columns is not implementation of their effects. Typed world/sheet effects, complete Off-Duty flow, independent/human acceptance remain pending."
+        },
+        {
+          "scope": "partial_offline_ordinary_cycle_and_all_six_handler_scenes",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-off-duty-cycle-pytest.xml",
+          "result": "801 passed in 102.44s after canonical Status, inbox, review freshness and restored-chat guards; no failures/errors/skips",
+          "artifact": "var/m3-off-duty-cycle-pytest.xml",
+          "limitation": "Void Observation, all one-use/shortage/economy and playbook interactions, remaining Strain/Endgame consequences and independent/human acceptance remain incomplete."
         }
       ]
     },
@@ -619,6 +631,28 @@
           "result": "775 passed in 80.73s; subsequent counter hardening 32 passed in 5.36s",
           "artifact": "var/m3-world-strain-effects-pytest.xml",
           "limitation": "World combat/scene/period integration, all other table effects and independent/human acceptance remain pending."
+        }
+      ]
+    },
+    {
+      "id": "M3E-OFF-DUTY-CYCLE-001",
+      "title": "Actual ordinary Off-Duty cycle and all six Handler scenes",
+      "expected": "Actual Strain work precedes activation; no-reroll chat/Tag pipeline; own scene attestations, canonical recovery/Status, typed discipline and once-only world end.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_off_duty_roll_service.py",
+        "tests/rules/test_off_duty_cycle.py",
+        "tests/rules/test_off_duty_cycle_ui.py",
+        "tests/rules/test_off_duty_discipline.py",
+        "tests/rules/test_off_duty_handler_scenes.py"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_ordinary_cycle_and_all_six_handler_scenes",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-off-duty-cycle-pytest.xml",
+          "result": "801 passed in 102.44s after canonical Status, inbox, review freshness and restored-chat guards; no failures/errors/skips",
+          "artifact": "var/m3-off-duty-cycle-pytest.xml",
+          "limitation": "Void Observation, all one-use/shortage/economy and playbook interactions, remaining Strain/Endgame consequences and independent/human acceptance remain incomplete."
         }
       ]
     }

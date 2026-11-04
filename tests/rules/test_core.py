@@ -171,3 +171,56 @@ def test_extra_repair_uses_current_handler_quote_not_an_invented_default(sheet):
         quoted_repair(sheet, quote, current_handler=99, expected_quote_revision=2)
     with pytest.raises(ValueError):
         quoted_repair(sheet, quote, current_handler=1, expected_quote_revision=1)
+
+
+def test_off_duty_tag_embrace_at_cap_preserves_locked_slot_and_declining_repairs(sheet):
+    from girlframe.engine.m2 import TagState
+
+    sheet.tags.append(TagState(id="new-tag", label="A new self", giver=1, observers=(1, 2)))
+    old = sheet.identities[0].id
+    sheet.identities[0].marked = True
+    sheet.sedation_locked = (old,)
+    sheet.sedation_period = "actual-period"
+    sheet.assets[0].damaged = True
+    choice = Recovery(
+        embrace_tag="new-tag",
+        replace_identity=old,
+        replacement_id="replacement",
+        repair_assets=False,
+    )
+    result = recover_off_duty(sheet, choice).sheet
+    assert result.sedation_locked == ("replacement",)
+    assert next(x for x in result.identities if x.id == "replacement").marked
+    assert result.assets[0].damaged and not result.tags
+    assert sheet.tags and sheet.identities[0].id == old
+    with pytest.raises(ValueError, match="Sedation"):
+        recover_off_duty(sheet, choice.model_copy(update={"unmark_identity": "replacement"}))
+    with pytest.raises(ValueError, match="four-slot"):
+        recover_off_duty(sheet, choice.model_copy(update={"replace_identity": None}))
+    with pytest.raises(ValueError, match="distinct"):
+        recover_off_duty(sheet, choice.model_copy(update={"replacement_id": sheet.assets[0].id}))
+
+
+def test_off_duty_embrace_below_cap_adds_without_erasing_or_forging_unmark_rules(sheet):
+    from pydantic import ValidationError
+
+    from girlframe.engine.m2 import TagState
+    from girlframe.engine.m3_off_duty import RecoveryChoice
+
+    sheet.identities = sheet.identities[:2]
+    sheet.tags.append(TagState(id="new-tag", label="A new self", giver=1, observers=(1, 2)))
+    result = recover_off_duty(
+        sheet, Recovery(embrace_tag="new-tag", replacement_id="replacement")
+    ).sheet
+    assert len(result.identities) == 3 and len(sheet.identities) == 2
+    with pytest.raises(ValueError, match="four-slot"):
+        recover_off_duty(
+            sheet,
+            Recovery(
+                embrace_tag="new-tag",
+                replacement_id="replacement",
+                replace_identity=sheet.identities[0].id,
+            ),
+        )
+    with pytest.raises(ValidationError):
+        RecoveryChoice(repair_limit=50, sedation_locked=())

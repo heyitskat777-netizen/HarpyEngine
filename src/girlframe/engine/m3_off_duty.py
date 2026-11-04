@@ -15,15 +15,24 @@ from girlframe.engine.m3_core import Recovery, recover_off_duty
 from girlframe.engine.rolls import Face
 
 
+class Adjustment(Model):
+    source: str
+    amount: int
+    actor: Snowflake | None = None
+    tag: str | None = None
+
+
 class Roll(Model):
     faces: tuple[Face, Face]
     modifier: int = Field(ge=0)
     total: int
     source: Literal["status", "void_assets"]
+    stage: Literal["tag_window", "choices"] = "choices"
+    adjustments: tuple[Adjustment, ...] = ()
 
     @model_validator(mode="after")
     def summed(self) -> "Roll":
-        if sum(self.faces) + self.modifier != self.total:
+        if sum(self.faces) + self.modifier + sum(x.amount for x in self.adjustments) != self.total:
             raise ValueError("The receipt must retain the actual dice and modifier")
         return self
 
@@ -51,6 +60,12 @@ class Progress(Model):
     scene: Scene | None = None
     scene_declined: bool = False
     recovered: bool = False
+    action_id: str | None = None
+
+
+class HandlerContext(Model):
+    entity: str | None = None
+    operation: Literal["hire", "fire", "chastise", "request"] | None = None
 
 
 class Period(Model):
@@ -61,6 +76,13 @@ class Period(Model):
     phase: Literal["preparing", "active", "complete"] = "preparing"
     progress: dict[str, Progress] = Field(default_factory=dict)
     credit_recorded: tuple[Snowflake, ...] = ()
+    handler_scene: Scene | None = None
+    status_review: tuple[Snowflake, ...] | None = None
+    status_review_game_revision: int | None = None
+    character_ids: dict[str, str] = Field(default_factory=dict)
+    handler_recipient: Snowflake | None = None
+    handler_work: str | None = None
+    handler_context: HandlerContext | None = None
 
     @model_validator(mode="after")
     def roster(self) -> "Period":
@@ -71,9 +93,61 @@ class Period(Model):
             or not set(self.progress) <= {str(x) for x in self.pilots}
             or len(set(self.credit_recorded)) != len(self.credit_recorded)
             or not set(self.credit_recorded) <= set(self.pilots)
+            or (self.character_ids and set(self.character_ids) != {str(x) for x in self.pilots})
+            or len(set(self.character_ids.values())) != len(self.character_ids)
         ):
             raise ValueError("Use the distinct canonical Pilot roster and its appointed Handler")
         return self
+
+
+class RecoveryChoice(Model):
+    unmark_identity: str | None = None
+    embrace_tag: str | None = None
+    replace_identity: str | None = None
+    repair_assets: bool = True
+
+
+HANDLER_SCENES = ("punish", "permission", "npc_employment", "prisoner", "exploit", "routine")
+
+
+def handler_scene(
+    period: Period,
+    expected: int,
+    actor: int,
+    kind: str,
+    participants: tuple[int, ...],
+    summary: str,
+    *,
+    extra_participants: frozenset[int] = frozenset(),
+) -> Period:
+    current(period, expected)
+    if (
+        actor != period.handler
+        or period.handler_scene is not None
+        or kind not in HANDLER_SCENES
+        or actor not in participants
+        or not set(participants) <= set(period.pilots) | {actor} | extra_participants
+        or not (set(participants) & set(period.pilots))
+    ):
+        raise ValueError(
+            "The current Handler sets one printed scene with at least one current Girl"
+        )
+    result = clone(period)
+    result.handler_scene = Scene(kind=kind, participants=participants, summary=summary)
+    result.revision += 1
+    return result
+
+
+def acknowledge_handler_scene(period: Period, expected: int, actor: int) -> Period:
+    current(period, expected)
+    scene = period.handler_scene
+    if scene is None or actor not in scene.participants or actor in scene.acknowledgements:
+        raise ValueError("Each actual Handler-scene participant confirms it for themselves")
+    result = clone(period)
+    assert result.handler_scene is not None
+    result.handler_scene.acknowledgements += (actor,)
+    result.revision += 1
+    return result
 
 
 def clone(period: Period) -> Period:
@@ -137,7 +211,12 @@ def choose_scene(
 ) -> Period:
     current(period, expected)
     progress = period.progress.get(str(actor))
-    if progress is None or progress.roll is None or progress.roll.source != "status":
+    if (
+        progress is None
+        or progress.roll is None
+        or progress.roll.source != "status"
+        or progress.roll.stage != "choices"
+    ):
         raise ValueError("Resume a saved ordinary Off-Duty roll before choosing its scene")
     if progress.scene is not None or progress.scene_declined:
         raise ValueError("The scene choice is already saved")
@@ -193,7 +272,7 @@ def recovery(
     progress = period.progress.get(str(actor))
     if sheet.owner != actor or progress is None or progress.roll is None or progress.recovered:
         raise ValueError("Only the owner can recover once from its saved Off-Duty Play")
-    if progress.roll.source != "status":
+    if progress.roll.source != "status" or progress.roll.stage != "choices":
         raise ValueError("Void Observation needs its own resolved choices and scene")
     if not progress.scene_declined and (
         progress.scene is None

@@ -67,6 +67,8 @@ def start(state: State, period_id: str, facts: StartFacts) -> State:
         raise ValueError("Resume pending Strain rolls/column choices before starting another cycle")
     if facts.no_girl_void and facts.at_least_half_have_void:
         raise ValueError("The current canonical Void trigger facts contradict each other")
+    if any(x.consumed_by is None and not getattr(facts, x.kind) for x in state.triggers):
+        raise ValueError("The factual review cannot deny an unconsumed canonical Strain trigger")
     raise_high = {
         "void": facts.at_least_half_have_void or facts.harpy_or_prevented_since_last,
         "rebellion": facts.girl_leaked_information
@@ -92,6 +94,10 @@ def start(state: State, period_id: str, facts: StartFacts) -> State:
         levels=levels,
         repeated=frozenset(),
         periods=state.periods + (period_id,),
+        triggers=tuple(
+            x.model_copy(update={"consumed_by": period_id}) if x.consumed_by is None else x
+            for x in state.triggers
+        ),
         requests=tuple(
             Request(
                 id=period_id + ":strain:" + track,

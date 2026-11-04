@@ -104,9 +104,11 @@ class DiscordGameGateway:
         elif kind == "receipt":
             receipt = payload["receipt"]
             faces = receipt["faces"]
+            modifier = receipt.get("base_modifier", receipt["heat"])
+            source = receipt.get("modifier_source", "Heat")
             text = (
                 f"**{clean(payload['callsign'])} — {clean(payload['play'].replace('_', ' '))}**"
-                f"\n{faces[0]} + {faces[1]} + {receipt['heat']} Heat"
+                f"\n{faces[0]} + {faces[1]} + {modifier} {source}"
                 f" = {receipt['pre_total']} before Tags."
                 f"\nReceipt `{receipt['id']}`\nHuman responses pending."
             )

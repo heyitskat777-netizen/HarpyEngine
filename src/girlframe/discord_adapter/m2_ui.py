@@ -717,8 +717,9 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
                     + " · "
                     + " + ".join(str(x) for x in receipt["faces"])
                     + " + "
-                    + str(receipt["heat"])
-                    + " Heat"
+                    + str(receipt.get("base_modifier", receipt["heat"]))
+                    + " "
+                    + str(receipt.get("modifier_source", "Heat"))
                 )
             if data["result"]:
                 for key, value in data["result"].items():

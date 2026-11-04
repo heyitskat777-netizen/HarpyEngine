@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import Field
 
 from girlframe.engine.creation_catalog import CATALOG
-from girlframe.engine.m2 import AssetState, Model, PilotSheet
+from girlframe.engine.m2 import AssetState, IdentityState, Model, PilotSheet
 
 
 class Followup(Model):
@@ -28,6 +28,10 @@ class RepairSelection(Model):
 
 class Recovery(Model):
     unmark_identity: str | None = None
+    embrace_tag: str | None = None
+    replace_identity: str | None = None
+    replacement_id: str | None = None
+    repair_assets: bool = True
     sedation_locked: frozenset[str] = frozenset()
     repair_limit: int | None = Field(default=None, ge=0)
     repairs: RepairSelection | None = None
@@ -106,12 +110,51 @@ def recover_off_duty(sheet: PilotSheet, choice: Recovery) -> Result:
     locks = choice.sedation_locked | frozenset(updated.sedation_locked)
     if not locks <= {x.id for x in updated.identities}:
         raise ValueError("Sedation locks must reference current owned Identities")
+    if choice.embrace_tag is not None:
+        tag = next((x for x in updated.tags if x.id == choice.embrace_tag), None)
+        if (
+            tag is None
+            or not choice.replacement_id
+            or choice.replacement_id
+            in {x.id for x in updated.identities}
+            | {x.id for x in updated.assets}
+            | {x.id for x in updated.tags}
+        ):
+            raise ValueError("Embrace an owned current Tag with a distinct new Identity ID")
+        ordinary = [x for x in updated.identities if not x.protected or x.paired]
+        replaced = next(
+            (x for x in updated.identities if x.id == choice.replace_identity and not x.protected),
+            None,
+        )
+        if (len(ordinary) >= 4 and replaced is None) or (
+            len(ordinary) < 4 and choice.replace_identity is not None
+        ):
+            raise ValueError(
+                "Replace an ordinary unprotected Identity only when the four-slot cap requires it"
+            )
+        if any(x.name.casefold() == tag.label.casefold() for x in updated.identities):
+            raise ValueError("Choose a Tag that does not duplicate a current Identity label")
+        marked = replaced is not None and replaced.id in locks
+        if replaced is not None:
+            updated.identities = [x for x in updated.identities if x.id != replaced.id]
+            if marked:
+                locks = frozenset(x for x in locks if x != replaced.id) | {choice.replacement_id}
+                updated.sedation_locked = tuple(sorted(locks))
+        updated.identities.append(
+            IdentityState(id=choice.replacement_id, name=tag.label, marked=marked)
+        )
+        updated.tags = [x for x in updated.tags if x.id != tag.id]
+    elif choice.replace_identity is not None or choice.replacement_id is not None:
+        raise ValueError("Identity replacement requires an actual embraced Tag")
     if choice.unmark_identity:
         selected = next((x for x in updated.identities if x.id == choice.unmark_identity), None)
         if selected is None or not selected.marked or selected.id in locks:
             raise ValueError("Choose a marked Identity that off-duty Sedation does not lock")
         selected.marked = False
-    if choice.repair_limit is None:
+    if not choice.repair_assets:
+        if choice.repairs is not None:
+            raise ValueError("Do not select repairs when declining Asset recovery")
+    elif choice.repair_limit is None:
         if choice.repairs is not None:
             raise ValueError("Ordinary recovery repairs all Assets, without a restricted selection")
         for asset in updated.assets:

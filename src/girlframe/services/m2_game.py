@@ -27,6 +27,7 @@ from girlframe.engine.m2 import (
     spend_heat,
 )
 from girlframe.engine.m2_registry import registry_digest
+from girlframe.engine.m3_plays import ROLL_IDS as M3_ROLL_IDS
 from girlframe.engine.m3_policy import RULESET as M3_RULESET
 from girlframe.engine.rolls import DiceSource, OsDice
 from girlframe.services.creation_review import CreationReviewService
@@ -87,6 +88,8 @@ class GameService:
         key: str,
         kind: str,
         state: GameState | None = None,
+        *,
+        event_id: str | None = None,
         **metadata: Any,
     ) -> str:
         if state is not None:
@@ -100,6 +103,7 @@ class GameService:
             key,
             kind,
             metadata,
+            event_id=event_id,
             ruleset_version=M3_RULESET if kind.startswith("m3.") else RULESET,
         )
         if state is not None:
@@ -126,6 +130,10 @@ class GameService:
                         campaign_id=self.store.campaign_id, revision=state.revision, body_json=body
                     )
                 )
+        if state is not None and self.store.policy.m3_approval is not None:
+            from girlframe.services.m3_debts import synchronize
+
+            synchronize(c, self.store, state, event)
         return event
 
     def sheet(self, viewer: GuildViewer, owner: int | None = None) -> dict[str, Any]:
@@ -521,12 +529,19 @@ class GameService:
         self, viewer: GuildViewer, key: str, channel: int, sheet_revision: int, prepared: PlayInput
     ) -> dict[str, Any]:
         prepared = PlayInput.model_validate_json(prepared.model_dump_json())
-        if prepared.play not in PLAY_IDS:
+        if prepared.play not in (*PLAY_IDS, *M3_ROLL_IDS):
             raise WorkflowError("UNSUPPORTED_RULE: this Play is not implemented in M2.")
 
         def operation(c: Connection) -> dict[str, Any]:
             self.unpaused(c)
             state = load_state(c, self.store.campaign_id)
+            m3 = None
+            if prepared.play in M3_ROLL_IDS:
+                from girlframe.services.m3_play_support import prepare
+
+                m3 = prepare(self, c, viewer, prepared)
+            elif prepared.off_duty_id is not None:
+                raise WorkflowError("A period reference belongs only to its actual M3 Play.")
             sheet = state.sheets.get(str(viewer.user_id))
             if sheet is None or sheet.revision != sheet_revision:
                 raise WorkflowError("STALE_SHEET: refresh the Play wizard.")
@@ -628,7 +643,8 @@ class GameService:
                     raise WorkflowError("The Pair must have an active sheet to receive Heat.")
             elif prepared.gain or prepared.pair_share:
                 raise WorkflowError("Heat gain requires an eligible Identity.")
-            spend_heat(preview, prepared.heat)
+            if m3 is None:
+                spend_heat(preview, prepared.heat)
             identity = str(uuid4())
             data = {
                 "prepared": prepared.model_dump(mode="json"),
@@ -642,6 +658,8 @@ class GameService:
                 "result": {},
                 "choices": {},
             }
+            if m3 is not None:
+                data["m3"] = m3
             c.execute(
                 t.m2["m2_actions"]
                 .insert()
@@ -684,9 +702,18 @@ class GameService:
                             campaign_id=self.store.campaign_id, channel_id=str(channel), **values
                         )
                     )
-            self.event(
-                c, viewer.user_id, key, "m2.play_confirmed", action_id=identity, play=prepared.play
+            event = self.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.play_confirmed" if m3 is not None else "m2.play_confirmed",
+                action_id=identity,
+                play=prepared.play,
             )
+            if m3 is not None:
+                from girlframe.services.m3_play_support import reserve
+
+                reserve(self, c, action, event)
             return {"action_id": identity, "state": action["state"]}
 
         try:
@@ -767,7 +794,7 @@ class GameService:
                 or action["state"] not in ("acquiring", "ready_to_roll")
             ):
                 raise WorkflowError("LOCK_NOT_ACKNOWLEDGED: no dice or Heat were consumed.")
-            if action["data"]["play"] not in PLAY_IDS:
+            if action["data"]["play"] not in (*PLAY_IDS, *M3_ROLL_IDS):
                 raise WorkflowError("This action is diceless.")
             state = load_state(c, self.store.campaign_id)
             if HandlerService(self.store).current(c)[1].handler_id != state.handler:
@@ -776,12 +803,18 @@ class GameService:
             if sheet.revision != action["data"]["sheet_revision"]:
                 raise WorkflowError("STALE_SHEET: recover the unrolled action; no dice consumed.")
             prepared = PlayInput.model_validate_json(json.dumps(action["data"]["prepared"]))
+            m3 = action["data"].get("m3")
+            if m3 is not None:
+                from girlframe.services.m3_play_support import pre_roll
+
+                pre_roll(self, c, viewer, action, state)
             if prepared.identity:
                 share = mark_identity(sheet, prepared.identity, prepared.gain, prepared.pair_share)
                 if share:
                     state.sheets[str(sheet.pair)].heat += share
                     state.sheets[str(sheet.pair)].revision += 1
-            spend_heat(sheet, prepared.heat)
+            if m3 is None:
+                spend_heat(sheet, prepared.heat)
             faces = self.dice.roll()
             if len(faces) != 2 or any(type(x) is not int or not 1 <= x <= 6 for x in faces):
                 raise ValueError("Dice source returned invalid faces")
@@ -790,11 +823,13 @@ class GameService:
                 "action_id": identity,
                 "faces": list(faces),
                 "heat": prepared.heat,
-                "pre_total": sum(faces) + prepared.heat,
+                "pre_total": sum(faces) + (m3["modifier"] if m3 is not None else prepared.heat),
                 "rng_source": self.rng_source,
                 "rolled_utc": datetime.now(UTC).isoformat(),
-                "ruleset": RULESET,
+                "ruleset": M3_RULESET if m3 is not None else RULESET,
             }
+            if m3 is not None:
+                receipt.update(base_modifier=m3["modifier"], modifier_source="Status")
             c.execute(
                 t.m2["m2_receipts"]
                 .insert()
@@ -816,15 +851,19 @@ class GameService:
                 "receipt",
                 {"receipt": receipt, "callsign": sheet.callsign, "play": prepared.play},
             )
-            self.event(
+            event = self.event(
                 c,
                 viewer.user_id,
                 key,
-                "m2.rolled",
+                "m3.rolled" if m3 is not None else "m2.rolled",
                 state,
                 action_id=identity,
                 receipt_id=receipt["id"],
             )
+            if m3 is not None:
+                from girlframe.services.m3_play_support import save_raw_roll
+
+                save_raw_roll(self, c, action, state, event)
             return {"action_id": identity, "receipt": receipt}
 
         try:
@@ -883,6 +922,10 @@ class GameService:
             if row is None:
                 raise WorkflowError("This decision belongs to another player or is unavailable.")
             action = self.action(c, row["action_id"])
+            if action["data"].get("m3"):
+                from girlframe.services.m3_play_support import authorize as authorize_m3
+
+                authorize_m3(self, c, viewer, action)
             if (
                 str(viewer.user_id) == str(action["data"]["handler"])
                 and HandlerService(self.store).current(c)[1].handler_id != viewer.user_id
@@ -920,11 +963,15 @@ class GameService:
                 c,
                 viewer.user_id,
                 key,
-                "m2.choice_resolved",
+                "m3.choice_resolved" if action["data"].get("m3") else "m2.choice_resolved",
                 state,
                 action_id=action["id"],
                 choice_id=choice_id,
             )
+            if action["data"].get("m3_finished"):
+                from girlframe.services.m3_play_support import sync_finished_roll
+
+                sync_finished_roll(self, c, action, event)
             c.execute(
                 t.m2["m2_responses"]
                 .insert()
@@ -1101,8 +1148,23 @@ class GameService:
             ]
             for row in rows:
                 child = self.action(c, row["id"])
-                self.save_action(c, child, state="aborted")
                 choices = t.m2["m2_choices"]
+                if action["data"].get("m3"):
+                    child["data"]["m3_recovery"] = {
+                        "root": identity,
+                        "state": child["state"],
+                        "choices": [
+                            {k: item[k] for k in ("id", "state", "revision")}
+                            for item in c.execute(
+                                sa.select(choices).where(
+                                    choices.c.campaign_id == self.store.campaign_id,
+                                    choices.c.action_id == child["id"],
+                                    choices.c.state.in_(("pending", "submitted")),
+                                )
+                            ).mappings()
+                        ],
+                    }
+                self.save_action(c, child, state="aborted")
                 c.execute(
                     choices.update()
                     .where(

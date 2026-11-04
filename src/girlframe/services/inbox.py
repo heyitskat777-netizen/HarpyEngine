@@ -440,6 +440,84 @@ class InboxService:
                         task="m3_mission",
                     )
                 )
+            from girlframe.engine.m3_off_duty import Period, Progress
+
+            table = t.m3["m3_off_duty"]
+            for body in connection.scalars(
+                sa.select(table.c.body_json).where(
+                    table.c.campaign_id == self.store.campaign_id, table.c.phase == "active"
+                )
+            ):
+                period = Period.model_validate_json(body)
+                invited = (
+                    period.handler_scene and viewer.user_id in period.handler_scene.participants
+                )
+                if (
+                    viewer.user_id not in period.pilots
+                    and viewer.user_id != current_handler
+                    and not invited
+                ):
+                    continue
+
+                def period_task(
+                    suffix: str, title: str, counterpart: str, period: Period = period
+                ) -> None:
+                    items.append(
+                        InboxItem(
+                            "off-duty:" + period.id + ":" + suffix,
+                            "off_duty",
+                            period.id,
+                            period.revision,
+                            "off_duty",
+                            title,
+                            counterpart,
+                            "pending",
+                            True,
+                            False,
+                            "Your own saved Off-Duty decision remains pending.",
+                            "Reopen the period to review current legal choices. "
+                            "Each participant confirms their own scene; no timer answers for them.",
+                            "Review Off-Duty",
+                            task="m3_off_duty",
+                        )
+                    )
+
+                if viewer.user_id in period.pilots:
+                    own_progress = period.progress.get(user, Progress())
+                    if not own_progress.recovered:
+                        title = (
+                            "Go Off-Duty / resume your saved Play"
+                            if own_progress.roll is None
+                            else "Finish Off-Duty Tag decisions"
+                            if own_progress.roll.stage == "tag_window"
+                            else "Choose your Off-Duty scene"
+                            if own_progress.scene is None and not own_progress.scene_declined
+                            else "Complete your Off-Duty recovery"
+                        )
+                        period_task("own", title, "Your sheet")
+                for owner, off_duty_progress in period.progress.items():
+                    scene = off_duty_progress.scene
+                    if (
+                        scene is not None
+                        and viewer.user_id in scene.participants
+                        and viewer.user_id not in scene.acknowledgements
+                    ):
+                        period_task(
+                            "scene:" + owner,
+                            "Confirm your Off-Duty scene participation",
+                            label(owner),
+                        )
+                scene = period.handler_scene
+                if (
+                    scene is not None
+                    and viewer.user_id in scene.participants
+                    and viewer.user_id not in scene.acknowledgements
+                ):
+                    period_task(
+                        "handler-scene", "Confirm your Handler scene participation", "Handler"
+                    )
+                if viewer.user_id == current_handler and period.status_review is not None:
+                    period_task("end", "Review world effects and end Off-Duty", "Cadre")
             table = t.m3["m3_required_work"]
             latest_work = {
                 row["id"]: dict(row)
@@ -457,6 +535,16 @@ class InboxService:
                     continue
                 primary, task_name = None, None
                 kind = work["kind"]
+                context_scene = (
+                    json.loads(work["body_json"]).get("context_scene")
+                    if kind == "punishment"
+                    else None
+                )
+                scene_attestation = bool(
+                    context_scene
+                    and viewer.user_id in context_scene["participants"]
+                    and viewer.user_id not in context_scene["acknowledgements"]
+                )
                 if kind in (
                     "punishment",
                     "punishment_consult",
@@ -476,6 +564,8 @@ class InboxService:
                     primary, task_name = "Review Strain", "m3_strain"
                 elif kind == "doctor_credit":
                     primary, task_name = "Record credit sharing", "m3_off_duty_credit"
+                elif kind in ("off_duty_handler_scene", "off_duty_status_review"):
+                    primary, task_name = "Review Off-Duty", "m3_off_duty"
                 elif kind == "strain_event":
                     from girlframe.engine.m3_strain_effects import SUPPORTED
 
@@ -512,7 +602,7 @@ class InboxService:
                         title,
                         label(work["subject_id"]),
                         "pending",
-                        work["owner_id"] == user
+                        (work["owner_id"] == user or scene_attestation)
                         and not (kind == "frame_replacement_package" and work["state"] == "quoted"),
                         False,
                         "A required consequence remains pending.",

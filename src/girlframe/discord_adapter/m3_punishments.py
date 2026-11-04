@@ -223,8 +223,12 @@ async def open_details(
         viewer.user_id,
         KINDS[kind][0] + " — " + data["callsign"],
         "The inflictor selects unspecified details. Explicit printed ownership overrides this. "
-        "One application covers this mission's failure and Dog causes. "
-        "Review & Confirm commits the selected action.",
+        + (
+            "Each Off-Duty cause keeps its own actual Punishment. "
+            if data.get("off_duty_id")
+            else "One application covers this mission's failure and Dog causes. "
+        )
+        + "Review & Confirm commits the selected action.",
         fields,
         submit,
     )
@@ -236,6 +240,13 @@ async def open_discipline(
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.get, viewer, identity)
+    if (
+        data["state"] != "resolved"
+        and data.get("context_scene")
+        and data["owner_id"] != str(viewer.user_id)
+    ):
+        await open_context_scene(interaction, service, identity)
+        return
     if data["state"] == "resolved" or data["owner_id"] != str(viewer.user_id):
         await reply(
             interaction,
@@ -249,6 +260,9 @@ async def open_discipline(
     if data["kind"] == "punishment":
 
         async def choose(current: discord.Interaction, value: str) -> None:
+            if value == "context_scene":
+                await open_context_scene(current, service, identity)
+                return
             await open_details(current, service, identity, value)
 
         view = Picker(
@@ -258,7 +272,12 @@ async def open_discipline(
             + "**\n"
             + ", ".join(x.replace("_", " ") for x in data["causes"])
             + ".\nUnfinished printed types are unavailable.",
-            tuple((kind, KINDS[kind][0]) for kind in KINDS if kind in SUPPORTED),
+            (
+                (("context_scene", "Record / confirm the Punishment scene"),)
+                if data.get("off_duty_id")
+                else ()
+            )
+            + tuple((kind, KINDS[kind][0]) for kind in KINDS if kind in SUPPORTED),
             choose,
         )
         await view.show(interaction)
@@ -372,3 +391,72 @@ async def discipline_queue(interaction: discord.Interaction, service: Punishment
 
     view = Picker(viewer.user_id, "**Your discipline work**", options, choose)
     await view.show(interaction)
+
+
+async def open_context_scene(
+    interaction: discord.Interaction, service: PunishmentService, identity: str
+) -> None:
+    viewer = viewer_from_interaction(interaction)
+    data = await asyncio.to_thread(service.get, viewer, identity)
+    if data["state"] == "resolved" or not data.get("off_duty_id"):
+        raise WorkflowError("Resume a pending Off-Duty Punishment.")
+    scene = data.get("context_scene")
+    if scene is None:
+        if data["owner_id"] != str(viewer.user_id):
+            raise WorkflowError("The inflictor sets this actual scene first.")
+        fields = [Field("summary", "Brief Punishment scene account", paragraph=True)]
+        instructions = (
+            "Set the actual on-screen scene. Each participant must then confirm "
+            "their own participation. This does not apply a Punishment."
+        )
+
+        async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+            await asyncio.to_thread(
+                service.propose_scene,
+                viewer_from_interaction(current),
+                str(current.id),
+                identity,
+                data["revision"],
+                data["game_revision"],
+                values["summary"],
+            )
+            return (
+                "Scene saved. Each participant confirms it through their requests "
+                "before the Punishment is applied."
+            )
+    else:
+        if (
+            viewer.user_id not in scene["participants"]
+            or viewer.user_id in scene["acknowledgements"]
+        ):
+            await reply(
+                interaction,
+                "Your participation is already recorded. Other participants answer for themselves.",
+            )
+            return
+        fields = [
+            Field(
+                "confirm", "Your own participation", (("yes", "I confirm this scene was played"),)
+            )
+        ]
+        instructions = (
+            clean(scene["summary"]) + "\nConfirm only your own participation. "
+            "Mechanical application remains with the inflictor."
+        )
+
+        async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+            await asyncio.to_thread(
+                service.attest_scene,
+                viewer_from_interaction(current),
+                str(current.id),
+                identity,
+                data["revision"],
+                data["game_revision"],
+            )
+            return (
+                "Your participation is saved. The inflictor must apply the actual "
+                "Punishment; no one answers for another participant."
+            )
+
+    form = NativeForm(viewer.user_id, "Punishment scene", instructions, fields, submit)
+    await reply(interaction, form.text(), form)

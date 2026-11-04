@@ -44,7 +44,12 @@ class OffDutyService:
     def _view(self, c: Connection, viewer: GuildViewer, period: Period) -> None:
         self.game.authorize(c, viewer, game=False)
         current_handler = HandlerService(self.store).current(c)[1].handler_id
-        if viewer.user_id not in period.pilots and viewer.user_id != current_handler:
+        invited = period.handler_scene and viewer.user_id in period.handler_scene.participants
+        if (
+            viewer.user_id not in period.pilots
+            and viewer.user_id != current_handler
+            and not invited
+        ):
             raise WorkflowError("This period is private to its Pilots and current Handler.")
 
     def _save(self, c: Connection, period: Period, event: str) -> None:
@@ -151,11 +156,28 @@ class OffDutyService:
                 raise WorkflowError(
                     "Resolve the current Pilot roster, immediate work and old locks."
                 )
-            period = Period(id=str(uuid4()), handler=viewer.user_id, pilots=state.order)
+            characters = {
+                owner: identity
+                for owner, identity in c.execute(
+                    sa.select(t.characters.c.user_id, t.characters.c.id).where(
+                        t.characters.c.campaign_id == self.store.campaign_id,
+                        t.characters.c.user_id.in_(tuple(str(x) for x in state.order)),
+                    )
+                ).tuples()
+            }
+            period = Period(
+                id=str(uuid4()),
+                handler=viewer.user_id,
+                pilots=state.order,
+                character_ids=characters,
+            )
             event = self.game.event(
                 c, viewer.user_id, key, "m3.off_duty_preparing", period_id=period.id
             )
             self._save(c, period, event)
+            from girlframe.services.m3_debts import synchronize
+
+            synchronize(c, self.store, state, event)
             # This is an actual dependency, not an operator acknowledgement checkbox.
             self._work(c, period, viewer.user_id, "off_duty_strain_start", event)
             self._work(c, period, viewer.user_id, "off_duty_handler_scene", event)

@@ -103,6 +103,7 @@ class Npc(PlacedEntity):
     bonds: dict[str, Literal[1, 2]] = Field(default_factory=dict)
     captive_of: str | None = None
     secret_factions: tuple[str, ...] = ()
+    employment: Literal["unrecorded", "foundation", "unemployed"] = "unrecorded"
 
     @model_validator(mode="after")
     def known_jobs(self) -> "Npc":

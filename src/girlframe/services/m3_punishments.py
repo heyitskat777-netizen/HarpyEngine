@@ -11,10 +11,13 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_punishments as rules
+from girlframe.engine.m3_off_duty import Scene
 from girlframe.engine.rules_registry import Registry
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_missions import MissionService
+from girlframe.services.m3_off_duty import OffDutyService
+from girlframe.services.m3_work import related
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -124,6 +127,10 @@ class PunishmentService:
         )
 
     def _bundle(self, c: Connection, row: dict[str, Any]) -> list[dict[str, Any]]:
+        if row["off_duty_id"] is not None:
+            if self._body(row).get("reason") not in ("m2_play", "off_duty_handler", "strain_event"):
+                raise WorkflowError("This Off-Duty cause needs its source-specific resolver.")
+            return [row]
         result = [
             x
             for x in self.missions._pending(c, row["mission_id"])
@@ -137,6 +144,44 @@ class PunishmentService:
         ):
             raise WorkflowError("This cause requires its own source-specific discipline resolver.")
         return result
+
+    def _context(self, c: Connection, row: dict[str, Any]) -> dict[str, Any]:
+        if row["off_duty_id"] is None:
+            return {"off_duty": False}
+        period = OffDutyService(self.missions)._get(c, row["off_duty_id"])
+        if period.phase not in (
+            "preparing",
+            "active",
+        ) or period.handler != self.missions._current_handler(c):
+            raise WorkflowError("Recover the changed Off-Duty context before discipline.")
+        people = {int(row["subject_id"]), int(row["owner_id"])}
+        saved_scene = self._body(row).get("context_scene")
+        witnessed = False
+        if saved_scene is not None:
+            proof = Scene.model_validate_json(json.dumps(saved_scene))
+            witnessed = people == set(proof.participants) == set(proof.acknowledgements)
+        handler_scene = period.handler_scene
+        if handler_scene is not None and handler_scene.kind == "punish":
+            witnessed |= (
+                people <= set(handler_scene.participants) == set(handler_scene.acknowledgements)
+            )
+        # Before the result is known, require actual on-screen proof rather than
+        # speculating that a future roll will allow an off-screen Punishment.
+        progress = period.progress.get(row["subject_id"])
+        if progress is not None and progress.scene is not None:
+            scene = progress.scene
+            witnessed |= people <= set(scene.participants) == set(scene.acknowledgements)
+        unknown_or_harsh = (
+            progress is None
+            or progress.roll is None
+            or progress.roll.stage != "choices"
+            or progress.roll.total <= 7
+        )
+        if unknown_or_harsh and not witnessed:
+            raise WorkflowError(
+                "Complete an on-screen Punishment scene with subject and inflictor first."
+            )
+        return {"off_duty": True, "off_duty_period": period.id}
 
     def get(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
         with self.store.engine.connect() as c:
@@ -161,6 +206,9 @@ class PunishmentService:
             result.update(
                 game_revision=state.revision, callsign=sheet.callsign if sheet else "Pilot"
             )
+            if row["off_duty_id"] is not None and row["kind"] == "punishment":
+                result["off_duty_id"] = row["off_duty_id"]
+                result["context_scene"] = body.get("context_scene")
             if row["kind"] == "punishment_consult":
                 result["proposal"] = body["proposal"]
                 result["inflictor"] = body["inflictor"]
@@ -292,6 +340,7 @@ class PunishmentService:
                 )
                 for item in bundle:
                     body = self._body(item)
+                    body.pop("context_scene", None)
                     consultation_id = body.pop("consult_id", None)
                     if consultation_id:
                         consultation = self._row(c, consultation_id)
@@ -318,9 +367,28 @@ class PunishmentService:
                 viewer.user_id,
                 details,
                 entity_id=str(uuid4()),
-                off_duty=False,
+                **self._context(c, row),
                 handler_consulted=consulted,
             )
+            for item in bundle:
+                source = self._body(item).get("obligation_id")
+                if source is not None:
+                    debt = next(
+                        (
+                            x
+                            for x in result.state.obligations
+                            if x.id == source
+                            and x.owner == int(row["subject_id"])
+                            and x.kind == "punishment"
+                            and x.state == "pending"
+                        ),
+                        None,
+                    )
+                    if debt is None:
+                        raise WorkflowError(
+                            "The original discipline debt changed; recover it explicitly."
+                        )
+                    debt.state = "fulfilled"
             event = self.game.event(
                 c,
                 viewer.user_id,
@@ -348,11 +416,11 @@ class PunishmentService:
                             state="resolved",
                             body=self._body(consultation) | {"approved": False, "superseded": True},
                         )
-            mission = self.missions._mission(c, row["mission_id"])
             for followup in result.followups:
-                self.missions._work(
+                related(
                     c,
-                    mission,
+                    self.store,
+                    row,
                     str(uuid4()),
                     int(state.handler)
                     if followup.kind == "helpless" and state.handler
@@ -362,6 +430,28 @@ class PunishmentService:
                     followup.model_dump(mode="json") | {"immediate": True, "source_work": identity},
                     event,
                 )
+            if (
+                row["off_duty_id"] is not None
+                and self._body(row).get("reason") == "off_duty_handler"
+            ):
+                periods = OffDutyService(self.missions)
+                period = periods._get(c, row["off_duty_id"])
+                scene = period.handler_scene
+                if (
+                    period.handler_work == identity
+                    and scene is not None
+                    and set(scene.participants) == set(scene.acknowledgements)
+                ):
+                    for item in periods._pending(c, period.id):
+                        if item["kind"] == "off_duty_handler_scene":
+                            self._save(
+                                c,
+                                item,
+                                event,
+                                state="resolved",
+                                body=self._body(item)
+                                | {"punishment_work": identity, "applied_event": event},
+                            )
             return {
                 "id": identity,
                 "state": "resolved",
@@ -524,7 +614,7 @@ class PunishmentService:
                 viewer.user_id,
                 details,
                 entity_id="consultation-preview",
-                off_duty=False,
+                **self._context(c, row),
                 handler_consulted=True,
             )
             bundle = self._bundle(c, row)
@@ -541,9 +631,10 @@ class PunishmentService:
                 "game_revision": state.revision,
                 "work_versions": {x["id"]: x["revision"] + 1 for x in bundle},
             }
-            self.missions._work(
+            related(
                 c,
-                self.missions._mission(c, row["mission_id"]),
+                self.store,
+                row,
                 consultation_id,
                 state.handler,
                 int(row["subject_id"]),
@@ -605,4 +696,103 @@ class PunishmentService:
             "m3.punishment_consult_answer",
             {"id": identity, "revision": revision, "approve": approve},
             operation,
+        )
+
+    def propose_scene(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        revision: int,
+        game_revision: int,
+        summary: str,
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            row = self._row(c, identity)
+            self._check(c, row, revision, game_revision)
+            if (
+                row["kind"] != "punishment"
+                or row["off_duty_id"] is None
+                or self._body(row).get("context_scene")
+            ):
+                raise WorkflowError("Set one actual scene for this pending Off-Duty Punishment.")
+            people = tuple(dict.fromkeys((int(row["owner_id"]), int(row["subject_id"]))))
+            scene = Scene(kind="punishment", participants=people, summary=summary)
+            event = self.game.event(
+                c, viewer.user_id, key, "m3.punishment_scene_set", work_id=identity
+            )
+            self._save(
+                c,
+                row,
+                event,
+                body=self._body(row) | {"context_scene": scene.model_dump(mode="json")},
+            )
+            return {"id": identity, "revision": revision + 1, "state": "scene_pending"}
+
+        return self._write(
+            viewer,
+            key,
+            identity,
+            "m3.punishment_scene_set",
+            {
+                "id": identity,
+                "revision": revision,
+                "game_revision": game_revision,
+                "summary": summary,
+            },
+            operation,
+        )
+
+    def attest_scene(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        revision: int,
+        game_revision: int,
+    ) -> dict[str, Any]:
+        def authorize(c: Connection) -> None:
+            self.missions.access.authorize(c, viewer, "discipline")
+            self.game.unpaused(c)
+            row = self._row(c, identity)
+            self._view(c, viewer, row)
+            if str(viewer.user_id) not in (row["owner_id"], row["subject_id"]):
+                raise WorkflowError("Only an actual participant confirms this Punishment scene.")
+
+        def operation(c: Connection) -> dict[str, Any]:
+            row = self._row(c, identity)
+            self._check(c, row, revision, game_revision)
+            body = self._body(row)
+            if (
+                row["kind"] != "punishment"
+                or row["off_duty_id"] is None
+                or not body.get("context_scene")
+            ):
+                raise WorkflowError("Resume an actual pending Punishment scene.")
+            scene = Scene.model_validate_json(json.dumps(body["context_scene"]))
+            if viewer.user_id not in scene.participants or viewer.user_id in scene.acknowledgements:
+                raise WorkflowError(
+                    "Each participant confirms the played scene for themselves once."
+                )
+            updated = Scene.model_validate_json(
+                scene.model_copy(
+                    update={"acknowledgements": scene.acknowledgements + (viewer.user_id,)}
+                ).model_dump_json()
+            )
+            event = self.game.event(
+                c, viewer.user_id, key, "m3.punishment_scene_attested", work_id=identity
+            )
+            self._save(
+                c, row, event, body=body | {"context_scene": updated.model_dump(mode="json")}
+            )
+            return {"id": identity, "revision": revision + 1, "state": "scene_attested"}
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.punishment_scene_attested",
+            {"id": identity, "revision": revision, "game_revision": game_revision},
+            operation,
+            auto_audit=False,
+            authorize=authorize,
         )

@@ -480,14 +480,20 @@
         "heading": "Status"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_off_duty_roll_service.py",
+        "tests/rules/test_off_duty_cycle.py",
+        "tests/rules/test_off_duty_cycle_ui.py",
+        "tests/rules/test_off_duty_discipline.py",
+        "tests/rules/test_off_duty_handler_scenes.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -674,7 +680,12 @@
       "test_evidence": [
         "tests/rules/test_punishments.py",
         "tests/rules/test_punishment_service.py",
-        "tests/rules/test_punishment_ui.py"
+        "tests/rules/test_punishment_ui.py",
+        "tests/rules/test_off_duty_roll_service.py",
+        "tests/rules/test_off_duty_cycle.py",
+        "tests/rules/test_off_duty_cycle_ui.py",
+        "tests/rules/test_off_duty_discipline.py",
+        "tests/rules/test_off_duty_handler_scenes.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -701,7 +712,12 @@
       "test_evidence": [
         "tests/rules/test_punishments.py",
         "tests/rules/test_punishment_service.py",
-        "tests/rules/test_punishment_ui.py"
+        "tests/rules/test_punishment_ui.py",
+        "tests/rules/test_off_duty_roll_service.py",
+        "tests/rules/test_off_duty_cycle.py",
+        "tests/rules/test_off_duty_cycle_ui.py",
+        "tests/rules/test_off_duty_discipline.py",
+        "tests/rules/test_off_duty_handler_scenes.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -728,7 +744,12 @@
       "test_evidence": [
         "tests/rules/test_punishments.py",
         "tests/rules/test_punishment_service.py",
-        "tests/rules/test_punishment_ui.py"
+        "tests/rules/test_punishment_ui.py",
+        "tests/rules/test_off_duty_roll_service.py",
+        "tests/rules/test_off_duty_cycle.py",
+        "tests/rules/test_off_duty_cycle_ui.py",
+        "tests/rules/test_off_duty_discipline.py",
+        "tests/rules/test_off_duty_handler_scenes.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -1095,12 +1116,60 @@
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Spend time at base in the actual active Off-Duty period, unless Void Observation replaces the Play.",
+        "actor_type": "Current human-controlled Girl/Pilot bound to the period and character incarnation.",
+        "pre_roll_sources": [
+          "Current Status: Dog +0, Wing +2, Ace +4",
+          "Explicit optional Identity marking and Paired Heat sharing; no Heat expenditure",
+          "Any source-specific pending modifiers must have typed consumers; unsupported interactions remain blocked"
+        ],
+        "roll_kind": "2d6",
+        "allowed_modifiers": [
+          "Post-roll known Girl Tag: one selected proposal, with current Bond depth and recorded campaign ruling",
+          "Printed Alpha Status and Paired/marked-Tag follow-ups through the shared decision pipeline",
+          "Source-specific one-use modifiers require their actual implementation"
+        ],
+        "tier_options": {
+          "7-": [
+            "Required Handler office, cell, Vital Frame, medical bay or other unwanted scene"
+          ],
+          "8-10": [
+            "Optional barracks, mess hall, hangar, training or other routine scene with other Girls"
+          ],
+          "11+": [
+            "Required Handler office, nearby city, prisoner, briefing/emergency or other unusual scene"
+          ]
+        },
+        "choice_ownership": "The acting Girl chooses its scene and recovery; every actual participant confirms only its own participation. Inflictor owns Punishment details under the recorded campaign ruling.",
+        "target_policy": "Current actual Cadre/Handler, saved scene participants and real world/NPC/prisoner entities; no inferred capture or absent-player answer.",
+        "post_roll_effects": [
+          "After Tag decisions save final tier, then scene, optional Tag embrace, unmark one legal Identity and optional Asset recovery",
+          "Honor the four ordinary Identity cap and protected/Paired slots",
+          "Keep actual per-period Sedation locks through slot replacement until explicit end"
+        ],
+        "mandatory_followups": [
+          "Every actual Strain, discipline, requisition, playbook and recovery consequence",
+          "Punishments faced on a harsh result happen on-screen",
+          "Handler scene and real end-of-period Status review",
+          "Once-only Directed steps, Aggressive effects and canonical future Strain triggers"
+        ],
+        "handler_or_gm_intervention": "Human Handler sets source-owned scenes and Status review; no AI or timeout supplies decisions. Incomplete cross-playbook, shortage, economy and Observation work prevents a rules-complete claim.",
+        "test_fixture_ids": [
+          "M3E-OFF-DUTY-CYCLE-001",
+          "M3-002"
+        ]
+      },
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_off_duty.py",
         "tests/rules/test_off_duty_service.py",
-        "tests/rules/test_sedation_m2.py"
+        "tests/rules/test_sedation_m2.py",
+        "tests/rules/test_off_duty_roll_service.py",
+        "tests/rules/test_off_duty_cycle.py",
+        "tests/rules/test_off_duty_cycle_ui.py",
+        "tests/rules/test_off_duty_discipline.py",
+        "tests/rules/test_off_duty_handler_scenes.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -5642,14 +5711,20 @@
         "heading": "Handler Off-Duty"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_off_duty_roll_service.py",
+        "tests/rules/test_off_duty_cycle.py",
+        "tests/rules/test_off_duty_cycle_ui.py",
+        "tests/rules/test_off_duty_discipline.py",
+        "tests/rules/test_off_duty_handler_scenes.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -5798,7 +5873,12 @@
       "test_evidence": [
         "tests/rules/test_world.py",
         "tests/rules/test_world_service.py",
-        "tests/rules/test_world_ui.py"
+        "tests/rules/test_world_ui.py",
+        "tests/rules/test_off_duty_roll_service.py",
+        "tests/rules/test_off_duty_cycle.py",
+        "tests/rules/test_off_duty_cycle_ui.py",
+        "tests/rules/test_off_duty_discipline.py",
+        "tests/rules/test_off_duty_handler_scenes.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -6722,7 +6802,12 @@
       "test_evidence": [
         "tests/rules/test_strain.py",
         "tests/rules/test_strain_service.py",
-        "tests/rules/test_strain_ui.py"
+        "tests/rules/test_strain_ui.py",
+        "tests/rules/test_off_duty_roll_service.py",
+        "tests/rules/test_off_duty_cycle.py",
+        "tests/rules/test_off_duty_cycle_ui.py",
+        "tests/rules/test_off_duty_discipline.py",
+        "tests/rules/test_off_duty_handler_scenes.py"
       ],
       "m2_play_id": null,
       "module": "core"

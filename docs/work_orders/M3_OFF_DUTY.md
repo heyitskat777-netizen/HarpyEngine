@@ -64,3 +64,47 @@ participant/Identity/Asset choices, observation substitution, shortages, pending
 work, absent owners, revocation, cross-campaign isolation, stale state/revisions,
 rollback, concurrent delivery/replay, restart/backup/rebuild and populated upgrade.
 Every printed rule remains incomplete until its full interactions are reviewed.
+
+## Ordinary cycle integration checkpoint
+
+The ordinary Go Off-Duty roll now uses the shared transactional scene lock, OS dice
+receipt, post-roll Tag choices, Bond modifiers and repeat-Tag/Paired follow-ups.
+Status is committed before rolling; Heat is not spent. The final adjusted receipt
+is saved to the real period before its scene/recovery choices become available.
+An abort preserves known dice and answered humans. Its owner can resume only after
+chat restoration; only an aborted unrolled reservation can be cancelled for a fresh
+confirmation. A changed character, Handler or registry requires explicit recovery.
+
+Activation proves three actual Strain rolls with saved columns, no remaining
+preparation effects, and a matching canonical roster/character incarnation. It
+cannot waive unimplemented Strain effects. Actual M2 Punishment debts are bound to
+this period, including debts created during its scenes. An actual discipline
+application fulfills the original debt; unrelated causes are not merged. Harsh
+results and pre-roll discipline require an on-screen scene confirmed by the
+participating humans. Moderate consultation, delegation and typed follow-ups retain
+the real mission/Off-Duty context. Sedation receives the actual period ID.
+
+Owned native controls and the requests inbox now cover roll/resume, scene choice,
+individual participation, recovery and optional Tag embrace. The four-slot cap,
+protected/Paired Identities and Sedation slot locks remain enforced. None of these
+controls supply another participant's response. Every printed Handler scene has a
+baseline workflow: routine, actual Permission award, actual Punishment, typed NPC
+hiring/firing/chastising/request, current prisoner and a human-authored exploitation
+scene. A human playing a real NPC/prisoner is separately invited; no PC is invented
+for them. Hiring/firing records employment without inventing a price or changing
+Bonds. Free external Pilots are unavailable as prisoners without actual custody.
+Handler-playbook exceptions remain part of the uncompleted playbook runtime.
+
+After real recovery/work and the Handler scene, the Handler explicitly reviews all
+current Girls' performance and submits the complete Status order. Effective-Status
+comparisons use active canon instead of creation-time ranks. Explicit end applies
+Directed movement and Aggressive changes/destruction once. Destruction records an
+unconsumed canonical Budget trigger with its actual source event; the next factual
+Strain review cannot deny it. All-base loss remains required Handler outcome work,
+not an automatically selected reassignment, punishment or ending. Sedation locks
+clear only on successful completion of their own period.
+
+Still required: Void Observation, all source-specific one-use modifiers, shortages
+and paid repairs, complete playbook/body-part interactions, the rest of the Strain
+and Endgame effects and world/Director outcomes, independent audit and human tests.
+This ordinary-cycle checkpoint does not complete M3 or authorize a live M3 release.

@@ -57,6 +57,14 @@ class Endgame(PeriodRecord):
         return f"strain.{self.track}.endgame.{self.option}"
 
 
+class Trigger(Model):
+    id: str
+    kind: Literal["structure_destroyed", "girl_death_or_severe"]
+    entity: str
+    source_event: str
+    consumed_by: str | None = None
+
+
 class State(Model):
     scenario: Scenario
     levels: dict[Track, Severity]
@@ -65,11 +73,18 @@ class State(Model):
     events: tuple[Event, ...] = ()
     endgames: tuple[Endgame, ...] = ()
     repeated: frozenset[Track] = frozenset()
+    triggers: tuple[Trigger, ...] = ()
 
     @model_validator(mode="after")
     def inventory(self) -> "State":
         if set(self.levels) != set(TRACKS) or len(set(self.periods)) != len(self.periods):
             raise ValueError("Retain all three Strain tracks and distinct period starts")
+        if len({x.id for x in self.triggers}) != len(self.triggers) or any(
+            x.consumed_by is not None and x.consumed_by not in self.periods for x in self.triggers
+        ):
+            raise ValueError(
+                "Canonical Strain triggers need distinct IDs and actual consuming periods"
+            )
         ids = [x.id for x in (*self.requests, *self.events, *self.endgames)]
         if len(set(ids)) != len(ids):
             raise ValueError("Strain requests and outcomes must have distinct stable IDs")
