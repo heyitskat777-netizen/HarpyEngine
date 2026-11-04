@@ -1511,3 +1511,56 @@ independent/human acceptance occurred. Physical travel, career/control, full sec
 discovery and the rest of agreed M3 remain unfinished; no M3-ready claim applies.
 The next confirmed source-inventory corrections are The Prince's playbook kind
 and class Requisitions on PDF 92–94 incorrectly grouped under Red Queen.
+
+
+Correction to the prior checkpoint's next-step note: the exact registry-kind
+audit found **Project Ankou**, not The Prince, misclassified as a mechanic.
+The Prince was already a playbook. The Class Requisitions grouping issue on
+PDF 92–94 was confirmed. Current classification work and its tests correct Ankou
+and preserve the actual nine-Frame inventory; no extra playbook is introduced.
+
+
+## Printed Frame classification and verified remaining-work snapshot
+
+The 104 Frame entries now distinguish **9 playbook headings / 30 base rules /
+52 playbook Requisitions / 13 Class Requisitions**. Three official Frames belong
+to each printed Class. JANUS-B uses JANUS eligibility without changing its server
+label. Actual mixed-page heading positions were inspected from the supplied
+source, including Nanobot Injection and Psych Strings as base rules. Project
+Ankou's header kind is corrected. PDF 92–94 / printed pp.90–92 Class rules have
+proper canonical IDs with all 13 old references retained as unambiguous aliases.
+Alias/canonical collisions and contradictory Class/category metadata fail.
+Compulsory packages reject whole-playbook headings as extra rules. These source
+corrections enable no unsupported ability and add no implementation certification.
+
+Completed full JUnit artifact: **1374 tests, zero failures/errors/skips**, recorded
+suite time **414.360s**, `var/m3-frame-classification-pytest.xml`. The originating
+execution session was no longer available when polled after the owner's next
+message; this result is verified from the completed artifact, without claiming a
+separately observed terminal exit code. Focused checks: **65 passed in 11.23s**,
+`var/m3-frame-classification-boundaries.xml`; preceding **64 passed in 11.35s**,
+`var/m3-frame-classification-focused.xml`. No pytest failure occurred in these
+classification runs. Ruff passes, **379 files** formatted, mypy **197 source
+files**. Public scan before the added remaining-work document: **461 publishable
+files / 40 original manifest entries / zero findings**. Contraband checkpoint
+**eccd74dd29516bbad65d2a9f3e94be3809a0a6c8** is pushed; GitHub CI passed,
+run **41912237658**.
+
+Verification confirms 436 required core inventory entries: **62 partial /
+374 unimplemented**, independent review pending for all 436. The 37 Ancillary
+entries remain deferred, giving the global 473 total and 411 unimplemented.
+The 44 acceptance cases remain 27 IN_PROGRESS / 17 NOT_RUN. The new
+`docs/M3_REMAINING_WORK.md` records the concrete remaining packages and next
+dependencies. No full M3-ready claim applies.
+
+Availability verification found **zero** running bot processes and the old
+execution session was unavailable. The provider reported connected/running with
+no failure; no stop cause was inferred. All **88 frozen source hashes** still
+matched commit `88cd237e9dc32742d2ac89a4fd2e18a4df10fc24`; the existing secure token
+binding remained present and live schema was still **0011**. The exact frozen
+M2 release passed its read-only startup check (13 guild-scoped commands), then
+was restored using its existing policy/database. Runtime reported **Running
+v0.1.0** and actual Gateway/command readiness; the process probe confirmed one
+instance, PID195086, execution session63256. No token value or campaign data was
+printed, and no schema migration, policy change, M3 deployment or environment
+publication was performed. The existing bot remains available during development.

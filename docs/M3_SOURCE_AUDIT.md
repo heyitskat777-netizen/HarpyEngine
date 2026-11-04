@@ -253,3 +253,16 @@ Asset. Explicit sharing, private ledger/export projections, damage/recovery,
 original-character proof, native controls, rollback/replay and backup preservation
 are checked. This does not implement travel, career/control or every later means
 of discovering a secret. See `work_orders/M3_CONTRABAND.md`.
+
+
+Frame source classification now distinguishes nine actual playbook headings,
+30 base rules, 52 playbook Requisitions and 13 Class Requisitions. Exact printed
+Requisitions heading positions were checked on the mixed pages, including
+Nanobot Injection as base and Borrowed Wings as acquired; Psych Strings is also
+base. Book PDF 92–94 / printed pp.90–92 belongs to the three Classes, not Red
+Queen. Those 13 canonical IDs retain their original IDs as historical aliases.
+Project Ankou's heading was incorrectly a mechanic; The Prince was already a
+playbook. The earlier hypothesis naming Prince was incorrect. Category/alias
+validation and replacement-package heading rejection preserve that distinction.
+This changes neither runtime implementation counts nor independent review. See
+`work_orders/M3_FRAME_CLASSIFICATION.md`.

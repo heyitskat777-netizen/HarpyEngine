@@ -49,8 +49,8 @@ def package(
         raise ValueError("Additional rules must be distinct")
     for identity in supplied.additional_rules:
         entry = registry.require_available(identity)
-        if entry.scope != "frame":
-            raise ValueError("A replacement package may only grant supported Frame rules")
+        if entry.scope != "frame" or entry.kind not in ("mechanic", "play"):
+            raise ValueError("A replacement package may only grant specific supported Frame rules")
     intrinsic = 1 if frame == "WYVERN 0.4" else 0
     if len(supplied.assets) > 5:
         raise ValueError("The ordinary package must fit the five-Asset cap; Enormous is additional")

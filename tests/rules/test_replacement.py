@@ -151,6 +151,16 @@ def test_new_court_requires_real_recipient_response_and_supported_extra_rules_on
         apply(before, registry, package=supplied(additional_rules=("not-a-rule",)))
 
 
+def test_extra_replacement_rules_cannot_grant_a_whole_playbook_heading(inputs, monkeypatch):
+    before, registry = inputs
+    heading = registry.entry("frame.ankou.project-ankou")
+    # Stub only availability to exercise the separate package-kind boundary.
+    # This creates no review/certification in the real source registry.
+    monkeypatch.setattr(type(registry), "require_available", lambda self, identity: heading)
+    with pytest.raises(ValueError, match="specific supported Frame rules"):
+        apply(before, registry, package=supplied(additional_rules=(heading.id,)))
+
+
 def test_changeling_strings_reference_actual_bonds_not_arbitrary_characters(inputs):
     before, registry = inputs
     result = apply(before, registry, frame="CHANGELING", package=supplied(psych_strings=(3,)))

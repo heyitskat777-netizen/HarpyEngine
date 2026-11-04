@@ -1,9 +1,13 @@
 """Source inventory and truthful certification gates; no storage or Discord dependencies."""
 
 from collections import Counter
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from girlframe.engine.frame_classes import FRAME_CLASSES, FrameClass, FrameRule
+
+RuleId = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9_.-]+$")]
 
 
 class Model(BaseModel):
@@ -33,7 +37,7 @@ class Contract(Model):
 
 
 class Entry(Model):
-    id: str = Field(pattern=r"^[a-z0-9][a-z0-9_.-]+$")
+    id: RuleId
     title: str = Field(min_length=1, max_length=180)
     scope: str = Field(min_length=1)
     module: Literal["core", "ancillary"] = "core"
@@ -49,9 +53,35 @@ class Entry(Model):
     dependencies: tuple[str, ...] = ()
     test_evidence: tuple[str, ...] = ()
     m2_play_id: str | None = None
+    aliases: tuple[RuleId, ...] = ()
+    frame_playbook: str | None = None
+    frame_class: FrameClass | None = None
+    frame_rule: FrameRule | None = None
 
     @model_validator(mode="after")
     def certification(self) -> "Entry":
+        if self.id in self.aliases or len(set(self.aliases)) != len(self.aliases):
+            raise ValueError("A rule has distinct historical aliases without its own canonical ID")
+        if any(x is not None for x in (self.frame_playbook, self.frame_class, self.frame_rule)):
+            if self.scope != "frame" or self.frame_rule is None or self.frame_class is None:
+                raise ValueError(
+                    "Frame classification needs actual Frame scope, rule category and class"
+                )
+            if self.frame_rule == "class_requisition":
+                if self.frame_playbook is not None or self.kind != "mechanic":
+                    raise ValueError(
+                        "A class Requisition belongs to its class rather than a Frame playbook"
+                    )
+            elif self.frame_playbook not in FRAME_CLASSES:
+                raise ValueError("Use an official Frame playbook in source classification")
+            elif FRAME_CLASSES[self.frame_playbook] != self.frame_class:
+                raise ValueError("Frame class must match its actual official playbook")
+            if (self.frame_rule == "playbook") != (self.kind == "playbook"):
+                raise ValueError(
+                    "A Frame playbook heading and a specific runtime rule are distinct"
+                )
+        if self.frame_rule in ("base", "requisition") and self.kind not in ("mechanic", "play"):
+            raise ValueError("Specific Frame classification requires an actual mechanic or Play")
         if self.implementation == "implemented" and (
             self.contract is None or not self.test_evidence or self.source_audit != "audited"
         ):
@@ -125,6 +155,11 @@ class Registry(Model):
         ids = {x.id for x in self.entries}
         if len(ids) != len(self.entries):
             raise ValueError("Rule IDs must be unique")
+        references = [value for entry in self.entries for value in (entry.id, *entry.aliases)]
+        if len(references) != len(set(references)):
+            raise ValueError(
+                "Historical rule aliases cannot collide with another canonical ID or alias"
+            )
         if len({x.id for x in self.campaign_rulings}) != len(self.campaign_rulings):
             raise ValueError("Campaign ruling IDs must be unique")
         for entry in self.entries:
@@ -156,11 +191,15 @@ class Registry(Model):
         }
 
     def require_available(self, identity: str) -> Entry:
-        entry = next((x for x in self.entries if x.id == identity), None)
-        if entry is None:
-            raise ValueError("UNSUPPORTED_RULE: unknown registry entry")
+        entry = self.entry(identity)
         if entry.module not in self.enabled_modules:
             raise ValueError("MODULE_DISABLED: this rule belongs to a disabled optional module")
         if not entry.verified:
             raise ValueError("UNSUPPORTED_RULE: implementation and review are incomplete")
+        return entry
+
+    def entry(self, identity: str) -> Entry:
+        entry = next((x for x in self.entries if x.id == identity or identity in x.aliases), None)
+        if entry is None:
+            raise ValueError("UNSUPPORTED_RULE: unknown registry entry")
         return entry

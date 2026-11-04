@@ -2888,7 +2888,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE PRINCE",
+      "frame_class": "autocrat",
+      "frame_rule": "base"
     },
     {
       "id": "frame.prince.permission-trigger",
@@ -2915,7 +2918,10 @@
         "tests/rules/test_frame_rewards.py"
       ],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE PRINCE",
+      "frame_class": "autocrat",
+      "frame_rule": "base"
     },
     {
       "id": "frame.prince.the-prince",
@@ -2938,7 +2944,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE PRINCE",
+      "frame_class": "autocrat",
+      "frame_rule": "playbook"
     },
     {
       "id": "frame.prince.performer",
@@ -2961,7 +2970,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE PRINCE",
+      "frame_class": "autocrat",
+      "frame_rule": "base"
     },
     {
       "id": "frame.prince.a-hero-we-can-believe-in",
@@ -2984,7 +2996,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE PRINCE",
+      "frame_class": "autocrat",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.prince.bad-girl",
@@ -3007,7 +3022,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE PRINCE",
+      "frame_class": "autocrat",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.prince.immortal-hero",
@@ -3030,7 +3048,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE PRINCE",
+      "frame_class": "autocrat",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.prince.tv-interviews",
@@ -3053,7 +3074,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE PRINCE",
+      "frame_class": "autocrat",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.prince.growing-fanbase",
@@ -3076,7 +3100,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE PRINCE",
+      "frame_class": "autocrat",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.prince.power-imbalance",
@@ -3099,7 +3126,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE PRINCE",
+      "frame_class": "autocrat",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.consume.consume",
@@ -3122,7 +3152,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "CONSUME",
+      "frame_class": "priestess",
+      "frame_rule": "playbook"
     },
     {
       "id": "frame.consume.permission-trigger",
@@ -3149,7 +3182,10 @@
         "tests/rules/test_frame_rewards.py"
       ],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "CONSUME",
+      "frame_class": "priestess",
+      "frame_rule": "base"
     },
     {
       "id": "frame.consume.starvation",
@@ -3172,7 +3208,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "CONSUME",
+      "frame_class": "priestess",
+      "frame_rule": "base"
     },
     {
       "id": "frame.consume.eat",
@@ -3195,7 +3234,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "CONSUME",
+      "frame_class": "priestess",
+      "frame_rule": "base"
     },
     {
       "id": "frame.consume.human-hound",
@@ -3218,7 +3260,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "CONSUME",
+      "frame_class": "priestess",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.consume.let-us-partake",
@@ -3241,7 +3286,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "CONSUME",
+      "frame_class": "priestess",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.consume.cannibal-requisition-forms",
@@ -3264,7 +3312,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "CONSUME",
+      "frame_class": "priestess",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.consume.feral",
@@ -3287,7 +3338,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "CONSUME",
+      "frame_class": "priestess",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.consume.just-a-nibble",
@@ -3310,7 +3364,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "CONSUME",
+      "frame_class": "priestess",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.consume.ontological-consumption-drive",
@@ -3333,7 +3390,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "CONSUME",
+      "frame_class": "priestess",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.consume.time-to-eat",
@@ -3356,7 +3416,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "CONSUME",
+      "frame_class": "priestess",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.janus.harpy-core",
@@ -3379,7 +3442,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "JANUS",
+      "frame_class": "priestess",
+      "frame_rule": "base"
     },
     {
       "id": "frame.janus.janus",
@@ -3402,7 +3468,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "JANUS",
+      "frame_class": "priestess",
+      "frame_rule": "playbook"
     },
     {
       "id": "frame.janus.permission-trigger",
@@ -3429,7 +3498,10 @@
         "tests/rules/test_frame_rewards.py"
       ],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "JANUS",
+      "frame_class": "priestess",
+      "frame_rule": "base"
     },
     {
       "id": "frame.janus.living-battery",
@@ -3452,7 +3524,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "JANUS",
+      "frame_class": "priestess",
+      "frame_rule": "base"
     },
     {
       "id": "frame.janus.pandora",
@@ -3475,7 +3550,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "JANUS",
+      "frame_class": "priestess",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.janus.a-girl-is-kinda-like-a-pet",
@@ -3498,7 +3576,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "JANUS",
+      "frame_class": "priestess",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.janus.obedience-training",
@@ -3521,7 +3602,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "JANUS",
+      "frame_class": "priestess",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.janus.universal-plug",
@@ -3544,7 +3628,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "JANUS",
+      "frame_class": "priestess",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.janus.void-storage",
@@ -3567,7 +3654,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "JANUS",
+      "frame_class": "priestess",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.doctordoctor.doctordoctor-mk-ii",
@@ -3590,7 +3680,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "DOCTORDOCTOR MK. II",
+      "frame_class": "legion",
+      "frame_rule": "playbook"
     },
     {
       "id": "frame.doctordoctor.permission-trigger",
@@ -3617,7 +3710,10 @@
         "tests/rules/test_frame_rewards.py"
       ],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "DOCTORDOCTOR MK. II",
+      "frame_class": "legion",
+      "frame_rule": "base"
     },
     {
       "id": "frame.doctordoctor.planned-obsolescence",
@@ -3649,7 +3745,10 @@
         "tests/rules/test_strain_service.py"
       ],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "DOCTORDOCTOR MK. II",
+      "frame_class": "legion",
+      "frame_rule": "base"
     },
     {
       "id": "frame.doctordoctor.borrowed-wings",
@@ -3672,7 +3771,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "DOCTORDOCTOR MK. II",
+      "frame_class": "legion",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.doctordoctor.nanobot-injection",
@@ -3695,7 +3797,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "DOCTORDOCTOR MK. II",
+      "frame_class": "legion",
+      "frame_rule": "base"
     },
     {
       "id": "frame.doctordoctor.running-ragged",
@@ -3718,7 +3823,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "DOCTORDOCTOR MK. II",
+      "frame_class": "legion",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.doctordoctor.the-cute-nurse",
@@ -3741,7 +3849,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "DOCTORDOCTOR MK. II",
+      "frame_class": "legion",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.doctordoctor.adrenal-injectors",
@@ -3764,7 +3875,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "DOCTORDOCTOR MK. II",
+      "frame_class": "legion",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.doctordoctor.here-for-support",
@@ -3787,7 +3901,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "DOCTORDOCTOR MK. II",
+      "frame_class": "legion",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.doctordoctor.metal-angel",
@@ -3810,7 +3927,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "DOCTORDOCTOR MK. II",
+      "frame_class": "legion",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.wyvern.a-vast-and-tractless-beast",
@@ -3833,7 +3953,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "WYVERN 0.4",
+      "frame_class": "legion",
+      "frame_rule": "base"
     },
     {
       "id": "frame.wyvern.permission-trigger",
@@ -3860,7 +3983,10 @@
         "tests/rules/test_frame_rewards.py"
       ],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "WYVERN 0.4",
+      "frame_class": "legion",
+      "frame_rule": "base"
     },
     {
       "id": "frame.wyvern.wyvern-0-4",
@@ -3920,7 +4046,10 @@
         "tests/rules/test_replacement_ui.py::test_wyvern_native_package_allows_five_ordinary_assets_plus_printed_enormous"
       ],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "WYVERN 0.4",
+      "frame_class": "legion",
+      "frame_rule": "playbook"
     },
     {
       "id": "frame.wyvern.a-heavy-burden",
@@ -3943,7 +4072,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "WYVERN 0.4",
+      "frame_class": "legion",
+      "frame_rule": "base"
     },
     {
       "id": "frame.wyvern.leviathan-chassis",
@@ -3966,7 +4098,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "WYVERN 0.4",
+      "frame_class": "legion",
+      "frame_rule": "base"
     },
     {
       "id": "frame.wyvern.crushing-bulk",
@@ -3989,7 +4124,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "WYVERN 0.4",
+      "frame_class": "legion",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.wyvern.deep-exploration",
@@ -4012,7 +4150,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "WYVERN 0.4",
+      "frame_class": "legion",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.wyvern.renovation-permission-forms",
@@ -4035,7 +4176,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "WYVERN 0.4",
+      "frame_class": "legion",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.wyvern.wraith-am",
@@ -4058,7 +4202,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "WYVERN 0.4",
+      "frame_class": "legion",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.wyvern.protector",
@@ -4081,7 +4228,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "WYVERN 0.4",
+      "frame_class": "legion",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.enforcer.obedience-conditioning",
@@ -4104,7 +4254,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE ENFORCER",
+      "frame_class": "autocrat",
+      "frame_rule": "base"
     },
     {
       "id": "frame.enforcer.permission-trigger",
@@ -4131,7 +4284,10 @@
         "tests/rules/test_frame_rewards.py"
       ],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE ENFORCER",
+      "frame_class": "autocrat",
+      "frame_rule": "base"
     },
     {
       "id": "frame.enforcer.the-enforcer",
@@ -4154,7 +4310,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE ENFORCER",
+      "frame_class": "autocrat",
+      "frame_rule": "playbook"
     },
     {
       "id": "frame.enforcer.enforcement-initiative",
@@ -4177,7 +4336,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE ENFORCER",
+      "frame_class": "autocrat",
+      "frame_rule": "base"
     },
     {
       "id": "frame.enforcer.masters-dog",
@@ -4200,7 +4362,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE ENFORCER",
+      "frame_class": "autocrat",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.enforcer.pavlovs-soldier",
@@ -4223,7 +4388,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE ENFORCER",
+      "frame_class": "autocrat",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.enforcer.personal-firearm",
@@ -4246,7 +4414,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE ENFORCER",
+      "frame_class": "autocrat",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.enforcer.compliance-virus",
@@ -4269,7 +4440,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE ENFORCER",
+      "frame_class": "autocrat",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.enforcer.overwhelming-firepower",
@@ -4292,7 +4466,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE ENFORCER",
+      "frame_class": "autocrat",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.enforcer.snoop",
@@ -4315,7 +4492,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE ENFORCER",
+      "frame_class": "autocrat",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.changeling.blank-slate",
@@ -4338,7 +4518,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "CHANGELING",
+      "frame_class": "priestess",
+      "frame_rule": "base"
     },
     {
       "id": "frame.changeling.changeling",
@@ -4361,7 +4544,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "CHANGELING",
+      "frame_class": "priestess",
+      "frame_rule": "playbook"
     },
     {
       "id": "frame.changeling.permission-trigger",
@@ -4388,7 +4574,10 @@
         "tests/rules/test_frame_rewards.py"
       ],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "CHANGELING",
+      "frame_class": "priestess",
+      "frame_rule": "base"
     },
     {
       "id": "frame.changeling.fingers-in-the-brain",
@@ -4411,7 +4600,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "CHANGELING",
+      "frame_class": "priestess",
+      "frame_rule": "base"
     },
     {
       "id": "frame.changeling.mindfuck",
@@ -4434,7 +4626,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "CHANGELING",
+      "frame_class": "priestess",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.changeling.psych-strings",
@@ -4457,7 +4652,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "CHANGELING",
+      "frame_class": "priestess",
+      "frame_rule": "base"
     },
     {
       "id": "frame.changeling.web-implant",
@@ -4480,7 +4678,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "CHANGELING",
+      "frame_class": "priestess",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.changeling.body-of-clay",
@@ -4503,7 +4704,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "CHANGELING",
+      "frame_class": "priestess",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.changeling.live-reconditioning-module",
@@ -4526,7 +4730,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "CHANGELING",
+      "frame_class": "priestess",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.changeling.psych-whip",
@@ -4549,7 +4756,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "CHANGELING",
+      "frame_class": "priestess",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.ankou.feedback-loop",
@@ -4572,7 +4782,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "PROJECT ANKOU",
+      "frame_class": "legion",
+      "frame_rule": "base"
     },
     {
       "id": "frame.ankou.permission-trigger",
@@ -4599,13 +4812,16 @@
         "tests/rules/test_frame_rewards.py"
       ],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "PROJECT ANKOU",
+      "frame_class": "legion",
+      "frame_rule": "base"
     },
     {
       "id": "frame.ankou.project-ankou",
       "title": "Project Ankou",
       "scope": "frame",
-      "kind": "mechanic",
+      "kind": "playbook",
       "source": {
         "document": "rulebook",
         "pdf_page": 84,
@@ -4622,7 +4838,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "PROJECT ANKOU",
+      "frame_class": "legion",
+      "frame_rule": "playbook"
     },
     {
       "id": "frame.ankou.emotional-relay",
@@ -4645,7 +4864,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "PROJECT ANKOU",
+      "frame_class": "legion",
+      "frame_rule": "base"
     },
     {
       "id": "frame.ankou.fight-fawn-procedure",
@@ -4668,7 +4890,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "PROJECT ANKOU",
+      "frame_class": "legion",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.ankou.obsessive",
@@ -4691,7 +4916,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "PROJECT ANKOU",
+      "frame_class": "legion",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.ankou.processor-core",
@@ -4714,7 +4942,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "PROJECT ANKOU",
+      "frame_class": "legion",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.ankou.amygdala-pulse",
@@ -4737,7 +4968,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "PROJECT ANKOU",
+      "frame_class": "legion",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.ankou.quickchange-implant",
@@ -4760,7 +4994,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "PROJECT ANKOU",
+      "frame_class": "legion",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.ankou.stalker",
@@ -4783,7 +5020,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "PROJECT ANKOU",
+      "frame_class": "legion",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.red-queen.permission-trigger",
@@ -4810,7 +5050,10 @@
         "tests/rules/test_frame_rewards.py"
       ],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE RED QUEEN",
+      "frame_class": "autocrat",
+      "frame_rule": "base"
     },
     {
       "id": "frame.red-queen.queens-court",
@@ -4833,7 +5076,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE RED QUEEN",
+      "frame_class": "autocrat",
+      "frame_rule": "base"
     },
     {
       "id": "frame.red-queen.the-red-queen",
@@ -4856,7 +5102,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE RED QUEEN",
+      "frame_class": "autocrat",
+      "frame_rule": "playbook"
     },
     {
       "id": "frame.red-queen.am-transfer",
@@ -4879,7 +5128,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE RED QUEEN",
+      "frame_class": "autocrat",
+      "frame_rule": "base"
     },
     {
       "id": "frame.red-queen.consult-the-court",
@@ -4902,7 +5154,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE RED QUEEN",
+      "frame_class": "autocrat",
+      "frame_rule": "base"
     },
     {
       "id": "frame.red-queen.judgement-on-high",
@@ -4925,7 +5180,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE RED QUEEN",
+      "frame_class": "autocrat",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.red-queen.one-girl-panopticon",
@@ -4948,7 +5206,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE RED QUEEN",
+      "frame_class": "autocrat",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.red-queen.personality-extraction",
@@ -4971,7 +5232,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE RED QUEEN",
+      "frame_class": "autocrat",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.red-queen.biting-accusation",
@@ -4994,7 +5258,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE RED QUEEN",
+      "frame_class": "autocrat",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.red-queen.memory-extraction",
@@ -5017,7 +5284,10 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE RED QUEEN",
+      "frame_class": "autocrat",
+      "frame_rule": "requisition"
     },
     {
       "id": "frame.red-queen.regiment-commander",
@@ -5040,10 +5310,13 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "frame_playbook": "THE RED QUEEN",
+      "frame_class": "autocrat",
+      "frame_rule": "requisition"
     },
     {
-      "id": "frame.red-queen.clone-am",
+      "id": "frame.class.autocrat.clone-am",
       "title": "Clone AM",
       "scope": "frame",
       "kind": "mechanic",
@@ -5063,10 +5336,16 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "aliases": [
+        "frame.red-queen.clone-am"
+      ],
+      "frame_playbook": null,
+      "frame_class": "autocrat",
+      "frame_rule": "class_requisition"
     },
     {
-      "id": "frame.red-queen.handlers-special-girl",
+      "id": "frame.class.autocrat.handlers-special-girl",
       "title": "Handler\u2019s Special Girl",
       "scope": "frame",
       "kind": "mechanic",
@@ -5086,10 +5365,16 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "aliases": [
+        "frame.red-queen.handlers-special-girl"
+      ],
+      "frame_playbook": null,
+      "frame_class": "autocrat",
+      "frame_rule": "class_requisition"
     },
     {
-      "id": "frame.red-queen.martyr",
+      "id": "frame.class.autocrat.martyr",
       "title": "Martyr",
       "scope": "frame",
       "kind": "mechanic",
@@ -5109,10 +5394,16 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "aliases": [
+        "frame.red-queen.martyr"
+      ],
+      "frame_playbook": null,
+      "frame_class": "autocrat",
+      "frame_rule": "class_requisition"
     },
     {
-      "id": "frame.red-queen.succubus-protocol",
+      "id": "frame.class.autocrat.succubus-protocol",
       "title": "Succubus Protocol",
       "scope": "frame",
       "kind": "mechanic",
@@ -5132,10 +5423,16 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "aliases": [
+        "frame.red-queen.succubus-protocol"
+      ],
+      "frame_playbook": null,
+      "frame_class": "autocrat",
+      "frame_rule": "class_requisition"
     },
     {
-      "id": "frame.red-queen.untouchable-frame",
+      "id": "frame.class.autocrat.untouchable-frame",
       "title": "Untouchable Frame",
       "scope": "frame",
       "kind": "mechanic",
@@ -5155,10 +5452,16 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "aliases": [
+        "frame.red-queen.untouchable-frame"
+      ],
+      "frame_playbook": null,
+      "frame_class": "autocrat",
+      "frame_rule": "class_requisition"
     },
     {
-      "id": "frame.red-queen.appearance-matrix",
+      "id": "frame.class.priestess.appearance-matrix",
       "title": "Appearance Matrix",
       "scope": "frame",
       "kind": "mechanic",
@@ -5178,10 +5481,16 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "aliases": [
+        "frame.red-queen.appearance-matrix"
+      ],
+      "frame_playbook": null,
+      "frame_class": "priestess",
+      "frame_rule": "class_requisition"
     },
     {
-      "id": "frame.red-queen.nightmare-core",
+      "id": "frame.class.priestess.nightmare-core",
       "title": "Nightmare Core",
       "scope": "frame",
       "kind": "mechanic",
@@ -5201,10 +5510,16 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "aliases": [
+        "frame.red-queen.nightmare-core"
+      ],
+      "frame_playbook": null,
+      "frame_class": "priestess",
+      "frame_rule": "class_requisition"
     },
     {
-      "id": "frame.red-queen.sup-of-primordial-flesh",
+      "id": "frame.class.priestess.sup-of-primordial-flesh",
       "title": "Sup of Primordial Flesh",
       "scope": "frame",
       "kind": "mechanic",
@@ -5224,10 +5539,16 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "aliases": [
+        "frame.red-queen.sup-of-primordial-flesh"
+      ],
+      "frame_playbook": null,
+      "frame_class": "priestess",
+      "frame_rule": "class_requisition"
     },
     {
-      "id": "frame.red-queen.void-physiotherapist",
+      "id": "frame.class.priestess.void-physiotherapist",
       "title": "Void Physiotherapist",
       "scope": "frame",
       "kind": "mechanic",
@@ -5247,10 +5568,16 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "aliases": [
+        "frame.red-queen.void-physiotherapist"
+      ],
+      "frame_playbook": null,
+      "frame_class": "priestess",
+      "frame_rule": "class_requisition"
     },
     {
-      "id": "frame.red-queen.dampener-link",
+      "id": "frame.class.legion.dampener-link",
       "title": "Dampener Link",
       "scope": "frame",
       "kind": "mechanic",
@@ -5270,10 +5597,16 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "aliases": [
+        "frame.red-queen.dampener-link"
+      ],
+      "frame_playbook": null,
+      "frame_class": "legion",
+      "frame_rule": "class_requisition"
     },
     {
-      "id": "frame.red-queen.home-of-a-sort",
+      "id": "frame.class.legion.home-of-a-sort",
       "title": "Home, of a Sort",
       "scope": "frame",
       "kind": "mechanic",
@@ -5293,10 +5626,16 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "aliases": [
+        "frame.red-queen.home-of-a-sort"
+      ],
+      "frame_playbook": null,
+      "frame_class": "legion",
+      "frame_rule": "class_requisition"
     },
     {
-      "id": "frame.red-queen.kicked-puppy",
+      "id": "frame.class.legion.kicked-puppy",
       "title": "Kicked Puppy",
       "scope": "frame",
       "kind": "mechanic",
@@ -5316,10 +5655,16 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "aliases": [
+        "frame.red-queen.kicked-puppy"
+      ],
+      "frame_playbook": null,
+      "frame_class": "legion",
+      "frame_rule": "class_requisition"
     },
     {
-      "id": "frame.red-queen.modular-build",
+      "id": "frame.class.legion.modular-build",
       "title": "Modular Build",
       "scope": "frame",
       "kind": "mechanic",
@@ -5339,7 +5684,13 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null,
-      "module": "core"
+      "module": "core",
+      "aliases": [
+        "frame.red-queen.modular-build"
+      ],
+      "frame_playbook": null,
+      "frame_class": "legion",
+      "frame_rule": "class_requisition"
     },
     {
       "id": "ancillary.soldier.expendable",
