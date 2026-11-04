@@ -338,7 +338,7 @@ def test_0012_preserves_populated_0011_and_does_not_activate_m3(ledger, monkeypa
     action = start(game)
     ledger.roll_basic(PLAYER, "synthetic-raw-roll", ledger.status(PLAYER)["revision"])
     config = Config(str(Path(__file__).resolve().parents[2] / "alembic.ini"))
-    # Only the three empty new tables are removed, on a synthetic disposable DB.
+    # Only additive M3 tables are removed, on a synthetic disposable DB.
     command.downgrade(config, "0011")
 
     def snapshot():
@@ -359,8 +359,9 @@ def test_0012_preserves_populated_0011_and_does_not_activate_m3(ledger, monkeypa
     command.upgrade(config, "head")
     command.check(config)
     after = snapshot()
-    assert len(after) == 36 and {name: after[name] for name in before} == before
-    assert all(after[name] == [] for name in set(after) - set(before))
+    assert len(after) == 37 and {name: after[name] for name in before} == before
+    assert len(after["m3_scene_contexts"]) == 1
+    assert all(after[name] == [] for name in set(after) - set(before) - {"m3_scene_contexts"})
     assert game.inspect(PLAYER, action)["id"] == action
     assert MissionService(ledger).access.registry is None
     with pytest.raises(WorkflowError, match="M3_REVIEW_PENDING"):

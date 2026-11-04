@@ -817,7 +817,11 @@ class InboxService:
                     kind,
                     "Required Off-Duty work"
                     if work["off_duty_id"]
-                    else "Required mission reaction",
+                    else "Required mission reaction"
+                    if work["mission_id"]
+                    else "Required scene work"
+                    if work.get("scene_id")
+                    else "Required campaign work",
                 )
                 items.append(
                     InboxItem(
@@ -825,7 +829,13 @@ class InboxService:
                         "mission_work",
                         work["id"],
                         work["revision"],
-                        "off_duty" if work["off_duty_id"] else "missions",
+                        "off_duty"
+                        if work["off_duty_id"]
+                        else "missions"
+                        if work["mission_id"]
+                        else "plays"
+                        if work.get("scene_id")
+                        else "world",
                         title,
                         label(work["subject_id"]),
                         "pending",

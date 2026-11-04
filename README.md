@@ -57,7 +57,7 @@ or outside Git. Never delete a populated database to refresh the environment.
 Before upgrading an existing database, make a new private backup, then migrate:
 
 ```bash
-python -m girlframe db backup --dest var/backups/before-0012.db
+python -m girlframe db backup --dest var/backups/before-0014.db
 python -m alembic upgrade head
 python -m alembic check
 ```
@@ -80,10 +80,16 @@ preserves existing records and does not approve or enable M3 gameplay. Upgrade a
 live installation only as part of a reviewed deployment with its matching code;
 the existing frozen bot continues on `0011` during M3 development.
 `0013` adds durable Off-Duty periods and append-only period history. Required work
-belongs to exactly one real mission or Off-Duty period; existing mission records
+initially belongs to one real mission or Off-Duty period; existing mission records
 are preserved. Development controls support Strain/Off-Duty preparation and owned
 credit declarations, with no generic resolver for pending Strain effects. These
 remain under the M3 release gate and are not deployed to the running bot.
+`0014` indexes actual historical scene binds and adds scene/campaign contexts for
+required work. Each work history keeps exactly one original context. Rebinding a
+channel preserves historical scene identities; unresolved scene work and known
+recoverable rolls prevent closing their scene. Upgrade preserves existing work and
+does not invent missing scene evidence. Downgrade refuses to discard new scoped
+work. This development migration is not applied to the frozen running bot.
 `alembic downgrade base` destroys application tables: use only on
 throwaway test databases. Never downgrade real campaign data to roll back code.
 

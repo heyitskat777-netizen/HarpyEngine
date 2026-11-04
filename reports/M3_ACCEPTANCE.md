@@ -1153,3 +1153,43 @@ migration, M3 policy/deployment, environment publication or human/independent
 acceptance applies. M3 still needs the remaining shared Plays, full playbooks,
 physical/Core/control/career state, further Requisitions, five Punishments,
 remaining Strain cells/Endgames and source/recovery/migration acceptance work.
+
+
+## Stable scene identities and required-work contexts
+
+Migration `0014` indexes actual historical scene binds and generalizes required
+work to exactly one actual mission, Off-Duty period, scene or explicit campaign
+context. Existing mission/period histories retain their contents and provenance.
+Each work ID keeps its original context across append-only revisions; a database
+trigger rejects reassignment. Sources and parent records must belong to the same
+campaign. Rebinding a channel retains the earlier scene index rather than moving
+its outstanding decisions into the new scene. Unknown historical scene identities
+are not invented. Downgrade refuses to discard new scene/campaign work, including
+resolved history. A populated `0013` → `0014` → `0013` → `0014` exercise preserves
+all existing work and checks actual historical binds, schema and foreign keys.
+
+Scene close now checks actual unresolved scene work and recoverable known rolls,
+including after chat has been restored. That closes a route which could strand a
+saved Handler-in-Girl-rules receipt. OOC administrator binding/closure works during
+safety pause and Director presence, without granting fictional actions or another
+role's resources. Inbox labels distinguish real scene work and campaign work.
+There is no generic resolver, fabricated consent, fictional movement or invented
+recovery period. These contexts support the remaining actual typed mechanics.
+
+Focused checks: **107 passed in 51.65s**, no failures/errors/skips;
+`var/m3-scene-work-final-focused.xml`. The preceding broad run passed **81 tests
+in 23.52s** and initial run passed **55 tests in 11.17s**. A remaining Ruff E501
+in the new immutable-context trigger was corrected before the final full suite.
+Full regression suite: **1164 passed in 289.06s**, no failures/errors/skips;
+`var/m3-scene-work-pytest.xml`. Ruff passes, **337 files** are formatted, and mypy
+passes for **176 source files**.
+
+Registry remains RULES_SUBSET: 473 entries, 436 required core, **57 subsets, 416
+unimplemented**, zero independent verifications. The context infrastructure does
+not count as an implemented gameplay rule. Public scan: **419 publishable files**,
+all **40 original manifest entries**, zero findings. The unchanged historical
+planning verifier passes **34 files / 86 planned cases / 4 schemas / 4 synthetic
+fixtures**; this is separate from implementation evidence. Exactly one bot remains
+running, PID47656; all **88 frozen source hashes** match. No live migration,
+M3 deployment, environment publication, independent/human acceptance or M3-ready
+claim applies. Development continues toward the remaining gameplay consumers.

@@ -312,10 +312,13 @@ class GameService:
 
     def bind_scene(self, viewer: GuildViewer, key: str, channel: int) -> dict[str, Any]:
         def authorize(c: Connection) -> None:
-            self.authorize(c, viewer)
+            self.authorize(c, viewer, game=False)
+            self.gate()
             self.store.administrator(viewer)
 
         def operation(c: Connection) -> dict[str, Any]:
+            if type(channel) is not int or not 0 < channel < 2**64:
+                raise WorkflowError("Choose an actual server text channel.")
             table = t.m2["m2_scenes"]
             where = sa.and_(
                 table.c.campaign_id == self.store.campaign_id, table.c.channel_id == str(channel)
@@ -323,8 +326,9 @@ class GameService:
             old = c.execute(sa.select(table).where(where)).mappings().first()
             if old and old["open"]:
                 raise WorkflowError("This scene is already open.")
+            identity = str(uuid4())
             values = {
-                "id": str(uuid4()),
+                "id": identity,
                 "revision": old["revision"] + 1 if old else 1,
                 "participants_json": "[]",
                 "open": True,
@@ -337,8 +341,13 @@ class GameService:
                         campaign_id=self.store.campaign_id, channel_id=str(channel), **values
                     )
                 )
-            self.event(c, viewer.user_id, key, "m2.scene_bound", channel=channel)
-            return {"channel": channel, "scene": values["id"]}
+            event = self.event(
+                c, viewer.user_id, key, "m2.scene_bound", channel=channel, scene_id=identity
+            )
+            from girlframe.services.m3_work import bind_scene_context
+
+            bind_scene_context(c, self.store, identity, channel, event)
+            return {"channel": channel, "scene": identity}
 
         return self.store._write(
             viewer,
@@ -1681,7 +1690,8 @@ class GameService:
 
     def close_scene(self, viewer: GuildViewer, key: str, channel: int) -> dict[str, Any]:
         def authorize(c: Connection) -> None:
-            self.authorize(c, viewer)
+            self.authorize(c, viewer, game=False)
+            self.gate()
             self.store.administrator(viewer)
 
         def operation(c: Connection) -> dict[str, Any]:
@@ -1691,6 +1701,36 @@ class GameService:
                 raise WorkflowError(
                     "Resolve or recover the pending action before closing this scene."
                 )
+            actions = t.m2["m2_actions"]
+            for body in c.scalars(
+                sa.select(actions.c.body_json).where(
+                    actions.c.campaign_id == self.store.campaign_id,
+                    actions.c.scene_id == scene["id"],
+                    actions.c.state == "aborted",
+                )
+            ):
+                saved = json.loads(body)
+                if saved.get("receipt") and (
+                    saved.get("m3_recovery") or saved.get("actor_recovery")
+                ):
+                    raise WorkflowError(
+                        "Resume the actual known roll before closing its original scene."
+                    )
+            work = t.m3["m3_required_work"]
+            latest = {
+                x["id"]: x
+                for x in c.execute(
+                    sa.select(work)
+                    .where(
+                        work.c.campaign_id == self.store.campaign_id,
+                    )
+                    .order_by(work.c.revision)
+                ).mappings()
+            }
+            if any(
+                x["scene_id"] == scene["id"] and x["state"] != "resolved" for x in latest.values()
+            ):
+                raise WorkflowError("Resolve the actual source-bound scene work before closing it.")
             table = t.m2["m2_scenes"]
             c.execute(
                 table.update()
