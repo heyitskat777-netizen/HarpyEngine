@@ -83,30 +83,24 @@ def record_scene(
         or not any(x.actor == benefit.actor and x.controller == owner for x in roles)
     ):
         raise ValueError("Choose actual cast roles including your original purchasing Girl")
-    base = (
+    place = (
         next(
-            (
-                x
-                for x in state.world.locations
-                if x.id == location
-                and x.kind == "base"
-                and x.allegiance == "foundation"
-                and x.condition != "destroyed"
-            ),
+            (x for x in state.world.locations if x.id == location and x.condition != "destroyed"),
             None,
         )
         if state.world
         else None
     )
-    if base is None:
-        raise ValueError("Record this Off-Duty improvement at an actual surviving Foundation base")
+    if place is None:
+        raise ValueError("Record this Off-Duty improvement at an actual surviving location")
     for role in roles:
         actual = resolve(state, role.actor, bindings, require_current_profile=False)
         if actual.controller != role.controller or (
-            actual.cell is not None and actual.cell != base.cell
+            actual.cell is not None and actual.cell != place.cell
         ):
             raise ValueError(
-                "Use actual current roles already at the scene's base; casting does not move them"
+                "Use actual current roles already at the scene's location; "
+                "casting does not move them"
             )
     return benefit.model_copy(
         update={
@@ -114,7 +108,7 @@ def record_scene(
                 id=identity,
                 cast_id=cast.id,
                 cast_revision=cast.revision,
-                location=base.id,
+                location=place.id,
                 roles=roles,
                 summary=summary,
                 acknowledgements=(owner,),

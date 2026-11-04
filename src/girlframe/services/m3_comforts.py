@@ -16,7 +16,7 @@ from girlframe.engine.m2 import GameState, tier
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_off_duty import Period
-from girlframe.engine.m3_requisition_state import ComfortBenefit, GirlAsset
+from girlframe.engine.m3_requisition_state import ComfortBenefit, ComfortReceipt, GirlAsset
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -319,6 +319,54 @@ class ComfortService(RequisitionService):
                     )
             return result
 
+    def _paid_source(self, c: Connection, viewer: GuildViewer, purchase: ComfortReceipt) -> None:
+        source = (
+            c.execute(
+                sa.select(t.events).where(
+                    t.events.c.campaign_id == self.store.campaign_id,
+                    t.events.c.id == purchase.source_event,
+                )
+            )
+            .mappings()
+            .first()
+        )
+        history = c.scalar(
+            sa.select(t.m2["m2_state_history"].c.body_json).where(
+                t.m2["m2_state_history"].c.campaign_id == self.store.campaign_id,
+                t.m2["m2_state_history"].c.event_id == purchase.source_event,
+            )
+        )
+        try:
+            original = GameState.model_validate_json(history) if history else None
+            metadata = json.loads(source["payload_json"]) if source else {}
+        except ValueError:
+            raise WorkflowError(
+                "SOURCE_PURCHASE_MISSING: recover the actual paid request."
+            ) from None
+        saved = (
+            next((x for x in original.requisitions if x.id == purchase.id), None)
+            if original
+            else None
+        )
+        if (
+            purchase.actor.entity != str(viewer.user_id)
+            or source is None
+            or source["actor_id"] != str(viewer.user_id)
+            or source["kind"] != "m3.creature_comforts_purchased"
+            or metadata.get("cost") != purchase.price
+            or metadata.get("requisition_id") != purchase.id
+            or saved != purchase
+        ):
+            raise WorkflowError("SOURCE_PURCHASE_MISSING: recover the actual paid request.")
+
+    def paid_receipt(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
+        receipt = next((x for x in self.receipts(viewer) if x["id"] == identity), None)
+        if receipt is None:
+            raise WorkflowError(
+                "This paid request belongs to its original owner or is unavailable."
+            )
+        return receipt
+
     def receipts(self, viewer: GuildViewer) -> Sequence[dict[str, Any]]:
         with self.store.engine.connect() as c:
             self.game.authorize(c, viewer, game=False)
@@ -329,6 +377,7 @@ class ComfortService(RequisitionService):
                     viewer.user_id
                 ):
                     continue
+                self._paid_source(c, viewer, purchase)
                 identity = str(uuid5(NAMESPACE_URL, "girlframe:creature-comforts:" + purchase.id))
                 work = t.m3["m3_required_work"]
                 status = c.scalar(
@@ -432,9 +481,7 @@ class ComfortService(RequisitionService):
                         locations=[
                             dict(id=x.id, name=x.name)
                             for x in state.world.locations
-                            if x.kind == "base"
-                            and x.allegiance == "foundation"
-                            and x.condition != "destroyed"
+                            if x.condition != "destroyed"
                         ]
                         if state.world
                         else [],

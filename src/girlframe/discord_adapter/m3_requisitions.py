@@ -9,7 +9,7 @@ from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.labels import entity_label
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
-from girlframe.discord_adapter.m3_comforts import open_comfort
+from girlframe.discord_adapter.m3_comforts import PaidComfortPages, open_comfort
 from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
@@ -73,19 +73,25 @@ class InstallationPages(discord.ui.View):
         await self.show(interaction)
 
 
-async def open_installation_history(
+async def open_purchase_history(
     interaction: discord.Interaction, service: RequisitionService
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     history = await asyncio.to_thread(service.installation_history, viewer)
+    comforts = ComfortService(service.game)
+    paid = await asyncio.to_thread(comforts.receipts, viewer)
 
     async def show(current: discord.Interaction, identity: str) -> None:
+        if identity.startswith("paid-comfort:"):
+            await PaidComfortPages(comforts, viewer.user_id, identity[13:]).show(current)
+            return
         await InstallationPages(service, viewer.user_id, identity).show(current)
 
     await Picker(
         viewer.user_id,
-        "**Your saved Asset Installments**\nChoose an original purchase to read its details.",
-        tuple((x["id"], x["name"]) for x in history),
+        "**Your saved purchases**\nChoose an original purchase to read its details.",
+        tuple((x["id"], x["name"]) for x in history)
+        + tuple(("paid-comfort:" + x["id"], "Creature Comforts receipt") for x in paid),
         show,
     ).show(interaction)
 
@@ -97,7 +103,7 @@ async def open_requisitions(interaction: discord.Interaction, service: Requisiti
     except WorkflowError as error:
         if not str(error).startswith(("STALE_CHARACTER:", "STALE_PROFILE:", "STALE_ACTOR:")):
             raise
-        await open_installation_history(interaction, service)
+        await open_purchase_history(interaction, service)
         return
     comforts = ComfortService(service.game)
     opportunities = await asyncio.to_thread(comforts.list, viewer)
@@ -117,7 +123,6 @@ async def open_requisitions(interaction: discord.Interaction, service: Requisiti
     options += tuple(
         ("paid-comfort:" + key, "Paid Creature Comforts — " + x["state"].replace("_", " "))
         for key, x in paid.items()
-        if x["benefit_id"] is None
     )
 
     async def choose(current: discord.Interaction, token: str) -> None:
@@ -125,13 +130,7 @@ async def open_requisitions(interaction: discord.Interaction, service: Requisiti
             await open_comfort(current, comforts, token[8:])
             return
         if token.startswith("paid-comfort:"):
-            receipt = paid[token[13:]]
-            await reply(
-                current,
-                "**Your paid Creature Comforts request**\n"
-                "1 Permission paid. Waiting for your next actual 8+ ordinary Go Off-Duty roll.\n"
-                + clean(receipt["account"]),
-            )
+            await PaidComfortPages(comforts, viewer.user_id, token[13:]).show(current)
             return
         if token == "buy-comforts":
 

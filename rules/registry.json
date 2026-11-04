@@ -1101,7 +1101,8 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_comforts.py",
-        "tests/rules/test_comfort_service.py"
+        "tests/rules/test_comfort_service.py",
+        "tests/rules/test_comfort_receipts.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -1132,7 +1133,8 @@
         "tests/rules/test_requisition_service.py",
         "tests/rules/test_comforts.py",
         "tests/rules/test_comfort_service.py",
-        "tests/rules/test_installation_history.py"
+        "tests/rules/test_installation_history.py",
+        "tests/rules/test_comfort_receipts.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -1658,7 +1660,8 @@
         "tests/rules/test_off_duty_cycle.py",
         "tests/rules/test_off_duty_cycle_ui.py",
         "tests/rules/test_off_duty_discipline.py",
-        "tests/rules/test_off_duty_handler_scenes.py"
+        "tests/rules/test_off_duty_handler_scenes.py",
+        "tests/rules/test_comfort_receipts.py"
       ],
       "m2_play_id": null,
       "module": "core"

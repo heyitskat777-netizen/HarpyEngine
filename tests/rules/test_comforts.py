@@ -181,11 +181,26 @@ def test_one_human_controlling_two_real_roles_does_not_need_a_second_invented_re
     )
 
 
-def test_actual_world_role_must_already_be_at_the_selected_surviving_foundation_base(canon):
+def test_actual_world_role_must_already_be_at_the_selected_surviving_location(canon):
     state, ref, benefit = offered(canon)
     npc = ActorRef(kind="npc", entity="2")
     with pytest.raises(ValueError, match="does not move"):
         scene(state, ref, benefit, (ref, npc), location="base1")
+    actual = scene(state, ref, benefit, location="city0")
+    assert actual.scene.location == "city0" and state.placements == []
+    with pytest.raises(ValueError, match="does not move"):
+        scene(state, ref, benefit, (ref, npc), location="city0")
+    with pytest.raises(ValueError, match="actual surviving"):
+        scene(state, ref, benefit, location="invented")
+    city = next(x for x in state.world.locations if x.id == "city0")
+    state.world = state.world.model_copy(
+        update={
+            "locations": tuple(
+                x.model_copy(update={"condition": "destroyed"}) if x.id == city.id else x
+                for x in state.world.locations
+            )
+        }
+    )
     with pytest.raises(ValueError, match="actual surviving"):
         scene(state, ref, benefit, location="city0")
 

@@ -17,6 +17,59 @@ from girlframe.services.m3_comforts import ComfortService
 from girlframe.services.onboarding import WorkflowError
 
 
+class PaidComfortPages(discord.ui.View):
+    def __init__(self, service: ComfortService, owner: int, identity: str):
+        super().__init__(timeout=600)
+        self.service, self.owner, self.identity, self.index = service, owner, identity, 0
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.owner:
+            await reply(interaction, "This paid request belongs to another player.")
+            return False
+        return True
+
+    async def show(self, interaction: discord.Interaction) -> None:
+        try:
+            data = await asyncio.to_thread(
+                self.service.paid_receipt, viewer_from_interaction(interaction), self.identity
+            )
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+            return
+        text = clean(data["account"])
+        pages = [text[start : start + 1700] for start in range(0, len(text), 1700)]
+        self.index = min(max(self.index, 0), len(pages) - 1)
+        self.previous.disabled, self.next.disabled = self.index == 0, self.index == len(pages) - 1
+        status = (
+            "Waiting for your next actual 8+ ordinary Go Off-Duty roll."
+            if data["benefit_id"] is None
+            else "Opportunity: " + clean(data["state"]) + "."
+        )
+        await reply(
+            interaction,
+            "**Your paid Creature Comforts receipt**\n1 Permission paid.\n"
+            + status
+            + "\n"
+            + pages[self.index]
+            + f"\nPage {self.index + 1}/{len(pages)} · Receipt `{self.identity}`",
+            self,
+        )
+
+    @discord.ui.button(label="Previous")
+    async def previous(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        self.index -= 1
+        await interaction.response.defer(ephemeral=True)
+        await self.show(interaction)
+
+    @discord.ui.button(label="Next")
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button[Any]) -> None:
+        self.index += 1
+        await interaction.response.defer(ephemeral=True)
+        await self.show(interaction)
+
+
 async def open_comfort(
     interaction: discord.Interaction, service: ComfortService, identity: str
 ) -> None:
@@ -215,12 +268,13 @@ async def open_comfort(
                 viewer.user_id,
                 "Record actual improvement scene",
                 "Record this after playing the improvement scene. "
-                "Choose actual characters already at the base, including your purchasing Girl. "
+                "Choose actual characters already at the scene's location, "
+                "including your purchasing Girl. "
                 "Selected participants see the summary; each human confirms their own attendance.",
                 [
                     Field(
                         "location",
-                        "Actual Foundation base",
+                        "Actual scene location",
                         tuple((x["id"], x["name"]) for x in data["locations"]),
                     ),
                     Field(
