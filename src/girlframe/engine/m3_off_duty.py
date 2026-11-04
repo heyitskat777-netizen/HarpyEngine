@@ -12,6 +12,7 @@ from girlframe.engine.identity import Snowflake
 from girlframe.engine.m2 import GameState, Model, PilotSheet, tier
 from girlframe.engine.m3_choices import OFF_DUTY, off_duty_modifier
 from girlframe.engine.m3_core import Recovery, recover_off_duty
+from girlframe.engine.m3_observation_state import Observation
 from girlframe.engine.rolls import Face
 
 
@@ -62,6 +63,7 @@ class Progress(Model):
     recovered: bool = False
     action_id: str | None = None
     reward_source_event: str | None = None
+    observation: Observation | None = None
 
 
 class HandlerContext(Model):
@@ -273,8 +275,13 @@ def recovery(
     progress = period.progress.get(str(actor))
     if sheet.owner != actor or progress is None or progress.roll is None or progress.recovered:
         raise ValueError("Only the owner can recover once from its saved Off-Duty Play")
-    if progress.roll.source != "status" or progress.roll.stage != "choices":
-        raise ValueError("Void Observation needs its own resolved choices and scene")
+    if progress.roll.stage != "choices":
+        raise ValueError("Finish the saved roll's Tag choices first")
+    if progress.roll.source == "void_assets":
+        from girlframe.engine.m3_observation import complete
+
+        if not complete(period, actor):
+            raise ValueError("Resolve the actual Observation choices, effects and scene first")
     if not progress.scene_declined and (
         progress.scene is None
         or set(progress.scene.acknowledgements) != set(progress.scene.participants)

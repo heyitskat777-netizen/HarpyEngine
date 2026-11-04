@@ -370,6 +370,32 @@ class InboxService:
                     "Choose recipient",
                     "court",
                 )
+            from girlframe.services.m2_state import load_state
+
+            canon = load_state(connection, self.store.campaign_id)
+            if canon.world is not None:
+                for offer in canon.world.npc_role_offers:
+                    if viewer.user_id not in (offer.proposer, offer.npc.controller, canon.handler):
+                        continue
+                    incoming = viewer.user_id == offer.npc.controller
+                    items.append(
+                        InboxItem(
+                            "npc-role:" + offer.id,
+                            "npc_role",
+                            offer.id,
+                            canon.revision,
+                            "world",
+                            "NPC role invitation",
+                            label(offer.proposer if incoming else offer.npc.controller),
+                            offer.state,
+                            incoming,
+                            False,
+                            "Accept to play this NPC. Scene confirmation stays separate.",
+                            "Review the role privately, then give your own response.",
+                            "Review NPC role" if offer.state == "pending" else None,
+                            task="m3_npc_role",
+                        )
+                    )
             table = t.m2["m2_choices"]
             for play_row in connection.execute(
                 sa.select(table).where(
@@ -451,6 +477,10 @@ class InboxService:
                 period = Period.model_validate_json(body)
                 invited = (
                     period.handler_scene and viewer.user_id in period.handler_scene.participants
+                )
+                invited = invited or any(
+                    progress.scene and viewer.user_id in progress.scene.participants
+                    for progress in period.progress.values()
                 )
                 if (
                     viewer.user_id not in period.pilots
@@ -564,6 +594,8 @@ class InboxService:
                     primary, task_name = "Review Strain", "m3_strain"
                 elif kind == "doctor_credit":
                     primary, task_name = "Record credit sharing", "m3_off_duty_credit"
+                elif kind in ("observation_choice", "observation_effect"):
+                    primary, task_name = "Review Observation", "m3_observation"
                 elif kind in (
                     "frame_off_duty_reward",
                     "frame_reward_court",
@@ -590,6 +622,9 @@ class InboxService:
                     "strain_event": "Required Strain event effects",
                     "strain_endgame_effect": "Required Endgame effects",
                     "doctor_credit": "DoctorDoctor credit sharing",
+                    "observation_choice": "Your Void Observation consequences",
+                    "observation_effect": "Required Observation details",
+                    "director_presence": "Director presence: Handler rule context",
                     "frame_off_duty_reward": "Frame Off-Duty Permission review",
                     "frame_reward_court": "Resolve actual Queen AM holder",
                     "frame_reward_interest": "Does this offering interest you?",

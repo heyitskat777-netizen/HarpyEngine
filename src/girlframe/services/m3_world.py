@@ -256,6 +256,13 @@ class WorldService:
                 for x in world.npcs
             ):
                 raise WorkflowError("Choose a living introduced NPC.")
+            if (
+                any(x.id == identity and "director" in x.jobs for x in world.npcs)
+                and viewer.user_id == state.handler
+            ):
+                raise WorkflowError(
+                    "The Director must be played by a different human from the Handler."
+                )
             state.world = rules.update(
                 world,
                 npcs=tuple(

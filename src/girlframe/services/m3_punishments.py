@@ -128,7 +128,12 @@ class PunishmentService:
 
     def _bundle(self, c: Connection, row: dict[str, Any]) -> list[dict[str, Any]]:
         if row["off_duty_id"] is not None:
-            if self._body(row).get("reason") not in ("m2_play", "off_duty_handler", "strain_event"):
+            if self._body(row).get("reason") not in (
+                "m2_play",
+                "off_duty_handler",
+                "strain_event",
+                "void_observation",
+            ):
                 raise WorkflowError("This Off-Duty cause needs its source-specific resolver.")
             return [row]
         result = [
@@ -177,7 +182,7 @@ class PunishmentService:
             progress is None
             or progress.roll is None
             or progress.roll.stage != "choices"
-            or progress.roll.total <= 7
+            or (progress.roll.source == "status" and progress.roll.total <= 7)
         )
         if unknown_or_harsh and not witnessed:
             raise WorkflowError(
@@ -237,6 +242,7 @@ class PunishmentService:
             if row["kind"] == "punishment" and row["state"] != "resolved":
                 bundle = self._bundle(c, row)
                 result["causes"] = [self._body(x)["reason"] for x in bundle]
+                result["required_severity"] = body.get("required_severity")
                 result["consultation"] = None
                 if body.get("consult_id"):
                     consultation = self._row(c, body["consult_id"])
@@ -326,6 +332,11 @@ class PunishmentService:
             if row["kind"] != "punishment":
                 raise WorkflowError("Choose the typed resolver for this required task.")
             severity = rules.validate(details)
+            required_severity = self._body(row).get("required_severity")
+            if required_severity is not None and severity != required_severity:
+                raise WorkflowError(
+                    "Apply the actual severity required by this source consequence."
+                )
             bundle = self._bundle(c, row)
             state = load_state(c, self.store.campaign_id)
             if details.kind == "passing_responsibility":
@@ -397,16 +408,32 @@ class PunishmentService:
                             "The original discipline debt changed; recover it explicitly."
                         )
                     debt.state = "fulfilled"
+            event_id = str(uuid4())
+            observation_period = None
+            if self._body(row).get("reason") == "void_observation":
+                from girlframe.services.m3_observation import discipline_applied
+
+                periods = OffDutyService(self.missions)
+                observation_period = discipline_applied(
+                    periods._get(c, row["off_duty_id"]),
+                    result.state,
+                    int(row["subject_id"]),
+                    self._body(row)["origin_outcome"],
+                    event_id,
+                )
             event = self.game.event(
                 c,
                 viewer.user_id,
                 key,
                 "m3.punishment_applied",
                 result.state,
+                event_id=event_id,
                 work_id=identity,
                 punishment=details.kind,
                 cause_count=len(bundle),
             )
+            if observation_period is not None:
+                OffDutyService(self.missions)._save(c, observation_period, event)
             for item in bundle:
                 body = self._body(item) | {
                     "punishment": details.model_dump(mode="json"),

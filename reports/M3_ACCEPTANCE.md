@@ -710,3 +710,54 @@ last two tests were added. Registry: 473 entries, 436 required core, 45 subsets,
 change notes and clarity-review flags in the central rulings register and registry.
 No M3 deployment, live migration, environment publication, independent audit or
 human play-test is claimed. One original frozen M2 bot was observed running.
+
+## Observation, nested consequences and separately played NPCs
+
+Sources: book PDF 28/123/192, printed 26/121/190. The actual Handler records its
+suspicion, Observation replaces the ordinary roll, and Status drops with the locked
+real roll transaction. Both families of Void Assets, including damaged Assets,
+set its modifier. Final saved Tag/Bond adjustments determine the actual separate
+player/Handler selection counts. Choice overlap, nested Identity ownership and
+populace Tag control are recorded as delegated rulings with alternatives/change
+notes. Existing protected slots, Sedation, ordinary harsh discipline and mandatory
+Moderate severity remain enforced. No client flag marks a mechanical effect done.
+
+Saved owned effects, real NPC role invitations, separate appearance responses and
+actual scene attestations now use native private controls and the inbox. The
+Director needs a human different from the Handler; a member without a Pilot sheet
+can accept the role, answer an appearance request and confirm its own scene.
+Declining a role/appearance creates no fictional acceptance. Required NPC scene
+controllers cannot be replaced by the Handler. Private accounts and NPC details
+are excluded from generic event/command outcomes and unrelated participants.
+
+Source review caught a mandatory Director interaction: its actual presence changes
+the Handler to Girl rules. Arrival now creates separate blocking `director_presence`
+work and prevents the Handler from continuing with its ordinary rule authority.
+The typed rule-mode/price resolver is still required; nothing acknowledges or
+waives it. Automatic world triggers/reprimands, future-period ordering, changed
+NPC-controller recovery and remaining battle/last-Asset/playbook/economy interactions
+also remain unfinished. The work order and source audit list these explicitly.
+
+Executed full suite: **907 passed in 139.24s**, no failures/errors/skips;
+`var/m3-observation-pytest.xml`. Final focused Observation/role run before the full
+suite: **42 passed in 19.01s**, followed by the explicit Director-context guard and
+positive Frame/Tag-tier cases. Ruff passed; **270 Python files** formatted; mypy
+passed for **142 source files**. Planning verifier passed. Public-file check:
+**352 files, all 40 original manifest entries, zero findings**. Registry: 473 entries,
+436 required core, 47 subsets, 426 unimplemented, zero independently verified.
+
+Development failures corrected before the passing run: strict assignment validation
+required atomic choice/outcome construction; two fixtures had the wrong synthetic
+Void baseline/projection field; resumed Tag fixtures must not answer an already
+saved human again; an NPC handoff initially attempted its work row before its
+foreign-key source event and now saves event then work in the same transaction.
+No failed check was waived. Tests also prove rollback, exactly-once backend replay,
+concurrent role responses, unrolled cancellation preserving the order, known-roll
+resume preserving Status/dice, private canonical rebuild and an actual synthetic
+backup/restore retaining the pending NPC question and receipt.
+
+GitHub initially rejected the prior sanitized source push with Internal Server
+Error. Retrying succeeded; CI passed `ee93568`, run 41812260571. Exactly one original
+frozen M2 process was observed running (PID47656); its source deployment remains
+88cd237. No live database/policy migration, M3 deployment, environment publication,
+independent audit, human play-test or M3-ready claim has occurred.

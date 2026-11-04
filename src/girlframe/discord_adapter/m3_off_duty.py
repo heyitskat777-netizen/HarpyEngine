@@ -86,6 +86,9 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
     cycle = CycleService(service)
     progress = await asyncio.to_thread(cycle.review, viewer, data["id"])
     actions: list[tuple[str, str]] = []
+    if viewer.user_id == progress["handler"] and data["phase"] != "complete":
+        actions.append(("observation_order", "Place a Girl under Void Observation"))
+        actions.append(("observation_hiding", "Review attempts to hide Void changes"))
     if progress["rewards_need_refresh"]:
         actions.append(("refresh_rewards", "Refresh current Frame bonus tasks"))
     if data["phase"] == "preparing" and viewer.user_id == progress["handler"]:
@@ -94,7 +97,14 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
         own = progress["own"]
         if progress["sheet"] is not None and not (own and own["recovered"]):
             if own is None or own["roll"] is None:
-                actions.append(("play", "Go Off-Duty / resume your saved Play"))
+                actions.append(
+                    (
+                        "play",
+                        "Void Observation / resume your saved Play"
+                        if own and own.get("observation")
+                        else "Go Off-Duty / resume your saved Play",
+                    )
+                )
             elif own["roll"]["stage"] == "tag_window":
                 actions.append(("play", "Resume your roll's Tag decisions"))
             elif own["scene"] is None and not own["scene_declined"]:
@@ -129,12 +139,32 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
 
     async def choose(current: discord.Interaction, identity: str) -> None:
         if identity.startswith("action:"):
+            if identity in ("action:observation_order", "action:observation_hiding"):
+                from girlframe.discord_adapter.m3_observation import open_order
+                from girlframe.services.m3_observation import ObservationService
+
+                await open_order(
+                    current,
+                    ObservationService(service),
+                    data["id"],
+                    review=identity.endswith("observation_hiding"),
+                )
+                return
             from girlframe.discord_adapter.m3_off_duty_cycle import open_action
 
             await open_action(current, cycle, data["id"], identity.removeprefix("action:"))
             return
         row = rows[identity]
-        if row["kind"] in ("frame_off_duty_reward", "frame_reward_court", "frame_reward_interest"):
+        if row["kind"] in ("observation_choice", "observation_effect"):
+            from girlframe.discord_adapter.m3_observation import open_work as open_observation
+            from girlframe.services.m3_observation import ObservationService
+
+            await open_observation(current, ObservationService(service), identity)
+        elif row["kind"] in (
+            "frame_off_duty_reward",
+            "frame_reward_court",
+            "frame_reward_interest",
+        ):
             from girlframe.discord_adapter.m3_frame_rewards import open_reward
             from girlframe.services.m3_frame_rewards import RewardService
 

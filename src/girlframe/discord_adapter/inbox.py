@@ -19,6 +19,7 @@ CATEGORY_LABELS = {
     "all": "All request types",
     "missions": "Mission offers & consequences",
     "off_duty": "Off-Duty, recovery & Strain",
+    "world": "World & NPC roles",
     "plays": "Pending Plays",
     "bonds": "Starting Bonds",
     "mentors": "Mentor coordination",
@@ -445,7 +446,29 @@ class InboxView(discord.ui.View):
                 allowed_mentions=discord.AllowedMentions.none(),
             )
 
-        if item.task == "m3_frame_reward":
+        if item.task == "m3_npc_role":
+            from girlframe.discord_adapter.m3_npc_roles import open_invitation
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_npc_roles import NpcRoleService
+            from girlframe.services.m3_world import WorldService
+
+            await open_invitation(
+                interaction,
+                NpcRoleService(WorldService(MissionService(self.service.store))),
+                item.identity,
+            )
+        elif item.task == "m3_observation":
+            from girlframe.discord_adapter.m3_observation import open_work as open_observation
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_observation import ObservationService
+            from girlframe.services.m3_off_duty import OffDutyService
+
+            await open_observation(
+                interaction,
+                ObservationService(OffDutyService(MissionService(self.service.store))),
+                item.identity,
+            )
+        elif item.task == "m3_frame_reward":
             from girlframe.discord_adapter.m3_frame_rewards import open_reward
             from girlframe.services.m3_frame_rewards import RewardService
             from girlframe.services.m3_missions import MissionService

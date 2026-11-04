@@ -50,7 +50,7 @@ def prepare(
 ) -> dict[str, Any]:
     authorize(game, c, viewer)
     if (
-        prepared.play != "go_off_duty"
+        prepared.play not in ("go_off_duty", "void_observation")
         or prepared.off_duty_id is None
         or prepared.heat
         or prepared.parent
@@ -72,11 +72,21 @@ def prepare(
     existing = period.progress.get(str(viewer.user_id), Progress())
     if existing.roll is not None or existing.action_id is not None:
         raise WorkflowError("Resume this period's saved Play; it cannot be rolled a second time.")
-    if any(
+    under_observation = any(
         x.kind == "void_observation" and x.owner == viewer.user_id and x.state == "pending"
         for x in state.obligations
-    ):
+    )
+    if prepared.play == "go_off_duty" and under_observation:
         raise WorkflowError("Void Observation replaces the ordinary Off-Duty Play.")
+    if prepared.play == "void_observation":
+        from girlframe.engine.m3_observation import context, modifier
+
+        if not under_observation:
+            raise WorkflowError("The actual Handler must record Observation before this Play.")
+        context(period, viewer.user_id)
+        amount = modifier(state, viewer.user_id)
+    else:
+        amount = None
     if viewer.user_id not in state.order:
         raise WorkflowError("A current canonical Status position is required.")
     status: Literal["Ace", "Wings", "Dog"] = (
@@ -91,7 +101,8 @@ def prepare(
     return {
         "period_id": period.id,
         "status": status,
-        "modifier": off_duty_modifier(status),
+        "modifier": off_duty_modifier(status) if amount is None else amount,
+        "modifier_source": "status" if amount is None else "void_assets",
         "registry": approval.registry_sha256,
         "ruleset": RULESET,
     }
@@ -101,7 +112,8 @@ def reserve(game: "GameService", c: Connection, action: dict[str, Any], event: s
     service = periods(game)
     period = service._get(c, action["data"]["m3"]["period_id"])
     updated = clone(period)
-    updated.progress[action["actor_id"]] = Progress(action_id=action["id"])
+    progress = updated.progress.setdefault(action["actor_id"], Progress())
+    progress.action_id = action["id"]
     updated.revision += 1
     service._save(c, updated, event)
 
@@ -137,6 +149,14 @@ def pre_roll(
         raise WorkflowError(
             "STALE_STATUS: recover the unrolled action and confirm current Status first."
         )
+    if action["data"]["play"] == "void_observation":
+        from girlframe.engine.m2 import shift_status
+        from girlframe.engine.m3_observation import lower_before_roll, modifier
+
+        if modifier(state, viewer.user_id) != meta["modifier"]:
+            raise WorkflowError("STALE_VOID: confirm the current Void Asset count before rolling.")
+        lower_before_roll(period, viewer.user_id, state)
+        shift_status(state, viewer.user_id, -1)
 
 
 def _character(game: "GameService", c: Connection, period: Period, actor: int) -> None:
@@ -161,13 +181,21 @@ def save_raw_roll(
     period = service._get(c, action["data"]["m3"]["period_id"])
     actor = int(action["actor_id"])
     receipt = action["data"]["receipt"]
-    updated = ordinary_roll(period, period.revision, actor, state, tuple(receipt["faces"]))
+    if action["data"]["play"] == "void_observation":
+        from girlframe.engine.m3_observation import roll
+
+        updated = roll(period, period.revision, actor, state, tuple(receipt["faces"]))
+    else:
+        updated = ordinary_roll(period, period.revision, actor, state, tuple(receipt["faces"]))
     updated.progress[str(actor)].action_id = action["id"]
     updated.progress[str(actor)].reward_source_event = event
     saved = updated.progress[str(actor)].roll
     assert saved is not None
     saved.stage = "tag_window"
     service._save(c, updated, event)
+    from girlframe.services.m3_observation import synchronize as observation_work
+
+    observation_work(c, game.store, updated, event)
     from girlframe.services.m3_frame_rewards import synchronize
 
     synchronize(c, game.store, state, updated, event)
@@ -204,6 +232,10 @@ def sync_finished_roll(
     )
     updated.revision += 1
     service._save(c, updated, event)
+
+    from girlframe.services.m3_observation import synchronize
+
+    synchronize(c, game.store, updated, event)
 
 
 def resume(
@@ -339,7 +371,10 @@ def cancel_unrolled(
                 "Only an aborted, unrolled reservation with restored chat can cancel."
             )
         updated = clone(period)
-        del updated.progress[action["actor_id"]]
+        if progress.observation is not None:
+            updated.progress[action["actor_id"]].action_id = None
+        else:
+            del updated.progress[action["actor_id"]]
         updated.revision += 1
         del action["data"]["m3_recovery"]
         game.save_action(c, action)

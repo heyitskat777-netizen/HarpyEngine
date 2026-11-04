@@ -139,15 +139,23 @@ async def open_action(
                 Field("confirm", "Printed trigger", (("yes", "I am spending time at base"),)),
             ]
             fields = [x for x in fields if x.key != "identity" or x.options]
-            title = "Go Off-Duty — confirm your Play"
+            observation = own is not None and own.get("observation") is not None
+            title = (
+                "Void Observation — confirm your Play"
+                if observation
+                else "Go Off-Duty — confirm your Play"
+            )
             instructions = (
-                "Your current Status sets the modifier. Chat locks before dice are rolled, "
+                "Your Status lowers when the roll commits; both families of Void Assets "
+                "set the modifier. Chat locks before dice, followed by each human's Tag choices."
+                if observation
+                else "Your current Status sets the modifier. Chat locks before dice are rolled, "
                 "then participants make their Tag choices."
             )
 
             async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
                 prepared = PlayInput(
-                    play="go_off_duty",
+                    play="void_observation" if observation else "go_off_duty",
                     off_duty_id=identity,
                     heat=0,
                     trigger_confirmed=True,
@@ -173,11 +181,21 @@ async def open_action(
             raise WorkflowError("Finish the saved roll and Tag decisions first.")
         level = tier(own["roll"]["total"])
         choices = tuple((x, x.replace("_", " ").title()) for x in OFF_DUTY[level])
-        if level == "mid":
+        observation = own.get("observation")
+        if observation is not None:
+            from girlframe.discord_adapter.m3_observation import LABELS
+
+            choices = tuple(
+                ("observation:" + x["kind"], LABELS[x["kind"]]) for x in observation["outcomes"]
+            )
+            choices += tuple((x, x.replace("_", " ").title()) for x in OFF_DUTY["low"])
+        elif level == "mid":
             choices = (("decline", "No optional scene"),) + choices
         participants = tuple(x for x in data["participants"] if x[0] != str(viewer.user_id))
-        if level != "mid":
+        if level != "mid" or observation is not None:
             participants += ((str(data["handler"]), "Handler"),)
+        if observation is not None:
+            participants += data["observation_participants"]
         fields = [
             Field("kind", "Choose your scene", choices),
             Field(

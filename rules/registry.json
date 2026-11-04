@@ -346,7 +346,7 @@
       "policy_key": "frame_reward_observation",
       "clarity_review": true,
       "revision": 1,
-      "implementation_note": "The common reward scheduler accepts an actual Off-Duty roll context. Full Observation integration remains pending.",
+      "implementation_note": "The common Frame reward scheduler now accepts a real, provenance-checked Observation roll. The actual positive JANUS bonus and no-trigger review are tested on that route. Full playbook/world interactions remain pending.",
       "change_impact": "A revised exclusion affects future Observation periods and outstanding reviews, retaining prior receipts."
     },
     {
@@ -381,6 +381,55 @@
       "revision": 1,
       "implementation_note": "Consumed delivery provenance is recorded per actual character ID. Current delivery-state checks are implemented; complete custody/event-history selection remains pending.",
       "change_impact": "New pricing/eligibility policy requires explicit treatment of pending delivery claims and preserved consumed-source receipts."
+    },
+    {
+      "id": "observation-shared-list",
+      "summary": "Player and Handler choose distinct consequences across the shared Observation list.",
+      "source": "Book PDF 28 / printed p.26; owner delegated authority",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "Separate choose counts refer to one outcome list; distinct consequences avoid selecting the same surgery or assignment twice without source instructions for stacking.",
+      "alternatives": [
+        "Permit the same consequence once for each human"
+      ],
+      "policy_key": "observation_choice_overlap",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "The reducer enforces distinct values within and across saved selections; each human still owns its exact count.",
+      "change_impact": "Changes affect legal pending selections and need explicit treatment of already selected/resolved effects; retain dice and completed effects."
+    },
+    {
+      "id": "observation-retained-identity-owner",
+      "summary": "The affected player chooses the retained current Identity and any approved fallback slot for Observation reprogramming, regardless of who selected that consequence.",
+      "source": "Book PDF 28 / printed p.26; owner delegated authority",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "The text does not allocate the nested choice. Preserving the affected player's own Identity choice avoids treating non-Punishment reprogramming as the separately ruled inflictor-owned Punishment default.",
+      "alternatives": [
+        "Let the human selecting reprogramming choose its Identity details",
+        "Always assign reprogramming details to the Handler"
+      ],
+      "policy_key": "observation_reprogram_owner",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "A separate affected-player request applies the actual reset reducer and preserves protected/locked slots.",
+      "change_impact": "A new owner rule requires reassignment of pending requests; do not reset already settled Identities or impersonate an absent player."
+    },
+    {
+      "id": "observation-populace-tag-owner",
+      "summary": "The Handler plays the general populace for its actual public-display Tag and is recorded as that Tag's human giver.",
+      "source": "Book PDF 28 / printed p.26; owner delegated authority",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "rationale": "The source specifies the populace as giver but supplies no separate player role; the existing core Tag system identifies the human controller.",
+      "alternatives": [
+        "Invite another explicit human to play the populace"
+      ],
+      "policy_key": "observation_populace_controller",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Public-display Tag detail is a separate Handler-owned request. Harpy Candidate uses its printed fixed label; neither is automatically marked.",
+      "change_impact": "Changing controller representation affects future Tag authority and pending choices, and requires an explicit migration for existing giver provenance."
     }
   ],
   "entries": [
@@ -1294,8 +1343,11 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_reprogram.py",
         "tests/rules/test_core.py",
+        "tests/rules/test_observation.py",
+        "tests/rules/test_observation_service.py",
+        "tests/rules/test_observation_ui.py",
+        "tests/rules/test_reprogram.py",
         "tests/rules/test_shared_choices.py"
       ],
       "m2_play_id": null,
@@ -6035,14 +6087,16 @@
         "heading": "Void Observation"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_observation_service.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -11233,14 +11287,17 @@
         "heading": "THE DIRECTOR"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_npc_roles.py",
+        "tests/rules/test_observation_service.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

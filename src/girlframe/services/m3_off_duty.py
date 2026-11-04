@@ -46,6 +46,10 @@ class OffDutyService:
         self.game.authorize(c, viewer, game=False)
         current_handler = HandlerService(self.store).current(c)[1].handler_id
         invited = period.handler_scene and viewer.user_id in period.handler_scene.participants
+        invited = invited or any(
+            progress.scene and viewer.user_id in progress.scene.participants
+            for progress in period.progress.values()
+        )
         if (
             viewer.user_id not in period.pilots
             and viewer.user_id != current_handler

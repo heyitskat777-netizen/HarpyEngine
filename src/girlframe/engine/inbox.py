@@ -13,6 +13,7 @@ CATEGORIES = (
     "plays",
     "missions",
     "off_duty",
+    "world",
 )
 
 

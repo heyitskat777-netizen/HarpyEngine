@@ -46,6 +46,10 @@ class Access:
     def authorize(self, c: Connection, viewer: GuildViewer, subsystem: str) -> None:
         game = GameService(self.store)
         game.authorize(c, viewer, game=False)
+        if game.director_mode_pending(c, viewer.user_id):
+            raise WorkflowError(
+                "UNSUPPORTED_RULE: resolve the Director's Handler/Girl rules context first."
+            )
         approval = self.store.policy.m3_approval
         if (
             approval is None

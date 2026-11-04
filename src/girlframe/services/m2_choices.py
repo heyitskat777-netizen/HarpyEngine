@@ -645,7 +645,7 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         play = action["data"]["play"]
         level = action["data"]["result"]["tier"]
-        if play == "go_off_duty" and action["data"].get("m3"):
+        if play in ("go_off_duty", "void_observation") and action["data"].get("m3"):
             action["data"]["m3_finished"] = True
             self.finish(c, state, action)
             return

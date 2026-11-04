@@ -34,10 +34,42 @@ class CycleService:
         self.store, self.game = periods.store, periods.game
 
     def _current(
-        self, c: Connection, viewer: GuildViewer, identity: str, game_revision: int
+        self,
+        c: Connection,
+        viewer: GuildViewer,
+        identity: str,
+        game_revision: int,
+        *,
+        invited_observation: str | None = None,
     ) -> tuple[rules.Period, GameState]:
         period = self.periods._get(c, identity)
-        self.periods._view(c, viewer, period)
+        if invited_observation is None:
+            self.periods._view(c, viewer, period)
+        else:
+            self.game.authorize(c, viewer, game=False)
+            table = t.m3["m3_required_work"]
+            row = (
+                c.execute(
+                    sa.select(table)
+                    .where(
+                        table.c.campaign_id == self.store.campaign_id,
+                        table.c.id == invited_observation,
+                    )
+                    .order_by(table.c.revision.desc())
+                    .limit(1)
+                )
+                .mappings()
+                .first()
+            )
+            if (
+                row is None
+                or row["off_duty_id"] != identity
+                or row["owner_id"] != str(viewer.user_id)
+                or row["kind"] != "observation_effect"
+                or row["state"] != "pending"
+                or json.loads(row["body_json"]).get("mode") != "npc_response"
+            ):
+                raise WorkflowError("Only the actual invited NPC controller answers this request.")
         state = load_state(c, self.store.campaign_id)
         characters = {
             owner: character
@@ -117,8 +149,12 @@ class CycleService:
             if period.revision != expected:
                 raise WorkflowError("STALE_OFF_DUTY: reopen the period.")
             updated, state, resolved, proof = change(c, period, state)
+            from girlframe.services.m3_observation import settle, synchronize
+
+            settle(updated, state)
             event = self.game.event(c, viewer.user_id, key, kind, state, period_id=identity)
             self.periods._save(c, updated, event)
+            synchronize(c, self.store, updated, event)
             self._resolve(c, resolved, event, proof)
             if updated.handler_work is not None and period.handler_work is None:
                 from girlframe.services.m3_work import related
@@ -214,6 +250,27 @@ class CycleService:
         summary: str,
     ) -> dict[str, Any]:
         def change(c: Connection, period: rules.Period, state: GameState) -> Outcome:
+            progress = period.progress.get(str(viewer.user_id))
+            if progress is not None and progress.observation is not None:
+                from girlframe.engine.m3_observation import scene, scene_roles
+
+                if kind is None:
+                    raise WorkflowError("Void Observation always requires an actual scene.")
+                return (
+                    scene(
+                        period,
+                        expected,
+                        viewer.user_id,
+                        kind,
+                        participants,
+                        summary,
+                        extra_participants=scene_roles(period, state, viewer.user_id),
+                        required_participants=scene_roles(period, state, viewer.user_id, kind),
+                    ),
+                    state,
+                    [],
+                    {},
+                )
             updated = rules.choose_scene(
                 period,
                 expected,
@@ -245,6 +302,17 @@ class CycleService:
         scene_owner: int | None,
     ) -> dict[str, Any]:
         def change(c: Connection, period: rules.Period, state: GameState) -> Outcome:
+            if scene_owner is not None:
+                progress = period.progress.get(str(scene_owner))
+                if progress and progress.observation and progress.scene:
+                    from girlframe.engine.m3_observation import scene_roles
+
+                    if not scene_roles(period, state, scene_owner, progress.scene.kind) <= set(
+                        progress.scene.participants
+                    ):
+                        raise WorkflowError(
+                            "Recover the changed NPC scene controller before confirmation."
+                        )
             updated = (
                 rules.acknowledge_handler_scene(period, expected, viewer.user_id)
                 if scene_owner is None
@@ -538,6 +606,11 @@ class CycleService:
                 if progress.scene is not None and viewer.user_id in progress.scene.participants
             ]
             handler_scene = period.handler_scene
+            observation_people: frozenset[int] = frozenset()
+            if own is not None and own.observation is not None:
+                from girlframe.engine.m3_observation import scene_roles
+
+                observation_people = scene_roles(period, state, viewer.user_id)
             return {
                 **self.periods.get(viewer, identity),
                 "game_revision": state.revision,
@@ -550,6 +623,11 @@ class CycleService:
                 if viewer.user_id in period.pilots
                 else None,
                 "invitations": scenes,
+                "observation_participants": tuple(
+                    (str(uid), "NPC controller " + str(uid))
+                    for uid in sorted(observation_people)
+                    if uid not in period.pilots and uid != period.handler
+                ),
                 "handler_scene": handler_scene.model_dump(mode="json")
                 if handler_scene and viewer.user_id in handler_scene.participants
                 else None,

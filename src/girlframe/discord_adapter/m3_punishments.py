@@ -280,7 +280,15 @@ async def open_discipline(
                 if data.get("off_duty_id")
                 else ()
             )
-            + tuple((kind, KINDS[kind][0]) for kind in KINDS if kind in SUPPORTED),
+            + tuple(
+                (kind, KINDS[kind][0])
+                for kind in KINDS
+                if kind in SUPPORTED
+                and (
+                    data.get("required_severity") is None
+                    or KINDS[kind][1] == data["required_severity"]
+                )
+            ),
             choose,
         )
         await view.show(interaction)

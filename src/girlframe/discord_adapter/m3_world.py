@@ -218,8 +218,17 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
         if action == "map":
             await MapPages(service, viewer.user_id).show(current)
             return
-        if action == "npc":
+        if action in ("npc", "npc_invite"):
             npc_identity = str(uuid4())
+            from girlframe.services.m3_npc_roles import NpcRoleService
+
+            roles = NpcRoleService(service)
+            invited = action == "npc_invite"
+            members = (await asyncio.to_thread(roles.members, viewer))["members"] if invited else ()
+            if invited and not members:
+                raise WorkflowError(
+                    "Another joined campaign member is needed for a separate NPC role."
+                )
 
             async def submit(actor: discord.Interaction, values: dict[str, Any]) -> str:
                 npc = Npc(
@@ -227,18 +236,22 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
                     name=values["name"],
                     jobs=tuple(values["jobs"]),
                     detail=values["detail"],
-                    controller=actor.user.id,
+                    controller=int(values["controller"][0]) if invited else actor.user.id,
                     cell=coordinates(values["cell"][0]),
                     revealed=values["visible"][0] == "yes",
                 )
                 await asyncio.to_thread(
-                    service.npc,
+                    roles.offer if invited else service.npc,
                     viewer_from_interaction(actor),
                     str(actor.id),
                     fresh["game_revision"],
                     npc,
                 )
-                return "NPC introduced. Another human can explicitly claim a revealed NPC's role."
+                return (
+                    "Private NPC role invitation saved. The invited human must answer."
+                    if invited
+                    else "NPC introduced. Another human can explicitly claim a revealed NPC's role."
+                )
 
             fields = [
                 Field("name", "NPC name"),
@@ -257,9 +270,11 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
                     (("yes", "Yes"), ("no", "Keep private")),
                 ),
             ]
+            if invited:
+                fields.insert(0, Field("controller", "Invite this human to play the NPC", members))
             form = NativeForm(
                 viewer.user_id,
-                "Introduce an NPC",
+                "Invite a human to an NPC role" if invited else "Introduce an NPC",
                 "Choose who they are and where they enter the world. "
                 "Their private notes and any starting Bond feelings stay outside the public map.",
                 fields,
@@ -301,6 +316,7 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
         (
             ("map", "View the player map"),
             ("npc", "Introduce an NPC"),
+            ("npc_invite", "Invite someone to play an NPC / Director"),
             ("reveal", "Reveal a Gorgon encountered by the Cadre"),
         ),
         choose,

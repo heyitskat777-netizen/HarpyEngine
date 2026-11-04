@@ -231,6 +231,15 @@ class StartingNpcLink(Model):
     npc: str
 
 
+class NpcRoleOffer(Model):
+    id: str = Field(min_length=1, max_length=100)
+    proposer: Snowflake
+    npc: Npc
+    source_event: str
+    state: Literal["pending", "accepted", "declined", "withdrawn"] = "pending"
+    response_event: str | None = None
+
+
 class World(Model):
     board: Board
     locations: tuple[Location, ...]
@@ -243,12 +252,20 @@ class World(Model):
     npc_recruitment: tuple[NpcRecruitment, ...] = ()
     rooms: tuple[tuple[Snowflake, ...], ...] = ()
     starting_npc_links: tuple[StartingNpcLink, ...] = ()
+    npc_role_offers: tuple[NpcRoleOffer, ...] = ()
 
     @model_validator(mode="after")
     def references(self) -> "World":
         entities = (*self.locations, *self.npcs, *self.gorgons, *self.pilots, *self.factions)
         if len({x.id for x in entities}) != len(entities):
             raise ValueError("World entity IDs are globally distinct within a campaign")
+        candidates = [x.npc for x in self.npc_role_offers if x.state == "pending"]
+        if len({x.id for x in self.npc_role_offers}) != len(self.npc_role_offers) or len(
+            {x.id for x in (*entities, *candidates)}
+        ) != len(entities) + len(candidates):
+            raise ValueError("Pending NPC role offers reserve distinct actual entity IDs")
+        if any(not self.board.contains(x.cell) for x in candidates):
+            raise ValueError("An offered NPC still requires an actual map square")
         if len({x.cell for x in self.locations}) != len(self.locations):
             raise ValueError("Each major location occupies its own square")
         if any(

@@ -66,6 +66,10 @@ class GameService:
         self.store._membership(c, viewer)
         if game:
             self.gate()
+            if self.director_mode_pending(c, viewer.user_id):
+                raise WorkflowError(
+                    "UNSUPPORTED_RULE: resolve the Director's Handler/Girl rules context first."
+                )
             state = load_state(c, self.store.campaign_id)
             if (
                 state.sheets
@@ -508,6 +512,22 @@ class GameService:
             is not None
         )
 
+    def director_mode_pending(self, c: Connection, owner: int) -> bool:
+        table = t.m3["m3_required_work"]
+        rows = {
+            row["id"]: row
+            for row in c.execute(
+                sa.select(table)
+                .where(
+                    table.c.campaign_id == self.store.campaign_id,
+                    table.c.subject_id == str(owner),
+                    table.c.kind == "director_presence",
+                )
+                .order_by(table.c.revision)
+            ).mappings()
+        }
+        return any(x["state"] != "resolved" for x in rows.values())
+
     def immediate_work(self, c: Connection, owner: int) -> bool:
         work = t.m3["m3_required_work"]
         latest = {
@@ -829,7 +849,12 @@ class GameService:
                 "ruleset": M3_RULESET if m3 is not None else RULESET,
             }
             if m3 is not None:
-                receipt.update(base_modifier=m3["modifier"], modifier_source="Status")
+                receipt.update(
+                    base_modifier=m3["modifier"],
+                    modifier_source="Void Assets"
+                    if m3.get("modifier_source") == "void_assets"
+                    else "Status",
+                )
             c.execute(
                 t.m2["m2_receipts"]
                 .insert()

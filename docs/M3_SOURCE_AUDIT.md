@@ -13,8 +13,9 @@ no PDF, full book text, real campaign state or private engine is included in Git
 implemented Plays. There are 72 distinct Strain cells (three tracks × two severities
 × six die results × two columns) and 22 endgame slots, including distinct duplicate
 advancement slots. Nested branches, options, source interactions and sheet/book
-comparisons still need further audit. Seven M2 entries retain the honest `subset`
-implementation marker; no entry has independent verification.
+comparisons still need further audit. Current implementation counts come from
+`tools/check_rules_registry.py`; partial implementations retain the `subset`
+marker and no entry has independent verification.
 
 ## Current module scope
 
@@ -122,10 +123,23 @@ blocking. Core/Court state here is baseline setup, not complete World/AM mechani
 The workflow and acceptance requirements are in `work_orders/M3_FRAME_REPLACEMENT.md`.
 This remains a partial implementation and branch audit.
 
-Two upcoming Off-Duty interpretations await owner input: DoctorDoctor's credited
-Permission recipient scope, and the duration of off-duty Sedation Identity locks.
-Neither branch has an assumed production default.
+DoctorDoctor credit recipients and Off-Duty Sedation duration have since been
+resolved under the owner's delegated recommendations. Their exact decisions,
+alternatives and implementation notes are in `CAMPAIGN_RULINGS.md`.
 
 The new rules tests are synthetic. They are useful implementation evidence, not
 finished M3 case acceptance. Required source/fixture matrices and all remaining
 M3A–M3H work remain in the work order and acceptance plan.
+
+
+## Observation and separately played roles checkpoint
+
+Actual Observation substitution, locked Status/Void roll, final Tag-adjusted tier,
+owned selections and nested effects now have offline engine/service/native tests.
+Real NPC role invitations and a separate appearance response preserve human control;
+a non-Pilot Director can participate without an invented character sheet. Its
+printed Handler/Girl context creates separate blocking work, rather than silently
+allowing ordinary Handler authority. Full Director rules/prices, automatic world
+triggers/reprimands, future-period ordering and remaining battle/playbook/economy
+interactions remain incomplete. See `work_orders/M3_OBSERVATION.md`; this is not
+full M3 acceptance or a live gameplay release.
