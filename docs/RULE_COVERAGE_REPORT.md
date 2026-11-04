@@ -290,6 +290,8 @@ rulings are recorded with owner provenance. Initial pure reducers, shared decisi
 contracts and mission lifecycle tests are partial evidence only. Coverage remains
 RULES_SUBSET; M3 acceptance is still pending. The owner has approved the current
 Ace's bonus even when absent. Private transactional mission controls, replay and
-required-work persistence now have offline tests; Punishment/special-reaction
-resolvers and the remaining source interactions are unfinished. Two Punishment
-interpretations await owner input; see `M3_SOURCE_AUDIT.md`.
+required-work persistence now have offline tests. The partial discipline subsystem
+implements ten effect types, delegation, Handler consultation and owned Paired Heat
+sharing; remaining types and special reactions stay blocked. Both prior Punishment
+rulings are approved; Sedation with fewer than two Identities awaits a campaign
+ruling. See `M3_SOURCE_AUDIT.md`; full M3 acceptance is still pending.

@@ -12,6 +12,8 @@ class Rulings(BaseModel):
     standard_unpriced_cost: Literal[1]
     extra_repairs: Literal["handler_quote"]
     reprogramming_fallback: Literal["owner_selects_ordinary_slot"]
+    punishment_details: Literal["inflictor_selects"]
+    failure_dog_overlap: Literal["one_punishment_both_causes"]
 
 
 class Approval(BaseModel):
@@ -19,6 +21,8 @@ class Approval(BaseModel):
     ruleset: Literal["girlframe-m3-core-1"] = "girlframe-m3-core-1"
     registry_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     scope: Literal["rules_subset", "core_complete"]
-    subsystems: frozenset[Literal["missions", "economy", "plays", "strain", "world", "playbooks"]]
+    subsystems: frozenset[
+        Literal["missions", "discipline", "economy", "plays", "strain", "world", "playbooks"]
+    ]
     reviewer: str = Field(min_length=1, max_length=120)
     reference: str = Field(min_length=1, max_length=240)

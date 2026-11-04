@@ -172,3 +172,74 @@ unspecified Identity/Asset details after the inflictor chooses the type, and whe
 one actual Punishment can satisfy both failure and Dog causes. No assumption on
 either has been committed. Full remaining mechanics, Strain/world rules, independent
 source/code review, human acceptance and owner milestone sign-off are still required.
+
+
+## Inflictor-owned discipline checkpoint
+
+The owner resolved both pending Punishment questions: the inflictor selects all
+unspecified details, with explicit printed choice ownership taking precedence;
+one actual Punishment satisfies both mission-failure and Dog causes for the same
+Girl in the same mission. Registry and trusted policy models record those exact
+rulings. Both source causes retain distinct immutable records and reference the
+same application event. The rulings have not been applied to the live policy.
+
+Pure reducers implement Sedation, Beating, Reduced Socialization, Quality Time,
+Demotion, Stimulant Injection, Correctional Programming, Frame Disassembly,
+Compliance Surgery and Libido Inhibitor. Passing Responsibility transfers all
+pending failure/Dog causes to a chosen active Pilot without applying a consequence.
+Handler/Pilot authority and explicit printed protected Identity rules are checked.
+Personal Bonds erase when weakened; strengthening beyond Intense grants two Heat
+to both characters, including tracked Handler Heat. Off-duty Sedation locks survive
+pure recovery attempts, while this service handles pre-Off-Duty mission discipline.
+
+The transactional service adds exact-proposal Moderate consultation: a delegated
+Girl proposes legal choices, the current Handler reviews and explicitly answers,
+then the inflictor applies precisely approved choices. Approval binds game revision,
+work revisions and Handler. Changed state/choices invalidate it. A different legal
+Minor Punishment or delegation supersedes an unneeded consultation without waiving
+the actual Punishment. Duplicate/concurrent submissions cannot apply twice, and
+failed writes roll back effects, history and all cause records together.
+
+`/mission discipline` and the existing requests inbox open native private selectors,
+modals and confirmations. The subject cannot choose inflictor-owned details. The
+inflictor receives necessary Identity/Asset/Tag labels, not private descriptions,
+notes, NPC drafts, review snapshots or the mission objective. Severe/unimplemented
+types are unavailable. Explicit Paired Identity Heat sharing remains the affected
+owner's choice; its allocation is durable/idempotent and cannot be chosen by the
+inflictor. Immediate follow-ups block new Plays and false mission completion.
+
+Executed checks:
+
+| Check | Actual result |
+|---|---|
+| Locked installer | 36 packages resolved, 35 installed packages checked; no dependency change |
+| Ruff lint / format | All checks passed; 187 files already formatted |
+| Mypy | No issues in 100 source files |
+| Focused initial pure reducers | 14 passed in 3.34s |
+| Integrated reducers/services/missions/inbox | 57 passed in 13.02s |
+| Native discipline UI | Four passed in 1.67s |
+| Final full local suite | **549 passed in 53.14s**, zero failures/errors/skips; private artifact `var/m3-discipline-pytest.xml` |
+| Added focused absent-Dog application regression | One passed after the full run; applies real effects without exposing the objective |
+| Registry | RULES_SUBSET, 473 inventory entries, 436 required core entries; 11 subset / 462 unimplemented; zero independently verified |
+| Handoff integrity | 34 required files, 86 planned cases, four schemas and four synthetic fixtures; planning package PASS only |
+| Publishable-file check | 269 files, 40 original manifest entries intact, zero findings |
+| Whitespace / startup wrapper | `git diff --check` and `bash -n` passed |
+| Live operational readback | Exactly one bot; frozen-source hashes unchanged; live schema 0011; integrity ok and zero FK errors |
+
+Initial test authoring found a protected-Identity fixture accidentally below the
+ordinary cap, a return value needing an explicit string type, and two overlong
+static UI strings. These were corrected before the passing checks. No network
+access is allowed in the synthetic tests. No live migration, restart, M3 activation
+or environment publication occurred. Private engine/PDFs/runtime data stay ignored.
+
+This is a partial M3D/M3H checkpoint, not milestone acceptance. Revoked Privileges,
+Strict Regulations and all four Severe Punishments need their supporting runtime
+mechanics. Libido Inhibitor is stored canonically; future Sex Plays must enforce it
+before release. Last-Asset context, Ankou and Void follow-ups remain blocking until
+specific resolvers exist. Princess/DoctorDoctor reactions, Requisitions, remaining
+playbook interactions, Strain/world mechanics and independent/human review remain.
+
+One new source edge case needs an owner ruling: Sedation with fewer than two
+remaining Identities (book PDF 17 / printed p.15). The source provides no fallback.
+That branch currently fails without committing an effect; no recommendation has
+been silently applied. M3 remains IN_PROGRESS / RULES_SUBSET.

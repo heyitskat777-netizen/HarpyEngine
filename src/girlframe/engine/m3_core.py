@@ -103,11 +103,12 @@ def corrupt(sheet: PilotSheet, asset_id: str, description: str, *, piloting: boo
 
 def recover_off_duty(sheet: PilotSheet, choice: Recovery) -> Result:
     updated = clone(sheet)
-    if not choice.sedation_locked <= {x.id for x in updated.identities}:
+    locks = choice.sedation_locked | frozenset(updated.sedation_locked)
+    if not locks <= {x.id for x in updated.identities}:
         raise ValueError("Sedation locks must reference current owned Identities")
     if choice.unmark_identity:
         selected = next((x for x in updated.identities if x.id == choice.unmark_identity), None)
-        if selected is None or not selected.marked or selected.id in choice.sedation_locked:
+        if selected is None or not selected.marked or selected.id in locks:
             raise ValueError("Choose a marked Identity that off-duty Sedation does not lock")
         selected.marked = False
     if choice.repair_limit is None:

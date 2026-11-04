@@ -257,4 +257,19 @@ def register_missions(
             interaction, lambda: details(service.get(viewer_from_interaction(interaction), mission))
         )
 
+    @group.command(
+        name="discipline", description="Review assigned Punishments and Handler consultations"
+    )
+    async def discipline(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_punishments import discipline_queue
+        from girlframe.services.m3_punishments import PunishmentService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await discipline_queue(
+                interaction, PunishmentService(service.store, service.access.registry)
+            )
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
     tree.add_command(group, guild=discord.Object(id=guild_id))

@@ -40,6 +40,18 @@
       "summary": "The current Ace receives the extra mission-end Permission even if it did not participate.",
       "provenance": "owner_approved_campaign_ruling",
       "source": "Owner approval in this development conversation"
+    },
+    {
+      "id": "punishment-detail-owner",
+      "summary": "The inflictor chooses unspecified Punishment details, including Identities and Assets. Explicit printed choice ownership overrides this default.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Book PDF 17–18 / printed pp.15–16; owner decision"
+    },
+    {
+      "id": "failure-dog-overlap",
+      "summary": "One actual Punishment may satisfy both mission-failure and Dog causes for the same Girl in the same mission; both causes remain audited.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Book PDF 16–17 / printed pp.14–15; owner decision"
     }
   ],
   "entries": [
@@ -423,14 +435,18 @@
         "heading": "Minor Punishments"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_punishments.py",
+        "tests/rules/test_punishment_service.py",
+        "tests/rules/test_punishment_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -446,14 +462,18 @@
         "heading": "Moderate Punishments"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_punishments.py",
+        "tests/rules/test_punishment_service.py",
+        "tests/rules/test_punishment_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -469,14 +489,18 @@
         "heading": "Punishment"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_punishments.py",
+        "tests/rules/test_punishment_service.py",
+        "tests/rules/test_punishment_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -5230,14 +5254,18 @@
         "heading": "Punish Them"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_punishments.py",
+        "tests/rules/test_punishment_service.py",
+        "tests/rules/test_punishment_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

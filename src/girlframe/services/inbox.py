@@ -474,6 +474,14 @@ class InboxService:
                             "Resolve this with the designated participant; "
                             "an offline player or timer cannot waive it."
                         ),
+                        "Review discipline"
+                        if work["kind"]
+                        in ("punishment", "punishment_consult", "punishment_paired_identity_heat")
+                        else None,
+                        task="m3_discipline"
+                        if work["kind"]
+                        in ("punishment", "punishment_consult", "punishment_paired_identity_heat")
+                        else None,
                     )
                 )
         return tuple(

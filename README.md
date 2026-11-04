@@ -17,8 +17,11 @@ or certify rules automatically. M1 raw dice remain a separate test primitive.
 
 M3 is in development and remains **RULES_SUBSET**. Its offline mission flow now
 persists private invitations, explicit player responses, dispatch and mission-end
-rewards, with required consequences blocking completion. Mechanical Punishment
-resolution and special mission-end reactions remain unfinished. These changes
+rewards, with required consequences blocking completion. The discipline flow adds
+inflictor-owned selectors, delegation, exact-proposal Handler consultation and
+atomic effects for ten printed Punishment types. Six further printed types,
+special mission-end reactions and some compulsory follow-ups remain unfinished.
+These changes
 require a separate, scoped M3 release approval and are not enabled in the running
 bot. See [M3 evidence](reports/M3_ACCEPTANCE.md) and
 [source coverage](docs/M3_SOURCE_AUDIT.md). Ancillary playbooks are deferred and
@@ -154,6 +157,7 @@ check installation and guild ID. Errors omit raw provider bodies and private pat
 | `/choice resume`, `/choice show` | Own durable responses; permitted saved action/receipt |
 | `/mission offer` | Current Handler; private Pilot selector, objective and explicit confirmation; M3 approval required |
 | `/mission inbox`, `/mission show` | Invited players/current Handler; saved private offers and progress, with owner-bound actions |
+| `/mission discipline` | Assigned inflictor/affected player; native Punishment controls, Handler consultation and owned Paired Heat choices |
 | `/character activate`, `/character state` | Explicit activation/public fields; current private state with paging |
 | `/character followthrough`, `/character recover` | Owner follow-through and source-backed moment-alone recovery |
 | `/campaign scene_bind`, `scene_join`, `scene_leave`, `scene_close` | Staff-bound scenes, explicit participation and safe close |

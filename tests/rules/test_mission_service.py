@@ -30,7 +30,7 @@ def service(store, girl="MOCKINGBIRD", frame="JANUS-B"):
             "m3_approval": Approval(
                 registry_sha256=digest(registry),
                 scope="rules_subset",
-                subsystems=frozenset({"missions"}),
+                subsystems=frozenset({"missions", "discipline"}),
                 reviewer="synthetic fixture only",
                 reference="Not independent certification",
             ),
@@ -40,6 +40,8 @@ def service(store, girl="MOCKINGBIRD", frame="JANUS-B"):
                 standard_unpriced_cost=1,
                 extra_repairs="handler_quote",
                 reprogramming_fallback="owner_selects_ordinary_slot",
+                punishment_details="inflictor_selects",
+                failure_dog_overlap="one_punishment_both_causes",
             ),
         }
     )

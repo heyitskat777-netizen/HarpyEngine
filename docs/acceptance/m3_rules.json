@@ -54,7 +54,10 @@
       "planned_tests": [
         "tests/rules/test_missions.py::test_absent_dog_punishment_remains_real_pending_work",
         "tests/rules/test_mission_service.py::test_mission_rewards_and_absent_dog_are_atomic_idempotent_and_durable",
-        "tests/rules/test_mission_service.py::test_inbox_exposes_absent_dogs_work_without_the_private_mission_objective"
+        "tests/rules/test_mission_service.py::test_inbox_exposes_absent_dogs_work_without_the_private_mission_objective",
+        "tests/rules/test_punishment_service.py::test_one_actual_punishment_resolves_both_causes_once_and_mission_can_complete",
+        "tests/rules/test_punishment_service.py::test_paired_heat_remains_owned_pending_and_blocks_new_plays_until_split_once",
+        "tests/rules/test_punishment_service.py::test_absent_dogs_punishment_applies_without_exposing_the_mission"
       ],
       "evidence": [
         {
@@ -70,6 +73,13 @@
           "result": "520 passed in 46.41s; zero failures/errors/skips",
           "artifact": "var/m3-missions-pytest.xml",
           "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
+        },
+        {
+          "scope": "partial_offline_discipline_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-discipline-pytest.xml",
+          "result": "549 passed in 53.14s, zero failures/errors/skips; subsequent focused absent-Dog application test: 1 passed",
+          "artifact": "var/m3-discipline-pytest.xml",
+          "limitation": "Six Punishment types, special follow-ups, broader M3 mechanics and independent/human acceptance remain unfinished"
         }
       ]
     },
@@ -265,7 +275,10 @@
       "status": "IN_PROGRESS",
       "planned_tests": [
         "tests/rules/test_missions.py::test_absent_dog_punishment_remains_real_pending_work",
-        "tests/rules/test_mission_service.py::test_mission_rewards_and_absent_dog_are_atomic_idempotent_and_durable"
+        "tests/rules/test_mission_service.py::test_mission_rewards_and_absent_dog_are_atomic_idempotent_and_durable",
+        "tests/rules/test_punishment_service.py::test_one_actual_punishment_resolves_both_causes_once_and_mission_can_complete",
+        "tests/rules/test_punishment_service.py::test_paired_heat_remains_owned_pending_and_blocks_new_plays_until_split_once",
+        "tests/rules/test_punishment_service.py::test_absent_dogs_punishment_applies_without_exposing_the_mission"
       ],
       "evidence": [
         {
@@ -281,6 +294,13 @@
           "result": "520 passed in 46.41s; zero failures/errors/skips",
           "artifact": "var/m3-missions-pytest.xml",
           "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
+        },
+        {
+          "scope": "partial_offline_discipline_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-discipline-pytest.xml",
+          "result": "549 passed in 53.14s, zero failures/errors/skips; subsequent focused absent-Dog application test: 1 passed",
+          "artifact": "var/m3-discipline-pytest.xml",
+          "limitation": "Six Punishment types, special follow-ups, broader M3 mechanics and independent/human acceptance remain unfinished"
         }
       ]
     },
@@ -321,7 +341,10 @@
       "status": "IN_PROGRESS",
       "planned_tests": [
         "tests/rules/test_mission_service.py::test_mission_rewards_and_absent_dog_are_atomic_idempotent_and_durable",
-        "tests/rules/test_mission_service.py::test_rollback_after_permission_event_restores_all_mission_state"
+        "tests/rules/test_mission_service.py::test_rollback_after_permission_event_restores_all_mission_state",
+        "tests/rules/test_punishment_service.py::test_one_actual_punishment_resolves_both_causes_once_and_mission_can_complete",
+        "tests/rules/test_punishment_service.py::test_paired_heat_remains_owned_pending_and_blocks_new_plays_until_split_once",
+        "tests/rules/test_punishment_service.py::test_absent_dogs_punishment_applies_without_exposing_the_mission"
       ],
       "evidence": [
         {
@@ -330,6 +353,13 @@
           "result": "520 passed in 46.41s; zero failures/errors/skips",
           "artifact": "var/m3-missions-pytest.xml",
           "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
+        },
+        {
+          "scope": "partial_offline_discipline_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-discipline-pytest.xml",
+          "result": "549 passed in 53.14s, zero failures/errors/skips; subsequent focused absent-Dog application test: 1 passed",
+          "artifact": "var/m3-discipline-pytest.xml",
+          "limitation": "Six Punishment types, special follow-ups, broader M3 mechanics and independent/human acceptance remain unfinished"
         }
       ]
     },
@@ -373,7 +403,10 @@
       "status": "IN_PROGRESS",
       "planned_tests": [
         "tests/rules/test_mission_service.py::test_pause_revocation_and_other_campaign_do_not_leak_or_mutate",
-        "tests/rules/test_mission_service.py::test_saved_mission_reads_survive_a_vacant_handler_appointment"
+        "tests/rules/test_mission_service.py::test_saved_mission_reads_survive_a_vacant_handler_appointment",
+        "tests/rules/test_punishment_service.py::test_one_actual_punishment_resolves_both_causes_once_and_mission_can_complete",
+        "tests/rules/test_punishment_service.py::test_paired_heat_remains_owned_pending_and_blocks_new_plays_until_split_once",
+        "tests/rules/test_punishment_service.py::test_absent_dogs_punishment_applies_without_exposing_the_mission"
       ],
       "evidence": [
         {
@@ -382,6 +415,13 @@
           "result": "520 passed in 46.41s; zero failures/errors/skips",
           "artifact": "var/m3-missions-pytest.xml",
           "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
+        },
+        {
+          "scope": "partial_offline_discipline_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-discipline-pytest.xml",
+          "result": "549 passed in 53.14s, zero failures/errors/skips; subsequent focused absent-Dog application test: 1 passed",
+          "artifact": "var/m3-discipline-pytest.xml",
+          "limitation": "Six Punishment types, special follow-ups, broader M3 mechanics and independent/human acceptance remain unfinished"
         }
       ]
     },
@@ -392,7 +432,10 @@
       "planned_tests": [
         "tests/rules/test_mission_service.py::test_private_mission_and_metadata_have_no_administrator_override",
         "tests/rules/test_mission_service.py::test_concurrent_end_never_duplicates_rewards",
-        "tests/rules/test_mission_service.py::test_immutable_history_rebuild_and_real_backup_restore"
+        "tests/rules/test_mission_service.py::test_immutable_history_rebuild_and_real_backup_restore",
+        "tests/rules/test_punishment_service.py::test_one_actual_punishment_resolves_both_causes_once_and_mission_can_complete",
+        "tests/rules/test_punishment_service.py::test_paired_heat_remains_owned_pending_and_blocks_new_plays_until_split_once",
+        "tests/rules/test_punishment_service.py::test_absent_dogs_punishment_applies_without_exposing_the_mission"
       ],
       "evidence": [
         {
@@ -401,6 +444,13 @@
           "result": "520 passed in 46.41s; zero failures/errors/skips",
           "artifact": "var/m3-missions-pytest.xml",
           "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
+        },
+        {
+          "scope": "partial_offline_discipline_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-discipline-pytest.xml",
+          "result": "549 passed in 53.14s, zero failures/errors/skips; subsequent focused absent-Dog application test: 1 passed",
+          "artifact": "var/m3-discipline-pytest.xml",
+          "limitation": "Six Punishment types, special follow-ups, broader M3 mechanics and independent/human acceptance remain unfinished"
         }
       ]
     },
@@ -420,15 +470,9 @@
   ],
   "pending_owner_rulings": [
     {
-      "id": "punishment-detail-owner",
-      "source": "Book PDF 17\u201318 / printed 15\u201316",
-      "question": "Who selects unspecified Identity/Asset details after the inflictor chooses the Punishment type?",
-      "status": "AWAITING_OWNER"
-    },
-    {
-      "id": "failure-dog-overlap",
-      "source": "Book PDF 16\u201317 / printed 14\u201315",
-      "question": "Does one applied Punishment satisfy both mission failure and Dog causes for the same Girl, or are two required?",
+      "id": "sedation-fewer-than-two-identities",
+      "source": "Book PDF 17 / printed p.15",
+      "question": "What does Sedation do when fewer than two Identities remain?",
       "status": "AWAITING_OWNER"
     }
   ]

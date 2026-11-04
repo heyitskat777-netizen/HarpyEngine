@@ -34,6 +34,8 @@ or unreviewed optional rules. Coverage reports identify their enabled module sco
 | Unpriced standard Requisitions | Creature Comforts, Privacy and Asset Installment each cost 1 Permission | Book PDF 16 / printed 14; sheets PDF 40 omit these prices |
 | Budget shortage extra repairs | The current Handler explicitly sets the price for each extra repair; no default cost | Book PDF 150 / printed 148; sheets PDF 43 allow paid repairs without a price |
 | Absent Ace bonus | Owner approved granting it to the current Ace even when absent | Book PDF 16 / printed 14 does not state whether the separate Ace bonus requires participation |
+| Unspecified Punishment details | The inflictor chooses details; explicit printed ownership overrides this default | Book PDF 17–18 / printed 15–16 |
+| Mission failure and Dog overlap | One actual Punishment covers both causes for the same Girl in the same mission; preserve both cause records | Book PDF 16–17 / printed 14–15 |
 
 Previously approved starting conditions, JANUS-B alias and Intense ±2 modifier
 remain separate existing rulings. No new ruling is silently applied to live policy.
@@ -71,15 +73,30 @@ remain separate existing rulings. No new ruling is silently applied to live poli
   revision checks and explicit responses. An absent Dog sees its required work
   without receiving the private mission objective.
 - Known Princess and DoctorDoctor mission-end reactions block rewards until their
-  source-specific work is resolved. Their resolvers, mechanical Punishments and
+  source-specific work is resolved. Their resolvers, remaining Punishments and
   the remaining end-trigger interaction audit are still pending. There is no
   generic acknowledgment that completes these tasks. Migration `0012` is tested
   on populated synthetic `0011` data; no live migration or M3 activation occurred.
 
-Two Punishment interpretations await owner input: who chooses unspecified sheet
-details after the inflictor selects the type, and whether one applied Punishment
-can satisfy both mission-failure and Dog causes for the same Girl. Both causes
-are retained separately while unresolved; no fictional consequence is invented.
+The new discipline subsystem applies ten printed types plus Passing Responsibility
+as a transfer of pending work. It records one application against both failure/Dog
+causes, never twice. Delegated Girls must obtain the current Handler's consultation
+on the exact Moderate proposal; changed game state or choices invalidate approval.
+Requests and `/mission discipline` provide native owner-bound controls. Only the
+assigned inflictor receives the sheet labels necessary for its choices, without
+notes, descriptions or review snapshots. Explicit Paired Heat sharing stays owned
+by the affected player and commits once after Sedation. Off-duty Sedation locks
+are retained by the pure recovery reducer; the mission service applies pre-Off-Duty
+discipline only. Handler Heat from an Intense Bond is tracked in canonical state.
+
+Revoked Privileges, Strict Regulations and all four Severe types remain unavailable.
+Last-Asset, Ankou and Void-context work remain blocking until their typed resolvers
+exist; no acknowledgment waives them. The Libido Inhibitor condition is persisted;
+future Sex Plays must enforce it before release. Remaining playbook interactions
+and noncanonical initial NPC Bond migration still need audit and implementation.
+
+One source edge case awaits owner input: what Sedation does when a Girl has fewer
+than two Identities. Until ruled, this branch is unavailable and applies no effect.
 
 The new rules tests are synthetic. They are useful implementation evidence, not
 finished M3 case acceptance. Required source/fixture matrices and all remaining

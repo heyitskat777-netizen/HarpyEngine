@@ -489,6 +489,25 @@ class GameService:
             sheet = state.sheets.get(str(viewer.user_id))
             if sheet is None or sheet.revision != sheet_revision:
                 raise WorkflowError("STALE_SHEET: refresh the Play wizard.")
+            work = t.m3["m3_required_work"]
+            latest_work = {
+                row["id"]: row
+                for row in c.execute(
+                    sa.select(work)
+                    .where(
+                        work.c.campaign_id == self.store.campaign_id,
+                        work.c.subject_id == str(viewer.user_id),
+                    )
+                    .order_by(work.c.revision)
+                ).mappings()
+            }
+            if any(
+                row["state"] != "resolved" and json.loads(row["body_json"]).get("immediate")
+                for row in latest_work.values()
+            ):
+                raise WorkflowError(
+                    "REQUIRED_FOLLOWUP: resolve the immediate mechanical follow-up first."
+                )
             if sheet.helpless_against:
                 raise WorkflowError(
                     "UNSUPPORTED_RULE: recover from Helplessness before a new defensive Play."

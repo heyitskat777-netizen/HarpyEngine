@@ -163,11 +163,14 @@ mission.
 Current M3D checkpoint: private mission offers/responses/dispatch, atomic rewards,
 append-only mission/work persistence, owner-bound Discord controls and requests
 inbox integration are implemented offline. Princess/DoctorDoctor end reactions
-and required Punishments remain blocking work, with no generic waiver. Migration
+and unsupported required consequences remain blocking work, with no generic waiver. Migration
 `0012` is validated on populated synthetic `0011` data; the live frozen bot and
 database remain unchanged. This does not complete M3D or M3H.
 
-Pending owner rulings before Punishment application: ownership of unspecified
-Identity/Asset selections after the inflictor chooses the type, and whether one
-actual Punishment satisfies both failure and Dog causes for the same Girl. Preserve
-each cause in the audit regardless of the eventual decision.
+Owner ruled that the inflictor selects all unspecified Punishment details, subject
+to explicit printed ownership. One actual Punishment satisfies both failure and
+Dog causes for the same Girl in the same mission; keep each source cause audited.
+Typed discipline effects, delegation, fixed-proposal Handler consultation, native
+controls and Paired Heat sharing are now implemented offline. Six printed types
+and special immediate reactions remain unsupported. A pending new edge-case ruling
+is Sedation when fewer than two Identities remain; do not assume a fallback.

@@ -81,6 +81,8 @@ class PilotSheet(Model):
     status_marked: bool = False
     maxims_marked: tuple[int, ...] = ()
     public_fields: tuple[str, ...] = ()
+    sedation_locked: tuple[str, ...] = ()
+    libido_inhibited: bool = False
 
     @model_validator(mode="after")
     def unique_ids(self) -> "PilotSheet":
@@ -109,6 +111,7 @@ class GameState(Model):
     sheets: dict[str, PilotSheet] = Field(default_factory=dict)
     order: tuple[Snowflake, ...] = ()
     handler: Snowflake | None = None
+    handler_heat: int = Field(default=0, ge=0)
     bonds: dict[str, int] = Field(default_factory=dict)
     obligations: list[Obligation] = Field(default_factory=list)
     facts: list[dict[str, str]] = Field(default_factory=list)
