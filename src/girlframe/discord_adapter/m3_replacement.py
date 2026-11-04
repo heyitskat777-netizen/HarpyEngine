@@ -130,7 +130,7 @@ async def package_form(
 ) -> None:
     data = await asyncio.to_thread(service.get, viewer_from_interaction(interaction), identity)
     frame = data["preferences"]["frame"]
-    if not 0 <= count <= (4 if frame == "WYVERN 0.4" else 5):
+    if not 0 <= count <= 5:
         raise WorkflowError("Choose a legal supplied Asset count.")
     options = tuple(
         (x, x)
@@ -255,7 +255,8 @@ async def package_form(
     form = NativeForm(
         interaction.user.id,
         "Handler replacement package",
-        f"Supply exactly {count} Assets. Printed intrinsic Assets are additional within the cap. "
+        f"Supply exactly {count} ordinary Assets (up to five). "
+        "WYVERN's printed Enormous Asset is additional and outside that limit. "
         "No Permissions are charged. Only available extra abilities can be added.",
         fields,
         submit,
@@ -476,7 +477,7 @@ async def open_replacement(
             else:
                 await package_form(current, service, identity, int(value))
 
-        limit = 4 if data["preferences"]["frame"] == "WYVERN 0.4" else 5
+        limit = 5
         view = Picker(
             viewer.user_id,
             "Choose the exact supplied Asset count (compulsory replacement is free)",

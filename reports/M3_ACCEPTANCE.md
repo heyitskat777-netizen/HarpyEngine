@@ -1363,3 +1363,34 @@ publication, independent/human acceptance or M3-ready claim applies. Continue th
 agreed milestone. The next confirmed source correction is WYVERN Enormous: it is
 additional to the five-Asset limit and cannot be a cap replacement, while existing
 package/install logic incorrectly counts it toward that limit.
+
+
+## Printed WYVERN intrinsic Asset exception
+
+Book PDF 74 / printed p.72 expressly places Enormous outside the five-Frame-Asset
+limit and prohibits replacing it. Actual activation and compulsory replacement
+now retain a semantic source marker; legacy actual original IDs are proved from
+the original creation or current replacement instance. Custom display names grant
+no exception. Installment purchases, pure cap operations and native replacement
+selectors use those actual properties. Five ordinary Assets plus Enormous fit.
+Enormous remains damageable/repairable and contributes to actual last-Asset
+Defeat; its protection does not grant immunity or waive other consequences.
+
+Full offline regression: **1269 passed in 343.73s**, no failures/errors/skips,
+`var/m3-asset-properties-pytest.xml`. Focused pure checks: **41 passed in 10.939s**,
+`var/m3-asset-properties-pure.xml`; focused integration: **48 passed in 12.93s**,
+`var/m3-asset-properties-integration.xml`. The prior replacement test encoded the
+incorrect four-ordinary-Asset limit and was corrected against the actual printed
+source. No failing pytest case preceded these results. Ruff passes, **357 files**
+formatted, mypy **186 source files**. Original handoff verifier passes 34 files /
+86 planned cases / 4 schemas / 4 synthetic fixtures (planning only).
+
+Registry: 473 entries, 436 required core, **60 subsets / 413 unimplemented**, zero
+independent verifications. The two new partial contracts cover core Assets and
+the WYVERN exception; neither claims full WYVERN runtime or complete core Assets.
+The next-refusal Strain bonus work order records the required actual-source,
+one-roll consumption and known-roll recovery dependency; it is still planned.
+Physical checkpoint **dffd5a4b18d4998c9feeec8ae4c4833aed0b5680** is pushed and its
+GitHub CI passed, run **41899662008**. No live migration, bot restart, gameplay
+deployment, environment publication, independent/human acceptance or M3-ready
+claim applies. The existing frozen bot remains running; development continues.

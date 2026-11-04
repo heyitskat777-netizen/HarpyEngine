@@ -11,6 +11,7 @@ from test_replacement_service import pending, propose, quote
 from girlframe.discord_adapter.m2_forms import NativeForm
 from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.m3_replacement import PackageReview, open_replacement
+from girlframe.engine.m3_frame_state import Preferences
 from girlframe.services.m2_state import public_sheet
 from girlframe.services.onboarding import WorkflowError
 
@@ -107,5 +108,42 @@ def test_package_requests_wait_for_owner_and_unrelated_player_cannot_open_them(l
     async def run():
         with pytest.raises(WorkflowError):
             await open_replacement(current(3), svc, identity)
+
+    asyncio.run(run())
+
+
+def test_wyvern_native_package_allows_five_ordinary_assets_plus_printed_enormous(ledger):
+    svc, game, _, identity = pending(ledger)
+    request = propose(svc, identity, Preferences(frame="WYVERN 0.4"))
+
+    async def run():
+        handler = current(1)
+        await handler.response.defer(ephemeral=True)
+        await open_replacement(handler, svc, request["package_id"])
+        picker = handler.edit_original_response.call_args.kwargs["view"]
+        assert "5" in dict(picker.options) and "6" not in dict(picker.options)
+        await picker.open_item(handler, "5")
+        form = handler.edit_original_response.call_args.kwargs["view"]
+        assert "outside that limit" in form.text()
+        form.values = {"rules": ("none",), "explanation": "Five ordinary Assets plus Enormous"}
+        for index in range(5):
+            form.values.update(
+                {
+                    f"name{index}": ("custom",),
+                    f"custom{index}": "Ordinary " + str(index),
+                    f"description{index}": "Explicit supplied gear",
+                    f"damaged{index}": ("no",),
+                    f"void{index}": ("no",),
+                }
+            )
+        await form.confirm.callback(current(1, 15011))
+        assert form.completed
+        owner = current(2)
+        await owner.response.defer(ephemeral=True)
+        review = PackageReview(2, svc, svc.get(PLAYER, identity))
+        await review.confirm.callback(current(2, 15012))
+        assets = [x for x in state(game).sheets["2"].assets if x.family == "frame"]
+        assert len(assets) == 6
+        assert sum(x.intrinsic == "wyvern_enormous" for x in assets) == 1
 
     asyncio.run(run())

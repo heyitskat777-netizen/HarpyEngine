@@ -80,8 +80,11 @@ def test_wyvern_intrinsic_and_consume_handler_track_are_not_hidden_defaults(inpu
     result = apply(before, registry, frame="WYVERN 0.4", package=supplied(4))
     assert len([x for x in result.sheets["2"].assets if x.family == "frame"]) == 5
     assert result.sheets["2"].assets[-1].name == "Enormous"
-    with pytest.raises(ValueError, match="cap"):
-        apply(before, registry, frame="WYVERN 0.4", package=supplied(5))
+    full = apply(before, registry, frame="WYVERN 0.4", package=supplied(5))
+    assert len([x for x in full.sheets["2"].assets if x.family == "frame"]) == 6
+    assert full.sheets["2"].assets[-1].intrinsic == "wyvern_enormous"
+    with pytest.raises(ValueError):
+        supplied(6)
     with pytest.raises(ValueError, match="hunger"):
         apply(before, registry, frame="CONSUME")
     result = apply(before, registry, frame="CONSUME", package=supplied(1, consume_hunger="Gnawing"))

@@ -15,8 +15,11 @@ again or grant another Asset. Retain private descriptions outside public audit/p
 First implement Asset Installment: one printed Asset from any official base Frame,
 or an owner-authored custom Asset as the source permits. New Assets are ordinary
 and undamaged; purchases do not grant a Frame playbook, intrinsic rules, Void or
-another character's control. At five Frame Assets explicitly replace one actual
-non-Void Frame Asset. Validate actual character, current Frame, funds, pause,
+another character's control. At five ordinary Frame Assets explicitly replace one
+actual replaceable non-Void Frame Asset. WYVERN's original printed Enormous is
+additional to that limit and cannot be replaced (book PDF 74 / printed p.72).
+Source identity, not a custom Asset name, determines the exception.
+Validate actual character, current Frame, funds, pause,
 pending Plays/immediate work and restored chat. Require the owner to describe
 the actual installation in the Conversation; purchasing never moves a body,
 creates custody, repairs a different Asset or waives a prior consequence.

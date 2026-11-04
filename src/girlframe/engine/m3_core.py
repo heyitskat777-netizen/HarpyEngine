@@ -6,6 +6,7 @@ from pydantic import Field
 
 from girlframe.engine.creation_catalog import CATALOG
 from girlframe.engine.m2 import AssetState, IdentityState, Model, PilotSheet
+from girlframe.engine.m3_assets import can_replace_at_limit, counts_toward_limit
 from girlframe.engine.m3_identity_slots import replacement_slot
 
 
@@ -71,9 +72,15 @@ def install(sheet: PilotSheet, asset: AssetState, *, replace: str | None = None)
         raise ValueError("Asset IDs must be distinct")
     family = [x for x in updated.assets if x.family == asset.family]
     maximum = 4 if asset.family == "girl" else 5
-    if len(family) >= maximum:
+    count = sum(counts_toward_limit(updated, x) for x in family)
+    if not counts_toward_limit(updated, asset):
+        if replace is not None:
+            raise ValueError(
+                "An additional intrinsic Asset does not replace another Asset at the cap"
+            )
+    elif count >= maximum:
         candidate = next((x for x in family if x.id == replace), None)
-        if candidate is None or candidate.void:
+        if candidate is None or not can_replace_at_limit(updated, candidate):
             raise ValueError("At the Asset cap, explicitly replace a non-Void Asset of that family")
         updated.assets = [x for x in updated.assets if x.id != candidate.id]
     elif replace is not None:

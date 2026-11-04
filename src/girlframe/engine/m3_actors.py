@@ -4,7 +4,7 @@ import hashlib
 import json
 from typing import Any
 
-from girlframe.engine.m2 import GameState
+from girlframe.engine.m2 import GameState, PilotSheet
 from girlframe.engine.m3_actor_state import (
     ActorRef,
     ActorView,
@@ -12,15 +12,24 @@ from girlframe.engine.m3_actor_state import (
     IdentityView,
     ProfileBinding,
 )
+from girlframe.engine.m3_assets import can_replace_at_limit, counts_toward_limit
 
 
 def fingerprint(value: Any) -> str:
     return hashlib.sha256(value.model_dump_json().encode()).hexdigest()
 
 
-def assets(values: Any) -> tuple[AssetView, ...]:
+def assets(values: Any, *, sheet: PilotSheet | None = None) -> tuple[AssetView, ...]:
     return tuple(
-        AssetView(id=x.id, name=x.name, family=x.family, damaged=x.damaged, void=x.void)
+        AssetView(
+            id=x.id,
+            name=x.name,
+            family=x.family,
+            damaged=x.damaged,
+            void=x.void,
+            counts_toward_limit=counts_toward_limit(sheet, x) if sheet else None,
+            can_replace_at_limit=can_replace_at_limit(sheet, x) if sheet else None,
+        )
         for x in values
     )
 
@@ -90,7 +99,7 @@ def resolve(
             frame_instance=frame_instance,
             frame_scrapped=sheet.frame_scrapped,
             heat=sheet.heat,
-            assets=assets(sheet.assets),
+            assets=assets(sheet.assets, sheet=sheet),
             identities=identities(sheet.identities),
             cell=placement.girl_cell if placement else None,
             vessel_id=placement.vessel_id if placement else None,

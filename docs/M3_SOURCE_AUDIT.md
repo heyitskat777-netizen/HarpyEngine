@@ -204,6 +204,16 @@ controls never let the Handler select the random recipient. Other temporary
 modifiers and remaining Strain/playbook/world/economy rules remain unfinished.
 See `work_orders/M3_SUPPLY_LOSS.md` and the central ruling register.
 
+WYVERN's Enormous exception is now enforced in actual activation, paid Asset
+Installment, compulsory replacement packages and native selectors (book PDF 74 /
+printed p.72; ordinary caps PDF 15 / printed p.13). Five ordinary Frame Assets
+fit alongside Enormous; it cannot be selected for cap replacement. An actual
+source marker, or proven original legacy identity, supplies the properties.
+Naming a custom Asset Enormous grants no exception. Damage, repair and counting
+surviving Assets for Defeat still include the actual intrinsic Asset. This audits
+only that printed exception and the partial core cap operations; full WYVERN
+Plays, special control/transport and further Asset interactions remain unfinished.
+
 
 Low Budget 3/1 (PDF 150 / printed p.148) now records one or two actual scientific
 Observation orders, with explicit per-Girl hiding decisions and distinct real

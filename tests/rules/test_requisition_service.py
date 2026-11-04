@@ -23,8 +23,8 @@ from girlframe.services.onboarding import WorkflowError
 ledger = ledger_fixture
 
 
-def ready(store):
-    missions, game = service(store)
+def ready(store, frame="JANUS-B"):
+    missions, game = service(store, frame=frame)
     approval = store.policy.m3_approval
     store.policy = store.policy.model_copy(
         update={
@@ -257,3 +257,58 @@ def test_custom_native_purchase_preserves_private_details_and_new_assets_are_ord
         )
         assert "PRIVATE_CUSTOM_" not in str(list(bodies))
         assert c.scalar(sa.select(sa.func.count()).select_from(t.m2["m2_outbox"])) == 0
+
+
+def test_wyvern_purchases_fill_five_ordinary_slots_without_replacing_enormous(ledger):
+    svc, game = ready(ledger, frame="WYVERN 0.4")
+    with ledger.transaction() as c:
+        canon = state(game)
+        canon.sheets["2"].permissions = 5
+        game.event(c, 1, "synthetic-wyvern-funds", "synthetic.permissions", canon)
+    for _ in range(3):
+        buy(svc)
+    before = state(game)
+    assets = svc.view(PLAYER)["frame_assets"]
+    assert len(assets) == 6 and sum(x["counts_toward_limit"] for x in assets) == 5
+    assert before.sheets["2"].permissions == 2
+    for replacement in (None, "frame:intrinsic:0"):
+        with pytest.raises(WorkflowError, match="non-Void"):
+            buy(svc, choice=selected(replace=replacement))
+        assert state(game) == before
+    buy(svc, choice=selected(replace="frame:0"))
+    after = state(game)
+    assert after.sheets["2"].permissions == 1 and len(after.requisitions) == 4
+    assert any(x.id == "frame:intrinsic:0" for x in after.sheets["2"].assets)
+    assert not any(x.id == "frame:0" for x in after.sheets["2"].assets)
+
+
+def test_wyvern_native_purchase_uses_ordinary_count_and_excludes_protected_replacements(ledger):
+    from test_mission_ui import current
+
+    from girlframe.discord_adapter.m3_requisitions import open_requisitions
+
+    svc, game = ready(ledger, frame="WYVERN 0.4")
+    for _ in range(2):
+        buy(svc)
+
+    async def form_for_purchase():
+        owner = current(2)
+        await owner.response.defer(ephemeral=True)
+        await open_requisitions(owner, svc)
+        picker = owner.edit_original_response.call_args.kwargs["view"]
+        await picker.open_item(owner, "install")
+        catalog = owner.edit_original_response.call_args.kwargs["view"]
+        await catalog.open_item(owner, "custom")
+        return owner.edit_original_response.call_args.kwargs["view"]
+
+    async def run():
+        # Five actual Assets include Enormous: the fifth ordinary slot is still free.
+        form = await form_for_purchase()
+        assert not any(x.key == "replace" for x in form.fields)
+        buy(svc)
+        form = await form_for_purchase()
+        replacement = next(x for x in form.fields if x.key == "replace")
+        assert len(replacement.options) == 5
+        assert "frame:intrinsic:0" not in dict(replacement.options)
+
+    asyncio.run(run())

@@ -60,6 +60,13 @@ class AssetState(Model):
     description: str = ""
     damaged: bool = False
     void: bool = False
+    intrinsic: Literal["wyvern_enormous"] | None = None
+
+    @model_validator(mode="after")
+    def actual_intrinsic_family(self) -> "AssetState":
+        if self.intrinsic is not None and self.family != "frame":
+            raise ValueError("The printed WYVERN intrinsic belongs to its Frame Asset")
+        return self
 
 
 class TagState(Model):

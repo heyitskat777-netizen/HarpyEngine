@@ -90,6 +90,8 @@ class AssetView(Model):
     family: Literal["girl", "frame", "gorgon"]
     damaged: bool
     void: bool
+    counts_toward_limit: bool | None = None
+    can_replace_at_limit: bool | None = None
 
 
 class IdentityView(Model):

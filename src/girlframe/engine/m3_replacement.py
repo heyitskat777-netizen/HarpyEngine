@@ -52,8 +52,8 @@ def package(
         if entry.scope != "frame":
             raise ValueError("A replacement package may only grant supported Frame rules")
     intrinsic = 1 if frame == "WYVERN 0.4" else 0
-    if len(supplied.assets) + intrinsic > 5:
-        raise ValueError("The package and printed intrinsic Assets must fit the five-Asset cap")
+    if len(supplied.assets) > 5:
+        raise ValueError("The ordinary package must fit the five-Asset cap; Enormous is additional")
     if intrinsic and any(x.name.strip().casefold() == "enormous" for x in supplied.assets):
         raise ValueError("Enormous is already supplied as the printed intrinsic Asset")
     if (supplied.consume_hunger is not None) != (frame == "CONSUME"):
@@ -120,7 +120,14 @@ def replace(
         for index, asset in enumerate(supplied.assets)
     )
     if selected.frame == "WYVERN 0.4":
-        sheet.assets.append(AssetState(id=frame_id + ":intrinsic", family="frame", name="Enormous"))
+        sheet.assets.append(
+            AssetState(
+                id=frame_id + ":intrinsic",
+                family="frame",
+                name="Enormous",
+                intrinsic="wyvern_enormous",
+            )
+        )
     if selected.fanbase:
         sheet.identities.extend(
             IdentityState(id=frame_id + ":fan:" + str(i), name=name, protected=True)

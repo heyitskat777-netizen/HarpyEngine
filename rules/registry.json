@@ -918,14 +918,51 @@
         "heading": "Assets"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Actual source-bound Asset acquisition, replacement, damage or recovery; printed WYVERN Enormous exception.",
+        "actor_type": "Actual canonical Girl/Frame with original activation or replacement provenance.",
+        "pre_roll_sources": [
+          "Actual owned Asset IDs and family",
+          "Source-backed intrinsic marker or proven legacy original ID",
+          "Actual original Girl and current Frame instance",
+          "Original activation/replacement history"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "The acquiring owner explicitly chooses a legal non-Void replacement when the ordinary family cap requires one. A compulsory package remains the exact Handler proposal plus player confirmation.",
+        "target_policy": "Four ordinary Girl Assets / five ordinary Frame Assets. Actual WYVERN Enormous is additional and cannot be a cap replacement. A custom name confers no intrinsic properties.",
+        "post_roll_effects": [
+          "Pure install enforces effective cap and protected replacement",
+          "Actual activation/replacement marks printed Enormous",
+          "Paid installation charges once with acquisition and receipt",
+          "Native selectors use actual semantic properties",
+          "Additional Asset still takes damage, repairs and contributes to Defeat"
+        ],
+        "mandatory_followups": [
+          "Last-Asset and Void threshold helpers remain partial; full runtime consumers unfinished.",
+          "WYVERN Plays, Leviathan Chassis and Heavy Burden remain unimplemented."
+        ],
+        "handler_or_gm_intervention": "No narrative or extra permission is inferred from a label. Printed intrinsic exception is not a campaign ruling.",
+        "test_fixture_ids": [
+          "tests/rules/test_asset_properties.py",
+          "tests/rules/test_requisition_service.py::test_wyvern_purchases_fill_five_ordinary_slots_without_replacing_enormous",
+          "tests/rules/test_requisition_service.py::test_wyvern_native_purchase_uses_ordinary_count_and_excludes_protected_replacements",
+          "tests/rules/test_replacement_ui.py::test_wyvern_native_package_allows_five_ordinary_assets_plus_printed_enormous"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_asset_properties.py",
+        "tests/rules/test_requisition_service.py::test_wyvern_purchases_fill_five_ordinary_slots_without_replacing_enormous",
+        "tests/rules/test_requisition_service.py::test_wyvern_native_purchase_uses_ordinary_count_and_excludes_protected_replacements",
+        "tests/rules/test_replacement_ui.py::test_wyvern_native_package_allows_five_ordinary_assets_plus_printed_enormous"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -3816,14 +3853,51 @@
         "heading": "Wyvern_0.4"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Actual source-bound Asset acquisition, replacement, damage or recovery; printed WYVERN Enormous exception.",
+        "actor_type": "Actual canonical Girl/Frame with original activation or replacement provenance.",
+        "pre_roll_sources": [
+          "Actual owned Asset IDs and family",
+          "Source-backed intrinsic marker or proven legacy original ID",
+          "Actual original Girl and current Frame instance",
+          "Original activation/replacement history"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "The acquiring owner explicitly chooses a legal non-Void replacement when the ordinary family cap requires one. A compulsory package remains the exact Handler proposal plus player confirmation.",
+        "target_policy": "Four ordinary Girl Assets / five ordinary Frame Assets. Actual WYVERN Enormous is additional and cannot be a cap replacement. A custom name confers no intrinsic properties.",
+        "post_roll_effects": [
+          "Pure install enforces effective cap and protected replacement",
+          "Actual activation/replacement marks printed Enormous",
+          "Paid installation charges once with acquisition and receipt",
+          "Native selectors use actual semantic properties",
+          "Additional Asset still takes damage, repairs and contributes to Defeat"
+        ],
+        "mandatory_followups": [
+          "Last-Asset and Void threshold helpers remain partial; full runtime consumers unfinished.",
+          "WYVERN Plays, Leviathan Chassis and Heavy Burden remain unimplemented."
+        ],
+        "handler_or_gm_intervention": "No narrative or extra permission is inferred from a label. Printed intrinsic exception is not a campaign ruling.",
+        "test_fixture_ids": [
+          "tests/rules/test_asset_properties.py",
+          "tests/rules/test_requisition_service.py::test_wyvern_purchases_fill_five_ordinary_slots_without_replacing_enormous",
+          "tests/rules/test_requisition_service.py::test_wyvern_native_purchase_uses_ordinary_count_and_excludes_protected_replacements",
+          "tests/rules/test_replacement_ui.py::test_wyvern_native_package_allows_five_ordinary_assets_plus_printed_enormous"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_asset_properties.py",
+        "tests/rules/test_requisition_service.py::test_wyvern_purchases_fill_five_ordinary_slots_without_replacing_enormous",
+        "tests/rules/test_requisition_service.py::test_wyvern_native_purchase_uses_ordinary_count_and_excludes_protected_replacements",
+        "tests/rules/test_replacement_ui.py::test_wyvern_native_package_allows_five_ordinary_assets_plus_printed_enormous"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

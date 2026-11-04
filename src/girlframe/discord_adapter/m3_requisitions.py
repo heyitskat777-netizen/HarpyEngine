@@ -113,13 +113,13 @@ async def open_requisitions(interaction: discord.Interaction, service: Requisiti
         ) + (("custom", "Write my own ordinary Frame Asset"),)
 
         async def select_asset(selected: discord.Interaction, source: str) -> None:
-            if len(data["frame_assets"]) >= 5 and not any(
-                not x["void"] for x in data["frame_assets"]
-            ):
+            at_limit = sum(x["counts_toward_limit"] for x in data["frame_assets"]) >= 5
+            replaceable = [x for x in data["frame_assets"] if x["can_replace_at_limit"]]
+            if at_limit and not replaceable:
                 await reply(
                     selected,
-                    "Your Frame is at its Asset limit and every Frame Asset is Void. "
-                    "Asset Installment needs a non-Void Frame Asset to replace.",
+                    "Your Frame is at its Asset limit with no replaceable non-Void Asset. "
+                    "Asset Installment cannot replace a Void or protected intrinsic Asset.",
                 )
                 return
             custom = source == "custom"
@@ -128,16 +128,12 @@ async def open_requisitions(interaction: discord.Interaction, service: Requisiti
                 Field("description", "Describe the installed Asset", paragraph=True),
                 Field("account", "Describe the actual installation", paragraph=True),
             ]
-            if len(data["frame_assets"]) >= 5:
+            if at_limit:
                 fields.append(
                     Field(
                         "replace",
                         "Non-Void Frame Asset to replace",
-                        tuple(
-                            (x["id"], entity_label(x))
-                            for x in data["frame_assets"]
-                            if not x["void"]
-                        ),
+                        tuple((x["id"], entity_label(x)) for x in replaceable),
                     )
                 )
             fields.append(

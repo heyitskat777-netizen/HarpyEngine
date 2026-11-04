@@ -227,7 +227,14 @@ class GameService:
                     for i, x in enumerate(values)
                 )
             assets.extend(
-                AssetState(id="frame:intrinsic:" + str(i), family="frame", name=name)
+                AssetState(
+                    id="frame:intrinsic:" + str(i),
+                    family="frame",
+                    name=name,
+                    intrinsic="wyvern_enormous"
+                    if review.creation.frame_playbook == "WYVERN 0.4" and name == "Enormous"
+                    else None,
+                )
                 for i, name in enumerate(review.creation.intrinsic_frame_assets)
             )
             outgoing = next((x for x in review.bonds if x.outgoing), None)
