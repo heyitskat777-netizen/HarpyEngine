@@ -180,4 +180,6 @@ Compulsory Frame replacement at DoctorDoctor eight boxes remains a real owned
 task. The owner ruled that the Handler specifies the package, the player must
 choose a different official Frame playbook and no Permissions are charged.
 `M3_FRAME_REPLACEMENT.md` specifies the proposal/package/confirmation work and
-acceptance tests; its mechanical application is not yet implemented.
+acceptance tests. The DoctorDoctor path now has typed proposal, package, Court
+consent and exact free application, including profile/sync consistency and origin
+binding. Defeat destruction and full Frame/World runtime interactions remain.

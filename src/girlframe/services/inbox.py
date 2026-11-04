@@ -455,6 +455,31 @@ class InboxService:
             for work in latest_work.values():
                 if work["state"] == "resolved":
                     continue
+                primary, task_name = None, None
+                kind = work["kind"]
+                if kind in (
+                    "punishment",
+                    "punishment_consult",
+                    "punishment_paired_identity_heat",
+                    "punishment_helpless",
+                ):
+                    primary, task_name = "Review discipline", "m3_discipline"
+                elif kind in (
+                    "doctor_frame_replacement",
+                    "frame_replacement_package",
+                    "frame_replacement_court",
+                ):
+                    primary, task_name = "Review replacement", "m3_replacement"
+                elif kind in ("doctor_obsolescence", "princess_mission_end"):
+                    primary, task_name = "Review reaction", "m3_reaction"
+                title = {
+                    "punishment": "Required Punishment",
+                    "doctor_frame_replacement": "Choose replacement Frame",
+                    "frame_replacement_package": "Package awaiting confirmation"
+                    if work["state"] == "quoted"
+                    else "Define replacement package",
+                    "frame_replacement_court": "Confirm replacement Court role",
+                }.get(kind, "Required mission reaction")
                 items.append(
                     InboxItem(
                         "mission-work:" + work["id"],
@@ -462,50 +487,19 @@ class InboxService:
                         work["id"],
                         work["revision"],
                         "missions",
-                        "Required Punishment"
-                        if work["kind"] == "punishment"
-                        else "Required mission reaction",
+                        title,
                         label(work["subject_id"]),
                         "pending",
-                        work["owner_id"] == user,
+                        work["owner_id"] == user
+                        and not (kind == "frame_replacement_package" and work["state"] == "quoted"),
                         False,
                         "A required consequence remains pending.",
                         (
                             "Resolve this with the designated participant; "
                             "an offline player or timer cannot waive it."
                         ),
-                        "Review discipline"
-                        if work["kind"]
-                        in (
-                            "punishment",
-                            "punishment_consult",
-                            "punishment_paired_identity_heat",
-                            "punishment_helpless",
-                        )
-                        else "Review reaction"
-                        if work["kind"]
-                        in (
-                            "doctor_obsolescence",
-                            "princess_mission_end",
-                            "doctor_frame_replacement",
-                        )
-                        else None,
-                        task="m3_discipline"
-                        if work["kind"]
-                        in (
-                            "punishment",
-                            "punishment_consult",
-                            "punishment_paired_identity_heat",
-                            "punishment_helpless",
-                        )
-                        else "m3_reaction"
-                        if work["kind"]
-                        in (
-                            "doctor_obsolescence",
-                            "princess_mission_end",
-                            "doctor_frame_replacement",
-                        )
-                        else None,
+                        primary,
+                        task=task_name,
                     )
                 )
         return tuple(

@@ -22,11 +22,10 @@ async def open_reaction(
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.get, viewer, identity)
     if data["kind"] == "doctor_frame_replacement":
-        await reply(
-            interaction,
-            "Frame replacement is required. Replacement is not yet available in this pilot; "
-            "the obligation stays pending.",
-        )
+        from girlframe.discord_adapter.m3_replacement import open_replacement
+        from girlframe.services.m3_replacement import ReplacementService
+
+        await open_replacement(interaction, ReplacementService(service.missions), identity)
         return
     if data["state"] == "resolved" or data["owner_id"] != str(viewer.user_id):
         await reply(

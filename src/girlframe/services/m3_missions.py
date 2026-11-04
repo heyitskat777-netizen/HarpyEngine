@@ -12,6 +12,7 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_missions as rules
+from girlframe.engine.m3_policy import RULESET as M3_RULESET
 from girlframe.engine.rules_registry import Registry
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_game import GameService
@@ -174,6 +175,7 @@ class MissionService:
                 or uid == viewer.user_id
                 or not setup._member(c, uid)
                 or state.sheets[str(uid)].frame_scrapped
+                or self.game.immediate_work(c, uid)
                 for uid in players
             ):
                 raise WorkflowError(
@@ -259,8 +261,13 @@ class MissionService:
             state = load_state(c, self.store.campaign_id)
             if str(viewer.user_id) not in state.sheets:
                 raise WorkflowError("A current canonical Pilot is required to respond.")
-            if response == "accept" and state.sheets[str(viewer.user_id)].frame_scrapped:
-                raise WorkflowError("Replace the scrapped Frame before accepting another mission.")
+            if response == "accept" and (
+                state.sheets[str(viewer.user_id)].frame_scrapped
+                or self.game.immediate_work(c, viewer.user_id)
+            ):
+                raise WorkflowError(
+                    "Resolve the scrapped Frame or immediate work before accepting another mission."
+                )
             updated = rules.respond(mission, viewer.user_id, expected, response)
             event = self.game.event(
                 c,
@@ -284,6 +291,8 @@ class MissionService:
 
     def start(self, viewer: GuildViewer, key: str, identity: str, expected: int) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
+            if self.game.pending_actions(c):
+                raise WorkflowError("Finish the pending scene Play before dispatching a mission.")
             mission = self._mission(c, identity)
             self._handler(c, viewer)
             state = load_state(c, self.store.campaign_id)
@@ -291,7 +300,9 @@ class MissionService:
             active = frozenset(
                 int(uid)
                 for uid in state.sheets
-                if setup._member(c, int(uid)) and not state.sheets[uid].frame_scrapped
+                if setup._member(c, int(uid))
+                and not state.sheets[uid].frame_scrapped
+                and not self.game.immediate_work(c, int(uid))
             )
             updated = rules.dispatch(
                 mission, viewer.user_id, self._current_handler(c), expected, active
@@ -335,6 +346,8 @@ class MissionService:
             mission = self._mission(c, identity)
             self._handler(c, viewer)
             rules.handler(mission, viewer.user_id, self._current_handler(c))
+            if self.game.pending_actions(c):
+                raise WorkflowError("Finish the pending scene Play before ending the mission.")
             rules.revision(mission, expected)
             if mission.phase != "active":
                 raise WorkflowError("Only an active mission can be ended.")
@@ -451,6 +464,8 @@ class MissionService:
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             self._handler(c, viewer)
+            if self.game.pending_actions(c):
+                raise WorkflowError("Finish the pending scene Play before advancing the mission.")
             mission = self._mission(c, identity)
             rules.handler(mission, viewer.user_id, self._current_handler(c))
             rules.revision(mission, expected)
@@ -522,6 +537,7 @@ class MissionService:
                 str(uuid4()),
                 "m3.mission_projections_rebuilt",
                 {"missions": len(latest)},
+                ruleset_version=M3_RULESET,
             )
             return len(latest)
 

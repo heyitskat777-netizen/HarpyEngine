@@ -111,10 +111,20 @@ and noncanonical initial NPC Bond migration still need audit and implementation.
 The owner approved Sedation's small-set fallback; zero/one-Identity paths now
 apply only after confirmation and create no synthetic Identity. Compulsory Frame
 replacement now has approved policies: Handler-defined package, different official
-playbook and no Permission charge. Its application is still unfinished; the task
-stays pending, with no placeholder replacement or payment. The explicit workflow
-and acceptance requirements are in `work_orders/M3_FRAME_REPLACEMENT.md`.
+playbook and no Permission charge. The DoctorDoctor-scrapping path applies an
+exact player-confirmed package, separately owned Court consent and typed Frame
+setup, while preserving Girl state. It binds the original Frame/character and
+updates the canonical Frame, public profile, immutable snapshot and cosmetic sync
+intent atomically. Changed quotes/state invalidate old forms. All package text has
+paged private review. Defeat's destroyed-Frame trigger is still unimplemented;
+additional unlocks require registry availability and further Void work remains
+blocking. Core/Court state here is baseline setup, not complete World/AM mechanics.
+The workflow and acceptance requirements are in `work_orders/M3_FRAME_REPLACEMENT.md`.
 This remains a partial implementation and branch audit.
+
+Two upcoming Off-Duty interpretations await owner input: DoctorDoctor's credited
+Permission recipient scope, and the duration of off-duty Sedation Identity locks.
+Neither branch has an assumed production default.
 
 The new rules tests are synthetic. They are useful implementation evidence, not
 finished M3 case acceptance. Required source/fixture matrices and all remaining

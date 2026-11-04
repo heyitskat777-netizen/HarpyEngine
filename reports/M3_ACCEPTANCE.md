@@ -320,3 +320,81 @@ the typed task stays pending. Remaining
 Punishments, playbook interactions, full recovery, Strain/world rules and
 independent/human acceptance remain unfinished; this checkpoint does not complete
 M3D, M3E or M3H.
+
+
+## Free, Handler-defined compulsory replacement checkpoint
+
+The approved DoctorDoctor-scrapping path now supports player proposal, an exact
+Handler-defined package and final player confirmation, with no Permission charge
+and no same-playbook/alias bypass. The proposal preserves source work, Frame
+instance and character identity. Revising it supersedes only its derived package
+and Court requests; the original obligation remains pending. Changed state,
+package, membership or Handler invalidates stale inputs. No real-time expiration
+waives replacement or chooses a Frame for the player.
+
+Packages supply an explicit zero-to-five Asset count, descriptions, damage/Void
+state and only registry-available additional rules. No two-Asset baseline is assumed.
+Wyvern's printed intrinsic Enormous remains within the cap. Frame-specific setup
+includes owner-chosen Prince fanbase, a distinct unnamed JANUS Core baseline,
+Handler-specified CONSUME hunger/Doctor track, eligible CHANGELING Strings and
+separately accepted Red Queen Court allocation. A Handler-assigned AM is recorded
+as a Handler Tag. These are typed baseline facts, not complete Core/Court/World
+runtime mechanics. Unsupported additional abilities fail without applying a quote.
+All-Void follow-up work remains explicit and cannot be acknowledged as complete.
+
+Installation commits canonical state, saved public profile, immutable profile
+snapshot, required-work history and cosmetic sync intent in one transaction.
+Girl resources, existing Identities/Bonds, notes and historical receipts are
+preserved; no reactivation resets anything. The current Frame's new name/appearance
+is used for authorized public fields rather than the old creation snapshot.
+`/mission replacement`, reaction routing and requests use native private controls.
+The final review has bounded pages for the complete package, all Asset descriptions,
+setup and unlocked abilities; opening it does not install anything. Court recipients
+see only their own role request, not the private package or owner preferences. A
+still-current request may be refused after state changes; stale acceptance remains
+blocked, and refusal does not install a Frame or waive the parent obligation.
+
+Immediate work now also blocks mission acceptance/dispatch; a pending M2 scene
+Play prevents dispatch, mission end or advancement. An unresolved choice cannot
+be bypassed by declaring a new mission phase. Source-specific work still remains
+resumable and owner-bound.
+
+The shared event recorder previously inherited the M1 SQL default ruleset label
+for gameplay. Forward writes now stamp actual M2/M3 versions and include the
+configured registry digest on M3 gameplay events. Local rebuild audit versions
+are explicit as well. No old immutable record was rewritten. The replacement
+integration test asserts the recorded M3 version and digest.
+
+Validation executed:
+
+| Check | Actual result |
+|---|---|
+| Final full offline suite | **600 passed in 56.65s**, zero failures/errors/skips; private artifact `var/m3-replacement-pytest.xml` |
+| Added coverage | 25 pure/service/native replacement cases plus one pending-Play mission guard over the 574-test checkpoint |
+| Replacement transaction tests | Ten passed in 3.31s, including origin binding, real backup/rebuild and campaign/revocation guards |
+| Ruff lint / format | All checks passed; 201 files already formatted |
+| Mypy | No issues in 107 source files |
+| Registry | RULES_SUBSET; 473 inventory entries, 436 required core, 13 subset / 460 unimplemented; zero independent verification |
+| Handoff verifier | 34 required files, 86 planned cases, four schemas and four synthetic fixtures; planning-only PASS |
+| Publishable check | 283 files, all 40 original manifest entries intact, zero findings |
+| Whitespace | `git diff --check` passed |
+
+Early checks corrected a nonexistent catalogue constant, a reused synthetic
+interaction key, static typing/format findings and a long-review assertion before
+the final passing run. An initial full run also passed 599 tests; the suite was
+rerun after correcting provenance stamping and checking stale Court refusal. No remaining check failure is hidden.
+Tests perform no live Discord/network access and use synthetic data only.
+
+The running frozen build remains separate from these edits. After its restoration
+in the prior checkpoint, a further readback found exactly one bot. No M3 deployment,
+live schema migration, policy edit or environment publication occurred in this
+replacement work. The current live release is still the frozen 13-command build
+on schema 0011; developing source registers 14 top-level groups.
+
+M3 remains IN_PROGRESS / RULES_SUBSET. This application is tied to DoctorDoctor
+scrapping; the destroyed-Frame Defeat/Off-Duty trigger is not yet implemented.
+Full Frame/Core/Court abilities, remaining Punishments, recovery cycles, Strain,
+world state and independent/human acceptance remain unfinished. Two upcoming
+Off-Duty interpretations await owner input: DoctorDoctor's credited Permission
+recipient scope and the duration of off-duty Sedation locks. Neither has been
+silently applied as a production default.

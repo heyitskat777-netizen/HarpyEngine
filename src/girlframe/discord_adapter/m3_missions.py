@@ -283,4 +283,15 @@ def register_missions(
         except WorkflowError as error:
             await reply(interaction, str(error))
 
+    @group.command(name="replacement", description="Review compulsory free Frame replacement tasks")
+    async def replacement(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_replacement import replacement_queue
+        from girlframe.services.m3_replacement import ReplacementService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await replacement_queue(interaction, ReplacementService(service))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
     tree.add_command(group, guild=discord.Object(id=guild_id))

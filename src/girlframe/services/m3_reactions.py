@@ -197,7 +197,22 @@ class ReactionService:
                     result.sheet.owner,
                     result.sheet.owner,
                     "doctor_frame_replacement",
-                    {"source_pdf": 71, "immediate": True, "source_work": identity},
+                    {
+                        "source_pdf": 71,
+                        "immediate": True,
+                        "source_work": identity,
+                        "origin_frame": result.sheet.frame,
+                        "origin_frame_id": result.sheet.frame_runtime.id
+                        if result.sheet.frame_runtime
+                        else None,
+                        "origin_fingerprint": result.sheet.source_fingerprint,
+                        "origin_character_id": c.scalar(
+                            sa.select(t.characters.c.id).where(
+                                t.characters.c.campaign_id == self.store.campaign_id,
+                                t.characters.c.user_id == str(result.sheet.owner),
+                            )
+                        ),
+                    },
                     event,
                 )
             return {

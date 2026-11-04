@@ -105,6 +105,20 @@ def test_saved_mission_reads_survive_a_vacant_handler_appointment(ledger):
         svc.end(ADMIN, "former-handler", identity, revision, True)
 
 
+def test_pending_scene_play_cannot_be_bypassed_by_mission_end(ledger):
+    from test_m2_game import start
+
+    svc, game = service(ledger)
+    identity, revision = launched(svc)
+    action = start(game)
+    with pytest.raises(WorkflowError, match="pending scene Play"):
+        svc.end(ADMIN, "too-early", identity, revision, True)
+    assert svc.get(ADMIN, identity)["mission"]["phase"] == "active"
+    assert state(game).sheets["2"].permissions == 0
+    game.abort(ADMIN, "explicit-recovery", action)
+    assert svc.end(ADMIN, "after-recovery", identity, revision, True)["rewards_committed"]
+
+
 def test_private_mission_and_metadata_have_no_administrator_override(ledger):
     svc, game = service(ledger)
     identity, rev = launched(svc)

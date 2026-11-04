@@ -94,6 +94,7 @@ class OnboardingStore:
         event_index: int = 0,
         visibility: str = "private",
         event_id: str | None = None,
+        ruleset_version: str = "synthetic-m1",
     ) -> str:
         identity = event_id or str(uuid4())
         revision = (
@@ -119,6 +120,7 @@ class OnboardingStore:
                 id=identity,
                 created_utc=datetime.now(UTC).isoformat(),
                 visibility=visibility,
+                ruleset_version=ruleset_version,
             )
         )
         return identity

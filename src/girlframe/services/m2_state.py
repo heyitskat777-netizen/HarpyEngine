@@ -30,7 +30,11 @@ def public_sheet(sheet: PilotSheet, state: GameState) -> dict[str, Any]:
     draft = sheet.review.creation
     for field in ("frame_name", "frame_appearance"):
         if field in sheet.public_fields:
-            result[field] = getattr(draft, field)
+            result[field] = (
+                getattr(sheet.frame_runtime, field)
+                if sheet.frame_runtime
+                else getattr(draft, field)
+            )
     if "appearance" in sheet.public_fields:
         result["appearance"] = draft.girl_appearance
     if "identities" in sheet.public_fields:

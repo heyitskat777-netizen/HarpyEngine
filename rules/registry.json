@@ -2860,7 +2860,10 @@
       "test_evidence": [
         "tests/rules/test_reactions.py",
         "tests/rules/test_reaction_service.py",
-        "tests/rules/test_reaction_ui.py"
+        "tests/rules/test_reaction_ui.py",
+        "tests/rules/test_replacement.py",
+        "tests/rules/test_replacement_service.py",
+        "tests/rules/test_replacement_ui.py"
       ],
       "m2_play_id": null,
       "module": "core"

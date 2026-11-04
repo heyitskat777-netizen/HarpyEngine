@@ -297,5 +297,6 @@ Punishment rulings now include marking all remaining Identities for Sedation's
 small-set case. Princess post-promotion Permission timing is also approved. Mission-end
 reactions and conditional Beating Helplessness have typed service/native controls.
 Frame replacement has approved Handler-defined/different-playbook/free policies,
-while package application remains unfinished. See
+with DoctorDoctor-scrapping package application now implemented offline. Destroyed
+Frame/Defeat integration and full runtime interactions remain unfinished. See
 `M3_SOURCE_AUDIT.md`; full M3 acceptance is still pending.

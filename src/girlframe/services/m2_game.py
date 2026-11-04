@@ -27,6 +27,7 @@ from girlframe.engine.m2 import (
     spend_heat,
 )
 from girlframe.engine.m2_registry import registry_digest
+from girlframe.engine.m3_policy import RULESET as M3_RULESET
 from girlframe.engine.rolls import DiceSource, OsDice
 from girlframe.services.creation_review import CreationReviewService
 from girlframe.services.handler_setup import HandlerService
@@ -91,7 +92,16 @@ class GameService:
         if state is not None:
             state.revision += 1
             metadata["game_revision"] = state.revision
-        event = self.store._audit(c, actor, key, kind, metadata)
+        if kind.startswith("m3.") and self.store.policy.m3_approval is not None:
+            metadata["rules_registry_sha256"] = self.store.policy.m3_approval.registry_sha256
+        event = self.store._audit(
+            c,
+            actor,
+            key,
+            kind,
+            metadata,
+            ruleset_version=M3_RULESET if kind.startswith("m3.") else RULESET,
+        )
         if state is not None:
             body = GameState.model_validate_json(state.model_dump_json()).model_dump_json()
             c.execute(
@@ -476,6 +486,37 @@ class GameService:
         )
         return identity
 
+    def pending_actions(self, c: Connection) -> bool:
+        actions = t.m2["m2_actions"]
+        return (
+            c.scalar(
+                sa.select(actions.c.id)
+                .where(
+                    actions.c.campaign_id == self.store.campaign_id,
+                    actions.c.state.not_in(("complete", "aborted")),
+                )
+                .limit(1)
+            )
+            is not None
+        )
+
+    def immediate_work(self, c: Connection, owner: int) -> bool:
+        work = t.m3["m3_required_work"]
+        latest = {
+            row["id"]: row
+            for row in c.execute(
+                sa.select(work)
+                .where(
+                    work.c.campaign_id == self.store.campaign_id, work.c.subject_id == str(owner)
+                )
+                .order_by(work.c.revision)
+            ).mappings()
+        }
+        return any(
+            row["state"] != "resolved" and bool(json.loads(row["body_json"]).get("immediate"))
+            for row in latest.values()
+        )
+
     def begin(
         self, viewer: GuildViewer, key: str, channel: int, sheet_revision: int, prepared: PlayInput
     ) -> dict[str, Any]:
@@ -493,22 +534,7 @@ class GameService:
                 raise WorkflowError(
                     "REQUIRED_FOLLOWUP: replace the scrapped Frame before new Plays."
                 )
-            work = t.m3["m3_required_work"]
-            latest_work = {
-                row["id"]: row
-                for row in c.execute(
-                    sa.select(work)
-                    .where(
-                        work.c.campaign_id == self.store.campaign_id,
-                        work.c.subject_id == str(viewer.user_id),
-                    )
-                    .order_by(work.c.revision)
-                ).mappings()
-            }
-            if any(
-                row["state"] != "resolved" and json.loads(row["body_json"]).get("immediate")
-                for row in latest_work.values()
-            ):
+            if self.immediate_work(c, viewer.user_id):
                 raise WorkflowError(
                     "REQUIRED_FOLLOWUP: resolve the immediate mechanical follow-up first."
                 )
@@ -1168,6 +1194,7 @@ class GameService:
                 str(uuid4()),
                 "m2.projection_rebuilt",
                 {"game_revision": state.revision},
+                ruleset_version=RULESET,
             )
             return state.revision
 

@@ -174,7 +174,9 @@
       "status": "IN_PROGRESS",
       "planned_tests": [
         "tests/rules/test_reactions.py::test_obsolescence_printed_triggers_mark_one_and_scrapping_cannot_be_ignored",
-        "tests/rules/test_reaction_service.py::test_doctor_scrapping_persists_mandatory_owner_replacement_and_blocks_missions_and_plays"
+        "tests/rules/test_reaction_service.py::test_doctor_scrapping_persists_mandatory_owner_replacement_and_blocks_missions_and_plays",
+        "tests/rules/test_replacement.py::test_free_replacement_uses_exact_handler_asset_count_and_preserves_girl_resources",
+        "tests/rules/test_replacement.py::test_new_court_requires_real_recipient_response_and_supported_extra_rules_only"
       ],
       "evidence": [
         {
@@ -183,6 +185,13 @@
           "result": "574 passed in 54.24s; zero failures/errors/skips",
           "artifact": "var/m3-reactions-pytest.xml",
           "limitation": "Frame replacement and remaining M3 mechanics, source interactions, independent review and human acceptance remain pending"
+        },
+        {
+          "scope": "partial_offline_doctor_replacement_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-replacement-pytest.xml",
+          "result": "600 passed in 56.65s; zero failures/errors/skips; includes ruleset provenance and stale Court refusal",
+          "artifact": "var/m3-replacement-pytest.xml",
+          "limitation": "Defeat integration, full Frame/Core/Court/World mechanics and independent/human acceptance remain unfinished"
         }
       ]
     },
@@ -352,7 +361,8 @@
       "title": "Every passive and compulsory cross-playbook dependency tested",
       "status": "IN_PROGRESS",
       "planned_tests": [
-        "tests/rules/test_punishment_service.py::test_last_girl_asset_requires_handler_context_and_applies_helplessness_conditionally"
+        "tests/rules/test_punishment_service.py::test_last_girl_asset_requires_handler_context_and_applies_helplessness_conditionally",
+        "tests/rules/test_replacement_service.py::test_free_replacement_updates_canon_profile_history_and_cosmetic_intent_once"
       ],
       "evidence": [
         {
@@ -361,6 +371,13 @@
           "result": "574 passed in 54.24s; zero failures/errors/skips",
           "artifact": "var/m3-reactions-pytest.xml",
           "limitation": "Frame replacement and remaining M3 mechanics, source interactions, independent review and human acceptance remain pending"
+        },
+        {
+          "scope": "partial_offline_doctor_replacement_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-replacement-pytest.xml",
+          "result": "600 passed in 56.65s; zero failures/errors/skips; includes ruleset provenance and stale Court refusal",
+          "artifact": "var/m3-replacement-pytest.xml",
+          "limitation": "Defeat integration, full Frame/Core/Court/World mechanics and independent/human acceptance remain unfinished"
         }
       ]
     },
@@ -374,7 +391,8 @@
         "tests/rules/test_punishment_service.py::test_one_actual_punishment_resolves_both_causes_once_and_mission_can_complete",
         "tests/rules/test_punishment_service.py::test_paired_heat_remains_owned_pending_and_blocks_new_plays_until_split_once",
         "tests/rules/test_punishment_service.py::test_absent_dogs_punishment_applies_without_exposing_the_mission",
-        "tests/rules/test_reaction_service.py::test_doctor_failure_marks_once_before_rewards_and_has_no_acknowledgment_shortcut"
+        "tests/rules/test_reaction_service.py::test_doctor_failure_marks_once_before_rewards_and_has_no_acknowledgment_shortcut",
+        "tests/rules/test_replacement_service.py::test_completed_replacement_backup_and_projection_rebuild_keep_frame_and_profile"
       ],
       "evidence": [
         {
@@ -397,6 +415,13 @@
           "result": "574 passed in 54.24s; zero failures/errors/skips",
           "artifact": "var/m3-reactions-pytest.xml",
           "limitation": "Frame replacement and remaining M3 mechanics, source interactions, independent review and human acceptance remain pending"
+        },
+        {
+          "scope": "partial_offline_doctor_replacement_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-replacement-pytest.xml",
+          "result": "600 passed in 56.65s; zero failures/errors/skips; includes ruleset provenance and stale Court refusal",
+          "artifact": "var/m3-replacement-pytest.xml",
+          "limitation": "Defeat integration, full Frame/Core/Court/World mechanics and independent/human acceptance remain unfinished"
         }
       ]
     },
@@ -422,7 +447,8 @@
       "title": "World/mission deadlines advance only through explicit fictional triggers",
       "status": "IN_PROGRESS",
       "planned_tests": [
-        "tests/rules/test_mission_service.py::test_mission_rewards_and_absent_dog_are_atomic_idempotent_and_durable"
+        "tests/rules/test_mission_service.py::test_mission_rewards_and_absent_dog_are_atomic_idempotent_and_durable",
+        "tests/rules/test_mission_service.py::test_pending_scene_play_cannot_be_bypassed_by_mission_end"
       ],
       "evidence": [
         {
@@ -431,6 +457,13 @@
           "result": "520 passed in 46.41s; zero failures/errors/skips",
           "artifact": "var/m3-missions-pytest.xml",
           "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
+        },
+        {
+          "scope": "partial_offline_doctor_replacement_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-replacement-pytest.xml",
+          "result": "600 passed in 56.65s; zero failures/errors/skips; includes ruleset provenance and stale Court refusal",
+          "artifact": "var/m3-replacement-pytest.xml",
+          "limitation": "Defeat integration, full Frame/Core/Court/World mechanics and independent/human acceptance remain unfinished"
         }
       ]
     },
@@ -445,7 +478,9 @@
         "tests/rules/test_punishment_service.py::test_paired_heat_remains_owned_pending_and_blocks_new_plays_until_split_once",
         "tests/rules/test_punishment_service.py::test_absent_dogs_punishment_applies_without_exposing_the_mission",
         "tests/rules/test_reaction_ui.py::test_doctor_native_confirmation_applies_the_source_effect_once",
-        "tests/rules/test_punishment_ui.py::test_sedation_zero_identities_is_an_explicit_confirmed_heat_reset"
+        "tests/rules/test_punishment_ui.py::test_sedation_zero_identities_is_an_explicit_confirmed_heat_reset",
+        "tests/rules/test_replacement_ui.py::test_native_free_replacement_requires_proposal_handler_package_and_owner_confirmation",
+        "tests/rules/test_replacement_ui.py::test_exact_package_review_pages_do_not_truncate_descriptions_and_reject_changed_quotes"
       ],
       "evidence": [
         {
@@ -468,6 +503,13 @@
           "result": "574 passed in 54.24s; zero failures/errors/skips",
           "artifact": "var/m3-reactions-pytest.xml",
           "limitation": "Frame replacement and remaining M3 mechanics, source interactions, independent review and human acceptance remain pending"
+        },
+        {
+          "scope": "partial_offline_doctor_replacement_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-replacement-pytest.xml",
+          "result": "600 passed in 56.65s; zero failures/errors/skips; includes ruleset provenance and stale Court refusal",
+          "artifact": "var/m3-replacement-pytest.xml",
+          "limitation": "Defeat integration, full Frame/Core/Court/World mechanics and independent/human acceptance remain unfinished"
         }
       ]
     },
@@ -481,7 +523,9 @@
         "tests/rules/test_mission_service.py::test_immutable_history_rebuild_and_real_backup_restore",
         "tests/rules/test_punishment_service.py::test_one_actual_punishment_resolves_both_causes_once_and_mission_can_complete",
         "tests/rules/test_punishment_service.py::test_paired_heat_remains_owned_pending_and_blocks_new_plays_until_split_once",
-        "tests/rules/test_punishment_service.py::test_absent_dogs_punishment_applies_without_exposing_the_mission"
+        "tests/rules/test_punishment_service.py::test_absent_dogs_punishment_applies_without_exposing_the_mission",
+        "tests/rules/test_replacement_service.py::test_other_campaign_and_revoked_owner_cannot_read_or_confirm_replacement",
+        "tests/rules/test_replacement_service.py::test_rollback_and_duplicate_concurrent_acceptance_preserve_exactly_once_effects"
       ],
       "evidence": [
         {
@@ -497,6 +541,13 @@
           "result": "549 passed in 53.14s, zero failures/errors/skips; subsequent focused absent-Dog application test: 1 passed",
           "artifact": "var/m3-discipline-pytest.xml",
           "limitation": "Six Punishment types, special follow-ups, broader M3 mechanics and independent/human acceptance remain unfinished"
+        },
+        {
+          "scope": "partial_offline_doctor_replacement_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-replacement-pytest.xml",
+          "result": "600 passed in 56.65s; zero failures/errors/skips; includes ruleset provenance and stale Court refusal",
+          "artifact": "var/m3-replacement-pytest.xml",
+          "limitation": "Defeat integration, full Frame/Core/Court/World mechanics and independent/human acceptance remain unfinished"
         }
       ]
     },
@@ -514,5 +565,18 @@
   "deferred_modules": [
     "ancillary"
   ],
-  "pending_owner_rulings": []
+  "pending_owner_rulings": [
+    {
+      "id": "doctor-credited-permission-recipient",
+      "source": "Book PDF 16 and 71 / printed pp.14 and 69",
+      "question": "Can DoctorDoctor credit-sharing grant a Permission to Handler/NPCs, or only current Pilots?",
+      "status": "AWAITING_OWNER"
+    },
+    {
+      "id": "off-duty-sedation-duration",
+      "source": "Book PDF 17 / printed p.15",
+      "question": "Do off-duty Sedation Identity locks end with that Off-Duty period or require later treatment?",
+      "status": "AWAITING_OWNER"
+    }
+  ]
 }

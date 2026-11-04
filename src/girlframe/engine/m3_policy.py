@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+RULESET: Literal["girlframe-m3-core-1"] = "girlframe-m3-core-1"
+
 
 class Rulings(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
@@ -23,7 +25,7 @@ class Rulings(BaseModel):
 
 class Approval(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
-    ruleset: Literal["girlframe-m3-core-1"] = "girlframe-m3-core-1"
+    ruleset: Literal["girlframe-m3-core-1"] = RULESET
     registry_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     scope: Literal["rules_subset", "core_complete"]
     subsystems: frozenset[

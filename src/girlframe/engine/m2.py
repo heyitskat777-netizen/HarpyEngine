@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from girlframe.engine.creation_review import ReviewSheet
 from girlframe.engine.identity import Snowflake
+from girlframe.engine.m3_frame_state import FrameRuntime
 
 RULESET: Literal["girlframe-m2-pilot-1"] = "girlframe-m2-pilot-1"
 PLAY_IDS = ("keep_your_head", "check_sensors", "engage", "disobey_orders", "flirt")
@@ -85,6 +86,7 @@ class PilotSheet(Model):
     libido_inhibited: bool = False
     obsolescence_marked: int = Field(default=0, ge=0, le=8)
     frame_scrapped: bool = False
+    frame_runtime: FrameRuntime | None = None
 
     @model_validator(mode="after")
     def unique_ids(self) -> "PilotSheet":
@@ -114,6 +116,7 @@ class GameState(Model):
     order: tuple[Snowflake, ...] = ()
     handler: Snowflake | None = None
     handler_heat: int = Field(default=0, ge=0)
+    handler_tags: list[TagState] = Field(default_factory=list)
     bonds: dict[str, int] = Field(default_factory=dict)
     obligations: list[Obligation] = Field(default_factory=list)
     facts: list[dict[str, str]] = Field(default_factory=list)

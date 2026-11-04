@@ -1,6 +1,7 @@
 # M3 compulsory Frame replacement
 
-Status: scoped; application NOT_RUN. This remains part of M3C/M3D/M3E/M3H,
+Status: IN_PROGRESS; DoctorDoctor-scrapping application implemented offline.
+Defeat's destroyed-Frame integration remains NOT_RUN. This is part of M3C/M3D/M3E/M3H,
 not a new milestone or an authorization to deploy unfinished rules.
 
 Source: DoctorDoctor Planned Obsolescence, book PDF 71 / printed p.69, and
@@ -13,7 +14,8 @@ the player must choose a different Frame playbook. Compare official identities,
 including JANUS/JANUS-B normalization; a cosmetic alias is not a different Frame.
 The owner also ruled that compulsory replacement is free. Never charge Permissions
 or reuse Frame Swap's price. Current replacement work remains blocking until its
-actual package and application are implemented.
+actual package and application commit. The DoctorDoctor path now implements this
+workflow, with unsupported optional abilities or additional Void work kept explicit.
 
 ## Work and authority
 
@@ -69,5 +71,11 @@ actual package and application are implemented.
 - Pause and saved-read behavior, changed Handler/package/profile invalidation,
   safe cosmetic retry and subsequent valid Play after successful replacement.
 
-Record actual results in the additive M3 acceptance plan and report. These work
-orders and pending tasks are not implementation or independent verification.
+The current implementation has pure package/alias/setup tests, eleven transactional
+service cases and native proposal/review/confirmation tests, plus full-suite
+evidence in `reports/M3_ACCEPTANCE.md`. It binds the originating Frame and character,
+updates canonical/profile/snapshot/sync intent atomically and preserves Girl state.
+Printed JANUS/Core and Court facts are typed baseline state; complete Core/Court
+runtime mechanics still belong to the remaining M3C/M3G work. Additional abilities
+require actual registry implementation and independent verification. This is not
+independent source certification or completion of all the acceptance work above.

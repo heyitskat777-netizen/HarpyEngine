@@ -22,8 +22,10 @@ inflictor-owned selectors, delegation, exact-proposal Handler consultation and
 atomic effects for ten printed Punishment types. DoctorDoctor mission-failure
 Obsolescence and Princess mission-end standards now have private review controls
 before rewards. Last-Girl-Asset Beating reviews apply Helplessness from confirmed
-Frame context. Six further Punishment types, compulsory Frame replacement and
-some other follow-ups remain unfinished. These changes
+Frame context. DoctorDoctor scrapping now supports free replacement through player
+proposal, an exact Handler package and player confirmation, including required
+Court consent and safe Discord-label updates. Six further Punishment types,
+Defeat/recovery integration and some other follow-ups remain unfinished. These changes
 require a separate, scoped M3 release approval and are not enabled in the running
 bot. See [M3 evidence](reports/M3_ACCEPTANCE.md) and
 [source coverage](docs/M3_SOURCE_AUDIT.md). Ancillary playbooks are deferred and
@@ -161,6 +163,7 @@ check installation and guild ID. Errors omit raw provider bodies and private pat
 | `/mission inbox`, `/mission show` | Invited players/current Handler; saved private offers and progress, with owner-bound actions |
 | `/mission discipline` | Assigned inflictor/affected player; native Punishment controls, Handler consultation and owned Paired Heat choices |
 | `/mission reactions` | Assigned Handler/affected player; saved DoctorDoctor and Princess mission-end work |
+| `/mission replacement` | Player proposal, Handler-defined free package, separate Court recipient response and exact player confirmation |
 | `/character activate`, `/character state` | Explicit activation/public fields; current private state with paging |
 | `/character followthrough`, `/character recover` | Owner follow-through and source-backed moment-alone recovery |
 | `/campaign scene_bind`, `scene_join`, `scene_leave`, `scene_close` | Staff-bound scenes, explicit participation and safe close |
