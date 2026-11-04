@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from girlframe.engine.creation_review import ReviewSheet
 from girlframe.engine.identity import Snowflake
 from girlframe.engine.m3_actor_state import SceneCast
+from girlframe.engine.m3_contraband_state import ContrabandFind
 from girlframe.engine.m3_frame_state import FrameRuntime
 from girlframe.engine.m3_physical_state import Placement
 from girlframe.engine.m3_refusal_state import RefusalBonus
@@ -62,6 +63,7 @@ class AssetState(Model):
     damaged: bool = False
     void: bool = False
     intrinsic: Literal["wyvern_enormous"] | None = None
+    concealed: bool = False
 
     @model_validator(mode="after")
     def actual_intrinsic_family(self) -> "AssetState":
@@ -189,9 +191,12 @@ class GameState(Model):
     requisitions: list[Requisition] = Field(default_factory=list)
     placements: list[Placement] = Field(default_factory=list)
     refusal_bonuses: list[RefusalBonus] = Field(default_factory=list)
+    contraband_finds: list[ContrabandFind] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def distinct_original_placements(self) -> "GameState":
+        if len({x.id for x in self.contraband_finds}) != len(self.contraband_finds):
+            raise ValueError("Actual contraband source finds must be distinct")
         if len({x.id for x in self.refusal_bonuses}) != len(self.refusal_bonuses):
             raise ValueError("Actual refusal bonus sources must be distinct")
         if len({x.actor for x in self.placements}) != len(self.placements) or len(

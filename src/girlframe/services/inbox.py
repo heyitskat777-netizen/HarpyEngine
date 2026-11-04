@@ -546,6 +546,37 @@ class InboxService:
                         task="m3_actor_recovery",
                     )
                 )
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_contraband import ContrabandService
+
+            contraband = ContrabandService(GameService(self.store))
+            for find in canon.contraband_finds:
+                if find.actor.entity != user:
+                    continue
+                contraband.source(connection, find)
+                items.append(
+                    InboxItem(
+                        "contraband:" + find.id,
+                        "contraband",
+                        find.id,
+                        canon.revision,
+                        "world",
+                        "Your private contraband find",
+                        find.label,
+                        "pending"
+                        if find.taken is None
+                        else "accepted"
+                        if find.taken
+                        else "declined",
+                        find.taken is None,
+                        False,
+                        "Choose whether to add this actual find as a Girl Asset.",
+                        "The choice and resulting Asset stay private "
+                        "until you explicitly share them.",
+                        "Review your find",
+                        task="m3_contraband",
+                    )
+                )
             for item in canon.obligations:
                 if (
                     item.owner == viewer.user_id

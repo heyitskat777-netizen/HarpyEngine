@@ -439,4 +439,15 @@ def register_missions(
         except WorkflowError as error:
             await reply(interaction, str(error))
 
+    @group.command(name="contraband", description="Review your own private contraband finds")
+    async def contraband(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_contraband import open_finds
+        from girlframe.services.m3_contraband import ContrabandService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_finds(interaction, ContrabandService(service.game))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
     tree.add_command(group, guild=discord.Object(id=guild_id))

@@ -11,9 +11,12 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_strain_effects as rules
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_contraband_state import ContrabandFind
 from girlframe.engine.m3_supply_state import SupplyLoss
 from girlframe.engine.rolls import IndexSource, OsIndex
 from girlframe.services.m2_state import load_state
+from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_strain import StrainService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
@@ -105,6 +108,69 @@ class EffectService:
                 )
             event_id = str(uuid4())
             supply = None
+            contraband = None
+            if choice.rule_id == "strain.rebellion.low.2.2":
+                rules.fields(choice, {"target"})
+                period = self.strain.periods._get(c, row["off_duty_id"])
+                base = (
+                    next(
+                        (
+                            x
+                            for x in state.world.locations
+                            if x.id == choice.target
+                            and x.kind == "base"
+                            and x.allegiance == "foundation"
+                            and x.condition != "destroyed"
+                        ),
+                        None,
+                    )
+                    if state.world
+                    else None
+                )
+                if base is None or set(period.pilots) != set(state.order):
+                    raise WorkflowError(
+                        "Use the actual Cadre and surviving Foundation base for this find."
+                    )
+                population = tuple(
+                    ActorRef(
+                        kind="pilot",
+                        entity=str(uid),
+                        incarnation=self.game.character_binding(
+                            c, state, uid, require_current_profile=False
+                        ),
+                    )
+                    for uid in period.pilots
+                )
+                if any(period.character_ids.get(x.entity) != x.incarnation for x in population):
+                    raise WorkflowError(
+                        "Recover the original period characters before the random find."
+                    )
+                for actor in population:
+                    actual = resolve(
+                        state,
+                        actor,
+                        profiles(c, self.store.campaign_id),
+                        require_current_profile=False,
+                    )
+                    if actual.cell is not None and actual.cell != base.cell:
+                        raise WorkflowError(
+                            "The event cannot move a known absent Girl to this base. "
+                            "Resolve actual travel first."
+                        )
+                index = self.selector.choose(len(population))
+                # Validate before indexing; bool/negative/out-of-range results never select a Girl.
+                if type(index) is not int or not 0 <= index < len(population):
+                    raise WorkflowError("The random source did not produce a valid Cadre index.")
+                contraband = ContrabandFind(
+                    id=identity,
+                    period=period.id,
+                    source_event=event_id,
+                    base=base.id,
+                    population=population,
+                    index=index,
+                    rng_source=self.selection_source,
+                    label=state.sheets[population[index].entity].callsign,
+                )
             if choice.rule_id == "strain.budget.low.3.2":
                 rules.fields(choice, {"missing_resource"})
                 if not choice.missing_resource or not choice.missing_resource.strip():
@@ -147,6 +213,7 @@ class EffectService:
                 period_id=row["off_duty_id"],
                 supply=supply,
                 source_event=event_id,
+                contraband=contraband,
             )
             scientific_period, scientific_events = None, []
             if choice.rule_id == "strain.budget.low.3.1":

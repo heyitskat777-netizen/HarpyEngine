@@ -6,6 +6,7 @@ from pydantic import Field
 
 from girlframe.engine import m3_world as world_rules
 from girlframe.engine.m2 import GameState, Model, TagState, pair_key
+from girlframe.engine.m3_contraband_state import ContrabandFind
 from girlframe.engine.m3_refusal_state import RefusalBonus
 from girlframe.engine.m3_scientific_observation import Demand, require_orders
 from girlframe.engine.m3_supply_state import SupplyLoss
@@ -28,6 +29,7 @@ SUPPORTED = frozenset(
         "strain.void.high.3.1",
         "strain.rebellion.low.1.1",
         "strain.rebellion.low.1.2",
+        "strain.rebellion.low.2.2",
         "strain.rebellion.low.6.1",
         "strain.budget.low.5.2",
         "strain.budget.low.4.2",
@@ -83,6 +85,7 @@ def apply(
     period_id: str | None = None,
     supply: SupplyLoss | None = None,
     source_event: str | None = None,
+    contraband: ContrabandFind | None = None,
 ) -> GameState:
     if choice.rule_id not in SUPPORTED:
         raise ValueError("UNSUPPORTED_RULE: this Strain effect has no complete typed resolver")
@@ -91,7 +94,20 @@ def apply(
     if world is None or state.handler is None:
         raise ValueError("Initialize the actual world and appointed Handler first")
     rule = choice.rule_id
-    if rule == "strain.rebellion.low.1.2":
+    if rule == "strain.rebellion.low.2.2":
+        fields(choice, {"target"})
+        if (
+            contraband is None
+            or contraband.id != source_work
+            or contraband.period != period_id
+            or contraband.base != choice.target
+            or contraband.source_event != source_event
+            or contraband.taken is not None
+            or any(x.id == source_work for x in state.contraband_finds)
+        ):
+            raise ValueError("Record one actual private contraband draw and its source period")
+        state.contraband_finds.append(contraband)
+    elif rule == "strain.rebellion.low.1.2":
         fields(choice, set())
         if (
             period_id is None

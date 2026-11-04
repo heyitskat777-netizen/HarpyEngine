@@ -29,6 +29,7 @@ def assets(values: Any, *, sheet: PilotSheet | None = None) -> tuple[AssetView, 
             void=x.void,
             counts_toward_limit=counts_toward_limit(sheet, x) if sheet else None,
             can_replace_at_limit=can_replace_at_limit(sheet, x) if sheet else None,
+            concealed=x.concealed if sheet else None,
         )
         for x in values
     )

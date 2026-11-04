@@ -52,6 +52,7 @@ def public_sheet(sheet: PilotSheet, state: GameState) -> dict[str, Any]:
                 ),
             }
             for x in sheet.assets
+            if not x.concealed
         ]
     if sheet.owner in state.order:
         i = state.order.index(sheet.owner)

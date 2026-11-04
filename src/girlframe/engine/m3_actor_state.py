@@ -92,6 +92,7 @@ class AssetView(Model):
     void: bool
     counts_toward_limit: bool | None = None
     can_replace_at_limit: bool | None = None
+    concealed: bool | None = None
 
 
 class IdentityView(Model):

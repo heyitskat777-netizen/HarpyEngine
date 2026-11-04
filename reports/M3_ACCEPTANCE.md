@@ -1457,3 +1457,57 @@ is pushed and GitHub CI passed, run **41902442991**. The frozen bot remains PID4
 all **88 source hashes** match its original tested M2 release. No live migration,
 restart, M3 deployment, environment publication, independent/human acceptance or
 M3-ready claim applies. Continue the agreed milestone.
+
+
+## Actual private random contraband source and optional Girl Asset
+
+Low Rebellion 2/2 (book PDF 147 / printed p.145) now creates one actual uniform
+source draw among the unchanged period's original Cadre Girls. The actual base,
+population/index and character references remain in private source history. Known
+absence blocks scheduling before RNG, without moving a body or filtering the
+random population. Both valid recipient indices and invalid random outputs are
+covered. The Handler's source view omits the recipient/item; only the original
+recipient receives the optional Asset decision. No Permission is charged.
+
+The owner explicitly adds an ordinary undamaged non-Void Girl Asset, with the
+normal four-Asset cap/non-Void replacement, or declines. An accepted Asset is
+concealed even on a sheet otherwise publishing Assets. Explicit owned sharing
+may include it under existing public Asset consent; finding/source accounts stay
+private. Concealment changes no cap, damage, repair or Helplessness rule and
+grants no permanent fictional immunity from discovery. `/mission contraband`
+and the requests inbox expose private pending/history controls. Full descriptions
+and owner accounts remain retrievable. Declining can occur during pause; actual
+acquisition/sharing waits for normal safety, pending-Play and immediate-work guards.
+
+Actual work/die/column/period/event and original random snapshot prove private
+ownership. Changed indices/source IDs cannot grant another human private access.
+Source/decision/Asset/history/command writes are atomic; replay, concurrent
+commands and private backup/rebuild preserve the actual source. A new character
+cannot inherit the original find. Public ledger/export/sheet views do not expose
+its private details. No public outbox post is created.
+
+Full regression: **1344 passed in 409.65s**, no failures/errors/skips;
+`var/m3-contraband-pytest.xml`. Final focused: **66 passed in 42.67s**,
+`var/m3-contraband-final-focused.xml`; explicit two-campaign/native check:
+**3 passed in 2.77s**, `var/m3-contraband-isolation.xml`. Initial service checks:
+**16 passed in 9.54s**, `var/m3-contraband-service-initial.xml`. Intermediate
+`var/m3-contraband-focused.xml` had **1 failed / 28 passed in 21.08s**: the malformed
+boolean-index test incorrectly generated its JSON with Pydantic's serializer,
+which normalized the deliberately malformed value; it now submits actual malformed
+JSON. Production selection already rejected non-integer indices before indexing.
+`var/m3-contraband-boundaries.xml` had **1 failed / 32 passed in 18.62s**, a missing
+`json` import in the synthetic export test. Both are corrected. Ruff/import/line
+formatting findings were fixed before final checks.
+
+Ruff passes, **376 files** formatted, mypy **196 source files**. Public scan:
+**458 publishable files / 40 original manifest entries / zero findings**. Original
+planning verifier passes 34 files / 86 planned cases / 4 schemas / 4 synthetic
+fixtures; planning only. Registry remains RULES_SUBSET: 473 entries, 436 required
+core, **62 subsets / 411 unimplemented**, zero independent verifications.
+Shared recovery/refusal checkpoint **a8eca845de4388fe6fe06beb496157fcc00c682c**
+is pushed and GitHub CI passed, run **41908107947**. The frozen live bot remains
+PID47656. No live migration, restart, M3 deployment, environment publication or
+independent/human acceptance occurred. Physical travel, career/control, full secret
+discovery and the rest of agreed M3 remain unfinished; no M3-ready claim applies.
+The next confirmed source-inventory corrections are The Prince's playbook kind
+and class Requisitions on PDF 92–94 incorrectly grouped under Red Queen.

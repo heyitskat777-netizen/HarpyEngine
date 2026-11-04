@@ -114,7 +114,23 @@ async def open_effect(
 
     def build(values: dict[str, Any]) -> list[Field]:
         fields: list[Field] = []
-        if spawned:
+        if rule == "strain.rebellion.low.2.2":
+            fields.append(
+                Field(
+                    "target",
+                    "Actual base where the contraband is found",
+                    options(
+                        [
+                            x
+                            for x in world["locations"]
+                            if x["kind"] == "base"
+                            and x["allegiance"] == "foundation"
+                            and x["condition"] != "destroyed"
+                        ]
+                    ),
+                )
+            )
+        elif spawned:
             classes = (
                 ("directed",)
                 if rule.endswith("1.1")
@@ -377,7 +393,9 @@ async def open_effect(
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         payload: dict[str, Any] = {"rule_id": rule, "account": values["account"]}
-        if spawned:
+        if rule == "strain.rebellion.low.2.2":
+            payload["target"] = values["target"][0]
+        elif spawned:
             selected_class = values["class"][0]
             types = (
                 tuple(gorgons[values["leader"][0]]["types"])
@@ -518,6 +536,8 @@ async def open_effect(
                 "Control slip recorded. The next actual Girl Disobey Orders roll "
                 "gets +2, separate from Heat and later Tags. No recipient was chosen."
             )
+        if rule == "strain.rebellion.low.2.2":
+            return "Private find saved. The recipient can review it in their requests inbox."
         return "Event effects committed once. Reopen Off-Duty for remaining work."
 
     form = DependentForm(

@@ -242,3 +242,14 @@ preservation are checked; this is not complete M3H or full runtime certification
 Unrolled reservations do not block otherwise safe world changes. A source-proven
 legacy metadata bind can enable recovery of a known roll without changing its
 receipt, prior answers or mechanical resources.
+
+Low Rebellion 2/2 (book PDF 147 / printed p.145) now has actual uniform source
+selection and a private optional Girl Asset decision. Original source snapshots
+prove the recipient/index; changing a current record cannot grant another human
+private access. Known absent Girls cannot be moved or filtered out before the
+draw. The owner confirms the actual finding or declines; normal Asset caps and
+Void protection apply. Public sheet settings do not automatically expose this
+Asset. Explicit sharing, private ledger/export projections, damage/recovery,
+original-character proof, native controls, rollback/replay and backup preservation
+are checked. This does not implement travel, career/control or every later means
+of discovering a secret. See `work_orders/M3_CONTRABAND.md`.

@@ -8274,14 +8274,52 @@
         "heading": "Rebellion low: die 2, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
-      "source_audit": "inventoried",
+      "implementation": "subset",
+      "source_audit": "audited",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
-      "dependencies": [],
-      "test_evidence": [],
+      "contract": {
+        "trigger": "Actual Low Rebellion die 2, selected column 2 introduces one private random contraband find at an actual base.",
+        "actor_type": "Uniform actual original Cadre Girl from the current source period; no Handler-selected recipient.",
+        "pre_roll_sources": [
+          "Actual source die/column, period and resolved effect work",
+          "Actual unchanged period roster and character incarnations",
+          "Actual surviving Foundation base; known absent Girls cannot be moved or filtered out",
+          "OS uniform index and immutable actual original source snapshot"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {},
+        "choice_ownership": "Handler selects the real event/base and describes its source. Only the actual randomly selected Girl decides whether to add an ordinary Girl Asset and chooses a legal cap replacement. There is no timeout acceptance.",
+        "target_policy": "Original recipient only, without a generic administrator override. A new character cannot inherit the offer. Handler and other humans do not receive the recipient, item or private finding account.",
+        "post_roll_effects": [
+          "Persist one actual draw without charging Permissions",
+          "Owner may accept an ordinary undamaged non-Void Girl Asset at the actual four-Asset cap or explicitly decline",
+          "Added Asset is concealed from public sheet views until explicit owned sharing under existing public-Asset consent",
+          "Concealment gives no damage/repair/Helplessness immunity",
+          "Source, response, Asset and immutable history commit atomically; no public outbox post"
+        ],
+        "mandatory_followups": [
+          "Actual physical travel is separate and remains unimplemented; known absence blocks scheduling before RNG rather than teleporting a recipient.",
+          "Further physical/career/control and secret-discovery interactions remain M3 work."
+        ],
+        "handler_or_gm_intervention": "No chat inference, forced player dialogue, auto-publication, recipient redraw after a known committed source, or borrowed roles. Actual immutable source proof is required for private reads and writes.",
+        "test_fixture_ids": [
+          "tests/rules/test_contraband.py",
+          "tests/rules/test_contraband_service.py",
+          "tests/rules/test_contraband_ui.py"
+        ]
+      },
+      "dependencies": [
+        "core.core.assets",
+        "source.quadrant-map-setup"
+      ],
+      "test_evidence": [
+        "tests/rules/test_contraband.py",
+        "tests/rules/test_contraband_service.py",
+        "tests/rules/test_contraband_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

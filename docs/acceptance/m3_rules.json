@@ -825,6 +825,26 @@
           "limitation": "Full actor-aware Plays, career/physical/runtime rules, remaining Strain and independent/human acceptance remain incomplete."
         }
       ]
+    },
+    {
+      "id": "M3-CONTRABAND",
+      "title": "Actual random contraband and private optional Asset",
+      "expected": "Uniform actual source, original recipient consent, ordinary Asset caps and concealed public views until explicit sharing.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_contraband.py",
+        "tests/rules/test_contraband_service.py",
+        "tests/rules/test_contraband_ui.py"
+      ],
+      "evidence": [
+        {
+          "scope": "offline_actual_source_private_claim_and_projections",
+          "command": ".venv/bin/pytest -q --tb=short --junitxml=var/m3-contraband-pytest.xml",
+          "result": "1344 passed in 409.65s; no failures/errors/skips",
+          "artifact": "var/m3-contraband-pytest.xml",
+          "limitation": "Full physical/career/control, further secret discovery, remaining core rules and independent/human acceptance remain unfinished."
+        }
+      ]
     }
   ],
   "enabled_modules": [

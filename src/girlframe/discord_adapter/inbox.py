@@ -582,6 +582,14 @@ class InboxView(discord.ui.View):
             await open_physical_review(
                 interaction, PhysicalService(self.service.store), item.identity
             )
+        elif item.task == "m3_contraband":
+            from girlframe.discord_adapter.m3_contraband import open_find
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_contraband import ContrabandService
+
+            await open_find(
+                interaction, ContrabandService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_shared_recovery":
             from girlframe.discord_adapter.m3_recovery import open_recovery as open_shared_recovery
             from girlframe.services.m2_game import GameService
