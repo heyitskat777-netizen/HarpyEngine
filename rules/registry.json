@@ -978,7 +978,8 @@
         "tests/rules/test_asset_properties.py",
         "tests/rules/test_requisition_service.py::test_wyvern_purchases_fill_five_ordinary_slots_without_replacing_enormous",
         "tests/rules/test_requisition_service.py::test_wyvern_native_purchase_uses_ordinary_count_and_excludes_protected_replacements",
-        "tests/rules/test_replacement_ui.py::test_wyvern_native_package_allows_five_ordinary_assets_plus_printed_enormous"
+        "tests/rules/test_replacement_ui.py::test_wyvern_native_package_allows_five_ordinary_assets_plus_printed_enormous",
+        "tests/rules/test_installation_history.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -1073,7 +1074,8 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_requisitions.py",
-        "tests/rules/test_requisition_service.py"
+        "tests/rules/test_requisition_service.py",
+        "tests/rules/test_installation_history.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -1129,7 +1131,8 @@
         "tests/rules/test_requisitions.py",
         "tests/rules/test_requisition_service.py",
         "tests/rules/test_comforts.py",
-        "tests/rules/test_comfort_service.py"
+        "tests/rules/test_comfort_service.py",
+        "tests/rules/test_installation_history.py"
       ],
       "m2_play_id": null,
       "module": "core"

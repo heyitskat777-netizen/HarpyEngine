@@ -16,15 +16,93 @@ from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_requisition_state import Installation
 from girlframe.services.m3_comforts import ComfortService
 from girlframe.services.m3_requisitions import RequisitionService
+from girlframe.services.onboarding import WorkflowError
+
+
+class InstallationPages(discord.ui.View):
+    def __init__(self, service: RequisitionService, owner: int, identity: str):
+        super().__init__(timeout=600)
+        self.service, self.owner, self.identity, self.index = service, owner, identity, 0
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.owner:
+            await reply(interaction, "This private purchase belongs to another player.")
+            return False
+        return True
+
+    async def show(self, interaction: discord.Interaction) -> None:
+        try:
+            data = await asyncio.to_thread(
+                self.service.installation, viewer_from_interaction(interaction), self.identity
+            )
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+            return
+        receipt, asset = data["receipt"], data["asset"]
+        sections = (
+            "Asset: " + asset["name"] + "\nInstalled in: " + data["frame"] + "\n1 Permission paid.",
+            "Original Asset description\n" + asset["description"],
+            "Original installation\n" + receipt["installation"]["account"],
+        )
+        pages: list[str] = []
+        for section in sections:
+            escaped = clean(section)
+            pages.extend(escaped[start : start + 1700] for start in range(0, len(escaped), 1700))
+        self.index = min(max(0, self.index), len(pages) - 1)
+        self.previous.disabled, self.next.disabled = self.index == 0, self.index == len(pages) - 1
+        await reply(
+            interaction,
+            "**Your original Asset Installment receipt**\n"
+            + pages[self.index]
+            + f"\nPage {self.index + 1}/{len(pages)} · Receipt `{self.identity}`",
+            self,
+        )
+
+    @discord.ui.button(label="Previous")
+    async def previous(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        self.index -= 1
+        await interaction.response.defer(ephemeral=True)
+        await self.show(interaction)
+
+    @discord.ui.button(label="Next")
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button[Any]) -> None:
+        self.index += 1
+        await interaction.response.defer(ephemeral=True)
+        await self.show(interaction)
+
+
+async def open_installation_history(
+    interaction: discord.Interaction, service: RequisitionService
+) -> None:
+    viewer = viewer_from_interaction(interaction)
+    history = await asyncio.to_thread(service.installation_history, viewer)
+
+    async def show(current: discord.Interaction, identity: str) -> None:
+        await InstallationPages(service, viewer.user_id, identity).show(current)
+
+    await Picker(
+        viewer.user_id,
+        "**Your saved Asset Installments**\nChoose an original purchase to read its details.",
+        tuple((x["id"], x["name"]) for x in history),
+        show,
+    ).show(interaction)
 
 
 async def open_requisitions(interaction: discord.Interaction, service: RequisitionService) -> None:
     viewer = viewer_from_interaction(interaction)
-    data = await asyncio.to_thread(service.view, viewer)
+    try:
+        data = await asyncio.to_thread(service.view, viewer)
+    except WorkflowError as error:
+        if not str(error).startswith(("STALE_CHARACTER:", "STALE_PROFILE:", "STALE_ACTOR:")):
+            raise
+        await open_installation_history(interaction, service)
+        return
     comforts = ComfortService(service.game)
     opportunities = await asyncio.to_thread(comforts.list, viewer)
     paid = {x["id"]: x for x in await asyncio.to_thread(comforts.receipts, viewer)}
-    purchases = {x["id"]: x for x in data["purchases"]}
+    purchases = {x["id"]: x for x in await asyncio.to_thread(service.installation_history, viewer)}
     options = (("install", "Buy an Asset Installment — 1 Permission"),) + tuple(
         (key, "Saved Asset purchase " + key[:8]) for key in purchases
     )
@@ -91,21 +169,7 @@ async def open_requisitions(interaction: discord.Interaction, service: Requisiti
             await reply(current, form.text(), form)
             return
         if token in purchases:
-            receipt = purchases[token]
-            actual = next((x for x in data["frame_assets"] if x["id"] == receipt["asset_id"]), None)
-            await reply(
-                current,
-                "**Your saved purchase**\n1 Permission paid. Receipt `"
-                + token
-                + "`.\n"
-                + (
-                    clean(actual["name"])
-                    if actual
-                    else "The original purchased Asset is not in your current Frame."
-                )
-                + "\n"
-                + clean(receipt["installation"]["account"]),
-            )
+            await InstallationPages(service, viewer.user_id, token).show(current)
             return
         entries = {x["key"]: x for x in data["catalog"]}
         sources = tuple(
