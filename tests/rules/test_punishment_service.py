@@ -314,3 +314,52 @@ def test_absent_dogs_punishment_applies_without_exposing_the_mission(ledger):
     submit(discipline, ADMIN, work["id"], Details(kind="stimulant_injection"))
     assert state(game).sheets["3"].heat == 7
     assert missions.complete(ADMIN, "complete", identity, result["revision"])["phase"] == "complete"
+
+
+@pytest.mark.parametrize("piloting", [False, True])
+def test_last_girl_asset_requires_handler_context_and_applies_helplessness_conditionally(
+    ledger, piloting
+):
+    svc, missions, game, mission, identity = ended(ledger)
+    with ledger.transaction() as c:
+        saved = state(game)
+        next(x for x in saved.sheets["3"].assets if x.id == "girl:1").damaged = True
+        game.event(c, 1, "synthetic-earlier-damage", "synthetic.damage", saved)
+    submit(svc, ADMIN, identity, Details(kind="beating", asset="girl:0", tag="Bruised"))
+    row = next(x for x in missions.owned_work(ADMIN) if x["kind"] == "punishment_helpless")
+    current = svc.get(ADMIN, row["id"])
+    assert row["owner_id"] == "1" and not state(game).sheets["3"].helpless_against
+    with pytest.raises(WorkflowError):
+        svc.resolve_helpless(
+            OTHER,
+            "forged-context",
+            row["id"],
+            1,
+            current["game_revision"],
+            piloting=True,
+            evidence="Unverified",
+        )
+    result = svc.resolve_helpless(
+        ADMIN,
+        "context",
+        row["id"],
+        1,
+        current["game_revision"],
+        piloting=piloting,
+        evidence="Synthetic observed Frame context",
+    )
+    assert result["helpless"] is (not piloting)
+    assert state(game).sheets["3"].helpless_against == (() if piloting else (1,))
+    assert (
+        svc.resolve_helpless(
+            ADMIN,
+            "context",
+            row["id"],
+            1,
+            current["game_revision"],
+            piloting=piloting,
+            evidence="Synthetic observed Frame context",
+        )
+        == result
+    )
+    assert missions.get(ADMIN, mission["id"])["pending_count"] == 1

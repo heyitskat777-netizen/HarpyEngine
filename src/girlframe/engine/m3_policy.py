@@ -14,6 +14,11 @@ class Rulings(BaseModel):
     reprogramming_fallback: Literal["owner_selects_ordinary_slot"]
     punishment_details: Literal["inflictor_selects"]
     failure_dog_overlap: Literal["one_punishment_both_causes"]
+    sedation_small_set: Literal["mark_all_remaining"]
+    princess_ace_check: Literal["after_promotion"] | None = None
+    compulsory_frame_package: Literal["handler_defined"]
+    replacement_frame_repeat: Literal["different_playbook"]
+    compulsory_frame_charge: Literal["free"]
 
 
 class Approval(BaseModel):

@@ -170,7 +170,10 @@ class MissionService:
                 raise WorkflowError("Select one to 25 distinct active Pilots.")
             setup = HandlerService(self.store)
             if any(
-                str(uid) not in state.sheets or uid == viewer.user_id or not setup._member(c, uid)
+                str(uid) not in state.sheets
+                or uid == viewer.user_id
+                or not setup._member(c, uid)
+                or state.sheets[str(uid)].frame_scrapped
                 for uid in players
             ):
                 raise WorkflowError(
@@ -256,6 +259,8 @@ class MissionService:
             state = load_state(c, self.store.campaign_id)
             if str(viewer.user_id) not in state.sheets:
                 raise WorkflowError("A current canonical Pilot is required to respond.")
+            if response == "accept" and state.sheets[str(viewer.user_id)].frame_scrapped:
+                raise WorkflowError("Replace the scrapped Frame before accepting another mission.")
             updated = rules.respond(mission, viewer.user_id, expected, response)
             event = self.game.event(
                 c,
@@ -283,7 +288,11 @@ class MissionService:
             self._handler(c, viewer)
             state = load_state(c, self.store.campaign_id)
             setup = HandlerService(self.store)
-            active = frozenset(int(uid) for uid in state.sheets if setup._member(c, int(uid)))
+            active = frozenset(
+                int(uid)
+                for uid in state.sheets
+                if setup._member(c, int(uid)) and not state.sheets[uid].frame_scrapped
+            )
             updated = rules.dispatch(
                 mission, viewer.user_id, self._current_handler(c), expected, active
             )
@@ -337,7 +346,11 @@ class MissionService:
             for uid, sheet in state.sheets.items():
                 if sheet.girl == "PRINCESS":
                     reactions.append((int(uid), "princess_mission_end", 32))
-                if sheet.frame == "DOCTORDOCTOR MK. II" and not success:
+                if (
+                    sheet.frame == "DOCTORDOCTOR MK. II"
+                    and not sheet.frame_scrapped
+                    and not success
+                ):
                     reactions.append((int(uid), "doctor_obsolescence", 71))
             if reactions:
                 updated = rules.changed(mission, phase="ending", success=success)

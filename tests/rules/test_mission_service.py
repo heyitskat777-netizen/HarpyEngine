@@ -42,6 +42,11 @@ def service(store, girl="MOCKINGBIRD", frame="JANUS-B"):
                 reprogramming_fallback="owner_selects_ordinary_slot",
                 punishment_details="inflictor_selects",
                 failure_dog_overlap="one_punishment_both_causes",
+                sedation_small_set="mark_all_remaining",
+                princess_ace_check="after_promotion",
+                compulsory_frame_package="handler_defined",
+                replacement_frame_repeat="different_playbook",
+                compulsory_frame_charge="free",
             ),
         }
     )

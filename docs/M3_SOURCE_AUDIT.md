@@ -36,6 +36,10 @@ or unreviewed optional rules. Coverage reports identify their enabled module sco
 | Absent Ace bonus | Owner approved granting it to the current Ace even when absent | Book PDF 16 / printed 14 does not state whether the separate Ace bonus requires participation |
 | Unspecified Punishment details | The inflictor chooses details; explicit printed ownership overrides this default | Book PDF 17–18 / printed 15–16 |
 | Mission failure and Dog overlap | One actual Punishment covers both causes for the same Girl in the same mission; preserve both cause records | Book PDF 16–17 / printed 14–15 |
+| Sedation with fewer than two Identities | Mark all remaining Identities and set Heat to zero; preserve explicit Paired Identity effects | Book PDF 17 / printed 15 omits a fallback |
+| Princess Permission timing | Promote Status first; if now Ace, grant the Princess Permission, then determine normal mission/Ace rewards separately | Book PDF 32 / printed 30; owner-approved interpretation |
+| Compulsory Frame package | The current Handler specifies each package; the player must choose a different official Frame playbook | Book PDF 71 / printed 69 and PDF 29 / printed 27; owner decision |
+| Compulsory Frame price | No Permission charge; optional paid Frame Swap remains separate | Book PDF 16, 29 and 71; owner decision |
 
 Previously approved starting conditions, JANUS-B alias and Intense ±2 modifier
 remain separate existing rulings. No new ruling is silently applied to live policy.
@@ -73,9 +77,14 @@ remain separate existing rulings. No new ruling is silently applied to live poli
   revision checks and explicit responses. An absent Dog sees its required work
   without receiving the private mission objective.
 - Known Princess and DoctorDoctor mission-end reactions block rewards until their
-  source-specific work is resolved. Their resolvers, remaining Punishments and
-  the remaining end-trigger interaction audit are still pending. There is no
-  generic acknowledgment that completes these tasks. Migration `0012` is tested
+  source-specific work is resolved. Typed handlers now apply a standards review
+  and one Obsolescence mark for an actual Cadre mission failure. Their private
+  native controls are in `/mission reactions` and the requests inbox. Princess
+  grants its approved post-promotion benefit before the final normal reward
+  snapshot. DoctorDoctor fills at eight boxes, marks the Frame scrapped and queues
+  owner-controlled replacement; neither rewards nor new missions/Plays bypass it.
+  Other Obsolescence triggers currently have pure-domain coverage only; their
+  production triggering Plays/events still need implementation. Migration `0012` is tested
   on populated synthetic `0011` data; no live migration or M3 activation occurred.
 
 The new discipline subsystem applies ten printed types plus Passing Responsibility
@@ -90,13 +99,22 @@ are retained by the pure recovery reducer; the mission service applies pre-Off-D
 discipline only. Handler Heat from an Intense Bond is tracked in canonical state.
 
 Revoked Privileges, Strict Regulations and all four Severe types remain unavailable.
-Last-Asset, Ankou and Void-context work remain blocking until their typed resolvers
-exist; no acknowledgment waives them. The Libido Inhibitor condition is persisted;
+Ankou and Void-context work remain blocking until their typed resolvers
+exist; no acknowledgment waives them. The last-Girl-Asset Beating resolver now
+requires the current assigned Handler's factual Frame-context review: apply
+Helplessness against the inflictor outside a Frame, or record why that printed
+condition does not apply inside one. The review is typed and auditable, not a
+waiver. The Libido Inhibitor condition is persisted;
 future Sex Plays must enforce it before release. Remaining playbook interactions
 and noncanonical initial NPC Bond migration still need audit and implementation.
 
-One source edge case awaits owner input: what Sedation does when a Girl has fewer
-than two Identities. Until ruled, this branch is unavailable and applies no effect.
+The owner approved Sedation's small-set fallback; zero/one-Identity paths now
+apply only after confirmation and create no synthetic Identity. Compulsory Frame
+replacement now has approved policies: Handler-defined package, different official
+playbook and no Permission charge. Its application is still unfinished; the task
+stays pending, with no placeholder replacement or payment. The explicit workflow
+and acceptance requirements are in `work_orders/M3_FRAME_REPLACEMENT.md`.
+This remains a partial implementation and branch audit.
 
 The new rules tests are synthetic. They are useful implementation evidence, not
 finished M3 case acceptance. Required source/fixture matrices and all remaining

@@ -67,6 +67,28 @@ class Applied(Model):
     followups: tuple[Followup, ...] = ()
 
 
+def last_girl_asset_context(
+    original: GameState, subject: int, inflictor: int, *, piloting: bool
+) -> GameState:
+    if type(piloting) is not bool:
+        raise ValueError("Record the actual Frame context when the Asset was damaged")
+    state = GameState.model_validate_json(original.model_dump_json())
+    sheet = state.sheets.get(str(subject))
+    if (
+        sheet is None
+        or not any(x.family == "girl" for x in sheet.assets)
+        or any(x.family == "girl" and not x.damaged for x in sheet.assets)
+    ):
+        raise ValueError("Resolve the changed Girl Asset state before this follow-up")
+    if not piloting:
+        sheet.helpless_against = tuple(sorted(set(sheet.helpless_against) | {inflictor}))
+        sheet.revision += 1
+    state.facts.append(
+        {"kind": "beating_frame_context", "owner": str(subject), "piloting": str(piloting)}
+    )
+    return state
+
+
 def validate(details: Details) -> str:
     details = Details.model_validate_json(details.model_dump_json())
     if details.kind not in KINDS:
@@ -121,8 +143,11 @@ def apply(
         raise ValueError("Delegation transfers pending work; it does not apply a Punishment")
     if kind == "sedation":
         chosen = [x for x in sheet.identities if x.id in details.identities]
-        if len(details.identities) != 2 or len(chosen) != 2:
-            raise ValueError("Select two distinct current Identities for Sedation")
+        count = min(2, len(sheet.identities))
+        if len(details.identities) != count or len(chosen) != count:
+            raise ValueError(
+                "Sedation: select two distinct current Identities, or all remaining if fewer"
+            )
         was_full = all(x.marked for x in sheet.identities)
         sheet.heat = 0
         for identity in chosen:

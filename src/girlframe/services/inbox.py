@@ -476,11 +476,35 @@ class InboxService:
                         ),
                         "Review discipline"
                         if work["kind"]
-                        in ("punishment", "punishment_consult", "punishment_paired_identity_heat")
+                        in (
+                            "punishment",
+                            "punishment_consult",
+                            "punishment_paired_identity_heat",
+                            "punishment_helpless",
+                        )
+                        else "Review reaction"
+                        if work["kind"]
+                        in (
+                            "doctor_obsolescence",
+                            "princess_mission_end",
+                            "doctor_frame_replacement",
+                        )
                         else None,
                         task="m3_discipline"
                         if work["kind"]
-                        in ("punishment", "punishment_consult", "punishment_paired_identity_heat")
+                        in (
+                            "punishment",
+                            "punishment_consult",
+                            "punishment_paired_identity_heat",
+                            "punishment_helpless",
+                        )
+                        else "m3_reaction"
+                        if work["kind"]
+                        in (
+                            "doctor_obsolescence",
+                            "princess_mission_end",
+                            "doctor_frame_replacement",
+                        )
                         else None,
                     )
                 )

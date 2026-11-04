@@ -489,6 +489,10 @@ class GameService:
             sheet = state.sheets.get(str(viewer.user_id))
             if sheet is None or sheet.revision != sheet_revision:
                 raise WorkflowError("STALE_SHEET: refresh the Play wizard.")
+            if sheet.frame_scrapped:
+                raise WorkflowError(
+                    "REQUIRED_FOLLOWUP: replace the scrapped Frame before new Plays."
+                )
             work = t.m3["m3_required_work"]
             latest_work = {
                 row["id"]: row

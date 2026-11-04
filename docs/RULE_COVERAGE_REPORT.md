@@ -292,6 +292,10 @@ RULES_SUBSET; M3 acceptance is still pending. The owner has approved the current
 Ace's bonus even when absent. Private transactional mission controls, replay and
 required-work persistence now have offline tests. The partial discipline subsystem
 implements ten effect types, delegation, Handler consultation and owned Paired Heat
-sharing; remaining types and special reactions stay blocked. Both prior Punishment
-rulings are approved; Sedation with fewer than two Identities awaits a campaign
-ruling. See `M3_SOURCE_AUDIT.md`; full M3 acceptance is still pending.
+sharing; remaining types and some special reactions stay blocked. The approved
+Punishment rulings now include marking all remaining Identities for Sedation's
+small-set case. Princess post-promotion Permission timing is also approved. Mission-end
+reactions and conditional Beating Helplessness have typed service/native controls.
+Frame replacement has approved Handler-defined/different-playbook/free policies,
+while package application remains unfinished. See
+`M3_SOURCE_AUDIT.md`; full M3 acceptance is still pending.

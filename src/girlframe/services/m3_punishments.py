@@ -44,6 +44,7 @@ class PunishmentService:
             "punishment",
             "punishment_consult",
             "punishment_paired_identity_heat",
+            "punishment_helpless",
         ):
             raise WorkflowError("This discipline task is unavailable.")
         return dict(row)
@@ -353,7 +354,9 @@ class PunishmentService:
                     c,
                     mission,
                     str(uuid4()),
-                    followup.owner,
+                    int(state.handler)
+                    if followup.kind == "helpless" and state.handler
+                    else followup.owner,
                     followup.owner,
                     "punishment_" + followup.kind,
                     followup.model_dump(mode="json") | {"immediate": True, "source_work": identity},
@@ -376,6 +379,65 @@ class PunishmentService:
                 "revision": revision,
                 "game_revision": game_revision,
                 "details": details.model_dump(mode="json"),
+            },
+            operation,
+        )
+
+    def resolve_helpless(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        revision: int,
+        game_revision: int,
+        *,
+        piloting: bool,
+        evidence: str,
+    ) -> dict[str, Any]:
+        if not evidence.strip() or len(evidence) > 1200:
+            raise WorkflowError("Record the factual Frame context in 1–1200 characters.")
+
+        def operation(c: Connection) -> dict[str, Any]:
+            row = self._row(c, identity)
+            HandlerService(self.store).authorize(c, viewer)
+            self._check(c, row, revision, game_revision)
+            if row["kind"] != "punishment_helpless":
+                raise WorkflowError("This task is not a last-Girl-Asset context review.")
+            body = self._body(row)
+            updated = rules.last_girl_asset_context(
+                load_state(c, self.store.campaign_id),
+                int(row["subject_id"]),
+                int(body["details"]["inflictor"]),
+                piloting=piloting,
+            )
+            event = self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.beating_frame_context_resolved",
+                updated,
+                work_id=identity,
+            )
+            self._save(
+                c,
+                row,
+                event,
+                state="resolved",
+                body=body | {"piloting": piloting, "evidence": evidence.strip()},
+            )
+            return {"id": identity, "state": "resolved", "helpless": not piloting}
+
+        return self._write(
+            viewer,
+            key,
+            identity,
+            "m3.beating_frame_context_resolved",
+            {
+                "id": identity,
+                "revision": revision,
+                "game_revision": game_revision,
+                "piloting": piloting,
+                "evidence": evidence,
             },
             operation,
         )

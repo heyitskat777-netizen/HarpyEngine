@@ -111,7 +111,19 @@ async def open_details(
 
     fields = []
     if kind == "sedation":
-        fields.append(entities("identities", "Select two Identities", own["identities"], 2, 2))
+        count = min(2, len(own["identities"]))
+        if count:
+            fields.append(
+                entities("identities", "Select Identities to mark", own["identities"], count, count)
+            )
+        else:
+            fields.append(
+                Field(
+                    "confirm",
+                    "No Identities remain; set Heat to zero",
+                    (("yes", "Apply Sedation"),),
+                )
+            )
     elif kind in ("beating", "frame_disassembly", "compliance_surgery"):
         family = "frame" if kind == "frame_disassembly" else "girl"
         assets = [
@@ -276,6 +288,37 @@ async def open_discipline(
         instructions = "\n".join(clean(x) for x in data["summary"])
         if data["stale"]:
             instructions += "\nState changed: decline and request a fresh proposal."
+    elif data["kind"] == "punishment_helpless":
+        fields = [
+            Field(
+                "piloting",
+                "Frame context when Beating was applied",
+                (("yes", "Inside a Frame"), ("no", "Outside a Frame")),
+            ),
+            Field("evidence", "Brief factual context", paragraph=True),
+        ]
+
+        async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+            result = await asyncio.to_thread(
+                service.resolve_helpless,
+                viewer_from_interaction(current),
+                str(current.id),
+                identity,
+                data["revision"],
+                data["game_revision"],
+                piloting=values["piloting"][0] == "yes",
+                evidence=values["evidence"],
+            )
+            return "Context saved. " + (
+                "Helplessness applied; explicit recovery is required."
+                if result["helpless"]
+                else "The outside-Frame Helplessness condition does not apply."
+            )
+
+        instructions = (
+            "The last Girl Asset was damaged. Confirm the actual Frame context at that moment. "
+            "Outside a Frame, the Pilot becomes Helpless."
+        )
     elif data["kind"] == "punishment_paired_identity_heat":
         fields = [
             Field(
@@ -308,7 +351,13 @@ async def discipline_queue(interaction: discord.Interaction, service: Punishment
     options = tuple(
         (x["id"], x["kind"].replace("_", " ").title() + " — Player " + x["subject_id"])
         for x in rows
-        if x["kind"] in ("punishment", "punishment_consult", "punishment_paired_identity_heat")
+        if x["kind"]
+        in (
+            "punishment",
+            "punishment_consult",
+            "punishment_paired_identity_heat",
+            "punishment_helpless",
+        )
     )
     if not options:
         await reply(

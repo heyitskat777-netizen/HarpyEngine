@@ -272,4 +272,15 @@ def register_missions(
         except WorkflowError as error:
             await reply(interaction, str(error))
 
+    @group.command(name="reactions", description="Review required mission-end playbook reactions")
+    async def reactions(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_reactions import reaction_queue
+        from girlframe.services.m3_reactions import ReactionService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await reaction_queue(interaction, ReactionService(service))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
     tree.add_command(group, guild=discord.Object(id=guild_id))

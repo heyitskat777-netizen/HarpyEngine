@@ -444,7 +444,15 @@ class InboxView(discord.ui.View):
                 allowed_mentions=discord.AllowedMentions.none(),
             )
 
-        if item.task == "m3_discipline":
+        if item.task == "m3_reaction":
+            from girlframe.discord_adapter.m3_reactions import open_reaction
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_reactions import ReactionService
+
+            await open_reaction(
+                interaction, ReactionService(MissionService(self.service.store)), item.identity
+            )
+        elif item.task == "m3_discipline":
             from girlframe.discord_adapter.m3_punishments import open_discipline
             from girlframe.services.m3_punishments import PunishmentService
 

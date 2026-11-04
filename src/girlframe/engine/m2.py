@@ -83,6 +83,8 @@ class PilotSheet(Model):
     public_fields: tuple[str, ...] = ()
     sedation_locked: tuple[str, ...] = ()
     libido_inhibited: bool = False
+    obsolescence_marked: int = Field(default=0, ge=0, le=8)
+    frame_scrapped: bool = False
 
     @model_validator(mode="after")
     def unique_ids(self) -> "PilotSheet":

@@ -162,8 +162,9 @@ mission.
 
 Current M3D checkpoint: private mission offers/responses/dispatch, atomic rewards,
 append-only mission/work persistence, owner-bound Discord controls and requests
-inbox integration are implemented offline. Princess/DoctorDoctor end reactions
-and unsupported required consequences remain blocking work, with no generic waiver. Migration
+inbox integration are implemented offline. Princess and DoctorDoctor mission-failure
+reactions now have typed private resolvers. Unsupported required consequences
+remain blocking work, with no generic waiver. Migration
 `0012` is validated on populated synthetic `0011` data; the live frozen bot and
 database remain unchanged. This does not complete M3D or M3H.
 
@@ -172,5 +173,11 @@ to explicit printed ownership. One actual Punishment satisfies both failure and
 Dog causes for the same Girl in the same mission; keep each source cause audited.
 Typed discipline effects, delegation, fixed-proposal Handler consultation, native
 controls and Paired Heat sharing are now implemented offline. Six printed types
-and special immediate reactions remain unsupported. A pending new edge-case ruling
-is Sedation when fewer than two Identities remain; do not assume a fallback.
+and some special immediate reactions remain unsupported. The owner approved
+marking all remaining Identities when Sedation has fewer than two, and checking
+Princess's Ace benefit after promotion, separately from normal mission rewards.
+Compulsory Frame replacement at DoctorDoctor eight boxes remains a real owned
+task. The owner ruled that the Handler specifies the package, the player must
+choose a different official Frame playbook and no Permissions are charged.
+`M3_FRAME_REPLACEMENT.md` specifies the proposal/package/confirmation work and
+acceptance tests; its mechanical application is not yet implemented.

@@ -243,3 +243,80 @@ One new source edge case needs an owner ruling: Sedation with fewer than two
 remaining Identities (book PDF 17 / printed p.15). The source provides no fallback.
 That branch currently fails without committing an effect; no recommendation has
 been silently applied. M3 remains IN_PROGRESS / RULES_SUBSET.
+
+
+## Mission-end reactions and recovery context checkpoint
+
+The owner approved two further campaign rulings: Sedation marks all remaining
+Identities when fewer than two exist, and Princess checks Ace after its Status
+promotion, gaining its own Permission separately from the later normal Ace bonus.
+Both are recorded in the registry/trusted policy model, with explicit synthetic
+fixture configuration. No live policy was edited. Zero/one-Identity Sedation now
+requires confirmation, changes no Identity count, preserves Paired exceptions and
+sets Heat to zero before any separately owned Paired Heat allocation.
+
+New pure/service/native modules resolve DoctorDoctor's failed-Cadre-mission mark
+and Princess's factual standards review before the final reward snapshot. At eight
+Obsolescence boxes, canonical state marks the Frame scrapped and creates a real
+owner-controlled replacement task. Mission completion, dispatch/acceptance and new
+Plays cannot bypass it. DoctorDoctor's three other printed triggers have pure
+reducer tests only; their actual production Plays/events are not implemented by
+this checkpoint. The replacement itself is still unavailable.
+
+Princess's assigned current Handler reviews its three recorded standards, with the
+Handler standard visibly identified as an order. The review is a signed human fact,
+not invented behaviour or consent. An upheld review applies Status first and the
+approved post-promotion Permission. Normal completion/Ace rewards are committed
+later from the final Status order. Negative reviews grant no invented benefit.
+Rationale remains in private append-only work history, not generic event payloads.
+
+Last-Girl-Asset Beating now requires a typed current-Handler context review before
+continuing: outside a Frame, apply Helplessness against the inflictor; inside,
+record that the outside-Frame condition does not apply. The factual context and
+mechanical effect commit together. Neither a subject-submitted form nor a generic
+acknowledgment can clear it. Existing explicit Helplessness recovery remains the
+M2 pilot subset; this is not full Off-Duty/Defeat implementation.
+
+`/mission reactions` and the requests inbox expose private owner-bound native
+controls. Saved reads remain available during pauses; stale forms and unrelated
+members cannot change state. The new service uses scoped playbook approval,
+authorized current Handler identity, game/work revisions, append-only work and the
+existing canonical state transaction. No independent review was fabricated.
+
+Executed validation:
+
+| Check | Actual result |
+|---|---|
+| Locked setup | 36 packages resolved, 35 installed packages checked; no dependency change |
+| Pure reaction tests | Ten passed in 2.74s |
+| Reaction service/native integration | Twenty passed in 4.74s |
+| Combined reactions/discipline/native/inbox | 56 passed in 14.70s |
+| Final full suite | **574 passed in 54.24s**, zero failures/errors/skips; `var/m3-reactions-pytest.xml` |
+| Ruff lint / format | All checks passed; 193 files already formatted |
+| Mypy | No issues in 103 source files |
+| Registry | RULES_SUBSET: 473 inventory entries, 436 required core; 13 subset, 460 unimplemented; zero independent verification |
+| Handoff verifier | 34 required files, 86 planned cases, four schemas and four synthetic fixtures; planning-only PASS |
+| Publishable-file check | 276 files, 40 original manifest entries intact, zero findings |
+| Whitespace / startup wrapper | `git diff --check` and `bash -n` passed |
+
+The first full run had 573 passes and one assertion failure because the revised
+Sedation validation error omitted the expected Punishment label. Restoring the
+explicit label fixed it before the passing full run. Routine format/lint findings
+were fixed during development. No application failure remains from those checks.
+
+A process check found the temporary bot had stopped. Its recorded frozen source
+hashes were verified unchanged, and the same tested build was restarted after its
+offline policy check. Live output confirmed **Running v0.1.0** and Gateway READY,
+with the existing 13-command frozen release. Live schema remained **0011**,
+integrity `ok`, zero FK errors. No M3 code, migration or policy was deployed, and
+no environment configuration was published. Private source/data remain ignored.
+
+M3 remains IN_PROGRESS / RULES_SUBSET. The owner then ruled that compulsory
+replacement uses a Handler-defined package, a different official Frame playbook
+and no Permission charge. These are now explicit trusted-policy/registry facts,
+with a detailed additive work order. Subsequent reaction/registry policy checks
+passed all 18 focused tests. Actual replacement application remains unfinished;
+the typed task stays pending. Remaining
+Punishments, playbook interactions, full recovery, Strain/world rules and
+independent/human acceptance remain unfinished; this checkpoint does not complete
+M3D, M3E or M3H.

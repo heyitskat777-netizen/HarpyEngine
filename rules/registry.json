@@ -52,6 +52,36 @@
       "summary": "One actual Punishment may satisfy both mission-failure and Dog causes for the same Girl in the same mission; both causes remain audited.",
       "provenance": "owner_approved_campaign_ruling",
       "source": "Book PDF 16–17 / printed pp.14–15; owner decision"
+    },
+    {
+      "id": "sedation-fewer-than-two-identities",
+      "summary": "Sedation marks all remaining Identities when fewer than two remain and reduces Heat to zero. Explicit Paired Identity effects still apply.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Book PDF 17 / printed p.15; owner approved the recommended fallback"
+    },
+    {
+      "id": "princess-mission-end-ace-check",
+      "summary": "Resolve Princess Status promotion first; if now Ace, grant its Princess Permission. Normal mission completion and Ace bonuses follow separately.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Book PDF 32 / printed p.30; owner approved checking Ace after promotion"
+    },
+    {
+      "id": "compulsory-frame-baseline",
+      "summary": "The current Handler specifies each compulsory Frame replacement package case by case; no automatic starting Asset/ability package is assumed.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Book PDF 71 / printed p.69 and PDF 29 / printed p.27; owner decision"
+    },
+    {
+      "id": "compulsory-frame-repeat",
+      "summary": "A compulsory replacement must use a different official Frame playbook; cosmetic aliases do not bypass the restriction.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Book PDF 71 / printed p.69 and PDF 29 / printed p.27; owner decision"
+    },
+    {
+      "id": "compulsory-frame-charge",
+      "summary": "Compulsory Frame replacement after scrapping or destruction costs no Permissions. The optional paid Frame Swap is separate.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Book PDF 16, 29 and 71 / printed pp.14, 27, 69; owner decision"
     }
   ],
   "entries": [
@@ -976,14 +1006,18 @@
         "heading": "To a Higher Standard"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_reactions.py",
+        "tests/rules/test_reaction_service.py",
+        "tests/rules/test_reaction_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -2816,14 +2850,18 @@
         "heading": "Planned Obsolescence"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_reactions.py",
+        "tests/rules/test_reaction_service.py",
+        "tests/rules/test_reaction_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
