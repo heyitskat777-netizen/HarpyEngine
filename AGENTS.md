@@ -13,13 +13,13 @@ The owner explicitly authorized these Discord tags and continuation of the remai
 M1 dice/ledger, safety, durable delivery and local backup/rebuild foundation.
 The owner subsequently authorized continuation into M2 and confirmed that JANUS-B
 uses official JANUS rules while keeping its Discord label. M2A starting choices are implemented and verified. The owner requested further
-continuation; M2B and M2C are implemented. Handler/NPC setup is implemented; the owner authorized further M2 continuation. The active step is
-`docs/work_orders/M2K_GAMEPLAY_COMPLETION.md`, within
-`M2_CHARACTER_BUILDER.md`.
-The owner now authorizes all remaining M2 implementation before review, with human
-play-testing deferred to its end. Complete activation, audited pilot Plays, core
-mechanics, durable responses and scene locking; stop for owner review after M2.
-Do not fabricate independent certification or advance to M3.
+continuation; M2B and M2C are implemented. Handler/NPC setup is implemented; the owner authorized further M2 continuation. The current owner instruction explicitly authorizes beginning M3 development.
+Read `docs/work_orders/M3_RULES_COMPLETION.md` and the original `CODEX_M3_RULES.md`.
+M3 is now scoped into M3A–M3H; begin with the source inventory and M2 interaction audit.
+M2 implementation/deployment is complete, but independent rules review and human
+play-testing remain pending. Do not fabricate certification or remove a release gate.
+Keep the frozen running bot available while developing; stop after M3 for review.
+AI and M4 remain outside the authorized milestone.
 Recovered-engine writes and AI remain deferred. Record partial scope honestly.
 
 - Run `bash tools/install.sh`, then the checks in `README.md`.
@@ -33,5 +33,5 @@ Recovered-engine writes and AI remain deferred. Record partial scope honestly.
   Engine mutation/reconstruction is deferred; empty namespaces are intentional.
   Do not turn planning examples into implemented game mechanics.
 - Record actual commands, output, counts, failures, and limitations in
-  `reports/M2_ACCEPTANCE.md` for current work. Preserve M0/M1 historical evidence. Keep offline,
+  `reports/M3_ACCEPTANCE.md` for M3 work. Preserve M0/M1 historical evidence. Keep offline,
   live login/registration and human slash-command outcomes distinct.

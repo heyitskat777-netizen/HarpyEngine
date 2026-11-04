@@ -1,0 +1,253 @@
+{
+  "milestone": "M3",
+  "status": "SCOPED_NOT_IMPLEMENTED",
+  "rules_coverage": "RULES_SUBSET",
+  "owner_authorization": "Begin M3 development; no fabricated M2/M3 review or live release approval",
+  "required_evidence": [
+    "test_name",
+    "executed_command",
+    "actual_result",
+    "log_or_trace",
+    "git_commit"
+  ],
+  "cases": [
+    {
+      "id": "M3-001",
+      "title": "Status swap and one-use maxim",
+      "expected": "Oldgen gain exchange and consume only once.",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-002",
+      "title": "Go Off-Duty Status modifiers and 7\u2212 scene",
+      "expected": "Dog/Wing/Ace and on-screen harsh scene.",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-003",
+      "title": "Princess Show Dog both extra choices",
+      "expected": "Printed second selection/NPC Bond not dropped.",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-004",
+      "title": "Dog mission-end Punishment",
+      "expected": "Applies even if not in mission; absent PC choice respected.",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-005",
+      "title": "Budget High 6 second-column recursion",
+      "expected": "Compulsory extra rolls/endgame; cannot park indefinitely.",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-006",
+      "title": "Low Rebellion escaped prisoner escalation",
+      "expected": "Mandatory Strain rise if unresolved.",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-007",
+      "title": "Void/Gorgon movement and placement",
+      "expected": "No invented map square; exact eligible movements.",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-008",
+      "title": "Flirt 11+ all official extra options",
+      "expected": "Never swap arbitrary Tag for printed choice.",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-009",
+      "title": "Director due price and breach consequence",
+      "expected": "No consequence-free expiration.",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-010",
+      "title": "Harpy medical, custody, Core consent separate",
+      "expected": "No implied conversion from medical help.",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-011",
+      "title": "Requisitions and Permissions triggers",
+      "expected": "All participants and Ace bonuses exact.",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-012",
+      "title": "Per-Playbook and Frame Assets",
+      "expected": "All agreed printed roles and exceptions tested.",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-013",
+      "title": "All published table rows tracked",
+      "expected": "Each Low/High Strain table branch has source fixture.",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-014",
+      "title": "Full rule registry coverage report",
+      "expected": "No unsupported Play incorrectly marked verified.",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "RUL-001",
+      "title": "Status displacement and one-use Oldgen maxim",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "RUL-002",
+      "title": "High Budget second-column 6 recursion/endgame",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "RUL-003",
+      "title": "Unaddressed escaped-prisoner Rebellion escalation",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "RUL-004",
+      "title": "Full Flirt high-result choices and target authority",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "RUL-005",
+      "title": "Harsh Off-Duty scene and Princess Show Dog choices",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "RUL-006",
+      "title": "Director price due, breach or legitimate dispute",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "RUL-007",
+      "title": "Harpy location/custody continuity and distinct consent",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "RUL-008",
+      "title": "Human player choices, words and private reveals remain owned",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "RUL-009",
+      "title": "Mission-end Dog Punishment even when not participating",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "RUL-010",
+      "title": "No unprinted rescue quotas or predetermined consent",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-ADD-001",
+      "title": "Every registered Play has complete source/owner/tier/follow-up contract",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-ADD-002",
+      "title": "Every passive and compulsory cross-playbook dependency tested",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-ADD-003",
+      "title": "Required cascade work survives restart without lost/duplicate effects",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-ADD-004",
+      "title": "M2-to-M3 migration preserves existing sheets, resources and receipts",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-ADD-005",
+      "title": "World/mission deadlines advance only through explicit fictional triggers",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-ADD-006",
+      "title": "Native controls, scene locks, OOC pause and absence behavior",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-ADD-007",
+      "title": "Campaign isolation, private projections, concurrency and backups",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-ADD-008",
+      "title": "Independent source audit, human acceptance and milestone sign-off",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    }
+  ]
+}
