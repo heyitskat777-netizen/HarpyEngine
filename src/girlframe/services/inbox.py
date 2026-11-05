@@ -623,9 +623,9 @@ class InboxService:
                                 (item.target or item.owner) if permission["owner"] else item.owner
                             ),
                             "pending" if active else "resolved",
-                            active and permission["owner"],
+                            active and permission["can_consent"],
                             permission["stale"],
-                            "The original setter may allow rejection of this Tag.",
+                            "The original locker may allow rejection of this Tag.",
                             "Permission does not erase the Tag or supply "
                             "the affected player's action.",
                             "Review permission",
@@ -713,12 +713,151 @@ class InboxService:
             from girlframe.services.m3_physical import PhysicalService
 
             physical = PhysicalService(self.store)
+            from girlframe.services.m3_battle import BattleService
+            from girlframe.services.m3_battle_dormant import DormantService
             from girlframe.services.m3_careers import CareerService
             from girlframe.services.m3_handler_creation import HandlerCreationService
+            from girlframe.services.m3_harpy_defeat import HarpyDefeatService
+            from girlframe.services.m3_harpy_physical import HarpyPhysicalService
+
+            harpy_service = HarpyDefeatService(self.store)
+            for harpy_task in harpy_service._tasks(connection, viewer):
+                if (
+                    harpy_task["kind"] == "harpy_defeat"
+                    and harpy_task.get("action")
+                    and any(
+                        choice["actor_id"] == str(viewer.user_id)
+                        for choice in harpy_service.game.pending(connection, harpy_task["action"])
+                    )
+                ):
+                    continue
+                items.append(
+                    InboxItem(
+                        "harpy-task:" + harpy_task["kind"] + ":" + harpy_task["id"],
+                        harpy_task["kind"],
+                        harpy_task["id"],
+                        canon.revision,
+                        "plays",
+                        harpy_task["label"],
+                        "Original Harpy and actual source participants",
+                        "pending",
+                        harpy_task["can_act"],
+                        False,
+                        "Continue only the actual source-owned response for this original role.",
+                        "Saved dice and physical facts remain tied to the original person.",
+                        "Review actual next step",
+                        task="m3_harpy_task:" + harpy_task["kind"],
+                    )
+                )
+            for harpy_physical in HarpyPhysicalService(self.store)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "harpy-physical:" + harpy_physical["id"],
+                        "harpy_physical",
+                        harpy_physical["id"],
+                        harpy_physical["revision"],
+                        "plays",
+                        "Review actual Harpy help"
+                        if harpy_physical["review"]
+                        else "Actual Harpy Frame and body",
+                        "Original Frame voice and actual source-scene helpers",
+                        "pending",
+                        harpy_physical["actionable"],
+                        False,
+                        "Frame consent, extraction and medical recovery each require a real act.",
+                        "Only physical flags change; no resources or transport are inferred.",
+                        "Review actual help"
+                        if harpy_physical["review"]
+                        else "Review physical controls",
+                        task="m3_harpy_help" if harpy_physical["review"] else "m3_harpy_physical",
+                    )
+                )
+            for dormant in DormantService(self.store)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "dormant:" + dormant["id"],
+                        "dormant",
+                        dormant["id"],
+                        dormant["revision"],
+                        "plays",
+                        "Dormant: actual Void and required Dive",
+                        "Original affected person",
+                        dormant["state"],
+                        dormant["actionable"],
+                        False,
+                        "The source remains held through actual corruption and required Dive.",
+                        "Resume the actual owned consequence; a new character cannot substitute.",
+                        "Review Dormant consequence",
+                        task="m3_dormant",
+                    )
+                )
+            for battle_context in BattleService(self.store)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "battle-context:" + battle_context["id"],
+                        "battle_context",
+                        battle_context["id"],
+                        battle_context["revision"],
+                        "plays",
+                        battle_context["label"],
+                        "Actual declarer and human adjudicator",
+                        "pending",
+                        battle_context["state"] == "confirmed" or battle_context["incoming"],
+                        False,
+                        "Review the actual original bodies, owned Assets, opening and reach.",
+                        "Stage: "
+                        + battle_context["state"]
+                        + ". No dice or movement is supplied by this review.",
+                        "Review combat declaration",
+                        task="m3_battle_context",
+                    )
+                )
+            from girlframe.services.m3_handler_plays import HandlerPlayService
             from girlframe.services.m3_medical import MedicalService
             from girlframe.services.m3_privacy_trouble import PrivacyTroubleService
             from girlframe.services.m3_scene_requisitions import SceneRequisitionService
 
+            for request in HandlerPlayService(self.store)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "handler-play:" + request["id"],
+                        "handler_play",
+                        request["id"],
+                        canon.revision,
+                        "plays",
+                        request["label"],
+                        "Your actual source-owned choice",
+                        "pending",
+                        request["can_act"],
+                        False,
+                        "Choose only the actual Handler Play granted by this source.",
+                        "No player answer, consent, body or resource is invented "
+                        "by opening this request.",
+                        "Review Handler Play",
+                        task="m3_handler_play",
+                    )
+                )
+            for notice in HandlerPlayService(self.store)._notices(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "handler-notice:" + notice["id"],
+                        "handler_notice",
+                        notice["id"],
+                        canon.revision,
+                        "plays",
+                        notice["label"],
+                        "Actual source information for you",
+                        "resolved",
+                        False,
+                        False,
+                        "Read the actual committed Handler Play affecting your original character.",
+                        "Actual effect stage: " + notice["state"] + ". "
+                        "This notice supplies no answer or consent; "
+                        "mechanical follow-ups remain separate.",
+                        "Read actual Handler notice",
+                        task="m3_handler_notice",
+                    )
+                )
             for request in HandlerCreationService(self.store)._tasks(
                 connection, viewer, history=True
             ):
@@ -904,6 +1043,35 @@ class InboxService:
                         task="m3_lobotomy",
                     )
                 )
+            from girlframe.services.m3_role_punishments import RolePunishmentService
+
+            role_cases = RolePunishmentService(physical.game)._tasks(connection, viewer)
+            visible_role_work = {
+                case.pc_work
+                for case in canon.role_punishments
+                if case.id in {x["id"] for x in role_cases} and case.pc_work is not None
+            }
+            for request in role_cases:
+                items.append(
+                    InboxItem(
+                        "role-punishment:" + request["id"],
+                        "role_punishment",
+                        request["id"],
+                        canon.revision,
+                        "plays",
+                        "Original instruction and actual Punishment",
+                        "Original chooser, executor and affected participant",
+                        request["state"],
+                        request["actionable"],
+                        False,
+                        "Each human owns only their actual instruction, "
+                        "consultation, scene or execution.",
+                        "The source Play waits for the real instructed effects "
+                        "and their required follow-ups.",
+                        "Review actual Punishment",
+                        task="m3_role_punishment",
+                    )
+                )
             for request in FrameSwapService(physical.game)._tasks(connection, viewer):
                 items.append(
                     InboxItem(
@@ -942,6 +1110,69 @@ class InboxService:
                         "no Permission charge.",
                         "Review firearm return",
                         task="m3_firearm_return",
+                    )
+                )
+            from girlframe.services.m3_enforcer_volunteer import VolunteerService
+
+            for request in VolunteerService(physical.game)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "enforcer-volunteer:" + request["id"],
+                        "enforcer_volunteer",
+                        request["id"],
+                        request["revision"],
+                        "plays",
+                        "Actual Enforcer volunteering offer",
+                        "Original inflictor and proposed executor",
+                        request["state"],
+                        request["state"] == "pending" and request["actionable"],
+                        False,
+                        "The original chooser accepts or declines this exact actual executor.",
+                        "The original Punishment cause and chooser remain unchanged; "
+                        "real effects still follow.",
+                        "Review volunteer offer",
+                        task="m3_enforcer_volunteer",
+                    )
+                )
+            from girlframe.services.m3_items import ItemService
+
+            for request in ItemService(physical.game)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "held-item-fact:" + request["id"],
+                        "held_item_fact",
+                        request["id"],
+                        request["revision"],
+                        "world",
+                        "Actual existing held object",
+                        "Original holder and human GM",
+                        request["state"],
+                        request["state"] == "pending" and request["actionable"],
+                        False,
+                        "Confirm only an actual existing possession, not a new mechanical Asset.",
+                        "The actual human GM reviews the source holder "
+                        "and whether the object is a weapon on hand.",
+                        "Review factual possession",
+                        task="m3_item_fact",
+                    )
+                )
+            for request in EnforcerService(physical.game)._grasp_tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "enforcer-grasp:" + request["id"],
+                        "enforcer_grasp",
+                        request["id"],
+                        request["revision"],
+                        "plays",
+                        "Your actual held grasp",
+                        "Original holder",
+                        request["state"],
+                        request["actionable"],
+                        False,
+                        "Release only the actual source-owned grip.",
+                        "Voluntary release moves nobody and does not remove separate Helplessness.",
+                        "Review voluntary release" if request["actionable"] else None,
+                        task="m3_enforcer_grasp" if request["actionable"] else None,
                     )
                 )
             for request in EnforcerService(physical.game)._tasks(connection, viewer):
@@ -1304,7 +1535,14 @@ class InboxService:
                     "frame_swap",
                     "personal_firearm_return",
                     "enforcer_rank",
+                    "held_item_fact",
+                    "enforcer_volunteer",
+                    "dormant_void",
+                    "harpy_physical_help",
+                    "harpy_defeat",
                 ):
+                    continue
+                if work["id"] in visible_role_work:
                     continue
                 if json.loads(work["body_json"]).get("lobotomy_id") in visible_surgeries:
                     continue

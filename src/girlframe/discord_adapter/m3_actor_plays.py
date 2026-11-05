@@ -16,10 +16,23 @@ from girlframe.services.m3_actor_plays import ActorPlayService
 
 
 async def open_actor_play(
-    interaction: discord.Interaction, game: GameService, ref: ActorRef
+    interaction: discord.Interaction,
+    game: GameService,
+    ref: ActorRef,
+    *,
+    parent: dict[str, Any] | None = None,
+    source_work: str | None = None,
+    channel: int | None = None,
 ) -> None:
     service = ActorPlayService(game)
-    viewer, channel = viewer_from_interaction(interaction), interaction.channel_id or 0
+    viewer = viewer_from_interaction(interaction)
+    channel = (
+        int(parent["channel"])
+        if parent
+        else channel
+        if channel is not None
+        else interaction.channel_id or 0
+    )
     data = await threaded(lambda: service.preview(viewer, channel, ref))
     actor = data["actor"]
     owed = await threaded(lambda: game.own_obligations(viewer))
@@ -29,27 +42,38 @@ async def open_actor_play(
         if x["kind"] == "actor_reject_tag"
         and ActorRef.model_validate_json(x["details"]["actor"]) == ref
     }
-    options = (("keep_your_head", "Keep Your Head"),) + tuple(
-        ("reject:" + key, "Take action to reject an owed Tag") for key in rejections
+    harpy_mode = actor.get("girl") == "harpy"
+    basic = (("keep_your_head", "Keep Your Head"),) + (
+        (("dive_deep", "Dive Deep"), ("check_sensors", "Check Sensors — honest questions"))
+        if harpy_mode
+        else ()
+    )
+    options = ((("dive_deep", "Required Dive Deep"),) if source_work else basic) + (
+        tuple(("reject:" + key, "Take action to reject an owed Tag") for key in rejections)
+        if parent is None and source_work is None
+        else ()
     )
 
     async def choose(current: discord.Interaction, token: str) -> None:
         rejection = token[7:] if token.startswith("reject:") else None
+        sensors = token == "check_sensors"
         fields = [
             text(
                 "context",
-                "What are you trying to make it through?"
+                "What questions do you ask?"
+                if sensors
+                else "What are you trying to make it through?"
                 if rejection is None
                 else "Describe your action to reject this Tag",
             )
         ]
-        if rejection is None:
+        if rejection is None and not sensors:
             fields.extend(
                 [
                     entities(
                         "identity",
                         "Mark an ordinary Identity (optional)",
-                        [x for x in actor["identities"] if not x["marked"]],
+                        [x for x in actor["identities"] if not x["marked"] and not x["paired"]],
                         0,
                         1,
                         False,
@@ -61,13 +85,13 @@ async def open_actor_play(
         fields.append(
             Field(
                 "confirm",
-                "Confirm the Play and its responding Director",
+                "Confirm the Play and its adjudicator",
                 (("yes", "Confirm and request scene lock"),),
             )
         )
 
         async def submit(response: discord.Interaction, values: dict[str, Any]) -> str:
-            identity = one(values, "identity") if rejection is None else None
+            identity = one(values, "identity") if rejection is None and not sensors else None
             result = await threaded(
                 lambda: service.begin(
                     viewer_from_interaction(response),
@@ -75,7 +99,9 @@ async def open_actor_play(
                     channel,
                     ref,
                     actor["source_sha256"],
-                    ActorRef.model_validate(data["adjudicator"]["ref"]),
+                    ActorRef.model_validate(data["adjudicator"]["ref"])
+                    if data["adjudicator"]["ref"]
+                    else None,
                     data["cast_revision"],
                     PlayInput(
                         play="actor_reject_tag" if rejection else token,
@@ -84,6 +110,8 @@ async def open_actor_play(
                         heat=int(one(values, "heat", "0")),
                         identity=identity,
                         gain=int(one(values, "gain", "0")) if identity else 0,
+                        parent=parent["action_id"] if parent else None,
+                        source_work=source_work,
                     ),
                     rejection=rejection,
                 )
@@ -97,11 +125,17 @@ async def open_actor_play(
 
         form = NativeForm(
             viewer.user_id,
-            "Your actual Handler role",
-            "Your Director for Handler-rule replies is "
+            "Your Harpy" if harpy_mode else "Your actual Handler role",
+            "Your rules adjudicator is "
             + data["adjudicator"]["label"]
-            + ". Your Heat and Identities belong to this Director-presence context. "
-            "Confirm before anything is spent.",
+            + (
+                ". Ask any questions; this spends no Heat and rolls no dice. "
+                if sensors
+                else ". This uses your Harpy's own Heat and Identities. "
+                if harpy_mode
+                else ". Your Heat and Identities belong to this Director-presence context. "
+            )
+            + "Confirm before anything is spent.",
             fields,
             submit,
         )
@@ -109,7 +143,8 @@ async def open_actor_play(
 
     await Picker(
         viewer.user_id,
-        "**Your Handler under Girl rules**\nChoose a Play or owed Tag rejection in this scene.",
+        ("**Your Harpy**" if harpy_mode else "**Your Handler under Girl rules**")
+        + "\nChoose a Play or owed Tag rejection in this scene.",
         options,
         choose,
     ).show(interaction)

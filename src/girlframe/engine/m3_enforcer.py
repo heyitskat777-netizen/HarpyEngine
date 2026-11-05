@@ -32,12 +32,16 @@ def grasp(
     bindings: tuple[ProfileBinding, ...],
     action: str,
     event: str,
+    *,
+    piloting: bool = False,
 ) -> GameState:
     from girlframe.engine.m3_actor_bonds import make_helpless
 
     state = GameState.model_validate_json(original.model_dump_json())
     holder = resolve(state, actor, bindings, require_current_profile=False)
-    resolve(state, target, bindings, require_current_profile=False)
+    from girlframe.engine.m3_role_punishments import view
+
+    target_view = view(state, target, bindings)
     if not initiative(state, actor) or not holder.frame_instance or actor == target:
         raise ValueError("Use an actual current Enforcer taking hold of another actual role")
     if any(x.action == action or x.id == event for x in state.enforcer_grasps):
@@ -52,13 +56,21 @@ def grasp(
             frame_instance=holder.frame_instance,
             action=action,
             source_event=event,
+            contact="frame" if piloting else "body",
         )
     )
     girl = target.kind == "pilot"
     if target.kind == "external_pilot" and state.world:
         girl = any(x.id == target.entity and x.kind != "harpy" for x in state.world.pilots)
-    if girl or target.kind in ("npc", "handler"):
-        state = make_helpless(state, target, actor, event)
+    if (
+        girl
+        or target.kind == "npc"
+        or target.kind == "handler"
+        and target_view.rules == "handler_girl"
+    ):
+        from girlframe.engine.m3_items import body_ref
+
+        state = make_helpless(state, body_ref(state, target), actor, event)
     # Harpies/Gorgons remain unable to escape this actual grip, without being silently
     # reclassified as Girls or receiving the source's different Helplessness benefit.
     return state
@@ -294,4 +306,36 @@ def record_released_position(
             source_event=event,
         )
     )
+    return state
+
+
+def end_lost_frame_grasps(original: GameState, event: str) -> GameState:
+    """Only actual Frame-contact grips end on sourceful loss of their original vessel."""
+    state = GameState.model_validate_json(original.model_dump_json())
+    for grip in tuple(state.enforcer_grasps):
+        sheet = state.sheets.get(grip.actor.entity)
+        if (
+            not grip.held
+            or grip.contact != "frame"
+            or sheet is None
+            or sheet.character_id != grip.actor.incarnation
+        ):
+            continue
+        current = sheet.frame_runtime.id if sheet.frame_runtime else None
+        if sheet.frame_scrapped or current is not None and current != grip.frame_instance:
+            state.enforcer_grasps = [
+                x.model_copy(
+                    update=dict(
+                        held=False,
+                        release_event=event,
+                        release_account=(
+                            "The actual original Frame holding this grip was lost; "
+                            "nobody moved or recovered Helplessness."
+                        ),
+                    )
+                )
+                if x.id == grip.id
+                else x
+                for x in state.enforcer_grasps
+            ]
     return state

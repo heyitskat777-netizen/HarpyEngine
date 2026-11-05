@@ -2,7 +2,7 @@
 
 import json
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NamedTuple
 from uuid import uuid4
 
 import sqlalchemy as sa
@@ -14,7 +14,7 @@ from girlframe.engine import m3_cast
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput, tier
 from girlframe.engine.m3_actor_resources import Commitment, commit
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
-from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_policy import RULESET
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
@@ -26,9 +26,47 @@ if TYPE_CHECKING:
     from girlframe.services.m2_game import GameService
 
 
+class Judge(NamedTuple):
+    ref: ActorRef | None
+    controller: int
+    label: str
+    appointment: str | None = None
+
+
 class ActorPlayService:
     def __init__(self, game: "GameService"):
         self.game, self.store = game, game.store
+
+    def _judge(self, c: Connection, state: GameState, cast: SceneCast, acting: ActorRef) -> Judge:
+        if acting.kind == "external_pilot" and cast.adjudicator is None:
+            from girlframe.services.m3_medical import MedicalService
+
+            human, appointment = MedicalService(self.store)._handler(c)
+            if cast.facilitator != human or state.handler != human:
+                raise WorkflowError("Recover this scene's actual original human GM.")
+            return Judge(None, human, "Handler (rules adjudication)", appointment)
+        actual = m3_cast.adjudicator(
+            state, cast, profiles(c, self.store.campaign_id), acting=acting
+        )
+        return Judge(actual.ref, actual.controller, actual.label)
+
+    def _eligible_play(
+        self, state: GameState, actor: ActorRef, *, rejection: bool, play: str = "keep_your_head"
+    ) -> None:
+        if actor.kind != "external_pilot":
+            return
+        from girlframe.engine.m3_actor_bonds import is_helpless
+        from girlframe.engine.m3_harpy_defeat import harpy
+
+        actual = harpy(state, actor)
+        if actual.body_incapacitated:
+            raise WorkflowError("The actual Harpy body is incapacitated.")
+        if not rejection and (
+            any(x.play == play for x in actual.blocked_plays)
+            or play == "keep_your_head"
+            and is_helpless(state, actor)
+        ):
+            raise WorkflowError("This actual Harpy cannot make the defensive Keep Your Head Play.")
 
     def saved(self, viewer: GuildViewer) -> list[dict[str, Any]]:
         with self.store.engine.connect() as c:
@@ -177,14 +215,19 @@ class ActorPlayService:
             actor = next(
                 (x for x in actors if x.ref == ref and x.controller == viewer.user_id), None
             )
-            if actor is None or actor.rules != "handler_girl":
-                raise WorkflowError("This consumer requires your actual Handler Girl-rules role.")
-            judge = m3_cast.adjudicator(
-                state, cast, profiles(c, self.store.campaign_id), acting=ref
-            )
+            if actor is None or not (
+                actor.rules == "handler_girl"
+                or actor.ref.kind == "external_pilot"
+                and actor.girl == "harpy"
+            ):
+                raise WorkflowError("Select your actual Handler Girl-rules role or Harpy body.")
+            judge = self._judge(c, state, cast, ref)
             return {
                 "actor": actor.model_dump(mode="json"),
-                "adjudicator": {"ref": judge.ref.model_dump(mode="json"), "label": judge.label},
+                "adjudicator": {
+                    "ref": judge.ref.model_dump(mode="json") if judge.ref else None,
+                    "label": judge.label,
+                },
                 "cast_revision": cast.revision,
                 "game_revision": state.revision,
             }
@@ -196,21 +239,42 @@ class ActorPlayService:
         channel: int,
         ref: ActorRef,
         expected: str,
-        adjudicator: ActorRef,
+        adjudicator: ActorRef | None,
         cast_revision: int,
         prepared: PlayInput,
         *,
         rejection: str | None = None,
     ) -> dict[str, Any]:
         prepared = PlayInput.model_validate_json(prepared.model_dump_json())
+        battle_play = prepared.play in ("all_out_assault", "go_for_the_core")
+        if battle_play:
+            from girlframe.engine.m3_plays import HEAT_IDS
+
+            if prepared.play not in HEAT_IDS:
+                raise WorkflowError("M3_REVIEW_PENDING: actual-role combat remains release-gated")
+            if prepared.play == "all_out_assault":
+                raise WorkflowError(
+                    "UNSUPPORTED_RULE: the Harpy's extra maneuver needs its resolver"
+                )
         if (
-            prepared.play != ("actor_reject_tag" if rejection else "keep_your_head")
+            (
+                prepared.play != "actor_reject_tag"
+                if rejection
+                else prepared.play
+                not in ("keep_your_head", "dive_deep", "check_sensors", "go_for_the_core")
+            )
             or prepared.target is not None
             or prepared.parent is not None
+            and rejection is not None
             or prepared.off_duty_id is not None
             or prepared.piloting
+            and not battle_play
             or prepared.order_id is not None
             or prepared.witnessed
+            or prepared.target_actor is not None
+            and not battle_play
+            or prepared.source_work is not None
+            and prepared.play != "dive_deep"
         ):
             raise WorkflowError("UNSUPPORTED_RULE: select an implemented actual-role Play.")
 
@@ -221,23 +285,55 @@ class ActorPlayService:
             actor = next((x for x in actors if x.ref == ref), None)
             from girlframe.services.m3_scene_requisitions import guard
 
-            guard(c, self.store, cast.id, ref)
-            judge = m3_cast.adjudicator(
-                state, cast, profiles(c, self.store.campaign_id), acting=ref
-            )
+            guard(c, self.store, cast.id, ref, continuation=prepared.parent is not None)
+            judge = self._judge(c, state, cast, ref)
             if (
                 actor is None
                 or actor.controller != viewer.user_id
-                or actor.rules != "handler_girl"
+                or not (
+                    actor.rules == "handler_girl"
+                    or actor.ref.kind == "external_pilot"
+                    and actor.girl == "harpy"
+                )
                 or actor.source_sha256 != expected
                 or judge.ref != adjudicator
                 or cast.revision != cast_revision
             ):
                 raise ValueError("STALE_ACTOR: confirm your actual resources and Director first")
-            if self.game.pending_actions(c):
+            parent = self.game.action(c, prepared.parent) if prepared.parent else None
+            counter = None
+            dive = None
+            battle = None
+            dormant_source = None
+            if battle_play:
+                from girlframe.services.m3_battle import prepare
+
+                if actor.girl != "harpy":
+                    raise ValueError("Use the actual Harpy's own combat role and resources")
+                battle = prepare(self.game, c, viewer, state, self.game.scene(c, channel), prepared)
+                if battle["actor"] != ref.model_dump(mode="json"):
+                    raise ValueError("The declared combatant must be this exact Harpy body")
+            if prepared.play == "dive_deep":
+                from girlframe.services.m3_dive import prepare_actor
+
+                dive = prepare_actor(self.game, c, viewer, state, cast, prepared, ref)
+                if prepared.source_work:
+                    from girlframe.services.m3_battle_dormant import prepare_dive_source
+
+                    dormant_source = prepare_dive_source(
+                        self.game, c, viewer, prepared, state, channel
+                    )
+            if parent is not None:
+                from girlframe.services.m3_battle import validate_counter_child
+
+                if parent["scene_id"] != cast.id or int(parent["channel_id"]) != channel:
+                    raise ValueError("Continue this counter-Play in its original source scene")
+                if dormant_source is None:
+                    counter = validate_counter_child(self.game, c, parent, ref, prepared)
+            if self.game.pending_actions(c) and parent is None:
                 raise ValueError("SCENE_BUSY: finish or recover the pending Play first")
             lock = self.game.lock(c, channel)
-            if lock and lock["state"] != "released":
+            if lock and lock["state"] != "released" and parent is None:
                 raise ValueError("SCENE_BUSY: restore the existing scene lock first")
             commitment = Commitment(
                 heat=prepared.heat,
@@ -245,7 +341,12 @@ class ActorPlayService:
                 gain=prepared.gain,
                 pair_share=prepared.pair_share,
             )
-            commit(state, ref, profiles(c, self.store.campaign_id), commitment, expected)
+            self._eligible_play(state, ref, rejection=rejection is not None, play=prepared.play)
+            if prepared.play == "check_sensors":
+                if actor.girl != "harpy" or commitment != Commitment(heat=0):
+                    raise ValueError("A Harpy asks honest Sensor questions without dice or Heat")
+            elif not rejection:
+                commit(state, ref, profiles(c, self.store.campaign_id), commitment, expected)
             if rejection:
                 item = next((x for x in state.obligations if x.id == rejection), None)
                 if (
@@ -259,6 +360,12 @@ class ActorPlayService:
                     raise ValueError(
                         "Choose your actual owed Tag rejection without spending resources"
                     )
+                if ref.kind == "external_pilot":
+                    from girlframe.services.m3_tag_permissions import PermissionService
+
+                    PermissionService(self.store).authorize_rejection(
+                        c, viewer, state, ref, item.details["tag"]
+                    )
             identity = str(uuid4())
             approval = self.store.policy.m3_approval
             assert approval is not None
@@ -268,8 +375,10 @@ class ActorPlayService:
             data = {
                 "actor_basic": {
                     "ref": ref.model_dump(mode="json"),
-                    "adjudicator": judge.ref.model_dump(mode="json"),
+                    "label": actor.label,
+                    "adjudicator": judge.ref.model_dump(mode="json") if judge.ref else None,
                     "adjudicator_controller": judge.controller,
+                    "adjudicator_appointment": judge.appointment,
                     "cast_revision": cast.revision,
                     "registry": approval.registry_sha256,
                     "source_sha256": expected,
@@ -285,6 +394,28 @@ class ActorPlayService:
                 "result": {},
                 "choices": {},
             }
+            from girlframe.engine.m3_handler_consequences import active_handler
+
+            handler = active_handler(state)
+            data["tag_context"] = dict(
+                actor=ref.model_dump(mode="json"),
+                handler=handler.model_dump(mode="json") if handler else None,
+                cast=cast.model_dump(mode="json"),
+                cast_sha256=fingerprint(cast),
+                table=participants,
+            )
+            if dive is not None:
+                data["dive"] = dive
+            if battle is not None:
+                data["battle"] = battle
+            if dormant_source is not None:
+                data["dormant_dive_source"] = dormant_source
+            if parent is not None and counter is not None:
+                data["battle_counter_source"] = dict(
+                    choice=counter["id"],
+                    actor=ref.model_dump(mode="json"),
+                    attacker=parent["data"]["battle"]["actor"],
+                )
             c.execute(
                 t.m2["m2_actions"]
                 .insert()
@@ -294,7 +425,7 @@ class ActorPlayService:
                     actor_id=str(viewer.user_id),
                     channel_id=str(channel),
                     scene_id=cast.id,
-                    parent_id=None,
+                    parent_id=prepared.parent,
                     revision=1,
                     state="acquiring",
                     body_json=json.dumps(data, sort_keys=True),
@@ -308,7 +439,9 @@ class ActorPlayService:
                 claim_token=None,
             )
             table = t.m2["m2_locks"]
-            if lock:
+            if parent is not None:
+                self.game.save_action(c, self.game.action(c, identity), state="ready_to_roll")
+            elif lock:
                 c.execute(
                     table.update()
                     .where(
@@ -324,7 +457,7 @@ class ActorPlayService:
                     )
                 )
             self.game.event(c, viewer.user_id, key, "m3.actor_play_confirmed", action_id=identity)
-            return {"action_id": identity, "state": "acquiring"}
+            return {"action_id": identity, "state": "ready_to_roll" if parent else "acquiring"}
 
         try:
             return self.store._write(
@@ -335,7 +468,7 @@ class ActorPlayService:
                     channel=channel,
                     ref=ref.model_dump(mode="json"),
                     expected=expected,
-                    adjudicator=adjudicator.model_dump(mode="json"),
+                    adjudicator=adjudicator.model_dump(mode="json") if adjudicator else None,
                     cast_revision=cast_revision,
                     prepared=prepared.model_dump(mode="json"),
                     rejection=rejection,
@@ -352,15 +485,53 @@ class ActorPlayService:
         ref = ActorRef.model_validate(meta["ref"])
         cast, actors = self.actors(c, state, int(action["channel_id"]), fresh=False)
         actor = next((x for x in actors if x.ref == ref), None)
-        judge = m3_cast.adjudicator(state, cast, profiles(c, self.store.campaign_id), acting=ref)
+        source = action["data"].get("tag_context")
+        old_judge = ActorRef.model_validate(meta["adjudicator"]) if meta["adjudicator"] else None
+        procedural = (
+            action["data"]["play"] == "check_sensors"
+            and bool(action["data"]["result"].get("questions"))
+        ) or (action["data"]["play"] == "keep_your_head" and "positive" in action["data"]["result"])
+        if (
+            ref.kind == "external_pilot"
+            and actor is not None
+            and actor.girl == "harpy"
+            and actor.controller == int(action["actor_id"])
+            and procedural
+            and source is not None
+            and old_judge is not None
+        ):
+            from girlframe.services.m3_harpy_defeat import ended_director_judge
+
+            original = SceneCast.model_validate_json(json.dumps(source["cast"]))
+            if (
+                fingerprint(original) == source["cast_sha256"]
+                and original.revision == meta["cast_revision"]
+                and ended_director_judge(
+                    self.game,
+                    c,
+                    state,
+                    original,
+                    cast,
+                    old_judge,
+                    meta["adjudicator_controller"],
+                )
+            ):
+                return actor
+        judge = self._judge(c, state, cast, ref)
         if (
             cast.id != action["scene_id"]
             or cast.revision != meta["cast_revision"]
             or actor is None
             or actor.controller != int(action["actor_id"])
-            or actor.rules != "handler_girl"
-            or judge.ref != ActorRef.model_validate(meta["adjudicator"])
+            or not (
+                actor.rules == "handler_girl"
+                or actor.ref.kind == "external_pilot"
+                and actor.girl == "harpy"
+            )
+            or judge.ref
+            != (ActorRef.model_validate(meta["adjudicator"]) if meta["adjudicator"] else None)
             or judge.controller != meta["adjudicator_controller"]
+            or judge.appointment != meta.get("adjudicator_appointment")
         ):
             raise ValueError("STALE_CAST: explicitly recover the saved actual roles and responses")
         return actor
@@ -372,14 +543,40 @@ class ActorPlayService:
         state = load_state(c, self.store.campaign_id)
         actor = self.validate(c, state, action)
         meta = action["data"]["actor_basic"]
-        if meta.get("rejection"):
+        self._eligible_play(
+            state,
+            actor.ref,
+            rejection=bool(meta.get("rejection")),
+            play=action["data"]["play"],
+        )
+        if action["data"]["play"] == "check_sensors":
+            if actor.girl != "harpy":
+                raise ValueError("Only the actual Harpy uses the diceless Sensor adjustment")
+            action["state"] = "awaiting_choices"
+            action["data"]["result"]["questions"] = action["data"]["prepared"]["context"]
+            self.game.request(c, action, meta["adjudicator_controller"], "harpy_sensor_answers")
+        elif meta.get("rejection"):
             item = next(x for x in state.obligations if x.id == meta["rejection"])
             if item.state != "pending":
                 raise ValueError("This rejection has already resolved")
+            if actor.ref.kind == "external_pilot":
+                from girlframe.services.m3_tag_permissions import PermissionService
+
+                PermissionService(self.store).authorize_rejection(
+                    c, viewer, state, actor.ref, item.details["tag"]
+                )
             rules.reject(state, actor.ref, item.details["tag"])
             item.state = "fulfilled"
             self.finish(c, state, action)
         else:
+            if action["data"].get("battle"):
+                from girlframe.services.m3_battle import pre_roll as battle_pre_roll
+
+                battle_pre_roll(self.game, c, state, action)
+            if action["data"].get("dive"):
+                from girlframe.services.m3_dive import pre_roll
+
+                pre_roll(self.game, c, viewer, state, action)
             committed = commit(
                 state,
                 actor.ref,
@@ -392,6 +589,11 @@ class ActorPlayService:
                     "UNSUPPORTED_RULE: this actual-role follow-up needs its owned resolver"
                 )
             state = committed.state
+            base_modifier = 0
+            if action["data"].get("battle"):
+                from girlframe.services.m3_battle import modifier as battle_modifier
+
+                base_modifier = battle_modifier(state, action)
             faces = self.game.dice.roll()
             if len(faces) != 2 or any(type(x) is not int or not 1 <= x <= 6 for x in faces):
                 raise ValueError("Dice source returned invalid faces")
@@ -400,11 +602,15 @@ class ActorPlayService:
                 action_id=action["id"],
                 faces=list(faces),
                 heat=meta["commitment"]["heat"],
-                pre_total=sum(faces) + meta["commitment"]["heat"],
+                pre_total=sum(faces) + meta["commitment"]["heat"] + base_modifier,
                 rng_source=self.game.rng_source,
                 rolled_utc=datetime.now(UTC).isoformat(),
                 ruleset=RULESET,
             )
+            if action["data"].get("battle"):
+                receipt["pre_modifiers"] = [
+                    dict(source="target_undamaged_assets", amount=base_modifier)
+                ]
             c.execute(
                 t.m2["m2_receipts"]
                 .insert()
@@ -427,7 +633,15 @@ class ActorPlayService:
             )
         self.game.save_action(c, action)
         self.game.event(
-            c, viewer.user_id, key, "m3.actor_play_advanced", state, action_id=action["id"]
+            c,
+            viewer.user_id,
+            key,
+            "m3.rolled" if action["data"].get("battle") else "m3.actor_play_advanced",
+            state,
+            action_id=action["id"],
+            event_id=action["data"]["battle"]["roll_event"]
+            if action["data"].get("battle")
+            else None,
         )
         return {"action_id": action["id"], "receipt": action["data"]["receipt"]}
 
@@ -441,12 +655,31 @@ class ActorPlayService:
             "outcome",
             dict(
                 play=action["data"]["play"],
-                callsign="Handler",
+                callsign=action["data"]["actor_basic"].get("label")
+                or resolve(
+                    state,
+                    ActorRef.model_validate(action["data"]["actor_basic"]["ref"]),
+                    profiles(c, self.store.campaign_id),
+                    require_alive=False,
+                    require_current_profile=False,
+                ).label,
                 receipt=action["data"]["receipt"],
                 total=action["data"]["result"].get("total"),
                 tier=action["data"]["result"].get("tier"),
             ),
         )
+
+    def synchronize(
+        self, c: Connection, action: dict[str, Any], event: str, viewer: GuildViewer, key: str
+    ) -> None:
+        if (
+            action["state"] == "complete"
+            and action.get("parent_id")
+            and action["data"].get("battle_counter_source")
+        ):
+            from girlframe.services.m3_battle import complete_counter_play
+
+            complete_counter_play(self.game, c, action, event, viewer, key)
 
     def results(self, c: Connection, action: dict[str, Any]) -> None:
         total = action["data"]["receipt"]["pre_total"] + sum(
@@ -454,17 +687,41 @@ class ActorPlayService:
         )
         action["data"]["result"].update(total=total, tier=tier(total))
         action["state"] = "awaiting_choices"
-        self.game.request(c, action, int(action["actor_id"]), "actor_keep")
+        if action["data"].get("battle"):
+            from girlframe.services.m3_battle import results as battle_results
+
+            battle_results(self.game, c, action)
+        elif action["data"].get("dive"):
+            from girlframe.services.m3_dive import results
+
+            results(self.game, c, action)
+        else:
+            self.game.request(c, action, int(action["actor_id"]), "actor_keep")
 
     def select_tag(
         self, c: Connection, state: GameState, action: dict[str, Any], selected: dict[str, Any]
     ) -> None:
         ref = ActorRef.model_validate(action["data"]["actor_basic"]["ref"])
+        from girlframe.services.m3_tag_markers import current as current_markers
+
+        saved_marker = selected.get("marker")
+        if saved_marker is not None and not any(
+            marker.model_dump(mode="json") == saved_marker
+            for marker in current_markers(self.game, c, state, action, selected["controller"])
+        ):
+            action["data"]["tag_proposals"] = [
+                p for p in action["data"]["tag_proposals"] if p["id"] != selected["id"]
+            ]
+            action["data"].pop("tag_candidate", None)
+            action["data"].pop("tag_consensus", None)
+            action["state"] = "tag_window"
+            self.game.request(c, action, selected["controller"], "tag_window")
+            return
         # Revalidate the actual proposal and Bond immediately before applying it.
         amount = rules.proposal(
             state,
             ref,
-            ActorRef.model_validate(selected["ref"]),
+            ActorRef.model_validate(selected["ref"]) if selected["ref"] else None,
             selected["controller"],
             profiles(c, self.store.campaign_id),
             selected["tag"],
@@ -495,12 +752,22 @@ class ActorPlayService:
         action: dict[str, Any],
         row: dict[str, Any],
         answer: ChoiceAnswer,
+        *,
+        viewer: GuildViewer | None = None,
     ) -> None:
         actor = self.validate(c, state, action)
         owner, kind = int(row["actor_id"]), row["kind"]
         body, meta = json.loads(row["body_json"]), action["data"]["actor_basic"]
         judge = meta["adjudicator_controller"]
-        if kind == "tag_window":
+        if action["data"].get("battle") and kind.startswith("battle_"):
+            from girlframe.services.m3_battle import apply as battle_apply
+
+            battle_apply(self.game, c, state, action, row, answer)
+        elif action["data"].get("dive") and kind.startswith("dive_"):
+            from girlframe.services.m3_dive import apply
+
+            apply(self.game, c, state, action, row, answer)
+        elif kind == "tag_window":
             if answer.options == ("pass",):
                 if (
                     answer.denied
@@ -511,17 +778,20 @@ class ActorPlayService:
                 ):
                     raise ValueError("A pass does not commit a Tag or another role's modifier")
             elif answer.options == ("tag",) and len(answer.denied) == 1:
-                cast, actors = self.actors(c, state, int(action["channel_id"]), fresh=False)
-                proposer = next(
+                from girlframe.services.m3_tag_markers import current as current_markers
+
+                marker = next(
                     (
                         x
-                        for x in actors
-                        if x.controller == owner and x.ref.token == answer.fields.get("as_actor")
+                        for x in current_markers(self.game, c, state, action, owner)
+                        if x.token == answer.fields.get("as_actor")
+                        or x.actor is not None
+                        and x.actor.token == answer.fields.get("as_actor")
                     ),
                     None,
                 )
                 if (
-                    proposer is None
+                    marker is None
                     or set(answer.fields) != {"as_actor"}
                     or answer.flag is not None
                     or answer.member
@@ -530,7 +800,7 @@ class ActorPlayService:
                 rules.proposal(
                     state,
                     actor.ref,
-                    proposer.ref,
+                    marker.actor,
                     owner,
                     profiles(c, self.store.campaign_id),
                     answer.denied[0],
@@ -542,7 +812,8 @@ class ActorPlayService:
                     dict(
                         id=row["id"],
                         controller=owner,
-                        ref=proposer.ref.model_dump(mode="json"),
+                        ref=marker.actor.model_dump(mode="json") if marker.actor else None,
+                        marker=marker.model_dump(mode="json"),
                         tag=answer.denied[0],
                         direction=answer.number,
                         account=answer.text,
@@ -588,11 +859,19 @@ class ActorPlayService:
                 else:
                     self.game.request(c, action, judge, "actor_tag_selection")
         elif kind == "tag_resolution" and owner == actor.controller:
-            tag = next(x for x in state.handler_tags if x.id == body["tag"])
+            tag = next(x for x in rules.tags(state, actor.ref) if x.id == body["tag"])
             if answer.options == ("embrace",):
                 rules.embrace(state, actor.ref, tag.id, answer.denied)
             elif answer.options == ("reject",) and not answer.denied:
-                tag.rejection_pending = True
+                if actor.ref.kind == "external_pilot":
+                    from girlframe.services.m3_tag_permissions import PermissionService
+
+                    if viewer is None or viewer.user_id != owner:
+                        raise ValueError("Use the actual authenticated Tag bearer's response")
+                    PermissionService(self.store).authorize_rejection(
+                        c, viewer, state, actor.ref, tag.id
+                    )
+                rules.defer_rejection(state, actor.ref, tag.id)
                 self.game.obligation(
                     state,
                     action,
@@ -606,15 +885,34 @@ class ActorPlayService:
                     "Choose to embrace or take action to reject the actual repeated Tag"
                 )
             self.results(c, action)
+        elif kind == "harpy_sensor_answers" and owner == judge:
+            if (
+                actor.girl != "harpy"
+                or action["data"]["play"] != "check_sensors"
+                or answer.flag is not True
+                or not answer.text.strip()
+                or answer.options
+                or answer.denied
+                or answer.fields
+                or answer.number is not None
+                or answer.member is not None
+            ):
+                raise ValueError("The actual adjudicator answers every question honestly")
+            action["data"]["result"].update(answers=answer.text, honest_attested=True)
+            self.finish(c, state, action)
         elif kind == "actor_keep" and owner == actor.controller:
-            result = rules.keep(action["data"]["result"]["tier"], answer)
+            result = (
+                rules.harpy_keep(state, actor.ref, action["data"]["result"]["tier"], answer)
+                if actor.girl == "harpy"
+                else rules.keep(action["data"]["result"]["tier"], answer)
+            )
             if action["data"]["result"]["tier"] == "high":
                 rules.add_tag(state, actor.ref, answer.text, tuple(action["data"]["participants"]))
             action["data"]["result"].update(result)
             self.game.request(c, action, judge, "handler_keep")
         elif kind == "handler_keep" and owner == judge:
             if answer.flag is None or not answer.text.strip():
-                raise ValueError("The actual Director must answer whether it is enough and explain")
+                raise ValueError("The actual rules adjudicator must answer whether it is enough")
             action["data"]["result"].update(enough=answer.flag, ruling=answer.text)
             self.finish(c, state, action)
         else:
@@ -623,20 +921,27 @@ class ActorPlayService:
     def decision(
         self, c: Connection, viewer: GuildViewer, action: dict[str, Any], row: dict[str, Any]
     ) -> dict[str, Any]:
+        from girlframe.engine.m3_harpy_defeat import harpy
+        from girlframe.services.m3_tag_markers import current as current_markers
+
         state = load_state(c, self.store.campaign_id)
         actor = self.validate(c, state, action)
         cast, actual = self.actors(c, state, int(action["channel_id"]), fresh=False)
         own = actor.controller == viewer.user_id
         selected = action["data"].get("tag_candidate")
         proposals = action["data"].get("tag_proposals", [])
-        return dict(row) | {
+        result = dict(row) | {
             "actor_basic": True,
             "body": json.loads(row["body_json"]),
             "play": action["data"]["play"],
             "result": action["data"]["result"],
             "actor": actor.controller,
             "own": {
-                "girl": None,
+                "girl": "harpy" if actor.girl == "harpy" else None,
+                "harpy": actor.girl == "harpy",
+                "retained_plays": list(getattr(harpy(state, actor.ref), "plays", ()))
+                if actor.girl == "harpy"
+                else [],
                 "assets": [],
                 "identities": [x.model_dump(mode="json") for x in actor.identities],
             }
@@ -644,18 +949,21 @@ class ActorPlayService:
             else None,
             "tags": [
                 x.model_dump(mode="json")
-                for x in state.handler_tags
+                for x in rules.tags(state, actor.ref)
                 if own or viewer.user_id in x.observers
             ],
             "roles": [
-                {"token": x.ref.token, "label": x.label}
-                for x in actual
-                if x.controller == viewer.user_id and x.rules in ("girl_frame", "npc", "director")
-            ],
+                {"token": marker.token, "label": marker.label}
+                for marker in current_markers(self.game, c, state, action, viewer.user_id)
+            ]
+            if row["kind"] == "tag_window"
+            else [],
             "proposals": [
                 {
                     "id": x["id"],
-                    "label": next(t.label for t in state.handler_tags if t.id == x["tag"]),
+                    "label": next(
+                        t.label for t in rules.tags(state, actor.ref) if t.id == x["tag"]
+                    ),
                     "direction": x["direction"],
                     "account": x["account"],
                 }
@@ -669,3 +977,16 @@ class ActorPlayService:
             "channel": int(action["channel_id"]),
             "context": action["data"]["prepared"]["context"],
         }
+        if action["data"].get("dive") and row["kind"].startswith("dive_"):
+            from girlframe.services.m3_dive import projection
+
+            result["dive"] = projection(self.game, c, viewer, state, action, row)
+        if action["data"].get("battle") and row["kind"].startswith("battle_"):
+            from girlframe.services.m3_battle import projection as battle_projection
+
+            result["battle"] = battle_projection(self.game, c, state, action, row)
+        if row["kind"] == "tag_resolution" and actor.ref.kind == "external_pilot":
+            from girlframe.engine.m3_tag_permissions import can_reject
+
+            result["rejection_blocked"] = not can_reject(state, actor.ref, result["body"]["tag"])
+        return result

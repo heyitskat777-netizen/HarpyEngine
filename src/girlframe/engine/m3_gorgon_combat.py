@@ -121,6 +121,8 @@ def expose(original: GameState, choice: Exposure, event: str) -> GameState:
     choice = Exposure.model_validate_json(choice.model_dump_json())
     state = GameState.model_validate_json(original.model_dump_json())
     actor = resolve(state, choice.actor, ())
+    if actor.offstage_source is not None:
+        raise ValueError("OFFSTAGE_RIFT: this actual Gorgon must return before map Core exposure")
     if actor.source_sha256 != choice.source_sha256:
         raise ValueError("STALE_CORE: review the actual Gorgon and Core plan")
     _source(state, event)

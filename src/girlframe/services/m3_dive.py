@@ -14,6 +14,7 @@ from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_choices import DIVE, Context, plan
 from girlframe.engine.m3_dive_state import Effect, NpcVoid
+from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_physical import cockpit_lock, occupied_frame
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
@@ -33,8 +34,15 @@ if TYPE_CHECKING:
 def authorize(
     game: "GameService", c: Connection, viewer: GuildViewer, action: dict[str, Any] | None = None
 ) -> None:
-    Access(game.store).authorize(c, viewer, "plays")
+    Access(game.store).authorize(
+        c, viewer, "plays", director_response=bool(action and action["data"].get("actor_basic"))
+    )
     if action is None:
+        return
+    if action["data"].get("actor_basic"):
+        from girlframe.services.m3_actor_plays import ActorPlayService
+
+        ActorPlayService(game).validate(c, load_state(c, game.store.campaign_id), action)
         return
     meta = action["data"]["dive"]
     approval = game.store.policy.m3_approval
@@ -43,12 +51,10 @@ def authorize(
     game.action_characters(c, action, load_state(c, game.store.campaign_id))
     handler, appointment = MedicalService(game.store)._handler(c)
     state = load_state(c, game.store.campaign_id)
-    ref = ActorRef(
-        kind="handler",
-        entity=str(handler),
-        incarnation=state.handler_persona.id if state.handler_persona else None,
-    )
-    if ref.model_dump(mode="json") != meta["handler"] or appointment != meta["appointment"]:
+    ref = active_handler(state)
+    if (ref.model_dump(mode="json") if ref else None) != meta["handler"] or appointment != meta[
+        "appointment"
+    ]:
         raise WorkflowError("Recover this Dive's original current Handler appointment/persona.")
     cast, _ = CastService(ActorService(MissionService(game.store)))._current(
         c, state, int(action["channel_id"])
@@ -71,11 +77,14 @@ def prepare(
         prepared.target is not None
         or prepared.off_duty_id is not None
         or prepared.order_id is not None
-        or prepared.source_work
     ):
         raise WorkflowError(
             "Dive Deep uses your actual link and Heat, without a target or Off-Duty context."
         )
+    if prepared.source_work:
+        from girlframe.services.m3_battle_dormant import prepare_dive_source
+
+        prepare_dive_source(game, c, viewer, prepared, state, channel)
     actor = ActorRef(
         kind="pilot",
         entity=str(viewer.user_id),
@@ -108,22 +117,84 @@ def prepare(
         raise WorkflowError("No printed Dive effect can apply to the actual resources or scene.")
     handler, appointment = MedicalService(game.store)._handler(c)
     assert game.store.policy.m3_approval is not None
+    actual_handler = active_handler(state)
     return dict(
         actor=actor.model_dump(mode="json"),
         table=sorted(table),
         cast=cast.model_dump(mode="json"),
         cast_sha256=fingerprint(cast),
-        handler=ActorRef(
-            kind="handler",
-            entity=str(handler),
-            incarnation=state.handler_persona.id if state.handler_persona else None,
-        ).model_dump(mode="json"),
+        handler=actual_handler.model_dump(mode="json") if actual_handler else None,
+        handler_controller=handler,
         appointment=appointment,
         registry=game.store.policy.m3_approval.registry_sha256,
         steps=[],
         completed_steps=0,
         followups=[],
     )
+
+
+def prepare_actor(
+    game: "GameService",
+    c: Connection,
+    viewer: GuildViewer,
+    state: GameState,
+    cast: SceneCast,
+    prepared: PlayInput,
+    ref: ActorRef,
+) -> dict[str, Any]:
+    """Actual Harpy basic Dive uses its own resources and frozen real table."""
+    from girlframe.services.m3_actor_plays import ActorPlayService
+
+    Access(game.store).authorize(c, viewer, "plays", director_response=True)
+    actual = resolve(state, ref, profiles(c, game.store.campaign_id), require_current_profile=False)
+    if (
+        ref.kind != "external_pilot"
+        or actual.girl != "harpy"
+        or actual.controller != viewer.user_id
+        or prepared.play != "dive_deep"
+        or prepared.target is not None
+        or prepared.target_actor is not None
+        or prepared.order_id
+        or prepared.off_duty_id
+        or prepared.witnessed
+    ):
+        raise WorkflowError("Use the actual original linked Harpy's own Dive resources and role.")
+    if prepared.source_work:
+        from girlframe.services.m3_battle_dormant import prepare_dive_source
+
+        source = prepare_dive_source(game, c, viewer, prepared, state, cast.channel)
+        if source["actor"] != ref.model_dump(mode="json"):
+            raise WorkflowError("Use this obligation's actual original transformed Harpy role.")
+    if not any(x.actor == ref and x.controller == viewer.user_id for x in cast.roles):
+        raise WorkflowError("Join the actual Harpy role in this source scene before Dive.")
+    judge = ActorPlayService(game)._judge(c, state, cast, ref)
+    table = sorted(
+        {x.controller for x in cast.roles} | ({cast.facilitator} if cast.facilitator else set())
+    )
+    if not available_options(
+        state, ref, tuple(x.actor.entity for x in cast.roles if x.actor.kind == "npc")
+    ):
+        raise WorkflowError("No actual printed Dive effect is currently available for this Harpy.")
+    assert game.store.policy.m3_approval is not None
+    return dict(
+        actor=ref.model_dump(mode="json"),
+        table=table,
+        cast=cast.model_dump(mode="json"),
+        cast_sha256=fingerprint(cast),
+        handler=judge.ref.model_dump(mode="json") if judge.ref else None,
+        handler_controller=judge.controller,
+        appointment=judge.appointment,
+        registry=game.store.policy.m3_approval.registry_sha256,
+        steps=[],
+        completed_steps=0,
+        followups=[],
+    )
+
+
+def _handler_controller(meta: dict[str, Any]) -> int:
+    if meta.get("handler_controller") is not None:
+        return int(meta["handler_controller"])
+    return int(meta["handler"]["entity"])
 
 
 def pre_roll(
@@ -152,9 +223,9 @@ def _next(game: "GameService", c: Connection, state: GameState, action: dict[str
     groups = _groups(action)
     if completed < len(groups):
         owner = (
-            int(meta["actor"]["entity"])
+            int(action["actor_id"])
             if groups[completed].owner == "actor"
-            else int(meta["handler"]["entity"])
+            else _handler_controller(meta)
         )
         game.request(
             c, action, owner, "dive_select", dict(step=completed, role=groups[completed].owner)
@@ -163,7 +234,8 @@ def _next(game: "GameService", c: Connection, state: GameState, action: dict[str
     if action["data"]["result"]["tier"] == "high" and not meta.get("status_lowered"):
         actor = ActorRef.model_validate_json(json.dumps(meta["actor"]))
         if (
-            actor.entity in state.sheets
+            actor.kind == "pilot"
+            and actor.entity in state.sheets
             and state.sheets[actor.entity].character_id == actor.incarnation
         ):
             changed = rules.high_status(
@@ -199,7 +271,12 @@ def _next(game: "GameService", c: Connection, state: GameState, action: dict[str
     action["data"]["result"]["dive_steps"] = [
         dict(option=x["option"], choice_owner=x["chooser"]) for x in meta["steps"]
     ]
-    ChoiceEngine(game).finish(c, state, action)
+    if action["data"].get("actor_basic"):
+        from girlframe.services.m3_actor_plays import ActorPlayService
+
+        ActorPlayService(game).finish(c, state, action)
+    else:
+        ChoiceEngine(game).finish(c, state, action)
 
 
 def results(game: "GameService", c: Connection, action: dict[str, Any]) -> None:
@@ -213,12 +290,12 @@ def _copy(target: GameState, source: GameState) -> None:
         setattr(target, field, getattr(source, field))
 
 
-def _context(action: dict[str, Any]) -> tuple[ActorRef, ActorRef, tuple[str, ...]]:
+def _context(action: dict[str, Any]) -> tuple[ActorRef, ActorRef | None, tuple[str, ...]]:
     meta = action["data"]["dive"]
     cast = SceneCast.model_validate_json(json.dumps(meta["cast"]))
     return (
         ActorRef.model_validate_json(json.dumps(meta["actor"])),
-        ActorRef.model_validate_json(json.dumps(meta["handler"])),
+        ActorRef.model_validate_json(json.dumps(meta["handler"])) if meta["handler"] else None,
         tuple(x.actor.entity for x in cast.roles if x.actor.kind == "npc"),
     )
 
@@ -243,19 +320,15 @@ def projection(
         return data
     selected = meta["steps"][step]
     data["option"] = selected["option"]
-    sheet = state.sheets.get(actor.entity)
+    actual_assets, actual_identities = rules.resources(state, actor)
     if request["kind"] == "dive_effect":
         option = selected["option"]
         if option == "void_and_unmark_all":
-            data["assets"] = (
-                [dict(id=x.id, label=x.name) for x in sheet.assets if not x.void] if sheet else []
-            )
+            data["assets"] = [dict(id=x.id, label=x.name) for x in actual_assets if not x.void]
         elif option in ("erase_identity_and_table_question", "table_replaces_identity"):
-            data["identities"] = (
-                [dict(id=x.id, label=x.name) for x in sheet.identities if not x.protected]
-                if sheet
-                else []
-            )
+            data["identities"] = [
+                dict(id=x.id, label=x.name) for x in actual_identities if not x.protected
+            ]
         elif option == "nearby_npcs_gain_void":
             available = rules.nearby(state, actor, npcs)
             data["npcs"] = (
@@ -268,13 +341,9 @@ def projection(
         data["answers"] = selected.get("answers", {})
     if request["kind"] == "dive_table_agreement":
         data["proposal"] = selected["effect"]
-        data["identity_label"] = (
-            next(
-                (x.name for x in sheet.identities if x.id == selected["effect"]["identity"]),
-                "Original Identity unavailable",
-            )
-            if sheet
-            else "Original Identity unavailable"
+        data["identity_label"] = next(
+            (x.name for x in actual_identities if x.id == selected["effect"]["identity"]),
+            "Original Identity unavailable",
         )
         data["proposal_revision"] = selected["proposal_revision"]
         data["answers"] = selected.get("agreements", {})
@@ -286,27 +355,37 @@ def projection(
 def available_options(
     state: GameState, actor: ActorRef, cast_npcs: tuple[str, ...] = ()
 ) -> tuple[str, ...]:
-    sheet = state.sheets.get(actor.entity)
-    if sheet is None:
+    try:
+        actual_assets, actual_identities = rules.resources(state, actor)
+    except ValueError:
         return ()
     values = list(DIVE)
-    if not any(not x.void for x in sheet.assets):
+    if not any(not x.void for x in actual_assets):
         values.remove("void_and_unmark_all")
-    if not any(not x.protected for x in sheet.identities):
+    if not any(not x.protected for x in actual_identities):
         values.remove("erase_identity_and_table_question")
         values.remove("table_replaces_identity")
     if not rules.nearby(state, actor, cast_npcs):
         values.remove("nearby_npcs_gain_void")
-    body = next((x for x in state.placements if x.actor == actor), None)
-    expected = (
-        sheet.frame_runtime.id if sheet.frame_runtime else "initial:" + str(actor.incarnation)
-    )
-    if (
-        body is None
-        or occupied_frame(body) != (actor, expected)
-        or cockpit_lock(state, actor, expected) is not None
-    ):
-        values.remove("locked_cockpit_extraction_requires_frame_consent")
+    if actor.kind == "external_pilot":
+        from girlframe.engine.m3_harpy_defeat import harpy
+        from girlframe.engine.m3_harpy_physical import locked
+
+        actual_harpy = harpy(state, actor)
+        if not actual_harpy.linked or locked(state, actor) is not None:
+            values.remove("locked_cockpit_extraction_requires_frame_consent")
+    else:
+        body = next((x for x in state.placements if x.actor == actor), None)
+        sheet = state.sheets[actor.entity]
+        expected = (
+            sheet.frame_runtime.id if sheet.frame_runtime else "initial:" + str(actor.incarnation)
+        )
+        if (
+            body is None
+            or occupied_frame(body) != (actor, expected)
+            or cockpit_lock(state, actor, expected) is not None
+        ):
+            values.remove("locked_cockpit_extraction_requires_frame_consent")
     return tuple(values)
 
 
@@ -314,7 +393,7 @@ def _request_effect(game: "GameService", c: Connection, action: dict[str, Any], 
     meta = action["data"]["dive"]
     selected = meta["steps"][step]
     role = selected["option"] in ("nearby_npcs_gain_void", "table_replaces_identity")
-    uid = int(meta["handler"]["entity"] if role else meta["actor"]["entity"])
+    uid = _handler_controller(meta) if role else int(action["actor_id"])
     game.request(c, action, uid, "dive_effect", dict(step=step))
 
 
@@ -342,6 +421,7 @@ def _apply_effect(
         piloting=action["data"]["prepared"]["piloting"],
         handler=handler,
         cast_npcs=npcs,
+        handler_controller=_handler_controller(meta),
     )
     _copy(state, result.state)
     selected["applied_event"] = action["data"]["response_event"]
@@ -432,9 +512,7 @@ def apply(
                 "Choose exactly one printed effect and describe the actual connection."
             )
         group = _groups(action)[step]
-        expected = int(
-            meta["actor"]["entity"] if group.owner == "actor" else meta["handler"]["entity"]
-        )
+        expected = int(action["actor_id"]) if group.owner == "actor" else _handler_controller(meta)
         if int(request["actor_id"]) != expected:
             raise WorkflowError("The actual printed chooser owns this effect.")
         meta["steps"].append(
@@ -450,10 +528,10 @@ def apply(
     selected = meta["steps"][step]
     if kind == "dive_effect":
         option = selected["option"]
-        detail_owner = int(
-            meta["handler"]["entity"]
+        detail_owner = (
+            _handler_controller(meta)
             if option in ("nearby_npcs_gain_void", "table_replaces_identity")
-            else meta["actor"]["entity"]
+            else int(action["actor_id"])
         )
         if int(request["actor_id"]) != detail_owner:
             raise WorkflowError("The actual source-specific detail chooser owns this response.")
@@ -511,6 +589,7 @@ def apply(
                 piloting=action["data"]["prepared"]["piloting"],
                 handler=handler,
                 cast_npcs=npcs,
+                handler_controller=_handler_controller(meta),
             )
             selected["proposal_revision"] = selected.get("proposal_revision", 0) + 1
             selected["agreements"] = {}
@@ -650,7 +729,7 @@ def complete_void_continuation(
             t.events.c.command_key == key,
         )
     )
-    game.event(
+    completed_event = game.event(
         c,
         viewer.user_id,
         key,
@@ -660,6 +739,10 @@ def complete_void_continuation(
         work_id=work_id,
         event_index=1 if prior_index is None else prior_index + 1,
     )
+    if action["state"] == "complete" and action["data"].get("dormant_dive_source"):
+        from girlframe.services.m3_battle_dormant import complete_dive
+
+        complete_dive(game, c, action, completed_event, viewer, key)
 
 
 def prove_void_source(

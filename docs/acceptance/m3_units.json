@@ -435,7 +435,7 @@
         "mandatory_followups": [
           "Last Frame Asset counter-damage requires a complete actual Defeat workflow.",
           "Full supported target roles and cross-playbook/lifecycle effects remain part of agreed M3.",
-          "Four Severe Punishments, other Requisition types and remaining Void/discipline dependencies are unfinished.",
+          "Core Severe Punishment workflows now have bounded source evidence; broader role consumers, future Requisitions and remaining original-ending continuations remain unfinished.",
           "Actual Helplessness, Void thresholds, Paired Heat and other immediate linked consequences must finish through supported source-backed consumers."
         ],
         "handler_or_gm_intervention": "Current Handler supplies actual consultation and factual context where required. Human decisions remain owned; generic acknowledgement or unsupported pending work does not complete the Play.",
@@ -451,12 +451,14 @@
       },
       "code_commit": "402a6f8eab5840d5dc8f8f5705cf680a62acbef3",
       "publication": {
-        "status": "BLOCKED_UPSTREAM",
+        "status": "PUSHED",
         "remote_branch": "codex/m3-rules",
         "remote_baseline": "5323f3b1f9f14cbb4fe700847bc428e41413ddbd",
-        "error": "Git push: fatal error in commit_refs; Git API ref update: HTTP 500.",
         "portable_checkpoint": "var/m3-social-checkpoint.bundle",
-        "remote_ci": "NOT_RUN"
+        "remote_ci": "NOT_RUN",
+        "pushed_checkpoint": "1964eb1",
+        "historical_error": "Git push: fatal error in commit_refs; Git API ref update: HTTP 500.",
+        "note": "The earlier ref-write failure was followed by a successful normal push. Unit implementation remains IN_PROGRESS; this does not deploy or certify gameplay."
       }
     },
     {
@@ -635,5 +637,14 @@
         "seconds": 676.62
       }
     }
-  ]
+  ],
+  "current_candidate_validation": {
+    "status": "PASS_AUTOMATED_WITHIN_DOCUMENTED_SCOPE",
+    "tests": 1983,
+    "seconds": 815.95,
+    "artifact": "var/m3-combat-harpy-full-fixed.xml",
+    "independent_review": "NOT_RUN",
+    "human_acceptance": "NOT_RUN",
+    "milestone_complete": false
+  }
 }

@@ -108,22 +108,22 @@ async def open_return(
             replace=None if chosen == "none" else chosen,
         )
         return (
-            "Actual pistol issued."
+            "Foundation replacement pistol issued."
             if result["taken"]
-            else "You declined this retrieval opportunity."
+            else "You declined this replacement opportunity."
         )
 
     form = NativeForm(
         viewer.user_id,
-        "Retrieve your lost Personal Firearm",
+        "Replace your lost Personal Firearm",
         "Your original Girl completed a real eight-plus ordinary Off-Duty roll "
         "while the issued pistol was lost. Damage alone does not qualify. "
-        "Retrieval adds one actual item and no Permission charge.",
+        "The replacement costs no extra Permissions. " + data["replacement_notice"],
         [
             Field(
                 "take",
                 "Your owned choice",
-                (("yes", "Retrieve my pistol"), ("no", "Decline this opportunity")),
+                (("yes", "Accept replacement pistol"), ("no", "Decline this opportunity")),
             ),
             replacement(data["replacements"]),
             Field("account", "Describe your actual decision", paragraph=True),

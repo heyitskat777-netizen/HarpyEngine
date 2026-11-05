@@ -416,6 +416,7 @@ class PersonalFirearmService(RequisitionService):
                 expected=fingerprint(sheet) if sheet else None,
                 actor=actor.model_dump(mode="json"),
                 total=body["total"],
+                replacement_notice=rules.REPLACEMENT_NOTICE,
                 resolution=body.get("resolution"),
                 deferred=body.get("deferred", False),
                 transfer_work=body.get("transfer_work"),

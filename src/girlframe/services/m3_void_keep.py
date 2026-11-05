@@ -141,7 +141,14 @@ def prepare_keep(
     if prepared.parent:
         parent = game.action(c, prepared.parent)
         if parent["channel_id"] != str(channel) or not any(
-            x["kind"] in ("defeat_void_threshold", "dive_void_threshold")
+            x["kind"]
+            in (
+                "defeat_void_threshold",
+                "dive_void_threshold",
+                "enforcer_void_threshold",
+                "battle_item_void_threshold",
+                "battle_dormant_threshold",
+            )
             and x["actor_id"] == actor.entity
             and json.loads(x["body_json"]).get("work_id") == row["id"]
             for x in game.pending(c, parent["id"])

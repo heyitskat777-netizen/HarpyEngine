@@ -1,5 +1,106 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Combat, Harpy and original-person checkpoint — automated verification passed
+
+The new integrated candidate passed **1,983 tests in 815.95s**, zero failures,
+errors or skips: `.venv/bin/pytest -q --tb=short
+--junitxml=var/m3-combat-harpy-full-fixed.xml`. JUnit counts were independently
+read back. Ruff passes; **599 files** are formatted and mypy checks **315 source
+files**. The public-source scan reports **682 publishable files**, original
+**40 manifest entries unchanged**, **zero findings**. The registry validates with
+**119 adjustable campaign rulings**; source-entry coverage and independent review
+remain unchanged. This verifies the bounded candidate, not all M3 systems.
+
+The first frozen run completed **1,976 passed / 4 failed in 864.72s**, no errors or
+skips (`var/m3-combat-harpy-full-first.xml`). Three failures came from coercing
+legitimate system/maintenance audit identities into human IDs in the new scoped
+Tag verifier. It now preserves system audit identities without giving them a
+human principal; a genuine-grant negative test proves a system actor cannot
+create that Tag. The fourth failure lost an established protective-hold position
+when the guardian had no recorded position or movement. The repair preserves the
+known hold until actual reviewed offstage motion; actual unknown movement still
+invalidates stale coordinates. Focused repairs: **21 passed in 17.92s** at
+`var/m3-life-full-repairs.xml`, **34 passed in 20.87s** at
+`var/m3-guardian-actual-motion-regression.xml`.
+
+Read-only source review also found two missed interactions, repaired before the
+passing full run: Harpy Dive now uses its authentic ActorBasic Tag context rather
+than mistaking its Director adjudicator for the fictional Handler body (**5 passed
+in 6.54s**, `var/m3-harpy-director-tag-context.xml`); Harpy Defeat's mid communication
+choice now applies the printed common escape, preserving actual body/Frame IDs
+and resources while recording unknown offstage position. No test result is used
+as fabricated human play-testing or independent certification.
+
+Fresh isolated `/tmp` SQLite checks passed upgrade/check/CLI health, downgrade to
+base and repeat upgrade/check/health. No live database was opened or migrated.
+The unchanged handoff verifier passes 34 required files / 86 planned cases /
+4 schemas / 4 synthetic fixtures, which verifies planning only. Initial static
+checks found four formatting omissions, corrected before the final run. The bot
+still has **zero running processes**. No live policy, restart, deployment,
+Discord connection or environment publication occurred.
+
+### Previous source checkpoint and focused integration evidence
+
+The tested checkpoint and evidence **successfully pushed** to the existing
+`codex/m3-rules` branch at `1964eb1` (source `e9e528b`). Git reported a normal
+non-force update from `5323f3b` to `1964eb1`. The earlier upstream ref-write failure
+is historical; this successful push does not deploy gameplay or publish the cloud
+environment. Private engine archives/reference PDFs, real campaign state and secrets
+remain outside Git. New uncommitted work below is not covered by the 1,796-test
+checkpoint.
+
+Four agents resumed work on basic combat, Enforcer Initiative/volunteers/items,
+basic Handler moves and native shared routing. Root owns returned-original work
+restoration and shared combat integration. Source review corrected the earlier
+unimplemented Core plan: high NPC/non-NPC target branches and actual optional owned
+counter choices, without automatic bystander damage. Delegated interpretation is
+recorded centrally; contract checks **28 passed in 0.25s** at
+`var/m3-core-branch-contract-correction.xml`. This is not completed combat runtime.
+
+New focused synthetic evidence in the active batch (overlapping, not additive):
+
+| Bounded workflow | Executed evidence |
+|---|---|
+| Returned original Frame and mission obligations | `var/m3-returned-obligations-regression.xml`: **31 passed in 28.41s**. Real original-owner return, next actual Off-Duty work, free Handler package, mission failure/Dog shared Punishment and separate Defeat discipline; old receipts remain closed. Forged return claims fail. |
+| Basic actual Handler moves | `var/m3-basic-handler-complete.xml`: **16 passed in 9.29s**; related regression `var/m3-basic-handler-final-regression.xml`: **60 passed in 27.58s**. Owned grants, current-vs-original source authority, actual damage/Punishment/care/Off-Duty and private notices. |
+| Handler damage into required Defeat | `var/m3-handler-source-defeat-bridge.xml`: **1 passed in 1.74s**. Actual staged damage and mandatory child return to their real source. |
+| Enforcer Initiative, volunteer and physical items | `var/m3-enforcer-final-focused.xml`: **48 passed in 38.11s**. Actual item direction/custody and real linked Void consequences; not invented Asset loot. |
+| Harpy resource isolation | `var/m3-harpy-actual-resources-fixed.xml`: **16 passed in 4.65s**. Converted and native Harpies use actual resources; no controller's PC resources. |
+| Actual Harpy Keep and existing actual-role regression | `var/m3-harpy-keep-regression.xml`: **35 passed in 16.06s**. Actual owner facts plus GM review, all result tiers, native character selector, one receipt, real sufficiency response. Later recovery/physical guards and Dive integration are still being checked. |
+| Root actor/return integration | `var/m3-root-actor-return-checkpoint.xml`: **69 passed in 33.05s**. Includes saved Harpy recovery, original-body context proof and actual mission/period debt handling. Subsequent source refinements have additional checks below. |
+| Harpy questions and retained original Tag consent | `var/m3-harpy-actual-flow-regression.xml`: **36 passed in 35.05s**. Real converted Harpy questions, native/current Director ownership, actual Keep and strong original-locker consent/rejection. |
+| Actual original Director's procedural answer after death | `var/m3-harpy-sensors-owned-director.xml`: **7 passed in 7.53s**. A real Handler damage source and original Director's owned death retain only the original question's human; new questions use the current GM. |
+| Reviewed Rift position projections | `var/m3-rift-position-source-first.xml`: **35 passed in 7.80s**. Unknown actual body/Frame positions override cached cells without changing resources or masking another person's Frame. Full Rift navigation is a separate lifecycle workflow. |
+| Harpy basic/Core candidate | `var/m3-harpy-basic-source-fixed.xml`: **17 passed in 12.88s**. Actual Harpy Core strike, actual NPC death, own Heat/Identity authority, controller-PC exclusion and production gate preservation. This is not all combat branches or Harpy All Out Assault's extra maneuver. |
+| Real retained-lock whole flow | `var/m3-retained-lock-full-flow.xml`: **11 passed in 17.16s**. Actual source lock → real selected Harpy birth → repeat → blocked rejection → original locker consent → owned rejection, with no extra roll. |
+| Root pre-freeze cross-rule regression | `var/m3-root-actor-return-pre-freeze.xml`: **94 passed in 71.36s**. Current actual-role controls, Harpy Core candidate, original-body positions, consent, careers and period/mission debt integration; four root source modules also passed mypy. |
+| Original person consent and Handler items | `var/m3-retained-consent-body-items-focused.xml`: **51 passed in 53.39s**, owned Ruff/format 11 files and mypy 9 modules clean. Current aliases share actual objects; replacements inherit none. New Director-context Initiative remains blocked before dice until its actual source judge is supported. |
+| Dormant conversion and actual child Dive | `var/m3-dormant-harpy-whole.xml`: **10 passed in 13.79s**; pause/replay/source follow-up `var/m3-dormant-complete.xml`: **3 passed in 7.01s**. Original attack survives genuine transformation and the genuine second Play; old roll provenance stays immutable. |
+
+The first Harpy Keep run had **3 failures / 32 passes** because the fixture put a
+`PRIVATE_` marker in the displayed character name; receipt names are public scene
+labels. The corrected fixture preserves private context/Tag markers, which stay
+out of public jobs. An expanded run had **1 failure / 50 passes** because a recovery
+test incorrectly chose two traits at total 7; the corrected test uses its actual
+low-tier choice. These failures are retained as evidence, not counted as passes.
+An additional native question assertion initially omitted Discord's Markdown
+escaping; the corrected 23-test check passed in 11.97s at
+`var/m3-harpy-sensors-fixed.xml`. The first Harpy Core port check had one fixture
+failure because its separate PC lacked factual cockpit placement; real placement
+was added before the passing 17-test check. One root check named a nonexistent
+test file and ran no tests; the corrected paths were used for the passing runs.
+The first pure Harpy resource attempt tried to mutate frozen models; it was repaired
+with validated state updates before the passing resource run. Returned-work tests
+also corrected incomplete synthetic Strain/recovery/source facts before the reported
+31-test regression; no real period was marked completed to bypass its rules.
+
+The current candidate adds passing bounded combat/Director consequences, actual
+Harpy Defeat, Dormant forced Dive and Harpy physical workflows. Whole combat and
+the Harpy playbook remain incomplete: the explicit gates in the remaining-work
+map are not waived by the passing full suite. Source-aware world advancement,
+additional Gorgon branches, mandatory forbidden Harpy Dive, Harpy Off-Duty,
+extra maneuvers and original-ending continuations still require implementation.
+
 ## Four-agent integrated checkpoint — automated verification passed
 
 The owner authorized four agents with bounded file ownership. The candidate now
@@ -53,7 +154,7 @@ consumers, remaining playbook abilities, outstanding Strain/Endgames, broader
 Harpy/world/NPC rules and returned-obligation bridges. Independent and player
 acceptance remain NOT_RUN. Bot remains intentionally off. No live migration,
 restart, rules-policy change, deployment or environment publication occurred.
-Sanitized source is committed locally at `e9e528b077fac98435862cc62c13cd3bb25b4ecb`. Ignored incremental backup `var/m3-parallel-checkpoint.bundle` verifies over remote baseline `5323f3b1f9f14cbb4fe700847bc428e41413ddbd`. The older upstream ref-write failure remains separate from local verification; no push success is implied.
+Sanitized source and evidence were pushed at `1964eb1` (source `e9e528b077fac98435862cc62c13cd3bb25b4ecb`). Ignored incremental backup `var/m3-parallel-checkpoint.bundle` verifies over remote baseline `5323f3b1f9f14cbb4fe700847bc428e41413ddbd`. The older upstream ref-write failure is historical and was followed by a successful normal push.
 
 ## Unit 2a in progress — social consequences and temporary Requisition removal
 

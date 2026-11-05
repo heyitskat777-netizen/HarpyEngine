@@ -23,11 +23,29 @@ if TYPE_CHECKING:
 
 
 def context(action: dict[str, Any]) -> dict[str, Any] | None:
-    value = (
-        action["data"].get("dive")
-        or action["data"].get("void_keep")
-        or action["data"].get("tag_context")
-    )
+    data = action["data"]
+    actor_basic = data.get("actor_basic")
+    frozen = data.get("tag_context")
+    if isinstance(actor_basic, dict) and frozen is not None:
+        # A rule's adjudicator can be a Director NPC; the frozen Tag context
+        # separately records the original main Handler body and actual cast.
+        try:
+            if not isinstance(frozen, dict):
+                raise ValueError()
+            actor = ActorRef.model_validate_json(json.dumps(actor_basic["ref"]))
+            cast = SceneCast.model_validate_json(json.dumps(frozen["cast"]))
+            if (
+                frozen["actor"] != actor.model_dump(mode="json")
+                or frozen["cast_sha256"] != fingerprint(cast)
+                or actor_basic["cast_revision"] != cast.revision
+                or set(frozen["table"]) != set(data["participants"])
+            ):
+                raise ValueError()
+        except (ValueError, KeyError, TypeError):
+            raise WorkflowError("Recover the actual original role's frozen Tag context.") from None
+        value = frozen
+    else:
+        value = data.get("dive") or data.get("enforcement") or data.get("void_keep") or frozen
     if value is None:
         return None
     if not isinstance(value, dict):
@@ -112,6 +130,12 @@ def current(
                         ),
                     )
             ref = current_ref(state, owner)
+            if owner == state.handler:
+                active_context = next(
+                    (x for x in state.director_contexts if x.active and x.handler == owner), None
+                )
+                if active_context is not None:
+                    ref = ActorRef(kind="handler", entity=str(owner), incarnation=active_context.id)
             view = resolve(
                 state, ref, profiles(c, game.store.campaign_id), require_current_profile=False
             )

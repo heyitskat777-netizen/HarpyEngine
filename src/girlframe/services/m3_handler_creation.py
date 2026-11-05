@@ -730,6 +730,10 @@ class HandlerCreationService:
                 source,
                 npc_accepted=tuple(npc_accepted),
             )
+            if not state.handler_archives:
+                from girlframe.services.m3_battle_director import bind_legacy_context_bodies
+
+                updated = bind_legacy_context_bodies(self.game, c, updated)
             self.game.event(
                 c,
                 viewer.user_id,

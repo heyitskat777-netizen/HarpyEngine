@@ -151,6 +151,10 @@ async def setup_world(
     await reply(interaction, form.text(), form)
 
 
+def map_cell(cell: list[int] | tuple[int, int] | None) -> str:
+    return f"{cell[0]},{cell[1]}" if cell is not None else "position unknown or offstage"
+
+
 class MapPages(discord.ui.View):
     def __init__(self, service: WorldService, owner: int):
         super().__init__(timeout=600)
@@ -169,12 +173,12 @@ class MapPages(discord.ui.View):
             await reply(interaction, "The Handler has not initialized the world yet.")
             return
         lines = [
-            f"{clean(x['name'])} · {x['cell'][0]},{x['cell'][1]} · {x['kind']} · "
+            f"{clean(x['name'])} · {map_cell(x['cell'])} · {x['kind']} · "
             + ("unavailable" if not x["operational"] else x["condition"])
             for x in world["locations"]
         ]
         lines += [
-            f"{clean(x['name'])} · {x['cell'][0]},{x['cell'][1]} · known {x['gorgon_class']}"
+            f"{clean(x['name'])} · {map_cell(x['cell'])} · known {x['gorgon_class']}"
             for x in world["gorgons"]
         ]
         self.page = min(self.page, max(0, (len(lines) - 1) // 8))
@@ -219,7 +223,14 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
             await MapPages(service, viewer.user_id).show(current)
             return
         if action == "gorgon_position":
-            unknown = tuple((x["id"], x["name"]) for x in world["gorgons"] if x["cell"] is None)
+            offstage = {
+                x["entity"] for x in fresh.get("offstage_world", ()) if x["kind"] == "gorgon"
+            }
+            unknown = tuple(
+                (x["id"], x["name"])
+                for x in world["gorgons"]
+                if x["cell"] is None and x["id"] not in offstage
+            )
             if not unknown:
                 raise WorkflowError("No actual Gorgon has an unrecorded position.")
 

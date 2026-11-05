@@ -140,3 +140,26 @@ def test_ended_npc_legacy_bond_migrates_without_duplicate_hidden_authority(canon
     result = rules.migrate_actor(canon, first, "actual-career-end")
     assert result.world.npcs[0].bonds == {}
     assert rules.depth(result, first, ActorRef(kind="npc", entity=npc.id)) == 2
+
+
+def test_same_human_handler_and_pilot_have_distinct_typed_bonds_and_ambiguous_legacy_fails(canon):
+    from girlframe.engine.m3_handler_consequences import active_handler
+
+    handler = active_handler(canon)
+    peer = rules.current_ref(canon, 2)
+    canon.sheets["1"] = canon.sheets["2"].model_copy(
+        update={"owner": 1, "character_id": "actual-separate-pilot"}
+    )
+    canon.order = (1, *canon.order)
+    pilot = rules.current_ref(canon, 1)
+    assert pilot.kind == "pilot" and pilot != handler
+    linked = rules.set_depth(canon, handler, peer, 1, "actual-handler-body-source")
+    assert rules.depth(linked, handler, peer) == 1 and rules.depth(linked, pilot, peer) == 0
+    linked = rules.set_depth(linked, pilot, peer, 2, "actual-separate-pilot-source")
+    assert rules.depth(linked, handler, peer) == 1 and rules.depth(linked, pilot, peer) == 2
+    ambiguous = canon.model_copy(deep=True)
+    ambiguous.bonds["1:2"] = 1
+    with pytest.raises(ValueError, match="ambiguous numeric Bond"):
+        rules.depth(ambiguous, handler, peer)
+    with pytest.raises(ValueError, match="ambiguous numeric Bond"):
+        rules.depth(ambiguous, pilot, peer)

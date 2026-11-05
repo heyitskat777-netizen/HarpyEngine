@@ -240,7 +240,9 @@ async def open_effect(
                 victims = [
                     x
                     for x in world["npcs"]
-                    if x["alive"] and f"{x['cell'][0]},{x['cell'][1]}" == selected_cell
+                    if x["alive"]
+                    and x["cell"] is not None
+                    and f"{x['cell'][0]},{x['cell'][1]}" == selected_cell
                 ]
                 fields.append(
                     Field(

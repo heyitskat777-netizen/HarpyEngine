@@ -75,6 +75,13 @@ class ChoiceEngine:
         state.sheets[str(owner)].revision += 1
         return tag
 
+    def prove_tag_setter(self, c: Connection, state: GameState, owner: int, tag: TagState) -> None:
+        if tag.gm_setter_appointment is not None or tag.gm_setter_event is not None:
+            from girlframe.engine.m3_actor_bonds import current_ref
+            from girlframe.services.m3_tag_setters import ooc_setter
+
+            ooc_setter(c, self.game.store, current_ref(state, owner), tag)
+
     def tag_resolved(self, state: GameState, owner: int, tag: str) -> None:
         for item in state.obligations:
             if (
@@ -132,12 +139,21 @@ class ChoiceEngine:
         owner = int(request["actor_id"])
         actor = int(action["actor_id"])
         sheet = state.sheets.get(str(owner))
-        acting = state.sheets[str(actor)]
         body = json.loads(request["body_json"])
         if kind in ("tag_marker_selection", "tag_marker_agreement"):
             from girlframe.services.m3_tag_markers import apply_discussion
 
             apply_discussion(self.game, c, state, action, request, answer)
+            return
+        if kind.startswith("battle_") and action["data"].get("battle"):
+            from girlframe.services.m3_battle import apply as apply_battle
+
+            apply_battle(self.game, c, state, action, request, answer)
+            return
+        if kind.startswith("enforcer_") and action["data"].get("enforcement"):
+            from girlframe.services.m3_enforcement_initiative import apply as apply_enforcement
+
+            apply_enforcement(self.game, c, state, action, request, answer)
             return
         if kind.startswith("dive_") and action["data"].get("dive"):
             from girlframe.services.m3_dive import apply as apply_dive
@@ -162,10 +178,12 @@ class ChoiceEngine:
             ):
                 self.close_tag_window(c, state, action)
             return
+        acting = state.sheets[str(actor)]
         if kind == "tag_resolution":
             tag = next((x for x in acting.tags if x.id == body["tag"]), None)
             require(tag is not None, "The marked Tag is no longer available.")
             assert tag is not None
+            self.prove_tag_setter(c, state, actor, tag)
             picks(answer.options, {"reject", "embrace"}, 1)
             if answer.options == ("reject",):
                 from girlframe.engine.m3_beneath import rejection_blocked
@@ -380,6 +398,7 @@ class ChoiceEngine:
                 elif option == "reject_tag":
                     picks(answer.denied, {x.id for x in acting.tags}, 1)
                     rejected = next(x for x in acting.tags if x.id == answer.denied[0])
+                    self.prove_tag_setter(c, state, actor, rejected)
                     from girlframe.engine.m3_beneath import rejection_blocked
 
                     require(
@@ -485,7 +504,32 @@ class ChoiceEngine:
                 if extra == "escape":
                     self.game.request(c, action, owner, "flirt_escape")
                 elif extra == "handler":
-                    self.game.request(c, action, state.handler, "handler_brief")
+                    required = self.game.request(c, action, state.handler, "handler_brief")
+                    approval = self.game.store.policy.m3_approval
+                    if approval is not None and "plays" in approval.subsystems:
+                        from girlframe.engine.m3_actor_state import ActorRef
+                        from girlframe.services.m3_handler_plays import request_from_play
+
+                        bindings = action["data"].get("character_ids")
+                        if bindings is None:
+                            bindings = self.game.legacy_action_bindings(c, action)
+                        affected = tuple(
+                            ActorRef(kind="pilot", entity=str(uid), incarnation=bindings[str(uid)])
+                            for uid in (actor, owner)
+                        )
+                        updated, grant = request_from_play(
+                            self.game,
+                            c,
+                            state,
+                            action,
+                            required,
+                            "flirt.high.handler",
+                            action["data"]["response_event"],
+                            targets=affected,
+                        )
+                        for field in GameState.model_fields:
+                            setattr(state, field, getattr(updated, field))
+                        action["data"]["handler_play_m3"] = grant
                 elif extra == "owe":
                     self.game.request(c, action, owner, "flirt_owe_tag")
                 else:
@@ -513,6 +557,10 @@ class ChoiceEngine:
             sheet.revision += 1
             return
         if kind == "handler_brief":
+            require(
+                not body.get("handler_grant"),
+                "Use the actual source-owned Handler Play; a text Brief cannot complete it.",
+            )
             require(
                 answer.options == ("brief",) and bool(answer.text.strip()),
                 "The Handler must choose Brief Them and supply the situation information.",
@@ -609,6 +657,7 @@ class ChoiceEngine:
                 1,
             )
             tag = next(x for x in sheet.tags if x.id == answer.denied[0])
+            self.prove_tag_setter(c, state, actor, tag)
             require(
                 owner != actor
                 or mentor_tag(sheet, tag, state)
@@ -747,6 +796,16 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         play = action["data"]["play"]
         level = action["data"]["result"]["tier"]
+        if play in ("all_out_assault", "go_for_the_core") and action["data"].get("battle"):
+            from girlframe.services.m3_battle import results as battle_results
+
+            battle_results(self.game, c, action)
+            return
+        if play == "enforcement_initiative" and action["data"].get("enforcement"):
+            from girlframe.services.m3_enforcement_initiative import results as enforcement_results
+
+            enforcement_results(self.game, c, state, action)
+            return
         if play == "dive_deep" and action["data"].get("dive"):
             from girlframe.services.m3_dive import results as dive_results
 
@@ -807,6 +866,9 @@ class ChoiceEngine:
                 "tier": action["data"]["result"].get("tier"),
             },
         )
+        if action["data"].get("battle_counter_source") or action["data"].get("dormant_dive_source"):
+            # Settle this exact counter only after its real saved completion event.
+            return
         if action["parent_id"] and not action["data"].get("void_keep"):
             parent = self.game.action(c, action["parent_id"])
             requests = [

@@ -148,12 +148,15 @@ def finish_callback(
     c: Connection,
     record: HandlerConsequence,
     event: str,
-    viewer: GuildViewer,
+    viewer: GuildViewer | None,
     key: str,
 ) -> None:
     if record.state == "pending" or not record.effect_event:
         raise WorkflowError("The actual Handler must choose the source replacement effect first.")
     if not record.source_request:
+        from girlframe.services.m3_battle import complete_handler_consequence as complete_battle
+
+        complete_battle(game, c, record, event, viewer, key)
         return
     choices = t.m2["m2_choices"]
     row = (
@@ -206,6 +209,20 @@ def finish_callback(
         from girlframe.services.m3_enforcement_initiative import complete_handler_consequence
 
         complete_handler_consequence(game, c, action, record, event, viewer, key)
+        return
+    state = load_state(c, game.store.campaign_id)
+    staged = any(
+        fact.get("kind") == "battle_damage_stage"
+        and fact.get("requirement")
+        and json.loads(fact["requirement"]).get("details", {}).get("consequence") == record.id
+        for fact in state.facts
+    )
+    if staged:
+        from girlframe.services.m3_battle import complete_handler_consequence as complete_battle
+
+        game.save_action(c, action)
+        if not complete_battle(game, c, record, event, viewer, key):
+            raise WorkflowError("Recover the actual staged Handler source consequence.")
         return
     if not game.pending(c, action["id"]):
         from girlframe.services.m2_choices import ChoiceEngine
@@ -370,3 +387,52 @@ class HandlerConsequenceService:
             )
         except ValueError as error:
             raise WorkflowError(str(error)) from None
+
+
+def force_end_handler(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    actor: ActorRef,
+    *,
+    source_action: str,
+    source_choice: str | None,
+    clause: str,
+    event: str,
+    account: str,
+) -> GameState:
+    from girlframe.engine.m3_handler_consequence_state import HandlerFatalSource
+
+    action = game.action(c, source_action)
+    if action["data"].get("play") != "go_for_the_core":
+        raise WorkflowError(
+            "A compulsory Handler death needs the actual printed fatal Play source."
+        )
+    if source_choice is not None:
+        choices = t.m2["m2_choices"]
+        if not c.scalar(
+            sa.select(choices.c.id).where(
+                choices.c.campaign_id == game.store.campaign_id,
+                choices.c.id == source_choice,
+                choices.c.action_id == source_action,
+            )
+        ):
+            raise WorkflowError("Recover the actual source death decision.")
+    try:
+        fatal = HandlerFatalSource.model_validate_json(
+            json.dumps(
+                dict(
+                    id="handler-fatal:" + source_action + ":" + (source_choice or clause),
+                    actor=actor.model_dump(mode="json"),
+                    source_event=event,
+                    source_action=source_action,
+                    source_choice=source_choice,
+                    clause=clause,
+                    appointment=MedicalService(game.store)._handler(c)[1],
+                    account=account,
+                )
+            )
+        )
+        return rules.force_end(state, fatal)
+    except ValueError as error:
+        raise WorkflowError(str(error)) from None

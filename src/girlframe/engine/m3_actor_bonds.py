@@ -23,11 +23,13 @@ def current_ref(state: GameState, owner: int) -> ActorRef:
 
 
 def _current(state: GameState, actor: ActorRef) -> bool:
-    if actor.kind in ("pilot", "handler"):
-        try:
-            return current_ref(state, int(actor.entity)) == actor
-        except ValueError:
-            return False
+    if actor.kind == "handler":
+        from girlframe.engine.m3_handler_consequences import same_handler_body
+
+        return same_handler_body(state, actor)
+    if actor.kind == "pilot":
+        sheet = state.sheets.get(actor.entity)
+        return bool(sheet and sheet.character_id == actor.incarnation)
     if actor.kind == "external_pilot" and any(
         x.id == actor.entity and x.alive for x in state.harpy_states
     ):
@@ -83,7 +85,20 @@ def _legacy(state: GameState, first: ActorRef, second: ActorRef) -> int:
     if not (_legacy_bound(state, first) and _legacy_bound(state, second)):
         return 0
     if first.kind in ("pilot", "handler") and second.kind in ("pilot", "handler"):
-        return state.bonds.get(":".join(sorted((first.entity, second.entity), key=int)), 0)
+        key = ":".join(sorted((first.entity, second.entity), key=int))
+        legacy_value = state.bonds.get(key, 0)
+        if legacy_value:
+            from girlframe.engine.m3_handler_consequences import active_handler
+
+            handler = active_handler(state)
+            if handler is not None and any(
+                ref.entity == handler.entity and ref.entity in state.sheets
+                for ref in (first, second)
+            ):
+                raise ValueError(
+                    "Recover the actual separate-role source of this ambiguous numeric Bond"
+                )
+        return legacy_value
     values = []
     for npc, other in ((first, second), (second, first)):
         if npc.kind == "npc" and state.world is not None:
@@ -160,6 +175,11 @@ def _heat(state: GameState, actor: ActorRef) -> None:
         if row is not None:
             state.harpy_states = [
                 x.model_copy(update={"heat": x.heat + 2}) if x.id == row.id else x for x in rows
+            ]
+        elif any(x.id == actor.entity for x in state.native_harpies):
+            state.native_harpies = [
+                x.model_copy(update={"heat": x.heat + 2}) if x.id == actor.entity else x
+                for x in state.native_harpies
             ]
         elif state.world is not None and any(x.id == actor.entity for x in state.world.pilots):
             raise ValueError("An external Pilot needs an actual Heat resource before deepening")
@@ -239,9 +259,21 @@ def rebind(original: GameState, old: ActorRef, new: ActorRef, source_event: str)
     return GameState.model_validate_json(state.model_dump_json())
 
 
+def _same_body(state: GameState, first: ActorRef, second: ActorRef) -> bool:
+    if first == second:
+        return True
+    if first.kind != "handler" or second.kind != "handler":
+        return False
+    from girlframe.engine.m3_handler_consequences import same_handler_body
+
+    return same_handler_body(state, first) and same_handler_body(state, second)
+
+
 def is_helpless(state: GameState, subject: ActorRef, foe: ActorRef | None = None) -> bool:
     if any(
-        x.active and x.subject == subject and (foe is None or x.foe == foe)
+        x.active
+        and _same_body(state, x.subject, subject)
+        and (foe is None or _same_body(state, x.foe, foe))
         for x in state.helpless_conditions
     ):
         return True
@@ -263,7 +295,13 @@ def make_helpless(
     original: GameState, subject: ActorRef, foe: ActorRef, source_event: str
 ) -> GameState:
     state = GameState.model_validate_json(original.model_dump_json())
-    if subject == foe or not source_event or not all(_known(state, x) for x in (subject, foe)):
+    from girlframe.engine.m3_handler_consequences import same_handler_body
+
+    if (
+        _same_body(state, subject, foe)
+        or not source_event
+        or not all(_known(state, x) or same_handler_body(state, x) for x in (subject, foe))
+    ):
         raise ValueError("Helplessness needs actual source-bound opposing people")
     if subject.kind == "pilot" and _current(state, subject) and foe.kind in ("pilot", "handler"):
         sheet = state.sheets[subject.entity]
@@ -272,7 +310,7 @@ def make_helpless(
         (
             x
             for x in state.helpless_conditions
-            if x.active and x.subject == subject and x.foe == foe
+            if x.active and _same_body(state, x.subject, subject) and _same_body(state, x.foe, foe)
         ),
         None,
     )
@@ -314,7 +352,9 @@ def clear_helpless(
         raise ValueError("Only an actual recovery source can clear existing Helplessness")
     state.helpless_conditions = [
         x.model_copy(update={"active": False, "recovery_event": source_event})
-        if x.active and x.subject == subject and (foe is None or x.foe == foe)
+        if x.active
+        and _same_body(state, x.subject, subject)
+        and (foe is None or _same_body(state, x.foe, foe))
         else x
         for x in state.helpless_conditions
     ]
@@ -324,3 +364,42 @@ def clear_helpless(
             () if foe is None else tuple(x for x in sheet.helpless_against if str(x) != foe.entity)
         )
     return state
+
+
+def bond_ref(state: GameState, ref: ActorRef) -> ActorRef:
+    """Only a proved current same-body Handler alias shares its actual Bond endpoint.
+
+    This normalizes reads, not stored edges or historic consent. Existing raw alias
+    edges require a real source-bound write/recovery rather than silent migration.
+    """
+    import json
+
+    from girlframe.engine.m3_handler_consequences import active_handler
+
+    actual = active_handler(state)
+    if ref.kind != "handler" or actual is None or ref.entity != actual.entity or ref == actual:
+        return ref
+    initial_alias = ref.incarnation is None and not state.handler_archives
+    context = next(
+        (
+            x
+            for x in state.director_contexts
+            if x.active
+            and x.handler == state.handler
+            and x.id == ref.incarnation
+            and x.source_event.strip()
+        ),
+        None,
+    )
+    if context is not None:
+        for archive in state.handler_archives:
+            saved = json.loads(archive.links_json).get("director_contexts", ())
+            if any(x.get("id") == context.id for x in saved):
+                return ref  # An ended original context never identifies a replacement body.
+    if not initial_alias and context is None:
+        return ref
+    if any(ref in (x.first, x.second) for x in state.actor_bonds):
+        raise ValueError(
+            "Recover source-bound Handler alias Bond edges; do not duplicate authority"
+        )
+    return actual

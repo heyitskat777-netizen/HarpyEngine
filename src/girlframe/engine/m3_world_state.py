@@ -139,6 +139,7 @@ class CorePlan(Model):
 
 
 class Gorgon(Entity):
+    tags: tuple[WorldTag, ...] = ()
     cell: Cell | None = None
     position_event: str | None = None
     gorgon_class: GorgonClass
@@ -193,6 +194,7 @@ class Faction(Entity):
 class AdversaryPilot(PlacedEntity):
     """An external Pilot; a PC uses its canonical sheet instead of a copied sheet."""
 
+    tags: tuple[WorldTag, ...] = ()
     kind: Literal["harpy", "rebel", "foundation"]
     girl: str
     frame: str

@@ -60,12 +60,20 @@ def test_tags_require_actual_other_human_observation_and_explicit_bond_port(cano
     for actual, controller in (
         (pilot, 1),
         (ActorRef(kind="npc", entity="director"), 3),
-        (ActorRef(kind="external_pilot", entity="external"), 2),
     ):
         with pytest.raises(ValueError):
             rules.proposal(
                 state, ref, actual, controller, bindings(state), "tag", "scene", 1, "Relevance"
             )
+    # A separately controlled actual person uses their own graph Bond, never
+    # the same human's Pilot edge above.
+    external = ActorRef(kind="external_pilot", entity="external")
+    assert (
+        rules.proposal(
+            state, ref, external, 2, bindings(state), "tag", "scene", 1, "Actual relevance"
+        )
+        == 1
+    )
     assert not state.handler_tags[0].marked
 
 

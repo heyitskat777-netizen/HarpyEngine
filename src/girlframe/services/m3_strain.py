@@ -167,7 +167,12 @@ class StrainService:
             self._check(c, viewer, root, 1)
             if period.revision != period_revision or state.strain is None:
                 raise WorkflowError("Choose an initial Strain scenario and refresh the period.")
-            if set(period.pilots) != set(state.order):
+            from girlframe.services.m3_off_duty import current_original_characters
+
+            originals = current_original_characters(c, self.game, state, period)
+            if set(originals) != {
+                str(uid) for uid in state.order if str(uid) not in period.ended_characters
+            }:
                 raise WorkflowError("Resolve the changed canonical roster before Strain start.")
             if any(x["kind"] == "doctor_credit" for x in self.periods._pending(c, period_id)):
                 raise WorkflowError(

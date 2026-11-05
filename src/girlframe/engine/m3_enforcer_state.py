@@ -1,5 +1,7 @@
 """Actual Foundation rank and original accusations, independent of map guesses."""
 
+from typing import Literal
+
 from pydantic import Field, model_validator
 
 from girlframe.engine.m3_actor_state import ActorRef, Model
@@ -70,6 +72,7 @@ class Grasp(Model):
     frame_instance: str = Field(min_length=1)
     action: str = Field(min_length=1)
     source_event: str = Field(min_length=1)
+    contact: Literal["body", "frame"] = "body"
     held: bool = True
     release_event: str | None = None
     release_account: str = Field(default="", max_length=1200)

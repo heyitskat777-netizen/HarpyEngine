@@ -126,6 +126,95 @@ class EnforcerService:
         ]
         return result
 
+    def _grasp_tasks(self, c: Connection, viewer: GuildViewer) -> list[dict[str, Any]]:
+        self.game.authorize(c, viewer, game=False)
+        state = load_state(c, self.store.campaign_id)
+        return [
+            dict(
+                id=x.id,
+                kind="enforcer_grasp",
+                revision=state.revision,
+                state="pending" if x.held else "resolved",
+                actionable=x.held,
+            )
+            for x in state.enforcer_grasps
+            if x.actor.entity == str(viewer.user_id)
+        ]
+
+    def grasps(self, viewer: GuildViewer) -> list[dict[str, Any]]:
+        with self.store.engine.connect() as c:
+            self.game.authorize(c, viewer, game=False)
+            state = load_state(c, self.store.campaign_id)
+            return [
+                dict(
+                    id=x.id,
+                    actor=x.actor.model_dump(mode="json"),
+                    target=x.target.model_dump(mode="json"),
+                    held=x.held,
+                    revision=state.revision,
+                )
+                for x in state.enforcer_grasps
+                if x.actor.entity == str(viewer.user_id)
+            ]
+
+    def release_grasp(
+        self, viewer: GuildViewer, key: str, identity: str, revision: int, account: str
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            state = load_state(c, self.store.campaign_id)
+            saved = next((x for x in state.enforcer_grasps if x.id == identity), None)
+            if (
+                saved is None
+                or saved.actor.entity != str(viewer.user_id)
+                or state.revision != revision
+            ):
+                raise WorkflowError("Refresh your actual original held grasp.")
+            from girlframe.engine.m3_role_punishments import view
+
+            actual_holder = view(state, saved.actor, profiles(c, self.store.campaign_id))
+            if saved.contact == "frame" and actual_holder.frame_instance != saved.frame_instance:
+                raise WorkflowError(
+                    "Recover the actual original holder and Frame, not a replacement."
+                )
+            body = c.scalar(
+                sa.select(t.m2["m2_state_history"].c.body_json).where(
+                    t.m2["m2_state_history"].c.campaign_id == self.store.campaign_id,
+                    t.m2["m2_state_history"].c.event_id == saved.source_event,
+                )
+            )
+            source = GameState.model_validate_json(body) if body else None
+            actual = (
+                next((x for x in source.enforcer_grasps if x.id == identity), None)
+                if source
+                else None
+            )
+            if actual is None or actual != saved or not saved.held:
+                raise WorkflowError("Recover the immutable original still-held grasp source.")
+            # A voluntary release removes only this physical restraint, including during
+            # safety pause. It supplies no movement, new consent or separate Helpless recovery.
+            event = str(uuid4())
+            changed = rules.release_grasp(state, identity, saved.actor, event, account)
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.enforcer_grasp_released",
+                changed,
+                event_id=event,
+                grasp_id=identity,
+            )
+            return dict(id=identity, held=False)
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.enforcer_grasp_release",
+            dict(id=identity, revision=revision, account=account),
+            operation,
+            authorize=lambda c: self.game.authorize(c, viewer, game=False),
+            auto_audit=False,
+        )
+
     def tasks(self, viewer: GuildViewer) -> list[dict[str, Any]]:
         with self.store.engine.connect() as c:
             return self._tasks(c, viewer)

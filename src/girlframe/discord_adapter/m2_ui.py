@@ -149,23 +149,39 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
     elif kind == "paired_tag":
         fields = [menu("options", "Make this the Paired Identity?", ("yes", "no"))]
     elif kind == "actor_keep":
+        harpy_mode = bool(own and own.get("harpy"))
+        traits = tuple("beautiful" if x == "sexy" else x for x in TRAITS) if harpy_mode else TRAITS
+        automatic = set(keep_automatic(own))
+        retained = set(own.get("retained_plays", ())) if own else set()
+        if harpy_mode:
+            if "girl.princess.objectively-beautiful" in retained:
+                automatic.add("beautiful")
+            if "girl.alpha.itching-for-a-fight" in retained:
+                automatic.add("vicious")
         if level == "mid":
             fields = [
-                menu("options", "Choose two positive traits", TRAITS, 2, 2),
+                menu("options", "Choose two positive traits", traits, 2, 2),
                 menu(
                     "denied",
                     "Choose one distinct negative trait",
-                    tuple(x for x in TRAITS if x not in keep_automatic(own)),
+                    tuple(x for x in traits if x not in automatic),
                 ),
             ]
         elif level == "low":
-            fields = [menu("options", "Choose one positive trait", TRAITS)]
+            fields = [menu("options", "Choose one positive trait", traits)]
         else:
             fields = [text("text", "Take a Tag: write its label")]
-        if has_rule(own, "girl.oldgen.elder-bitch", "OLDGEN"):
+        if has_rule(own, "girl.oldgen.elder-bitch", "OLDGEN") or (
+            harpy_mode and "girl.oldgen.elder-bitch" in retained
+        ):
             fields.append(flags("Also choose experienced?"))
     elif kind == "handler_keep":
         fields = [flags("Is it enough?"), text("text", "Explain the outcome")]
+    elif kind == "harpy_sensor_answers":
+        fields = [
+            text("text", "Answer every question honestly"),
+            flags("These answers are honest and complete?"),
+        ]
     elif kind == "actor_sensors":
         count = {"low": 1, "mid": 2, "high": 3}[level]
         fields = [
@@ -404,6 +420,44 @@ def answer_values(values: dict[str, Any]) -> ChoiceAnswer:
 
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
     decision = await threaded(lambda: game.decision(viewer_from_interaction(interaction), identity))
+    if decision.get("harpy_defeat"):
+        from girlframe.discord_adapter.m3_harpy_defeat import open_choice as open_harpy_choice
+        from girlframe.services.m3_harpy_defeat import HarpyDefeatService
+
+        await open_harpy_choice(interaction, HarpyDefeatService(game.store, game), identity)
+        return
+    if decision["kind"] in ("battle_dormant_void", "battle_dormant_dive"):
+        from girlframe.discord_adapter.m3_battle_dormant import open_dormant
+        from girlframe.services.m3_battle_dormant import DormantService
+
+        await open_dormant(
+            interaction, DormantService(game.store, game), decision["body"]["work_id"]
+        )
+        return
+    if decision["kind"] == "battle_dormant_threshold":
+        from girlframe.discord_adapter.m3_void import open_void
+        from girlframe.services.m3_void import VoidService
+
+        await open_void(interaction, VoidService(game.store), decision["body"]["work_id"])
+        return
+    if decision["kind"].startswith("battle_") and decision.get("battle") is not None:
+        from girlframe.discord_adapter.m3_battle import open_battle
+
+        await open_battle(interaction, game, identity)
+        return
+    if decision["kind"] == "handler_brief" and decision["body"].get("handler_grant"):
+        from girlframe.discord_adapter.m3_handler_plays import open_play as open_handler_play
+        from girlframe.services.m3_handler_plays import HandlerPlayService
+
+        await open_handler_play(
+            interaction, HandlerPlayService(game.store), decision["body"]["handler_grant"]
+        )
+        return
+    if decision["kind"].startswith("enforcer_") and decision.get("enforcement") is not None:
+        from girlframe.discord_adapter.m3_enforcement_initiative import open_enforcer_choice
+
+        await open_enforcer_choice(interaction, game, identity)
+        return
     if decision["kind"] in ("tag_marker_selection", "tag_marker_agreement"):
         from girlframe.discord_adapter.m3_tag_markers import open_discussion
 
@@ -484,7 +538,12 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
                 else "Choose your result's printed effects."
             )
         )
-    if decision.get("actor_basic"):
+    if decision.get("actor_basic") and decision["kind"] in (
+        "tag_window",
+        "tag_resolution",
+        "actor_tag_selection",
+        "actor_tag_agreement",
+    ):
         instructions += (
             "\nTag proposals and their relevance are shared with all scene participants. "
             "Pass without selecting a role or modifier."
@@ -505,13 +564,17 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             )
     if decision["kind"] == "handler_sensors":
         instructions += "\nQuestions: " + "; ".join(decision["result"]["questions"])
+    if decision["kind"] == "harpy_sensor_answers":
+        instructions += "\nAnswer these questions honestly: " + clean(
+            decision["result"]["questions"]
+        )
     if decision["kind"] == "target_flirt":
         instructions += "\nQuestion: " + str(
             decision["result"].get("question", "Why did you withdraw?")
         )
     if decision.get("order_text"):
         instructions += "\nDirect order: " + clean(decision["order_text"])
-    if decision.get("context"):
+    if decision.get("context") and decision["kind"] != "harpy_sensor_answers":
         instructions += "\nProposed follow-through: " + clean(decision["context"])
     form = NativeForm(
         interaction.user.id,
@@ -524,10 +587,15 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
 
 
 async def open_play(
-    interaction: discord.Interaction, game: GameService, *, parent: dict[str, Any] | None = None
+    interaction: discord.Interaction,
+    game: GameService,
+    *,
+    parent: dict[str, Any] | None = None,
+    _pilot: bool = False,
 ) -> None:
-    if parent is None and game.store.policy.m3_approval is not None:
+    if not _pilot and game.store.policy.m3_approval is not None:
         from girlframe.discord_adapter.m3_actor_plays import open_actor_play
+        from girlframe.discord_adapter.m3_punishments import Picker
         from girlframe.engine.m3_actor_state import ActorRef
         from girlframe.services.m3_actors import ActorService
         from girlframe.services.m3_missions import MissionService
@@ -537,9 +605,46 @@ async def open_play(
                 viewer_from_interaction(interaction)
             )
         )
-        actual = next((x for x in roles["actors"] if x["rules"] == "handler_girl"), None)
-        if actual is not None:
-            await open_actor_play(interaction, game, ActorRef.model_validate(actual["ref"]))
+        actual = [
+            x
+            for x in roles["actors"]
+            if x["rules"] == "handler_girl"
+            or x.get("girl") == "harpy"
+            and x.get("heat") is not None
+        ]
+        if parent is not None:
+            if parent["kind"] != "battle_counter_play":
+                actual = []
+            elif parent.get("actor"):
+                actual = [x for x in actual if x["ref"] == parent["actor"]]
+        pilots = [x for x in roles["actors"] if x["kind"] == "pilot"]
+        if parent and parent["kind"] == "battle_counter_play" and parent.get("actor"):
+            pilots = [x for x in pilots if x["ref"] == parent["actor"]]
+        if actual and not pilots and len(actual) == 1:
+            await open_actor_play(
+                interaction, game, ActorRef.model_validate(actual[0]["ref"]), parent=parent
+            )
+            return
+        if actual:
+            by_token = {x["token"]: x for x in actual}
+            options = tuple((x["token"], x["label"]) for x in actual)
+            if pilots:
+                options += (("pilot", "Your Girl and Frame"),)
+
+            async def choose_role(current: discord.Interaction, selected: str) -> None:
+                if selected == "pilot":
+                    await open_play(current, game, parent=parent, _pilot=True)
+                else:
+                    await open_actor_play(
+                        current,
+                        game,
+                        ActorRef.model_validate(by_token[selected]["ref"]),
+                        parent=parent,
+                    )
+
+            await Picker(
+                interaction.user.id, "**Which character is acting?**", options, choose_role
+            ).show(interaction)
             return
     viewer = viewer_from_interaction(interaction)
     game.gate()
@@ -553,7 +658,9 @@ async def open_play(
     scene = await threaded(lambda: game.scene_info(viewer, channel))
     if not scene["joined"]:
         raise WorkflowError("Join this scene with /campaign scene_join first.")
-    plays = ("disobey_orders",) if parent and parent["kind"] == "order_disobey" else PLAY_IDS
+    plays: tuple[str, ...] = (
+        ("disobey_orders",) if parent and parent["kind"] == "order_disobey" else PLAY_IDS
+    )
     approval = game.store.policy.m3_approval
     rulings = game.store.policy.owner_m3_rulings
     if (
@@ -564,6 +671,24 @@ async def open_play(
         and rulings.beneath_private_choices == "affected_owner"
     ):
         plays = (*plays, *HEAT_IDS)
+    enforcement_targets: dict[str, Any] = {}
+    plays = tuple(
+        x
+        for x in plays
+        if x not in ("enforcement_initiative", "all_out_assault", "go_for_the_core")
+    )
+    if (
+        not parent
+        and approval is not None
+        and "plays" in approval.subsystems
+        and "enforcement_initiative" in HEAT_IDS
+    ):
+        from girlframe.services.m3_enforcement_initiative import preview as enforcement_preview
+
+        enforcement = await threaded(lambda: enforcement_preview(game, viewer, channel))
+        if enforcement["available"]:
+            plays = (*plays, "enforcement_initiative")
+            enforcement_targets = {x["token"]: x for x in enforcement["targets"]}
     identities = [x for x in sheet["identities"] if not x["marked"]]
     fields = [
         menu("play", "Choose a Play", plays),
@@ -591,14 +716,35 @@ async def open_play(
         ),
     ]
 
+    if enforcement_targets:
+        fields.insert(
+            2,
+            Field(
+                "enforcer_target",
+                "Actual Enforcement Initiative target",
+                tuple((token, item["label"]) for token, item in enforcement_targets.items()),
+                minimum=0,
+                required=False,
+            ),
+        )
+
     # Target IDs are stable authenticated IDs, not editable claims of ownership.
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         play = one(values, "play")
         identity = one(values, "identity")
+        target_actor = None
+        if play == "enforcement_initiative":
+            from girlframe.engine.m3_actor_state import ActorRef
+
+            selected = one(values, "enforcer_target")
+            if selected is None or selected not in enforcement_targets:
+                raise WorkflowError("Choose the actual original Enforcement Initiative target.")
+            target_actor = ActorRef.model_validate(enforcement_targets[selected]["ref"])
         prepared = PlayInput(
             play=play,
             context=values["context"],
             trigger_confirmed=True,
+            target_actor=target_actor,
             heat=int(one(values, "heat")),
             identity=identity,
             gain=int(one(values, "gain")),
@@ -740,6 +886,27 @@ class SceneControls(discord.ui.View):
     def __init__(self, game: GameService):
         super().__init__(timeout=None)
         self.game = game
+        approval = game.store.policy.m3_approval
+        if not (
+            approval
+            and "plays" in approval.subsystems
+            and "all_out_assault" in HEAT_IDS
+            and "go_for_the_core" in HEAT_IDS
+        ):
+            self.remove_item(self.battle)
+
+    @discord.ui.button(label="Declare combat", custom_id="m3:scene:battle", row=0)
+    async def battle(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        await interaction.response.defer(ephemeral=True)
+        try:
+            from girlframe.discord_adapter.m3_battle import open_declaration
+            from girlframe.services.m3_battle import BattleService
+
+            await open_declaration(interaction, BattleService(self.game.store))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
 
     @discord.ui.button(label="My pending choices", custom_id="m2:scene:choices", row=0)
     async def choices(
@@ -959,6 +1126,20 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         await interaction.response.defer(ephemeral=True)
         try:
             await open_play(interaction, game)
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @app_commands.command(
+        name="battle", description="Declare actual combatants, Assets and opening before rolling"
+    )
+    @app_commands.guild_only()
+    async def battle(interaction: discord.Interaction) -> None:
+        await interaction.response.defer(ephemeral=True)
+        try:
+            from girlframe.discord_adapter.m3_battle import open_declaration
+            from girlframe.services.m3_battle import BattleService
+
+            await open_declaration(interaction, BattleService(game.store))
         except WorkflowError as error:
             await reply(interaction, str(error))
 
@@ -1260,5 +1441,13 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         except WorkflowError as error:
             await reply(interaction, str(error))
 
+    approval = game.store.policy.m3_approval
+    if (
+        approval
+        and "plays" in approval.subsystems
+        and "all_out_assault" in HEAT_IDS
+        and "go_for_the_core" in HEAT_IDS
+    ):
+        tree.add_command(battle, guild=guild)
     tree.add_command(play, guild=guild)
     tree.add_command(choice, guild=guild)

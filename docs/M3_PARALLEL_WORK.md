@@ -12,7 +12,7 @@ by this checkpoint.
 | Workflow | Implemented behavior | Important boundary |
 |---|---|---|
 | Handler creation | Seven printed variants, resumable drafts, actual shared starting choices and activation; first-persona adoption preserves established relationships. | Fresh persona generations, actual NPC history consent and body-death replacement are implemented; remaining Handler abilities still need consumers. |
-| Original character careers | Death/execution/imprisonment/retirement archives, distinct replacement characters, explicit starting Status, original-owner return offers and preserved resources. | Restored pending consequences need their actual source-specific bridges; a replacement never inherits them. |
+| Original character careers | Death/execution/imprisonment/retirement archives, distinct replacements, original-owner returns and preserved resources. Actual returned Frame obligations and completed-mission discipline now reissue in new real periods with immutable source proof. | Other future obligation families need their own bridges; a replacement never inherits an original's debt. |
 | Severe discipline | Actual execution, imprisonment, link reversal and experimental-surgery workflow; actual patient descriptions precede applied surgery. | Surgery's selectable rolled Plays currently cover implemented shared Plays and the three named upcoming basic Frame Plays, not every unfinished playbook ability. |
 | Mandatory inability to roll | Actual Handler-authored adjudication for prohibited Defeat/Go Off-Duty/Observation, clearly marked as manual, followed by actual Tag and consequence choices. | Campaign clarification, not printed dice results or restored abilities. Voluntary prohibited Plays remain unavailable. |
 | Medical recovery | Actual care proposal and confirmation, waking and source-owned Girl Play exchange, including real three-person standards setup. | Five acquisition runtimes currently have consumers; other acquisitions remain unavailable. Care grants no Asset repair or invented movement. |
@@ -25,12 +25,14 @@ by this checkpoint.
 
 | Path | Current implementation | Remaining closure |
 |---|---|---|
-| Defeat | Actual mandatory source, real dice/Tags, owned tier choices, rescues, amnesia, Girl-book change, post-mission discipline, destruction and next-period free replacement. | Actual Void, legacy identity, original-source discipline and next-period lost-Frame replacement bridges are integrated. Returned obligations and broader role/playbook consumers remain unfinished. |
-| Dive Deep | All five basic choices, correct tier owners, actual table responses, nearby-NPC Void manifestations, actual subsumption and source-bound Void continuations. | Source-role Tag selection/discussion and actual Void continuations are integrated; full consuming playbook abilities remain unfinished. |
+| Defeat | Actual mandatory source, real dice/Tags, owned tier choices, rescues, amnesia, Girl-book change, post-mission discipline, destruction and next-period free replacement. | Actual Void, legacy identity, source discipline, lost-Frame replacement and returned-original Frame/mission bridges are integrated. Broader role/playbook consumers remain unfinished. |
+| Dive Deep | All five basic choices, correct tier owners, actual table responses, NPC manifestations, physical subsumption and real Void continuations. The active batch adds actual Harpy resources and consent/extraction/medical controls. | Full consuming playbook abilities and inherited prohibited mandatory Harpy Dive remain separate unfinished dependencies. |
 | Void transformation | Actual source/occupancy review, original-player ordered answers, escape/Gorgon conversion, irreversible new Harpy body and original relationship continuity. | Real Keep Your Head resistance, standalone entry, actual arrival, protective custody/release and deferred lost-Frame replacement are integrated. Broader Harpy playbook runtime remains unfinished. |
 | Personal Firearm | Actual reviewed acquisition, original pistol, loss and earned return; source-priced Ability Unlock/Grafting path and temporary-removal semantics. | Independent source review and broader acquired Frame-rule consumers. Positive acquisition tests use explicitly synthetic review approvals. |
 | Paid Frame Swap | Atomic four-Permission candidate, actual new baseline choices and external consent, parked original Frame and retained-resource proof. | Real destination base runtime/review gates remain closed. Nine-baseline candidate tests do not make all nine Frames playable. |
-| Enforcer | Actual non-Dog authority, source-bound factual NPC rank review and detention/release; Initiative/volunteer work in development. | NPC/Handler instructed Punishment execution has actual actor/controller proof, and shared recovery reads typed Helplessness. Initiative rolls, volunteer/item-transfer consumers and remaining actor ports are unfinished. |
+| Enforcer | Actual non-Dog authority, factual rank review, detention/release, shared Initiative tiers, original-body grips, original-chooser volunteers, real carried objects and linked Void consequences have focused automated evidence. | Director-context new Initiative remains gated before dice until its actual judge is supported. Broader role-specific discipline, acquired rules and independent review are unfinished. |
+| Harpy shared consumers | Actual owner facts plus GM review, independent Heat/Identity resources, Keep tiers, diceless honest Sensor questions, all five Dive effects, retained original Tag consent and a gated Core candidate. | Full Harpy playbook remains unfinished: Off-Duty, Engage/All Out extra maneuver, broader social/counter/world consumers and remaining acquired-rule interactions. |
+| Basic combat candidate | Source declarations, actual dice/Tags, Pilot All Out tiers, actual Core counters/deaths, genuine child Plays, NPC substitutions, Director body replacement and scoped human adjudication have focused evidence. | Collateral/world/Budget outcomes, further Gorgon branches, broader role/tier integration and Harpy extra maneuvers remain gated. This is not whole-combat acceptance. |
 
 ## Additional shared integration
 
@@ -50,7 +52,16 @@ must not be summed into a milestone completion score.
 
 The integrated source checkpoint `e9e528b077fac98435862cc62c13cd3bb25b4ecb` passed the full regression: **1,796 tests in 676.62s**, zero failures/errors/skips, `var/m3-parallel-full-fixed.xml`. Ruff passes, 528 files are formatted, mypy checks 282 source files; isolated fresh/repeat migrations and the privacy/handoff scans pass. The first full run exposed 13 regressions in two integration paths, repaired and documented in the acceptance report. This verifies this checkpoint only, not subsequent new work or complete M3.
 
-The next batch covers basic combat, Enforcer Initiative/volunteers/items, basic Handler moves and original-return obligation restoration. Root integrates shared APIs. The earlier GitHub ref-write failure is separate from local development; no push success is implied.
+The subsequent combat/Harpy/original-person candidate passes **1,983 tests in
+815.95s**, zero failures/errors/skips, `var/m3-combat-harpy-full-fixed.xml`. Ruff
+passes, 599 files are formatted, and mypy checks 315 source files. The privacy scan
+passes 682 publishable files / 40 unchanged original manifest entries / zero
+findings; isolated migration checks pass. Its first full run exposed four
+regressions, repaired alongside two source-audit findings before the passing run.
+There are 119 centrally recorded campaign rulings, all reviewable without treating
+them as independent certification. Bot remains off. See the acceptance report for
+exact scope, artifacts and remaining gates. The earlier `1964eb1` push succeeded;
+the older GitHub ref-write failure is historical.
 
 After these paths, agreed M3 still includes All-Out Assault/Go for the Core,
 remaining Girl/Frame/Handler runtime abilities, all outstanding Strain consequences

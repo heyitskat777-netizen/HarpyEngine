@@ -131,26 +131,76 @@ def _void_original(c: Connection, store: OnboardingStore, row: dict[str, Any]) -
     return row
 
 
-def pending(c: Connection, store: OnboardingStore, state: GameState, owner: int) -> bool:
+def _sources(
+    c: Connection, store: OnboardingStore, state: GameState
+) -> list[tuple[dict[str, Any], dict[str, str] | None]]:
+    from girlframe.services.m3_returned_work import proof as returned_proof
+
     table = t.m3["m3_required_work"]
     rows = c.execute(
         sa.select(table)
         .where(
             table.c.campaign_id == store.campaign_id,
-            table.c.kind.in_(FUTURES),
-            table.c.owner_id == str(owner),
+            table.c.kind.in_((*FUTURES, ACTIVE)),
         )
         .order_by(table.c.revision)
     ).mappings()
     latest = {row["id"]: dict(row) for row in rows}
-    character = GameService(store).character_binding(c, state, owner, require_current_profile=False)
+    result: list[tuple[dict[str, Any], dict[str, str] | None]] = []
     for row in latest.values():
-        if row["state"] == "resolved":
+        if row["kind"] not in FUTURES:
             continue
-        body = json.loads(_original(c, store, row["id"])["body_json"])
-        if body["character"] == character:
-            return True
-    return False
+        body = json.loads(row["body_json"])
+        owner = row["owner_id"]
+        if owner not in state.sheets or state.sheets[owner].character_id != body["character"]:
+            continue
+        active = [
+            x
+            for x in latest.values()
+            if x["kind"] == ACTIVE and json.loads(x["body_json"]).get("source_work") == row["id"]
+        ]
+        # Any real fulfillment consumes this loss forever. An unresolved task
+        # already has its original period and must not be issued a second time.
+        if any(
+            x["state"] != "resolved"
+            or json.loads(x["body_json"]).get("resolution") != "original_character_career_ended"
+            for x in active
+        ):
+            continue
+        original = _original(c, store, row["id"])
+        if row["state"] != "resolved":
+            result.append((original, None))
+            continue
+        closed = active or [row]
+        current_archive = next(
+            (
+                a.id
+                for a in reversed(state.career_archives)
+                if a.actor.incarnation == body["character"]
+            ),
+            None,
+        )
+        selected = next(
+            (
+                x
+                for x in closed
+                if json.loads(x["body_json"]).get("career_archive") == current_archive
+            ),
+            closed[-1],
+        )
+        returned = returned_proof(c, store, state, selected, int(owner), body["character"])
+        if returned is not None:
+            result.append((original, returned))
+    return result
+
+
+def _identity(source: str, period: str, returned: dict[str, str] | None) -> str:
+    suffix = ":return:" + returned["return_event"] + ":period:" + period if returned else ""
+    return str(uuid5(NAMESPACE_URL, "girlframe:defeat-replacement:" + source + suffix))
+
+
+def pending(c: Connection, store: OnboardingStore, state: GameState, owner: int) -> bool:
+    return any(row["owner_id"] == str(owner) for row, _ in _sources(c, store, state))
 
 
 def synchronize(c: Connection, store: OnboardingStore, period: Period, event: str) -> None:
@@ -160,16 +210,17 @@ def synchronize(c: Connection, store: OnboardingStore, period: Period, event: st
 
     state = load_state(c, store.campaign_id)
     table = t.m3["m3_required_work"]
-    rows = c.execute(
-        sa.select(table)
-        .where(table.c.campaign_id == store.campaign_id, table.c.kind.in_(FUTURES))
-        .order_by(table.c.revision)
-    ).mappings()
-    latest = {row["id"]: dict(row) for row in rows}
-    for row in latest.values():
-        if row["state"] == "resolved":
-            continue
-        original = _original(c, store, row["id"])
+    for original, returned in _sources(c, store, state):
+        row = (
+            c.execute(
+                sa.select(table)
+                .where(table.c.campaign_id == store.campaign_id, table.c.id == original["id"])
+                .order_by(table.c.revision.desc())
+                .limit(1)
+            )
+            .mappings()
+            .one()
+        )
         body = json.loads(original["body_json"])
         owner = row["owner_id"]
         if owner in period.ended_characters or period.character_ids.get(owner) != body["character"]:
@@ -179,7 +230,7 @@ def synchronize(c: Connection, store: OnboardingStore, period: Period, event: st
             raise WorkflowError(
                 "The original destroyed Frame needs reconciliation before Off-Duty."
             )
-        identity = str(uuid5(NAMESPACE_URL, "girlframe:defeat-replacement:" + row["id"]))
+        identity = _identity(row["id"], period.id, returned)
         if c.scalar(
             sa.select(table.c.id).where(
                 table.c.campaign_id == store.campaign_id, table.c.id == identity
@@ -202,10 +253,15 @@ def synchronize(c: Connection, store: OnboardingStore, period: Period, event: st
                 origin_frame_id=sheet.frame_runtime.id if sheet.frame_runtime else None,
                 origin_fingerprint=sheet.source_fingerprint,
                 origin_character_id=body["character"],
+                return_proof=returned,
                 immediate=True,
             ),
             event,
         )
+        if returned is not None:
+            # Old work remains closed by its real ending. This is a new owned
+            # obligation for the actual returned original, not a reopened receipt.
+            continue
         c.execute(
             table.insert().values(
                 **{
@@ -228,7 +284,6 @@ def check_active(c: Connection, store: OnboardingStore, row: dict[str, Any]) -> 
     body = json.loads(row["body_json"])
     original = _original(c, store, body.get("source_work", ""))
     source = json.loads(original["body_json"])
-    expected = str(uuid5(NAMESPACE_URL, "girlframe:defeat-replacement:" + original["id"]))
     table = t.m3["m3_required_work"]
     first = (
         c.execute(
@@ -249,6 +304,44 @@ def check_active(c: Connection, store: OnboardingStore, row: dict[str, Any]) -> 
         )
     )
     period = Period.model_validate_json(raw) if raw else None
+    returned = origin.get("return_proof")
+    if returned is not None:
+        from girlframe.services.m3_returned_work import proof as returned_proof
+
+        prior = (
+            c.execute(
+                sa.select(table)
+                .where(
+                    table.c.campaign_id == store.campaign_id,
+                    table.c.id == returned.get("closed_work"),
+                )
+                .order_by(table.c.revision.desc())
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
+        if (
+            prior is None
+            or not (
+                prior["id"] == original["id"]
+                or (
+                    prior["kind"] == ACTIVE
+                    and json.loads(prior["body_json"]).get("source_work") == original["id"]
+                )
+            )
+            or returned_proof(
+                c,
+                store,
+                load_state(c, store.campaign_id),
+                dict(prior),
+                int(row["subject_id"]),
+                source["character"],
+            )
+            != returned
+        ):
+            raise WorkflowError("SOURCE_RETURN_MISSING: reopen the actual returned-original work.")
+    expected = _identity(original["id"], row["off_duty_id"], returned)
     if (
         row["id"] != expected
         or row["kind"] != ACTIVE
@@ -266,6 +359,7 @@ def check_active(c: Connection, store: OnboardingStore, row: dict[str, Any]) -> 
                 "origin_frame_id",
                 "origin_character_id",
                 "origin_fingerprint",
+                "return_proof",
             )
         )
     ):

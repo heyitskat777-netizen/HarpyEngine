@@ -14,7 +14,7 @@ from girlframe.services.m3_replacement import DEFEAT_ROOT, ReplacementService
 from girlframe.services.m3_void import VoidService
 
 
-def test_actual_abandoned_frame_has_source_proved_next_period_free_package(ledger):
+def escaped(ledger):
     game, worker, gateway, root, work = threshold_source(ledger)
     service = VoidService(ledger)
     before = state(game).sheets["2"]
@@ -60,6 +60,12 @@ def test_actual_abandoned_frame_has_source_proved_next_period_free_package(ledge
             )
         }
     )
+    return game, before, abandoned, girl_asset
+
+
+def test_actual_abandoned_frame_has_source_proved_next_period_free_package(ledger):
+    game, before, abandoned, girl_asset = escaped(ledger)
+    frame_assets = [x for x in before.assets if x.family == "frame"]
     missions = MissionService(ledger)
     periods = OffDutyService(missions)
     period = periods.begin(ADMIN, "real-next-off-duty-after-escape")

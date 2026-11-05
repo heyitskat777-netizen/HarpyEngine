@@ -274,6 +274,27 @@ class LobotomyService:
         with self.store.engine.connect() as c:
             _, surgery = self._get(c, viewer, identity)
             work = self.discipline.get(viewer, surgery.work_ids[0])
+            execution_account = None
+            row = self.discipline._row(c, surgery.work_ids[0])
+            if self.discipline._body(row).get("role_case"):
+                from girlframe.services.m3_role_punishments import pc_execution
+
+                case = pc_execution(
+                    c, self.game, row, viewer, Details(kind="lobotomization", surgery=identity)
+                )
+                if (
+                    case is None
+                    or case.source_kind != "handler_play"
+                    or case.chooser != case.executor
+                    or case.executor != surgery.inflictor
+                    or case.subject != surgery.subject
+                    or case.chooser_controller != case.executor_controller
+                    or not case.scene_account.strip()
+                ):
+                    raise WorkflowError(
+                        "Use the actual same Handler's saved surgery scene and owned execution."
+                    )
+                execution_account = case.scene_account
         return self.discipline.apply(
             viewer,
             key,
@@ -281,6 +302,7 @@ class LobotomyService:
             work["revision"],
             work["game_revision"],
             Details(kind="lobotomization", surgery=identity),
+            execution_account=execution_account,
         )
 
 

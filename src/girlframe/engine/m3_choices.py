@@ -187,13 +187,17 @@ def plan(play: BasicPlay, context: Context) -> Plan:
             raise ValueError("Core must be exposed before this Play can begin")
         if level == "mid":
             fixed = ("target_messy_death_now_or_shortly",)
-        elif level == "high" and context.target_is_npc:
-            fixed = ("target_explodes", "every_other_character_damages_asset_or_dies")
         else:
             groups = [
-                group("retaliation", "target", CORE_RETALIATION, 1, 2 if level == "low" else 1)
+                group("retaliation", "target", CORE_RETALIATION, 0, 2 if level == "low" else 1)
             ]
-            if level == "low" and context.target_is_npc:
+            if level == "high":
+                fixed = (
+                    "target_explodes"
+                    if context.target_is_npc
+                    else "target_damages_actual_undamaged_asset_or_dies",
+                )
+            elif context.target_is_npc:
                 fixed = ("npc_dies_unless_valid_fictional_defense",)
     elif play == "dive_deep":
         source = 24

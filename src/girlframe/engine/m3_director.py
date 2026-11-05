@@ -49,12 +49,18 @@ def enter(
         if len(labels) != 2 or any(not x.strip() or len(x.strip()) > 120 for x in labels):
             raise ValueError("The Handler chooses exactly two nonblank ordinary Identity names")
         identity = str(uuid5(NAMESPACE_URL, source + ":director-context"))
+        from girlframe.engine.m3_handler_consequences import active_handler
+
+        actual_body = active_handler(updated)
+        if actual_body is None:
+            raise ValueError("The actual current Handler body must exist before changing its rules")
         context = DirectorContext(
             id=identity,
             handler=handler,
             directors=(npc_id,),
             source_works=(work,),
             source_event=source,
+            body_actor=actual_body,
             identities=[
                 IdentityState(
                     id=str(uuid5(NAMESPACE_URL, identity + ":" + str(i))),

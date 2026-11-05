@@ -299,3 +299,92 @@ def test_actual_return_pause_post_history_failure_and_concurrent_confirmation_ar
     assert sum(x is not None for x in results) == 1
     assert len(state(game).personal_firearms[0].issues) == 2
     assert state(game).sheets["2"].permissions == 2
+
+
+def test_real_replacement_issue_preserves_stolen_object_custody_and_later_retrieval_is_separate(
+    ledger, tmp_path, monkeypatch
+):
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.engine.m3_world_state import Board, Npc, World
+    from girlframe.services.m3_items import prove_item, take_in_transaction
+
+    service, cycle, game, period = setup(ledger, tmp_path, monkeypatch, period=True)
+    purchase(service)
+    actor = current_ref(state(game), 2)
+    old = state(game).personal_firearms[0].issues[-1].asset
+    npc = ActorRef(kind="npc", entity="actual-pistol-custodian")
+    with ledger.transaction() as c:
+        canon = state(game)
+        canon.world = World(
+            board=Board(minimum=(-1, -1), maximum=(1, 1)),
+            locations=(),
+            npcs=(
+                Npc(
+                    id=npc.entity,
+                    name="Actual pistol custodian",
+                    jobs=("guard",),
+                    detail="Actual distinct holder",
+                    controller=1,
+                    cell=(0, 0),
+                    revealed=True,
+                ),
+            ),
+        )
+        game.event(c, 1, str(uuid4()), "synthetic.actual_pistol_custodian", canon)
+
+    def move(source, target, selection):
+        with ledger.transaction() as c:
+            event = str(uuid4())
+            changed = take_in_transaction(
+                c,
+                game,
+                state(game),
+                source=source,
+                recipient=target,
+                selection=selection,
+                action=str(uuid4()),
+                event=event,
+                account="Actual original physical object transferred",
+            )
+            game.event(
+                c,
+                1,
+                str(uuid4()),
+                "synthetic.actual_stolen_object_transfer",
+                changed,
+                event_id=event,
+            )
+            return changed.held_items[-1]
+
+    item = move(actor, npc, "asset:" + old)
+    activate(cycle, game, period)
+    roll_for(cycle, game, period, PLAYER, (2, 2))
+    sync(service, period)
+    work = service.return_tasks(PLAYER)[0]["id"]
+    data = service.return_get(PLAYER, work)
+    assert "replacement pistol" in data["replacement_notice"]
+    service.claim(
+        PLAYER,
+        str(uuid4()),
+        work,
+        data["revision"],
+        take=True,
+        account="Actual Foundation replacement issue accepted",
+        expected=data["expected"],
+    )
+    actual = state(game)
+    replacement = actual.personal_firearms[0].issues[-1]
+    assert replacement.asset != old and replacement.kind == "foundation_replacement"
+    assert (
+        replacement.recipient == actor
+        and replacement.controller == 2
+        and replacement.replaces_asset == old
+    )
+    with ledger.engine.connect() as c:
+        assert prove_item(c, game, actual, item.id).holder == npc
+    count = len(actual.sheets["2"].assets)
+    returned = move(npc, actor, item.id)
+    assert returned.id == item.id and returned.asset_id == old
+    assert len(state(game).sheets["2"].assets) == count + 1
+    assert {old, replacement.asset} <= {x.id for x in state(game).sheets["2"].assets}
+    assert len(state(game).personal_firearms[0].issues) == 2

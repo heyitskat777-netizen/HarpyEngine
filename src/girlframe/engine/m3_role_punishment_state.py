@@ -15,15 +15,15 @@ class Instruction(Model):
 
 class RolePunishment(Model):
     id: str = Field(min_length=1)
-    source_kind: Literal["enforcement_initiative", "obedience_volunteer"]
+    source_kind: Literal["enforcement_initiative", "obedience_volunteer", "handler_play"]
     action: str | None = None
     source_work: str | None = None
     source_event: str = Field(min_length=1)
-    chooser: ActorRef
+    chooser: ActorRef | None
     chooser_controller: int = Field(gt=0)
     executor: ActorRef
     executor_controller: int = Field(gt=0)
-    executor_frame: str = Field(min_length=1)
+    executor_frame: str | None = Field(default=None, min_length=1)
     subject: ActorRef
     subject_controller: int = Field(gt=0)
     instruction: Instruction | None = None
@@ -39,8 +39,16 @@ class RolePunishment(Model):
 
     @model_validator(mode="after")
     def actual_owners(self) -> "RolePunishment":
-        if self.executor.kind != "pilot" or self.executor == self.subject:
+        if self.executor.kind not in ("pilot", "npc", "handler") or self.executor == self.subject:
             raise ValueError("An original actual Enforcer carries out another person's Punishment")
+        if self.source_kind != "handler_play" and (
+            self.executor.kind != "pilot" or self.chooser is None
+        ):
+            raise ValueError(
+                "The Enforcer source preserves its actual original chooser and Pilot executor"
+            )
+        if self.executor.kind == "pilot" and self.executor_frame is None:
+            raise ValueError("A Pilot executor preserves its actual source Frame")
         if (self.instruction is None) != (self.instruction_event is None):
             raise ValueError("The actual chooser's exact instruction needs its source")
         if len(set(self.attendance)) != len(self.attendance) or not set(self.attendance) <= {

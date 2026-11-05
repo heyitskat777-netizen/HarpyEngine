@@ -62,11 +62,19 @@ def test_core_exposure_and_npc_explosion_are_distinct():
     with pytest.raises(ValueError):
         plan("go_for_the_core", Context(total=9, target_is_gorgon_or_piloting=True))
     result = plan("go_for_the_core", Context(total=12, target_is_npc=True))
-    assert (
-        not result.groups
-        and "every_other_character_damages_asset_or_dies" in result.fixed_followups
-    )
-    assert plan("go_for_the_core", Context(total=12)).groups[0].owner == "target"
+    assert result.fixed_followups == ("target_explodes",)
+    assert result.groups[0].owner == "target"
+    result.groups[0].select("target", ())
+    result.groups[0].select("target", (result.groups[0].options[0],))
+    with pytest.raises(ValueError):
+        result.groups[0].select("handler", ())
+    other = plan("go_for_the_core", Context(total=12))
+    assert other.fixed_followups == ("target_damages_actual_undamaged_asset_or_dies",)
+    assert other.groups[0].owner == "target"
+    low = plan("go_for_the_core", Context(total=5, target_is_npc=True))
+    low.groups[0].select("target", ())
+    low.groups[0].select("target", low.groups[0].options[:2])
+    assert low.fixed_followups == ("npc_dies_unless_valid_fictional_defense",)
 
 
 def test_dive_high_has_both_owners_then_status_loss_and_low_only_handler():

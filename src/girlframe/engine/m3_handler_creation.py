@@ -205,7 +205,12 @@ def activate(
         ]
         for sheet in state.sheets.values():
             for tag in sheet.tags:
-                if tag.giver == owner and tag.giver_actor is None and tag.giver_character is None:
+                if (
+                    tag.giver == owner
+                    and tag.giver_actor is None
+                    and tag.giver_character is None
+                    and tag.gm_setter_appointment is None
+                ):
                     tag.giver_actor = actual
     for package in draft.npc_starting:
         state = set_depth(

@@ -68,14 +68,19 @@ def enable(game: "GameService", c: Connection, viewer: GuildViewer, data: dict[s
 
 
 def authorize(
-    game: "GameService", c: Connection, viewer: GuildViewer, action: dict[str, Any]
+    game: "GameService",
+    c: Connection,
+    viewer: GuildViewer,
+    action: dict[str, Any],
+    *,
+    director_response: bool = False,
 ) -> None:
     meta = action["data"].get("m3_shared") or action["data"].get("shared_recovery")
     if meta is None:
         return
     from girlframe.services.m3_access import Access
 
-    Access(game.store).authorize(c, viewer, "plays")
+    Access(game.store).authorize(c, viewer, "plays", director_response=director_response)
     approval = game.store.policy.m3_approval
     if approval is None or approval.registry_sha256 != meta.get("registry"):
         raise WorkflowError("M3_POLICY_CHANGED: recover the original shared Play approval first.")
@@ -268,7 +273,9 @@ class RecoveryService:
                     )
                 if not cancel:
                     self.game.action_characters(c, action, state)
-                    if action["data"]["handler"] != state.handler:
+                    if (action["data"].get("battle") or {}).get(
+                        "procedural_gm", action["data"]["handler"]
+                    ) != state.handler:
                         raise WorkflowError("The original response Handler changed.")
                     if set(scene["participants"]) != set(action["data"]["participants"]):
                         raise WorkflowError("Recover the original scene participants first.")

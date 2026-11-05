@@ -115,7 +115,8 @@ def relation_current(sheet: object, relation: Literal["mentor", "pair"], state: 
 
 def mentor_tag(sheet: object, tag: object, state: object) -> bool:
     if (
-        not has_rule(sheet, "girl.newgirl.mentor", "NEWGIRL")
+        getattr(tag, "gm_setter_appointment", None) is not None
+        or not has_rule(sheet, "girl.newgirl.mentor", "NEWGIRL")
         or not relation_current(sheet, "mentor", state)
         or getattr(tag, "giver", None) != getattr(sheet, "mentor", None)
     ):

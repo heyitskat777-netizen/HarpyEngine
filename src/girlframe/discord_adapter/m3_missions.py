@@ -433,14 +433,53 @@ def register_missions(
         from girlframe.discord_adapter.m3_enforcer import open_conditioning, open_enforcer_task
         from girlframe.discord_adapter.m3_punishments import Picker
         from girlframe.services.m3_enforcer import EnforcerService
+        from girlframe.services.m3_role_punishments import RolePunishmentService
 
         await interaction.response.defer(ephemeral=True)
         try:
             enforcers = EnforcerService(service.game)
             saved = await asyncio.to_thread(enforcers.tasks, viewer_from_interaction(interaction))
+            grasps = await asyncio.to_thread(enforcers.grasps, viewer_from_interaction(interaction))
+            discipline = RolePunishmentService(service.game)
+            cases = await asyncio.to_thread(discipline.tasks, viewer_from_interaction(interaction))
+
+            from girlframe.engine.m3_plays import HEAT_IDS
+
+            initiative = False
+            if "enforcement_initiative" in HEAT_IDS and interaction.channel_id is not None:
+                from girlframe.services.m3_enforcement_initiative import preview
+
+                available = await asyncio.to_thread(
+                    preview,
+                    service.game,
+                    viewer_from_interaction(interaction),
+                    interaction.channel_id,
+                )
+                initiative = available["available"]
 
             async def choose(current: discord.Interaction, token: str) -> None:
-                if token == "conditioning":
+                if token == "volunteer":
+                    from girlframe.discord_adapter.m3_enforcer_volunteer import open_volunteer
+                    from girlframe.services.m3_enforcer_volunteer import VolunteerService
+
+                    await open_volunteer(current, VolunteerService(service.game))
+                elif token == "item-fact":
+                    from girlframe.discord_adapter.m3_items import open_item_proposal
+
+                    await open_item_proposal(current, service.game)
+                elif token.startswith("grasp:"):
+                    from girlframe.discord_adapter.m3_enforcement_initiative import open_grasp
+
+                    await open_grasp(current, service.game, token[6:])
+                elif token == "initiative":
+                    from girlframe.discord_adapter.m3_enforcement_initiative import open_initiative
+
+                    await open_initiative(current, service.game)
+                elif token.startswith("punishment:"):
+                    from girlframe.discord_adapter.m3_role_punishments import open_role_punishment
+
+                    await open_role_punishment(current, discipline, token[11:])
+                elif token == "conditioning":
                     await open_conditioning(current, enforcers)
                 else:
                     await open_enforcer_task(current, enforcers, token)
@@ -448,21 +487,58 @@ def register_missions(
             await Picker(
                 interaction.user.id,
                 "Your actual Enforcer controls",
-                (("conditioning", "Obedience Conditioning — actual known NPCs"),)
-                + tuple((x["id"], x["kind"].replace("_", " ").title()) for x in saved),
+                (
+                    ("conditioning", "Obedience Conditioning — actual known NPCs"),
+                    ("item-fact", "Existing held object — actual possession review"),
+                    ("volunteer", "Volunteer to carry out an actual Punishment"),
+                )
+                + (
+                    (("initiative", "Enforcement Initiative — actual take hold"),)
+                    if initiative
+                    else ()
+                )
+                + tuple((x["id"], x["kind"].replace("_", " ").title()) for x in saved)
+                + tuple(("punishment:" + x["id"], "Actual instructed Punishment") for x in cases)
+                + tuple(
+                    ("grasp:" + x["id"], "Release your actual held grasp")
+                    for x in grasps
+                    if x["held"]
+                ),
                 choose,
             ).show(interaction)
         except WorkflowError as error:
             await reply(interaction, str(error))
 
-    @group.command(name="handler", description="Create or review your actual Handler persona")
+    @group.command(
+        name="handler", description="Review your Handler persona or source-owned basic Plays"
+    )
     async def handler_creation(interaction: discord.Interaction) -> None:
         from girlframe.discord_adapter.m3_handler_creation import open_handler
+        from girlframe.discord_adapter.m3_handler_plays import open_handler_plays
+        from girlframe.discord_adapter.m3_punishments import Picker
         from girlframe.services.m3_handler_creation import HandlerCreationService
+        from girlframe.services.m3_handler_plays import HandlerPlayService
 
         await interaction.response.defer(ephemeral=True)
         try:
-            await open_handler(interaction, HandlerCreationService(service.store))
+
+            async def choose(current: discord.Interaction, token: str) -> None:
+                if token == "persona":
+                    await open_handler(current, HandlerCreationService(service.store))
+                elif token == "plays":
+                    await open_handler_plays(current, HandlerPlayService(service.store))
+                else:
+                    raise WorkflowError("Choose a current Handler control.")
+
+            await Picker(
+                interaction.user.id,
+                "Your actual Handler controls",
+                (
+                    ("persona", "Create or review your fictional Handler persona"),
+                    ("plays", "Basic Handler Plays — actual human GM procedures"),
+                ),
+                choose,
+            ).show(interaction)
         except WorkflowError as error:
             await reply(interaction, str(error))
 

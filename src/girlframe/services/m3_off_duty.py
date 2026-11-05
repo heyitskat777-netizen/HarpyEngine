@@ -236,6 +236,9 @@ class OffDutyService:
         from girlframe.services.m3_defeat_replacement import synchronize as replacements
 
         replacements(c, self.store, period, event)
+        from girlframe.services.m3_handler_plays import synchronize_off_duty
+
+        synchronize_off_duty(c, self.game, period, event)
 
     def _work(
         self,

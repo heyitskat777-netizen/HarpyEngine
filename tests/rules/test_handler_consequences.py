@@ -10,7 +10,67 @@ from test_actors import ledger as ledger
 from girlframe.engine import m3_handler_consequences as rules
 from girlframe.engine.m2 import DirectorContext, IdentityState, TagState, pair_key
 from girlframe.engine.m3_actor_bonds import current_ref, depth
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_handler_state import Draft, HandlerPersona
+
+
+@pytest.mark.parametrize("ended", [False, True])
+def test_context_alias_preserves_only_exact_current_body_after_director_exit(canon, ended):
+    body = rules.active_handler(canon)
+    assert body is not None
+    canon.director_contexts.append(
+        DirectorContext(
+            id="actual-body-context",
+            handler=1,
+            directors=("director",),
+            source_works=("actual-director-source",),
+            identities=[],
+            source_event="actual-context-source",
+            body_actor=body,
+            active=not ended,
+            termination_reason="director_death" if ended else None,
+            termination_event="actual-director-death" if ended else None,
+        )
+    )
+    alias = ActorRef(kind="handler", entity="1", incarnation="actual-body-context")
+    assert rules.same_handler_body(canon, alias)
+    assert rules.body_original(canon, alias).actor == body
+    prepared, identity = required(canon)
+    result = rules.apply(prepared, identity, "death", "Actual body death", "body-death")
+    result.handler_persona = HandlerPersona(
+        id="replacement-body",
+        owner=1,
+        appointment="actual-appointment",
+        draft=Draft(name="A genuinely new body"),
+        source_event="new-body-source",
+    )
+    assert not rules.same_handler_body(result, alias)
+    assert rules.body_original(result, alias).actor == body
+
+
+def test_legacy_context_without_body_proof_cannot_bind_after_any_handler_archive(canon):
+    canon.director_contexts.append(
+        DirectorContext(
+            id="legacy-context",
+            handler=1,
+            directors=("director",),
+            source_works=("actual-source",),
+            identities=[],
+            source_event="legacy-context-source",
+        )
+    )
+    alias = ActorRef(kind="handler", entity="1", incarnation="legacy-context")
+    assert rules.same_handler_body(canon, alias)
+    prepared, identity = required(canon)
+    result = rules.apply(prepared, identity, "death", "Actual death", "actual-death")
+    result.handler_persona = HandlerPersona(
+        id="new-body",
+        owner=1,
+        appointment="actual-appointment",
+        draft=Draft(name="New Handler"),
+        source_event="new-source",
+    )
+    assert not rules.same_handler_body(result, alias)
 
 
 def required(canon, *, occurrence="actual-damage"):

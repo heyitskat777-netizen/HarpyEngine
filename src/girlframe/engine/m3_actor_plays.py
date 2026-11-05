@@ -1,5 +1,6 @@
-"""Actual Handler-in-Director-presence Girl rules, without a proxy Pilot sheet."""
+"""Actual Handler/Harpy basic resources, without proxy Pilot sheets."""
 
+from collections.abc import Sequence
 from uuid import uuid4
 
 from girlframe.engine.m2 import (
@@ -9,10 +10,24 @@ from girlframe.engine.m2 import (
     GameState,
     IdentityState,
     TagState,
-    pair_key,
 )
 from girlframe.engine.m3_actor_state import ActorRef, ProfileBinding
 from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_harpy_defeat import harpy
+from girlframe.engine.m3_harpy_defeat import update as update_harpy
+from girlframe.engine.m3_void_state import HarpyIdentity, HarpyTag
+
+
+def tags(state: GameState, actor: ActorRef) -> Sequence[TagState | HarpyTag]:
+    if actor.kind == "external_pilot":
+        return harpy(state, actor).tags
+    context(state, actor)
+    return state.handler_tags
+
+
+def _put_harpy(state: GameState, actor: ActorRef, **values: object) -> None:
+    changed = update_harpy(state, actor, **values)
+    state.harpy_states, state.native_harpies = changed.harpy_states, changed.native_harpies
 
 
 def context(state: GameState, actor: ActorRef) -> DirectorContext:
@@ -26,7 +41,18 @@ def context(state: GameState, actor: ActorRef) -> DirectorContext:
     return value
 
 
-def keep(level: str, answer: ChoiceAnswer) -> dict[str, list[str]]:
+def keep(level: str, answer: ChoiceAnswer, *, harpy_mode: bool = False) -> dict[str, list[str]]:
+    if harpy_mode:
+        if "sexy" in (*answer.options, *answer.denied):
+            raise ValueError("The Harpy trait is beautiful, replacing sexy")
+        normalized = answer.model_copy(
+            update={
+                "options": tuple("sexy" if x == "beautiful" else x for x in answer.options),
+                "denied": tuple("sexy" if x == "beautiful" else x for x in answer.denied),
+            }
+        )
+        result = keep(level, normalized)
+        return {k: ["beautiful" if x == "sexy" else x for x in v] for k, v in result.items()}
     positives = set(answer.options)
     negatives = set(answer.denied)
     if answer.fields or answer.flag is not None or answer.number is not None or answer.member:
@@ -52,6 +78,23 @@ def keep(level: str, answer: ChoiceAnswer) -> dict[str, list[str]]:
 
 
 def add_tag(state: GameState, actor: ActorRef, label: str, participants: tuple[int, ...]) -> None:
+    if actor.kind == "external_pilot":
+        actual_harpy = harpy(state, actor)
+        _put_harpy(
+            state,
+            actor,
+            tags=(
+                *actual_harpy.tags,
+                HarpyTag(
+                    id=str(uuid4()),
+                    label=label.strip(),
+                    giver=actual_harpy.controller,
+                    giver_ref=actor,
+                    observers=participants,
+                ),
+            ),
+        )
+        return
     actual = context(state, actor)
     state.handler_tags.append(
         TagState(id=str(uuid4()), label=label.strip(), giver=actual.handler, observers=participants)
@@ -59,10 +102,34 @@ def add_tag(state: GameState, actor: ActorRef, label: str, participants: tuple[i
     actual.revision += 1
 
 
+def harpy_keep(
+    state: GameState, actor: ActorRef, level: str, answer: ChoiceAnswer
+) -> dict[str, list[str]]:
+    body = harpy(state, actor)
+    owned = set(getattr(body, "plays", ()))
+    experienced = "girl.oldgen.elder-bitch" in owned
+    if answer.flag is not None and not experienced:
+        raise ValueError("This actual Harpy does not own the experienced trait rule")
+    selected = answer.model_copy(update={"flag": None})
+    result = keep(level, selected, harpy_mode=True)
+    automatic = set()
+    if "girl.princess.objectively-beautiful" in owned:
+        automatic.add("beautiful")
+    if "girl.alpha.itching-for-a-fight" in owned:
+        automatic.add("vicious")
+    if automatic & set(answer.denied):
+        raise ValueError("An actual retained automatic trait cannot be denied")
+    result["positive"] = sorted(set(result["positive"]) | automatic)
+    result["negative"] = sorted(set(result["negative"]) - automatic)
+    if experienced and answer.flag is True:
+        result["positive"].append("experienced")
+    return result
+
+
 def proposal(
     state: GameState,
     target: ActorRef,
-    proposer: ActorRef,
+    proposer: ActorRef | None,
     controller: int,
     bindings: tuple[ProfileBinding, ...],
     tag_id: str,
@@ -70,11 +137,15 @@ def proposal(
     direction: int,
     account: str,
 ) -> int:
-    context(state, target)
-    actual = resolve(state, proposer, bindings, require_current_profile=False)
-    if actual.controller != controller or controller == int(target.entity):
+    actual_target = resolve(state, target, bindings, require_current_profile=False)
+    actual = resolve(state, proposer, bindings, require_current_profile=False) if proposer else None
+    if (
+        (actual is not None and actual.controller != controller)
+        or (actual is None and controller != state.handler)
+        or controller == actual_target.controller
+    ):
         raise ValueError("Only another human can propose a Tag through their actual role")
-    tag = next((x for x in state.handler_tags if x.id == tag_id), None)
+    tag = next((x for x in tags(state, target) if x.id == tag_id), None)
     if (
         tag is None
         or controller not in tag.observers
@@ -83,28 +154,79 @@ def proposal(
         or not account.strip()
     ):
         raise ValueError("Propose one observed, unused Tag with a direction and relevance")
-    if proposer.kind == "pilot":
-        depth = state.bonds.get(pair_key(controller, int(target.entity)), 0)
-    elif proposer.kind == "npc" and state.world:
-        npc = next(x for x in state.world.npcs if x.id == proposer.entity)
-        depth = npc.bonds.get("handler:" + target.entity, 0)
-    else:
-        raise ValueError("UNSUPPORTED_RULE: this role's actual Bond port is not implemented")
+    from girlframe.engine.m3_actor_bonds import bond_ref
+    from girlframe.engine.m3_actor_bonds import depth as actual_depth
+
+    depth = (
+        actual_depth(state, bond_ref(state, target), bond_ref(state, proposer)) if proposer else 0
+    )
     return direction * (2 if depth else 1)
 
 
+def defer_rejection(state: GameState, actor: ActorRef, tag_id: str) -> None:
+    if actor.kind == "external_pilot":
+        from girlframe.engine.m3_tag_permissions import can_reject
+
+        if not can_reject(state, actor, tag_id):
+            raise ValueError("Original locker consent is required before choosing rejection")
+    tag = next((x for x in tags(state, actor) if x.id == tag_id), None)
+    if tag is None or not tag.marked:
+        raise ValueError("Choose the actual marked Tag to reject")
+    if actor.kind == "external_pilot":
+        _put_harpy(
+            state,
+            actor,
+            tags=tuple(
+                x.model_copy(update={"rejection_pending": True}) if x.id == tag_id else x
+                for x in tags(state, actor)
+            ),
+        )
+    else:
+        tag.rejection_pending = True
+
+
 def mark(state: GameState, target: ActorRef, tag_id: str, scene: str) -> bool:
-    actual = context(state, target)
-    tag = next((x for x in state.handler_tags if x.id == tag_id), None)
+    tag = next((x for x in tags(state, target) if x.id == tag_id), None)
     if tag is None or tag.scene_used == scene:
         raise ValueError("The proposed Tag changed or was already used in this scene")
     was_marked = tag.marked
+    if target.kind == "external_pilot":
+        _put_harpy(
+            state,
+            target,
+            tags=tuple(
+                x.model_copy(update={"marked": True, "scene_used": scene}) if x.id == tag_id else x
+                for x in tags(state, target)
+            ),
+        )
+        return was_marked
+    actual = context(state, target)
     tag.marked, tag.scene_used = True, scene
     actual.revision += 1
     return was_marked
 
 
 def embrace(state: GameState, actor: ActorRef, tag_id: str, replaced: tuple[str, ...]) -> None:
+    if actor.kind == "external_pilot":
+        body = harpy(state, actor)
+        harpy_tag = next((x for x in body.tags if x.id == tag_id and x.marked), None)
+        count = 1 if len(body.identities) >= 4 else 0
+        if (
+            harpy_tag is None
+            or len(replaced) != count
+            or not set(replaced) <= {x.id for x in body.identities if not x.protected}
+        ):
+            raise ValueError("Embrace the actual marked Tag with any required ordinary replacement")
+        _put_harpy(
+            state,
+            actor,
+            identities=(
+                *tuple(x for x in body.identities if x.id not in replaced),
+                HarpyIdentity(id=str(uuid4()), name=harpy_tag.label),
+            ),
+            tags=tuple(x for x in body.tags if x.id != harpy_tag.id),
+        )
+        return
     actual = context(state, actor)
     tag = next((x for x in state.handler_tags if x.id == tag_id), None)
     if tag is None or not tag.marked:
@@ -120,6 +242,16 @@ def embrace(state: GameState, actor: ActorRef, tag_id: str, replaced: tuple[str,
 
 
 def reject(state: GameState, actor: ActorRef, tag_id: str) -> None:
+    if actor.kind == "external_pilot":
+        from girlframe.engine.m3_tag_permissions import can_reject
+
+        if not can_reject(state, actor, tag_id):
+            raise ValueError("The original Tag locker must grant permission before rejection")
+        body = harpy(state, actor)
+        if not any(x.id == tag_id and x.rejection_pending for x in body.tags):
+            raise ValueError("Take the actual owed action to reject this Harpy Tag")
+        _put_harpy(state, actor, tags=tuple(x for x in body.tags if x.id != tag_id))
+        return
     actual = context(state, actor)
     tag = next((x for x in state.handler_tags if x.id == tag_id and x.rejection_pending), None)
     if tag is None:

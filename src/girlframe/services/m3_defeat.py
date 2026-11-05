@@ -90,17 +90,23 @@ def prepare(
         body = json.loads(source_work["body_json"])
         if source_work["owner_id"] != actor.entity or body.get("character") != actor.incarnation:
             raise WorkflowError("This Defeat belongs to a different original character.")
+        battle_damage = isinstance(body.get("requirement"), dict)
+        if battle_damage:
+            from girlframe.services.m3_battle import source_parent_for_defeat
+
+            if source_parent_for_defeat(game, c, source_work, actor) != prepared.parent:
+                raise WorkflowError("Use the actual original damage source for this Defeat.")
         if prepared.parent:
             from girlframe.services.m3_beneath import discipline_action
 
-            if discipline_action(game, c, source_work) != prepared.parent:
+            if not battle_damage and discipline_action(game, c, source_work) != prepared.parent:
                 raise WorkflowError("Use the actual held source Play for this Defeat.")
             parent = game.action(c, prepared.parent)
             source_request = next(
                 (
                     x
                     for x in game.pending(c, parent["id"])
-                    if x["kind"] == "required_defeat"
+                    if x["kind"] in ("required_defeat", "battle_defeat")
                     and x["actor_id"] == actor.entity
                     and json.loads(x["body_json"]).get("work_id") == source_work["id"]
                 ),
@@ -555,9 +561,20 @@ def synchronize(
                 body_json=json.dumps(body, sort_keys=True),
             )
         )
-        from girlframe.services.m3_beneath import discipline_finished
+        if isinstance(body.get("requirement"), dict):
+            from girlframe.services.m3_battle import complete_damage_work, source_parent_for_defeat
 
-        discipline_finished(game, c, viewer, key, row)
+            source_parent_for_defeat(
+                game,
+                c,
+                row,
+                ActorRef.model_validate_json(json.dumps(action["data"]["defeat"]["actor"])),
+            )
+            complete_damage_work(game, c, row, event, viewer, key)
+        else:
+            from girlframe.services.m3_beneath import discipline_finished
+
+            discipline_finished(game, c, viewer, key, row)
 
 
 def complete_void_continuation(

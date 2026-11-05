@@ -58,6 +58,8 @@ def tag_giver_ref(state: GameState, tag: TagState) -> ActorRef:
     """Recover the actual setter, including an ended original rather than its replacement."""
     from girlframe.engine.m3_actor_bonds import current_ref
 
+    if tag.gm_setter_appointment is not None:
+        raise ValueError("An OOC GM setter has no fictional actor or Bond authority")
     if tag.giver_actor is not None:
         return tag.giver_actor
     if tag.giver_character is not None:
@@ -68,7 +70,14 @@ def tag_giver_ref(state: GameState, tag: TagState) -> ActorRef:
     return current_ref(state, tag.giver)
 
 
-def stamp_tag_givers(previous: GameState, original: GameState, source_event: str) -> GameState:
+def stamp_tag_givers(
+    previous: GameState,
+    original: GameState,
+    source_event: str,
+    *,
+    gm_principal: tuple[int, str] | None = None,
+    gm_grants: dict[str, tuple[int, str]] | None = None,
+) -> GameState:
     """Bind only newly created Tags; existing historical setter evidence stays unchanged."""
     from girlframe.engine.m3_actor_bonds import current_ref
 
@@ -86,11 +95,36 @@ def stamp_tag_givers(previous: GameState, original: GameState, source_event: str
     for uid, character, tag in targets:
         saved = before.get((uid, character, tag.id))
         if saved is not None:
+            if (saved.gm_setter_appointment, saved.gm_setter_event, saved.gm_setter_grant) != (
+                tag.gm_setter_appointment,
+                tag.gm_setter_event,
+                tag.gm_setter_grant,
+            ):
+                raise ValueError("An existing Tag cannot silently change its actual OOC setter")
             if saved.giver != tag.giver:
                 raise ValueError("An existing Tag cannot silently change its numeric setter")
             if saved.giver_actor is not None and tag.giver_actor != saved.giver_actor:
                 raise ValueError("An existing Tag cannot silently change its actual setter")
             continue
+        if tag.gm_setter_appointment is not None:
+            if (
+                (
+                    (gm_grants or {}).get(tag.gm_setter_grant)
+                    if tag.gm_setter_grant is not None
+                    else gm_principal
+                )
+                != (tag.giver, tag.gm_setter_appointment)
+                or tag.giver_actor is not None
+                or tag.giver_character is not None
+                or tag.gm_setter_event not in (None, source_event)
+            ):
+                raise ValueError(
+                    "New OOC Tags require the actual event actor's authenticated GM appointment"
+                )
+            tag.gm_setter_event = source_event
+            continue
+        if tag.gm_setter_event is not None:
+            raise ValueError("An OOC setter event requires its real appointment principal")
         if tag.giver_actor is None:
             tag.giver_actor = current_ref(state, tag.giver)
         if tag.giver_actor.kind in ("pilot", "handler") and tag.giver_actor.entity != str(
@@ -242,9 +276,13 @@ def end(
             if owner in tag.observers:
                 observation.append(dict(owner=uid, tag=tag.id, observers=list(tag.observers)))
                 tag.observers = tuple(x for x in tag.observers if x != owner)
-            if tag.giver == owner and tag.giver_character is None:
+            if (
+                tag.giver == owner
+                and tag.giver_character is None
+                and tag.gm_setter_appointment is None
+            ):
                 tag.giver_character = actor.incarnation
-            if tag.giver == owner and tag.giver_actor is None:
+            if tag.giver == owner and tag.giver_actor is None and tag.gm_setter_appointment is None:
                 tag.giver_actor = actor
         if len(related) > 2:
             incoming.append(related)
@@ -252,9 +290,9 @@ def end(
             other.revision += 1
     links["incoming"], links["tag_observation"] = incoming, observation
     for tag in state.handler_tags:
-        if tag.giver == owner and tag.giver_character is None:
+        if tag.giver == owner and tag.giver_character is None and tag.gm_setter_appointment is None:
             tag.giver_character = actor.incarnation
-        if tag.giver == owner and tag.giver_actor is None:
+        if tag.giver == owner and tag.giver_actor is None and tag.gm_setter_appointment is None:
             tag.giver_actor = actor
         tag.observers = tuple(x for x in tag.observers if x != owner)
     if state.world:

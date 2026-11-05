@@ -36,6 +36,9 @@ class HarpyTag(Model):
     giver: Snowflake
     giver_character: str | None = None
     giver_ref: ActorRef | None = None
+    gm_setter_appointment: str | None = None
+    gm_setter_event: str | None = None
+    gm_setter_grant: str | None = None
     observers: tuple[Snowflake, ...] = ()
     marked: bool = False
     scene_used: str | None = None
@@ -57,6 +60,12 @@ class HarpyState(Model):
     cell: Cell | None
     frame_cell: Cell | None
     linked: bool = True
+    frame_shutdown: bool = False
+    body_incapacitated: bool = False
+    subsumed: bool = False
+    vitals_active: bool = True
+    physical_source_event: str | None = None
+    condition_event: str | None = None
     heat: int = Field(default=0, ge=0)
     permissions: int = Field(default=0, ge=0)
     assets: tuple[HarpyAsset, ...]

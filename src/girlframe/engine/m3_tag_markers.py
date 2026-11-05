@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import Field, model_validator
 
 from girlframe.engine.m2 import GameState
-from girlframe.engine.m3_actor_bonds import depth
+from girlframe.engine.m3_actor_bonds import bond_ref, depth
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, Model, ProfileBinding, SceneCast
 from girlframe.engine.m3_actors import resolve
 
@@ -32,7 +32,7 @@ class Marker(Model):
 
 
 def make_marker(state: GameState, view: ActorView, binding: str, roller: ActorRef) -> Marker:
-    amount = depth(state, roller, view.ref)
+    amount = depth(state, bond_ref(state, roller), bond_ref(state, view.ref))
     bonus = 2 if amount == 1 else int(state.intense_tag_bonus or 1) if amount == 2 else 1
     return Marker(
         actor=view.ref,
@@ -64,6 +64,12 @@ def markers(
     handler: ActorRef | None,
 ) -> tuple[Marker, ...]:
     result: list[Marker] = []
+    if handler is not None:
+        context = next(
+            (x for x in state.director_contexts if x.active and x.handler == state.handler), None
+        )
+        if context is not None:
+            handler = ActorRef(kind="handler", entity=handler.entity, incarnation=context.id)
     rolling_human = resolve(state, roller, bindings, require_current_profile=False).controller
     for role in cast.roles:
         if role.controller != controller:
@@ -79,7 +85,15 @@ def markers(
         and controller == state.handler
         and cast.facilitator_source is not None
         and controller != rolling_human
-        and (handler is None or not any(x.actor == handler for x in result))
+        and (
+            handler is None
+            or not any(
+                x.actor is not None
+                and x.actor.kind == "handler"
+                and x.actor.entity == handler.entity
+                for x in result
+            )
+        )
     ):
         if handler is None:
             result.append(
@@ -98,7 +112,11 @@ def markers(
 
 
 def modifier(state: GameState, roller: ActorRef, marker: Marker, direction: Literal[-1, 1]) -> int:
-    amount = depth(state, roller, marker.actor) if marker.actor is not None else 0
+    amount = (
+        depth(state, bond_ref(state, roller), bond_ref(state, marker.actor))
+        if marker.actor is not None
+        else 0
+    )
     bonus = 2 if amount == 1 else int(state.intense_tag_bonus or 1) if amount == 2 else 1
     if amount != marker.bond_depth or bonus != marker.bonus:
         raise ValueError("STALE_TAG_MARKER: review the actual changed source Bond and modifier")

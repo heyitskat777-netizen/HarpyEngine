@@ -771,6 +771,9 @@ class CycleService:
                 raise WorkflowError("Initialize the actual world and Strain before period end.")
             followups: tuple[world_rules.Followup, ...] = ()
             if identity not in updated.world.completed_off_duty:
+                from girlframe.services.m3_world import require_world_advancement
+
+                require_world_advancement(updated)
                 result = world_rules.end_off_duty(updated.world, identity, movements, changes)
                 updated.world = result.world
                 followups = result.followups

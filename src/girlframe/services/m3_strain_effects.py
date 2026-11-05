@@ -206,6 +206,13 @@ class EffectService:
                     rng_source=self.selection_source,
                     resource=choice.missing_resource,
                 )
+            if (
+                choice.rule_id in {"strain.void.low.4.1", "strain.void.low.5.1"}
+                and choice.victim is not None
+            ):
+                from girlframe.services.m3_world import require_onstage
+
+                require_onstage(state, ActorRef(kind="npc", entity=choice.victim))
             updated = rules.apply(
                 state,
                 choice,

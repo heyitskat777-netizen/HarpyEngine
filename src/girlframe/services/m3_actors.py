@@ -113,6 +113,8 @@ class ActorService:
                         "label": actor.label,
                         "kind": ref.kind,
                         "rules": actor.rules,
+                        "girl": actor.girl,
+                        "heat": actor.heat,
                     }
                 )
             raw = _raw_state(c, self.store.campaign_id)

@@ -104,7 +104,7 @@ def verify(game: "GameService", c: Connection, state: GameState, required: Requi
     from girlframe.services.m3_medical import MedicalService
 
     gm, appointment = MedicalService(game.store)._handler(c)
-    if gm != required.controller or (
+    if (required.adjudicator is None and gm != required.controller) or (
         required.appointment is not None and appointment != required.appointment
     ):
         raise WorkflowError("Recover the actual appointed human GM for this manual decision.")
@@ -131,11 +131,36 @@ def verify(game: "GameService", c: Connection, state: GameState, required: Requi
     if (
         surgery is None
         or surgery.phase != "applied"
-        or surgery.subject != required.actor
+        or surgery.subject
+        != (
+            next(x.origin for x in state.harpy_states if x.id == required.actor.entity)
+            if required.play == "harpy_defeat"
+            else required.actor
+        )
         or (event.actor_id != surgery.inflictor.entity)
     ):
         raise WorkflowError("The actual source surgery and original patient have changed.")
-    if required.source_kind == "defeat_work":
+    if required.source_kind == "harpy_defeat_work":
+        from girlframe.services.m3_harpy_defeat import HarpyDefeatService
+
+        service = HarpyDefeatService(game.store, game=game)
+        harpy_row, _, actor = service._source(c, required.source_id)
+        declarations = [
+            x
+            for x in state.harpy_defeat_declarations
+            if x.work == required.source_id and x.actor == actor
+        ]
+        if (
+            harpy_row["revision"] != required.source_revision
+            or actor != required.actor
+            or len(declarations) != 1
+            or declarations[0].gm_controller != required.controller
+            or declarations[0].adjudicator != required.adjudicator
+            or declarations[0].appointment != required.appointment
+        ):
+            raise WorkflowError("Recover the actual original Harpy's mandatory source and judge.")
+        service._current(c, game.action(c, declarations[0].id), unrolled=True)
+    elif required.source_kind == "defeat_work":
         from girlframe.services.m3_defeat import work
 
         work_row = work(game, c, required.source_id)
@@ -184,7 +209,10 @@ def reserve_request(
     required = Required.model_validate_json(json.dumps(action["data"]["adjudication"]))
     state = load_state(c, game.store.campaign_id)
     verify(game, c, state, required)
-    if action["actor_id"] != str(viewer.user_id) or required.actor.entity != action["actor_id"]:
+    if (
+        action["actor_id"] != str(viewer.user_id)
+        or str(required.patient_controller) != action["actor_id"]
+    ):
         raise WorkflowError("Only the actual original Girl resumes this mandatory Play.")
     existing = next(
         (x for x in game.pending(c, action["id"]) if x["kind"] == "manual_adjudication"), None
@@ -224,6 +252,12 @@ def written_receipt(
     key: str,
 ) -> dict[str, Any]:
     """Actual Handler-owned choice, no RNG/resource spend, then ordinary Tag decisions."""
+    if action["data"].get("harpy_defeat") is not None:
+        from girlframe.services.m3_harpy_defeat import HarpyDefeatService
+
+        return HarpyDefeatService(game.store, game=game).manual_receipt(
+            c, viewer, key, action, total, reason, request_id
+        )
     HandlerService(game.store).authorize(c, viewer)
     game.unpaused(c)
     required = Required.model_validate_json(json.dumps(action["data"]["adjudication"]))
@@ -376,7 +410,7 @@ class AdjudicationService:
             raise WorkflowError("This actual manual adjudication request is unavailable.")
         action = self.game.action(c, row["action_id"])
         required = Required.model_validate_json(json.dumps(action["data"]["adjudication"]))
-        if viewer.user_id not in (required.controller, int(required.actor.entity)):
+        if viewer.user_id not in (required.controller, required.patient_controller):
             raise WorkflowError("This manual decision belongs to its actual Handler and Girl.")
         if row["state"] == "pending":
             verify(self.game, c, load_state(c, self.store.campaign_id), required)
@@ -401,13 +435,26 @@ class AdjudicationService:
             action, row, required = self._get(c, viewer, identity)
             from girlframe.engine.m3_careers import original_sheet
 
-            original = original_sheet(load_state(c, self.store.campaign_id), required.actor)
+            state = load_state(c, self.store.campaign_id)
+            if required.play == "harpy_defeat":
+                from girlframe.engine.m3_actors import resolve
+                from girlframe.services.m3_actors import profiles
+
+                patient = resolve(
+                    state,
+                    required.actor,
+                    profiles(c, self.store.campaign_id),
+                    require_alive=False,
+                    require_current_profile=False,
+                ).label
+            else:
+                patient = original_sheet(state, required.actor).callsign
             return dict(
                 id=identity,
                 action_id=action["id"],
                 revision=action["revision"],
                 play=required.play,
-                patient=original.callsign,
+                patient=patient,
                 can_act=row["state"] == "pending" and viewer.user_id == required.controller,
                 receipt=action["data"].get("receipt"),
             )
@@ -417,8 +464,11 @@ class AdjudicationService:
     ) -> dict[str, Any]:
         def authorize(c: Connection) -> None:
             self.access.authorize(c, viewer, "plays")
-            HandlerService(self.store).authorize(c, viewer)
-            self._get(c, viewer, identity)
+            _, _, required = self._get(c, viewer, identity)
+            if required.play != "harpy_defeat":
+                HandlerService(self.store).authorize(c, viewer)
+            elif viewer.user_id != required.controller:
+                raise WorkflowError("Only this source's actual human adjudicator can decide.")
 
         def operation(c: Connection) -> dict[str, Any]:
             action, row, _ = self._get(c, viewer, identity)

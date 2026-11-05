@@ -49,6 +49,52 @@ def identities(values: Any) -> tuple[IdentityView, ...]:
     )
 
 
+def harpy_resource_view(state: GameState, ref: ActorRef) -> tuple[tuple[AssetView, ...], str]:
+    from girlframe.engine.m3_harpy_resources import assets as actual_assets
+    from girlframe.engine.m3_items import actual_asset, same_holder
+
+    values = actual_assets(state, ref)
+    source = dict(
+        assets=[x.model_dump(mode="json") for x in values],
+        carried=[
+            x.model_dump(mode="json")
+            for x in state.held_items
+            if same_holder(state, x.holder, ref) and actual_asset(state, x) is not None
+        ],
+    )
+    return assets(values), hashlib.sha256(json.dumps(source, sort_keys=True).encode()).hexdigest()
+
+
+def physical_cell(
+    state: GameState,
+    ref: ActorRef,
+    profiles: tuple[ProfileBinding, ...],
+    *,
+    require_alive: bool = True,
+    _physical_seen: tuple[ActorRef, ...] = (),
+) -> tuple[int, int] | None:
+    """Read a real body's pose without granting a stored alias its current Play role."""
+    actual = ref
+    if ref.kind == "handler":
+        from girlframe.engine.m3_handler_consequences import same_handler_body
+
+        if not same_handler_body(state, ref):
+            raise ValueError("This stored Handler body cannot refer to its replacement")
+        contexts = [x for x in state.director_contexts if x.active and x.handler == state.handler]
+        if len(contexts) > 1:
+            raise ValueError("Recover the inconsistent active Handler context")
+        if contexts:
+            actual = ActorRef(kind="handler", entity=ref.entity, incarnation=contexts[0].id)
+    return resolve(
+        state,
+        actual,
+        profiles,
+        require_alive=require_alive,
+        require_current_profile=False,
+        _physical_seen=_physical_seen,
+    ).cell
+
+
 def frame_position(
     state: GameState,
     owner: ActorRef,
@@ -57,6 +103,27 @@ def frame_position(
     fallback: tuple[int, int] | None = None,
 ) -> tuple[int, int] | None:
     """Follow one actual Frame body through parking or transformation, never its controller."""
+    if owner.kind == "gorgon" and any(
+        x.state == "offstage" and x.actor == owner for x in state.harpy_travels
+    ):
+        return None
+    if any(
+        x.state == "offstage"
+        and x.travels_frame
+        and x.frame_instance == instance
+        and (
+            x.actor == owner
+            or any(
+                h.origin == owner
+                and h.id == x.actor.entity
+                and h.frame_instance == instance
+                and x.actor.kind == "external_pilot"
+                for h in state.harpy_states
+            )
+        )
+        for x in state.harpy_travels
+    ):
+        return None
     transformed = next(
         (
             x
@@ -66,6 +133,10 @@ def frame_position(
         None,
     )
     if transformed is not None:
+        if any(
+            x.state == "offstage" and x.actor == transformed.gorgon for x in state.harpy_travels
+        ):
+            return None
         body = (
             next((x for x in state.world.gorgons if x.id == transformed.gorgon.entity), None)
             if state.world and transformed.gorgon
@@ -83,6 +154,23 @@ def frame_position(
         ):
             return None
         return harpy.frame_cell
+    native = next(
+        (
+            x
+            for x in state.native_harpies
+            if owner.kind == "external_pilot"
+            and x.id == owner.entity
+            and x.frame_instance == instance
+        ),
+        None,
+    )
+    if native is not None:
+        if native.linked and any(
+            (x.active and owner in (x.traveler, x.supervisor)) or owner in x.offstage_refs
+            for x in state.escort_journeys
+        ):
+            return None
+        return native.frame_cell
     placed = next(
         (x for x in state.placements if x.actor == owner and x.frame_instance == instance), None
     )
@@ -103,13 +191,74 @@ def resolve(
     require_current_profile: bool = True,
     _physical_seen: tuple[ActorRef, ...] = (),
 ) -> ActorView:
+    """Resolve resources once, then apply actual reviewed unknown-position travel."""
+    from girlframe.engine.m3_harpy_defeat import offstage_travel
+
+    actual = _resolve(
+        state,
+        ref,
+        profiles,
+        require_alive=require_alive,
+        require_current_profile=require_current_profile,
+        _physical_seen=_physical_seen,
+    )
+    travel = offstage_travel(state, ref)
+    if travel is None:
+        return actual
+    from girlframe.engine.m3_handler_consequences import same_handler_body
+
+    def same_body(candidate: ActorRef) -> bool:
+        return candidate == ref or (
+            candidate.kind == ref.kind == "handler"
+            and same_handler_body(state, candidate)
+            and same_handler_body(state, ref)
+        )
+
+    if travel.controller != actual.controller or any(
+        x.active and any(same_body(y) for y in (x.traveler, x.supervisor))
+        for x in state.escort_journeys
+    ):
+        raise ValueError("Recover this original body's inconsistent real travel sources")
+    return actual.model_copy(
+        update={
+            "cell": None,
+            "frame_cell": None if travel.travels_frame else actual.frame_cell,
+            "offstage_source": travel.id,
+            "position_sha256": fingerprint(travel),
+            "source_sha256": hashlib.sha256(
+                (actual.source_sha256 + fingerprint(travel)).encode()
+            ).hexdigest(),
+        }
+    )
+
+
+def _resolve(
+    state: GameState,
+    ref: ActorRef,
+    profiles: tuple[ProfileBinding, ...],
+    *,
+    require_alive: bool = True,
+    require_current_profile: bool = True,
+    _physical_seen: tuple[ActorRef, ...] = (),
+) -> ActorView:
     ref = ActorRef.model_validate_json(ref.model_dump_json())
     if ref in _physical_seen:
         raise ValueError("Recover the actual inconsistent physical custody cycle")
+
+    def same_physical_role(candidate: ActorRef) -> bool:
+        if candidate == ref:
+            return True
+        if ref.kind != "handler" or candidate.kind != "handler":
+            return False
+        from girlframe.engine.m3_handler_consequences import same_handler_body
+
+        return same_handler_body(state, ref) and same_handler_body(state, candidate)
+
     journeys = [
         x
         for x in state.escort_journeys
-        if (x.active and ref in (x.traveler, x.supervisor)) or ref in x.offstage_refs
+        if (x.active and any(same_physical_role(y) for y in (x.traveler, x.supervisor)))
+        or any(same_physical_role(y) for y in x.offstage_refs)
     ]
     if len(journeys) > 1:
         raise ValueError("Recover the actual actor's inconsistent supervised journey")
@@ -119,7 +268,7 @@ def resolve(
             x
             for x in reversed(state.facts)
             if x.get("kind") == "recorded_handler_recovery_position"
-            and x.get("actor") == ref.model_dump_json()
+            and same_physical_role(ActorRef.model_validate_json(x["actor"]))
         ),
         None,
     )
@@ -188,16 +337,29 @@ def resolve(
             None,
         )
         if hold is not None and hold.guardian is not None:
-            guardian = resolve(
+            guardian_cell = physical_cell(
                 state,
                 hold.guardian,
                 profiles,
                 require_alive=require_alive,
-                require_current_profile=False,
                 _physical_seen=(*_physical_seen, ref),
             )
-            if guardian.cell is not None:
-                cell = guardian.cell
+            from girlframe.engine.m3_harpy_defeat import offstage_travel
+
+            moved_offstage = (
+                offstage_travel(state, hold.guardian) is not None
+                or any(
+                    (x.active and hold.guardian in (x.traveler, x.supervisor))
+                    or hold.guardian in x.offstage_refs
+                    for x in state.escort_journeys
+                )
+                or any(
+                    x.escaped and hold.guardian in (x.actor, *x.departed)
+                    for x in state.harpy_defeats
+                )
+            )
+            if guardian_cell is not None or moved_offstage:
+                cell = guardian_cell
         return ActorView(
             ref=ref,
             controller=uid,
@@ -271,11 +433,21 @@ def resolve(
                     ).encode()
                 ).hexdigest(),
             )
-        if ref.incarnation is not None and (
-            state.handler_persona is None or ref.incarnation != state.handler_persona.id
+        context_alias = next(
+            (
+                x
+                for x in state.director_contexts
+                if not x.active and x.id == ref.incarnation and x.body_actor == body
+            ),
+            None,
+        )
+        if (
+            context_alias is None
+            and ref.incarnation is not None
+            and (state.handler_persona is None or ref.incarnation != state.handler_persona.id)
         ):
             raise ValueError("This old Director context no longer grants Girl-rule authority")
-        if state.handler_archives and ref != body:
+        if state.handler_archives and ref != body and context_alias is None:
             raise ValueError("This original Handler body does not identify the new persona")
         return ActorView(
             ref=ref,
@@ -305,6 +477,7 @@ def resolve(
     if harpy is not None:
         if require_alive and not harpy.alive:
             raise ValueError("The actual original Harpy is no longer alive")
+        resource_view, resource_source = harpy_resource_view(state, ref)
         return ActorView(
             ref=ref,
             controller=harpy.controller,
@@ -315,18 +488,25 @@ def resolve(
             frame="harpy",
             frame_instance=harpy.frame_instance,
             heat=harpy.heat,
-            assets=assets(harpy.assets),
+            assets=resource_view,
             identities=identities(harpy.identities),
             cell=None if journey else harpy.cell,
             vessel_id=harpy.body_vessel,
             frame_cell=None if journey is not None and harpy.linked else harpy.frame_cell,
             inside_frame=harpy.linked,
-            piloting=harpy.linked and harpy.custody == "free",
+            piloting=harpy.linked
+            and harpy.custody == "free"
+            and not harpy.frame_shutdown
+            and not harpy.body_incapacitated,
+            subsumed=harpy.subsumed,
+            vitals_active=harpy.vitals_active,
             occupied_frame_instance=harpy.frame_instance if harpy.linked else None,
             core_exposed=harpy.exposed,
             custody="supervised_visit:" + journey.id if journey else harpy.custody,
             position_sha256=fingerprint(harpy),
-            source_sha256=fingerprint(harpy),
+            source_sha256=hashlib.sha256(
+                (fingerprint(harpy) + resource_source).encode()
+            ).hexdigest(),
         )
     world = state.world
     if world is None:
@@ -366,6 +546,43 @@ def resolve(
         pilot = next((x for x in world.pilots if x.id == ref.entity), None)
         if pilot is None or (require_alive and not pilot.alive):
             raise ValueError("Choose a living actual external Pilot")
+        native = next((x for x in state.native_harpies if x.id == ref.entity), None)
+        if native is not None:
+            from girlframe.engine.m3_harpy_defeat import harpy as actual_harpy
+
+            actual_harpy(state, ref)
+            resource_view, resource_source = harpy_resource_view(state, ref)
+            source = hashlib.sha256(
+                (fingerprint(pilot) + fingerprint(native) + resource_source).encode()
+            ).hexdigest()
+            return ActorView(
+                ref=ref,
+                controller=pilot.controller,
+                label=pilot.name,
+                alive=pilot.alive,
+                rules="external_pilot",
+                girl="harpy",
+                frame="harpy",
+                frame_instance=native.frame_instance,
+                heat=native.heat,
+                assets=resource_view,
+                identities=identities(native.identities),
+                cell=None if journey else native.cell,
+                vessel_id=native.body_vessel,
+                frame_cell=None if journey and native.linked else native.frame_cell,
+                inside_frame=native.linked,
+                piloting=native.linked
+                and native.custody == "free"
+                and not native.frame_shutdown
+                and not native.body_incapacitated,
+                subsumed=native.subsumed,
+                vitals_active=native.vitals_active,
+                occupied_frame_instance=native.frame_instance if native.linked else None,
+                core_exposed=pilot.exposed,
+                custody="supervised_visit:" + journey.id if journey else native.custody,
+                position_sha256=fingerprint(native),
+                source_sha256=source,
+            )
         return ActorView(
             ref=ref,
             controller=pilot.controller,

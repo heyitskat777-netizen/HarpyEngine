@@ -51,6 +51,10 @@ class PunishmentService:
             "punishment_frame_loss",
         ):
             raise WorkflowError("This discipline task is unavailable.")
+        if row["kind"] == "punishment" and json.loads(row["body_json"]).get("return_source_work"):
+            from girlframe.services.m3_debts import check_returned
+
+            check_returned(c, self.store, dict(row))
         return dict(row)
 
     def _body(self, row: dict[str, Any]) -> dict[str, Any]:
@@ -202,6 +206,27 @@ class PunishmentService:
         ):
             return [row]
         if row["off_duty_id"] is not None:
+            if self._body(row).get("return_source_work") and self._body(row).get("reason") in (
+                "mission_failure",
+                "dog_mission_end",
+            ):
+                source = self._body(row)
+                result = [
+                    item
+                    for item in OffDutyService(self.missions)._pending(c, row["off_duty_id"])
+                    if item["kind"] == "punishment"
+                    and item["subject_id"] == row["subject_id"]
+                    and item["owner_id"] == row["owner_id"]
+                    and self._body(item).get("reason") in ("mission_failure", "dog_mission_end")
+                    and self._body(item).get("original_mission") == source["original_mission"]
+                    and self._body(item).get("return_proof", {}).get("return_event")
+                    == source["return_proof"]["return_event"]
+                ]
+                from girlframe.services.m3_debts import check_returned
+
+                for item in result:
+                    check_returned(c, self.store, item)
+                return result
             if self._body(row).get("reason") not in (
                 "m2_play",
                 "off_duty_handler",
@@ -538,10 +563,11 @@ class PunishmentService:
                         )
                     self._save(c, item, event, owner_id=str(target), body=body)
                 return {"id": identity, "state": "delegated", "cause_count": len(bundle)}
+            inflictor = int(role_case.executor.entity) if role_case is not None else viewer.user_id
             consulted = bool(role_case and role_case.handler_approval_event) or self._approved(
                 c, row, bundle, details
             )
-            if severity == "moderate" and viewer.user_id != state.handler and not consulted:
+            if severity == "moderate" and inflictor != state.handler and not consulted:
                 raise WorkflowError(
                     "HANDLER_CONSULT_REQUIRED: submit this exact proposal for Handler "
                     "consultation first."
@@ -549,7 +575,7 @@ class PunishmentService:
             event_id = str(uuid4())
             character_ids = {
                 uid: self.game.character_binding(c, state, uid, require_current_profile=False)
-                for uid in {int(row["subject_id"]), viewer.user_id}
+                for uid in {int(row["subject_id"]), inflictor}
                 if uid != state.handler
             }
             for item in bundle:
@@ -574,7 +600,7 @@ class PunishmentService:
             result = rules.apply(
                 state,
                 int(row["subject_id"]),
-                viewer.user_id,
+                inflictor,
                 details,
                 entity_id=str(uuid4()),
                 **self._context(c, row),

@@ -89,6 +89,38 @@ def commit(
         ):
             raise ValueError("Spend available Heat; holding five or more requires spending all")
         state.handler_heat -= prepared.heat
+    elif actor.kind == "external_pilot" and view.girl == "harpy":
+        from girlframe.engine.m3_harpy_defeat import harpy, update
+
+        actual = harpy(state, actor)
+        actual_heat, actual_identities = actual.heat, actual.identities
+        was_full = bool(actual.identities) and all(x.marked for x in actual.identities)
+        if prepared.pair_share:
+            raise ValueError("A Harpy cannot borrow a former Girl's Pair resource port")
+        if prepared.identity is not None:
+            selected = next((x for x in actual.identities if x.id == prepared.identity), None)
+            if selected is None or selected.marked or not 1 <= prepared.gain <= 3:
+                raise ValueError("Mark an actual unmarked Harpy Identity for one to three Heat")
+            if selected.paired:
+                raise ValueError(
+                    "UNSUPPORTED_RULE: this retained Paired Identity needs its own port"
+                )
+            actual_identities = tuple(
+                x.model_copy(update={"marked": True}) if x.id == selected.id else x
+                for x in actual.identities
+            )
+            actual_heat += prepared.gain
+        elif prepared.gain:
+            raise ValueError("Heat gain requires an actual eligible Harpy Identity")
+        if prepared.heat > actual_heat or (actual_heat >= 5 and prepared.heat != actual_heat):
+            raise ValueError("Spend actual available Heat; holding five or more requires all")
+        state = update(state, actor, heat=actual_heat - prepared.heat, identities=actual_identities)
+        if (
+            "frame.ankou.feedback-loop" in getattr(actual, "plays", ())
+            and not was_full
+            and all(x.marked for x in actual_identities)
+        ):
+            followups.append(Followup(kind="ankou_feedback", actor=actor, source_pdf=84))
     else:
         raise ValueError(
             "UNSUPPORTED_RULE: this role has no supported Girl Heat/Identity resource port"

@@ -10,6 +10,7 @@ from girlframe.engine.m3_handler_consequence_state import (
     HandlerArchive,
     HandlerBody,
     HandlerConsequence,
+    HandlerFatalSource,
     HandlerInjury,
     HandlerOpportunity,
 )
@@ -36,10 +37,9 @@ def same_handler_body(state: GameState, actor: ActorRef) -> bool:
         actor == current
         or (actor.incarnation is None and not state.handler_archives)
         or any(
-            x.active
-            and x.termination_event is None
-            and x.handler == int(actor.entity)
+            x.handler == int(actor.entity)
             and x.id == actor.incarnation
+            and (x.body_actor == current or (x.body_actor is None and not state.handler_archives))
             for x in state.director_contexts
         )
     )
@@ -146,7 +146,11 @@ def require(
 
 
 def _end(
-    state: GameState, target: ActorRef, request: HandlerConsequence, source_event: str, account: str
+    state: GameState,
+    target: ActorRef,
+    request: HandlerConsequence | HandlerFatalSource,
+    source_event: str,
+    account: str,
 ) -> GameState:
     from girlframe.engine.m3_actor_bonds import migrate_actor, migrate_helpless
     from girlframe.engine.m3_enforcer import end_grasps
@@ -193,7 +197,11 @@ def _end(
         )
     for sheet in state.sheets.values():
         for tag in sheet.tags:
-            if tag.giver == int(target.entity) and tag.giver_actor is None:
+            if (
+                tag.giver == int(target.entity)
+                and tag.giver_actor is None
+                and tag.gm_setter_appointment is None
+            ):
                 tag.giver_actor = target
     state.bonds = {
         key: value for key, value in state.bonds.items() if target.entity not in key.split(":")
@@ -308,3 +316,17 @@ def apply(
         for x in state.handler_consequences
     ]
     return GameState.model_validate_json(state.model_dump_json())
+
+
+def force_end(original: GameState, fatal: HandlerFatalSource) -> GameState:
+    state = GameState.model_validate_json(original.model_dump_json())
+    if not same_handler_body(state, fatal.actor) or any(
+        x.id == fatal.id for x in state.handler_fatal_sources
+    ):
+        raise ValueError("Use this actual current original Handler and its distinct fatal source")
+    current = active_handler(state)
+    assert current is not None
+    state.handler_fatal_sources.append(fatal)
+    return GameState.model_validate_json(
+        _end(state, current, fatal, fatal.source_event, fatal.account).model_dump_json()
+    )

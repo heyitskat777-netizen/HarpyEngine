@@ -104,6 +104,70 @@ def source(
             or not all(x.void for x in assets)
         ):
             raise ValueError()
+        if body.get("reason") == "item_transfer":
+            from girlframe.services.m3_items import new_void_families, prove_transfer
+
+            before, after, transfer = prove_transfer(c, game, body["transfer"])
+            action = (
+                game.action(c, transfer.action) if transfer.source_kind != "npc_damage" else None
+            )
+            if transfer.source_kind == "npc_damage":
+                from girlframe.services.m3_battle_npc import NpcDamageService
+
+                parent = NpcDamageService(game.store)._row(c, transfer.source_work or "")
+                actual_source, actual_receiver = NpcDamageService(game.store)._proof(c, parent)
+                fact = next(
+                    (
+                        x
+                        for x in after.facts
+                        if x.get("kind") == "npc_asset_replacement"
+                        and x.get("work") == transfer.source_work
+                        and x.get("effect") == "take_item"
+                        and x.get("event") == transfer.event
+                    ),
+                    None,
+                )
+                if (
+                    body.get("item_source") != "npc_damage"
+                    or body.get("source_work") != transfer.source_work
+                    or json.loads(parent["body_json"]).get("source_action")
+                    != body.get("source_action")
+                    or transfer.action != (body.get("source_action") or transfer.source_work)
+                    or actual_source != transfer.source
+                    or actual_receiver != transfer.recipient
+                    or fact is None
+                ):
+                    raise ValueError()
+            else:
+                if action is None:
+                    raise ValueError()
+                meta = action["data"].get("enforcement")
+                record = (
+                    next((x for x in meta.get("item_void", []) if x["id"] == identity), None)
+                    if meta
+                    else None
+                )
+                if (
+                    record is None
+                    or record["owner"] != actor.model_dump(mode="json")
+                    or record["transfer"] != transfer.id
+                    or transfer.source_kind != "enforcement_initiative"
+                    or body.get("source_action") != transfer.action
+                ):
+                    raise ValueError()
+            if (
+                transfer.event != first["event_id"]
+                or actor not in (transfer.source, transfer.recipient)
+                or actor not in new_void_families(before, after)
+                or family != "girl"
+            ):
+                raise ValueError()
+            return current, body, actor
+        if body.get("reason") == "dormant_void":
+            from girlframe.services.m3_battle_dormant import prove_void_source
+
+            prove_void_source(game, c, first, body, actor)
+            return current, body, actor
         if body.get("reason") == "physical_entry":
             audit = (
                 c.execute(
@@ -300,6 +364,19 @@ def complete(
             from girlframe.services.m3_defeat import complete_void_continuation as defeat_complete
 
             defeat_complete(game, c, identity, event, viewer, key)
+        elif body.get("reason") == "item_transfer":
+            if body.get("item_source") == "npc_damage":
+                from girlframe.services.m3_battle_npc import complete_void_continuation
+
+                complete_void_continuation(game, c, identity, event, viewer, key)
+            else:
+                from girlframe.services.m3_enforcement_initiative import complete_item_void
+
+                complete_item_void(game, c, identity, event)
+        elif body.get("reason") == "dormant_void":
+            from girlframe.services.m3_battle_dormant import complete_void
+
+            complete_void(game, c, identity, event, viewer, key)
         elif body.get("reason") != "physical_entry":
             from girlframe.services.m3_dive import complete_void_continuation as dive_complete
 

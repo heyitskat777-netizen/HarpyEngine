@@ -158,7 +158,8 @@ async def open_instruction(
         viewer.user_id,
         "Instruct " + KINDS[kind][0],
         "You choose the type and unspecified details. This records your instruction; "
-        "the named Enforcer carries it out and receives actual executor Bonds/Tag attribution.",
+        "the named actual executor carries it out and receives actual "
+        "executor Bonds/Tag attribution.",
         fields,
         save,
     )
@@ -181,7 +182,8 @@ async def open_role_punishment(
     if data["stale"]:
         await reply(
             interaction,
-            "Recover the original participants and source Frame before this case continues.",
+            "Recover the original participants and actual source context "
+            "before this case continues.",
         )
         return
     if data["chooser"] and case["instruction"] is None:

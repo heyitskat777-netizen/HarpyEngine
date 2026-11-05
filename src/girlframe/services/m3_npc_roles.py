@@ -121,6 +121,9 @@ class NpcRoleService:
                 invitation_id=identity,
                 decision=decision,
             )
+            from girlframe.services.m3_battle_director import synchronize_replacement
+
+            synchronize_replacement(self.game, c, identity, event, viewer, key)
             return {
                 "id": identity,
                 "state": next(x.state for x in state.world.npc_role_offers if x.id == identity),

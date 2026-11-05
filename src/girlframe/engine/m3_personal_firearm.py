@@ -14,6 +14,11 @@ from girlframe.engine.rules_registry import Registry
 
 RULE = "frame.enforcer.personal-firearm"
 Kind = Literal["ability_unlock", "frame_grafting"]
+REPLACEMENT_NOTICE = (
+    "The Foundation issues a distinct physical replacement pistol. "
+    "A stolen original keeps its recorded custody. Real retrieval uses a separate actual transfer. "
+    "The replacement uses the normal Girl Asset capacity."
+)
 
 
 def held(state: GameState, actor: ActorRef, frame: str) -> list[PersonalFirearmGrant]:
@@ -66,7 +71,14 @@ def grant(
             frame_instance=frame,
             source_event=event,
             purchase=purchase,
-            issues=(FirearmIssue(asset=asset.id, source_event=event),),
+            issues=(
+                FirearmIssue(
+                    asset=asset.id,
+                    source_event=event,
+                    recipient=actor,
+                    controller=current.controller,
+                ),
+            ),
         )
     )
     return state
@@ -176,14 +188,22 @@ def reissue(
         id="firearm:" + entitlement.id + ":" + str(len(entitlement.issues)),
         family="girl",
         name="Personal Firearm",
-        description="A returned service pistol and access to ammunition.",
+        description="A Foundation-issued replacement service pistol and access to ammunition.",
     )
     state.sheets[actor.entity] = install(state.sheets[actor.entity], asset, replace=replace).sheet
     updated = entitlement.model_copy(
         update={
             "issues": (
                 *entitlement.issues,
-                FirearmIssue(asset=asset.id, source_event=event, action=action),
+                FirearmIssue(
+                    asset=asset.id,
+                    source_event=event,
+                    action=action,
+                    kind="foundation_replacement",
+                    recipient=actor,
+                    controller=current.controller,
+                    replaces_asset=lost,
+                ),
             )
         }
     )

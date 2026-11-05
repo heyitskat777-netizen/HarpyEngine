@@ -124,7 +124,7 @@ class ExtractionConsent(Model):
 
     @model_validator(mode="after")
     def actual_response(self) -> "ExtractionConsent":
-        if self.actor.kind != "pilot" or not self.account.strip():
+        if self.actor.kind not in ("pilot", "external_pilot") or not self.account.strip():
             raise ValueError("An extraction response names the actual original Girl")
         if self.used_event is not None and not self.allowed:
             raise ValueError("A refused extraction cannot be consumed as consent")
@@ -144,7 +144,10 @@ class FrameLock(Model):
 
     @model_validator(mode="after")
     def actual_frame(self) -> "FrameLock":
-        if self.owner.kind != "pilot" or self.subject.kind != "pilot":
+        if self.owner.kind not in ("pilot", "external_pilot") or self.subject.kind not in (
+            "pilot",
+            "external_pilot",
+        ):
             raise ValueError("A source-bound cockpit lock names its actual Frame and original Girl")
         if self.active == (self.released_event is not None):
             raise ValueError("Only an explicitly released cockpit lock has a release source")

@@ -467,6 +467,12 @@ async def open_end(
     snapshot = await asyncio.to_thread(WorldService(service.missions).get, viewer, private=True)
     if snapshot["game_revision"] != data["game_revision"] or snapshot["world"] is None:
         raise WorkflowError("Refresh the actual world and period before ending Off-Duty.")
+    if snapshot.get("offstage_world"):
+        raise WorkflowError(
+            "Map advancement awaits source-aware offstage support; cached positions "
+            "cannot move bodies or cause destruction. An actual reviewed return may "
+            "restore map presence."
+        )
     world = World.model_validate_json(json.dumps(snapshot["world"]))
     directed = [x for x in world.gorgons if x.alive and x.gorgon_class == "directed"]
     unplaced = [

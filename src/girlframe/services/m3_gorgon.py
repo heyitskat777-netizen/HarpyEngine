@@ -185,6 +185,8 @@ class GorgonService:
                 ):
                     continue
                 actor = resolve(state, ActorRef(kind="gorgon", entity=gorgon.id), ())
+                if actor.offstage_source is not None:
+                    continue
                 entries.append(
                     actor.model_dump(mode="json")
                     | {"token": actor.ref.token, "weakness": gorgon.core_plan.weakness}

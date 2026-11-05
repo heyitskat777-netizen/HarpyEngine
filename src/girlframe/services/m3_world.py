@@ -11,6 +11,8 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_world as rules
 from girlframe.engine.m2 import GameState
+from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_harpy_defeat import offstage_travel
 from girlframe.engine.m3_world_state import (
     Board,
     Cell,
@@ -25,6 +27,60 @@ from girlframe.services.m2_state import load_state
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
+
+
+def require_onstage(state: GameState, actor: ActorRef) -> None:
+    """A cached map square cannot establish a body that actually crossed a Rift."""
+    if offstage_travel(state, actor) is not None:
+        raise WorkflowError(
+            "OFFSTAGE_RIFT: record this actual body's return through its Rift travel review first."
+        )
+
+
+def _escaped_native_harpy(state: GameState, actor: ActorRef) -> bool:
+    return (
+        actor.kind == "external_pilot"
+        and any(x.id == actor.entity and x.cell is None for x in state.native_harpies)
+        and any(x.escaped and actor in x.departed for x in state.harpy_defeats)
+    )
+
+
+def offstage_world_actors(state: GameState) -> tuple[ActorRef, ...]:
+    if state.world is None:
+        return ()
+    actors: list[ActorRef] = []
+    for rows, kind in (
+        (state.world.npcs, "npc"),
+        (state.world.gorgons, "gorgon"),
+        (state.world.pilots, "external_pilot"),
+    ):
+        for row in rows:
+            actor = ActorRef.model_validate(dict(kind=kind, entity=row.id))
+            if row.alive and (
+                offstage_travel(state, actor) is not None or _escaped_native_harpy(state, actor)
+            ):
+                actors.append(actor)
+    return tuple(actors)
+
+
+def require_world_advancement(state: GameState) -> None:
+    if offstage_world_actors(state):
+        raise WorkflowError(
+            "OFFSTAGE_RIFT: map advancement needs source-aware offstage support. "
+            "Cached map positions cannot move these bodies or cause destruction. "
+            "An actual reviewed return may restore their map presence."
+        )
+
+
+def _world_projection(state: GameState) -> dict[str, Any]:
+    assert state.world is not None
+    projected = state.world.model_dump(mode="json")
+    for key, kind in (("npcs", "npc"), ("gorgons", "gorgon"), ("pilots", "external_pilot")):
+        for row in projected[key]:
+            actor = ActorRef.model_validate(dict(kind=kind, entity=row["id"]))
+            if offstage_travel(state, actor) is not None or _escaped_native_harpy(state, actor):
+                row["cell"] = None
+    return projected
 
 
 class WorldService:
@@ -102,7 +158,13 @@ class WorldService:
             if world is None:
                 return {"game_revision": state.revision, "world": None}
             if private:
-                return {"game_revision": state.revision, "world": world.model_dump(mode="json")}
+                return {
+                    "game_revision": state.revision,
+                    "world": _world_projection(state),
+                    "offstage_world": [
+                        x.model_dump(mode="json") for x in offstage_world_actors(state)
+                    ],
+                }
             return {
                 "game_revision": state.revision,
                 "world": {
@@ -116,7 +178,10 @@ class WorldService:
                         {
                             "id": x.id,
                             "name": x.name,
-                            "cell": list(x.cell) if x.cell is not None else None,
+                            "cell": list(x.cell)
+                            if x.cell is not None
+                            and offstage_travel(state, ActorRef(kind="gorgon", entity=x.id)) is None
+                            else None,
                             "gorgon_class": x.gorgon_class,
                             "alive": x.alive,
                         }
@@ -380,6 +445,7 @@ class WorldService:
                 raise WorkflowError("Record the actual missing position and factual source.")
             if self.game.pending_actions(c):
                 raise WorkflowError("Finish pending Plays before recording world positions.")
+            require_onstage(state, ActorRef(kind="gorgon", entity=identity))
             source = str(uuid4())
             state.world = rules.locate_gorgon(state.world, identity, cell, source)
             state.facts.append(

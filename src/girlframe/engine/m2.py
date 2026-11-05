@@ -22,10 +22,22 @@ from girlframe.engine.m3_girl_runtime_state import GirlRuntime
 from girlframe.engine.m3_handler_consequence_state import (
     HandlerArchive,
     HandlerConsequence,
+    HandlerFatalSource,
     HandlerInjury,
     HandlerOpportunity,
 )
+from girlframe.engine.m3_handler_play_state import HandlerPlay
 from girlframe.engine.m3_handler_state import HandlerPersona
+from girlframe.engine.m3_harpy_defeat_state import (
+    Declaration as HarpyDefeatDeclaration,
+)
+from girlframe.engine.m3_harpy_defeat_state import (
+    DefeatEffect,
+    HarpySetup,
+    NativeHarpyRuntime,
+    Rift,
+    Travel,
+)
 from girlframe.engine.m3_item_state import HeldItem, ItemTransfer
 from girlframe.engine.m3_lobotomy_state import BlockedPlay, Surgery
 from girlframe.engine.m3_physical_state import EscortJourney, FrameLock, ParkedFrame, Placement
@@ -103,6 +115,21 @@ class TagState(Model):
     rejection_pending: bool = False
     giver_character: str | None = None
     giver_actor: ActorRef | None = None
+    gm_setter_appointment: str | None = Field(default=None, min_length=1)
+    gm_setter_event: str | None = Field(default=None, min_length=1)
+    gm_setter_grant: str | None = Field(default=None, min_length=1)
+
+    @model_validator(mode="after")
+    def separate_setter_roles(self) -> "TagState":
+        if self.gm_setter_appointment is not None and (
+            self.giver_actor is not None or self.giver_character is not None
+        ):
+            raise ValueError("An OOC GM setter has no fictional actor or character authority")
+        if (
+            self.gm_setter_event is not None or self.gm_setter_grant is not None
+        ) and self.gm_setter_appointment is None:
+            raise ValueError("The OOC setter event requires its actual appointment source")
+        return self
 
 
 class PilotSheet(Model):
@@ -161,9 +188,10 @@ class DirectorContext(Model):
     source_works: tuple[str, ...]
     identities: list[IdentityState]
     source_event: str
+    body_actor: ActorRef | None = None
     active: bool = True
     revision: int = 1
-    termination_reason: Literal["handler_death"] | None = None
+    termination_reason: Literal["handler_death", "director_death"] | None = None
     termination_event: str | None = None
 
     @model_validator(mode="after")
@@ -211,7 +239,9 @@ class GameState(Model):
     handler_consequences: list[HandlerConsequence] = Field(default_factory=list)
     handler_injuries: list[HandlerInjury] = Field(default_factory=list)
     handler_opportunities: list[HandlerOpportunity] = Field(default_factory=list)
+    handler_fatal_sources: list[HandlerFatalSource] = Field(default_factory=list)
     role_punishments: list[RolePunishment] = Field(default_factory=list)
+    handler_plays: list[HandlerPlay] = Field(default_factory=list)
     held_items: list[HeldItem] = Field(default_factory=list)
     item_transfers: list[ItemTransfer] = Field(default_factory=list)
     bonds: dict[str, int] = Field(default_factory=dict)
@@ -241,6 +271,12 @@ class GameState(Model):
     incarnation_bindings: list[IncarnationBinding] = Field(default_factory=list)
     unlinked_careers: list[UnlinkedCareer] = Field(default_factory=list)
     harpy_states: list[HarpyState] = Field(default_factory=list)
+    native_harpies: list[NativeHarpyRuntime] = Field(default_factory=list)
+    harpy_setups: list[HarpySetup] = Field(default_factory=list)
+    harpy_defeats: list[DefeatEffect] = Field(default_factory=list)
+    harpy_defeat_declarations: list[HarpyDefeatDeclaration] = Field(default_factory=list)
+    void_rifts: list[Rift] = Field(default_factory=list)
+    harpy_travels: list[Travel] = Field(default_factory=list)
     void_thresholds: list[VoidThreshold] = Field(default_factory=list)
     lobotomies: list[Surgery] = Field(default_factory=list)
     enforcer_ranks: list[RankFact] = Field(default_factory=list)
@@ -278,12 +314,23 @@ class PlayInput(Model):
     pair_share: int = Field(default=0, ge=0, le=5)
     target: Snowflake | None = None
     target_actor: ActorRef | None = None
+    attacking_asset: str | None = Field(default=None, min_length=1, max_length=200)
+    target_asset: str | None = Field(default=None, min_length=1, max_length=200)
+    battle_context: str | None = Field(default=None, min_length=1, max_length=100)
     piloting: bool = False
     order_id: str | None = None
     witnessed: bool = False
     parent: str | None = None
     off_duty_id: str | None = None
     source_work: str | None = Field(default=None, max_length=100)
+
+    @model_validator(mode="after")
+    def battle_fields_only(self) -> "PlayInput":
+        if self.play not in ("all_out_assault", "go_for_the_core") and any(
+            x is not None for x in (self.attacking_asset, self.target_asset, self.battle_context)
+        ):
+            raise ValueError("Only an actual battle Play accepts battle Asset/context fields")
+        return self
 
 
 class ChoiceAnswer(Model):

@@ -438,6 +438,8 @@ class PhysicalService:
         lock = next((x for x in state.frame_locks if x.id == identity), None)
         if lock is None:
             raise WorkflowError("This original Frame cockpit is unavailable.")
+        if lock.owner.kind != "pilot" or lock.subject.kind != "pilot":
+            raise WorkflowError("Use the actual Harpy body's dedicated cockpit controls.")
         try:
             voice = rules.frame_voice(state, lock.owner, lock.frame_instance)
         except ValueError:
@@ -657,6 +659,14 @@ class PhysicalService:
                 raise WorkflowError("Only the actual Frame's human voice can give this response.")
             represented_core = state.world is not None and any(
                 x.id == lock.core_id for x in (*state.world.npcs, *state.world.pilots)
+            )
+            represented_core = represented_core or any(
+                x.id == lock.core_id
+                and x.alive
+                and x.custody == "core"
+                and x.core_frame_owner == lock.owner
+                and x.core_frame_instance == lock.frame_instance
+                for x in state.harpy_states
             )
             if not represented_core:
                 self._handler(c, viewer)

@@ -154,6 +154,9 @@ def test_damage_is_not_loss_and_each_real_loss_return_has_a_distinct_item_identi
         "actual-roll",
     )
     returned = restored.personal_firearms[0].issues[-1].asset
+    issue = restored.personal_firearms[0].issues[-1]
+    assert issue.kind == "foundation_replacement" and issue.replaces_asset == original
+    assert issue.recipient == actor(restored) and issue.controller == 2
     assert (
         returned != original
         and restored.sheets["2"].permissions == purchased.sheets["2"].permissions

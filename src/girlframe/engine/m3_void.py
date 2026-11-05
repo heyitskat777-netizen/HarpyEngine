@@ -681,7 +681,7 @@ def rebirth(
             count = 2
         if any(x.track == "void" for x in archived.strain.endgames):
             count = 3
-    return _save(
+    converted = _save(
         archived,
         value.model_copy(
             update=dict(
@@ -692,3 +692,6 @@ def rebirth(
             )
         ),
     )
+    from girlframe.engine.m3_tag_permissions import record_conversion
+
+    return record_conversion(converted, value.actor, ref, archive_id, retained_tags, event)
