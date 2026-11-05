@@ -713,6 +713,365 @@ class InboxService:
             from girlframe.services.m3_physical import PhysicalService
 
             physical = PhysicalService(self.store)
+            from girlframe.services.m3_careers import CareerService
+            from girlframe.services.m3_handler_creation import HandlerCreationService
+            from girlframe.services.m3_medical import MedicalService
+            from girlframe.services.m3_privacy_trouble import PrivacyTroubleService
+            from girlframe.services.m3_scene_requisitions import SceneRequisitionService
+
+            for request in HandlerCreationService(self.store)._tasks(
+                connection, viewer, history=True
+            ):
+                items.append(
+                    InboxItem(
+                        "handler-creation:" + request["id"],
+                        "handler_creation",
+                        request["id"],
+                        request["revision"],
+                        "playbook",
+                        request["label"],
+                        "Original shared participants",
+                        "pending" if request["actionable"] else request["state"],
+                        request["actionable"],
+                        request["stale"],
+                        "Review only your own exact creation choices or shared agreement.",
+                        "Private Handler details stay with their original creator.",
+                        "Review creation",
+                        task=request["kind"],
+                    )
+                )
+            for request in SceneRequisitionService(physical.game)._scene_tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "scene-requisition:" + request["id"],
+                        "scene_requisition",
+                        request["id"],
+                        request["revision"],
+                        "off_duty",
+                        request["kind"].replace("_", " ").title(),
+                        label(request["buyer"]),
+                        request["state"],
+                        request["state"] != "resolved",
+                        False,
+                        "Review your actual paid scene and your own participation.",
+                        "Other participants supply only their own responses.",
+                        "Review scene",
+                        task="m3_scene_requisition",
+                    )
+                )
+            for request in PrivacyTroubleService(self.store)._trouble_tasks(connection, viewer):
+                actionable = (
+                    request["own"] and request["state"] != "resolved" and not request["stale"]
+                )
+                items.append(
+                    InboxItem(
+                        "privacy-trouble:" + request["id"],
+                        "privacy_trouble",
+                        request["id"],
+                        request["revision"],
+                        "off_duty",
+                        "Privacy incident inquiry",
+                        "Original participants",
+                        request["state"],
+                        actionable,
+                        request["stale"],
+                        "Review the actual inquiry and choose only your response.",
+                        "Private-room secrets are never disclosed automatically.",
+                        "Review inquiry",
+                        task="m3_privacy_trouble",
+                    )
+                )
+            for request in MedicalService(self.store)._tasks(connection, viewer, history=True):
+                items.append(
+                    InboxItem(
+                        "medical:" + request["id"],
+                        "medical",
+                        request["id"],
+                        request["revision"],
+                        "plays",
+                        request["label"],
+                        "Original patient and care reviewer",
+                        request["state"],
+                        request["actionable"],
+                        request["stale"],
+                        "Record actual care, waking and your owned Play exchange.",
+                        "Waking does not repair Assets or restore a different character.",
+                        "Review recovery",
+                        task="m3_medical",
+                    )
+                )
+            from girlframe.services.m3_girl_transition import GirlTransitionService
+            from girlframe.services.m3_standards import StandardsService
+
+            for service, workflow_task in (
+                (GirlTransitionService(self.store), "m3_girl_transition"),
+                (StandardsService(self.store), "m3_standards"),
+            ):
+                for request in service._tasks(connection, viewer, history=True):
+                    items.append(
+                        InboxItem(
+                            workflow_task + ":" + request["id"],
+                            workflow_task,
+                            request["id"],
+                            request["revision"],
+                            "playbook",
+                            request["label"],
+                            "Original character and assigned choosers",
+                            request["state"],
+                            request["actionable"],
+                            request["stale"],
+                            "Complete your own original character's saved choices.",
+                            "Each participant supplies only their assigned details.",
+                            "Review choices",
+                            task=workflow_task,
+                        )
+                    )
+            from girlframe.services.m3_enforcer import EnforcerService
+            from girlframe.services.m3_frame_swap import FrameSwapService
+            from girlframe.services.m3_handler_consequences import HandlerConsequenceService
+            from girlframe.services.m3_lobotomy import LobotomyService
+            from girlframe.services.m3_personal_firearm import PersonalFirearmService
+            from girlframe.services.m3_void import VoidService
+
+            for request in HandlerConsequenceService(self.store)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "handler-consequence:" + request["id"],
+                        "handler_consequence",
+                        request["id"],
+                        canon.revision,
+                        "plays",
+                        "Your actual Handler body consequence",
+                        "Your original body",
+                        "pending",
+                        True,
+                        False,
+                        "Choose only your own actual source consequence.",
+                        "Persistent injury, an actual opening or original-body death "
+                        "is recorded explicitly.",
+                        "Review Handler consequence",
+                        task="m3_handler_consequence",
+                    )
+                )
+            for request in VoidService(self.store)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "void:" + request["id"],
+                        "void",
+                        request["id"],
+                        request["revision"],
+                        "plays",
+                        request["title"],
+                        "Original Girl and actual source participants",
+                        "pending",
+                        True,
+                        False,
+                        "Resolve the actual source Void state; "
+                        "a text acknowledgment cannot complete it.",
+                        "Stage: "
+                        + request["state"]
+                        + ". The source Play remains held until its real consequences finish.",
+                        "Review Void",
+                        task="m3_void",
+                    )
+                )
+            surgery_service = LobotomyService(self.store)
+            surgery_tasks = {x["id"]: x for x in surgery_service._tasks(connection, viewer)}
+            visible_surgeries = set()
+            for surgery in canon.lobotomies:
+                if user not in (surgery.subject.entity, surgery.inflictor.entity):
+                    continue
+                visible_surgeries.add(surgery.id)
+                actionable = surgery.id in surgery_tasks
+                items.append(
+                    InboxItem(
+                        "surgery:" + surgery.id,
+                        "surgery",
+                        surgery.id,
+                        canon.revision,
+                        "missions",
+                        "Original-patient surgery",
+                        "Original patient and inflictor",
+                        "resolved" if surgery.phase == "applied" else "pending",
+                        actionable,
+                        False,
+                        "The inflictor owns the exact effects; "
+                        "the original patient owns each description.",
+                        "Stage: "
+                        + surgery.phase
+                        + ". No answer or surgery effect is supplied automatically.",
+                        "Review surgery",
+                        task="m3_lobotomy",
+                    )
+                )
+            for request in FrameSwapService(physical.game)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "frame-swap:" + request["id"],
+                        "frame_swap",
+                        request["id"],
+                        request["revision"],
+                        "off_duty",
+                        "Optional paid Frame Swap",
+                        "Original buyer and assigned recipient",
+                        "resolved" if request["state"] == "resolved" else "pending",
+                        request["state"] != "resolved",
+                        False,
+                        "Review the actual saved plan and your own source-bound response.",
+                        "Saving a plan never charges Permissions; "
+                        "a complete confirmed exchange does.",
+                        "Review Frame Swap",
+                        task="m3_frame_swap",
+                    )
+                )
+            for request in PersonalFirearmService(physical.game)._return_tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "firearm-return:" + request["id"],
+                        "firearm_return",
+                        request["id"],
+                        request["revision"],
+                        "off_duty",
+                        "Retrieve lost Personal Firearm",
+                        "Original entitled Girl",
+                        "resolved" if request["state"] == "resolved" else "pending",
+                        request["state"] != "resolved",
+                        False,
+                        "Only a real earned lost-pistol return can issue the actual item.",
+                        "Review the original entitlement and explicitly accept or decline; "
+                        "no Permission charge.",
+                        "Review firearm return",
+                        task="m3_firearm_return",
+                    )
+                )
+            for request in EnforcerService(physical.game)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "enforcer:" + request["id"],
+                        "enforcer",
+                        request["id"],
+                        request["revision"],
+                        "world",
+                        request["kind"].replace("_", " ").title(),
+                        "Original Enforcer and current Handler",
+                        "resolved" if request["state"] == "resolved" else "pending",
+                        request["state"] != "resolved" and viewer.user_id == canon.handler,
+                        False,
+                        "Actual rank, innocence evidence or release position stays source-bound.",
+                        "The Handler records factual evidence; "
+                        "no innocence, guilt or map location is invented.",
+                        "Review Enforcer case",
+                        task="m3_enforcer",
+                    )
+                )
+            careers = CareerService(self.store)
+            for archive in canon.career_archives:
+                if archive.actor.entity != user:
+                    continue
+                _, proved = careers._archive(connection, viewer, archive.id)
+                items.append(
+                    InboxItem(
+                        "career:" + proved.id,
+                        "career",
+                        proved.id,
+                        canon.revision,
+                        "playbook",
+                        "Your original character archive",
+                        "Your ended career",
+                        "resolved",
+                        False,
+                        False,
+                        "Read the preserved original sheet and history.",
+                        "A replacement starts a separate actual character.",
+                        "Review archive",
+                        task="m3_career",
+                    )
+                )
+            if canon.handler == viewer.user_id:
+                for request in careers._return_candidates(connection, viewer):
+                    items.append(
+                        InboxItem(
+                            "career-return-offer:" + request["id"],
+                            "career_return_offer",
+                            request["id"],
+                            request["game_revision"],
+                            "playbook",
+                            "Offer an original character's return",
+                            request["callsign"],
+                            "pending",
+                            True,
+                            False,
+                            "The original player chooses whether to resume this character.",
+                            "Choose an explicit return Status and describe the actual release.",
+                            "Offer return",
+                            task="m3_career_return_offer",
+                        )
+                    )
+                for request in careers._status_requests(connection, viewer):
+                    if request["position"] is not None:
+                        continue
+                    items.append(
+                        InboxItem(
+                            "career-status:" + request["character"],
+                            "career_status",
+                            request["character"],
+                            request["game_revision"],
+                            "playbook",
+                            "Assign new-character starting Status",
+                            request["callsign"],
+                            "pending",
+                            True,
+                            False,
+                            "Choose the new original character's actual starting position.",
+                            "The prior character's rank is not inherited.",
+                            "Assign Status",
+                            task="m3_career_status",
+                            target=request["owner"],
+                        )
+                    )
+            for request in careers._return_requests(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "career-return:" + request["id"],
+                        "career_return",
+                        request["id"],
+                        canon.revision,
+                        "playbook",
+                        "Original character return offer",
+                        "Handler",
+                        "pending",
+                        True,
+                        False,
+                        "Choose whether to resume your actual archived original character.",
+                        "Resources and conditions stay preserved; "
+                        "an active replacement is reserved.",
+                        "Review return",
+                        task="m3_career_return",
+                    )
+                )
+            for lock in canon.frame_locks:
+                try:
+                    request = physical._frame(connection, viewer, lock.id)
+                except WorkflowError:
+                    continue
+                items.append(
+                    InboxItem(
+                        "frame-physical:" + lock.id,
+                        "frame_physical",
+                        lock.id,
+                        request["revision"],
+                        "world",
+                        "Frame consent and extraction",
+                        request["label"],
+                        "pending" if lock.active else "resolved",
+                        lock.active and (request["can_voice"] or bool(request["extractors"])),
+                        False,
+                        "Review actual Frame consent, opening and physical extraction.",
+                        "Extraction alone grants no healing or restored vital signs.",
+                        "Review Frame",
+                        task="m3_frame_physical",
+                    )
+                )
             approval = self.store.policy.m3_approval
             if (
                 approval is not None
@@ -928,7 +1287,26 @@ class InboxService:
                     continue
                 primary, task_name = None, None
                 kind = work["kind"]
-                if kind in ("creature_comforts", "physical_initial"):
+                if kind in (
+                    "creature_comforts",
+                    "physical_initial",
+                    "handler_creation",
+                    "handler_creation_agreement",
+                    "handler_creation_npc_agreement",
+                    "scene_requisition",
+                    "privacy_trouble",
+                    "privacy_inquiry_response",
+                    "defeat_medical_wake",
+                    "girl_playbook_transition",
+                    "girl_standards",
+                    "void_threshold",
+                    "defeat_void_threshold",
+                    "frame_swap",
+                    "personal_firearm_return",
+                    "enforcer_rank",
+                ):
+                    continue
+                if json.loads(work["body_json"]).get("lobotomy_id") in visible_surgeries:
                     continue
                 context_scene = (
                     json.loads(work["body_json"]).get("context_scene")
@@ -948,8 +1326,11 @@ class InboxService:
                     "punishment_frame_loss",
                 ):
                     primary, task_name = "Review discipline", "m3_discipline"
+                elif kind == "defeat":
+                    primary, task_name = "Resolve actual Defeat", "m3_defeat"
                 elif kind in (
                     "doctor_frame_replacement",
+                    "defeat_frame_replacement_active",
                     "frame_replacement_package",
                     "frame_replacement_court",
                 ):
@@ -980,6 +1361,8 @@ class InboxService:
                 title = {
                     "punishment": "Required Punishment",
                     "doctor_frame_replacement": "Choose replacement Frame",
+                    "defeat_frame_replacement_active": "Choose replacement for lost Frame",
+                    "defeat_frame_replacement": "Destroyed Frame: replacement next Off-Duty",
                     "frame_replacement_package": "Package awaiting confirmation"
                     if work["state"] == "quoted"
                     else "Define replacement package",

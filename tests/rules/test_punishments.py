@@ -116,14 +116,11 @@ def test_disassembly_surgery_and_inhibitor_are_canonical_and_immutable_inputs(ca
 @pytest.mark.parametrize(
     "kind",
     [
-        "execution",
         "lobotomization",
-        "indefinite_imprisonment",
-        "link_surgery_reversal",
     ],
 )
-def test_unfinished_punishments_fail_closed(canon, kind):
-    with pytest.raises(ValueError, match="UNSUPPORTED_RULE"):
+def test_source_surgery_cannot_apply_without_actual_preparation_and_patient(canon, kind):
+    with pytest.raises(ValueError, match="experimental surgery"):
         inflict(canon, Details(kind=kind))
 
 

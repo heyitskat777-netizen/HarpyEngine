@@ -44,7 +44,9 @@ def commit(
         sheet = state.sheets[actor.entity]
         was_full = all(x.marked for x in sheet.identities)
         if prepared.identity is not None:
-            share = mark_identity(sheet, prepared.identity, prepared.gain, prepared.pair_share)
+            share = mark_identity(
+                sheet, prepared.identity, prepared.gain, prepared.pair_share, state=state
+            )
             if share:
                 pair = next((x for x in bindings if x.owner == sheet.pair), None)
                 if pair is None:

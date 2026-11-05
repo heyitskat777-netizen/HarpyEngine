@@ -20,6 +20,7 @@ from girlframe.engine.m2 import (
     ChoiceAnswer,
     PlayInput,
 )
+from girlframe.engine.m3_girl_runtime_state import has_rule, keep_automatic
 from girlframe.engine.m3_plays import HEAT_IDS
 from girlframe.services.creation_review import CreationReviewService
 from girlframe.services.m2_game import PUBLIC_FIELDS, GameService
@@ -114,7 +115,12 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
             menu("number", "Tag direction", ("-1", "1"), required=False),
             text("text", "Why is the Tag relevant?", False),
         ]
-        if own and own["girl"] == "ALPHA":
+        if (
+            own
+            and own.get("owner") == decision["actor"]
+            and not own.get("status_marked")
+            and has_rule(own, "girl.alpha.nothing-more-than-a-hound", "ALPHA")
+        ):
             fields.append(
                 menu(
                     "fields.status",
@@ -123,6 +129,11 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
                     required=False,
                 )
             )
+        from girlframe.discord_adapter.m3_tag_markers import marker_field
+
+        source_marker = marker_field(decision)
+        if source_marker is not None:
+            fields.append(source_marker)
     elif kind == "tag_resolution":
         fields = [
             menu("options", "Resolve the repeated marked Tag", ("embrace", "reject")),
@@ -141,13 +152,17 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
         if level == "mid":
             fields = [
                 menu("options", "Choose two positive traits", TRAITS, 2, 2),
-                menu("denied", "Choose one distinct negative trait", TRAITS),
+                menu(
+                    "denied",
+                    "Choose one distinct negative trait",
+                    tuple(x for x in TRAITS if x not in keep_automatic(own)),
+                ),
             ]
         elif level == "low":
             fields = [menu("options", "Choose one positive trait", TRAITS)]
         else:
             fields = [text("text", "Take a Tag: write its label")]
-        if own["girl"] == "OLDGEN":
+        if has_rule(own, "girl.oldgen.elder-bitch", "OLDGEN"):
             fields.append(flags("Also choose experienced?"))
     elif kind == "handler_keep":
         fields = [flags("Is it enough?"), text("text", "Explain the outcome")]
@@ -389,6 +404,38 @@ def answer_values(values: dict[str, Any]) -> ChoiceAnswer:
 
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
     decision = await threaded(lambda: game.decision(viewer_from_interaction(interaction), identity))
+    if decision["kind"] in ("tag_marker_selection", "tag_marker_agreement"):
+        from girlframe.discord_adapter.m3_tag_markers import open_discussion
+
+        await open_discussion(interaction, game, identity)
+        return
+    if decision["kind"] == "manual_adjudication":
+        from girlframe.discord_adapter.m3_adjudication import open_adjudication
+        from girlframe.services.m3_adjudication import AdjudicationService
+
+        await open_adjudication(interaction, AdjudicationService(game.store), identity)
+        return
+    if decision["kind"] in ("defeat_void_threshold", "dive_void_threshold", "void_keep_threshold"):
+        from girlframe.discord_adapter.m3_void import open_void
+        from girlframe.services.m3_void import VoidService
+
+        await open_void(interaction, VoidService(game.store), decision["body"]["work_id"])
+        return
+    if decision["kind"].startswith("dive_") and decision.get("dive") is not None:
+        from girlframe.discord_adapter.m3_dive import open_dive
+
+        await open_dive(interaction, game, identity)
+        return
+    if decision["kind"] in ("beneath_defeat", "required_defeat"):
+        from girlframe.discord_adapter.m3_defeat import open_start
+
+        await open_start(interaction, game, decision)
+        return
+    if decision["kind"].startswith("defeat_") and decision.get("defeat") is not None:
+        from girlframe.discord_adapter.m3_defeat import open_decision
+
+        await open_decision(interaction, game, decision)
+        return
     if decision["kind"] == "beneath_punishment":
         from girlframe.discord_adapter.m3_punishments import open_discipline
         from girlframe.services.m3_punishments import PunishmentService
@@ -405,13 +452,15 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         raise WorkflowError("UNSUPPORTED_RULE: this response requires staff review.")
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        from girlframe.discord_adapter.m3_tag_markers import bind_answer
+
         result = await threaded(
             lambda: game.respond(
                 viewer_from_interaction(current),
                 str(current.id),
                 identity,
                 decision["revision"],
-                answer_values(values),
+                bind_answer(decision, answer_values(values)),
             )
         )
         return (
@@ -555,7 +604,7 @@ async def open_play(
             gain=int(one(values, "gain")),
             pair_share=int(one(values, "pair_share")),
             target=int(one(values, "target"))
-            if play in ("flirt", *HEAT_IDS) and one(values, "target")
+            if play in ("flirt", "put_someone_beneath_you") and one(values, "target")
             else None,
             piloting=one(values, "piloting") == "yes",
             witnessed=one(values, "witnessed") == "yes",
@@ -792,6 +841,8 @@ class StatePages(discord.ui.View):
             "Tag: " + x["label"] + (" [marked]" if x["marked"] else "") for x in sheet["tags"]
         ]
         lines += ["Helpless against: " + str(x) for x in sheet["helpless_against"]]
+        if await threaded(lambda: self.game.helpless_status(viewer_from_interaction(interaction))):
+            lines.append("Helpless: recover through /character recover after a moment alone.")
         obligations = await threaded(
             lambda: self.game.own_obligations(viewer_from_interaction(interaction))
         )
@@ -1165,6 +1216,10 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         await interaction.response.defer(ephemeral=True)
         try:
             game.gate()
+            if not await threaded(
+                lambda: game.helpless_status(viewer_from_interaction(interaction))
+            ):
+                raise WorkflowError("No current Helpless condition needs recovery.")
             sheet = await threaded(lambda: game.sheet(viewer_from_interaction(interaction)))
             girls = [x for x in sheet["assets"] if x["family"] == "girl"]
             needs_asset = bool(girls) and all(x["damaged"] for x in girls)

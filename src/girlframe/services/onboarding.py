@@ -330,6 +330,50 @@ class OnboardingStore:
             operation,
         )
 
+    def _cosmetic_draft(
+        self, connection: Connection, owner: int, data: dict[str, Any]
+    ) -> DraftInput:
+        if data.get("callsign") != "":
+            return DraftInput.model_validate(data)
+        from girlframe.engine.m2 import GameState
+        from girlframe.engine.m3_lobotomy import name_removal_source
+        from girlframe.services.m2_state import load_state
+
+        state = load_state(connection, self.campaign_id)
+        source = name_removal_source(state, owner)
+        if source is None:
+            raise WorkflowError("A nickname reset needs its actual original name-removal source.")
+        history = t.m2["m2_state_history"]
+        raw = connection.scalar(
+            sa.select(history.c.body_json).where(
+                history.c.campaign_id == self.campaign_id,
+                history.c.event_id == source.applied_event,
+            )
+        )
+        proof = GameState.model_validate_json(raw) if raw else None
+        event = connection.execute(
+            sa.select(t.events.c.kind, t.events.c.actor_id).where(
+                t.events.c.campaign_id == self.campaign_id,
+                t.events.c.id == source.applied_event,
+            )
+        ).first()
+        if (
+            proof is None
+            or name_removal_source(proof, owner) != source
+            or event is None
+            or event.kind != "m3.punishment_applied"
+            or event.actor_id != source.inflictor.entity
+        ):
+            raise WorkflowError("Recover the actual original name-removal event before syncing.")
+        # Validate every ordinary field before applying this source-proved exceptional name.
+        validated = DraftInput.model_validate(data | {"callsign": "Name removed"})
+        return validated.model_copy(update={"callsign": ""})
+
+    def cosmetic_draft(self, viewer: GuildViewer, data: dict[str, Any]) -> DraftInput:
+        with self.engine.connect() as connection:
+            self._membership(connection, viewer)
+            return self._cosmetic_draft(connection, viewer.user_id, data)
+
     def _enqueue_sync(
         self, connection: Connection, owner: int, revision: int, draft: DraftInput
     ) -> None:
@@ -367,17 +411,18 @@ class OnboardingStore:
             )
             if not row:
                 raise WorkflowError("Save a draft first.")
+            from girlframe.services.m2_state import load_state
+
+            sheet = load_state(connection, self.campaign_id).sheets.get(str(viewer.user_id))
+            data = json.loads(row["public_json"])
+            if sheet:
+                data["callsign"] = sheet.callsign
             try:
-                desired = DraftInput.model_validate(json.loads(row["public_json"]))
+                desired = self._cosmetic_draft(connection, viewer.user_id, data)
             except ValueError:
                 raise WorkflowError(
                     "Reopen /character create and choose listed playbooks first."
                 ) from None
-            from girlframe.services.m2_state import load_state
-
-            sheet = load_state(connection, self.campaign_id).sheets.get(str(viewer.user_id))
-            if sheet:
-                desired = desired.model_copy(update={"callsign": sheet.callsign})
             self._enqueue_sync(connection, viewer.user_id, row["revision"], desired)
             return {"id": row["id"], "revision": row["revision"]}
 

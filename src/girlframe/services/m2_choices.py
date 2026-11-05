@@ -22,6 +22,12 @@ from girlframe.engine.m2 import (
     shift_status,
     tier,
 )
+from girlframe.engine.m3_girl_runtime_state import (
+    has_rule,
+    keep_automatic,
+    mentor_tag,
+    relation_current,
+)
 from girlframe.services.onboarding import WorkflowError
 
 if TYPE_CHECKING:
@@ -89,7 +95,17 @@ class ChoiceEngine:
             if entry.id in ids:
                 entry.marked = False
 
-    def bond(self, state: GameState, first: int, second: int, delta: int) -> None:
+    def bond(
+        self, state: GameState, first: int, second: int, delta: int, source_event: str
+    ) -> None:
+        from girlframe.engine.m3_actor_bonds import change, current_ref
+
+        refs = (current_ref(state, first), current_ref(state, second))
+        if any({edge.first, edge.second} == set(refs) for edge in state.actor_bonds):
+            changed = change(state, *refs, 1 if delta > 0 else -1, source_event)
+            for name in GameState.model_fields:
+                setattr(state, name, getattr(changed, name))
+            return
         key = pair_key(first, second)
         old = state.bonds.get(key, 0)
         if old == 2 and delta == 1:
@@ -118,6 +134,21 @@ class ChoiceEngine:
         sheet = state.sheets.get(str(owner))
         acting = state.sheets[str(actor)]
         body = json.loads(request["body_json"])
+        if kind in ("tag_marker_selection", "tag_marker_agreement"):
+            from girlframe.services.m3_tag_markers import apply_discussion
+
+            apply_discussion(self.game, c, state, action, request, answer)
+            return
+        if kind.startswith("dive_") and action["data"].get("dive"):
+            from girlframe.services.m3_dive import apply as apply_dive
+
+            apply_dive(self.game, c, state, action, request, answer)
+            return
+        if kind.startswith("defeat_") and action["data"].get("defeat"):
+            from girlframe.services.m3_defeat import apply as apply_defeat
+
+            apply_defeat(self.game, c, state, action, request, answer)
+            return
         if kind.startswith("beneath_") and action["data"].get("beneath"):
             from girlframe.services.m3_beneath import apply as apply_beneath
 
@@ -144,7 +175,7 @@ class ChoiceEngine:
                     "TAG_CONSENT_REQUIRED: its setter must consent to rejecting this Tag.",
                 )
                 require(
-                    not (acting.girl == "NEWGIRL" and tag.giver == acting.mentor),
+                    not (mentor_tag(acting, tag, state)),
                     "A Newgirl cannot reject a Tag given by its Mentor.",
                 )
                 tag.rejection_pending = True
@@ -214,7 +245,7 @@ class ChoiceEngine:
                 item.state == "pending" and item.target == owner, "This follow-through changed."
             )
             if answer.flag:
-                self.bond(state, actor, owner, 1)
+                self.bond(state, actor, owner, 1, action["data"]["response_event"])
                 item.state = "fulfilled"
             action["data"]["result"].update(confirmed=answer.flag, response=answer.text)
             self.finish(c, state, action)
@@ -222,13 +253,7 @@ class ChoiceEngine:
         result = action["data"]["result"]
         level = result.get("tier")
         if kind == "actor_keep":
-            automatic = (
-                {"sexy"}
-                if acting.girl == "PRINCESS"
-                else {"vicious"}
-                if acting.girl == "ALPHA"
-                else set()
-            )
+            automatic = keep_automatic(acting)
             if level == "mid":
                 picks(answer.options, set(TRAITS), 2)
                 picks(answer.denied, set(TRAITS) - set(answer.options) - automatic, 1)
@@ -249,7 +274,7 @@ class ChoiceEngine:
                 else set(answer.denied)
             )
             positives |= automatic
-            if acting.girl == "OLDGEN" and answer.flag:
+            if has_rule(acting, "girl.oldgen.elder-bitch", "OLDGEN") and answer.flag:
                 positives.add("experienced")
             if acting.frame == "WYVERN 0.4" and action["data"]["prepared"]["piloting"]:
                 positives.add("big_enough")
@@ -362,7 +387,7 @@ class ChoiceEngine:
                         "TAG_CONSENT_REQUIRED: its setter must consent to rejecting this Tag.",
                     )
                     require(
-                        not (acting.girl == "NEWGIRL" and rejected.giver == acting.mentor),
+                        not (mentor_tag(acting, rejected, state)),
                         "A Newgirl cannot reject a Mentor Tag.",
                     )
                     acting.tags = [x for x in acting.tags if x.id != rejected.id]
@@ -554,12 +579,22 @@ class ChoiceEngine:
         owner: int,
         answer: ChoiceAnswer,
     ) -> None:
+        from girlframe.services import m3_tag_markers as markers
+
         actor = int(action["actor_id"])
         sheet = state.sheets[str(actor)]
         picks(answer.options, {"pass", "tag"}, 1)
+        require(
+            set(answer.fields) <= {"status", "marker"}, "Choose only supported source-role fields."
+        )
+        marker = (
+            markers.select(self.game, c, state, action, owner, answer.fields.get("marker"))
+            if answer.options == ("tag",) or "marker" in answer.fields
+            else None
+        )
         if answer.options == ("pass",):
             require(
-                not answer.denied and set(answer.fields) <= {"status"},
+                not answer.denied and set(answer.fields) <= {"status", "marker"},
                 "A pass does not modify a Tag.",
             )
         else:
@@ -576,8 +611,11 @@ class ChoiceEngine:
             tag = next(x for x in sheet.tags if x.id == answer.denied[0])
             require(
                 owner != actor
-                or (sheet.girl == "NEWGIRL" and tag.giver == sheet.mentor)
-                or (sheet.girl == "PRINCESS" and action["data"]["play"] == "flirt"),
+                or mentor_tag(sheet, tag, state)
+                or (
+                    has_rule(sheet, "girl.princess.objectively-beautiful", "PRINCESS")
+                    and action["data"]["play"] == "flirt"
+                ),
                 "Only another player or a printed self-mark exception can mark this Girl Tag.",
             )
             require(
@@ -586,13 +624,14 @@ class ChoiceEngine:
             )
         if (
             owner == actor
-            and sheet.girl == "ALPHA"
+            and has_rule(sheet, "girl.alpha.nothing-more-than-a-hound", "ALPHA")
             and state.order
             and state.order[-1] == actor
             and not sheet.status_marked
         ):
             require(
-                set(answer.fields) <= {"status"}, "Choose only the supported Dog Status modifier."
+                set(answer.fields) <= {"status", "marker"},
+                "Choose only the supported Dog Status modifier.",
             )
             require(
                 answer.fields.get("status", "0") in ("-1", "0", "1"),
@@ -604,23 +643,55 @@ class ChoiceEngine:
                 action["data"]["modifiers"].append(
                     {"source": "alpha_status", "amount": int(answer.fields["status"])}
                 )
-        elif answer.fields:
+        elif set(answer.fields) - {"marker"}:
             raise WorkflowError("This actor has no supported Status-mark modifier.")
+        if answer.options == ("tag",):
+            assert marker is not None
+            markers.capture(self.game, c, state, action, marker)
 
     def close_tag_window(self, c: Connection, state: GameState, action: dict[str, Any]) -> None:
+        from girlframe.engine.m3_tag_markers import modifier
+        from girlframe.services import m3_tag_markers as markers
+
         actor = int(action["actor_id"])
         sheet = state.sheets[str(actor)]
         proposals = []
         for person in action["data"]["participants"]:
             answer = self.answered(action, "tag_window", person)
             if answer.options == ("tag",):
-                proposals.append((person, answer))
+                try:
+                    marker = markers.saved(self.game, c, state, action, person)
+                except WorkflowError:
+                    markers.reopen(self.game, c, action, person)
+                    return
+                proposals.append((person, answer, marker))
         selected = None
-        for entry in proposals:
-            if selected is None or higher(state, entry[0], selected[0]):
-                selected = entry
+        discussion = action["data"].get("tag_marker_discussion")
+        if discussion and discussion.get("ready"):
+            proposal = next(
+                x for x in discussion["proposals"] if x["id"] == discussion["candidate"]
+            )
+            selected = next((x for x in proposals if x[0] == proposal["controller"]), None)
+            require(selected is not None, "Recover the original discussed Tag proposal.")
+        elif len(proposals) > 1 and any(
+            x[2].actor is None or x[2].actor.kind not in ("pilot", "handler") for x in proposals
+        ):
+            markers.begin_discussion(self.game, c, action, proposals)
+            return
+        else:
+            for entry in proposals:
+                if selected is None:
+                    selected = entry
+                    continue
+                require(
+                    entry[2].actor is not None and selected[2].actor is not None,
+                    "Only actual ranked bodies have Status priority",
+                )
+                assert entry[2].actor is not None and selected[2].actor is not None
+                if higher(state, int(entry[2].actor.entity), int(selected[2].actor.entity)):
+                    selected = entry
         if selected:
-            person, answer = selected
+            person, answer, marker = selected
             tag = next(x for x in sheet.tags if x.id == answer.denied[0])
             require(
                 tag.scene_used != action["scene_id"], "This Tag was already used in this scene."
@@ -629,18 +700,32 @@ class ChoiceEngine:
             tag.marked = True
             tag.scene_used = action["scene_id"]
             sheet.revision += 1
-            depth = state.bonds.get(pair_key(actor, person), 0)
-            bonus = 2 if depth == 1 else int(state.intense_tag_bonus or 1) if depth == 2 else 1
+            amount = modifier(
+                state, markers.roller(state, action), marker, 1 if answer.number == 1 else -1
+            )
+            action["data"]["tag_marker_applied"] = dict(
+                actor=marker.actor.model_dump(mode="json") if marker.actor else None,
+                controller=person,
+                tag=tag.id,
+                amount=amount,
+                source_actor_sha256=marker.source_actor_sha256,
+            )
             action["data"]["modifiers"].append(
                 {
                     "source": "girl_tag",
                     "tag": tag.id,
                     "actor": person,
-                    "amount": bonus * int(answer.number or 0),
+                    "amount": amount,
                 }
             )
             self.set_total(action)
-            if sheet.girl == "BONDED" and sheet.pair == person:
+            if (
+                has_rule(sheet, "girl.bonded.bonded-pair", "BONDED")
+                and relation_current(sheet, "pair", state)
+                and marker.actor is not None
+                and marker.actor.kind == "pilot"
+                and sheet.pair == int(marker.actor.entity)
+            ):
                 self.game.request(
                     c, action, person, "paired_tag", {"tag": tag.id, "already_marked": old}
                 )
@@ -662,6 +747,16 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         play = action["data"]["play"]
         level = action["data"]["result"]["tier"]
+        if play == "dive_deep" and action["data"].get("dive"):
+            from girlframe.services.m3_dive import results as dive_results
+
+            dive_results(self.game, c, action)
+            return
+        if play == "defeat" and action["data"].get("defeat"):
+            from girlframe.services.m3_defeat import results as defeat_results
+
+            defeat_results(self.game, c, action)
+            return
         if play == "put_someone_beneath_you" and action["data"].get("beneath"):
             from girlframe.services.m3_beneath import results as beneath_results
 
@@ -680,7 +775,7 @@ class ChoiceEngine:
                 return
         if play == "flirt" and level == "low":
             target = int(action["data"]["prepared"]["target"])
-            self.bond(state, actor, target, -1)
+            self.bond(state, actor, target, -1, action["data"]["response_event"])
             self.game.request(c, action, target, "target_flirt")
             return
         kind = {
@@ -694,6 +789,11 @@ class ChoiceEngine:
 
     def finish(self, c: Connection, state: GameState, action: dict[str, Any]) -> None:
         require(not self.game.pending(c, action["id"]), "Mandatory decisions remain pending.")
+        if action["data"].get("void_keep"):
+            from girlframe.services.m3_void_keep import finish_keep
+
+            if not finish_keep(self.game, c, state, action):
+                return
         action["state"] = "complete"
         self.game.queue(
             c,
@@ -701,19 +801,26 @@ class ChoiceEngine:
             "outcome",
             {
                 "play": action["data"]["play"],
-                "callsign": state.sheets[action["actor_id"]].callsign,
+                "callsign": self.original_callsign(state, action),
                 "receipt": action["data"]["receipt"],
                 "total": action["data"]["result"].get("total"),
                 "tier": action["data"]["result"].get("tier"),
             },
         )
-        if action["parent_id"]:
+        if action["parent_id"] and not action["data"].get("void_keep"):
             parent = self.game.action(c, action["parent_id"])
             requests = [
                 x
                 for x in self.game.pending(c, parent["id"])
                 if x["actor_id"] == action["actor_id"]
-                and x["kind"] in ("escape_play", "order_disobey", "beneath_response_play")
+                and x["kind"]
+                in (
+                    "escape_play",
+                    "order_disobey",
+                    "beneath_response_play",
+                    "beneath_defeat",
+                    "required_defeat",
+                )
             ]
             require(len(requests) == 1, "The parent response linkage changed.")
             table = t.m2["m2_choices"]
@@ -728,5 +835,18 @@ class ChoiceEngine:
             parent["data"]["result"]["response_play"] = action["id"]
             if requests[0]["kind"] == "escape_play":
                 parent["data"]["result"]["escaped"] = True
-            self.finish(c, state, parent)
+            if not self.game.pending(c, parent["id"]):
+                self.finish(c, state, parent)
             self.game.save_action(c, parent)
+
+    def original_callsign(self, state: GameState, action: dict[str, Any]) -> str:
+        sheet = state.sheets.get(action["actor_id"])
+        if sheet is not None:
+            return sheet.callsign
+        from girlframe.engine.m3_actor_state import ActorRef
+        from girlframe.engine.m3_careers import original_sheet
+
+        character = action["data"].get("character_ids", {}).get(action["actor_id"])
+        return original_sheet(
+            state, ActorRef(kind="pilot", entity=action["actor_id"], incarnation=character)
+        ).callsign

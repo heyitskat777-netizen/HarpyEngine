@@ -187,17 +187,10 @@ def pre_roll(
 
 
 def _character(game: "GameService", c: Connection, period: Period, actor: int) -> None:
-    import sqlalchemy as sa
-
-    from girlframe.database import tables as t
-
-    character = c.scalar(
-        sa.select(t.characters.c.id).where(
-            t.characters.c.campaign_id == game.store.campaign_id,
-            t.characters.c.user_id == str(actor),
-        )
+    character = game.character_binding(
+        c, load_state(c, game.store.campaign_id), actor, require_current_profile=False
     )
-    if character is None or period.character_ids.get(str(actor)) != character:
+    if str(actor) in period.ended_characters or period.character_ids.get(str(actor)) != character:
         raise WorkflowError("The character changed; explicitly recover the old period first.")
 
 
@@ -208,18 +201,27 @@ def save_raw_roll(
     period = service._get(c, action["data"]["m3"]["period_id"])
     actor = int(action["actor_id"])
     receipt = action["data"]["receipt"]
+    from girlframe.engine.m3_adjudication_state import Decision
+
+    manual = (
+        Decision.model_validate_json(json.dumps(receipt["adjudication"]))
+        if receipt.get("adjudication") is not None
+        else None
+    )
+    faces = tuple(receipt["faces"]) if receipt["faces"] is not None else None
     if action["data"]["play"] == "void_observation":
         from girlframe.engine.m3_observation import roll
 
-        updated = roll(period, period.revision, actor, state, tuple(receipt["faces"]))
+        updated = roll(period, period.revision, actor, state, faces, adjudication=manual)
     else:
-        updated = ordinary_roll(period, period.revision, actor, state, tuple(receipt["faces"]))
+        updated = ordinary_roll(period, period.revision, actor, state, faces, adjudication=manual)
     updated.progress[str(actor)].action_id = action["id"]
     updated.progress[str(actor)].reward_source_event = event
     saved = updated.progress[str(actor)].roll
     assert saved is not None
     updated.progress[str(actor)].roll = Roll(
         faces=saved.faces,
+        adjudication=saved.adjudication,
         modifier=saved.modifier,
         total=receipt["pre_total"],
         source=saved.source,
@@ -258,6 +260,7 @@ def sync_finished_roll(
     raw = progress.roll
     updated.progress[action["actor_id"]].roll = Roll(
         faces=raw.faces,
+        adjudication=raw.adjudication,
         modifier=raw.modifier,
         total=action["data"]["result"]["total"],
         source=raw.source,

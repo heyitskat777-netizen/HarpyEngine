@@ -66,7 +66,7 @@ def eligible(state: GameState, attacker: ActorRef, defender: ActorRef) -> None:
     original = next(x for x in state.world.gorgons if x.id == attacker.entity)
     if original.gorgon_class == "benevolent":
         raise ValueError("A Benevolent Gorgon will not initiate an Attack")
-    if first.cell != second.cell:
+    if first.cell is None or second.cell is None or first.cell != second.cell:
         raise ValueError("UNSUPPORTED_RULE: this contest branch covers co-located Gorgons")
     if any(not any(not x.damaged for x in actor.assets) for actor in (first, second)):
         raise ValueError("Each actual Gorgon needs an undamaged Asset to pit in this contest")

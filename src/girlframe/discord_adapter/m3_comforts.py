@@ -75,6 +75,17 @@ async def open_comfort(
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.get, viewer, identity)
+    if data.get("deferred"):
+        await reply(
+            interaction,
+            "This unspent paid benefit is temporarily suspended. "
+            + (
+                "Its original entitlement moved to a new period request; reopen your inbox."
+                if data.get("transfer_work")
+                else "It remains owed until the original condition and restoration are completed."
+            ),
+        )
+        return
     if data["taken"] is not None:
         text = "**Creature Comforts — resolved**\n"
         if data["own"]:

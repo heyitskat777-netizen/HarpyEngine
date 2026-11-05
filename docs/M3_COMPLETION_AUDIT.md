@@ -6,6 +6,8 @@ Owner requested this audit after questioning the earlier 600-credit estimate.
 is available.** Work resumes by finished workflows, rather than another open-ended
 foundation pass. This document changes neither the agreed scope nor release gates.
 
+The current four-agent candidate is tracked in [M3_PARALLEL_WORK.md](M3_PARALLEL_WORK.md) and the top of the acceptance report. The original audit and earlier checkpoint counts below are historical; they are not the current candidate's completion claim.
+
 Subsequent checkpoints: **1a, Asset Installment** (`af0a221`) and **1b, Creature
 Comforts** (`620e879`) are **IMPLEMENTED_AUTOMATED** within their stated flows.
 Final full suite: **1,399 passed**. Independent review and human acceptance remain

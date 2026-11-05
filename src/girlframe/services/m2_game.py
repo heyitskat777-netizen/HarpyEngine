@@ -27,6 +27,7 @@ from girlframe.engine.m2 import (
     spend_heat,
 )
 from girlframe.engine.m2_registry import registry_digest
+from girlframe.engine.m3_plays import ASSET_IDS as M3_ASSET_IDS
 from girlframe.engine.m3_plays import HEAT_IDS as M3_HEAT_IDS
 from girlframe.engine.m3_plays import ROLL_IDS as M3_ROLL_IDS
 from girlframe.engine.m3_policy import RULESET as M3_RULESET
@@ -99,6 +100,13 @@ class GameService:
         **metadata: Any,
     ) -> str:
         if state is not None:
+            from girlframe.services.m3_incarnations import prepare_write
+
+            bound, binding_proof = prepare_write(c, self.store.campaign_id, state)
+            for field in GameState.model_fields:
+                setattr(state, field, getattr(bound, field))
+            if binding_proof:
+                metadata["legacy_identity_bindings"] = binding_proof
             state.revision += 1
             metadata["game_revision"] = state.revision
         if kind.startswith("m3.") and self.store.policy.m3_approval is not None:
@@ -114,6 +122,11 @@ class GameService:
             ruleset_version=M3_RULESET if kind.startswith("m3.") else RULESET,
         )
         if state is not None:
+            from girlframe.engine.m3_careers import stamp_tag_givers
+
+            bound = stamp_tag_givers(load_state(c, self.store.campaign_id), state, event)
+            for field in GameState.model_fields:
+                setattr(state, field, getattr(bound, field))
             body = GameState.model_validate_json(state.model_dump_json()).model_dump_json()
             c.execute(
                 t.m2["m2_state_history"]
@@ -156,6 +169,17 @@ class GameService:
                 else public_sheet(sheet, state)
             )
 
+    def helpless_status(self, viewer: GuildViewer) -> bool:
+        """Read the current person's condition, including actor-bound NPC opponents."""
+        from girlframe.engine.m3_actor_bonds import current_ref, is_helpless
+
+        with self.store.engine.connect() as c:
+            self.authorize(c, viewer, game=False)
+            state = load_state(c, self.store.campaign_id)
+            if str(viewer.user_id) not in state.sheets:
+                raise WorkflowError("This Pilot has no activated sheet.")
+            return is_helpless(state, current_ref(state, viewer.user_id))
+
     def activate(
         self, viewer: GuildViewer, key: str, fingerprint: str, public_fields: tuple[str, ...] = ()
     ) -> dict[str, Any]:
@@ -183,13 +207,28 @@ class GameService:
                 )
             review = CreationReviewService(self.store)._current(c, viewer).sheet
             setup = HandlerService(self.store).current(c)[1]
-            if not state.order:
+            from girlframe.engine.m3_careers import binding, profile_character
+
+            current_career = binding(state, viewer.user_id)
+            if any(int(x.actor.entity) == viewer.user_id for x in state.career_archives) and (
+                current_career is None
+                or not current_career.active
+                or current_career.status_event is None
+            ):
+                raise WorkflowError(
+                    "The replacement needs its own explicit current-Handler Status assignment."
+                )
+            absent_careers = {
+                int(x.actor.entity)
+                for x in state.career_archives
+                if int(x.actor.entity) not in state.order
+            }
+            expected_roster = {x.user_id for x in setup.status_order} - absent_careers
+            if not state.order and not state.career_archives:
                 state.order = tuple(x.user_id for x in setup.status_order)
                 state.handler = setup.handler_id
                 state.intense_tag_bonus = self.store.policy.owner_intense_tag_bonus
-            elif state.handler != setup.handler_id or set(state.order) != {
-                x.user_id for x in setup.status_order
-            }:
+            elif state.handler != setup.handler_id or set(state.order) != expected_roster:
                 raise WorkflowError(
                     "UNSUPPORTED_RULE: canonical roster/Handler changes need explicit migration."
                 )
@@ -249,6 +288,9 @@ class GameService:
                 raise WorkflowError(
                     "The actual current character profile is required for activation."
                 )
+            character_id = profile_character(
+                state, viewer.user_id, character_id, review.character_revision
+            )
             sheet = PilotSheet(
                 owner=viewer.user_id,
                 character_id=character_id,
@@ -374,6 +416,21 @@ class GameService:
             if str(viewer.user_id) not in state.sheets and viewer.user_id != state.handler:
                 raise WorkflowError("Activate a Pilot or use the appointed Handler account.")
             scene = self.scene(c, channel)
+            from girlframe.engine.m3_actor_state import ActorRef
+            from girlframe.services.m3_scene_requisitions import guard
+
+            ref = (
+                ActorRef(kind="handler", entity=str(viewer.user_id))
+                if viewer.user_id == state.handler
+                else ActorRef(
+                    kind="pilot",
+                    entity=str(viewer.user_id),
+                    incarnation=self.character_binding(
+                        c, state, viewer.user_id, require_current_profile=False
+                    ),
+                )
+            )
+            guard(c, self.store, scene["id"], ref)
             if any(x.id == scene["id"] and x.open for x in state.scene_casts):
                 raise WorkflowError("Choose your actual role through /mission cast.")
             lock = self.lock(c, channel)
@@ -493,20 +550,25 @@ class GameService:
     def queue(
         self, c: Connection, action: dict[str, Any], kind: str, body: dict[str, Any] | None = None
     ) -> None:
-        identity = str(uuid4())
-        c.execute(
-            t.m2["m2_outbox"]
-            .insert()
-            .values(
-                campaign_id=self.store.campaign_id,
-                id=identity,
-                action_id=action["id"],
-                channel_id=action["channel_id"],
-                nonce=str(int(UUID(identity)) % (2**63 - 1)),
-                body_json=json.dumps({"kind": kind, **(body or {})}),
-                state="pending",
+        recipients = action["data"].get("private_audience") or (None,)
+        for recipient in recipients:
+            identity = str(uuid4())
+            payload = {"kind": kind, **(body or {})}
+            if recipient is not None:
+                payload["private_recipient"] = recipient
+            c.execute(
+                t.m2["m2_outbox"]
+                .insert()
+                .values(
+                    campaign_id=self.store.campaign_id,
+                    id=identity,
+                    action_id=action["id"],
+                    channel_id=action["channel_id"],
+                    nonce=str(int(UUID(identity)) % (2**63 - 1)),
+                    body_json=json.dumps(payload),
+                    state="pending",
+                )
             )
-        )
 
     def obligation(
         self,
@@ -572,39 +634,34 @@ class GameService:
     def character_binding(
         self, c: Connection, state: GameState, owner: int, *, require_current_profile: bool = True
     ) -> str:
-        sheet = state.sheets.get(str(owner))
-        profile = c.execute(
-            sa.select(t.characters.c.id, t.characters.c.revision).where(
-                t.characters.c.campaign_id == self.store.campaign_id,
-                t.characters.c.user_id == str(owner),
-            )
-        ).first()
-        if sheet is None or sheet.owner != owner or profile is None:
-            raise WorkflowError("STALE_CHARACTER: recover the actual active character.")
-        if require_current_profile and profile.revision != sheet.source_profile_revision:
-            raise WorkflowError(
-                "STALE_PROFILE: active profile changed; canonical resources were preserved."
-            )
-        original = sheet.character_id
-        if original is None:
-            original = c.scalar(
-                sa.select(t.snapshots.c.character_id).where(
-                    t.snapshots.c.campaign_id == self.store.campaign_id,
-                    t.snapshots.c.user_id == str(owner),
-                    t.snapshots.c.revision == sheet.source_profile_revision,
-                )
-            )
-        if original is None or original != profile.id:
-            raise WorkflowError(
-                "STALE_CHARACTER: original resources cannot move to another character."
-            )
-        return str(original)
+        from girlframe.services.m3_incarnations import identity
 
-    def action_characters(self, c: Connection, action: dict[str, Any], state: GameState) -> None:
+        return identity(
+            c,
+            self.store.campaign_id,
+            state,
+            owner,
+            require_current_profile=require_current_profile,
+        )
+
+    def action_characters(
+        self,
+        c: Connection,
+        action: dict[str, Any],
+        state: GameState,
+        *,
+        allow_archived: bool = False,
+    ) -> None:
         saved = action["data"].get("character_ids")
         if saved is None:
             saved = self.legacy_action_bindings(c, action)
         for owner, original in saved.items():
+            if allow_archived:
+                from girlframe.engine.m3_actor_state import ActorRef
+                from girlframe.engine.m3_careers import archive_for
+
+                if archive_for(state, ActorRef(kind="pilot", entity=owner, incarnation=original)):
+                    continue
             if (
                 self.character_binding(c, state, int(owner), require_current_profile=False)
                 != original
@@ -693,7 +750,7 @@ class GameService:
             result[str(owner)] = identity
         return result
 
-    def immediate_work(self, c: Connection, owner: int) -> bool:
+    def immediate_work(self, c: Connection, owner: int, *, scene_id: str | None = None) -> bool:
         work = t.m3["m3_required_work"]
         latest = {
             row["id"]: row
@@ -705,16 +762,24 @@ class GameService:
                 .order_by(work.c.revision)
             ).mappings()
         }
-        return any(
-            row["state"] != "resolved" and bool(json.loads(row["body_json"]).get("immediate"))
-            for row in latest.values()
-        )
+        for row in latest.values():
+            if row["state"] == "resolved" or not json.loads(row["body_json"]).get("immediate"):
+                continue
+            if scene_id is not None and row["kind"] == "scene_requisition":
+                from girlframe.engine.m3_scene_requisitions import active
+                from girlframe.services.m3_scene_requisitions import benefit
+
+                saved = benefit(dict(row))
+                if active(saved) and saved.scene is not None and saved.scene.id == scene_id:
+                    continue
+            return True
+        return False
 
     def begin(
         self, viewer: GuildViewer, key: str, channel: int, sheet_revision: int, prepared: PlayInput
     ) -> dict[str, Any]:
         prepared = PlayInput.model_validate_json(prepared.model_dump_json())
-        if prepared.play not in (*PLAY_IDS, *M3_ROLL_IDS, *M3_HEAT_IDS):
+        if prepared.play not in (*PLAY_IDS, *M3_ROLL_IDS, *M3_HEAT_IDS, *M3_ASSET_IDS):
             raise WorkflowError("UNSUPPORTED_RULE: this Play is not implemented in M2.")
 
         def operation(c: Connection) -> dict[str, Any]:
@@ -722,10 +787,27 @@ class GameService:
             state = load_state(c, self.store.campaign_id)
             m3 = None
             beneath = None
+            defeat = None
+            dive = None
+            void_keep = None
             from girlframe.services.m3_beneath import no_conflict
 
             no_conflict(self, c, viewer, prepared)
-            if prepared.play in M3_HEAT_IDS:
+            if prepared.play in M3_ASSET_IDS:
+                from girlframe.services.m3_defeat import prepare as prepare_defeat
+
+                defeat = prepare_defeat(self, c, viewer, prepared, state)
+            elif prepared.play == "keep_your_head" and prepared.source_work is not None:
+                from girlframe.services.m3_void_keep import prepare_keep
+
+                void_keep, state = prepare_keep(self, c, viewer, prepared, state, channel)
+            elif prepared.source_work is not None:
+                raise WorkflowError("A source work reference belongs to its actual mandatory Play.")
+            if prepared.play == "dive_deep":
+                from girlframe.services.m3_dive import prepare as prepare_dive
+
+                dive = prepare_dive(self, c, viewer, prepared, state, channel=channel)
+            if prepared.play == "put_someone_beneath_you":
                 from girlframe.services.m3_beneath import prepare as prepare_beneath
 
                 beneath = prepare_beneath(self, c, viewer, prepared, state)
@@ -735,18 +817,59 @@ class GameService:
                 m3 = prepare(self, c, viewer, prepared)
             elif prepared.off_duty_id is not None:
                 raise WorkflowError("A period reference belongs only to its actual M3 Play.")
+            from girlframe.services.m3_adjudication import prepare_required
+
+            adjudication = prepare_required(self, c, viewer, prepared, state, source=defeat or m3)
             sheet = state.sheets.get(str(viewer.user_id))
             if sheet is None or sheet.revision != sheet_revision:
                 raise WorkflowError("STALE_SHEET: refresh the Play wizard.")
-            if sheet.frame_scrapped:
+            if sheet.frame_scrapped and prepared.piloting and defeat is None:
                 raise WorkflowError(
                     "REQUIRED_FOLLOWUP: replace the scrapped Frame before new Plays."
                 )
-            if self.immediate_work(c, viewer.user_id):
+            if (
+                self.immediate_work(c, viewer.user_id, scene_id=self.scene(c, channel)["id"])
+                and defeat is None
+                and void_keep is None
+            ):
                 raise WorkflowError(
-                    "REQUIRED_FOLLOWUP: resolve the immediate mechanical follow-up first."
+                    "REQUIRED_FOLLOWUP: replace the scrapped Frame before new Plays."
+                    if sheet.frame_scrapped
+                    else "REQUIRED_FOLLOWUP: resolve the immediate mechanical follow-up first."
                 )
-            if sheet.helpless_against:
+            if sheet.medical_state != "fit" and defeat is None:
+                raise WorkflowError("Recover from unconscious injury before a new voluntary Play.")
+            from girlframe.engine.m3_actor_state import ActorRef
+            from girlframe.engine.m3_careers import can_pilot
+
+            current_ref = ActorRef(
+                kind="pilot",
+                entity=str(viewer.user_id),
+                incarnation=self.character_binding(
+                    c, state, viewer.user_id, require_current_profile=False
+                ),
+            )
+            if (
+                not can_pilot(state, current_ref)
+                and (
+                    prepared.piloting
+                    or prepared.play
+                    in (
+                        "check_sensors",
+                        "engage",
+                        "dive_deep",
+                        "all_out_assault",
+                        "go_for_the_core",
+                    )
+                )
+                and defeat is None
+            ):
+                raise WorkflowError(
+                    "Link Surgery Reversal prevents this original Girl's Frame Plays."
+                )
+            from girlframe.engine.m3_actor_bonds import is_helpless
+
+            if is_helpless(state, current_ref) and defeat is None and void_keep is None:
                 raise WorkflowError(
                     "UNSUPPORTED_RULE: recover from Helplessness before a new defensive Play."
                 )
@@ -754,7 +877,47 @@ class GameService:
             if HandlerService(self.store).current(c)[1].handler_id != state.handler:
                 raise WorkflowError("STALE_HANDLER: canonical Handler replacement needs review.")
             scene = self.scene(c, channel)
-            self.pilot_cast(c, state, scene)
+            if dive is None and void_keep is None:
+                self.pilot_cast(c, state, scene)
+            else:
+                from girlframe.engine.m3_actor_state import SceneCast
+
+                if dive is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(dive["cast"]))
+                else:
+                    from girlframe.services.m3_actors import ActorService
+                    from girlframe.services.m3_cast import CastService
+                    from girlframe.services.m3_missions import MissionService
+
+                    source_cast, _ = CastService(ActorService(MissionService(self.store)))._current(
+                        c, state, channel
+                    )
+                    assert void_keep is not None
+                    void_keep["cast"] = source_cast.model_dump(mode="json")
+                    void_keep["table"] = sorted(
+                        {role.controller for role in source_cast.roles}
+                        | ({source_cast.facilitator} if source_cast.facilitator else set())
+                    )
+                if source_cast.facilitator != state.handler or set(scene["participants"]) != (
+                    {role.controller for role in source_cast.roles if role.actor.kind == "pilot"}
+                    | {source_cast.facilitator}
+                ):
+                    raise WorkflowError(
+                        "STALE_CAST: recover the actual Dive participants and facilitator."
+                    )
+            from girlframe.engine.m3_actor_state import ActorRef
+            from girlframe.services.m3_scene_requisitions import guard as guard_private_scene
+
+            acting_ref = ActorRef(
+                kind="pilot",
+                entity=str(viewer.user_id),
+                incarnation=self.character_binding(
+                    c, state, viewer.user_id, require_current_profile=False
+                ),
+            )
+            guard_private_scene(
+                c, self.store, scene["id"], acting_ref, continuation=prepared.parent is not None
+            )
             if (
                 viewer.user_id not in scene["participants"]
                 or state.handler not in scene["participants"]
@@ -779,13 +942,28 @@ class GameService:
                     (
                         x
                         for x in choices
-                        if x["kind"] in ("escape_play", "order_disobey", "beneath_response_play")
+                        if x["kind"]
+                        in (
+                            "escape_play",
+                            "order_disobey",
+                            "beneath_response_play",
+                            "beneath_defeat",
+                            "required_defeat",
+                            "defeat_void_threshold",
+                            "dive_void_threshold",
+                        )
                         and x["actor_id"] == str(viewer.user_id)
                     ),
                     None,
                 )
                 if required is None:
                     raise WorkflowError("Only the required player can make this response Play.")
+                if required["kind"] in ("beneath_defeat", "required_defeat") and defeat is None:
+                    raise WorkflowError("This actual consequence requires Defeat.")
+                if required["kind"] in ("defeat_void_threshold", "dive_void_threshold") and (
+                    void_keep is None or prepared.play != "keep_your_head"
+                ):
+                    raise WorkflowError("Use the actual source-owned Void resistance controls.")
                 if required["kind"] == "order_disobey" and (
                     prepared.play != "disobey_orders"
                     or prepared.order_id != parent["data"]["order_id"]
@@ -810,7 +988,7 @@ class GameService:
                     )
             elif root_lock and root_lock["state"] != "released":
                 raise WorkflowError("SCENE_BUSY: resolve the pending Play first.")
-            if prepared.play in ("flirt", *M3_HEAT_IDS):
+            if prepared.play in ("flirt", "put_someone_beneath_you"):
                 if (
                     prepared.target == viewer.user_id
                     or str(prepared.target) not in state.sheets
@@ -826,7 +1004,7 @@ class GameService:
             preview = PilotSheet.model_validate_json(sheet.model_dump_json())
             if prepared.identity:
                 share = mark_identity(
-                    preview, prepared.identity, prepared.gain, prepared.pair_share
+                    preview, prepared.identity, prepared.gain, prepared.pair_share, state=state
                 )
                 if share and str(sheet.pair) not in state.sheets:
                     raise WorkflowError("The Pair must have an active sheet to receive Heat.")
@@ -852,10 +1030,25 @@ class GameService:
                 "result": {},
                 "choices": {},
             }
+            from girlframe.services.m3_scene_requisitions import audience as private_scene_audience
+
+            private_audience = private_scene_audience(c, self.store, scene["id"])
+            if private_audience is not None:
+                data["private_audience"] = list(private_audience)
             if m3 is not None:
                 data["m3"] = m3
             if beneath is not None:
                 data["beneath"] = beneath
+            if defeat is not None:
+                data["defeat"] = defeat
+            if dive is not None:
+                data["dive"] = dive
+                data["participants"] = list(dive["table"])
+            if adjudication is not None:
+                data["adjudication"] = adjudication
+            if void_keep is not None:
+                data["void_keep"] = void_keep
+                data["participants"] = list(void_keep["table"])
             from girlframe.services.m3_recovery import enable as enable_recovery
 
             enable_recovery(self, c, viewer, data)
@@ -910,8 +1103,13 @@ class GameService:
                 viewer.user_id,
                 key,
                 "m3.play_confirmed"
-                if m3 is not None or beneath is not None
+                if m3 is not None
+                or beneath is not None
+                or defeat is not None
+                or dive is not None
+                or void_keep is not None
                 else "m2.play_confirmed",
+                state if void_keep is not None else None,
                 action_id=identity,
                 play=prepared.play,
             )
@@ -1001,6 +1199,14 @@ class GameService:
                 from girlframe.services.m3_beneath import authorize as authorize_beneath
 
                 authorize_beneath(self, c, viewer, action)
+            if action["data"].get("defeat"):
+                from girlframe.services.m3_defeat import authorize as authorize_defeat
+
+                authorize_defeat(self, c, viewer, action)
+            if action["data"].get("dive"):
+                from girlframe.services.m3_dive import authorize as authorize_dive
+
+                authorize_dive(self, c, viewer, action)
 
         def operation(c: Connection) -> dict[str, Any]:
             action = self.action(c, identity)
@@ -1020,10 +1226,18 @@ class GameService:
                 from girlframe.services.m3_actor_plays import ActorPlayService
 
                 return ActorPlayService(self).roll(c, viewer, key, action)
-            if action["data"]["play"] not in (*PLAY_IDS, *M3_ROLL_IDS, *M3_HEAT_IDS):
+            if action["data"].get("adjudication"):
+                from girlframe.services.m3_adjudication import reserve_request
+
+                return reserve_request(self, c, viewer, action, key=key)
+            if action["data"]["play"] not in (*PLAY_IDS, *M3_ROLL_IDS, *M3_HEAT_IDS, *M3_ASSET_IDS):
                 raise WorkflowError("This action is diceless.")
             state = load_state(c, self.store.campaign_id)
             self.action_characters(c, action, state)
+            if action["data"].get("void_keep"):
+                from girlframe.services.m3_void_keep import authorize_keep
+
+                authorize_keep(self, c, state, action)
             if HandlerService(self.store).current(c)[1].handler_id != state.handler:
                 raise WorkflowError("STALE_HANDLER: staff recovery is required.")
             sheet = state.sheets[str(viewer.user_id)]
@@ -1034,7 +1248,26 @@ class GameService:
                 from girlframe.services.m3_beneath import pre_roll as beneath_pre_roll
 
                 beneath_pre_roll(self, c, viewer, state, action)
+            if action["data"].get("dive"):
+                from girlframe.services.m3_dive import pre_roll as dive_pre_roll
+
+                dive_pre_roll(self, c, viewer, state, action)
+                action["data"]["dive"]["roll_event"] = str(uuid4())
             m3 = action["data"].get("m3")
+            defeat = action["data"].get("defeat")
+            if defeat is not None:
+                from girlframe.engine.m3_actor_state import ActorRef
+                from girlframe.engine.m3_defeat import modifier as defeat_modifier
+                from girlframe.services.m3_actors import profiles
+
+                actual = defeat_modifier(
+                    state,
+                    ActorRef.model_validate_json(json.dumps(defeat["actor"])),
+                    profiles(c, self.store.campaign_id),
+                )
+                if actual != defeat["modifier"]:
+                    raise WorkflowError("STALE_DEFEAT: recover the original unrolled resources.")
+                defeat["roll_event"] = str(uuid4())
             if m3 is not None:
                 from girlframe.services.m3_play_support import pre_roll
 
@@ -1045,7 +1278,9 @@ class GameService:
 
                 refusal_modifiers = consume_refusal(self, c, viewer, state, action)
             if prepared.identity:
-                share = mark_identity(sheet, prepared.identity, prepared.gain, prepared.pair_share)
+                share = mark_identity(
+                    sheet, prepared.identity, prepared.gain, prepared.pair_share, state=state
+                )
                 if share:
                     state.sheets[str(sheet.pair)].heat += share
                     state.sheets[str(sheet.pair)].revision += 1
@@ -1069,12 +1304,23 @@ class GameService:
                 "faces": list(faces),
                 "heat": prepared.heat,
                 "pre_total": sum(faces)
-                + (m3["modifier"] if m3 is not None else prepared.heat)
+                + (
+                    m3["modifier"]
+                    if m3 is not None
+                    else defeat["modifier"]
+                    if defeat is not None
+                    else prepared.heat
+                )
                 + sum(x["amount"] for x in pre_modifiers),
                 "rng_source": self.rng_source,
                 "rolled_utc": datetime.now(UTC).isoformat(),
                 "ruleset": M3_RULESET
-                if m3 is not None or refusal_modifiers or action["data"].get("beneath")
+                if m3 is not None
+                or refusal_modifiers
+                or action["data"].get("beneath")
+                or action["data"].get("dive")
+                or action["data"].get("void_keep")
+                or defeat is not None
                 else RULESET,
             }
             if m3 is not None:
@@ -1084,6 +1330,12 @@ class GameService:
                     modifier_source="Void Assets"
                     if m3.get("modifier_source") == "void_assets"
                     else "Status",
+                )
+            elif defeat is not None:
+                receipt.update(
+                    base_modifier=defeat["modifier"],
+                    modifier_source="Undamaged Girl Assets",
+                    pre_modifiers=[],
                 )
             elif refusal_modifiers:
                 receipt.update(
@@ -1115,9 +1367,17 @@ class GameService:
                 viewer.user_id,
                 key,
                 "m3.rolled"
-                if m3 is not None or refusal_modifiers or action["data"].get("beneath")
+                if m3 is not None
+                or refusal_modifiers
+                or action["data"].get("beneath")
+                or defeat is not None
                 else "m2.rolled",
                 state,
+                event_id=defeat["roll_event"]
+                if defeat is not None
+                else action["data"]["dive"]["roll_event"]
+                if action["data"].get("dive")
+                else None,
                 action_id=identity,
                 receipt_id=receipt["id"],
             )
@@ -1205,6 +1465,10 @@ class GameService:
                 from girlframe.services.m3_beneath import authorize as authorize_beneath
 
                 authorize_beneath(self, c, viewer, action)
+            if action["data"].get("dive"):
+                from girlframe.services.m3_dive import authorize as authorize_dive
+
+                authorize_dive(self, c, viewer, action)
             return dict(row)
 
         def authorize(c: Connection) -> None:
@@ -1233,6 +1497,17 @@ class GameService:
             action["data"]["choices"][row["kind"] + ":" + row["actor_id"]] = answer.model_dump(
                 mode="json"
             )
+            action["data"]["response_event"] = str(uuid4())
+            if action["data"].get("void_keep") and not action["data"]["void_keep"].get(
+                "resistance_resolved"
+            ):
+                from girlframe.services.m3_void_keep import authorize_keep
+
+                authorize_keep(self, c, state, action)
+            if action["data"].get("defeat"):
+                from girlframe.services.m3_defeat import authorize as authorize_defeat
+
+                authorize_defeat(self, c, viewer, action)
             if action["data"].get("actor_basic"):
                 from girlframe.services.m3_actor_plays import ActorPlayService
 
@@ -1248,8 +1523,12 @@ class GameService:
                 if action["data"].get("m3")
                 or action["data"].get("actor_basic")
                 or action["data"].get("beneath")
+                or action["data"].get("defeat")
+                or action["data"].get("dive")
+                or action["data"].get("void_keep")
                 else "m2.choice_resolved",
                 state,
+                event_id=action["data"]["response_event"],
                 action_id=action["id"],
                 choice_id=choice_id,
             )
@@ -1261,6 +1540,18 @@ class GameService:
                 from girlframe.services.m3_beneath import synchronize as synchronize_beneath
 
                 synchronize_beneath(self, c, action, event)
+            if action["data"].get("defeat"):
+                from girlframe.services.m3_defeat import synchronize as synchronize_defeat
+
+                synchronize_defeat(self, c, action, event, viewer, key)
+            if action["data"].get("dive"):
+                from girlframe.services.m3_dive import synchronize as synchronize_dive
+
+                synchronize_dive(self, c, action, event)
+            if action["data"].get("void_keep"):
+                from girlframe.services.m3_void_keep import synchronize_keep
+
+                synchronize_keep(self, c, action, event, viewer, key)
             c.execute(
                 t.m2["m2_responses"]
                 .insert()
@@ -1934,6 +2225,24 @@ class GameService:
                 from girlframe.services.m3_beneath import projection
 
                 result["beneath"] = projection(self, c, viewer, state, action, dict(row))
+            if action["data"].get("defeat") and row["kind"].startswith("defeat_"):
+                from girlframe.services.m3_defeat import projection as defeat_projection
+
+                result["defeat"] = defeat_projection(self, c, state, action, dict(row))
+            if action["data"].get("dive") and row["kind"].startswith("dive_"):
+                from girlframe.services.m3_dive import projection as dive_projection
+
+                result["dive"] = dive_projection(self, c, viewer, state, action, dict(row))
+            if row["kind"] == "tag_window":
+                from girlframe.services.m3_tag_markers import projection as marker_projection
+
+                result["tag_markers"] = marker_projection(self, c, state, action, viewer.user_id)
+            if row["kind"] in ("tag_marker_selection", "tag_marker_agreement"):
+                from girlframe.services.m3_tag_markers import discussion_projection
+
+                result["tag_marker_discussion"] = discussion_projection(
+                    self, c, state, action, viewer.user_id
+                )
             from girlframe.engine.m3_beneath import rejection_blocked
 
             result["rejection_blocked"] = bool(
@@ -1952,7 +2261,13 @@ class GameService:
             self.unpaused(c)
             state = load_state(c, self.store.campaign_id)
             sheet = state.sheets.get(str(viewer.user_id))
-            if sheet is None or sheet.revision != revision or not sheet.helpless_against:
+            from girlframe.engine.m3_actor_bonds import clear_helpless, current_ref, is_helpless
+
+            if (
+                sheet is None
+                or sheet.revision != revision
+                or not is_helpless(state, current_ref(state, viewer.user_id))
+            ):
                 raise WorkflowError("STALE_SHEET: no matching Helpless recovery is available.")
             scenes = t.m2["m2_scenes"]
             for row in c.execute(
@@ -1974,9 +2289,18 @@ class GameService:
                 chosen.damaged = False
             elif asset is not None:
                 raise WorkflowError("Recover an Asset only if all Girl Assets are damaged.")
-            sheet.helpless_against = ()
             sheet.revision += 1
-            self.event(c, viewer.user_id, key, "m2.helpless_recovered", state, owner=viewer.user_id)
+            response_event = str(uuid4())
+            state = clear_helpless(state, current_ref(state, viewer.user_id), response_event)
+            self.event(
+                c,
+                viewer.user_id,
+                key,
+                "m2.helpless_recovered",
+                state,
+                event_id=response_event,
+                owner=viewer.user_id,
+            )
             return {"owner": viewer.user_id, "revision": sheet.revision}
 
         return self.store._write(

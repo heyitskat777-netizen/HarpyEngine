@@ -10,10 +10,18 @@ from girlframe.database import tables as t
 from girlframe.engine import m3_actors as rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, ProfileBinding
+from girlframe.engine.m3_careers import profile_character
 from girlframe.services.m2_state import load_state
+from girlframe.services.m3_incarnations import proof
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
+
+
+def _raw_state(c: Connection, campaign: str) -> GameState:
+    table = t.m2["m2_state"]
+    body = c.scalar(sa.select(table.c.body_json).where(table.c.campaign_id == campaign))
+    return GameState.model_validate_json(body) if body is not None else GameState()
 
 
 def profiles(c: Connection, campaign: str) -> tuple[ProfileBinding, ...]:
@@ -29,7 +37,7 @@ def profiles(c: Connection, campaign: str) -> tuple[ProfileBinding, ...]:
     return tuple(
         ProfileBinding(
             owner=int(uid),
-            character_id=identity,
+            character_id=profile_character(canon, int(uid), identity, revision),
             profile_revision=revision,
             source_character_id=originals.get(
                 (str(uid), canon.sheets[str(uid)].source_profile_revision)
@@ -47,6 +55,8 @@ def profiles(c: Connection, campaign: str) -> tuple[ProfileBinding, ...]:
                 t.characters.c.revision,
             ).where(t.characters.c.campaign_id == campaign)
         )
+        if str(uid) in canon.sheets
+        or not any(int(x.actor.entity) == int(uid) for x in canon.career_archives)
     )
 
 
@@ -105,19 +115,23 @@ class ActorService:
                         "rules": actor.rules,
                     }
                 )
-            sheet = state.sheets.get(str(viewer.user_id))
-            own_profile = next((x for x in bindings if x.owner == viewer.user_id), None)
+            raw = _raw_state(c, self.store.campaign_id)
+            sheet = raw.sheets.get(str(viewer.user_id))
+            legacy_available = False
+            if sheet is not None and sheet.character_id is None:
+                try:
+                    proof(
+                        c, self.store.campaign_id, raw, viewer.user_id, require_current_profile=True
+                    )
+                except WorkflowError:
+                    pass
+                else:
+                    legacy_available = True
             return {
                 "game_revision": state.revision,
                 "actors": available,
                 "stale": stale,
-                "legacy_binding_available": bool(
-                    sheet
-                    and sheet.character_id is None
-                    and own_profile
-                    and own_profile.profile_revision == sheet.source_profile_revision
-                    and own_profile.source_character_id == own_profile.character_id
-                ),
+                "legacy_binding_available": legacy_available,
             }
 
     def inspect(self, viewer: GuildViewer, ref: ActorRef) -> dict[str, Any]:
@@ -210,7 +224,7 @@ class ActorService:
             self.game.unpaused(c)
 
         def operation(c: Connection) -> dict[str, Any]:
-            state = load_state(c, self.store.campaign_id)
+            state = _raw_state(c, self.store.campaign_id)
             sheet = state.sheets.get(str(viewer.user_id))
             locks = t.m2["m2_locks"]
             actions = t.m2["m2_actions"]
@@ -218,7 +232,6 @@ class ActorService:
                 state.revision != expected
                 or sheet is None
                 or sheet.owner != viewer.user_id
-                or sheet.character_id is not None
                 # This proves an existing character identity without changing
                 # resources. It may be required to resume a known aborted roll.
                 or c.scalar(
@@ -240,29 +253,25 @@ class ActorService:
                 raise WorkflowError(
                     "Recover only your actual unbound legacy sheet after restoring chat."
                 )
-            snapshot = c.execute(
-                sa.select(t.snapshots.c.character_id, t.snapshots.c.event_id).where(
-                    t.snapshots.c.campaign_id == self.store.campaign_id,
-                    t.snapshots.c.user_id == str(viewer.user_id),
-                    t.snapshots.c.revision == sheet.source_profile_revision,
+            try:
+                source = proof(
+                    c, self.store.campaign_id, state, viewer.user_id, require_current_profile=True
                 )
-            ).first()
-            profile = c.execute(
-                sa.select(t.characters.c.id, t.characters.c.revision).where(
-                    t.characters.c.campaign_id == self.store.campaign_id,
-                    t.characters.c.user_id == str(viewer.user_id),
-                )
-            ).first()
-            if (
-                snapshot is None
-                or profile is None
-                or snapshot.character_id != profile.id
-                or profile.revision != sheet.source_profile_revision
-            ):
+            except WorkflowError:
                 raise WorkflowError(
                     "SOURCE_BINDING_MISSING: recover the immutable original character snapshot."
-                )
-            sheet.character_id = snapshot.character_id
+                ) from None
+            if sheet.character_id is not None:
+                # A genuine canonical write may already have persisted this proof
+                # while the explicit recovery form was open. Preserve its receipt.
+                return {
+                    "ref": ActorRef(
+                        kind="pilot", entity=str(viewer.user_id), incarnation=source.character
+                    ).model_dump(mode="json"),
+                    "sheet_revision": sheet.revision,
+                    "already_bound": True,
+                }
+            sheet.character_id = source.character
             sheet.revision += 1
             self.game.event(
                 c,
@@ -272,7 +281,7 @@ class ActorService:
                 state,
                 owner=viewer.user_id,
                 source_profile_revision=sheet.source_profile_revision,
-                snapshot_event=snapshot.event_id,
+                snapshot_event=source.snapshot_event,
             )
             return {
                 "ref": ActorRef(

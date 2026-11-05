@@ -10,6 +10,7 @@ from pydantic import Field, model_validator
 
 from girlframe.engine.identity import Snowflake
 from girlframe.engine.m2 import GameState, Model, PilotSheet, tier
+from girlframe.engine.m3_adjudication_state import Decision
 from girlframe.engine.m3_choices import OFF_DUTY, off_duty_modifier
 from girlframe.engine.m3_core import Recovery, RepairSelection, recover_off_duty
 from girlframe.engine.m3_observation_state import Observation
@@ -24,7 +25,8 @@ class Adjustment(Model):
 
 
 class Roll(Model):
-    faces: tuple[Face, Face]
+    faces: tuple[Face, Face] | None = None
+    adjudication: Decision | None = None
     modifier: int = Field(ge=0)
     total: int
     source: Literal["status", "void_assets"]
@@ -33,7 +35,22 @@ class Roll(Model):
 
     @model_validator(mode="after")
     def summed(self) -> "Roll":
-        if sum(self.faces) + self.modifier + sum(x.amount for x in self.adjustments) != self.total:
+        if self.adjudication is not None:
+            if (
+                self.faces is not None
+                or self.modifier != 0
+                or (
+                    self.adjudication.required.play
+                    != ("void_observation" if self.source == "void_assets" else "go_off_duty")
+                )
+            ):
+                raise ValueError("Manual adjudication has no dice or hidden numeric base")
+            base = self.adjudication.total
+        elif self.faces is not None:
+            base = sum(self.faces) + self.modifier
+        else:
+            raise ValueError("Retain exactly actual dice or owned manual adjudication proof")
+        if base + sum(x.amount for x in self.adjustments) != self.total:
             raise ValueError("The receipt must retain the actual dice and modifier")
         return self
 
@@ -43,6 +60,7 @@ class Scene(Model):
     participants: tuple[Snowflake, ...]
     acknowledgements: tuple[Snowflake, ...] = ()
     summary: str = Field(min_length=1, max_length=1200)
+    character_ids: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def distinct(self) -> "Scene":
@@ -51,6 +69,7 @@ class Scene(Model):
             or len(set(self.acknowledgements)) != len(self.acknowledgements)
             or not set(self.acknowledgements) <= set(self.participants)
             or not self.summary.strip()
+            or not set(self.character_ids) <= {str(uid) for uid in self.participants}
         ):
             raise ValueError("A scene needs distinct participants and their own acknowledgements")
         return self
@@ -64,6 +83,7 @@ class Progress(Model):
     action_id: str | None = None
     reward_source_event: str | None = None
     observation: Observation | None = None
+    career_ended: str | None = None
 
 
 class HandlerContext(Model):
@@ -83,6 +103,7 @@ class Period(Model):
     status_review: tuple[Snowflake, ...] | None = None
     status_review_game_revision: int | None = None
     character_ids: dict[str, str] = Field(default_factory=dict)
+    ended_characters: dict[str, str] = Field(default_factory=dict)
     handler_recipient: Snowflake | None = None
     handler_work: str | None = None
     handler_context: HandlerContext | None = None
@@ -98,6 +119,11 @@ class Period(Model):
             or not set(self.credit_recorded) <= set(self.pilots)
             or (self.character_ids and set(self.character_ids) != {str(x) for x in self.pilots})
             or len(set(self.character_ids.values())) != len(self.character_ids)
+            or not set(self.ended_characters) <= {str(x) for x in self.pilots}
+            or any(
+                self.character_ids.get(uid) != character
+                for uid, character in self.ended_characters.items()
+            )
         ):
             raise ValueError("Use the distinct canonical Pilot roster and its appointed Handler")
         return self
@@ -176,7 +202,13 @@ def activate(period: Period, expected: int, *, pending_preparation: frozenset[st
 
 
 def ordinary_roll(
-    period: Period, expected: int, actor: int, state: GameState, faces: tuple[int, int]
+    period: Period,
+    expected: int,
+    actor: int,
+    state: GameState,
+    faces: tuple[int, int] | None,
+    *,
+    adjudication: Decision | None = None,
 ) -> Period:
     current(period, expected)
     if actor not in period.pilots or str(actor) not in state.sheets or actor not in state.order:
@@ -186,7 +218,19 @@ def ordinary_roll(
             "This period already has a saved roll; resume it rather than rolling again"
         )
     sheet = state.sheets[str(actor)]
-    if sheet.frame_scrapped:
+    if str(actor) in period.ended_characters or (
+        period.character_ids
+        and sheet.character_id is not None
+        and period.character_ids.get(str(actor)) != sheet.character_id
+    ):
+        raise ValueError("This period belongs to its original living Girl")
+    from girlframe.engine.m3_actor_state import ActorRef
+    from girlframe.engine.m3_careers import can_pilot
+
+    unlinked = sheet.character_id is not None and not can_pilot(
+        state, ActorRef(kind="pilot", entity=str(actor), incarnation=sheet.character_id)
+    )
+    if sheet.frame_scrapped and not unlinked:
         raise ValueError("Resolve the compulsory Frame replacement first")
     if any(
         x.kind == "void_observation" and x.owner == actor and x.state == "pending"
@@ -197,7 +241,19 @@ def ordinary_roll(
         "Ace" if state.order[0] == actor else "Dog" if state.order[-1] == actor else "Wings"
     )
     modifier = off_duty_modifier(status)
-    receipt = Roll(faces=faces, modifier=modifier, total=sum(faces) + modifier, source="status")
+    if adjudication is not None and (
+        adjudication.required.actor.entity != str(actor)
+        or adjudication.required.actor.incarnation != sheet.character_id
+        or adjudication.required.source_id != period.id
+    ):
+        raise ValueError("The manual decision belongs to the original period's actual Girl")
+    receipt = Roll(
+        faces=faces,
+        adjudication=adjudication,
+        modifier=0 if adjudication else modifier,
+        total=adjudication.total if adjudication else sum(faces or ()) + modifier,
+        source="status",
+    )
     result = clone(period)
     result.progress[str(actor)] = Progress(roll=receipt)
     result.revision += 1
@@ -212,6 +268,7 @@ def choose_scene(
     kind: str | None,
     participants: tuple[int, ...] = (),
     summary: str = "",
+    available_pilots: frozenset[int] | None = None,
 ) -> Period:
     current(period, expected)
     progress = period.progress.get(str(actor))
@@ -229,13 +286,14 @@ def choose_scene(
         if level != "mid" or participants or summary:
             raise ValueError("Only the routine result can decline its optional scene")
     else:
+        people = set(period.pilots) if available_pilots is None else set(available_pilots)
         other = set(participants) - {actor}
         if (
             kind not in OFF_DUTY[level]
             or actor not in participants
             or not other
-            or not set(participants) <= set(period.pilots) | {period.handler}
-            or (level == "mid" and not other <= set(period.pilots))
+            or not set(participants) <= people | {period.handler}
+            or (level == "mid" and not other <= people)
         ):
             raise ValueError("Choose a source-legal scene with the required other Girls or Handler")
     result = clone(period)
@@ -348,8 +406,13 @@ def finish(
         pending_work
         or not handler_scene_complete
         or not status_review_complete
-        or any(not period.progress.get(str(uid), Progress()).recovered for uid in period.pilots)
-        or set(period.pilots) != set(state.order)
+        or any(
+            not period.progress.get(str(uid), Progress()).recovered
+            and str(uid) not in period.ended_characters
+            for uid in period.pilots
+        )
+        or not {uid for uid in period.pilots if str(uid) not in period.ended_characters}
+        <= set(state.order)
         or state.handler != period.handler
     ):
         raise ValueError("Off-Duty ends only after recovery, actual work, Handler scene and review")

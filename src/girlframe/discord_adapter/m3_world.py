@@ -218,6 +218,36 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
         if action == "map":
             await MapPages(service, viewer.user_id).show(current)
             return
+        if action == "gorgon_position":
+            unknown = tuple((x["id"], x["name"]) for x in world["gorgons"] if x["cell"] is None)
+            if not unknown:
+                raise WorkflowError("No actual Gorgon has an unrecorded position.")
+
+            async def locate(response: discord.Interaction, values: dict[str, Any]) -> str:
+                await asyncio.to_thread(
+                    service.locate_gorgon,
+                    viewer_from_interaction(response),
+                    str(response.id),
+                    fresh["game_revision"],
+                    values["gorgon"][0],
+                    coordinates(values["cell"][0]),
+                    values["account"],
+                )
+                return "Actual initial position recorded; no known position was moved."
+
+            form = NativeForm(
+                current.user.id,
+                "Record missing Gorgon position",
+                "Use the actual current map facts. This cannot move an already located Gorgon.",
+                [
+                    Field("gorgon", "Actual unplaced Gorgon", unknown),
+                    Field("cell", "Actual map square", squares(world["board"])),
+                    Field("account", "Factual source", paragraph=True),
+                ],
+                locate,
+            )
+            await reply(current, form.text(), form)
+            return
         if action == "gorgon_attack":
             from girlframe.discord_adapter.m3_gorgon import open_gorgon_attack
             from girlframe.services.m3_gorgon import GorgonService
@@ -329,6 +359,7 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
         "**World management**\nChoose an explicit action.",
         (
             ("map", "View the player map"),
+            ("gorgon_position", "Record an actually unknown Gorgon position"),
             ("npc", "Introduce an NPC"),
             ("npc_invite", "Invite someone to play an NPC / Director"),
             ("reveal", "Reveal a Gorgon encountered by the Cadre"),

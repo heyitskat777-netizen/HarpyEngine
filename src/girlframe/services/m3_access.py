@@ -34,14 +34,18 @@ def load_registry() -> Registry:
 class Access:
     def __init__(self, store: OnboardingStore, registry: Registry | None = None):
         self.store = store
-        # A disabled M3 service does not need to load an external file at startup.
-        self.registry = (
-            registry
-            if registry is not None
-            else load_registry()
-            if store.policy.m3_approval
-            else None
-        )
+        # Saved private records remain readable when a release file is unavailable.
+        self._registry = registry
+
+    @property
+    def registry(self) -> Registry | None:
+        if self._registry is None and self.store.policy.m3_approval is not None:
+            self._registry = load_registry()
+        return self._registry
+
+    @registry.setter
+    def registry(self, value: Registry | None) -> None:
+        self._registry = value
 
     def authorize(
         self, c: Connection, viewer: GuildViewer, subsystem: str, *, director_response: bool = False
@@ -53,16 +57,17 @@ class Access:
                 "UNSUPPORTED_RULE: resolve the Director's Handler/Girl rules context first."
             )
         approval = self.store.policy.m3_approval
+        registry = self.registry
         if (
             approval is None
-            or self.registry is None
-            or approval.registry_sha256 != digest(self.registry)
+            or registry is None
+            or approval.registry_sha256 != digest(registry)
             or subsystem not in approval.subsystems
         ):
             raise WorkflowError(
                 "M3_REVIEW_PENDING: this subsystem needs a scoped release approval."
             )
-        if approval.scope == "core_complete" and self.registry.coverage != "RULES_COMPLETE":
+        if approval.scope == "core_complete" and registry.coverage != "RULES_COMPLETE":
             raise WorkflowError(
                 "RULES_SUBSET: incomplete coverage cannot claim a complete M3 release."
             )

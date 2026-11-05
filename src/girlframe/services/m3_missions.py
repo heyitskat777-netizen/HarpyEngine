@@ -11,7 +11,11 @@ from pydantic import ValidationError
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
+from girlframe.engine import m3_careers as careers
 from girlframe.engine import m3_missions as rules
+from girlframe.engine.m2 import GameState
+from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_girl_runtime_state import has_rule
 from girlframe.engine.m3_policy import RULESET as M3_RULESET
 from girlframe.engine.rules_registry import Registry
 from girlframe.services.handler_setup import HandlerService
@@ -27,6 +31,152 @@ class MissionService:
         self.store = store
         self.access = Access(store, registry)
         self.game = GameService(store)
+
+    def _source_characters(
+        self,
+        c: Connection,
+        mission: rules.Mission,
+        *,
+        offered: bool = False,
+    ) -> dict[str, str]:
+        """Bind original invitations/dispatch, including old records lacking explicit CIDs."""
+        history = t.m3["m3_mission_history"]
+        original = c.execute(
+            sa.select(history.c.body_json, t.events.c.seq)
+            .join(
+                t.events,
+                sa.and_(
+                    t.events.c.campaign_id == history.c.campaign_id,
+                    t.events.c.id == history.c.event_id,
+                ),
+            )
+            .where(
+                history.c.campaign_id == self.store.campaign_id,
+                history.c.id == mission.id,
+                t.events.c.kind == ("m3.mission_offered" if offered else "m3.mission_started"),
+            )
+            .order_by(history.c.revision)
+            .limit(1)
+        ).first()
+        if original is None:
+            raise WorkflowError("SOURCE_MISSION_MISSING: recover the actual original dispatch.")
+        source = rules.Mission.model_validate_json(original.body_json)
+        ids = source.offered_characters if offered else source.character_ids
+        people = source.offered_to if offered else source.participants
+        if not ids:
+            state_history = t.m2["m2_state_history"]
+            body = c.scalar(
+                sa.select(state_history.c.body_json)
+                .join(
+                    t.events,
+                    sa.and_(
+                        t.events.c.campaign_id == state_history.c.campaign_id,
+                        t.events.c.id == state_history.c.event_id,
+                    ),
+                )
+                .where(
+                    state_history.c.campaign_id == self.store.campaign_id,
+                    t.events.c.seq <= original.seq,
+                )
+                .order_by(t.events.c.seq.desc())
+                .limit(1)
+            )
+            if body is None:
+                raise WorkflowError(
+                    "SOURCE_MISSION_MISSING: original character evidence is absent."
+                )
+            facts = GameState.model_validate_json(body)
+            ids = {
+                str(uid): self.game.character_binding(c, facts, uid, require_current_profile=False)
+                for uid in people
+            }
+        declared = mission.offered_characters if offered else mission.character_ids
+        if set(ids) != {str(uid) for uid in people} or (declared and declared != ids):
+            raise WorkflowError("SOURCE_MISSION_CHANGED: original character identities changed.")
+        return ids
+
+    def _departed(
+        self,
+        c: Connection,
+        mission: rules.Mission,
+        state: GameState,
+    ) -> dict[str, str]:
+        expected = self._source_characters(c, mission)
+        history = t.m3["m3_mission_history"]
+        dispatched = c.scalar(
+            sa.select(t.events.c.seq)
+            .join(
+                history,
+                sa.and_(
+                    history.c.campaign_id == t.events.c.campaign_id,
+                    history.c.event_id == t.events.c.id,
+                ),
+            )
+            .where(
+                history.c.campaign_id == self.store.campaign_id,
+                history.c.id == mission.id,
+                t.events.c.kind == "m3.mission_started",
+            )
+            .order_by(t.events.c.seq)
+            .limit(1)
+        )
+        if dispatched is None:
+            raise WorkflowError("Recover the original mission dispatch provenance.")
+        result = {}
+        for uid, character in expected.items():
+            ref = ActorRef(kind="pilot", entity=uid, incarnation=character)
+            unlinked = next((x for x in state.unlinked_careers if x.actor == ref), None)
+            archive = next(
+                (
+                    x
+                    for x in reversed(state.career_archives)
+                    if x.actor == ref
+                    and (
+                        c.scalar(
+                            sa.select(t.events.c.seq).where(
+                                t.events.c.campaign_id == self.store.campaign_id,
+                                t.events.c.id == x.source_event,
+                            )
+                        )
+                        or -1
+                    )
+                    >= dispatched
+                ),
+                None,
+            )
+            sheet = state.sheets.get(uid)
+            if (
+                archive is None
+                and unlinked is None
+                and sheet is not None
+                and self.game.character_binding(c, state, int(uid), require_current_profile=False)
+                == character
+            ):
+                continue
+            archive = archive or careers.archive_for(state, ref)
+            source = (
+                archive.source_event if archive else unlinked.source_event if unlinked else None
+            )
+            body = (
+                c.scalar(
+                    sa.select(t.m2["m2_state_history"].c.body_json).where(
+                        t.m2["m2_state_history"].c.campaign_id == self.store.campaign_id,
+                        t.m2["m2_state_history"].c.event_id == source,
+                    )
+                )
+                if source
+                else None
+            )
+            proof = GameState.model_validate_json(body) if body else None
+            if proof is None or not (
+                (archive is not None and archive in proof.career_archives)
+                or (unlinked is not None and unlinked in proof.unlinked_careers)
+            ):
+                raise WorkflowError(
+                    "Resolve the actual original participant before mission rewards."
+                )
+            result[uid] = character
+        return result
 
     def _authorize(self, c: Connection, viewer: GuildViewer, *, write: bool = True) -> None:
         if write:
@@ -204,6 +354,12 @@ class MissionService:
                 handler=viewer.user_id,
                 objective=objective.strip(),
                 offered_to=players,
+                offered_characters={
+                    str(uid): self.game.character_binding(
+                        c, state, uid, require_current_profile=False
+                    )
+                    for uid in players
+                },
             )
             event = self.game.event(
                 c, viewer.user_id, key, "m3.mission_offered", mission_id=mission.id, revision=1
@@ -279,6 +435,14 @@ class MissionService:
             state = load_state(c, self.store.campaign_id)
             if str(viewer.user_id) not in state.sheets:
                 raise WorkflowError("A current canonical Pilot is required to respond.")
+            if self._source_characters(c, mission, offered=True).get(
+                str(viewer.user_id)
+            ) != self.game.character_binding(
+                c, state, viewer.user_id, require_current_profile=False
+            ):
+                raise WorkflowError(
+                    "This invitation belongs to the original Girl, not its replacement."
+                )
             if response == "accept" and (
                 state.sheets[str(viewer.user_id)].frame_scrapped
                 or self.game.immediate_work(c, viewer.user_id)
@@ -326,6 +490,16 @@ class MissionService:
             updated = rules.dispatch(
                 mission, viewer.user_id, self._current_handler(c), expected, active
             )
+            invited = self._source_characters(c, mission, offered=True)
+            actual = {
+                str(uid): self.game.character_binding(c, state, uid, require_current_profile=False)
+                for uid in updated.participants
+            }
+            if any(invited[uid] != character for uid, character in actual.items()):
+                raise WorkflowError(
+                    "Original accepted characters changed; cancel and reoffer the mission."
+                )
+            updated.character_ids = actual
             from girlframe.engine.m3_repairs import dispatch as bind_shortages
 
             dispatch_event = str(uuid4())
@@ -382,7 +556,7 @@ class MissionService:
             # These reactions must occur before taking the final reward/Status snapshot.
             reactions = []
             for uid, sheet in state.sheets.items():
-                if sheet.girl == "PRINCESS":
+                if has_rule(sheet, "girl.princess.to-a-higher-standard", "PRINCESS"):
                     reactions.append((int(uid), "princess_mission_end", 32))
                 if (
                     sheet.frame == "DOCTORDOCTOR MK. II"
@@ -444,6 +618,7 @@ class MissionService:
             success=success,
             status_order=state.order,
             ace_policy=rulings.ace_bonus,
+            ended_participants=self._departed(c, mission, state),
         )
         changed = set()
         for grant in plan.grants:
@@ -460,6 +635,9 @@ class MissionService:
 
         event_id = str(uuid4())
         state = mission_ended(state, mission.id, event_id)
+        from girlframe.services.m3_debts import bind_mission, synchronize_mission
+
+        bind_mission(state, plan.mission)
         event = self.game.event(
             c,
             viewer.user_id,
@@ -471,6 +649,7 @@ class MissionService:
             revision=plan.mission.revision,
         )
         self._save(c, plan.mission, event)
+        synchronize_mission(c, self.store, state, plan.mission, event)
         for work in plan.consequences:
             self._work(
                 c,
@@ -479,7 +658,12 @@ class MissionService:
                 work.decision_owner,
                 work.owner,
                 "punishment",
-                work.model_dump(mode="json"),
+                work.model_dump(mode="json")
+                | dict(
+                    character=self.game.character_binding(
+                        c, state, work.owner, require_current_profile=False
+                    )
+                ),
                 event,
             )
         return {

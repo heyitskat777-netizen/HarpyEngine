@@ -316,9 +316,9 @@ def test_absent_dogs_punishment_applies_without_exposing_the_mission(ledger):
     assert missions.complete(ADMIN, "complete", identity, result["revision"])["phase"] == "complete"
 
 
-@pytest.mark.parametrize("piloting", [False, True])
+@pytest.mark.parametrize("inside_frame", [False, True])
 def test_last_girl_asset_requires_handler_context_and_applies_helplessness_conditionally(
-    ledger, piloting
+    ledger, inside_frame
 ):
     svc, missions, game, mission, identity = ended(ledger)
     with ledger.transaction() as c:
@@ -336,7 +336,7 @@ def test_last_girl_asset_requires_handler_context_and_applies_helplessness_condi
             row["id"],
             1,
             current["game_revision"],
-            piloting=True,
+            inside_frame=True,
             evidence="Unverified",
         )
     result = svc.resolve_helpless(
@@ -345,11 +345,15 @@ def test_last_girl_asset_requires_handler_context_and_applies_helplessness_condi
         row["id"],
         1,
         current["game_revision"],
-        piloting=piloting,
+        inside_frame=inside_frame,
         evidence="Synthetic observed Frame context",
     )
-    assert result["helpless"] is (not piloting)
-    assert state(game).sheets["3"].helpless_against == (() if piloting else (1,))
+    assert result["helpless"] is (not inside_frame)
+    from girlframe.engine.m3_actor_bonds import current_ref, is_helpless
+
+    assert is_helpless(state(game), current_ref(state(game), 3), current_ref(state(game), 1)) is (
+        not inside_frame
+    )
     assert (
         svc.resolve_helpless(
             ADMIN,
@@ -357,7 +361,7 @@ def test_last_girl_asset_requires_handler_context_and_applies_helplessness_condi
             row["id"],
             1,
             current["game_revision"],
-            piloting=piloting,
+            inside_frame=inside_frame,
             evidence="Synthetic observed Frame context",
         )
         == result

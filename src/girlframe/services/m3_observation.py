@@ -29,7 +29,9 @@ def synchronize(c: Connection, store: OnboardingStore, period: Period, event: st
     table = t.m3["m3_required_work"]
     for uid, progress in period.progress.items():
         if (
-            progress.observation is None
+            progress.career_ended is not None
+            or uid in period.ended_characters
+            or progress.observation is None
             or progress.roll is None
             or progress.roll.stage != "choices"
         ):
@@ -66,7 +68,12 @@ def synchronize(c: Connection, store: OnboardingStore, period: Period, event: st
 
 def settle(period: Period, state: GameState) -> None:
     for uid, progress in period.progress.items():
-        if progress.observation is None or not rules.complete(period, int(uid)):
+        if (
+            progress.career_ended is not None
+            or uid in period.ended_characters
+            or progress.observation is None
+            or not rules.complete(period, int(uid))
+        ):
             continue
         for debt in state.obligations:
             if (

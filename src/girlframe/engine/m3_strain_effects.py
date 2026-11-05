@@ -156,7 +156,7 @@ def apply(
             else {"gorgon"},
         )
         incoming = choice.gorgon
-        if incoming is None:
+        if incoming is None or incoming.cell is None:
             raise ValueError("Choose the actual Gorgon, its Assets, Core conditions and map square")
         bases = [x for x in world.locations if x.kind == "base" and x.condition != "destroyed"]
         cities = [x for x in world.locations if x.kind == "city" and x.condition != "destroyed"]

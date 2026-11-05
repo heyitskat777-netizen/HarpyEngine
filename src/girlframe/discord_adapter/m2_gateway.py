@@ -90,9 +90,18 @@ class DiscordGameGateway:
         )
 
     async def publish(self, channel: int, payload: dict[str, Any], nonce: str) -> int:
+        return await self._publish(await self.channel(channel), payload, nonce, controls=True)
+
+    async def _publish(
+        self,
+        resource: discord.abc.Messageable,
+        payload: dict[str, Any],
+        nonce: str,
+        *,
+        controls: bool,
+    ) -> int:
         from girlframe.discord_adapter.m2_ui import SceneControls
 
-        resource = await self.channel(channel)
         kind = payload["kind"]
         view = None
         if kind == "control":
@@ -101,7 +110,7 @@ class DiscordGameGateway:
                 "below. Safety pause is always available. Staff with Administrator "
                 "permission can still post."
             )
-            view = SceneControls(self.game)
+            view = SceneControls(self.game) if controls else None
         elif kind == "receipt":
             receipt = payload["receipt"]
             text = (
@@ -133,6 +142,30 @@ class DiscordGameGateway:
                 text, nonce=nonce, allowed_mentions=discord.AllowedMentions.none()
             )
         return message.id
+
+    async def _private(self, recipient: int) -> discord.DMChannel:
+        member = await self.guild.fetch_member(recipient)
+        with self.game.store.engine.connect() as c:
+            self.game.authorize(
+                c,
+                GuildViewer(member.id, self.guild.id, True, member.guild_permissions.administrator),
+                game=False,
+            )
+        return await member.create_dm()
+
+    async def publish_private(self, recipient: int, payload: dict[str, Any], nonce: str) -> int:
+        return await self._publish(await self._private(recipient), payload, nonce, controls=False)
+
+    async def find_private(self, recipient: int, nonce: str) -> int | None:
+        resource = await self._private(recipient)
+        async for message in resource.history(limit=50):
+            if (
+                self.guild.me
+                and message.author.id == self.guild.me.id
+                and ("M2 delivery `" + nonce + "`") in message.content
+            ):
+                return message.id
+        return None
 
     async def find(self, channel: int, nonce: str) -> int | None:
         resource = await self.channel(channel)

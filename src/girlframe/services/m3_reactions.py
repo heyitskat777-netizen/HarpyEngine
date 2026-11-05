@@ -11,6 +11,8 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_reactions as rules
+from girlframe.engine import m3_standards as standards_rules
+from girlframe.engine.m3_girl_runtime_state import has_rule
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.onboarding import WorkflowError
@@ -68,22 +70,7 @@ class ReactionService:
                 frame_scrapped=sheet.frame_scrapped,
             )
             if row["kind"] == "princess_mission_end":
-                standards = []
-                own = sheet.review.creation.girl_details
-                if own and own.own_standard:
-                    standards.append(
-                        {"role": "own", "label": own.own_standard.label, "is_order": False}
-                    )
-                standards.extend(
-                    {
-                        "role": x.role,
-                        "label": x.standard.label,
-                        "is_order": x.role == "princess_handler",
-                    }
-                    for x in sheet.review.coordination
-                    if x.standard and x.role in ("princess_peer", "princess_handler")
-                )
-                result["standards"] = standards
+                result["standards"] = standards_rules.labels(sheet)
                 result["ruling_ready"] = (
                     self.store.policy.owner_m3_rulings is not None
                     and self.store.policy.owner_m3_rulings.princess_ace_check is not None
@@ -251,12 +238,8 @@ class ReactionService:
                 raise WorkflowError("This is not a Princess standards review.")
             state = load_state(c, self.store.campaign_id)
             sheet = state.sheets[row["subject_id"]]
-            if (
-                sheet.review.creation.girl_playbook != "PRINCESS"
-                or sheet.review.creation.girl_details is None
-                or sheet.review.creation.girl_details.own_standard is None
-                or {x.role for x in sheet.review.coordination if x.standard}
-                != {"princess_peer", "princess_handler"}
+            if not has_rule(sheet, standards_rules.RULE, "PRINCESS") or not standards_rules.ready(
+                sheet
             ):
                 raise WorkflowError("Resolve all three current Princess standards before review.")
             rulings = self.store.policy.owner_m3_rulings

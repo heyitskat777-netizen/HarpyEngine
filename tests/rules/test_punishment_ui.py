@@ -28,7 +28,8 @@ def test_inflictor_selectors_require_confirmation_and_preserve_explicit_identity
         await open_discipline(interaction, svc, identity)
         picker = interaction.edit_original_response.call_args.kwargs["view"]
         assert isinstance(picker, Picker)
-        assert "execution" not in dict(picker.options)
+        assert "execution" in dict(picker.options)
+        assert "lobotomization" in dict(picker.options)
         await picker.open_item(interaction, "sedation")
         form = interaction.edit_original_response.call_args.kwargs["view"]
         assert isinstance(form, NativeForm)
@@ -134,8 +135,12 @@ def test_last_asset_native_context_is_a_handler_fact_review(ledger):
         await interaction.response.defer(ephemeral=True)
         await open_discipline(interaction, svc, task["id"])
         form = interaction.edit_original_response.call_args.kwargs["view"]
-        form.values = {"piloting": ("no",), "evidence": "Observed outside Frame"}
+        form.values = {"inside_frame": ("no",), "evidence": "Observed outside Frame"}
         await form.confirm.callback(current(1, 9021))
-        assert form.completed and state(game).sheets["3"].helpless_against == (1,)
+        from girlframe.engine.m3_actor_bonds import current_ref, is_helpless
+
+        assert form.completed and is_helpless(
+            state(game), current_ref(state(game), 3), current_ref(state(game), 1)
+        )
 
     asyncio.run(run())

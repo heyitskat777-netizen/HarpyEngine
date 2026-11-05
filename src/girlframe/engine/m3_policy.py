@@ -37,6 +37,8 @@ class Rulings(BaseModel):
     comforts_decline: Literal["consume_without_refund"]
     beneath_private_choices: Literal["affected_owner"] | None = None
     privilege_restoration: Literal["inflictor_condition_owner_restores"] | None = None
+    physical_frame_voice: Literal["controller_or_handler"] | None = None
+    handler_creation: Literal["owned_shared_choices_preserve_existing"] | None = None
     punishment_details: Literal["inflictor_selects"]
     regulation_breach_review: Literal["informed_handler"]
     failure_dog_overlap: Literal["one_punishment_both_causes"]

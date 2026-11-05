@@ -13,6 +13,7 @@ from girlframe.engine.m2 import (
     pair_key,
     shift_status,
 )
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_identity_slots import replacement_slot
 
 KINDS = {
@@ -34,12 +35,7 @@ KINDS = {
     "indefinite_imprisonment": ("Indefinite Imprisonment", "severe"),
     "link_surgery_reversal": ("Link Surgery Reversal", "severe"),
 }
-SUPPORTED = frozenset(KINDS) - {
-    "execution",
-    "lobotomization",
-    "indefinite_imprisonment",
-    "link_surgery_reversal",
-}
+SUPPORTED = frozenset(KINDS)
 
 
 class Details(Model):
@@ -56,6 +52,7 @@ class Details(Model):
     requisition: str | None = Field(default=None, max_length=100)
     restoration: str = Field(default="", max_length=1200)
     disclosed: bool = True
+    surgery: str | None = Field(default=None, max_length=100)
 
 
 class Followup(Model):
@@ -73,23 +70,38 @@ class Applied(Model):
 
 
 def last_girl_asset_context(
-    original: GameState, subject: int, inflictor: int, *, piloting: bool
+    original: GameState,
+    subject: int,
+    inflictor: int,
+    *,
+    inside_frame: bool,
+    source_event: str,
+    removal_proven: bool = False,
+    foe: ActorRef | None = None,
 ) -> GameState:
-    if type(piloting) is not bool:
-        raise ValueError("Record the actual Frame context when the Asset was damaged")
+    from girlframe.engine.m3_actor_bonds import current_ref, make_helpless
+
+    if type(inside_frame) is not bool:
+        raise ValueError("Record whether the original body was actually inside a Frame")
     state = GameState.model_validate_json(original.model_dump_json())
     sheet = state.sheets.get(str(subject))
     if (
         sheet is None
-        or not any(x.family == "girl" for x in sheet.assets)
         or any(x.family == "girl" and not x.damaged for x in sheet.assets)
+        or not any(x.family == "girl" for x in sheet.assets)
+        and not removal_proven
     ):
-        raise ValueError("Resolve the changed Girl Asset state before this follow-up")
-    if not piloting:
-        sheet.helpless_against = tuple(sorted(set(sheet.helpless_against) | {inflictor}))
-        sheet.revision += 1
+        raise ValueError("Recover the actual last-Girl-Asset damage or proved removal source")
+    if not inside_frame:
+        state = make_helpless(
+            state, current_ref(state, subject), foe or current_ref(state, inflictor), source_event
+        )
     state.facts.append(
-        {"kind": "beating_frame_context", "owner": str(subject), "piloting": str(piloting)}
+        {
+            "kind": "last_girl_asset_frame_context",
+            "owner": str(subject),
+            "inside_frame": str(inside_frame),
+        }
     )
     return state
 
@@ -111,6 +123,7 @@ def validate(details: Details) -> str:
         "frame_disassembly": {"asset"},
         "compliance_surgery": {"asset", "replacement_name", "replacement_description"},
         "strict_regulations": {"regulation", "disclosed"},
+        "lobotomization": {"surgery"},
     }.get(details.kind, set())
     defaults = Details(kind=details.kind)
     for field in Details.model_fields:
@@ -136,6 +149,7 @@ def apply(
     allow_duplicate_labels: bool = False,
     source_event: str | None = None,
     character_ids: dict[int, str] | None = None,
+    profile_context: dict[int, tuple[str, int]] | None = None,
 ) -> Applied:
     severity = validate(details)
     if inflictor != original.handler and str(inflictor) not in original.sheets:
@@ -152,6 +166,58 @@ def apply(
         raise ValueError("A Sedation period requires an actual current Off-Duty context")
     required: list[Followup] = []
     kind = details.kind
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+
+    if kind != "passing_responsibility" and has_rule(
+        sheet, "girl.alpha.nothing-more-than-a-hound", "ALPHA"
+    ):
+        sheet.status_marked = False
+    if kind == "lobotomization":
+        from girlframe.engine.m3_lobotomy import apply as apply_surgery
+
+        if details.surgery is None or source_event is None:
+            raise ValueError("Prepare the actual source-bound experimental surgery first")
+        return Applied(
+            state=apply_surgery(
+                state, details.surgery, source_event, allow_duplicate_labels=allow_duplicate_labels
+            )
+        )
+    if kind in ("execution", "indefinite_imprisonment", "link_surgery_reversal"):
+        from girlframe.engine import m3_careers as careers
+        from girlframe.engine.m3_actor_state import ActorRef
+
+        character = (character_ids or {}).get(subject, sheet.character_id)
+        if character is None or not source_event:
+            raise ValueError("Record the original character and actual severe Punishment source")
+        actor = ActorRef(kind="pilot", entity=str(subject), incarnation=character)
+        if kind == "link_surgery_reversal":
+            return Applied(
+                state=careers.unlink(
+                    state,
+                    actor,
+                    source_event=source_event,
+                    account="Handler-imposed Link Surgery Reversal",
+                )
+            )
+        current = careers.binding(state, subject)
+        profile_id, profile_revision = (profile_context or {}).get(
+            subject,
+            (
+                current.profile_id if current else character,
+                sheet.source_profile_revision,
+            ),
+        )
+        ended = careers.end(
+            state,
+            actor,
+            reason="execution" if kind == "execution" else "imprisonment",
+            source_event=source_event,
+            account="Handler-imposed " + KINDS[kind][0],
+            archive_id=entity_id,
+            profile_id=profile_id,
+            profile_revision=profile_revision,
+        )
+        return Applied(state=ended)
     if kind == "passing_responsibility":
         raise ValueError("Delegation transfers pending work; it does not apply a Punishment")
     if kind == "revoked_privileges":
@@ -168,6 +234,25 @@ def apply(
             character_ids or {},
         )
         sheet = state.sheets[str(subject)]
+        lost_girl = [
+            x
+            for x in original.sheets[str(subject)].assets
+            if x.family == "girl" and not any(y.id == x.id for y in sheet.assets)
+        ]
+        if lost_girl and not any(x.family == "girl" and not x.damaged for x in sheet.assets):
+            required.append(
+                Followup(
+                    kind="helpless",
+                    owner=subject,
+                    source_pdf=15,
+                    details={
+                        "inflictor": str(inflictor),
+                        "requires_outside_frame": "true",
+                        "removed_asset": lost_girl[0].id,
+                        "removal_source": source_event or "",
+                    },
+                )
+            )
         if (
             any(x.family == "frame" and not x.void for x in original.sheets[str(subject)].assets)
             and any(x.family == "frame" for x in sheet.assets)

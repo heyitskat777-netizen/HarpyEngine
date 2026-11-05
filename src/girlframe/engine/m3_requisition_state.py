@@ -5,6 +5,7 @@ from typing import Annotated, Literal
 from pydantic import Field, model_validator
 
 from girlframe.engine.m3_actor_state import ActorRef, CastRole, Model
+from girlframe.engine.m3_frame_swap_state import SwapReceipt
 
 
 class Installation(Model):
@@ -57,7 +58,78 @@ class ComfortReceipt(Model):
         return self
 
 
-Requisition = Annotated[Receipt | ComfortReceipt, Field(discriminator="kind")]
+class SceneReceipt(Model):
+    id: str = Field(min_length=1, max_length=80)
+    kind: Literal["privacy", "visiting_home"]
+    actor: ActorRef
+    price: Literal[1, 2]
+    companion: ActorRef | None = None
+    account: str = Field(min_length=1, max_length=1200)
+    source_event: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def actual_source(self) -> "SceneReceipt":
+        if self.actor.kind != "pilot" or not self.account.strip():
+            raise ValueError("The actual purchasing Girl owns this scene Requisition")
+        if self.kind == "privacy":
+            if (
+                self.price != 1
+                or self.companion is None
+                or self.companion.kind != "pilot"
+                or self.companion.entity == self.actor.entity
+            ):
+                raise ValueError("Privacy costs one Permission and names another actual Girl")
+        elif self.price != 2 or self.companion is not None:
+            raise ValueError(
+                "Visiting Home costs two Permissions; supervision is chosen in its scene"
+            )
+        return self
+
+
+class RetirementReceipt(Model):
+    id: str = Field(min_length=1, max_length=80)
+    kind: Literal["retirement"] = "retirement"
+    actor: ActorRef
+    price: Literal[20] = 20
+    archive_id: str = Field(min_length=1)
+    account: str = Field(min_length=1, max_length=1200)
+    source_event: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def actual_girl(self) -> "RetirementReceipt":
+        if self.actor.kind != "pilot" or not self.account.strip():
+            raise ValueError("Retirement belongs to the original Girl explicitly ending her career")
+        return self
+
+
+class FrameRuleReceipt(Model):
+    id: str = Field(min_length=1)
+    kind: Literal["ability_unlock", "frame_grafting"]
+    actor: ActorRef
+    frame_instance: str = Field(min_length=1)
+    frame: str = Field(min_length=1)
+    donor_frame: str = Field(min_length=1)
+    rule_id: str = Field(min_length=1)
+    grant: str = Field(min_length=1)
+    price: Literal[2, 3]
+    account: str = Field(min_length=1, max_length=1200)
+    source_event: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def actual_acquisition(self) -> "FrameRuleReceipt":
+        if (
+            self.actor.kind != "pilot"
+            or not self.account.strip()
+            or self.price != (2 if self.kind == "ability_unlock" else 3)
+        ):
+            raise ValueError("Use the original Girl and actual source-priced Frame acquisition")
+        return self
+
+
+Requisition = Annotated[
+    Receipt | ComfortReceipt | SceneReceipt | RetirementReceipt | FrameRuleReceipt | SwapReceipt,
+    Field(discriminator="kind"),
+]
 
 
 class ComfortScene(Model):

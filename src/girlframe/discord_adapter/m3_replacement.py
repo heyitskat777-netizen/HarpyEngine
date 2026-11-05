@@ -15,7 +15,7 @@ from girlframe.engine.creation_catalog import CATALOG
 from girlframe.engine.fanbase import DEMOGRAPHICS, QUALITIES, Fanbase
 from girlframe.engine.m3_frame_state import Package, Preferences, SuppliedAsset
 from girlframe.engine.shared_setup import AM_ROLES
-from girlframe.services.m3_replacement import COURT, PACKAGE, ROOT, ReplacementService
+from girlframe.services.m3_replacement import COURT, PACKAGE, ROOTS, ReplacementService
 from girlframe.services.onboarding import WorkflowError
 
 YES_NO = (("yes", "Yes"), ("no", "No"))
@@ -269,7 +269,7 @@ class PackageReview(discord.ui.View):
         super().__init__(timeout=600)
         self.owner, self.service, self.data, self.page = owner, service, data, 0
         self.confirm.disabled = (
-            data["kind"] != ROOT or data["subject_id"] != str(owner) or not data["ready"]
+            data["kind"] not in ROOTS or data["subject_id"] != str(owner) or not data["ready"]
         )
         package = data["package"]
         selected = Preferences.model_validate_json(json.dumps(data["preferences"]))
@@ -487,7 +487,7 @@ async def open_replacement(
         )
         await view.show(interaction)
         return
-    if data["kind"] == ROOT and data["owner_id"] == str(viewer.user_id):
+    if data["kind"] in ROOTS and data["owner_id"] == str(viewer.user_id):
 
         async def choose(current: discord.Interaction, value: str) -> None:
             if value == "review":
@@ -530,7 +530,7 @@ async def replacement_queue(interaction: discord.Interaction, service: Replaceme
     options = tuple(
         (x["id"], x["kind"].replace("_", " ").title() + " — Player " + x["subject_id"])
         for x in rows
-        if x["kind"] in (ROOT, PACKAGE, COURT)
+        if x["kind"] in (*ROOTS, PACKAGE, COURT)
     )
     if not options:
         await reply(interaction, "No compulsory replacement tasks are assigned to you.")

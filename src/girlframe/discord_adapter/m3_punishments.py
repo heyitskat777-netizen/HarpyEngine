@@ -94,6 +94,12 @@ async def open_details(
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.get, viewer, identity)
+    if data.get("lobotomy_id") and data["state"] != "resolved":
+        from girlframe.discord_adapter.m3_lobotomy import open_lobotomy
+        from girlframe.services.m3_lobotomy import LobotomyService
+
+        await open_lobotomy(interaction, LobotomyService(service.store), data["lobotomy_id"])
+        return
     if data["owner_id"] != str(viewer.user_id) or "choices" not in data:
         raise WorkflowError("Reopen your current assigned discipline task.")
     kind, _, branch = selection.partition(":")
@@ -263,6 +269,12 @@ async def open_discipline(
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.get, viewer, identity)
+    if data.get("lobotomy_id") and data["state"] != "resolved":
+        from girlframe.discord_adapter.m3_lobotomy import open_lobotomy
+        from girlframe.services.m3_lobotomy import LobotomyService
+
+        await open_lobotomy(interaction, LobotomyService(service.store), data["lobotomy_id"])
+        return
     if (
         data["state"] != "resolved"
         and data.get("context_scene")
@@ -304,6 +316,7 @@ async def open_discipline(
                 (kind, KINDS[kind][0])
                 for kind in KINDS
                 if kind in SUPPORTED
+                and (KINDS[kind][1] != "severe" or viewer.user_id == data["choices"]["handler"])
                 and (
                     data.get("required_severity") is None
                     or KINDS[kind][1] == data["required_severity"]
@@ -341,8 +354,8 @@ async def open_discipline(
     elif data["kind"] == "punishment_helpless":
         fields = [
             Field(
-                "piloting",
-                "Frame context when Beating was applied",
+                "inside_frame",
+                "Actual body context when the last Girl Asset was lost",
                 (("yes", "Inside a Frame"), ("no", "Outside a Frame")),
             ),
             Field("evidence", "Brief factual context", paragraph=True),
@@ -356,7 +369,7 @@ async def open_discipline(
                 identity,
                 data["revision"],
                 data["game_revision"],
-                piloting=values["piloting"][0] == "yes",
+                inside_frame=values["inside_frame"][0] == "yes",
                 evidence=values["evidence"],
             )
             return "Context saved. " + (

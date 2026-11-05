@@ -59,6 +59,12 @@ class PunishmentService:
     def _view(self, c: Connection, viewer: GuildViewer, row: dict[str, Any]) -> None:
         self.game.authorize(c, viewer, game=False)
         permitted = {row["owner_id"], row["subject_id"]}
+        if self._body(row).get("role_case"):
+            from girlframe.services.m3_role_punishments import case_proof
+
+            permitted.add(
+                str(case_proof(c, self.game, self._body(row)["role_case"]).executor_controller)
+            )
         if row["kind"] == "punishment_consult":
             permitted.add(str(self._body(row)["inflictor"]))
         if str(viewer.user_id) not in permitted:
@@ -82,11 +88,19 @@ class PunishmentService:
         kind: str,
         payload: dict[str, Any],
         operation: Callable[[Connection], dict[str, Any]],
+        *,
+        execution: bool = False,
     ) -> dict[str, Any]:
         def authorize(c: Connection) -> None:
             self.missions.access.authorize(c, viewer, "discipline")
             self.game.unpaused(c)
-            self._actor(c, viewer, self._row(c, identity))
+            row = self._row(c, identity)
+            if execution and self._body(row).get("role_case"):
+                from girlframe.services.m3_role_punishments import pc_execution
+
+                pc_execution(c, self.game, row, viewer)
+            else:
+                self._actor(c, viewer, row)
 
         try:
 
@@ -96,6 +110,19 @@ class PunishmentService:
                 from girlframe.services.m3_beneath import discipline_finished
 
                 discipline_finished(self.game, c, viewer, key, row)
+                if self._body(row).get("role_case") or self._body(row).get("source_work"):
+                    from girlframe.services.m3_role_punishments import synchronize
+
+                    latest = c.scalar(
+                        sa.select(t.events.c.id)
+                        .where(
+                            t.events.c.campaign_id == self.store.campaign_id,
+                        )
+                        .order_by(t.events.c.seq.desc())
+                        .limit(1)
+                    )
+                    if latest:
+                        synchronize(self.game, c, None, latest)
                 return result
 
             return self.store._write(
@@ -113,6 +140,18 @@ class PunishmentService:
             raise WorkflowError(str(error)) from None
 
     def _check(self, c: Connection, row: dict[str, Any], revision: int, game_revision: int) -> None:
+        original = self._body(row).get("character")
+        if (
+            original
+            and self.game.character_binding(
+                c,
+                load_state(c, self.store.campaign_id),
+                int(row["subject_id"]),
+                require_current_profile=False,
+            )
+            != original
+        ):
+            raise WorkflowError("STALE_CHARACTER: this consequence belongs to its original Girl.")
         if row["state"] == "resolved" or row["revision"] != revision:
             raise WorkflowError("STALE_WORK: reopen the current discipline task.")
         if load_state(c, self.store.campaign_id).revision != game_revision:
@@ -122,6 +161,12 @@ class PunishmentService:
 
         source_action = discipline_action(self.game, c, row)
         allowed = lineage(self.game, c, source_action) if source_action is not None else []
+        if self._body(row).get("role_case"):
+            from girlframe.services.m3_role_punishments import case_proof
+
+            case = case_proof(c, self.game, self._body(row)["role_case"])
+            if case.action:
+                allowed.append(case.action)
         if c.scalar(
             sa.select(actions.c.id)
             .where(
@@ -148,7 +193,13 @@ class PunishmentService:
         )
 
     def _bundle(self, c: Connection, row: dict[str, Any]) -> list[dict[str, Any]]:
-        if self._body(row).get("reason") in ("strict_regulations", "put_someone_beneath_you"):
+        if self._body(row).get("reason") in (
+            "strict_regulations",
+            "put_someone_beneath_you",
+            "privacy_death",
+            "defeat_post_mission",
+            "role_punishment",
+        ):
             return [row]
         if row["off_duty_id"] is not None:
             if self._body(row).get("reason") not in (
@@ -188,6 +239,15 @@ class PunishmentService:
             "active",
         ) or period.handler != self.missions._current_handler(c):
             raise WorkflowError("Recover the changed Off-Duty context before discipline.")
+        if self._body(row).get("role_case"):
+            from girlframe.services.m3_role_punishments import case_proof
+
+            case = case_proof(c, self.game, self._body(row)["role_case"])
+            if set(case.attendance) != {case.executor_controller, case.subject_controller}:
+                raise WorkflowError("Finish the actual executor/subject on-screen scene first.")
+            return dict(
+                off_duty=True, off_duty_period=period.id, allow_duplicate_labels=duplicate_labels
+            )
         people = {int(row["subject_id"]), int(row["owner_id"])}
         saved_scene = self._body(row).get("context_scene")
         witnessed = False
@@ -230,6 +290,18 @@ class PunishmentService:
             subject = int(row["subject_id"])
             sheet = state.sheets.get(str(subject))
             body = self._body(row)
+            role_case_id = body.get("role_case")
+            callsign = sheet.callsign if sheet else "Pilot"
+            original_character = body.get("character")
+            if original_character and (sheet is None or sheet.character_id != original_character):
+                from girlframe.engine.m3_actor_state import ActorRef
+                from girlframe.engine.m3_careers import archive_for, original_sheet
+
+                original = ActorRef(
+                    kind="pilot", entity=str(subject), incarnation=original_character
+                )
+                if archive_for(state, original) is not None:
+                    callsign = original_sheet(state, original).callsign
             result: dict[str, Any] = {
                 k: row[k]
                 for k in (
@@ -241,9 +313,11 @@ class PunishmentService:
                     "subject_id",
                 )
             }
-            result.update(
-                game_revision=state.revision, callsign=sheet.callsign if sheet else "Pilot"
-            )
+            result.update(game_revision=state.revision, callsign=callsign)
+            if role_case_id:
+                result["role_case"] = role_case_id
+            if body.get("lobotomy_id"):
+                result["lobotomy_id"] = body["lobotomy_id"]
             if row["off_duty_id"] is not None and row["kind"] == "punishment":
                 result["off_duty_id"] = row["off_duty_id"]
                 result["context_scene"] = body.get("context_scene")
@@ -367,6 +441,8 @@ class PunishmentService:
         revision: int,
         game_revision: int,
         details: rules.Details,
+        *,
+        execution_account: str | None = None,
     ) -> dict[str, Any]:
         details = rules.Details.model_validate_json(details.model_dump_json())
 
@@ -383,6 +459,31 @@ class PunishmentService:
                 )
             bundle = self._bundle(c, row)
             state = load_state(c, self.store.campaign_id)
+            role_case = None
+            if self._body(row).get("role_case"):
+                from girlframe.services.m3_role_punishments import pc_execution
+
+                role_case = pc_execution(c, self.game, row, viewer, details)
+                if execution_account is None or not execution_account.strip():
+                    raise WorkflowError("Describe your actual execution of the exact instruction.")
+            if self._body(row).get("lobotomy_id") and details.kind != "lobotomization":
+                raise WorkflowError("Finish the actual pending surgery before changing Punishment.")
+            if details.kind == "lobotomization":
+                if details.surgery is None:
+                    from girlframe.services.m3_lobotomy import start_in_transaction
+
+                    self._context(c, row)
+                    return start_in_transaction(c, self, viewer, key, row, bundle)
+                surgery = next((x for x in state.lobotomies if x.id == details.surgery), None)
+                if (
+                    surgery is None
+                    or surgery.phase != "ready"
+                    or set(surgery.work_ids) != {x["id"] for x in bundle}
+                    or any(self._body(x).get("lobotomy_id") != surgery.id for x in bundle)
+                ):
+                    raise WorkflowError(
+                        "Resume the actual prepared surgery and patient's responses."
+                    )
             if details.kind == "revoked_privileges":
                 from girlframe.services.m3_privileges import choices
 
@@ -437,7 +538,9 @@ class PunishmentService:
                         )
                     self._save(c, item, event, owner_id=str(target), body=body)
                 return {"id": identity, "state": "delegated", "cause_count": len(bundle)}
-            consulted = self._approved(c, row, bundle, details)
+            consulted = bool(role_case and role_case.handler_approval_event) or self._approved(
+                c, row, bundle, details
+            )
             if severity == "moderate" and viewer.user_id != state.handler and not consulted:
                 raise WorkflowError(
                     "HANDLER_CONSULT_REQUIRED: submit this exact proposal for Handler "
@@ -449,24 +552,13 @@ class PunishmentService:
                 for uid in {int(row["subject_id"]), viewer.user_id}
                 if uid != state.handler
             }
-            result = rules.apply(
-                state,
-                int(row["subject_id"]),
-                viewer.user_id,
-                details,
-                entity_id=str(uuid4()),
-                **self._context(c, row),
-                handler_consulted=consulted,
-                source_event=event_id,
-                character_ids=character_ids,
-            )
             for item in bundle:
                 source = self._body(item).get("obligation_id")
                 if source is not None:
                     debt = next(
                         (
                             x
-                            for x in result.state.obligations
+                            for x in state.obligations
                             if x.id == source
                             and x.owner == int(row["subject_id"])
                             and x.kind == "punishment"
@@ -479,6 +571,34 @@ class PunishmentService:
                             "The original discipline debt changed; recover it explicitly."
                         )
                     debt.state = "fulfilled"
+            result = rules.apply(
+                state,
+                int(row["subject_id"]),
+                viewer.user_id,
+                details,
+                entity_id=str(uuid4()),
+                **self._context(c, row),
+                handler_consulted=consulted,
+                source_event=event_id,
+                character_ids=character_ids,
+                profile_context={
+                    int(row["subject_id"]): c.execute(
+                        sa.select(
+                            t.characters.c.id,
+                            t.characters.c.revision,
+                        ).where(
+                            t.characters.c.campaign_id == self.store.campaign_id,
+                            t.characters.c.user_id == row["subject_id"],
+                        )
+                    )
+                    .one()
+                    ._tuple()
+                },
+            )
+            if role_case is not None:
+                from girlframe.services.m3_role_punishments import mark_pc_effect
+
+                mark_pc_effect(result.state, role_case, event_id, execution_account or "")
             observation_period = None
             if self._body(row).get("reason") == "void_observation":
                 from girlframe.services.m3_observation import discipline_applied
@@ -491,6 +611,12 @@ class PunishmentService:
                     self._body(row)["origin_outcome"],
                     event_id,
                 )
+            renamed_profile = None
+            if details.kind == "lobotomization":
+                from girlframe.services.m3_lobotomy import rename_profile
+
+                assert details.surgery is not None
+                renamed_profile = rename_profile(c, self.store, result.state, details.surgery)
             event = self.game.event(
                 c,
                 viewer.user_id,
@@ -502,12 +628,20 @@ class PunishmentService:
                 punishment=details.kind,
                 cause_count=len(bundle),
             )
+            if renamed_profile is not None:
+                from girlframe.services.m3_lobotomy import save_name_snapshot
+
+                save_name_snapshot(c, self.store, renamed_profile, event)
+            from girlframe.services.m3_privileges import suspend_benefits
+
+            suspend_benefits(c, self.store, result.state, event)
             if observation_period is not None:
                 OffDutyService(self.missions)._save(c, observation_period, event)
             for item in bundle:
                 body = self._body(item) | {
                     "punishment": details.model_dump(mode="json"),
                     "applied_event": event,
+                    "character": character_ids[int(row["subject_id"])],
                 }
                 self._save(c, item, event, state="resolved", body=body)
                 consultation_id = body.get("consult_id")
@@ -557,6 +691,15 @@ class PunishmentService:
                                 body=self._body(item)
                                 | {"punishment_work": identity, "applied_event": event},
                             )
+            if details.kind in ("execution", "indefinite_imprisonment"):
+                from girlframe.services.m3_careers import synchronize_end
+
+                ending = next(
+                    x
+                    for x in result.state.career_archives
+                    if x.source_event == event and x.actor.entity == row["subject_id"]
+                )
+                synchronize_end(c, self.game, ending)
             return {
                 "id": identity,
                 "state": "resolved",
@@ -574,8 +717,10 @@ class PunishmentService:
                 "revision": revision,
                 "game_revision": game_revision,
                 "details": details.model_dump(mode="json"),
+                "execution_account": execution_account,
             },
             operation,
+            execution=True,
         )
 
     def resolve_helpless(
@@ -586,7 +731,7 @@ class PunishmentService:
         revision: int,
         game_revision: int,
         *,
-        piloting: bool,
+        inside_frame: bool,
         evidence: str,
     ) -> dict[str, Any]:
         if not evidence.strip() or len(evidence) > 1200:
@@ -599,18 +744,93 @@ class PunishmentService:
             if row["kind"] != "punishment_helpless":
                 raise WorkflowError("This task is not a last-Girl-Asset context review.")
             body = self._body(row)
+            from girlframe.engine.m2 import AssetState, GameState
+            from girlframe.engine.m3_actor_bonds import current_ref
+            from girlframe.engine.m3_actor_state import ActorRef
+
+            history = t.m2["m2_state_history"]
+            first = (
+                c.execute(
+                    sa.select(t.m3["m3_required_work"]).where(
+                        t.m3["m3_required_work"].c.campaign_id == self.store.campaign_id,
+                        t.m3["m3_required_work"].c.id == identity,
+                        t.m3["m3_required_work"].c.revision == 1,
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            source_body = c.scalar(
+                sa.select(history.c.body_json).where(
+                    history.c.campaign_id == self.store.campaign_id,
+                    history.c.event_id == first["event_id"],
+                )
+            )
+            original = GameState.model_validate_json(source_body) if source_body else None
+            subject = int(row["subject_id"])
+            saved_sheet = original.sheets.get(str(subject)) if original else None
+            actual = load_state(c, self.store.campaign_id)
+            if (
+                saved_sheet is None
+                or str(subject) not in actual.sheets
+                or (saved_sheet.character_id != actual.sheets[str(subject)].character_id)
+            ):
+                raise WorkflowError("Recover the original last-Girl-Asset source and character.")
+            assert original is not None
+            actor = ActorRef(
+                kind="pilot", entity=str(subject), incarnation=saved_sheet.character_id
+            )
+            placement = next((x for x in original.placements if x.actor == actor), None)
+            if placement is not None and (placement.mode != "outside_frame") != inside_frame:
+                raise WorkflowError("Use the actual source body's inside/outside Frame facts.")
+            foe = current_ref(original, int(body["details"]["inflictor"]))
+            removal_proven = False
+            lost = body["details"].get("removed_asset")
+            if lost:
+                proof = next(
+                    (
+                        x
+                        for x in original.obligations
+                        if x.kind == "revoked_requisition"
+                        and x.details.get("source_event") == first["event_id"]
+                        and x.target == subject
+                        and "asset" in x.details
+                        and AssetState.model_validate_json(x.details["asset"]).id == lost
+                        and AssetState.model_validate_json(x.details["asset"]).family == "girl"
+                    ),
+                    None,
+                )
+                source_kind = c.scalar(
+                    sa.select(t.events.c.kind).where(
+                        t.events.c.id == first["event_id"],
+                        t.events.c.campaign_id == self.store.campaign_id,
+                    )
+                )
+                removal_proven = (
+                    proof is not None
+                    and source_kind == "m3.punishment_applied"
+                    and body["details"].get("removal_source") == first["event_id"]
+                    and not any(x.id == lost for x in saved_sheet.assets)
+                )
+                if not removal_proven:
+                    raise WorkflowError("Recover the actual source-proved Girl Asset removal.")
+            context_event = str(uuid4())
             updated = rules.last_girl_asset_context(
                 load_state(c, self.store.campaign_id),
                 int(row["subject_id"]),
                 int(body["details"]["inflictor"]),
-                piloting=piloting,
+                inside_frame=inside_frame,
+                source_event=context_event,
+                foe=foe,
+                removal_proven=removal_proven,
             )
             event = self.game.event(
                 c,
                 viewer.user_id,
                 key,
-                "m3.beating_frame_context_resolved",
+                "m3.last_girl_asset_frame_context_resolved",
                 updated,
+                event_id=context_event,
                 work_id=identity,
             )
             self._save(
@@ -618,9 +838,9 @@ class PunishmentService:
                 row,
                 event,
                 state="resolved",
-                body=body | {"piloting": piloting, "evidence": evidence.strip()},
+                body=body | {"inside_frame": inside_frame, "evidence": evidence.strip()},
             )
-            return {"id": identity, "state": "resolved", "helpless": not piloting}
+            return {"id": identity, "state": "resolved", "helpless": not inside_frame}
 
         return self._write(
             viewer,
@@ -631,7 +851,7 @@ class PunishmentService:
                 "id": identity,
                 "revision": revision,
                 "game_revision": game_revision,
-                "piloting": piloting,
+                "inside_frame": inside_frame,
                 "evidence": evidence,
             },
             operation,

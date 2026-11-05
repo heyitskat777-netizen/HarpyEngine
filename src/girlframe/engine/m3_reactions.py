@@ -3,6 +3,7 @@
 from typing import Literal
 
 from girlframe.engine.m2 import GameState, Model, PilotSheet, shift_status
+from girlframe.engine.m3_girl_runtime_state import has_rule
 
 DoctorTrigger = Literal["nanobot_injection", "mission_failure", "cadre_death", "high_budget"]
 AceCheck = Literal["after_promotion", "before_promotion"]
@@ -40,8 +41,12 @@ def princess_mission_end(
         raise ValueError("Record whether the standards were upheld")
     state = GameState.model_validate_json(original.model_dump_json())
     sheet = state.sheets.get(str(owner))
-    if sheet is None or sheet.girl != "PRINCESS" or owner not in state.order:
-        raise ValueError("A current Princess in the Status roster is required")
+    if (
+        sheet is None
+        or not has_rule(sheet, "girl.princess.to-a-higher-standard", "PRINCESS")
+        or owner not in state.order
+    ):
+        raise ValueError("A current owner of To a Higher Standard in the Status roster is required")
     if not upheld:
         return state
     if ace_check not in ("after_promotion", "before_promotion"):

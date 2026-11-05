@@ -113,6 +113,38 @@ async def open_requisitions(interaction: discord.Interaction, service: Requisiti
         (key, "Saved Asset purchase " + key[:8]) for key in purchases
     )
     options += (("buy-comforts", "Buy Creature Comforts — 1 Permission"),)
+    options += (
+        ("frame-swap", "Plan paid Frame Swap — 4 Permissions"),
+        ("ability-unlock", "Ability Unlock — supported owned Frame rule"),
+        ("frame-grafting", "Frame Grafting — supported donor Frame rule"),
+    )
+    from girlframe.services.m3_frame_swap import FrameSwapService
+    from girlframe.services.m3_personal_firearm import PersonalFirearmService
+
+    firearms = PersonalFirearmService(service.game)
+    exchanges = FrameSwapService(service.game)
+    options += tuple(
+        ("firearm-return:" + x["id"], "Saved Personal Firearm return")
+        for x in await asyncio.to_thread(firearms.return_tasks, viewer)
+    )
+    options += tuple(
+        ("frame-swap:" + x["id"], "Saved Frame Swap plan")
+        for x in await asyncio.to_thread(exchanges.tasks, viewer)
+    )
+
+    options += (
+        ("buy-privacy", "Privacy — 1 Permission"),
+        ("buy-home", "Visiting Home — 2 Permissions"),
+        ("retirement", "Retirement — 20 Permissions"),
+    )
+    from girlframe.services.m3_scene_requisitions import SceneRequisitionService
+
+    scene_service = SceneRequisitionService(service.game)
+    saved_scenes = await asyncio.to_thread(scene_service.scene_tasks, viewer)
+    options += tuple(
+        ("scene:" + x["id"], x["kind"].replace("_", " ").title() + " — saved scene")
+        for x in saved_scenes
+    )
     options += tuple(
         (
             "comfort:" + x["id"],
@@ -126,6 +158,46 @@ async def open_requisitions(interaction: discord.Interaction, service: Requisiti
     )
 
     async def choose(current: discord.Interaction, token: str) -> None:
+        if token == "frame-swap" or token.startswith("frame-swap:"):
+            from girlframe.discord_adapter.m3_frame_swap import open_plan, open_swap
+
+            if token == "frame-swap":
+                await open_swap(current, exchanges)
+            else:
+                await open_plan(current, exchanges, token[11:])
+            return
+        if token.startswith("firearm-return:"):
+            from girlframe.discord_adapter.m3_personal_firearm import open_return
+
+            await open_return(current, firearms, token[15:])
+            return
+        if token in ("ability-unlock", "frame-grafting"):
+            from girlframe.discord_adapter.m3_personal_firearm import open_acquisition
+
+            await open_acquisition(
+                current,
+                firearms,
+                "ability_unlock" if token == "ability-unlock" else "frame_grafting",
+            )
+            return
+        if token.startswith("scene:"):
+            from girlframe.discord_adapter.m3_scene_requisitions import open_scene
+
+            await open_scene(current, scene_service, token[6:])
+            return
+        if token in ("buy-privacy", "buy-home"):
+            from girlframe.discord_adapter.m3_scene_requisitions import open_purchase
+
+            await open_purchase(
+                current, scene_service, "privacy" if token == "buy-privacy" else "visiting_home"
+            )
+            return
+        if token == "retirement":
+            from girlframe.discord_adapter.m3_retirement import open_retirement
+            from girlframe.services.m3_retirement import RetirementService
+
+            await open_retirement(current, RetirementService(service.game))
+            return
         if token.startswith("comfort:"):
             await open_comfort(current, comforts, token[8:])
             return

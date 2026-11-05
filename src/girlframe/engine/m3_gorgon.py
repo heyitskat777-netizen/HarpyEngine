@@ -46,7 +46,7 @@ def eligible(state: GameState, attacker: ActorRef, target: ActorRef) -> None:
         raise ValueError(
             "UNSUPPORTED_RULE: this Director's death needs its own replacement resolver"
         )
-    if first.cell != second.cell:
+    if first.cell is None or second.cell is None or first.cell != second.cell:
         raise ValueError(
             "UNSUPPORTED_RULE: this branch covers co-located targets; ranged reach needs review"
         )

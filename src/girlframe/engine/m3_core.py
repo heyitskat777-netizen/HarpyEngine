@@ -7,6 +7,7 @@ from pydantic import Field
 from girlframe.engine.creation_catalog import CATALOG
 from girlframe.engine.m2 import AssetState, IdentityState, Model, PilotSheet
 from girlframe.engine.m3_assets import can_replace_at_limit, counts_toward_limit
+from girlframe.engine.m3_girl_runtime_state import has_rule
 from girlframe.engine.m3_identity_slots import replacement_slot
 
 
@@ -102,7 +103,7 @@ def corrupt(sheet: PilotSheet, asset_id: str, description: str, *, piloting: boo
     required: list[Followup] = []
     girls = [x for x in updated.assets if x.family == "girl"]
     frames = [x for x in updated.assets if x.family == "frame"]
-    if updated.girl == "MOCKINGBIRD":
+    if has_rule(updated, "girl.mockingbird.risk-factor", "MOCKINGBIRD"):
         if piloting and frames and all(x.void for x in frames):
             required.append(Followup(kind="mockingbird_resist", owner=sheet.owner, source_pdf=35))
     else:

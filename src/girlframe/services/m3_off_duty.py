@@ -13,14 +13,154 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
+from girlframe.engine.m2 import GameState
+from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_career_state import CareerArchive
+from girlframe.engine.m3_careers import archive_for
 from girlframe.engine.m3_identity_slots import bind as bind_identity_slots
-from girlframe.engine.m3_off_duty import Period, doctor_credit
+from girlframe.engine.m3_off_duty import Period, Progress, clone, doctor_credit
 from girlframe.engine.m3_policy import RULESET
 from girlframe.services.handler_setup import HandlerService
+from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
+
+
+def current_original_characters(
+    c: Connection,
+    game: GameService,
+    state: GameState,
+    period: Period,
+) -> dict[str, str]:
+    """Only surviving original period actors have that period's unconsumed authority."""
+    if set(period.character_ids) != {str(uid) for uid in period.pilots}:
+        raise WorkflowError("SOURCE_OFF_DUTY_MISSING: recover original period characters.")
+    result = {}
+    for uid, character in period.character_ids.items():
+        if uid in period.ended_characters:
+            archive = archive_for(state, ActorRef(kind="pilot", entity=uid, incarnation=character))
+            progress = period.progress.get(uid)
+            body = (
+                c.scalar(
+                    sa.select(t.m2["m2_state_history"].c.body_json).where(
+                        t.m2["m2_state_history"].c.campaign_id == game.store.campaign_id,
+                        t.m2["m2_state_history"].c.event_id == archive.source_event,
+                    )
+                )
+                if archive
+                else None
+            )
+            proof = GameState.model_validate_json(body) if body else None
+            if (
+                archive is None
+                or proof is None
+                or archive not in proof.career_archives
+                or progress is None
+                or progress.career_ended != archive.id
+            ):
+                raise WorkflowError("SOURCE_CAREER_MISSING: recover the actual ended period actor.")
+            continue
+        if game.character_binding(c, state, int(uid), require_current_profile=False) != character:
+            raise WorkflowError("STALE_OFF_DUTY: this period belongs to its original Girl.")
+        result[uid] = character
+    return result
+
+
+def end_off_duty_original(c: Connection, game: GameService, archive: CareerArchive) -> None:
+    """Ending a real career closes its participation, without pretending recovery occurred."""
+    periods = OffDutyService(MissionService(game.store))
+    table = t.m3["m3_off_duty"]
+    state = load_state(c, game.store.campaign_id)
+    same_source = [x for x in state.career_archives if x.source_event == archive.source_event]
+    for body in list(
+        c.scalars(
+            sa.select(table.c.body_json).where(
+                table.c.campaign_id == game.store.campaign_id,
+                table.c.phase != "complete",
+            )
+        )
+    ):
+        old = Period.model_validate_json(body)
+        endings = [
+            x
+            for x in same_source
+            if old.character_ids.get(x.actor.entity) == x.actor.incarnation
+            and x.actor.entity not in old.ended_characters
+        ]
+        if not endings:
+            continue
+        updated = clone(old)
+        updated.status_review = None
+        updated.status_review_game_revision = None
+        # One actual source may end multiple originals. Save one period revision for
+        # that event, preserving the history table's one-source/one-snapshot contract.
+        for ending in endings:
+            uid = ending.actor.entity
+            progress = updated.progress.setdefault(uid, Progress())
+            progress.career_ended = ending.id
+            updated.ended_characters[uid] = str(ending.actor.incarnation)
+            # Do not manufacture the departed original's unfinished attendance.
+            for owner, other in updated.progress.items():
+                if (
+                    owner != uid
+                    and other.scene is not None
+                    and int(uid) in other.scene.participants
+                    and (
+                        not other.scene.character_ids
+                        or other.scene.character_ids.get(uid) == ending.actor.incarnation
+                    )
+                    and set(other.scene.participants) != set(other.scene.acknowledgements)
+                ):
+                    other.scene = None
+            handler_scene = updated.handler_scene
+            if (
+                handler_scene is not None
+                and int(uid) in handler_scene.participants
+                and set(handler_scene.participants) != set(handler_scene.acknowledgements)
+            ):
+                updated.handler_scene = None
+                updated.handler_recipient = updated.handler_work = updated.handler_context = None
+        updated.revision += 1
+        periods._save(c, updated, archive.source_event)
+        if not state.order and set(updated.ended_characters) == set(updated.character_ids):
+            # There is no Girl for a new Handler scene; no scene or attendance is invented.
+            work = t.m3["m3_required_work"]
+            latest = {
+                row["id"]: dict(row)
+                for row in c.execute(
+                    sa.select(work)
+                    .where(
+                        work.c.campaign_id == game.store.campaign_id,
+                        work.c.off_duty_id == old.id,
+                        work.c.kind == "off_duty_handler_scene",
+                    )
+                    .order_by(work.c.revision)
+                ).mappings()
+            }
+            for row in latest.values():
+                if row["state"] == "resolved":
+                    continue
+                c.execute(
+                    work.insert().values(
+                        **{
+                            k: v
+                            for k, v in row.items()
+                            if k not in ("revision", "state", "body_json", "event_id")
+                        },
+                        revision=row["revision"] + 1,
+                        state="resolved",
+                        event_id=archive.source_event,
+                        body_json=json.dumps(
+                            json.loads(row["body_json"])
+                            | dict(
+                                resolution="no_remaining_girl_after_career_end",
+                                career_archive=archive.id,
+                            )
+                        ),
+                    )
+                )
 
 
 class OffDutyService:
@@ -83,6 +223,19 @@ class OffDutyService:
                 event_id=event,
             )
         )
+        from girlframe.services.m3_privileges import resume_restored_benefits
+        from girlframe.services.m3_scene_requisitions import (
+            synchronize as synchronize_scene_purchases,
+        )
+
+        resume_restored_benefits(c, self.store, period, event)
+        synchronize_scene_purchases(c, self.store, period, event)
+        from girlframe.services.m3_personal_firearm import synchronize as firearms
+
+        firearms(c, self.store, period, event)
+        from girlframe.services.m3_defeat_replacement import synchronize as replacements
+
+        replacements(c, self.store, period, event)
 
     def _work(
         self,
@@ -128,6 +281,18 @@ class OffDutyService:
         latest = {row["id"]: dict(row) for row in rows}
         return [row for row in latest.values() if row["state"] != "resolved"]
 
+    def _frameless_off_duty(self, c: Connection, state: GameState, owner: int) -> bool:
+        from girlframe.engine.m3_actor_state import ActorRef
+        from girlframe.engine.m3_careers import can_pilot
+        from girlframe.services.m3_defeat_replacement import pending
+
+        actor = ActorRef(
+            kind="pilot",
+            entity=str(owner),
+            incarnation=self.game.character_binding(c, state, owner, require_current_profile=False),
+        )
+        return not can_pilot(state, actor) or pending(c, self.store, state, owner)
+
     def begin(self, viewer: GuildViewer, key: str) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             self.missions._handler(c, viewer)
@@ -153,7 +318,10 @@ class OffDutyService:
             if not state.order or any(
                 not setup._member(c, uid)
                 or str(uid) not in state.sheets
-                or state.sheets[str(uid)].frame_scrapped
+                or (
+                    state.sheets[str(uid)].frame_scrapped
+                    and not self._frameless_off_duty(c, state, uid)
+                )
                 or self.game.immediate_work(c, uid)
                 or state.sheets[str(uid)].sedation_locked
                 for uid in state.order
@@ -162,13 +330,8 @@ class OffDutyService:
                     "Resolve the current Pilot roster, immediate work and old locks."
                 )
             characters = {
-                owner: identity
-                for owner, identity in c.execute(
-                    sa.select(t.characters.c.user_id, t.characters.c.id).where(
-                        t.characters.c.campaign_id == self.store.campaign_id,
-                        t.characters.c.user_id.in_(tuple(str(x) for x in state.order)),
-                    )
-                ).tuples()
+                str(uid): self.game.character_binding(c, state, uid, require_current_profile=False)
+                for uid in state.order
             }
             period = Period(
                 id=str(uuid4()),

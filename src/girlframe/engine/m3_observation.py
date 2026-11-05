@@ -3,6 +3,7 @@
 from uuid import NAMESPACE_URL, uuid5
 
 from girlframe.engine.m2 import GameState, Obligation, TagState, shift_status, tier
+from girlframe.engine.m3_adjudication_state import Decision
 from girlframe.engine.m3_choices import HIDDEN_VOID, OBSERVATION, OFF_DUTY
 from girlframe.engine.m3_observation_state import Details, Kind, Observation, Outcome
 from girlframe.engine.m3_off_duty import Period, Progress, Roll, Scene, clone, current
@@ -11,7 +12,13 @@ from girlframe.engine.m3_reprogram import apply as reprogram
 
 def context(period: Period, subject: int) -> tuple[Progress, Observation]:
     progress = period.progress.get(str(subject))
-    if progress is None or progress.observation is None or subject not in period.pilots:
+    if (
+        progress is None
+        or progress.career_ended is not None
+        or str(subject) in period.ended_characters
+        or progress.observation is None
+        or subject not in period.pilots
+    ):
         raise ValueError("Resume the actual Handler-recorded Observation order")
     return progress, progress.observation
 
@@ -27,7 +34,12 @@ def order(
     source: str,
 ) -> tuple[Period, GameState]:
     current(period, expected, active=period.phase == "active")
-    if actor != period.handler or state.handler != actor or subject not in period.pilots:
+    if (
+        actor != period.handler
+        or state.handler != actor
+        or subject not in period.pilots
+        or str(subject) in period.ended_characters
+    ):
         raise ValueError("Only the current Handler records its actual suspicion for a current Girl")
     progress = Progress.model_validate_json(
         period.progress.get(str(subject), Progress()).model_dump_json()
@@ -112,16 +124,32 @@ def lower_before_roll(period: Period, subject: int, state: GameState) -> GameSta
 
 
 def roll(
-    period: Period, expected: int, actor: int, state: GameState, faces: tuple[int, int]
+    period: Period,
+    expected: int,
+    actor: int,
+    state: GameState,
+    faces: tuple[int, int] | None,
+    *,
+    adjudication: Decision | None = None,
 ) -> Period:
     current(period, expected)
     progress, _ = context(period, actor)
     if progress.roll is not None or progress.recovered:
         raise ValueError("Resume the same Observation receipt instead of rerolling")
     amount = modifier(state, actor)
+    if adjudication is not None and (
+        adjudication.required.actor.entity != str(actor)
+        or adjudication.required.actor.incarnation != state.sheets[str(actor)].character_id
+        or adjudication.required.source_id != period.id
+    ):
+        raise ValueError("The manual decision belongs to the original Observation patient")
     updated = clone(period)
     updated.progress[str(actor)].roll = Roll(
-        faces=faces, modifier=amount, total=sum(faces) + amount, source="void_assets"
+        faces=faces,
+        adjudication=adjudication,
+        modifier=0 if adjudication else amount,
+        total=adjudication.total if adjudication else sum(faces or ()) + amount,
+        source="void_assets",
     )
     updated.revision += 1
     return updated

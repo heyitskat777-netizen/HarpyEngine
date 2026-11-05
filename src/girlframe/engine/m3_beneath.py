@@ -92,6 +92,7 @@ def apply(
     *,
     authority: Authority | None = None,
     actor_piloting: bool = False,
+    source_event: str | None = None,
 ) -> Outcome:
     state = GameState.model_validate_json(original.model_dump_json())
     decision = Decision.model_validate_json(decision.model_dump_json())
@@ -143,10 +144,15 @@ def apply(
         assert peer is not None
         if peer == victim:
             raise ValueError("Choose an actual Bond to another character")
-        actual_peer = resolve(
-            state, peer, bindings, require_alive=False, require_current_profile=False
-        )
-        if peer.kind in ("pilot", "handler"):
+        if any({edge.first, edge.second} == {victim, peer} for edge in state.actor_bonds):
+            from girlframe.engine.m3_actor_bonds import change
+
+            state = change(state, victim, peer, -1, source_event or choice)
+            sheet = state.sheets[str(subject)]
+        elif peer.kind in ("pilot", "handler"):
+            actual_peer = resolve(
+                state, peer, bindings, require_alive=False, require_current_profile=False
+            )
             key = pair_key(subject, actual_peer.controller)
             depth = state.bonds.get(key, 0)
             if depth < 1:

@@ -4,11 +4,12 @@ M3 is **IN_PROGRESS / RULES_SUBSET** and is not ready for full player testing.
 This snapshot separates implemented workflows from remaining agreed scope; it
 does not narrow the milestone.
 
+The current four-agent implementation map is [M3_PARALLEL_WORK.md](M3_PARALLEL_WORK.md). It supersedes older per-feature statements below; the earlier full-suite totals remain historical evidence. The new integrated candidate is undergoing frozen regression and remains incomplete.
+
 The owner's subsequent cost/progress review is recorded in
 [the completion audit and bounded delivery plan](M3_COMPLETION_AUDIT.md).
 Use that plan for future implementation units. The bot is intentionally off at
-the owner's request; do not restart it automatically. The untested local Handler
-draft is excluded from completed work.
+the owner's request; do not restart it automatically. Handler creation now has source-bound automated evidence; the old parked draft remains historical, not a separate tested feature.
 
 Bounded units **1a (Asset Installment)** and **1b (Creature Comforts)** are now
 implemented for their purchase/benefit/receipt flows. Final automated checkpoint:
@@ -28,7 +29,7 @@ Current development checkpoint: **1,450 automated tests passed**. Unit 2a remain
 IN_PROGRESS and does not change independent/player acceptance.
 
 The registry contains 473 source/table entries: **436 required core entries** and
-37 deferred Ancillary entries. Of the required core, **63 are partial and 373 are
+37 deferred Ancillary entries. Of the required core, **81 are partial and 355 are
 unimplemented**. None is independently approved. Entries are inventory units,
 not equal-size coding tasks or a completion percentage. The acceptance tracker
 currently has 44 cases: 27 in progress and 17 not run, with no completed milestone
@@ -41,8 +42,8 @@ earlier failures/corrections, checks and the difference from human acceptance.
 | Package | Remaining completion work |
 |---|---|
 | M3A — source audit | Finish nested branches, book/sheet comparisons, dependency contracts and the M2 cross-rule audit. Frame categories/aliases are corrected; the overall branch audit remains pending. |
-| M3B — shared rules | Finish Put Someone Beneath You, whose native human-Pilot flow is now implemented but still depends on full Defeat and cross-rule work. Implement Dive Deep, All-Out Assault, Go for the Core and Defeat. Complete actual actor/target/resource ports and immediate effects for existing shared Plays. |
-| M3C — playbooks | Complete all ten Girl, nine Frame and seven Handler runtimes: passives, Plays, counters, special resources, control/Core/AM interactions, temporary effects and acquisition consequences. Handler playbook/persona creation is missing. |
+| M3B — shared rules | Finish Put Someone Beneath You, whose native human-Pilot flow is now implemented but still depends on full Defeat and cross-rule work. Dive Deep and Defeat now have integrated source-bound flows; finish their remaining role/playbook interactions and implement All-Out Assault and Go for the Core. Complete actual actor/target/resource ports and immediate effects for existing shared Plays. |
+| M3C — playbooks | Complete all ten Girl, nine Frame and seven Handler runtimes: passives, Plays, counters, special resources, control/Core/AM interactions, temporary effects and acquisition consequences. Handler creation and fresh persona generations are implemented; remaining runtime abilities are not. |
 | M3D — economy/discipline | Complete Privacy, Visiting Home, Retirement, Ability Unlock, Frame Grafting and Frame Swap; suspension effects for future Requisition types (implemented purchases now have temporary removal/restoration); Execution, Lobotomization, Indefinite Imprisonment and Link Surgery Reversal. Preserve original character/persona ownership through missions and consequences. |
 | M3E — recovery/lifecycle | Complete Defeat/rescue/destruction outcomes, Helplessness for all actor types, medical help, Void thresholds/conversion and all playbook follow-ups. Provide actual death/retirement/imprisonment/new-character archives and safe replacement workflows. |
 | M3F — Strain | Implement every remaining consequence across all 72 cells and 22 Endgames, including actual recursive effects, prisoner escape escalation, mission obligations, deadlines and mandatory work completion. Scheduling a result is not applying it. |

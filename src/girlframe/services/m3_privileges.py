@@ -2,15 +2,16 @@
 
 import json
 from typing import Any
-from uuid import uuid4
+from uuid import NAMESPACE_URL, uuid4, uuid5
 
 import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_privileges as rules
-from girlframe.engine.m2 import GameState, Obligation
+from girlframe.engine.m2 import AssetState, GameState, Obligation
 from girlframe.engine.m3_actors import fingerprint
+from girlframe.engine.m3_off_duty import Period
 from girlframe.engine.m3_requisition_state import Requisition
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_game import GameService
@@ -66,7 +67,7 @@ def choices(
         sa.select(work)
         .where(
             work.c.campaign_id == game.store.campaign_id,
-            work.c.kind == "creature_comforts",
+            work.c.kind.in_(("creature_comforts", "scene_requisition")),
             work.c.subject_id == str(subject),
         )
         .order_by(work.c.revision.desc())
@@ -75,20 +76,225 @@ def choices(
             continue
         seen.add(row["id"])
         benefit = json.loads(row["body_json"])["benefit"]
-        if benefit["taken"] is not None:
+        if (
+            benefit.get("taken") is not None
+            or benefit.get("declined")
+            or (benefit.get("scene") and benefit["scene"].get("entered_event"))
+        ):
             resolved.add(benefit["purchase"])
     result = []
     for receipt in rules.available(state, subject, character):
         if receipt.id in resolved:
             continue
         purchase_proof(c, game.store, receipt)
-        label = (
-            next(x.name for x in state.sheets[str(subject)].assets if x.id == receipt.asset_id)
-            if receipt.kind == "asset_installment"
-            else "Creature Comforts"
-        )
+        if receipt.kind == "asset_installment":
+            label = next(
+                x.name for x in state.sheets[str(subject)].assets if x.id == receipt.asset_id
+            )
+        else:
+            label = {
+                "creature_comforts": "Creature Comforts",
+                "privacy": "Privacy",
+                "visiting_home": "Visiting Home",
+                "ability_unlock": "Personal Firearm",
+                "frame_grafting": "Personal Firearm",
+            }[receipt.kind]
         result.append(dict(id=receipt.id, name=label))
     return result
+
+
+DEFERRED_KINDS = ("creature_comforts", "scene_requisition", "personal_firearm_return")
+
+
+def _benefit_rows(c: Connection, store: OnboardingStore) -> list[dict[str, Any]]:
+    work = t.m3["m3_required_work"]
+    return list(
+        {
+            row["id"]: dict(row)
+            for row in c.execute(
+                sa.select(work)
+                .where(
+                    work.c.campaign_id == store.campaign_id,
+                    work.c.kind.in_(DEFERRED_KINDS),
+                )
+                .order_by(work.c.revision)
+            ).mappings()
+        }.values()
+    )
+
+
+def _save_benefit(
+    c: Connection,
+    row: dict[str, Any],
+    event: str,
+    body: dict[str, Any],
+) -> None:
+    c.execute(
+        t.m3["m3_required_work"]
+        .insert()
+        .values(
+            **{
+                k: v
+                for k, v in row.items()
+                if k not in ("revision", "state", "body_json", "event_id")
+            },
+            revision=row["revision"] + 1,
+            state="resolved",
+            event_id=event,
+            body_json=json.dumps(body, sort_keys=True),
+        )
+    )
+
+
+def suspend_benefits(c: Connection, store: OnboardingStore, state: GameState, event: str) -> None:
+    """Resolve only old work scheduling, preserving its unconsumed original entitlement."""
+    for gate in state.obligations:
+        if (
+            gate.kind != rules.KIND
+            or gate.state != "pending"
+            or gate.details.get("source_event") != event
+        ):
+            continue
+        for row in _benefit_rows(c, store):
+            if row["state"] == "resolved" or row["subject_id"] != str(gate.target):
+                continue
+            body = json.loads(row["body_json"])
+            saved = body.get("benefit", {})
+            matches = saved.get("purchase") == gate.details["purchase"]
+            if row["kind"] == "personal_firearm_return":
+                matches = gate.details.get("grant") is not None and body.get(
+                    "grant"
+                ) == gate.details.get("grant")
+            if not matches or saved.get("taken") is not None or saved.get("declined"):
+                continue
+            if row["kind"] == "scene_requisition" and (saved.get("scene") or {}).get(
+                "entered_event"
+            ):
+                continue
+            _save_benefit(
+                c,
+                row,
+                event,
+                body
+                | dict(
+                    immediate=False,
+                    deferred=True,
+                    deferred_by=gate.id,
+                    resolution="requisition_temporarily_suspended",
+                    qualification_period=body.get("qualification_period", row["off_duty_id"]),
+                ),
+            )
+
+
+def resume_restored_benefits(
+    c: Connection,
+    store: OnboardingStore,
+    period: Period,
+    event: str,
+) -> None:
+    """Append a new actual period scope; never rewrite the original source context or dice."""
+    if period.phase != "active":
+        return
+    from girlframe.services.m3_work import related
+
+    state = load_state(c, store.campaign_id)
+    gates = {x.id: x for x in state.obligations if x.kind == rules.KIND and x.state == "fulfilled"}
+    for row in _benefit_rows(c, store):
+        body = json.loads(row["body_json"])
+        gate = gates.get(body.get("deferred_by"))
+        if (
+            gate is None
+            or not body.get("deferred")
+            or body.get("resolution") != "requisition_temporarily_suspended"
+        ):
+            continue
+        owner = str(gate.target)
+        if (
+            period.character_ids.get(owner) != gate.details["character"]
+            or owner in period.ended_characters
+            or owner not in state.sheets
+        ):
+            continue
+        restored = c.scalar(
+            sa.select(t.events.c.id)
+            .where(
+                t.events.c.campaign_id == store.campaign_id,
+                t.events.c.kind == "m3.requisition_restored",
+                t.events.c.actor_id == owner,
+                sa.func.json_extract(t.events.c.payload_json, "$.revocation_id") == gate.id,
+            )
+            .order_by(t.events.c.seq.desc())
+            .limit(1)
+        )
+        if restored is None:
+            raise WorkflowError(
+                "SOURCE_RESTORATION_MISSING: recover the original owner's restoration."
+            )
+        proof = c.scalar(
+            sa.select(t.m2["m2_state_history"].c.body_json).where(
+                t.m2["m2_state_history"].c.campaign_id == store.campaign_id,
+                t.m2["m2_state_history"].c.event_id == restored,
+            )
+        )
+        restored_state = GameState.model_validate_json(proof) if proof else None
+        restored_gate = (
+            next((x for x in restored_state.obligations if x.id == gate.id), None)
+            if restored_state
+            else None
+        )
+        if restored_gate != gate:
+            raise WorkflowError("SOURCE_RESTORATION_MISSING: recover the exact restored resource.")
+        paid = next((x for x in state.requisitions if x.id == gate.details["purchase"]), None)
+        if paid is None:
+            raise WorkflowError("SOURCE_REQUISITION_MISSING: recover the actual paid resource.")
+        purchase_proof(c, store, paid)
+        fresh = json.loads(row["body_json"])
+        saved = fresh.get("benefit")
+        if saved is not None:
+            saved["period"] = period.id
+            scene = saved.get("scene")
+            if row["kind"] == "scene_requisition":
+                saved["scene"] = None
+            elif scene is not None and set(scene.get("acknowledgements", [])) != {
+                role["controller"] for role in scene["roles"]
+            }:
+                saved["scene"] = None
+        fresh.update(
+            deferred=False,
+            deferred_from=row["id"],
+            restoration_event=restored,
+            resolution="restored_original_entitlement",
+            qualification_period=body.get("qualification_period", row["off_duty_id"]),
+        )
+        fresh["immediate"] = bool(
+            row["kind"] == "creature_comforts" and saved and saved.get("scene")
+        )
+        identity = str(
+            uuid5(NAMESPACE_URL, "girlframe:restored-benefit:" + row["id"] + ":" + period.id)
+        )
+        related(
+            c,
+            store,
+            dict(campaign_id=store.campaign_id, off_duty_id=period.id),
+            identity,
+            int(row["owner_id"]),
+            int(row["subject_id"]),
+            row["kind"],
+            fresh,
+            event,
+        )
+        _save_benefit(
+            c,
+            row,
+            event,
+            body
+            | dict(
+                resolution="requisition_benefit_transferred",
+                transfer_work=identity,
+                transfer_period=period.id,
+                restoration_event=restored,
+            ),
+        )
 
 
 class PrivilegeService:
@@ -225,14 +431,15 @@ class PrivilegeService:
             can_restore=pending and allowed and not stale and viewer.user_id == gate.target,
             replacements=[],
         )
-        if result["can_restore"] and gate.details["kind"] == "asset_installment":
+        if result["can_restore"] and "asset" in gate.details:
             from girlframe.engine.m3_assets import can_replace_at_limit
 
             sheet = state.sheets[str(gate.target)]
+            family = AssetState.model_validate_json(gate.details["asset"]).family
             result["replacements"] = [
                 dict(id=x.id, name=x.name)
                 for x in sheet.assets
-                if x.family == "frame" and can_replace_at_limit(sheet, x)
+                if x.family == family and can_replace_at_limit(sheet, x)
             ]
         return result
 
@@ -318,6 +525,17 @@ class PrivilegeService:
                 event_id=source_event,
                 revocation_id=identity,
             )
+            if not allow:
+                periods = t.m3["m3_off_duty"]
+                for body in c.scalars(
+                    sa.select(periods.c.body_json).where(
+                        periods.c.campaign_id == self.store.campaign_id,
+                        periods.c.phase == "active",
+                    )
+                ):
+                    resume_restored_benefits(
+                        c, self.store, Period.model_validate_json(body), source_event
+                    )
             return dict(id=identity, allowed=True, restored=not allow)
 
         try:

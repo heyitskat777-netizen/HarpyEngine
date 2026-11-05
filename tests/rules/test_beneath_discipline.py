@@ -103,10 +103,12 @@ def test_last_girl_asset_beating_waits_for_actual_frame_context_followup(ledger)
         child,
         data["revision"],
         data["game_revision"],
-        piloting=False,
+        inside_frame=False,
         evidence="Actual out-of-Frame context",
     )
-    assert state(game).sheets["3"].helpless_against == (2,)
+    from girlframe.engine.m3_actor_bonds import current_ref, is_helpless
+
+    assert is_helpless(state(game), current_ref(state(game), 3), current_ref(state(game), 2))
     assert game.inspect(OTHER, identity)["state"] == "complete"
 
 

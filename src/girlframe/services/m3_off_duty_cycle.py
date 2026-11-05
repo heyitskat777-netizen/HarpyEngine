@@ -16,12 +16,14 @@ from girlframe.database import tables as t
 from girlframe.engine import m3_off_duty as rules
 from girlframe.engine import m3_world as world_rules
 from girlframe.engine.m2 import GameState
+from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_careers import can_pilot, original_sheet
 from girlframe.engine.m3_core import Recovery
 from girlframe.engine.m3_strain_state import TRACKS, Trigger
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_choices import ChoiceEngine
 from girlframe.services.m2_state import load_state
-from girlframe.services.m3_off_duty import OffDutyService
+from girlframe.services.m3_off_duty import OffDutyService, current_original_characters
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -71,15 +73,7 @@ class CycleService:
             ):
                 raise WorkflowError("Only the actual invited NPC controller answers this request.")
         state = load_state(c, self.store.campaign_id)
-        characters = {
-            owner: character
-            for owner, character in c.execute(
-                sa.select(t.characters.c.user_id, t.characters.c.id).where(
-                    t.characters.c.campaign_id == self.store.campaign_id,
-                    t.characters.c.user_id.in_(tuple(str(x) for x in period.pilots)),
-                )
-            )
-        }
+        characters = current_original_characters(c, self.game, state, period)
         locks = t.m2["m2_locks"]
         unrestored_chat = (
             c.scalar(
@@ -95,9 +89,8 @@ class CycleService:
             or unrestored_chat
             or state.handler != period.handler
             or self.missions._current_handler(c) != period.handler
-            or set(state.order) != set(period.pilots)
-            or characters != period.character_ids
-            or any(not HandlerService(self.store)._member(c, uid) for uid in period.pilots)
+            or not {int(uid) for uid in characters} <= set(state.order)
+            or any(not HandlerService(self.store)._member(c, uid) for uid in state.order)
         ):
             raise WorkflowError(
                 "STALE_OFF_DUTY: finish pending Plays and review the current roster and state."
@@ -109,6 +102,29 @@ class CycleService:
                 "Refresh the actual Frame reward tasks before advancing this period."
             )
         return period, state
+
+    def _original(self, c: Connection, period: rules.Period, state: GameState, owner: int) -> None:
+        if (
+            str(owner) in period.ended_characters
+            or owner not in period.pilots
+            or self.game.character_binding(c, state, owner, require_current_profile=False)
+            != period.character_ids.get(str(owner))
+        ):
+            raise WorkflowError("This action belongs to the original living Girl's period.")
+
+    def _bind_scene(
+        self,
+        c: Connection,
+        state: GameState,
+        scene: rules.Scene,
+        *,
+        independent_controllers: frozenset[int] = frozenset(),
+    ) -> None:
+        scene.character_ids = {
+            str(uid): self.game.character_binding(c, state, uid, require_current_profile=False)
+            for uid in scene.participants
+            if str(uid) in state.sheets and uid not in independent_controllers
+        }
 
     def _resolve(
         self, c: Connection, rows: list[dict[str, Any]], event: str, body: dict[str, Any]
@@ -231,8 +247,20 @@ class CycleService:
                 )
             )
             if len(start) != 1 or any(
-                sheet.frame_scrapped or self.game.immediate_work(c, uid)
+                (
+                    sheet.frame_scrapped
+                    and can_pilot(
+                        state,
+                        ActorRef(
+                            kind="pilot",
+                            entity=str(uid),
+                            incarnation=period.character_ids[str(uid)],
+                        ),
+                    )
+                )
+                or self.game.immediate_work(c, uid)
                 for uid in period.pilots
+                if str(uid) not in period.ended_characters
                 for sheet in (state.sheets[str(uid)],)
             ):
                 raise WorkflowError("Resolve actual start triggers and immediate sheet work first.")
@@ -255,27 +283,33 @@ class CycleService:
         summary: str,
     ) -> dict[str, Any]:
         def change(c: Connection, period: rules.Period, state: GameState) -> Outcome:
+            self._original(c, period, state, viewer.user_id)
             progress = period.progress.get(str(viewer.user_id))
             if progress is not None and progress.observation is not None:
                 from girlframe.engine.m3_observation import scene, scene_roles
 
                 if kind is None:
                     raise WorkflowError("Void Observation always requires an actual scene.")
-                return (
-                    scene(
-                        period,
-                        expected,
-                        viewer.user_id,
-                        kind,
-                        participants,
-                        summary,
-                        extra_participants=scene_roles(period, state, viewer.user_id),
-                        required_participants=scene_roles(period, state, viewer.user_id, kind),
-                    ),
-                    state,
-                    [],
-                    {},
+                selected = scene(
+                    period,
+                    expected,
+                    viewer.user_id,
+                    kind,
+                    participants,
+                    summary,
+                    extra_participants=scene_roles(period, state, viewer.user_id),
+                    required_participants=scene_roles(period, state, viewer.user_id, kind),
                 )
+                selected_scene = selected.progress[str(viewer.user_id)].scene
+                assert selected_scene is not None
+                self._bind_scene(
+                    c,
+                    state,
+                    selected_scene,
+                    independent_controllers=scene_roles(period, state, viewer.user_id)
+                    - {viewer.user_id, period.handler},
+                )
+                return selected, state, [], {}
             updated = rules.choose_scene(
                 period,
                 expected,
@@ -283,7 +317,11 @@ class CycleService:
                 kind=kind,
                 participants=participants,
                 summary=summary,
+                available_pilots=frozenset(state.order),
             )
+            saved = updated.progress[str(viewer.user_id)].scene
+            if saved is not None:
+                self._bind_scene(c, state, saved)
             return updated, state, [], {}
 
         return self._change(
@@ -307,6 +345,24 @@ class CycleService:
         scene_owner: int | None,
     ) -> dict[str, Any]:
         def change(c: Connection, period: rules.Period, state: GameState) -> Outcome:
+            actual_scene = (
+                period.handler_scene
+                if scene_owner is None
+                else (period.progress.get(str(scene_owner), rules.Progress()).scene)
+            )
+            if actual_scene is not None and str(viewer.user_id) in (
+                actual_scene.character_ids or period.character_ids
+            ):
+                expected_character = (actual_scene.character_ids or period.character_ids)[
+                    str(viewer.user_id)
+                ]
+                if (
+                    self.game.character_binding(
+                        c, state, viewer.user_id, require_current_profile=False
+                    )
+                    != expected_character
+                ):
+                    raise WorkflowError("This scene invitation belongs to its original character.")
             if scene_owner is not None:
                 progress = period.progress.get(str(scene_owner))
                 if progress and progress.observation and progress.scene:
@@ -419,6 +475,7 @@ class CycleService:
         choice = rules.RecoveryChoice.model_validate_json(choice.model_dump_json())
 
         def change(c: Connection, period: rules.Period, state: GameState) -> Outcome:
+            self._original(c, period, state, viewer.user_id)
             pending = frozenset(
                 x["id"]
                 for x in self.periods._pending(c, identity)
@@ -526,6 +583,8 @@ class CycleService:
                 )
             updated.handler_recipient = recipient
             updated.handler_context = context
+            assert updated.handler_scene is not None
+            self._bind_scene(c, state, updated.handler_scene)
             if kind == "punish":
                 self.missions.access.authorize(c, viewer, "discipline")
                 updated.handler_work = identity + ":handler-punishment"
@@ -566,12 +625,13 @@ class CycleService:
             if (
                 (period.status_review is None and len(review) != 1)
                 or period.status_review_game_revision == state.revision
-                or len(order) != len(period.pilots)
-                or set(order) != set(period.pilots)
+                or len(order) != len(state.order)
+                or set(order) != set(state.order)
                 or not account.strip()
                 or len(account) > 1200
                 or any(
                     not period.progress.get(str(uid), rules.Progress()).recovered
+                    and str(uid) not in period.ended_characters
                     for uid in period.pilots
                 )
                 or any(x["kind"] != "off_duty_status_review" for x in pending)
@@ -627,8 +687,23 @@ class CycleService:
                 "game_revision": state.revision,
                 "handler": period.handler,
                 "participants": tuple(
-                    (str(uid), state.sheets[str(uid)].callsign) for uid in period.pilots
+                    (str(uid), state.sheets[str(uid)].callsign) for uid in state.order
                 ),
+                "original_participants": tuple(
+                    (
+                        str(uid),
+                        original_sheet(
+                            state,
+                            ActorRef(
+                                kind="pilot",
+                                entity=str(uid),
+                                incarnation=period.character_ids[str(uid)],
+                            ),
+                        ).callsign,
+                    )
+                    for uid in period.pilots
+                ),
+                "ended_characters": dict(period.ended_characters),
                 "own": own.model_dump(mode="json") if own else None,
                 "pre_modifiers": [
                     {"source": "missed_supply", "amount": x.amount, "resource": x.resource}
@@ -640,6 +715,7 @@ class CycleService:
                 ],
                 "sheet": state.sheets[str(viewer.user_id)].model_dump(mode="json")
                 if viewer.user_id in period.pilots
+                and str(viewer.user_id) not in period.ended_characters
                 else None,
                 "invitations": scenes,
                 "observation_participants": tuple(
@@ -683,9 +759,12 @@ class CycleService:
                 expected,
                 state,
                 pending_work=pending,
-                handler_scene_complete=period.handler_scene is not None
-                and set(period.handler_scene.participants)
-                == set(period.handler_scene.acknowledgements),
+                handler_scene_complete=(
+                    period.handler_scene is not None
+                    and set(period.handler_scene.participants)
+                    == set(period.handler_scene.acknowledgements)
+                )
+                or (not state.order and set(period.ended_characters) == set(period.character_ids)),
                 status_review_complete=period.status_review is not None,
             )
             if updated.world is None or updated.strain is None:

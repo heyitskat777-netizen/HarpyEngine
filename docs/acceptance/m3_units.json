@@ -458,6 +458,164 @@
         "portable_checkpoint": "var/m3-social-checkpoint.bundle",
         "remote_ci": "NOT_RUN"
       }
+    },
+    {
+      "id": "M3-UNIT-3-HANDLER-CREATION",
+      "name": "Original Handler creation and fresh generation",
+      "status": "INTEGRATION_PENDING",
+      "source": [
+        {
+          "document": "rulebook",
+          "pdf": 124,
+          "printed": 122,
+          "topic": "Handler starting variants"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 126,
+          "printed": 124,
+          "topic": "Handler starting variants"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 128,
+          "printed": 126,
+          "topic": "Handler starting variants"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 131,
+          "printed": 129,
+          "topic": "Handler starting variants"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 134,
+          "printed": 132,
+          "topic": "Handler starting variants"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 137,
+          "printed": 135,
+          "topic": "Handler starting variants"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 139,
+          "printed": 137,
+          "topic": "Handler starting variants"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 141,
+          "printed": 139,
+          "topic": "Handler starting variants"
+        }
+      ],
+      "contract": {
+        "trigger": "The actual appointed human creates the first Handler persona or a fresh persona after an actual body ending.",
+        "actor_type": "Actual Handler human appointment and distinct prospective persona, plus the actual original Girls/NPC controllers who own shared history.",
+        "pre_roll_sources": [],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "diceless": [
+            "Seven printed starting variants; exact owned gear, descriptions, Bonds, history, rank and starting phrases."
+          ]
+        },
+        "choice_ownership": "Each original human approves only their exact shared proposal; private details remain private. Same-human separate-role NPC consent remains explicit.",
+        "target_policy": "Original actual ActorRef/character/persona and frozen exact human controllers; new profiles and replacements cannot inherit.",
+        "post_roll_effects": [
+          "Activate the exact original generation and actual agreed starting choices once.",
+          "Preserve established stronger same-body relationships on first legacy adoption only.",
+          "After any Handler archive require fresh choices and agreements; no predecessor inheritance."
+        ],
+        "mandatory_followups": [
+          "Keep actual source-owned agreements and required consequences pending until their real human responses/effects."
+        ],
+        "handler_or_gm_intervention": "Use actual printed/delegated decision ownership; no bot-selected consent or independent certification.",
+        "test_fixture_ids": [
+          "tests/rules/test_handler_creation.py",
+          "tests/rules/test_handler_creation_ui.py",
+          "tests/rules/test_handler_generations.py"
+        ]
+      },
+      "scope_limit": "Creation only; remaining Handler abilities, general Off-Duty old-body scene cleanup and first-legacy cast alias audit are separate. Global regression must pass before this candidate is reviewable.",
+      "independent_review": "NOT_RUN",
+      "human_acceptance": "NOT_RUN",
+      "checks": [
+        {
+          "branch": "Bounded workflow source/checkpoint checklist",
+          "tests": [
+            "test_all_seven_actual_starting_variants_save_reopen_agree_and_activate",
+            "test_activation_concurrent_retry_and_failure_after_canonical_write_are_atomic",
+            "test_actual_death_starts_new_generation_and_rejects_old_native_form",
+            "test_cached_old_menu_cannot_propose_new_generation_with_same_revision"
+          ]
+        }
+      ],
+      "evidence_report": "reports/M3_ACCEPTANCE.md"
+    },
+    {
+      "id": "M3-UNIT-PAID-PRIVACY-HOME",
+      "name": "Paid Privacy and Visiting Home with original private receipts",
+      "status": "INTEGRATION_PENDING",
+      "source": [
+        {
+          "document": "rulebook",
+          "pdf": 16,
+          "printed": 14,
+          "topic": "Privacy and Visiting Home"
+        }
+      ],
+      "contract": {
+        "trigger": "An actual current Girl pays for an eligible optional scene and later reaches its source-defined qualifying Off-Duty activation/result.",
+        "actor_type": "Original purchasing Girl, actual invited companion and actual controlled Foundation supervisor.",
+        "pre_roll_sources": [],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "diceless": [
+            "Privacy qualifies on the next actual activation; Home qualifies on a future actual ordinary final 8+. Owned proposal, attendance, ending or decline."
+          ]
+        },
+        "choice_ownership": "Each original participant and supervisor answers personally; one original Privacy participant may end participation. Actual OOC rules adjudication remains available.",
+        "target_policy": "Original actual ActorRef/character/persona and frozen exact human controllers; new profiles and replacements cannot inherit.",
+        "post_roll_effects": [
+          "Charge once and preserve immutable original receipt and known qualification.",
+          "Enter/end the actual scene only through original owned agreements; Home uses actual supervised co-travel and return.",
+          "Freeze Privacy receipt audience to the original two humans and deliver delayed receipts privately after closure.",
+          "Actual death ends protection by source and creates actual investigation/discipline without invented consent.",
+          "Temporary suspension defers an unspent benefit with original qualification proof, not a false consumed outcome."
+        ],
+        "mandatory_followups": [
+          "Keep actual source-owned agreements and required consequences pending until their real human responses/effects."
+        ],
+        "handler_or_gm_intervention": "Use actual printed/delegated decision ownership; no bot-selected consent or independent certification.",
+        "test_fixture_ids": [
+          "tests/rules/test_scene_requisitions.py",
+          "tests/rules/test_scene_requisition_service.py",
+          "tests/rules/test_privacy_trouble.py",
+          "tests/rules/test_privacy_game_delivery.py",
+          "tests/rules/test_economy_revocation.py"
+        ]
+      },
+      "scope_limit": "Named paid-scene workflows only. General travel, unrelated captivity/Harpy ports and all other economy consumers are not implied. Positive gameplay tests use synthetic scoped approval.",
+      "independent_review": "NOT_RUN",
+      "human_acceptance": "NOT_RUN",
+      "checks": [
+        {
+          "branch": "Bounded workflow source/checkpoint checklist",
+          "tests": [
+            "test_privacy_agreement_protection_and_delayed_audience",
+            "test_home_actual_final_eight_roll_supervision_and_physical_round_trip_are_owned",
+            "test_actual_inquiry_requires_survivor_owned_response_and_allows_refusal",
+            "test_actual_private_play_delivers_only_original_two_dms_after_room_closes_and_restart"
+          ]
+        }
+      ],
+      "evidence_report": "reports/M3_ACCEPTANCE.md"
     }
   ]
 }

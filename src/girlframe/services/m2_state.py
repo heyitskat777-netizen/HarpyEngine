@@ -12,7 +12,11 @@ from girlframe.engine.m2 import GameState, PilotSheet
 def load_state(connection: Connection, campaign: str) -> GameState:
     table = t.m2["m2_state"]
     value = connection.scalar(sa.select(table.c.body_json).where(table.c.campaign_id == campaign))
-    return GameState.model_validate_json(value) if value else GameState()
+    if value is None:
+        return GameState()
+    from girlframe.services.m3_incarnations import hydrate
+
+    return hydrate(connection, campaign, GameState.model_validate_json(value))
 
 
 def active(connection: Connection, campaign: str, owner: int) -> bool:

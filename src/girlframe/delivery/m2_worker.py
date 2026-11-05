@@ -22,6 +22,8 @@ class GameGateway(Protocol):
     ) -> None: ...
     async def publish(self, channel: int, payload: dict[str, Any], nonce: str) -> int: ...
     async def find(self, channel: int, nonce: str) -> int | None: ...
+    async def publish_private(self, recipient: int, payload: dict[str, Any], nonce: str) -> int: ...
+    async def find_private(self, recipient: int, nonce: str) -> int | None: ...
     async def actor(self, identity: int) -> GuildViewer: ...
 
 
@@ -191,8 +193,14 @@ class GameWorker:
 
     async def deliver(self, job: dict[str, Any], gateway: GameGateway) -> None:
         try:
+            payload = json.loads(job["body_json"])
+            recipient = payload.get("private_recipient")
             if job["state"] in ("uncertain", "sending"):
-                message = await gateway.find(int(job["channel_id"]), job["nonce"])
+                message = (
+                    await gateway.find_private(int(recipient), job["nonce"])
+                    if recipient is not None
+                    else await gateway.find(int(job["channel_id"]), job["nonce"])
+                )
                 self.delivery_result(job, "sent" if message else "review", message)
                 return
             table = t.m2["m2_outbox"]
@@ -206,9 +214,12 @@ class GameWorker:
                     )
                     .values(state="sending")
                 )
-            payload = json.loads(job["body_json"])
             payload["action_id"] = job["action_id"]
-            message = await gateway.publish(int(job["channel_id"]), payload, job["nonce"])
+            message = (
+                await gateway.publish_private(int(recipient), payload, job["nonce"])
+                if recipient is not None
+                else await gateway.publish(int(job["channel_id"]), payload, job["nonce"])
+            )
             self.delivery_result(job, "sent", message)
         except Exception:
             self.delivery_result(job, "uncertain", None)

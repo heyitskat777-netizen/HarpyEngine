@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from girlframe.engine.fanbase import Fanbase
 from girlframe.engine.frame_setup import HarpyCore
 from girlframe.engine.identity import Snowflake
+from girlframe.engine.m3_actor_state import ActorRef
 
 
 class Model(BaseModel):
@@ -58,4 +59,5 @@ class FrameRuntime(Model):
     court: dict[str, Snowflake] = Field(default_factory=dict)
     consume_hunger: Literal["Quiet", "Gnawing", "Ravenous"] | None = None
     psych_strings: tuple[Snowflake, ...] = ()
+    psych_string_refs: tuple[ActorRef, ...] = ()
     acquired_rules: tuple[str, ...] = ()

@@ -45,6 +45,14 @@ Future implementation should finish one named workflow with its source checklist
 and end-to-end evidence before opening another foundation task. Do not use registry
 entry counts, test totals or unequal unit counts as a completion percentage.
 
+The owner subsequently explicitly authorized four sub-agents to speed M3 work.
+Run separate bounded workflows in parallel with file ownership and explicit API
+handoffs; the root agent integrates shared state/routing and runs the final suite.
+This supersedes the earlier sequential-only workflow where dependencies can be
+completed independently. Keep all previous bot-off, source/privacy, release and
+truthful-acceptance boundaries. Continue M3 implementation until ready for the
+agreed human testing/review or a real blocker needs owner input.
+
 - Run `bash tools/install.sh`, then the checks in `README.md`.
 - Use the existing checkout. Cloud tasks are isolated; create no worktree unless requested.
 - Keep the original planning package unchanged, including its historical reports.

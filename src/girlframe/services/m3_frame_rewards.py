@@ -101,13 +101,29 @@ def eligibility(
         .mappings()
         .first()
     )
+    recorded = json.loads(receipt) if receipt else {}
+    manual = progress.roll.adjudication
+    valid_method = event is not None and (
+        manual is not None
+        and event["kind"] == "m3.manual_adjudicated"
+        and recorded.get("faces") is None
+        and recorded.get("rng_source") == "manual_adjudication"
+        and recorded.get("adjudication") == manual.model_dump(mode="json")
+        and manual.source_event == source
+        and manual.action == progress.action_id
+        and manual.required.actor.entity == str(uid)
+        and manual.required.actor.incarnation == period.character_ids.get(str(uid))
+        or manual is None
+        and event["kind"] == "m3.rolled"
+        and progress.roll.faces is not None
+        and recorded.get("faces") == list(progress.roll.faces)
+    )
     if (
         body is None
         or event is None
-        or event["kind"] != "m3.rolled"
+        or not valid_method
         or json.loads(event["payload_json"]).get("action_id") != progress.action_id
         or receipt is None
-        or json.loads(receipt)["faces"] != list(progress.roll.faces)
         or action is None
         or action["actor_id"] != str(uid)
         or json.loads(action["body_json"]).get("m3", {}).get("period_id") != period.id
@@ -123,12 +139,14 @@ def specifications(
 ) -> list[dict[str, Any]]:
     result = []
     for uid in period.pilots:
+        if str(uid) in period.ended_characters or str(uid) not in state.sheets:
+            continue
         facts, source = eligibility(c, store, state, period, uid)
         sheet = facts.sheets.get(str(uid))
-        character = c.scalar(
-            sa.select(t.characters.c.id).where(
-                t.characters.c.campaign_id == store.campaign_id, t.characters.c.user_id == str(uid)
-            )
+        from girlframe.services.m2_game import GameService
+
+        character = GameService(store).character_binding(
+            c, state, uid, require_current_profile=False
         )
         if sheet is None or sheet.frame_scrapped or character != period.character_ids.get(str(uid)):
             continue
@@ -294,19 +312,11 @@ class RewardService:
     ) -> tuple[GameState, Period, dict[str, Any]]:
         state = load_state(c, self.store.campaign_id)
         period = self.periods._get(c, row["off_duty_id"])
-        characters = {
-            uid: value
-            for uid, value in c.execute(
-                sa.select(t.characters.c.user_id, t.characters.c.id).where(
-                    t.characters.c.campaign_id == self.store.campaign_id,
-                    t.characters.c.user_id.in_(tuple(str(x) for x in period.pilots)),
-                )
-            )
-        }
-        if (
-            characters != period.character_ids
-            or set(state.order) != set(period.pilots)
-            or any(not HandlerService(self.store)._member(c, uid) for uid in period.pilots)
+        from girlframe.services.m3_off_duty import current_original_characters
+
+        characters = current_original_characters(c, self.game, state, period)
+        if row["subject_id"] not in characters or any(
+            not HandlerService(self.store)._member(c, int(uid)) for uid in characters
         ):
             raise WorkflowError(
                 "Recover the changed character roster before this old period's rewards."

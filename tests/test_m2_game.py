@@ -956,6 +956,8 @@ def test_paired_heat_and_bond_cap_are_explicit_owner_choices(ledger):
     saved = state(game)
     sheet = saved.sheets["2"]
     sheet.identities[0].paired = True
+    sheet.girl = "BONDED"
+    sheet.pair = 3
     with pytest.raises(ValueError):
         mark_identity(sheet, sheet.identities[0].id, 3, 0)
     assert mark_identity(sheet, sheet.identities[0].id, 5, 2) == 2
@@ -963,5 +965,5 @@ def test_paired_heat_and_bond_cap_are_explicit_owner_choices(ledger):
     spend_heat(sheet, 2)
     assert sheet.heat == 1
     saved.bonds["2:3"] = 2
-    ChoiceEngine(game).bond(saved, 2, 3, 1)
+    ChoiceEngine(game).bond(saved, 2, 3, 1, "synthetic-bond-consequence")
     assert saved.sheets["2"].heat == 3 and saved.sheets["3"].heat == 2

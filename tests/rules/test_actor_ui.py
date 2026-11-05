@@ -1,12 +1,14 @@
 import asyncio
 
 from test_actor_service import legacy, ready
+from test_incarnations import raw
 from test_ledger import PLAYER
 from test_ledger import ledger as ledger_fixture
 from test_m2_game import state
 from test_mission_ui import current
 
 from girlframe.discord_adapter.m3_actors import open_actors
+from girlframe.engine.m2 import GameState
 
 ledger = ledger_fixture
 
@@ -46,9 +48,17 @@ def test_legacy_character_link_is_explicit_and_uses_its_actual_snapshot(ledger):
         await review.response.defer(ephemeral=True)
         await picker.open_item(review, "bind-legacy")
         form = review.edit_original_response.call_args.kwargs["view"]
-        assert state(game).sheets["2"].character_id is None
+        assert GameState.model_validate_json(raw(ledger)).sheets["2"].character_id is None
+        projected = state(game).sheets["2"]
+        assert projected.character_id is not None
         form.values["confirm"] = ("yes",)
         await form.confirm.callback(current(2, 997))
-        assert form.completed and state(game).sheets["2"].character_id is not None
+        assert (
+            form.completed
+            and GameState.model_validate_json(raw(ledger)).sheets["2"].character_id is not None
+        )
+        assert state(game).sheets["2"].model_dump(exclude={"revision"}) == projected.model_dump(
+            exclude={"revision"}
+        )
 
     asyncio.run(run())

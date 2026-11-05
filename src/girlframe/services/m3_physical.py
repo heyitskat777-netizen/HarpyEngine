@@ -10,9 +10,11 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_physical as rules
+from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef
-from girlframe.engine.m3_actors import resolve
-from girlframe.engine.m3_physical_state import InitialPlacement, Review
+from girlframe.engine.m3_actors import fingerprint, owned_refs, resolve
+from girlframe.engine.m3_girl_runtime_state import has_rule
+from girlframe.engine.m3_physical_state import CockpitAction, FrameLock, InitialPlacement, Review
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
@@ -140,7 +142,665 @@ class PhysicalService:
                 ]
                 if state.world
                 else [],
+                position_sha256=actor.position_sha256,
+                actual_cell=list(actor.cell) if actor.cell is not None else None,
+                occupied_frame_instance=actor.occupied_frame_instance,
+                frame_locks=[
+                    x.id
+                    for x in state.frame_locks
+                    if (x.active or (placement and placement.subsumed))
+                    and (
+                        (x.owner == ref and x.frame_instance == actor.frame_instance)
+                        or (
+                            placement
+                            and rules.occupied_frame(placement) == (x.owner, x.frame_instance)
+                        )
+                    )
+                ],
+                can_record_unknown=placement is not None
+                and placement.custody is None
+                and placement.occupied_frame_owner is None
+                and not any(
+                    (x.active and ref in (x.traveler, x.supervisor)) or ref in x.offstage_refs
+                    for x in state.escort_journeys
+                )
+                and (
+                    placement.girl_cell is None
+                    or placement.frame_cell is None
+                    or (
+                        placement.frame_instance != actor.frame_instance
+                        and placement.mode == "outside_frame"
+                    )
+                ),
             )
+
+    def operate(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        revision: int,
+        command: CockpitAction,
+    ) -> dict[str, Any]:
+        command = CockpitAction.model_validate_json(command.model_dump_json())
+
+        def access(c: Connection) -> None:
+            self._access(c, viewer)
+            if command.actor.entity != str(viewer.user_id):
+                raise WorkflowError(
+                    "Only the actual original Girl's owner performs this operation."
+                )
+
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            self._idle(c)
+            state = load_state(c, self.store.campaign_id)
+            if type(revision) is not int or state.revision != revision:
+                raise WorkflowError("STALE_COCKPIT: refresh the actual physical state.")
+            if self.game.immediate_work(c, viewer.user_id):
+                raise WorkflowError(
+                    "Resolve the actual immediate consequence before ordinary cockpit operations."
+                )
+            if (
+                self.game.character_binding(c, state, viewer.user_id, require_current_profile=False)
+                != command.actor.incarnation
+            ):
+                raise WorkflowError(
+                    "STALE_ACTOR: this cockpit action belongs to the original Girl."
+                )
+            bindings = profiles(c, self.store.campaign_id)
+            actual = resolve(state, command.actor, bindings, require_current_profile=False)
+            if actual.position_sha256 != command.expected_position:
+                raise WorkflowError("STALE_COCKPIT: the original physical position changed.")
+            placement = next((x for x in state.placements if x.actor == command.actor), None)
+            frames = {(command.actor, actual.frame_instance)}
+            occupied = rules.occupied_frame(placement) if placement is not None else None
+            if occupied is not None:
+                frames.add(occupied)
+            for owner, instance in frames:
+                latest = next(
+                    (
+                        x
+                        for x in reversed(state.frame_locks)
+                        if x.owner == owner and x.frame_instance == instance
+                    ),
+                    None,
+                )
+                if latest is not None:
+                    self._frame_lock(c, viewer, latest.id)
+            source = str(uuid4())
+            if command.operation == "exit":
+                updated = rules.cockpit_exit(
+                    state, bindings, command.actor, source, command.account
+                )
+            else:
+                updated = rules.cockpit_enter(
+                    state,
+                    bindings,
+                    command.actor,
+                    source,
+                    command.account,
+                    pilot=command.operation == "pilot",
+                )
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.cockpit_operated",
+                updated,
+                event_id=source,
+                operation=command.operation,
+            )
+            void_works = []
+            if command.operation != "exit" and occupied != (command.actor, actual.frame_instance):
+                sheet = updated.sheets[command.actor.entity]
+                for family in ("girl", "frame"):
+                    assets = [x for x in sheet.assets if x.family == family]
+                    if (
+                        not assets
+                        or not all(x.void for x in assets)
+                        or (
+                            family == "girl"
+                            and has_rule(sheet, "girl.mockingbird.risk-factor", "MOCKINGBIRD")
+                        )
+                    ):
+                        continue
+                    identity = str(uuid4())
+                    related(
+                        c,
+                        self.store,
+                        dict(campaign_id=self.store.campaign_id, campaign_context=True),
+                        identity,
+                        viewer.user_id,
+                        viewer.user_id,
+                        "void_threshold",
+                        dict(
+                            owner=command.actor.model_dump(mode="json"),
+                            character=command.actor.incarnation,
+                            frame=actual.frame_instance,
+                            source_action=None,
+                            source_pdf=19,
+                            details=dict(family=family),
+                            reason="physical_entry",
+                            immediate=True,
+                        ),
+                        source,
+                    )
+                    void_works.append(identity)
+            return dict(
+                operation=command.operation, revision=updated.revision, void_works=void_works
+            )
+
+        try:
+            return self.store._write(
+                viewer,
+                key,
+                "m3.cockpit_operated",
+                dict(
+                    revision=revision,
+                    command=command.model_dump(mode="json"),
+                ),
+                operation,
+                authorize=access,
+                auto_audit=False,
+            )
+        except ValueError as error:
+            raise WorkflowError(str(error)) from None
+
+    def journey_tasks(self, viewer: GuildViewer) -> list[dict[str, Any]]:
+        with self.store.engine.connect() as c:
+            return self._journey_tasks(c, viewer)
+
+    def _journey_tasks(self, c: Connection, viewer: GuildViewer) -> list[dict[str, Any]]:
+        self.game.authorize(c, viewer, game=False)
+        state = load_state(c, self.store.campaign_id)
+        bindings = profiles(c, self.store.campaign_id)
+        result = []
+        for journey in state.escort_journeys:
+            for participant in journey.offstage_refs:
+                try:
+                    actual = resolve(state, participant, bindings, require_current_profile=False)
+                except ValueError:
+                    continue
+                if actual.controller == viewer.user_id:
+                    result.append(
+                        dict(
+                            id=journey.id,
+                            participant=participant.model_dump(mode="json"),
+                            label=actual.label,
+                            revision=state.revision,
+                            expected=fingerprint(journey),
+                        )
+                    )
+        return result
+
+    def journey(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            selected = next(
+                (x for x in self._journey_tasks(c, viewer) if x["id"] == identity), None
+            )
+            if selected is None:
+                raise WorkflowError(
+                    "This interrupted journey belongs to its actual surviving role."
+                )
+            state = load_state(c, self.store.campaign_id)
+            return selected | dict(
+                locations=[
+                    dict(id=x.id, name=x.name, cell=list(x.cell)) for x in state.world.locations
+                ]
+                if state.world
+                else []
+            )
+
+    def recover_journey(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        participant: ActorRef,
+        expected: str,
+        revision: int,
+        cell: tuple[int, int] | None,
+        account: str,
+    ) -> dict[str, Any]:
+        def access(c: Connection) -> None:
+            self._access(c, viewer)
+            state = load_state(c, self.store.campaign_id)
+            actual = resolve(
+                state,
+                participant,
+                profiles(c, self.store.campaign_id),
+                require_current_profile=False,
+            )
+            if actual.controller != viewer.user_id:
+                raise WorkflowError("Only the actual surviving role's human records its recovery.")
+
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            self._idle(c)
+            state = load_state(c, self.store.campaign_id)
+            journey = next((x for x in state.escort_journeys if x.id == identity), None)
+            if (
+                type(revision) is not int
+                or revision != state.revision
+                or journey is None
+                or fingerprint(journey) != expected
+            ):
+                raise WorkflowError("STALE_JOURNEY: refresh the actual interrupted recovery.")
+            source = str(uuid4())
+            updated = rules.recover_interrupted_journey(
+                state,
+                profiles(c, self.store.campaign_id),
+                identity,
+                participant,
+                cell,
+                source,
+                account,
+            )
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.interrupted_party_recovered",
+                updated,
+                event_id=source,
+                journey_id=identity,
+            )
+            return dict(id=identity, recovered=True)
+
+        try:
+            return self.store._write(
+                viewer,
+                key,
+                "m3.interrupted_party_recovered",
+                dict(
+                    id=identity,
+                    participant=participant.model_dump(mode="json"),
+                    expected=expected,
+                    revision=revision,
+                    cell=cell,
+                    account=account,
+                ),
+                operation,
+                authorize=access,
+                auto_audit=False,
+            )
+        except ValueError as error:
+            raise WorkflowError(str(error)) from None
+
+    def _frame_lock(
+        self,
+        c: Connection,
+        viewer: GuildViewer,
+        identity: str,
+    ) -> tuple[GameState, FrameLock, GameState]:
+        self.game.authorize(c, viewer, game=False)
+        state = load_state(c, self.store.campaign_id)
+        lock = next((x for x in state.frame_locks if x.id == identity), None)
+        if lock is None:
+            raise WorkflowError("This original Frame cockpit is unavailable.")
+        try:
+            voice = rules.frame_voice(state, lock.owner, lock.frame_instance)
+        except ValueError:
+            voice = None
+        permitted = {int(lock.owner.entity), int(lock.subject.entity), voice}
+        permitted.update(
+            int(x.actor.entity)
+            for x in state.placements
+            if rules.occupied_frame(x) == (lock.owner, lock.frame_instance)
+        )
+        permitted.update(x.controller for x in lock.consents)
+        if viewer.user_id not in permitted:
+            bindings = profiles(c, self.store.campaign_id)
+            target = next((x for x in state.placements if x.actor == lock.subject), None)
+            scenes = t.m2["m2_scenes"]
+            shared_scene = any(
+                {viewer.user_id, int(lock.subject.entity)} <= set(json.loads(raw))
+                for raw in c.scalars(
+                    sa.select(scenes.c.participants_json).where(
+                        scenes.c.campaign_id == self.store.campaign_id, scenes.c.open.is_(True)
+                    )
+                )
+            )
+            if target is not None and shared_scene:
+                actual_target = resolve(
+                    state, lock.subject, bindings, require_current_profile=False
+                )
+                if actual_target.cell is not None and any(
+                    resolve(state, ref, bindings, require_current_profile=False).cell
+                    == actual_target.cell
+                    for ref in owned_refs(state, viewer.user_id, bindings)
+                    if ref != lock.subject
+                ):
+                    permitted.add(viewer.user_id)
+        if viewer.user_id not in permitted:
+            raise WorkflowError("This actual cockpit belongs to its original participants.")
+        history = t.m2["m2_state_history"]
+
+        def source(event: str) -> GameState | None:
+            body = c.scalar(
+                sa.select(history.c.body_json).where(
+                    history.c.campaign_id == self.store.campaign_id,
+                    history.c.event_id == event,
+                )
+            )
+            return GameState.model_validate_json(body) if body else None
+
+        original = source(lock.source_event)
+        first = (
+            next((x for x in original.frame_locks if x.id == identity), None) if original else None
+        )
+        stable = ("id", "owner", "frame_instance", "subject", "source_event", "core_id")
+        if (
+            first is None
+            or original is None
+            or not first.active
+            or first.consents
+            or any(getattr(first, field) != getattr(lock, field) for field in stable)
+        ):
+            raise WorkflowError("SOURCE_COCKPIT_MISSING: recover the original subsumption event.")
+        latest_by_actor = {x.actor: x for x in lock.consents}
+        for latest in latest_by_actor.values():
+            answered = source(latest.source_event)
+            recorded = (
+                next((x for x in answered.frame_locks if x.id == identity), None)
+                if answered
+                else None
+            )
+            reply = (
+                next((x for x in recorded.consents if x.source_event == latest.source_event), None)
+                if recorded
+                else None
+            )
+            response_actor = c.scalar(
+                sa.select(t.events.c.actor_id).where(
+                    t.events.c.campaign_id == self.store.campaign_id,
+                    t.events.c.id == latest.source_event,
+                )
+            )
+            if (
+                reply is None
+                or reply.model_copy(update={"used_event": latest.used_event}) != latest
+                or response_actor != str(latest.controller)
+            ):
+                raise WorkflowError(
+                    "SOURCE_FRAME_CONSENT_MISSING: recover the actual Frame response."
+                )
+        if not lock.active:
+            released = source(lock.released_event or "")
+            recorded = (
+                next((x for x in released.frame_locks if x.id == identity), None)
+                if released
+                else None
+            )
+            if (
+                recorded is None
+                or recorded.active
+                or recorded.released_event != lock.released_event
+            ):
+                raise WorkflowError(
+                    "SOURCE_COCKPIT_RELEASE_MISSING: recover the Frame's actual opening."
+                )
+        return state, lock, original
+
+    def frame(
+        self, viewer: GuildViewer, identity: str, target: ActorRef | None = None
+    ) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            return self._frame(c, viewer, identity, target)
+
+    def _frame(
+        self, c: Connection, viewer: GuildViewer, identity: str, target: ActorRef | None = None
+    ) -> dict[str, Any]:
+        state, lock, original = self._frame_lock(c, viewer, identity)
+        occupants = [
+            x.actor
+            for x in state.placements
+            if rules.occupied_frame(x) == (lock.owner, lock.frame_instance)
+        ]
+        if target is None:
+            target = next((x for x in occupants if x.entity == str(viewer.user_id)), lock.subject)
+        if target != lock.subject and target not in occupants:
+            raise WorkflowError("Choose an actual original body in this cockpit.")
+        body = next((x for x in state.placements if x.actor == target), None)
+        present = body is not None and rules.occupied_frame(body) == (
+            lock.owner,
+            lock.frame_instance,
+        )
+        try:
+            voice = rules.frame_voice(state, lock.owner, lock.frame_instance)
+        except ValueError:
+            voice = None
+        latest = next((x for x in reversed(lock.consents) if x.actor == target), None)
+        allowed = bool(latest and latest.allowed and latest.used_event is None)
+        extractors = []
+        if present and (not lock.active or allowed):
+            bindings = profiles(c, self.store.campaign_id)
+            target_view = resolve(state, target, bindings, require_current_profile=False)
+            for ref in owned_refs(state, viewer.user_id, bindings):
+                if ref == target:
+                    continue
+                actual = resolve(state, ref, bindings, require_current_profile=False)
+                placement = next((x for x in state.placements if x.actor == ref), None)
+                if (
+                    actual.cell is None
+                    or actual.cell != target_view.cell
+                    or actual.custody not in (None, "free")
+                    or (
+                        placement is not None
+                        and (
+                            placement.incapacitated
+                            or placement.subsumed
+                            or not placement.vitals_active
+                        )
+                    )
+                ):
+                    continue
+                extractors.append(
+                    dict(ref=ref.model_dump(mode="json"), token=ref.token, label=actual.label)
+                )
+        sheet = (
+            original.sheets.get(target.entity)
+            if target == lock.subject
+            else state.sheets.get(target.entity)
+        )
+        return dict(
+            id=identity,
+            active=lock.active,
+            subject=target.model_dump(mode="json"),
+            occupants=[
+                dict(
+                    ref=x.model_dump(mode="json"),
+                    token=x.token,
+                    label=state.sheets[x.entity].callsign,
+                )
+                for x in occupants
+                if x.entity in state.sheets
+            ],
+            label=sheet.callsign if sheet else "Original Girl",
+            can_voice=lock.active and viewer.user_id == voice,
+            present=present,
+            allowed=allowed,
+            extractors=extractors,
+            expected=fingerprint(lock),
+            revision=state.revision,
+            vitals_active=body.vitals_active if body else None,
+        )
+
+    def frame_tasks(self, viewer: GuildViewer) -> list[dict[str, Any]]:
+        with self.store.engine.connect() as c:
+            self.game.authorize(c, viewer, game=False)
+            state = load_state(c, self.store.campaign_id)
+            result = []
+            for lock in state.frame_locks:
+                try:
+                    result.append(self._frame(c, viewer, lock.id))
+                except WorkflowError:
+                    continue
+            return result
+
+    def respond_frame(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        expected: str,
+        revision: int,
+        response: Literal["allow", "refuse", "open"],
+        account: str,
+        *,
+        target: ActorRef | None = None,
+    ) -> dict[str, Any]:
+        def access(c: Connection) -> None:
+            self._access(c, viewer)
+            state, lock, _ = self._frame_lock(c, viewer, identity)
+            if rules.frame_voice(state, lock.owner, lock.frame_instance) != viewer.user_id:
+                raise WorkflowError("Only the actual Frame's human voice can give this response.")
+            represented_core = state.world is not None and any(
+                x.id == lock.core_id for x in (*state.world.npcs, *state.world.pilots)
+            )
+            if not represented_core:
+                self._handler(c, viewer)
+            policy = self.store.policy.owner_m3_rulings
+            if (
+                policy is None
+                or getattr(policy, "physical_frame_voice", None) != "controller_or_handler"
+            ):
+                raise WorkflowError("UNRESOLVED_RULING: record the actual Frame voice ownership.")
+
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            state, lock, _ = self._frame_lock(c, viewer, identity)
+            if (
+                type(revision) is not int
+                or state.revision != revision
+                or fingerprint(lock) != expected
+            ):
+                raise WorkflowError("STALE_COCKPIT: reopen the actual Frame decision.")
+            source = str(uuid4())
+            selected = ActorRef.model_validate_json(
+                json.dumps(self._frame(c, viewer, identity, target)["subject"])
+            )
+            if response == "open":
+                updated = rules.open_cockpit(
+                    state, lock.owner, lock.frame_instance, viewer.user_id, source, account
+                )
+            elif response in ("allow", "refuse"):
+                updated = rules.consent_to_extract(
+                    state,
+                    profiles(c, self.store.campaign_id),
+                    selected,
+                    viewer.user_id,
+                    source,
+                    account,
+                    allowed=response == "allow",
+                )
+            else:
+                raise WorkflowError("Choose the actual Frame's response.")
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.frame_cockpit_response",
+                updated,
+                event_id=source,
+                cockpit_id=identity,
+                response=response,
+            )
+            return dict(id=identity, response=response)
+
+        try:
+            return self.store._write(
+                viewer,
+                key,
+                "m3.frame_cockpit_response",
+                dict(
+                    id=identity,
+                    expected=expected,
+                    revision=revision,
+                    response=response,
+                    account=account,
+                    target=target.model_dump(mode="json") if target else None,
+                ),
+                operation,
+                authorize=access,
+                auto_audit=False,
+            )
+        except ValueError as error:
+            raise WorkflowError(str(error)) from None
+
+    def extract_body(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        expected: str,
+        revision: int,
+        extractor: ActorRef,
+        account: str,
+        *,
+        target: ActorRef | None = None,
+    ) -> dict[str, Any]:
+        def access(c: Connection) -> None:
+            self._access(c, viewer)
+            self._frame_lock(c, viewer, identity)
+
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            self._idle(c)
+            state, lock, _ = self._frame_lock(c, viewer, identity)
+            data = self._frame(c, viewer, identity, target)
+            if (
+                type(revision) is not int
+                or state.revision != revision
+                or data["expected"] != expected
+                or extractor.model_dump(mode="json") not in [x["ref"] for x in data["extractors"]]
+            ):
+                raise WorkflowError(
+                    "STALE_EXTRACTION: choose your actual present role and recorded consent."
+                )
+            source = str(uuid4())
+            subject = ActorRef.model_validate_json(json.dumps(data["subject"]))
+            updated = rules.extract(
+                state, profiles(c, self.store.campaign_id), subject, source, account
+            )
+            updated.facts.append(
+                dict(
+                    kind="actual_body_extraction",
+                    actor=extractor.model_dump_json(),
+                    subject=subject.model_dump_json(),
+                    source_event=source,
+                )
+            )
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.body_extracted",
+                updated,
+                event_id=source,
+                cockpit_id=identity,
+            )
+            return dict(id=identity, extracted=True)
+
+        try:
+            return self.store._write(
+                viewer,
+                key,
+                "m3.body_extracted",
+                dict(
+                    id=identity,
+                    expected=expected,
+                    revision=revision,
+                    extractor=extractor.model_dump(mode="json"),
+                    account=account,
+                    target=target.model_dump(mode="json") if target else None,
+                ),
+                operation,
+                authorize=access,
+                auto_audit=False,
+            )
+        except ValueError as error:
+            raise WorkflowError(str(error)) from None
 
     def propose(
         self, viewer: GuildViewer, key: str, expected: int, proposal: InitialPlacement
@@ -171,7 +831,11 @@ class PhysicalService:
                 raise WorkflowError("Resume or withdraw your existing original physical proposal.")
             identity, source = str(uuid4()), str(uuid4())
             body = Review(
-                proposal=proposal, label=actor.label, handler=handler, proposed_event=source
+                proposal=proposal,
+                label=actor.label,
+                handler=handler,
+                proposed_event=source,
+                origin=next((x for x in state.placements if x.actor == proposal.actor), None),
             )
             self.game.event(
                 c,
@@ -293,7 +957,14 @@ class PhysicalService:
                         "The original proposing human must still be a campaign member."
                     )
                 state = load_state(c, self.store.campaign_id)
-                vessel = "vessel:" + identity
+                current = next(
+                    (x for x in state.placements if x.actor == body.proposal.actor), None
+                )
+                if current != body.origin:
+                    raise WorkflowError(
+                        "STALE_PLACEMENT: the original body facts changed after this proposal."
+                    )
+                vessel = current.vessel_id if current else "vessel:" + identity
                 state = rules.initial(
                     state,
                     profiles(c, self.store.campaign_id),

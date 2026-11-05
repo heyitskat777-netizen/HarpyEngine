@@ -9,7 +9,7 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_beneath as rules
-from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput, higher, pair_key
+from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput, higher
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import resolve
 from girlframe.services.handler_setup import HandlerService
@@ -58,7 +58,9 @@ def no_conflict(
         if row["id"] in ancestors:
             continue
         data = json.loads(row["body_json"])
-        if prepared.play != rules.PLAY and not data.get("beneath"):
+        if prepared.play not in (rules.PLAY, "defeat", "dive_deep") and not (
+            data.get("beneath") or data.get("defeat") or data.get("dive") or data.get("void_keep")
+        ):
             continue
         involved = {row["actor_id"]}
         target = (data.get("prepared") or {}).get("target")
@@ -162,34 +164,36 @@ def pre_roll(
 def bonds(
     game: "GameService", c: Connection, state: GameState, victim: ActorRef
 ) -> list[dict[str, Any]]:
+    from girlframe.engine.m3_actor_bonds import current_ref, depth
+
     result = []
     for uid in (*state.order, state.handler):
-        if (
-            uid is None
-            or str(uid) == victim.entity
-            or state.bonds.get(pair_key(int(victim.entity), uid), 0) < 1
-        ):
+        if uid is None or str(uid) == victim.entity:
             continue
-        peer = (
-            ActorRef(kind="handler", entity=str(uid))
-            if uid == state.handler
-            else ActorRef(
-                kind="pilot",
-                entity=str(uid),
-                incarnation=game.character_binding(c, state, uid, require_current_profile=False),
-            )
-        )
+        peer = current_ref(state, uid)
+        if depth(state, victim, peer) < 1:
+            continue
         actual = resolve(
             state, peer, profiles(c, game.store.campaign_id), require_current_profile=False
         )
         result.append(dict(token=peer.token, ref=peer.model_dump(mode="json"), label=actual.label))
     if state.world:
         for npc in state.world.npcs:
-            if npc.bonds.get("pilot:" + victim.entity, 0) > 0:
-                peer = ActorRef(kind="npc", entity=npc.id)
+            peer = ActorRef(kind="npc", entity=npc.id)
+            if depth(state, victim, peer) > 0:
                 result.append(
                     dict(token=peer.token, ref=peer.model_dump(mode="json"), label=npc.name)
                 )
+    for archive in state.career_archives:
+        peer = archive.actor
+        if peer != victim and depth(state, victim, peer) > 0:
+            result.append(
+                dict(
+                    token=peer.token,
+                    ref=peer.model_dump(mode="json"),
+                    label=json.loads(archive.sheet_json)["callsign"] + " (original character)",
+                )
+            )
     return result
 
 
@@ -477,6 +481,7 @@ def apply(
         tuple(action["data"]["participants"]),
         authority=authority,
         actor_piloting=action["data"]["prepared"]["piloting"],
+        source_event=action["data"]["response_event"],
     )
     for name in GameState.model_fields:
         setattr(state, name, getattr(outcome.state, name))
@@ -581,7 +586,9 @@ def work_root(game: "GameService", c: Connection, row: dict[str, Any]) -> dict[s
     raise WorkflowError("Recover the inconsistent discipline source chain.")
 
 
-def discipline_action(game: "GameService", c: Connection, row: dict[str, Any]) -> str | None:
+def discipline_action(
+    game: "GameService", c: Connection, row: dict[str, Any], *, allow_archived: bool = False
+) -> str | None:
     root = work_root(game, c, row)
     if root is None:
         return None
@@ -619,7 +626,19 @@ def discipline_action(game: "GameService", c: Connection, row: dict[str, Any]) -
         raise WorkflowError(
             "REQUIRED_RECOVERY: resume the original held social Play before discipline."
         )
-    game.action_characters(c, action, state)
+    game.action_characters(c, action, state, allow_archived=allow_archived)
+    if allow_archived:
+        from girlframe.engine.m3_careers import archive_for
+
+        if archive_for(
+            state,
+            ActorRef(
+                kind="pilot",
+                entity=root["owner_id"],
+                incarnation=body["discipline_owner_character"],
+            ),
+        ):
+            return str(action["id"])
     if (
         game.character_binding(c, state, int(root["owner_id"]), require_current_profile=False)
         != body["discipline_owner_character"]
@@ -636,7 +655,7 @@ def discipline_finished(
     root = work_root(game, c, row)
     if root is None:
         return
-    action_id = discipline_action(game, c, row)
+    action_id = discipline_action(game, c, row, allow_archived=True)
     assert action_id is not None
     table = t.m3["m3_required_work"]
     latest = {

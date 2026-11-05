@@ -219,6 +219,9 @@ class ActorPlayService:
             state = load_state(c, self.store.campaign_id)
             cast, actors = self.actors(c, state, channel)
             actor = next((x for x in actors if x.ref == ref), None)
+            from girlframe.services.m3_scene_requisitions import guard
+
+            guard(c, self.store, cast.id, ref)
             judge = m3_cast.adjudicator(
                 state, cast, profiles(c, self.store.campaign_id), acting=ref
             )

@@ -11,7 +11,15 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_world as rules
 from girlframe.engine.m2 import GameState
-from girlframe.engine.m3_world_state import Board, Faction, Gorgon, Location, Npc, StartingNpcLink
+from girlframe.engine.m3_world_state import (
+    Board,
+    Cell,
+    Faction,
+    Gorgon,
+    Location,
+    Npc,
+    StartingNpcLink,
+)
 from girlframe.engine.npc_bonds import NPC_ROLES
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_missions import MissionService
@@ -108,7 +116,7 @@ class WorldService:
                         {
                             "id": x.id,
                             "name": x.name,
-                            "cell": list(x.cell),
+                            "cell": list(x.cell) if x.cell is not None else None,
                             "gorgon_class": x.gorgon_class,
                             "alive": x.alive,
                         }
@@ -354,6 +362,51 @@ class WorldService:
             key,
             "m3.faction_introduced",
             {"expected": expected, "faction": faction.model_dump(mode="json")},
+            operation,
+        )
+
+    def locate_gorgon(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        expected: int,
+        identity: str,
+        cell: Cell,
+        account: str,
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            state = self._state(c, expected)
+            if state.world is None or not account.strip() or len(account) > 1200:
+                raise WorkflowError("Record the actual missing position and factual source.")
+            if self.game.pending_actions(c):
+                raise WorkflowError("Finish pending Plays before recording world positions.")
+            source = str(uuid4())
+            state.world = rules.locate_gorgon(state.world, identity, cell, source)
+            state.facts.append(
+                dict(
+                    kind="gorgon_initial_position",
+                    entity=identity,
+                    account=account,
+                    source_event=source,
+                )
+            )
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.gorgon_position_recorded",
+                state,
+                event_id=source,
+                entity_id=identity,
+                cell=list(cell),
+            )
+            return dict(id=identity, game_revision=state.revision, cell=list(cell))
+
+        return self._write(
+            viewer,
+            key,
+            "m3.gorgon_position_recorded",
+            dict(expected=expected, identity=identity, cell=list(cell), account=account),
             operation,
         )
 

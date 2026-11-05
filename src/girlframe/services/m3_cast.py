@@ -249,6 +249,9 @@ class CastService:
             try:
                 if action == "join" and ref is not None:
                     actor = self.actors._actor(c, viewer, state, ref)
+                    from girlframe.services.m3_scene_requisitions import guard
+
+                    guard(c, self.store, cast.id, ref)
                     if ref.kind == "pilot":
                         scenes = t.m2["m2_scenes"]
                         others = c.execute(

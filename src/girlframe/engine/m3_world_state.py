@@ -138,7 +138,9 @@ class CorePlan(Model):
         return self
 
 
-class Gorgon(PlacedEntity):
+class Gorgon(Entity):
+    cell: Cell | None = None
+    position_event: str | None = None
     gorgon_class: GorgonClass
     types: tuple[GorgonType, ...] = Field(min_length=1)
     assets: tuple[Asset, ...]
@@ -271,9 +273,8 @@ class World(Model):
         if len({x.cell for x in self.locations}) != len(self.locations):
             raise ValueError("Each major location occupies its own square")
         if any(
-            not self.board.contains(x.cell)
-            for x in (*self.locations, *self.npcs, *self.gorgons, *self.pilots)
-        ):
+            not self.board.contains(x.cell) for x in (*self.locations, *self.npcs, *self.pilots)
+        ) or any(x.cell is not None and not self.board.contains(x.cell) for x in self.gorgons):
             raise ValueError("Entities must occupy squares on the current map")
         factions, npcs = {x.id for x in self.factions}, {x.id for x in self.npcs}
         if any(x.npc not in npcs for x in self.starting_npc_links) or len(

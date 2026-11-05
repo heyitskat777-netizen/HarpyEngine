@@ -427,6 +427,46 @@ def register_missions(
             await reply(interaction, str(error))
 
     @group.command(
+        name="enforcer", description="Review actual Enforcer accusations and source-owned case work"
+    )
+    async def enforcer(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_enforcer import open_conditioning, open_enforcer_task
+        from girlframe.discord_adapter.m3_punishments import Picker
+        from girlframe.services.m3_enforcer import EnforcerService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            enforcers = EnforcerService(service.game)
+            saved = await asyncio.to_thread(enforcers.tasks, viewer_from_interaction(interaction))
+
+            async def choose(current: discord.Interaction, token: str) -> None:
+                if token == "conditioning":
+                    await open_conditioning(current, enforcers)
+                else:
+                    await open_enforcer_task(current, enforcers, token)
+
+            await Picker(
+                interaction.user.id,
+                "Your actual Enforcer controls",
+                (("conditioning", "Obedience Conditioning — actual known NPCs"),)
+                + tuple((x["id"], x["kind"].replace("_", " ").title()) for x in saved),
+                choose,
+            ).show(interaction)
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @group.command(name="handler", description="Create or review your actual Handler persona")
+    async def handler_creation(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_handler_creation import open_handler
+        from girlframe.services.m3_handler_creation import HandlerCreationService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_handler(interaction, HandlerCreationService(service.store))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @group.command(
         name="position", description="Review your actual original body and Frame positions"
     )
     async def position(interaction: discord.Interaction) -> None:

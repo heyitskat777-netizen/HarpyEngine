@@ -24,6 +24,9 @@ class Mission(Model):
     ] = "offered"
     success: bool | None = None
     consequence_ids: tuple[str, ...] = ()
+    offered_characters: dict[str, str] = Field(default_factory=dict)
+    character_ids: dict[str, str] = Field(default_factory=dict)
+    ended_participants: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def consistency(self) -> "Mission":
@@ -35,6 +38,16 @@ class Mission(Model):
             raise ValueError("Offer to a distinct nonempty Pilot set, excluding the Handler")
         if not set(self.responses) <= {str(x) for x in self.offered_to}:
             raise ValueError("Only offered players may respond")
+        if (
+            not set(self.offered_characters) <= {str(x) for x in self.offered_to}
+            or not set(self.character_ids) <= {str(x) for x in self.participants}
+            or not set(self.ended_participants) <= {str(x) for x in self.participants}
+            or any(
+                self.character_ids.get(uid, character) != character
+                for uid, character in self.ended_participants.items()
+            )
+        ):
+            raise ValueError("Mission identity records must match its actual original participants")
         accepted = {int(uid) for uid, value in self.responses.items() if value == "accept"}
         if (
             len(set(self.participants)) != len(self.participants)
@@ -120,27 +133,31 @@ def end(
     success: bool,
     status_order: tuple[Snowflake, ...],
     ace_policy: AcePolicy | None,
+    ended_participants: dict[str, str] | None = None,
 ) -> EndPlan:
     revision(mission, expected)
     handler(mission, actor, current_handler)
     if (
         mission.phase not in ("active", "ending")
         or (mission.phase == "ending" and mission.success != success)
-        or len(status_order) < 2
         or len(set(status_order)) != len(status_order)
         or current_handler in status_order
     ):
         raise ValueError("End an active mission with a valid current Status roster")
-    if not set(mission.participants) <= set(status_order):
+    departed = ended_participants or {}
+    if not set(departed) <= {str(uid) for uid in mission.participants} or any(
+        mission.character_ids.get(uid, character) != character
+        for uid, character in departed.items()
+    ):
+        raise ValueError("Departures must identify the original dispatched characters")
+    living = tuple(uid for uid in mission.participants if str(uid) not in departed)
+    if not set(living) <= set(status_order):
         raise ValueError("Mission roster changes require explicit resolution before rewards")
-    ace, dog = status_order[0], status_order[-1]
-    if ace_policy is None and ace not in mission.participants:
+    ace, dog = (status_order[0], status_order[-1]) if status_order else (None, None)
+    if ace is not None and ace_policy is None and ace not in living:
         raise ValueError("UNRESOLVED_RULING: absent Ace bonus policy is required")
-    grants = [
-        PermissionGrant(owner=uid, amount=1, reason="mission_completed")
-        for uid in mission.participants
-    ]
-    if ace in mission.participants or ace_policy == "current_ace":
+    grants = [PermissionGrant(owner=uid, amount=1, reason="mission_completed") for uid in living]
+    if ace is not None and (ace in living or ace_policy == "current_ace"):
         grants.append(PermissionGrant(owner=ace, amount=1, reason="ace_bonus"))
     consequences = (
         [
@@ -151,25 +168,27 @@ def end(
                 reason="mission_failure",
                 source_pdf=16,
             )
-            for uid in mission.participants
+            for uid in living
         ]
         if not success
         else []
     )
-    consequences.append(
-        Consequence(
-            id=mission.id + ":dog",
-            owner=dog,
-            decision_owner=current_handler,
-            reason="dog_mission_end",
-            source_pdf=17,
+    if dog is not None:
+        consequences.append(
+            Consequence(
+                id=mission.id + ":dog",
+                owner=dog,
+                decision_owner=current_handler,
+                reason="dog_mission_end",
+                source_pdf=17,
+            )
         )
-    )
     updated = changed(
         mission,
         phase="awaiting_consequences",
         success=success,
         consequence_ids=tuple(x.id for x in consequences),
+        ended_participants=departed,
     )
     return EndPlan(mission=updated, grants=tuple(grants), consequences=tuple(consequences))
 

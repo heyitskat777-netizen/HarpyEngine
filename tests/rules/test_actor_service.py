@@ -2,6 +2,8 @@ from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
+from test_incarnations import legacy as append_legacy
+from test_incarnations import raw
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger_fixture
 from test_m2_game import state
@@ -42,10 +44,14 @@ def pc_ref(svc, game):
 
 
 def legacy(svc, game):
-    with svc.store.transaction() as c:
-        canon = state(game)
-        canon.sheets["2"].character_id = None
-        game.event(c, 1, "legacy-source", "synthetic.legacy_actor", canon)
+    originals = state(game)
+
+    def retain_other_originals(canon):
+        for uid, sheet in canon.sheets.items():
+            if uid != "2":
+                sheet.character_id = originals.sheets[uid].character_id
+
+    append_legacy(svc.store, game, retain_other_originals)
 
 
 def test_owned_role_selector_distinguishes_same_human_roles_and_knowledge_is_actor_scoped(ledger):
@@ -114,6 +120,7 @@ def test_new_character_with_same_human_and_revision_cannot_take_unbound_old_shee
     svc, game = ready(ledger)
     legacy(svc, game)
     before = state(game)
+    encoded = raw(ledger)
     with ledger.transaction() as c:
         c.execute(
             t.characters.update()
@@ -122,7 +129,9 @@ def test_new_character_with_same_human_and_revision_cannot_take_unbound_old_shee
         )
     with pytest.raises(WorkflowError, match="SOURCE_BINDING_MISSING"):
         svc.bind_legacy(PLAYER, "cannot-borrow-old-resources", before.revision)
-    assert state(game) == before
+    assert raw(ledger) == encoded
+    with pytest.raises(WorkflowError, match="SOURCE_IDENTITY_MISSING"):
+        state(game)
 
 
 def test_legacy_binding_pause_rollback_and_policy_revocation_preserve_source(ledger, monkeypatch):
@@ -260,7 +269,16 @@ def test_legacy_known_roll_proves_original_generation_after_metadata_binding_and
     assert receipt and game.dice.calls == 1
     game.abort(ADMIN, "abort-legacy-roll", action)
     tick(worker, gateway, 5)
-    actors.bind_legacy(PLAYER, "bind-after-safe-abort", state(game).revision)
+    before_binding = state(game)
+    with ledger.engine.connect() as c:
+        history_before = c.scalar(sa.select(sa.func.count()).select_from(t.m2["m2_state_history"]))
+    bound = actors.bind_legacy(PLAYER, "bind-after-safe-abort", before_binding.revision)
+    assert bound["already_bound"] and state(game) == before_binding
+    with ledger.engine.connect() as c:
+        assert (
+            c.scalar(sa.select(sa.func.count()).select_from(t.m2["m2_state_history"]))
+            == history_before
+        )
     with ledger.engine.connect() as c:
         assert game.pending_actions(c)  # Metadata repair does not waive the known outcome.
     resume(game, PLAYER, "resume-original-roll", action, game.inspect(PLAYER, action)["revision"])

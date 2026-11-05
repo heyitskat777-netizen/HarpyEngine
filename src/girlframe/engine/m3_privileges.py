@@ -2,7 +2,7 @@
 
 from girlframe.engine.m2 import AssetState, GameState, Obligation
 from girlframe.engine.m3_core import install
-from girlframe.engine.m3_requisition_state import Requisition
+from girlframe.engine.m3_requisition_state import FrameRuleReceipt, Requisition, SceneReceipt
 
 KIND = "revoked_requisition"
 
@@ -41,6 +41,23 @@ def available(state: GameState, subject: int, character: str) -> list[Requisitio
                 and not any(
                     fact.get("kind") == "comforts_declined" and fact.get("purchase") == x.id
                     for fact in state.facts
+                )
+            )
+            or (
+                isinstance(x, SceneReceipt)
+                and not any(
+                    fact.get("kind") == "scene_requisition_consumed"
+                    and fact.get("purchase") == x.id
+                    for fact in state.facts
+                )
+            )
+            or (
+                isinstance(x, FrameRuleReceipt)
+                and any(
+                    grant.purchase == x.id
+                    and grant.actor == x.actor
+                    and grant.frame_instance == frame
+                    for grant in state.personal_firearms
                 )
             )
         )
@@ -86,6 +103,25 @@ def revoke(
             asset=asset.model_dump_json(), frame=receipt.frame_instance, label=asset.name
         )
         sheet.assets.remove(asset)
+    elif isinstance(receipt, FrameRuleReceipt):
+        grant = next(
+            x
+            for x in state.personal_firearms
+            if x.purchase == receipt.id and x.actor == receipt.actor
+        )
+        details.update(
+            grant=grant.id,
+            grant_issues=json_dump_issues(grant),
+            frame=grant.frame_instance,
+            label="Personal Firearm",
+            rule_id=receipt.rule_id,
+        )
+        pistol = next((x for x in sheet.assets if x.id == grant.issues[-1].asset), None)
+        if pistol is not None:
+            details["asset"] = pistol.model_dump_json()
+            sheet.assets.remove(pistol)
+    elif isinstance(receipt, SceneReceipt):
+        details["label"] = "Privacy" if receipt.kind == "privacy" else "Visiting Home"
     else:
         details["label"] = "Creature Comforts"
     state.obligations.append(
@@ -113,13 +149,40 @@ def restore(original: GameState, identity: str, character: str, replace: str | N
     ):
         raise ValueError("The original inflictor must first confirm the restoration condition")
     sheet = state.sheets[str(gate.target)]
-    if gate.details["kind"] == "asset_installment":
+    if gate.details["kind"] in ("asset_installment", "ability_unlock", "frame_grafting"):
         frame = sheet.frame_runtime.id if sheet.frame_runtime else "initial:" + character
         if frame != gate.details["frame"] or sheet.frame_scrapped:
             raise ValueError("Recover the original Frame before restoring its suspended Asset")
-        asset = AssetState.model_validate_json(gate.details["asset"])
-        state.sheets[str(gate.target)] = install(sheet, asset, replace=replace).sheet
+        if gate.details["kind"] != "asset_installment":
+            grant = next(
+                (x for x in state.personal_firearms if x.id == gate.details["grant"]), None
+            )
+            if (
+                grant is None
+                or grant.actor.entity != str(gate.target)
+                or grant.actor.incarnation != character
+                or grant.frame_instance != frame
+                or json_dump_issues(grant) != gate.details["grant_issues"]
+            ):
+                raise ValueError(
+                    "Recover the exact original suspended Frame rule and issued-item source"
+                )
+        if "asset" in gate.details:
+            asset = AssetState.model_validate_json(gate.details["asset"])
+            state.sheets[str(gate.target)] = install(sheet, asset, replace=replace).sheet
+        elif replace is not None:
+            raise ValueError(
+                "Restoring a lost-pistol entitlement does not issue or remove an Asset"
+            )
     elif replace is not None:
         raise ValueError("This restoration does not replace an Asset")
     gate.state = "fulfilled"
     return state
+
+
+def json_dump_issues(grant: object) -> str:
+    from girlframe.engine.m3_acquisition_state import PersonalFirearmGrant
+
+    if not isinstance(grant, PersonalFirearmGrant):
+        raise ValueError("Use the actual Personal Firearm entitlement")
+    return "|".join(issue.model_dump_json() for issue in grant.issues)

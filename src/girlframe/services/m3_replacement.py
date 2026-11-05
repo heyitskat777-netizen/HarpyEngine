@@ -22,6 +22,8 @@ from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
 ROOT = "doctor_frame_replacement"
+DEFEAT_ROOT = "defeat_frame_replacement_active"
+ROOTS = (ROOT, DEFEAT_ROOT)
 PACKAGE = "frame_replacement_package"
 COURT = "frame_replacement_court"
 
@@ -42,7 +44,7 @@ class ReplacementService:
             .mappings()
             .first()
         )
-        if row is None or row["kind"] not in (ROOT, PACKAGE, COURT):
+        if row is None or row["kind"] not in (*ROOTS, PACKAGE, COURT):
             raise WorkflowError("This replacement task is unavailable.")
         return dict(row)
 
@@ -86,7 +88,7 @@ class ReplacementService:
         )
 
     def _root(self, c: Connection, row: dict[str, Any]) -> dict[str, Any]:
-        return row if row["kind"] == ROOT else self._row(c, self._body(row)["root_id"])
+        return row if row["kind"] in ROOTS else self._row(c, self._body(row)["root_id"])
 
     def _check(
         self, c: Connection, row: dict[str, Any], revision: int, game_revision: int
@@ -101,12 +103,13 @@ class ReplacementService:
             raise WorkflowError("The compulsory replacement is no longer pending.")
         origin = self._body(root)
         sheet = state.sheets[root["subject_id"]]
-        character_id = c.scalar(
-            sa.select(t.characters.c.id).where(
-                t.characters.c.campaign_id == self.store.campaign_id,
-                t.characters.c.user_id == root["subject_id"],
-            )
+        character_id = self.game.character_binding(
+            c, state, int(root["subject_id"]), require_current_profile=False
         )
+        if root["kind"] == DEFEAT_ROOT:
+            from girlframe.services.m3_defeat_replacement import check_active
+
+            check_active(c, self.store, root)
         if not {
             "origin_frame",
             "origin_frame_id",
@@ -126,7 +129,7 @@ class ReplacementService:
             raise WorkflowError(
                 "STALE_FRAME: this obligation belongs to a different Frame or character."
             )
-        if row["kind"] != ROOT:
+        if row["kind"] not in ROOTS:
             body, parent = self._body(row), self._body(root)
             if body["proposal_id"] != parent.get("proposal_id"):
                 raise WorkflowError("STALE_PROPOSAL: this task belongs to an older proposal.")
@@ -246,7 +249,7 @@ class ReplacementService:
         def operation(c: Connection) -> dict[str, Any]:
             root = self._row(c, identity)
             self._check(c, root, revision, game_revision)
-            if root["kind"] != ROOT or root["subject_id"] != str(viewer.user_id):
+            if root["kind"] not in ROOTS or root["subject_id"] != str(viewer.user_id):
                 raise WorkflowError("The affected player must propose its new Frame.")
             state = load_state(c, self.store.campaign_id)
             handler = self.missions._current_handler(c)
@@ -437,7 +440,7 @@ class ReplacementService:
         def operation(c: Connection) -> dict[str, Any]:
             root = self._row(c, identity)
             self._check(c, root, revision, game_revision)
-            if root["kind"] != ROOT or root["subject_id"] != str(viewer.user_id):
+            if root["kind"] not in ROOTS or root["subject_id"] != str(viewer.user_id):
                 raise WorkflowError(
                     "Only the affected player confirms its exact replacement package."
                 )

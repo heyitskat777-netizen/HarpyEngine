@@ -39,6 +39,8 @@ def synchronize(c: Connection, store: OnboardingStore, period: Period, event: st
         return
     work = t.m3["m3_required_work"]
     for uid, progress in period.progress.items():
+        if uid in period.ended_characters or uid not in state.sheets:
+            continue
         if progress.roll is None or progress.roll.stage != "choices" or progress.action_id is None:
             continue
         actions = t.m2["m2_actions"]
@@ -436,6 +438,9 @@ class ComfortService(RequisitionService):
                 else None,
                 ready=rules.ready(benefit),
                 taken=benefit.taken,
+                resolution=json.loads(row["body_json"]).get("resolution"),
+                deferred=json.loads(row["body_json"]).get("deferred", False),
+                transfer_work=json.loads(row["body_json"]).get("transfer_work"),
             )
             if owner:
                 result.update(

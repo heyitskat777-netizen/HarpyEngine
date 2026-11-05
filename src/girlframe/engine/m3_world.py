@@ -129,6 +129,8 @@ def distance(first: Cell, second: Cell) -> int:
 
 
 def directed_steps(world: World, gorgon: Gorgon) -> tuple[Cell, ...]:
+    if gorgon.cell is None:
+        raise ValueError("UNKNOWN_POSITION: record the actual Gorgon position before movement")
     target = goal_cell(world, gorgon)
     current = distance(gorgon.cell, target)
     if current == 0:
@@ -140,6 +142,23 @@ def directed_steps(world: World, gorgon: Gorgon) -> tuple[Cell, ...]:
         if (dx, dy) != (0, 0)
         and world.board.contains(cell := (gorgon.cell[0] + dx, gorgon.cell[1] + dy))
         and distance(cell, target) < current
+    )
+
+
+def locate_gorgon(world: World, identity: str, cell: Cell, source_event: str) -> World:
+    actual = next((x for x in world.gorgons if x.id == identity), None)
+    if actual is None or actual.cell is not None:
+        raise ValueError("Record only the actual missing initial Gorgon position")
+    if not source_event or not world.board.contains(cell):
+        raise ValueError("Record the actual source and a square on the current map")
+    return update(
+        world,
+        gorgons=tuple(
+            x.model_copy(update={"cell": cell, "position_event": source_event})
+            if x.id == identity
+            else x
+            for x in world.gorgons
+        ),
     )
 
 

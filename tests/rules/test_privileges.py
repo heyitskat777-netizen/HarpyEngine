@@ -334,7 +334,7 @@ def test_actual_qualified_comfort_benefit_cannot_grant_during_temporary_removal(
             restoration="Actual temporary condition",
         ),
     )
-    with pytest.raises(WorkflowError, match="REVOKED_PRIVILEGE"):
+    with pytest.raises(WorkflowError, match="STALE_COMFORTS"):
         comfort.decline(
             PLAYER,
             "decline-while-revoked",
@@ -342,7 +342,9 @@ def test_actual_qualified_comfort_benefit_cannot_grant_during_temporary_removal(
             benefit["revision"],
             "Actual choice cannot spend a suspended benefit",
         )
-    assert comfort.list(PLAYER)[0]["state"] == "pending"
+    saved = comfort.get(PLAYER, benefit["id"])
+    assert saved["state"] == "resolved" and saved["deferred"]
+    assert saved["taken"] is None
 
 
 def test_concurrent_restore_is_exactly_once_and_failed_history_write_rolls_back(

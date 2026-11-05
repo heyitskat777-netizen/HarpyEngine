@@ -552,6 +552,133 @@ class InboxView(discord.ui.View):
             await open_reaction(
                 interaction, ReactionService(MissionService(self.service.store)), item.identity
             )
+        elif item.task == "handler_creation":
+            from girlframe.discord_adapter.m3_handler_creation import open_handler
+            from girlframe.services.m3_handler_creation import HandlerCreationService
+
+            await open_handler(interaction, HandlerCreationService(self.service.store))
+        elif item.task == "handler_creation_npc_agreement":
+            from girlframe.discord_adapter.m3_handler_creation import open_npc_agreement
+            from girlframe.services.m3_handler_creation import HandlerCreationService
+
+            await open_npc_agreement(
+                interaction, HandlerCreationService(self.service.store), item.identity
+            )
+        elif item.task == "handler_creation_agreement":
+            from girlframe.discord_adapter.m3_handler_creation import open_agreement
+            from girlframe.services.m3_handler_creation import HandlerCreationService
+
+            await open_agreement(
+                interaction, HandlerCreationService(self.service.store), item.identity
+            )
+        elif item.task == "m3_scene_requisition":
+            from girlframe.discord_adapter.m3_scene_requisitions import open_scene
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_scene_requisitions import SceneRequisitionService
+
+            await open_scene(
+                interaction, SceneRequisitionService(GameService(self.service.store)), item.identity
+            )
+        elif item.task == "m3_privacy_trouble":
+            from girlframe.discord_adapter.m3_privacy_trouble import open_trouble
+            from girlframe.services.m3_privacy_trouble import PrivacyTroubleService
+
+            await open_trouble(
+                interaction, PrivacyTroubleService(self.service.store), item.identity
+            )
+        elif item.task == "m3_handler_consequence":
+            from girlframe.discord_adapter.m3_handler_consequences import open_consequence
+            from girlframe.services.m3_handler_consequences import HandlerConsequenceService
+
+            await open_consequence(
+                interaction, HandlerConsequenceService(self.service.store), item.identity
+            )
+        elif item.task == "m3_void":
+            from girlframe.discord_adapter.m3_void import open_void
+            from girlframe.services.m3_void import VoidService
+
+            await open_void(interaction, VoidService(self.service.store), item.identity)
+        elif item.task == "m3_lobotomy":
+            from girlframe.discord_adapter.m3_lobotomy import open_lobotomy
+            from girlframe.services.m3_lobotomy import LobotomyService
+
+            await open_lobotomy(interaction, LobotomyService(self.service.store), item.identity)
+        elif item.task == "m3_frame_swap":
+            from girlframe.discord_adapter.m3_frame_swap import open_plan
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_frame_swap import FrameSwapService
+
+            await open_plan(
+                interaction, FrameSwapService(GameService(self.service.store)), item.identity
+            )
+        elif item.task == "m3_firearm_return":
+            from girlframe.discord_adapter.m3_personal_firearm import (
+                open_return as open_firearm_return,
+            )
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_personal_firearm import PersonalFirearmService
+
+            await open_firearm_return(
+                interaction, PersonalFirearmService(GameService(self.service.store)), item.identity
+            )
+        elif item.task == "m3_enforcer":
+            from girlframe.discord_adapter.m3_enforcer import open_enforcer_task
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_enforcer import EnforcerService
+
+            await open_enforcer_task(
+                interaction, EnforcerService(GameService(self.service.store)), item.identity
+            )
+        elif item.task == "m3_medical":
+            from girlframe.discord_adapter.m3_medical import open_medical
+            from girlframe.services.m3_medical import MedicalService
+
+            await open_medical(interaction, MedicalService(self.service.store), item.identity)
+        elif item.task == "m3_girl_transition":
+            from girlframe.discord_adapter.m3_girl_transition import open_transition
+            from girlframe.services.m3_girl_transition import GirlTransitionService
+
+            await open_transition(
+                interaction, GirlTransitionService(self.service.store), item.identity
+            )
+        elif item.task == "m3_standards":
+            from girlframe.discord_adapter.m3_standards import open_setup
+            from girlframe.services.m3_standards import StandardsService
+
+            await open_setup(interaction, StandardsService(self.service.store), item.identity)
+        elif item.task == "m3_career":
+            from girlframe.discord_adapter.m3_careers import open_archive
+            from girlframe.services.m3_careers import CareerService
+
+            await open_archive(interaction, CareerService(self.service.store), item.identity)
+        elif item.task == "m3_career_status":
+            from girlframe.discord_adapter.m3_careers import open_status
+            from girlframe.services.m3_careers import CareerService
+
+            assert item.target is not None
+            await open_status(
+                interaction, CareerService(self.service.store), item.target, item.identity
+            )
+        elif item.task == "m3_career_return_offer":
+            from girlframe.discord_adapter.m3_careers import open_return_offer
+            from girlframe.services.m3_careers import CareerService
+
+            await open_return_offer(interaction, CareerService(self.service.store), item.identity)
+        elif item.task == "m3_career_return":
+            from girlframe.discord_adapter.m3_careers import open_return
+            from girlframe.services.m3_careers import CareerService
+
+            await open_return(interaction, CareerService(self.service.store), item.identity)
+        elif item.task == "m3_frame_physical":
+            from girlframe.discord_adapter.m3_physical import open_frame
+            from girlframe.services.m3_physical import PhysicalService
+
+            await open_frame(interaction, PhysicalService(self.service.store), item.identity)
+        elif item.task == "m3_defeat":
+            from girlframe.discord_adapter.m3_defeat import open_work as open_defeat_work
+            from girlframe.services.m2_game import GameService
+
+            await open_defeat_work(interaction, GameService(self.service.store), item.identity)
         elif item.task == "m3_discipline":
             from girlframe.discord_adapter.m3_punishments import open_discipline
             from girlframe.services.m3_punishments import PunishmentService

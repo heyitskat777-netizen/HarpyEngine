@@ -54,8 +54,7 @@ independent and human acceptance remain pending.
 The development social flow now offers exact result dropdowns for Put Someone
 Beneath You, original-setter Tag consent, real pin-response Plays and on-scene
 Punishment. Temporary removal/restoration preserves actual purchased resources.
-Final Frame loss cannot bypass required Defeat. Unit 2a remains in progress until
-that recovery dependency and remaining cross-rule cases are implemented.
+Final Frame loss cannot bypass required Defeat. The parallel candidate adds actual Defeat/Dive/Void, original-character careers, Handler creation and paid-scene flows; see [the bounded implementation map](docs/M3_PARALLEL_WORK.md) for exact limits. M3 and unit 2a remain in progress pending remaining cross-rule systems and acceptance.
 
 Read `AGENTS.md` and [the roadmap](docs/PROJECT_ROADMAP.md) before development. The
 original planning package remains unchanged in `GIRLFRAME_Discord_Codex_Handoff_v0.2/`;
