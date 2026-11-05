@@ -48,10 +48,9 @@ physical/Void and original M2 integration checks. See `reports/M3_ACCEPTANCE.md`
 for exact artifacts and corrected failures. These focused totals overlap and
 must not be summed into a milestone completion score.
 
-The previous full-suite result of 1,450 passing tests belongs to the earlier
-committed social/privilege checkpoint. It does not verify all current parallel
-changes. The shared bridges are frozen for a full regression/static/migration/rebuild/privacy scan and a local sanitized source commit. Focused checks are evidence for their named paths only. The earlier GitHub ref-write failure is separate from
-local development; no push success is implied.
+The integrated source checkpoint `e9e528b077fac98435862cc62c13cd3bb25b4ecb` passed the full regression: **1,796 tests in 676.62s**, zero failures/errors/skips, `var/m3-parallel-full-fixed.xml`. Ruff passes, 528 files are formatted, mypy checks 282 source files; isolated fresh/repeat migrations and the privacy/handoff scans pass. The first full run exposed 13 regressions in two integration paths, repaired and documented in the acceptance report. This verifies this checkpoint only, not subsequent new work or complete M3.
+
+The next batch covers basic combat, Enforcer Initiative/volunteers/items, basic Handler moves and original-return obligation restoration. Root integrates shared APIs. The earlier GitHub ref-write failure is separate from local development; no push success is implied.
 
 After these paths, agreed M3 still includes All-Out Assault/Go for the Core,
 remaining Girl/Frame/Handler runtime abilities, all outstanding Strain consequences

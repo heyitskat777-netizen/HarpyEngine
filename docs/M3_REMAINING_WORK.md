@@ -4,7 +4,7 @@ M3 is **IN_PROGRESS / RULES_SUBSET** and is not ready for full player testing.
 This snapshot separates implemented workflows from remaining agreed scope; it
 does not narrow the milestone.
 
-The current four-agent implementation map is [M3_PARALLEL_WORK.md](M3_PARALLEL_WORK.md). It supersedes older per-feature statements below; the earlier full-suite totals remain historical evidence. The new integrated candidate is undergoing frozen regression and remains incomplete.
+The current four-agent implementation map is [M3_PARALLEL_WORK.md](M3_PARALLEL_WORK.md). It supersedes older per-feature statements below; the earlier full-suite totals remain historical evidence. The integrated source checkpoint `e9e528b` passes 1,796 automated tests; M3 remains incomplete and further work has resumed.
 
 The owner's subsequent cost/progress review is recorded in
 [the completion audit and bounded delivery plan](M3_COMPLETION_AUDIT.md).
@@ -25,7 +25,7 @@ keeps real Defeat work pending. Complete Defeat, broader actor targets and cross
 consequences before closing this unit. See the current acceptance report for the
 latest candidate's checks; the 1,399-test result below is the unit-1b baseline.
 
-Current development checkpoint: **1,450 automated tests passed**. Unit 2a remains
+Current integrated checkpoint: **1,796 automated tests passed** (`e9e528b`, `var/m3-parallel-full-fixed.xml`). Unit 2a remains
 IN_PROGRESS and does not change independent/player acceptance.
 
 The registry contains 473 source/table entries: **436 required core entries** and

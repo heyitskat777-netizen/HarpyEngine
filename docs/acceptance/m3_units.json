@@ -462,7 +462,7 @@
     {
       "id": "M3-UNIT-3-HANDLER-CREATION",
       "name": "Original Handler creation and fresh generation",
-      "status": "INTEGRATION_PENDING",
+      "status": "IMPLEMENTED_AUTOMATED",
       "source": [
         {
           "document": "rulebook",
@@ -541,7 +541,7 @@
           "tests/rules/test_handler_generations.py"
         ]
       },
-      "scope_limit": "Creation only; remaining Handler abilities, general Off-Duty old-body scene cleanup and first-legacy cast alias audit are separate. Global regression must pass before this candidate is reviewable.",
+      "scope_limit": "Creation only; remaining Handler abilities, general Off-Duty old-body scene cleanup and first-legacy cast alias audit are separate. Full automated checkpoint passes; independent/player acceptance remains pending.",
       "independent_review": "NOT_RUN",
       "human_acceptance": "NOT_RUN",
       "checks": [
@@ -555,12 +555,21 @@
           ]
         }
       ],
-      "evidence_report": "reports/M3_ACCEPTANCE.md"
+      "evidence_report": "reports/M3_ACCEPTANCE.md",
+      "source_commit": "e9e528b077fac98435862cc62c13cd3bb25b4ecb",
+      "full_regression": {
+        "artifact": "var/m3-parallel-full-fixed.xml",
+        "passed": 1796,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 676.62
+      }
     },
     {
       "id": "M3-UNIT-PAID-PRIVACY-HOME",
       "name": "Paid Privacy and Visiting Home with original private receipts",
-      "status": "INTEGRATION_PENDING",
+      "status": "IMPLEMENTED_AUTOMATED",
       "source": [
         {
           "document": "rulebook",
@@ -615,7 +624,16 @@
           ]
         }
       ],
-      "evidence_report": "reports/M3_ACCEPTANCE.md"
+      "evidence_report": "reports/M3_ACCEPTANCE.md",
+      "source_commit": "e9e528b077fac98435862cc62c13cd3bb25b4ecb",
+      "full_regression": {
+        "artifact": "var/m3-parallel-full-fixed.xml",
+        "passed": 1796,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 676.62
+      }
     }
   ]
 }

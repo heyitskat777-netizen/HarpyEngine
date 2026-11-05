@@ -1,6 +1,6 @@
 # M3 acceptance — scoped, implementation not yet certified
 
-## Four-agent integrated checkpoint — verification in progress
+## Four-agent integrated checkpoint — automated verification passed
 
 The owner authorized four agents with bounded file ownership. The candidate now
 includes original-character careers/returns, severe discipline and actual surgery,
@@ -29,7 +29,7 @@ Focused synthetic evidence (overlapping batches, never summed as coverage):
 | Defeat/Void lost-Frame replacement | `var/m3-frame-loss-replacements-fixed.xml`: 4 passed |
 | Shared typed Helpless recovery/custody | `var/m3-actor-condition-bridge-fixed.xml`: 3 passed, 68 deselected |
 
-Static checks: Ruff clean, 527 files formatted, mypy 282 source files. The source
+Static checks after all repairs: Ruff clean, 528 files formatted, mypy 282 source files. The source
 registry validates with 436 core entries (81 partial / 355 unimplemented), 37
 deferred Ancillary entries, zero independently verified entries and 90 adjustable
 campaign rulings. Source inventory counts are not a completion percentage.
@@ -37,24 +37,23 @@ campaign rulings. Source inventory counts are not a completion percentage.
 Fresh isolated `/tmp` SQLite checks passed upgrade/check/CLI health, downgrade to
 base, repeat upgrade/check/health. No live database was touched. Handoff verifier
 passes 34 required files / 86 planned cases / 4 schemas / 4 synthetic fixtures
-(planning only). Publishable-file scan: 610 files, original 40-entry manifest
+(planning only). Publishable-file scan after repairs: 611 files, original 40-entry manifest
 unchanged, zero findings. Final scan will be repeated after checkpoint records.
 
 First frozen full run: `.venv/bin/pytest -q --tb=short --junitxml=var/m3-parallel-full.xml` completed **1,781 passed / 13 failed in 624.28s**, zero errors/skips. Five failures concern explicit legacy binding/read hydration; eight concern paid-scene activation proof with no eligible purchases (seven Off-Duty roll checks plus one shared-recovery check). The failures are retained, diagnosed and being repaired; this is not pass evidence. A read-only review also found the first same-body Handler cast alias could miss real graph Bonds; its narrow source-bound repair is included before the next regression. Prior 1,450-test evidence below belongs to the older
 checkpoint. Initial narrow actor-condition test failed because its synthetic NPC
 omitted required cell/controller fields; completing that fixture yielded the
 reported three passing tests. Initial static checks found import/unused-variable
-and formatting issues, corrected before the full run. Ruling merge first failed strict tuple validation before writing; JSON validation then passed. One contract-validation attempt used system Python without the installed package; the correct virtual-environment interpreter passed. All five bounded contract records validate; two new workflows remain INTEGRATION_PENDING.
+and formatting issues, corrected before the full run. Ruling merge first failed strict tuple validation before writing; JSON validation then passed. One contract-validation attempt used system Python without the installed package; the correct virtual-environment interpreter passed. All five bounded contract records validate; the two bounded Handler-creation and paid-scene workflows now have final automated integration evidence. Independent/player review remains NOT_RUN.
 
-Repair evidence so far: paid-scene empty qualification guard **49 passed in 27.67s**, `var/m3-scene-qualification-noop-fix.xml`. First same-body Handler activation updates only open exact legacy casts, preserves closed history, and never adopts a dead predecessor: **26 passed in 12.22s**, `var/m3-handler-initial-cast.xml`. The actual post-adoption Dive Tag receives its original graph Bond modifier; stale cast controls are rejected. Explicit legacy-link repair is also green: **27 passed in 16.75s**, `var/m3-actor-legacy-compat.xml` (ActorService, native UI, incarnation proof and actual Keep); the root overlapping three-file check separately passed 21 in 8.85s. Raw legacy fixtures now append genuine old snapshots, authenticated reads do not write, explicit save preserves resources, and an already-proved binding is a no-op without a false event. A restricted async run hung and was stopped (exit 143); the escalated synthetic run above passed. Final full regression remains pending.
+Repair evidence so far: paid-scene empty qualification guard **49 passed in 27.67s**, `var/m3-scene-qualification-noop-fix.xml`. First same-body Handler activation updates only open exact legacy casts, preserves closed history, and never adopts a dead predecessor: **26 passed in 12.22s**, `var/m3-handler-initial-cast.xml`. The actual post-adoption Dive Tag receives its original graph Bond modifier; stale cast controls are rejected. Explicit legacy-link repair is also green: **27 passed in 16.75s**, `var/m3-actor-legacy-compat.xml` (ActorService, native UI, incarnation proof and actual Keep); the root overlapping three-file check separately passed 21 in 8.85s. Raw legacy fixtures now append genuine old snapshots, authenticated reads do not write, explicit save preserves resources, and an already-proved binding is a no-op without a false event. A restricted async run hung and was stopped (exit 143); the escalated synthetic run above passed. Final frozen source `e9e528b077fac98435862cc62c13cd3bb25b4ecb`: `.venv/bin/pytest -q --tb=short --junitxml=var/m3-parallel-full-fixed.xml` passed **1,796 tests in 676.62s**, zero failures/errors/skips. JUnit counts were independently read back. The earlier failed run is retained, not counted as passing.
 
 Remaining systems include shared combat, rolled Initiative/volunteer/item
 consumers, remaining playbook abilities, outstanding Strain/Endgames, broader
 Harpy/world/NPC rules and returned-obligation bridges. Independent and player
 acceptance remain NOT_RUN. Bot remains intentionally off. No live migration,
 restart, rules-policy change, deployment or environment publication occurred.
-Sanitized source has not yet been committed or pushed for this candidate; the
-older upstream ref-write failure remains separate from local verification.
+Sanitized source is committed locally at `e9e528b077fac98435862cc62c13cd3bb25b4ecb`. Ignored incremental backup `var/m3-parallel-checkpoint.bundle` verifies over remote baseline `5323f3b1f9f14cbb4fe700847bc428e41413ddbd`. The older upstream ref-write failure remains separate from local verification; no push success is implied.
 
 ## Unit 2a in progress — social consequences and temporary Requisition removal
 
