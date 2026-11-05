@@ -51,10 +51,17 @@ def available(
 ) -> tuple[str, ...]:
     target = view(state, subject, bindings)
     view(state, executor, bindings)
-    if subject == executor or executor.kind not in ("pilot", "npc", "handler"):
+    harpy_executor = (
+        executor.kind == "external_pilot" and view(state, executor, bindings).girl == "harpy"
+    )
+    if (
+        subject == executor
+        or executor.kind not in ("pilot", "npc", "handler")
+        and not harpy_executor
+    ):
         return ()
     if subject.kind == "pilot" and target.rules == "girl_frame":
-        if executor.kind == "npc":
+        if executor.kind == "npc" or harpy_executor:
             return ("reduced_socialization",) if depth(state, subject, executor) == 2 else SOCIAL
         # Severe effects require the actual Handler to inflict them. Passing Responsibility
         # changes selection ownership; it cannot satisfy this mandatory execution.
@@ -68,7 +75,7 @@ def available(
         kinds = list(SOCIAL)
         if depth(state, bond_ref(state, subject), bond_ref(state, executor)) == 2:
             for ref in (subject, executor):
-                has_heat = ref.kind in ("pilot", "handler") or (
+                has_heat = ref.kind in ("pilot", "handler", "npc") or (
                     ref.kind == "external_pilot"
                     and any(x.id == ref.entity for x in state.harpy_states)
                 )

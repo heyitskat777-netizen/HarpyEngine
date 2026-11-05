@@ -59,7 +59,9 @@ def harpy_resource_view(state: GameState, ref: ActorRef) -> tuple[tuple[AssetVie
         carried=[
             x.model_dump(mode="json")
             for x in state.held_items
-            if same_holder(state, x.holder, ref) and actual_asset(state, x) is not None
+            if same_holder(state, x.holder, ref)
+            and x.location_mode == "carried"
+            and actual_asset(state, x) is not None
         ],
     )
     return assets(values), hashlib.sha256(json.dumps(source, sort_keys=True).encode()).hexdigest()
@@ -267,7 +269,7 @@ def _resolve(
         (
             x
             for x in reversed(state.facts)
-            if x.get("kind") == "recorded_handler_recovery_position"
+            if x.get("kind") in ("recorded_handler_recovery_position", "handler_transport_arrived")
             and same_physical_role(ActorRef.model_validate_json(x["actor"]))
         ),
         None,
@@ -411,16 +413,37 @@ def _resolve(
             context = active[0]
             if ref.incarnation != context.id:
                 raise ValueError("Use the Handler's actual current Girl-rules context")
+            from girlframe.engine.m3_items import actual_asset, mechanical_assets, same_holder
+
+            mechanical = mechanical_assets(state, ref)
+            passengers = [
+                entry
+                for entry in state.passengers
+                if entry.state == "boarded" and same_physical_role(entry.actor)
+            ]
+            if len(passengers) > 1:
+                raise ValueError(
+                    "Recover the original Handler's contradictory actual passenger records"
+                )
+            carried = [
+                item.model_dump(mode="json")
+                for item in state.held_items
+                if item.location_mode == "carried"
+                and same_holder(state, item.holder, ref)
+                and actual_asset(state, item) is not None
+            ]
             return ActorView(
                 ref=ref,
                 controller=state.handler,
                 label="Handler",
                 alive=True,
                 rules="handler_girl",
-                cell=handler_cell,
+                cell=None if passengers else handler_cell,
                 custody="supervised_visit:" + journey.id if journey is not None else None,
                 heat=state.handler_heat,
                 identities=identities(context.identities),
+                assets=assets(mechanical),
+                position_sha256=fingerprint(passengers[0]) if passengers else None,
                 source_sha256=hashlib.sha256(
                     json.dumps(
                         {
@@ -428,6 +451,19 @@ def _resolve(
                             "persona": state.handler_persona.id if state.handler_persona else None,
                             "heat": state.handler_heat,
                             "tags": [x.model_dump(mode="json") for x in state.handler_tags],
+                            **(
+                                {
+                                    "assets": [x.model_dump(mode="json") for x in mechanical],
+                                    "carried": carried,
+                                }
+                                if mechanical
+                                else {}
+                            ),
+                            **(
+                                {"passenger": passengers[0].model_dump(mode="json")}
+                                if passengers
+                                else {}
+                            ),
                         },
                         sort_keys=True,
                     ).encode()

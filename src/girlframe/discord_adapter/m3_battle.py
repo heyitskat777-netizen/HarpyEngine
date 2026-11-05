@@ -10,7 +10,7 @@ from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m2 import ChoiceAnswer, PlayInput
 from girlframe.engine.m3_actor_state import ActorRef
-from girlframe.engine.m3_battle_state import Declaration
+from girlframe.engine.m3_battle_state import Declaration, Defense
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_battle import BattleService
 from girlframe.services.m3_battle_npc import NpcDamageService
@@ -258,6 +258,10 @@ async def open_context(
         return
     yesno = (("yes", "Yes, established by the actual Conversation"), ("no", "No, not established"))
 
+    defenses = await asyncio.to_thread(
+        service.defenses, viewer_from_interaction(interaction), identity
+    )
+
     async def confirm(current: discord.Interaction, values: dict[str, Any]) -> str:
         await asyncio.to_thread(
             service.confirm,
@@ -271,6 +275,18 @@ async def open_context(
             indirect=values["indirect"][0] == "yes",
             evidence=values["evidence"],
             core_capability_confirmed=values.get("core_capability", ("no",))[0] == "yes",
+            actor_outside_frame=values.get("actor_outside", ("unknown",))[0] == "yes"
+            if "actor_outside" in values
+            else None,
+            target_outside_frame=values.get("target_outside", ("unknown",))[0] == "yes"
+            if "target_outside" in values
+            else None,
+            defense=Defense.model_validate(
+                next(x["value"] for x in defenses if x["id"] == values["defense"][0])
+                | {"account": values.get("defense_account", "")}
+            )
+            if values.get("defense", ("none",))[0] != "none"
+            else None,
             dormant_awakened=values.get("awakened", ("no",))[0] == "yes",
             dormant_close=values.get("close", ("no",))[0] == "yes",
         )
@@ -284,6 +300,32 @@ async def open_context(
         Field("evidence", "Record the actual supporting facts", paragraph=True),
     ]
     target = next((x for x in data["actors"] if x["ref"] == value["declaration"]["target"]), None)
+    for key, role in (
+        ("actor", value["declaration"]["actor"]),
+        ("target", value["declaration"]["target"]),
+    ):
+        body = next((x for x in data["actors"] if x["ref"] == role), None)
+        if body is not None and body["rules"] == "handler_girl":
+            review_fields.append(
+                Field(key + "_outside", "Actual " + key + " Handler body is outside a Frame", yesno)
+            )
+    if defenses:
+        review_fields.extend(
+            [
+                Field(
+                    "defense",
+                    "Preexisting NPC defense",
+                    (("none", "No source-backed defense"),)
+                    + tuple((x["id"], x["label"]) for x in defenses),
+                ),
+                Field(
+                    "defense_account",
+                    "How does that actual defense protect these vitals?",
+                    paragraph=True,
+                    required=False,
+                ),
+            ]
+        )
     if target and target["gorgon_class"] == "dormant":
         review_fields.extend(
             [
@@ -309,6 +351,18 @@ async def open_battle(interaction: discord.Interaction, game: GameService, ident
     data = await asyncio.to_thread(game.decision, viewer_from_interaction(interaction), identity)
     detail = data["battle"]
     kind = data["kind"]
+    if kind == "battle_aggressive_damage":
+        from girlframe.discord_adapter.m3_gorgon_aggressive import open_aggressive
+        from girlframe.services.m3_gorgon_aggressive import AggressiveService
+
+        await open_aggressive(interaction, AggressiveService(game.store), detail["work_id"])
+        return
+    if kind == "battle_collateral":
+        from girlframe.discord_adapter.m3_collateral import open_collateral
+        from girlframe.services.m3_collateral import CollateralService
+
+        await open_collateral(interaction, CollateralService(game.store), detail["work_id"])
+        return
     if kind in ("battle_dormant_threshold", "battle_item_void_threshold"):
         from girlframe.discord_adapter.m3_void import open_void
         from girlframe.services.m3_void import VoidService

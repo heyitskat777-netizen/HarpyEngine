@@ -111,6 +111,7 @@ class HandlerPlay(Model):
     target_controllers: dict[str, Snowflake] = Field(default_factory=dict)
     scope: WorkScope
     final_original: bool = False
+    nonbody_only: bool = False
     state: Literal["pending", "awaiting_effect", "complete", "withdrawn", "declined"] = "pending"
     selected: Play | None = None
     effect: Effect | None = None
@@ -122,6 +123,13 @@ class HandlerPlay(Model):
 
     @model_validator(mode="after")
     def actual_authority(self) -> "HandlerPlay":
+        if self.nonbody_only and (
+            self.source != "required"
+            or self.clause != "all_out_assault.low"
+            or len(self.targets) != 1
+            or self.targets[0].kind != "pilot"
+        ):
+            raise ValueError("Only this original-ended mandatory source owns a nonbody procedure")
         if self.target_controllers and set(self.target_controllers) != {
             x.token for x in self.targets
         }:

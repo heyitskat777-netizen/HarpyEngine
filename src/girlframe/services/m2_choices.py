@@ -140,10 +140,53 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         sheet = state.sheets.get(str(owner))
         body = json.loads(request["body_json"])
+        if kind.startswith("snoop_") and action["data"].get("snoop"):
+            from girlframe.services.m3_enforcer_snoop import apply as apply_snoop
+
+            apply_snoop(self.game, c, state, action, request, answer)
+            return
+        if kind in (
+            "enforcer_firepower",
+            "enforcer_firepower_context",
+            "enforcer_firepower_confirm",
+        ):
+            from girlframe.services.m3_enforcer_firepower import apply as apply_firepower
+
+            apply_firepower(self.game, c, state, action, request, answer)
+            return
+        if (
+            kind.startswith("mockingbird_")
+            and kind not in ("mockingbird_risk", "mockingbird_void_threshold")
+            and action["data"].get("mockingbird")
+        ):
+            from girlframe.services.m3_mockingbird_plays import apply as apply_mock_play
+
+            apply_mock_play(self.game, c, state, action, request, answer)
+            return
+        if kind in ("mockingbird_risk", "mockingbird_void_threshold"):
+            from girlframe.services.m3_mockingbird import apply as apply_mockingbird
+
+            apply_mockingbird(self.game, c, state, action, request, answer)
+            return
+        if kind == "enforcer_master_dog":
+            from girlframe.services.m3_enforcer_requisitions import apply_master
+
+            apply_master(self.game, c, state, action, request, answer)
+            return
         if kind in ("tag_marker_selection", "tag_marker_agreement"):
             from girlframe.services.m3_tag_markers import apply_discussion
 
             apply_discussion(self.game, c, state, action, request, answer)
+            return
+        if kind.startswith("engage_"):
+            from girlframe.services.m3_engage import apply as apply_engage
+
+            apply_engage(self.game, c, state, action, request, answer)
+            return
+        if kind.startswith("battle_") and action["data"].get("engage"):
+            from girlframe.services.m3_battle import apply_damage_response
+
+            apply_damage_response(self.game, c, state, action, request, answer)
             return
         if kind.startswith("battle_") and action["data"].get("battle"):
             from girlframe.services.m3_battle import apply as apply_battle
@@ -271,7 +314,10 @@ class ChoiceEngine:
         result = action["data"]["result"]
         level = result.get("tier")
         if kind == "actor_keep":
-            automatic = keep_automatic(acting)
+            from girlframe.services.m3_enforcer_requisitions import keep_extras
+
+            pavlov = keep_extras(self.game, c, state, action, answer)
+            automatic = keep_automatic(acting) | pavlov
             if level == "mid":
                 picks(answer.options, set(TRAITS), 2)
                 picks(answer.denied, set(TRAITS) - set(answer.options) - automatic, 1)
@@ -792,10 +838,33 @@ class ChoiceEngine:
 
     def results(self, c: Connection, state: GameState, action: dict[str, Any]) -> None:
         self.set_total(action)
+        from girlframe.services.m3_enforcer_requisitions import intercept_results
+
+        if intercept_results(self.game, c, state, action):
+            return
+        from girlframe.services.m3_mockingbird import intercept_results as intercept_risk
+
+        if intercept_risk(self.game, c, state, action):
+            return
         action["state"] = "awaiting_choices"
         actor = int(action["actor_id"])
         play = action["data"]["play"]
         level = action["data"]["result"]["tier"]
+        if action["data"].get("snoop"):
+            from girlframe.services.m3_enforcer_snoop import results as snoop_results
+
+            snoop_results(self.game, c, state, action)
+            return
+        if action["data"].get("mockingbird"):
+            from girlframe.services.m3_mockingbird_plays import results as mock_play_results
+
+            mock_play_results(self.game, c, state, action)
+            return
+        if play == "engage" and action["data"].get("engage"):
+            from girlframe.services.m3_engage import results as engage_results
+
+            engage_results(self.game, c, state, action)
+            return
         if play in ("all_out_assault", "go_for_the_core") and action["data"].get("battle"):
             from girlframe.services.m3_battle import results as battle_results
 
@@ -853,6 +922,10 @@ class ChoiceEngine:
 
             if not finish_keep(self.game, c, state, action):
                 return
+        from girlframe.services.m3_mockingbird import intercept_finish
+
+        if intercept_finish(self.game, c, state, action):
+            return
         action["state"] = "complete"
         self.game.queue(
             c,
@@ -866,10 +939,17 @@ class ChoiceEngine:
                 "tier": action["data"]["result"].get("tier"),
             },
         )
-        if action["data"].get("battle_counter_source") or action["data"].get("dormant_dive_source"):
+        if any(
+            action["data"].get(key)
+            for key in ("battle_counter_source", "dormant_dive_source", "gorgon_counter_source")
+        ):
             # Settle this exact counter only after its real saved completion event.
             return
-        if action["parent_id"] and not action["data"].get("void_keep"):
+        if (
+            action["parent_id"]
+            and not action["data"].get("void_keep")
+            and not action["data"].get("defeat", {}).get("source_work")
+        ):
             parent = self.game.action(c, action["parent_id"])
             requests = [
                 x

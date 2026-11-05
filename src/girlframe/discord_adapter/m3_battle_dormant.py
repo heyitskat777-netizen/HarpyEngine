@@ -155,8 +155,11 @@ async def open_dormant(
             Field("account", "Describe the actual forced connection", paragraph=True),
         ]
 
+        if data.get("forbidden_dive"):
+            fields = [x for x in fields if x.key not in ("identity", "gain", "pair_share", "heat")]
+
         async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
-            chosen = values["identity"][0]
+            chosen = values.get("identity", ("none",))[0]
             result = await asyncio.to_thread(
                 service.game.begin,
                 viewer_from_interaction(current),
@@ -165,10 +168,10 @@ async def open_dormant(
                 data["sheet_revision"],
                 PlayInput(
                     play="dive_deep",
-                    heat=int(values["heat"][0]),
+                    heat=int(values.get("heat", ("0",))[0]),
                     identity=None if chosen == "none" else chosen,
-                    gain=int(values["gain"][0]),
-                    pair_share=int(values["pair_share"][0]),
+                    gain=int(values.get("gain", ("0",))[0]),
+                    pair_share=int(values.get("pair_share", ("0",))[0]),
                     piloting=values["piloting"][0] == "yes",
                     parent=data["parent"],
                     source_work=identity,
@@ -189,7 +192,12 @@ async def open_dormant(
         interaction.user.id,
         title,
         "This consequence is tied to the original source and affected Girl. "
-        "Safety pause remains available.",
+        "Safety pause remains available."
+        + (
+            " This source requires a manual no-roll decision; no Heat or Identity is spent."
+            if data.get("forbidden_dive")
+            else ""
+        ),
         fields,
         submit,
     )

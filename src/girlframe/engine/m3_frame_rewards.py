@@ -108,6 +108,7 @@ def review(
     eligibility: GameState | None = None,
     handler_interested: bool | None = None,
     character_id: str | None = None,
+    source_rule: str | None = None,
 ) -> GameState:
     claim = Claim.model_validate_json(claim.model_dump_json())
     facts = eligibility if eligibility is not None else state
@@ -122,6 +123,24 @@ def review(
     ):
         raise ValueError("Review the actual current Frame and source event")
     frame = official(sheet.frame)
+    if source_rule is not None:
+        from girlframe.engine.m3_actor_state import ActorRef
+        from girlframe.engine.m3_enforcer_requisitions import PERMISSION, held
+
+        if (
+            source_rule != PERMISSION
+            or not sheet.character_id
+            or held(
+                facts,
+                ActorRef(kind="pilot", entity=str(owner), incarnation=sheet.character_id),
+                PERMISSION,
+            )
+            is None
+        ):
+            raise ValueError(
+                "Use the actual owned retained Enforcer trigger at this Off-Duty source"
+            )
+        frame = "THE ENFORCER"
     if frame not in PAGES or frame in ("DOCTORDOCTOR MK. II", "THE RED QUEEN"):
         raise ValueError("This Frame has a separate source-owned reward decision")
     allowed = {
@@ -168,6 +187,7 @@ def review(
                 x.get("kind") == "frame_permission_trigger"
                 and x.get("character_id") == character_key
                 and x.get("custody_source") == custody_source
+                and x.get("frame") == frame
                 for x in state.facts
             ):
                 raise ValueError(

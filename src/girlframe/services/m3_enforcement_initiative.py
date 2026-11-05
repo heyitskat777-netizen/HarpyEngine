@@ -15,6 +15,7 @@ from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_actors import fingerprint
 from girlframe.engine.m3_handler_consequence_state import HandlerConsequence
 from girlframe.engine.m3_handler_consequences import active_handler, body_original
+from girlframe.engine.m3_harpy_defeat import controller
 from girlframe.engine.m3_role_punishments import bond_ref, view
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -33,6 +34,32 @@ if TYPE_CHECKING:
 LOW = ("escape", "item", "tag", "disapproval", "hesitate")
 
 
+def _low_options(
+    game: "GameService", c: Connection, state: GameState, actor: ActorRef
+) -> list[str]:
+    return [
+        x
+        for x in LOW
+        if (x != "disapproval" or actor.kind == "pilot")
+        and (x != "item" or available_items(c, game, state, actor))
+    ]
+
+
+def _prove_harpy(c: Connection, game: "GameService", state: GameState, actor: ActorRef) -> None:
+    from girlframe.services.m3_enforcer_requisitions import owned
+
+    if actor.kind == "external_pilot":
+        from girlframe.engine.m3_harpy_defeat import harpy
+        from girlframe.services.m3_tag_permissions import prove_birth
+
+        prove_birth(c, game, state, actor)
+        native = getattr(harpy(state, actor), "original_frame", None) == "THE ENFORCER"
+    else:
+        native = state.sheets[actor.entity].frame == "THE ENFORCER"
+    if not native and owned(c, game, state, actor, rules.INITIATIVE) is None:
+        raise WorkflowError("Recover the original actually acquired or retained Initiative source.")
+
+
 def _copy(target: GameState, source: GameState) -> None:
     for field in GameState.model_fields:
         setattr(target, field, getattr(source, field))
@@ -45,6 +72,43 @@ def _refs(action: dict[str, Any]) -> tuple[ActorRef, ActorRef]:
 
 def _cast(game: "GameService", c: Connection, state: GameState, channel: int) -> SceneCast:
     return CastService(ActorService(MissionService(game.store)))._current(c, state, channel)[0]
+
+
+def _judge(
+    game: "GameService", c: Connection, state: GameState, cast: SceneCast
+) -> tuple[ActorRef, int, str | None]:
+    from girlframe.services.m3_battle import _scene_judge
+
+    ref, controller, source = _scene_judge(game, c, state, cast)
+    if ref is None:
+        if any(x.active for x in state.director_contexts):
+            raise WorkflowError(
+                "SOURCE_JUDGE_REQUIRED: select the actual present Director's instruction role."
+            )
+        ref = active_handler(state)
+        if ref is None:
+            raise WorkflowError("The actual source Handler's instruction role is unavailable.")
+    return ref, controller, source
+
+
+def instruction_authority(
+    game: "GameService", c: Connection, state: GameState, action: dict[str, Any]
+) -> tuple[ActorRef, int]:
+    meta = action["data"]["enforcement"]
+    actual = ActorRef.model_validate(meta["handler"])
+    if actual.kind == "npc":
+        selected, controller, source = _judge(
+            game, c, state, _cast(game, c, state, int(action["channel_id"]))
+        )
+        if (
+            selected != actual
+            or controller != meta["handler_controller"]
+            or source != meta.get("judge_source")
+        ):
+            raise WorkflowError("Recover the original selected Director's instruction source.")
+    elif active_handler(state) != actual:
+        raise WorkflowError("Recover the original fictional Handler's instruction source.")
+    return actual, int(meta["handler_controller"])
 
 
 def authorize(
@@ -66,14 +130,19 @@ def authorize(
     if approval is None or approval.registry_sha256 != meta["registry"]:
         raise WorkflowError("Recover this actual Play's original release approval.")
     handler, appointment = MedicalService(game.store)._handler(c)
-    if handler != meta["handler_controller"] or appointment != meta["appointment"]:
+    if (
+        handler != meta.get("procedural_gm", meta["handler_controller"])
+        or appointment != meta["appointment"]
+    ):
         raise WorkflowError(
             "Recover the original appointed Handler's actual instruction authority."
         )
     state = load_state(c, game.store.campaign_id)
     if fingerprint(_cast(game, c, state, int(action["channel_id"]))) != meta["cast_sha256"]:
         raise WorkflowError("SOURCE_TABLE_CHANGED: recover this actual original cast.")
+    instruction_authority(game, c, state, action)
     actor, target = _refs(action)
+    _prove_harpy(c, game, state, actor)
     bound = profiles(c, game.store.campaign_id)
     if not rules.initiative(state, actor):
         raise WorkflowError("Recover the original Enforcer and its actually owned ability.")
@@ -103,7 +172,9 @@ def _contact(
 
 
 def _known_target(state: GameState, actor: ActorRef, target: ActorRef, controller: int) -> bool:
-    if target.kind in ("pilot", "handler") or controller == int(actor.entity):
+    from girlframe.engine.m3_harpy_defeat import controller as actual_controller
+
+    if target.kind in ("pilot", "handler") or controller == actual_controller(state, actor):
         return True
     if target.kind == "external_pilot" and any(
         x.id == target.entity and x.revealed for x in state.harpy_states
@@ -118,26 +189,34 @@ def _known_target(state: GameState, actor: ActorRef, target: ActorRef, controlle
     }[target.kind]
     if any(x.id == target.entity and bool(getattr(x, "revealed", False)) for x in collection):
         return True
+    original = actor
+    if actor.kind == "external_pilot" and any(x.id == actor.entity for x in state.harpy_states):
+        from girlframe.engine.m3_tag_permissions import conversion
+
+        original = conversion(state, actor)[0].origin
     return target.kind == "npc" and any(
-        x.owner == int(actor.entity)
-        and x.character_id == actor.incarnation
+        original.kind == "pilot"
+        and x.owner == int(original.entity)
+        and x.character_id == original.incarnation
         and x.npc == target.entity
         for x in state.world.starting_npc_links
     )
 
 
-def preview(game: "GameService", viewer: GuildViewer, channel: int) -> dict[str, Any]:
+def preview(
+    game: "GameService", viewer: GuildViewer, channel: int, *, actor_ref: ActorRef | None = None
+) -> dict[str, Any]:
     try:
         with game.store.engine.connect() as c:
             authorize(game, c, viewer)
             state = load_state(c, game.store.campaign_id)
-            if any(x.active for x in state.director_contexts):
-                return dict(available=False, targets=[], reason="SOURCE_JUDGE_REQUIRED")
-            actor = current_ref(state, viewer.user_id)
+            actor = actor_ref or current_ref(state, viewer.user_id)
+            _prove_harpy(c, game, state, actor)
             bound = profiles(c, game.store.campaign_id)
-            if active_handler(state) is None or not rules.initiative(state, actor):
+            if not rules.initiative(state, actor):
                 return dict(available=False, targets=[])
             cast = _cast(game, c, state, channel)
+            _judge(game, c, state, cast)
             if actor not in {bond_ref(state, x.actor) for x in cast.roles}:
                 return dict(available=False, targets=[])
             targets = []
@@ -155,14 +234,18 @@ def preview(game: "GameService", viewer: GuildViewer, channel: int) -> dict[str,
                 targets.append(
                     dict(ref=target.model_dump(mode="json"), token=target.token, label=actual.label)
                 )
-            sheet = state.sheets[actor.entity]
+            actual = view(state, actor, bound)
+            if actual.controller != viewer.user_id:
+                return dict(available=False, targets=[])
             return dict(
                 available=bool(targets),
                 targets=targets,
                 actor=actor.model_dump(mode="json"),
-                sheet_revision=sheet.revision,
-                identities=[x.model_dump(mode="json") for x in sheet.identities],
-                heat=sheet.heat,
+                sheet_revision=state.sheets[actor.entity].revision
+                if actor.kind == "pilot"
+                else state.revision,
+                identities=[x.model_dump(mode="json") for x in actual.identities],
+                heat=actual.heat,
                 piloting=view(state, actor, bound).piloting,
             )
     except (ValueError, WorkflowError):
@@ -177,13 +260,9 @@ def prepare(
     state: GameState,
     *,
     channel: int,
+    actor_ref: ActorRef | None = None,
 ) -> dict[str, Any]:
     authorize(game, c, viewer)
-    if any(x.active for x in state.director_contexts):
-        raise WorkflowError(
-            "SOURCE_JUDGE_REQUIRED: new Enforcement Initiative during Director presence "
-            "requires the actual source-specific Handler instruction role."
-        )
     if (
         prepared.target is not None
         or prepared.off_duty_id
@@ -191,7 +270,8 @@ def prepare(
         or prepared.source_work
     ):
         raise WorkflowError("Choose the actual typed person in this on-screen taking-hold scene.")
-    actor = current_ref(state, viewer.user_id)
+    actor = actor_ref or current_ref(state, viewer.user_id)
+    _prove_harpy(c, game, state, actor)
     target = prepared.target_actor
     bound = profiles(c, game.store.campaign_id)
     if (
@@ -220,11 +300,8 @@ def prepare(
         raise WorkflowError("Recover the actual original cast controllers.")
     contact = _contact(state, actor, target, bound, prepared.piloting)
     handler, appointment = MedicalService(game.store)._handler(c)
-    handler_ref = active_handler(state)
-    if handler_ref is None:
-        raise WorkflowError(
-            "The mandatory high result requires an actual Handler's original instruction role."
-        )
+    handler_ref, instruction_controller, judge_source = _judge(game, c, state, cast)
+    main_handler = active_handler(state)
     assert game.store.policy.m3_approval is not None
     table = {x.controller for x in cast.roles}
     if cast.facilitator is not None:
@@ -233,8 +310,12 @@ def prepare(
         actor=actor.model_dump(mode="json"),
         target=target.model_dump(mode="json"),
         target_controller=other.controller,
+        actor_controller=own.controller,
         handler=handler_ref.model_dump(mode="json"),
-        handler_controller=handler,
+        marker_handler=main_handler.model_dump(mode="json") if main_handler is not None else None,
+        handler_controller=instruction_controller,
+        procedural_gm=handler,
+        judge_source=judge_source,
         appointment=appointment,
         registry=game.store.policy.m3_approval.registry_sha256,
         cast=cast.model_dump(mode="json"),
@@ -281,15 +362,13 @@ def _request(
 
 
 def _next(game: "GameService", c: Connection, state: GameState, action: dict[str, Any]) -> None:
-    from girlframe.services.m2_choices import ChoiceEngine
-
     meta = action["data"]["enforcement"]
     if game.pending(c, action["id"]):
         return
     actor, target = _refs(action)
     if meta.get("target_ended"):
         action["data"]["result"]["original_target_ended"] = True
-        ChoiceEngine(game).finish(c, state, action)
+        _finish(game, c, state, action)
         return
     level = action["data"]["result"]["tier"]
     if level == "high" and not meta.get("punishment_completed"):
@@ -314,7 +393,9 @@ def _next(game: "GameService", c: Connection, state: GameState, action: dict[str
         return
     if level == "low":
         if not meta["selected"]:
-            _request(game, c, action, int(actor.entity), "select")
+            _request(
+                game, c, action, meta.get("actor_controller", int(action["actor_id"])), "select"
+            )
             return
         remaining = [x for x in meta["selected"] if x not in meta["done"]]
         if remaining:
@@ -329,7 +410,18 @@ def _next(game: "GameService", c: Connection, state: GameState, action: dict[str
                 option,
             )
             return
-    ChoiceEngine(game).finish(c, state, action)
+    _finish(game, c, state, action)
+
+
+def _finish(game: "GameService", c: Connection, state: GameState, action: dict[str, Any]) -> None:
+    if action["data"].get("actor_basic"):
+        from girlframe.services.m3_actor_plays import ActorPlayService
+
+        ActorPlayService(game).finish(c, state, action)
+    else:
+        from girlframe.services.m2_choices import ChoiceEngine
+
+        ChoiceEngine(game).finish(c, state, action)
 
 
 def results(game: "GameService", c: Connection, state: GameState, action: dict[str, Any]) -> None:
@@ -352,6 +444,23 @@ def results(game: "GameService", c: Connection, state: GameState, action: dict[s
             ),
         )
         meta["grasp"] = _event(action)
+        if view(state, target, profiles(c, game.store.campaign_id)).rules == "director":
+            from girlframe.services.m3_battle import require_director_helpless
+
+            changed, work = require_director_helpless(
+                game,
+                c,
+                state,
+                target=target,
+                opponent=actor,
+                source_action=action["id"],
+                event=_event(action),
+            )
+            _copy(state, changed)
+            if len(work) != 1:
+                raise WorkflowError("Keep the exact original Director Helpless consequence.")
+            meta["director_consequence"] = work[0]
+            return
         if (
             target.kind == "handler"
             and view(state, target, profiles(c, game.store.campaign_id)).rules != "handler_girl"
@@ -388,7 +497,7 @@ def projection(
     body = json.loads(request["body_json"])
     data = dict(actor=meta["actor"], target=meta["target"], kind=kind)
     if kind == "enforcer_select":
-        data["options"] = [x for x in LOW if x != "item" or available_items(c, game, state, actor)]
+        data["options"] = _low_options(game, c, state, actor)
     if kind in ("enforcer_item", "enforcer_hesitate"):
         data["items"] = available_items(
             c,
@@ -410,6 +519,8 @@ def projection(
         data["case_id"] = body["case_id"]
     if kind == "enforcer_handler_consequence":
         data["consequence"] = body["consequence"]
+    if kind == "enforcer_director_consequence":
+        data["work_id"] = body["work_id"]
     if kind == "enforcer_void_threshold":
         data["work_id"] = body["work_id"]
     return data
@@ -473,7 +584,7 @@ def apply(
             "Complete the actual owned consequence; an acknowledgment cannot fulfill it."
         )
     if kind == "select":
-        choices = [x for x in LOW if x != "item" or available_items(c, game, state, actor)]
+        choices = _low_options(game, c, state, actor)
         if len(answer.options) != 2 or not set(answer.options) <= set(choices):
             raise WorkflowError("Choose exactly two distinct printed applicable low outcomes.")
         meta["selected"] = list(answer.options)
@@ -487,17 +598,30 @@ def apply(
                 "The original target chooses one actual held object and describes its taking."
             )
         inside = view(state, actor, profiles(c, game.store.campaign_id)).inside_frame
+        from girlframe.engine.m3_harpy_resources import assets as harpy_assets
+
+        actual_assets = (
+            state.sheets[actor.entity].assets
+            if actor.kind == "pilot"
+            else harpy_assets(state, actor)
+        )
+        chosen_item = next((x for x in state.held_items if x.id == selection), None)
+        excluded = (
+            selection.removeprefix("asset:")
+            if selection.startswith("asset:")
+            else chosen_item.asset_id
+            if chosen_item
+            else None
+        )
         remaining = [
-            x
-            for x in state.sheets[actor.entity].assets
-            if x.family == "girl" and not x.damaged and selection != "asset:" + x.id
+            x for x in actual_assets if x.family == "girl" and not x.damaged and excluded != x.id
         ]
         if inside is None and not remaining:
             _request(
                 game,
                 c,
                 action,
-                int(actor.entity),
+                controller(state, actor),
                 "item_context",
                 item=selection,
                 account=answer.text,
@@ -566,15 +690,31 @@ def apply(
             )
         elif kind == "tag":
             actual = view(state, target, profiles(c, game.store.campaign_id))
-            state.sheets[actor.entity].tags.append(
-                TagState(
-                    id=str(uuid4()),
-                    label=answer.text.strip(),
-                    giver=actual.controller,
-                    giver_actor=target,
-                    observers=tuple(meta["table"]),
+            if actor.kind == "external_pilot":
+                from girlframe.engine.m3_harpy_defeat import give_tag
+
+                _copy(
+                    state,
+                    give_tag(
+                        state,
+                        actor,
+                        target,
+                        answer.text.strip(),
+                        _event(action),
+                        str(uuid4()),
+                        tuple(meta["table"]),
+                    ),
                 )
-            )
+            else:
+                state.sheets[actor.entity].tags.append(
+                    TagState(
+                        id=str(uuid4()),
+                        label=answer.text.strip(),
+                        giver=actual.controller,
+                        giver_actor=target,
+                        observers=tuple(meta["table"]),
+                    )
+                )
         elif kind == "disapproval":
             shift_status(state, int(actor.entity), -1)
         elif kind == "hesitate" and answer.flag is None:
@@ -624,6 +764,10 @@ def _battle_finished(
 
 
 def synchronize(game: "GameService", c: Connection, action: dict[str, Any], event: str) -> None:
+    if action["data"]["enforcement"].get("director_consequence"):
+        from girlframe.services.m3_battle import synchronize_damage
+
+        synchronize_damage(game, c, event)
     from girlframe.services.m3_role_punishments import synchronize as sync_role
 
     sync_role(game, c, action, event)
@@ -705,6 +849,80 @@ def synchronize(game: "GameService", c: Connection, action: dict[str, Any], even
             action.update(game.action(c, action["id"]))
     game.save_action(c, action)
     _battle_finished(game, c, action, event)
+
+
+def complete_director_consequence(
+    game: "GameService",
+    c: Connection,
+    action: dict[str, Any],
+    row: dict[str, Any],
+    event: str,
+    viewer: GuildViewer | None,
+    key: str,
+) -> None:
+    meta = action["data"].get("enforcement") or {}
+    body = json.loads(row["body_json"])
+    _, target = _refs(action)
+    if (
+        row["id"] != meta.get("director_consequence")
+        or row["kind"] != "director_helpless"
+        or row["state"] != "resolved"
+        or body.get("effect_event") != event
+        or body.get("source_action") != action["id"]
+        or body.get("requirement", {}).get("target") != target.model_dump(mode="json")
+    ):
+        raise WorkflowError("Recover the actual original Director Helpless response and source.")
+    state = load_state(c, game.store.campaign_id)
+    from girlframe.services.m3_battle_director import DirectorService
+
+    actual, _ = DirectorService(game.store)._source(c, row)
+    if actual != target:
+        raise WorkflowError("Do not transfer this original Director consequence to another body.")
+    if body.get("choice") == "death":
+        if not any(
+            x.get("kind") == "director_body_ended"
+            and x.get("event") == event
+            and x.get("actor") == target.model_dump_json()
+            for x in state.facts
+        ):
+            raise WorkflowError("Recover this actual Director body's source death proof.")
+        meta["target_ended"] = True
+        meta["unperformed_punishment_reason"] = "original_director_ended_by_printed_replacement"
+    meta["director_consequence_completed"] = event
+    next_event = str(uuid4())
+    action["data"]["response_event"] = next_event
+    _next(game, c, state, action)
+    human = (
+        viewer.user_id
+        if viewer is not None
+        else c.scalar(
+            sa.select(t.events.c.actor_id).where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.id == event,
+            )
+        )
+    )
+    if human is None:
+        raise WorkflowError("Recover the genuine Director response's command principal.")
+    index = c.scalar(
+        sa.select(sa.func.max(t.events.c.event_index)).where(
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.command_key == key,
+        )
+    )
+    game.event(
+        c,
+        human,
+        key,
+        "m3.enforcement_director_continued",
+        state,
+        event_id=next_event,
+        event_index=index + 1 if index is not None else 0,
+        action_id=action["id"],
+        source_event=event,
+        work_id=row["id"],
+    )
+    synchronize(game, c, action, next_event)
 
 
 def complete_handler_consequence(

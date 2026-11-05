@@ -19,6 +19,9 @@ class HarpyAsset(Model):
     void: bool = True
     concealed: bool = False
     intrinsic: Literal["wyvern_enormous"] | None = None
+    classification_event: str | None = Field(
+        default=None, min_length=1, exclude_if=lambda value: value is None
+    )
 
 
 class HarpyIdentity(Model):

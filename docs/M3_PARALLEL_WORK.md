@@ -7,6 +7,30 @@ agent integrates shared state, source ownership, routing and regression checks.
 The bot stays off. No live migration, restart or environment publication is authorized
 by this checkpoint.
 
+## Current frozen bounded gameplay candidate
+
+Four development agents and root completed the following bounded candidate. Its
+full regression passes **2,200 tests in 1,070.22s**, zero failures/errors/skips, at
+`var/m3-bounded-gameplay-full-fixed.xml`. The older full checkpoints below remain
+historical evidence. None of these workflows supplies whole-M3 acceptance.
+
+| Workflow | Actual implemented candidate | Remaining boundary |
+|---|---|---|
+| Engage and Harpy extras | Eight typed maneuvers, real tier counts, actual used-Asset damage and mandatory Defeat; Harpy optional extra across Engage/Assault tiers. | Broader playbook/world consumers and source review remain separate. |
+| Handler Tags | Original Girl/Handler/Director roles, three printed alternatives, owned replies and attention notices, held-Play reconciliation and readable saved receipts. | No automatic favour, fictional answer, successor obligation or observation. |
+| Enforcer | Real paid/free/retained rule sources, Initiative, Master's Dog, Pavlov, Firepower, Snoop, actual objects/Frame damage and retained Harpy consumers. | Compliance Virus and free Personal Firearm package issuance remain unimplemented; broader role discipline and final cross-rule acceptance remain. |
+| Mockingbird | Person conversations and conditional Starry capability, Risk, actual classification moves and bounded high Handler Void targets. | Full Sex outcomes and Call guest/relay remain gated; specialized roll-family coverage is incomplete. |
+| Lifecycle | Mandatory inherited no-roll Dive, actual Harpy Off-Duty, original-ending procedures, postcareer Tag record/return hook, and real normal Handler/Director/HandlerGirl Void. | Positive combined archived-killer-Tag return trace and further source adapters remain; no future case is inferred from a hook. |
+| Physical/world | Real Gorgon parent/response/damage/contest/collateral/Warp, Sprite interception, Aggressive introduction, City destruction, last-base aftermath, and source-aware world advancement. | Further Gorgon Types/Plays, exact Frame Core Tag criterion, general physical/world ports and recorded admission limits remain. |
+
+The current registry records **166 adjustable clarifications**, and 35 entries have
+updated bounded contracts/evidence. They retain subset status and pending independent
+review; no module, policy or runtime gate was enabled. Counts are inventory metadata,
+not a milestone completion percentage. The bot remains off.
+
+The older per-path tables below describe their earlier source checkpoint. Current
+scope is this table plus the full [remaining-work inventory](M3_REMAINING_WORK.md).
+
 ## Delivered bounded workflows
 
 | Workflow | Implemented behavior | Important boundary |

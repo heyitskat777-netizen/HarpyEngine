@@ -63,6 +63,7 @@ def mechanical_assets(state: GameState, holder: ActorRef) -> tuple[AssetState, .
         asset
         for item in state.held_items
         if same_holder(state, item.holder, holder)
+        and item.location_mode == "carried"
         and (asset := actual_asset(state, item)) is not None
     )
 
@@ -80,6 +81,7 @@ def take(
     origin_event: str,
     replace: str | None = None,
     inside_frame: bool | None = None,
+    scene: str | None = None,
 ) -> GameState:
     state = GameState.model_validate_json(original.model_dump_json())
     source_view = view(state, source, bindings)
@@ -145,6 +147,8 @@ def take(
         raise ValueError(
             "Select an actual proved held object; missing possessions need factual confirmation"
         )
+    if item.location_mode == "scene" and item.scene_id != scene:
+        raise ValueError("This actual object remains in its source room, not on the person's body")
     if not same_holder(state, item.holder, source):
         raise ValueError("The original source no longer holds this actual object")
     removed: str | None = None
@@ -174,20 +178,26 @@ def take(
                 )
             if not inside_frame:
                 state = make_helpless(state, source, recipient, event)
-    if (
-        source_asset is not None
-        and source.kind == "handler"
+    if source_asset is not None and (
+        source.kind == "handler"
         and source_view.rules == "handler_girl"
+        or source.kind == "external_pilot"
+        and source_view.girl == "harpy"
     ):
         removed = source_asset.id
-        last = not any(
-            x.id != item.id
-            and (asset := actual_asset(state, x)) is not None
-            and asset.family == "girl"
-            and not asset.damaged
-            for x in state.held_items
-            if same_holder(state, x.holder, source)
-        )
+        if source.kind == "external_pilot":
+            from girlframe.engine.m3_harpy_resources import assets as harpy_assets
+
+            remaining_assets = [x for x in harpy_assets(state, source) if x.id != source_asset.id]
+        else:
+            remaining_assets = [
+                asset
+                for x in state.held_items
+                if x.id != item.id
+                and same_holder(state, x.holder, source)
+                and (asset := actual_asset(state, x)) is not None
+            ]
+        last = not any(x.family == "girl" and not x.damaged for x in remaining_assets)
         if last:
             known = source_view.inside_frame
             if known is not None and inside_frame is not None and known != inside_frame:
@@ -214,7 +224,7 @@ def take(
         )
         destination_id = (
             original_asset.id
-            if recipient == item.source_owner and original_asset is not None
+            if same_holder(state, recipient, item.source_owner) and original_asset is not None
             else "item:" + item.id
         )
         actual = source_asset.model_copy(
@@ -238,6 +248,9 @@ def take(
             asset_json=asset_json,
             asset_id=received,
             asset_owner=binding_owner,
+            location_mode="carried",
+            scene_id=None,
+            location_event=event,
         )
     )
     state.held_items = [changed if x.id == item.id else x for x in state.held_items]

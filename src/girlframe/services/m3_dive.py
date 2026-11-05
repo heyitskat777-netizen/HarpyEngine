@@ -323,7 +323,11 @@ def projection(
     actual_assets, actual_identities = rules.resources(state, actor)
     if request["kind"] == "dive_effect":
         option = selected["option"]
-        if option == "void_and_unmark_all":
+        if option == "call_reclassify_assets":
+            data["assets"] = [
+                dict(id=x.id, label=x.name, family=x.family, void=x.void) for x in actual_assets
+            ]
+        elif option == "void_and_unmark_all":
             data["assets"] = [dict(id=x.id, label=x.name) for x in actual_assets if not x.void]
         elif option in ("erase_identity_and_table_question", "table_replaces_identity"):
             data["identities"] = [
@@ -386,6 +390,9 @@ def available_options(
             or cockpit_lock(state, actor, expected) is not None
         ):
             values.remove("locked_cockpit_extraction_requires_frame_consent")
+    from girlframe.services.m3_mockingbird_call import options as call_options
+
+    values.extend(call_options(state, actor))
     return tuple(values)
 
 
@@ -408,21 +415,26 @@ def _apply_effect(
     meta = action["data"]["dive"]
     selected = meta["steps"][step]
     actor, handler, npcs = _context(action)
-    effect = Effect.model_validate_json(json.dumps(selected["effect"]))
-    result = rules.apply(
-        state,
-        actor,
-        profiles(c, game.store.campaign_id),
-        selected["option"],
-        effect,
-        action["id"],
-        step,
-        action["data"]["response_event"],
-        piloting=action["data"]["prepared"]["piloting"],
-        handler=handler,
-        cast_npcs=npcs,
-        handler_controller=_handler_controller(meta),
-    )
+    if selected["option"] == "call_reclassify_assets":
+        from girlframe.services.m3_mockingbird_call import apply as apply_classification
+
+        result = apply_classification(game, c, state, action, step, actor)
+    else:
+        effect = Effect.model_validate_json(json.dumps(selected["effect"]))
+        result = rules.apply(
+            state,
+            actor,
+            profiles(c, game.store.campaign_id),
+            selected["option"],
+            effect,
+            action["id"],
+            step,
+            action["data"]["response_event"],
+            piloting=action["data"]["prepared"]["piloting"],
+            handler=handler,
+            cast_npcs=npcs,
+            handler_controller=_handler_controller(meta),
+        )
     _copy(state, result.state)
     selected["applied_event"] = action["data"]["response_event"]
     if result.followups:
@@ -535,7 +547,14 @@ def apply(
         )
         if int(request["actor_id"]) != detail_owner:
             raise WorkflowError("The actual source-specific detail chooser owns this response.")
-        if option == "void_and_unmark_all":
+        if option == "call_reclassify_assets":
+            from girlframe.services.m3_mockingbird_call import effect as classification_effect
+
+            actor, _, _ = _context(action)
+            selected["effect"] = classification_effect(state, actor, answer)
+            _apply_effect(game, c, state, action, step, request)
+            return
+        elif option == "void_and_unmark_all":
             _strict(answer, {"text", "fields"})
             if set(answer.fields) != {"asset"}:
                 raise WorkflowError("Choose the actual uncorrupted Asset to rewrite.")
@@ -844,6 +863,18 @@ def prove_void_source(
             if original
             else None
         )
+        if fact is not None and fact["option"] == "call_reclassify_assets":
+            from girlframe.services.m3_mockingbird_call import prove_classification_void
+
+            assert original is not None
+            prove_classification_void(
+                original,
+                actor,
+                action,
+                body,
+                ChoiceAnswer.model_validate_json(response.answer_json),
+            )
+            return
         if (
             fact is None
             or fact["option"] != "void_and_unmark_all"

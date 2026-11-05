@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import Field, model_validator
 
 from girlframe.engine.m3_actor_state import ActorRef, Model
+from girlframe.engine.m3_world_state import Cell
 
 Choice = Literal["opportunity", "chance_to_act", "weakness", "injury", "death"]
 
@@ -25,12 +26,30 @@ class HandlerArchive(Model):
     account: str = Field(min_length=1, max_length=1200)
     appointment: str = Field(min_length=1)
     links_json: str
+    ending: Literal["death", "fired", "retired", "imprisoned"] = "death"
+    alive: bool = False
+    custody: Literal["free", "foundation_prison"] = "free"
+    position: Cell | None = None
 
     @model_validator(mode="after")
     def actual_body(self) -> "HandlerArchive":
         if self.actor.kind != "handler" or self.body.actor != self.actor:
             raise ValueError("Archive the actual original Handler body")
+        if self.alive == (self.ending == "death") or (self.custody == "foundation_prison") != (
+            self.ending == "imprisoned"
+        ):
+            raise ValueError("Preserve the actual living/dead original and institutional custody")
         return self
+
+
+class HandlerDeparture(Model):
+    id: str = Field(min_length=1)
+    actor: ActorRef
+    reason: Literal["fired", "retired", "imprisoned"]
+    source_work: str = Field(min_length=1)
+    source_event: str = Field(min_length=1)
+    appointment: str = Field(min_length=1)
+    account: str = Field(min_length=1, max_length=1200)
 
 
 class HandlerConsequence(Model):

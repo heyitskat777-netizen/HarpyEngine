@@ -367,7 +367,9 @@ class DirectorService:
                 )
             )
             from girlframe.services.m3_battle import complete_damage_work, synchronize_casts
+            from girlframe.services.m3_handler_void import synchronize_endings
 
+            synchronize_endings(self.game, c, event, viewer, key)
             synchronize_casts(self.game, c, event)
             create_replacements(self.game, c, event)
             complete_damage_work(self.game, c, row, event, viewer, key)

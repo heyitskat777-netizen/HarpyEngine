@@ -62,7 +62,11 @@ def prove_item(c: Connection, game: GameService, state: GameState, item_id: str)
     )
     if first is None or any(getattr(first, k) != getattr(item, k) for k in stable):
         raise WorkflowError("SOURCE_ITEM_MISSING: recover the immutable original possession proof.")
-    if item.origin_asset_json:
+    if item.source_owner.kind == "handler" and item.confirmed_event and item.origin_asset_json:
+        from girlframe.services.m3_handler_girl_void import prove_handler_item
+
+        prove_handler_item(c, game, state, item)
+    elif item.origin_asset_json:
         old = _snapshot(c, game, item.origin_event)
         source = old.sheets.get(item.source_owner.entity) if old else None
         asset = AssetState.model_validate_json(item.origin_asset_json)
@@ -75,6 +79,12 @@ def prove_item(c: Connection, game: GameService, state: GameState, item_id: str)
             raise WorkflowError(
                 "SOURCE_ITEM_ASSET_MISSING: recover the original actual owned Asset."
             )
+    elif item.factual_source_action and game.action(c, item.factual_source_action)["data"].get(
+        "snoop"
+    ):
+        from girlframe.services.m3_enforcer_snoop import prove_object
+
+        prove_object(c, game, state, item)
     else:
         event = (
             c.execute(
@@ -124,6 +134,7 @@ def available_items(
     holder: ActorRef,
     *,
     weapons_only: bool = False,
+    scene: str | None = None,
 ) -> list[dict[str, Any]]:
     view(state, holder, profiles(c, game.store.campaign_id))
     result: list[dict[str, Any]] = []
@@ -142,6 +153,10 @@ def available_items(
             )
             if recorded:
                 prove_item(c, game, state, recorded.id)
+                if recorded.location_mode == "scene" and (
+                    weapons_only or recorded.scene_id != scene
+                ):
+                    continue
                 bindings.add(recorded.id)
             if recorded is None and not _weapon_asset(state, holder, asset):
                 # Owning a body part/trait is not proof of a takeable held object.
@@ -155,6 +170,14 @@ def available_items(
                 )
     for item in state.held_items:
         if not rules.same_holder(state, item.holder, holder) or item.id in bindings:
+            continue
+        if item.location_mode == "scene" and (weapons_only or item.scene_id != scene):
+            continue
+        if (
+            item.asset_json is None
+            and item.condition == "ruined"
+            and (weapons_only or scene is None)
+        ):
             continue
         prove_item(c, game, state, item.id)
         actual = rules.actual_asset(state, item)
@@ -184,8 +207,14 @@ def take_in_transaction(
     replace: str | None = None,
     inside_frame: bool | None = None,
     source_work: str | None = None,
+    snoop: bool = False,
 ) -> GameState:
-    if selection not in {x["id"] for x in available_items(c, game, state, source)}:
+    scene = None
+    if snoop:
+        from girlframe.services.m3_enforcer_snoop import validate_transfer_source
+
+        scene = validate_transfer_source(c, game, state, action, source, recipient, selection)
+    if selection not in {x["id"] for x in available_items(c, game, state, source, scene=scene)}:
         raise WorkflowError(
             "Select an actual accessible object from its current original custodian."
         )
@@ -227,6 +256,7 @@ def take_in_transaction(
         origin_event=origin,
         replace=replace,
         inside_frame=inside_frame,
+        scene=scene,
     )
     if new_void_families(state, changed):
         source_action = game.action(c, action) if source_work is None else None
@@ -234,6 +264,7 @@ def take_in_transaction(
             source_work is None
             and source_action is not None
             and not source_action["data"].get("enforcement")
+            and not snoop
         ):
             raise WorkflowError(
                 "This source needs its actual item-removal Void continuation "
@@ -242,7 +273,11 @@ def take_in_transaction(
     transfer = changed.item_transfers[-1].model_copy(
         update=dict(
             source_work=source_work,
-            source_kind="npc_damage" if source_work else "enforcement_initiative",
+            source_kind="enforcer_snoop"
+            if snoop
+            else "npc_damage"
+            if source_work
+            else "enforcement_initiative",
         )
     )
     changed.item_transfers[-1] = transfer
@@ -647,6 +682,97 @@ def new_void_families(before: GameState, after: GameState) -> list[ActorRef]:
         ):
             result.append(ActorRef(kind="pilot", entity=key, incarnation=sheet.character_id))
     return result
+
+
+def create_snoop_item_void(
+    game: GameService, c: Connection, transfer_id: str, event: str
+) -> tuple[str, ...]:
+    """The actual committed Snoop transfer opens its original owned threshold."""
+    from uuid import NAMESPACE_URL, uuid5
+
+    from girlframe.services.m3_void import _append, prepare_threshold
+
+    before, after, transfer = prove_transfer(c, game, transfer_id)
+    action = game.action(c, transfer.action)
+    meta = action["data"].get("snoop") or {}
+    if (
+        transfer.source_kind != "enforcer_snoop"
+        or transfer.event != event
+        or transfer_id not in meta.get("transfers", [])
+    ):
+        raise WorkflowError("Recover the actual committed Snoop object-transfer event.")
+    result = []
+    for owner in new_void_families(before, after):
+        identity = str(
+            uuid5(NAMESPACE_URL, "girlframe:snoop-item-void:" + transfer_id + ":" + owner.token)
+        )
+        table = t.m3["m3_required_work"]
+        if c.scalar(
+            sa.select(table.c.id)
+            .where(table.c.campaign_id == game.store.campaign_id, table.c.id == identity)
+            .limit(1)
+        ):
+            result.append(identity)
+            continue
+        related(
+            c,
+            game.store,
+            dict(campaign_id=game.store.campaign_id, scene_id=action["scene_id"]),
+            identity,
+            int(owner.entity),
+            int(owner.entity),
+            "void_threshold",
+            dict(
+                reason="item_transfer",
+                item_source="enforcer_snoop",
+                owner=owner.model_dump(mode="json"),
+                character=owner.incarnation,
+                source_action=action["id"],
+                source_pdf=19,
+                immediate=True,
+                transfer=transfer_id,
+                details=dict(family="girl"),
+            ),
+            event,
+        )
+        game.request(
+            c, action, int(owner.entity), "snoop_item_void_threshold", dict(work_id=identity)
+        )
+        game.save_action(c, action)
+        updated, value = prepare_threshold(c, game, identity)
+        opened = game.event(
+            c,
+            meta["procedural_gm"],
+            str(uuid4()),
+            "m3.snoop_item_void_opened",
+            updated,
+            source_event=event,
+            work_id=identity,
+        )
+        if value.stage == "prevented":
+            row = dict(
+                c.execute(
+                    sa.select(table)
+                    .where(table.c.campaign_id == game.store.campaign_id, table.c.id == identity)
+                    .order_by(table.c.revision.desc())
+                    .limit(1)
+                )
+                .mappings()
+                .one()
+            )
+            _append(
+                c,
+                row,
+                opened,
+                json.loads(row["body_json"])
+                | dict(threshold=value.id, resolution=value.stage, actual_actor=None),
+                resolved=True,
+            )
+            from girlframe.services.m3_enforcer_snoop import complete_item_void
+
+            complete_item_void(game, c, identity, opened, None, str(uuid4()))
+        result.append(identity)
+    return tuple(result)
 
 
 def create_npc_item_void(

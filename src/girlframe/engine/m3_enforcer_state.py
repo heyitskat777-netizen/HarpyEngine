@@ -79,7 +79,7 @@ class Grasp(Model):
 
     @model_validator(mode="after")
     def actual_grip(self) -> "Grasp":
-        if self.actor.kind != "pilot" or self.actor == self.target:
+        if self.actor.kind not in ("pilot", "external_pilot") or self.actor == self.target:
             raise ValueError("An actual Enforcer takes hold of another original person")
         if self.held == (self.release_event is not None):
             raise ValueError("The actual grasp has one sourceful owned ending")

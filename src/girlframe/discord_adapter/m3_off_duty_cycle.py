@@ -16,8 +16,8 @@ from girlframe.engine.m2 import PlayInput, tier
 from girlframe.engine.m3_choices import OFF_DUTY
 from girlframe.engine.m3_core import RepairSelection
 from girlframe.engine.m3_off_duty import HANDLER_SCENES, HandlerContext, RecoveryChoice
-from girlframe.engine.m3_world import ClassChange, Movement, directed_steps
-from girlframe.engine.m3_world_state import Goal, Gorgon, World
+from girlframe.engine.m3_world import ClassChange, Movement
+from girlframe.engine.m3_world_state import Goal, Gorgon
 from girlframe.services.m3_off_duty_cycle import CycleService
 from girlframe.services.m3_play_support import cancel_unrolled, resume
 from girlframe.services.m3_world import WorldService
@@ -464,23 +464,28 @@ async def open_end(
     interaction: discord.Interaction, service: CycleService, data: dict[str, Any]
 ) -> None:
     viewer = viewer_from_interaction(interaction)
-    snapshot = await asyncio.to_thread(WorldService(service.missions).get, viewer, private=True)
+    snapshot = await asyncio.to_thread(WorldService(service.missions).advancement, viewer)
     if snapshot["game_revision"] != data["game_revision"] or snapshot["world"] is None:
         raise WorkflowError("Refresh the actual world and period before ending Off-Duty.")
-    if snapshot.get("offstage_world"):
-        raise WorkflowError(
-            "Map advancement awaits source-aware offstage support; cached positions "
-            "cannot move bodies or cause destruction. An actual reviewed return may "
-            "restore map presence."
-        )
-    world = World.model_validate_json(json.dumps(snapshot["world"]))
-    directed = [x for x in world.gorgons if x.alive and x.gorgon_class == "directed"]
+    from girlframe.engine.m3_world_state import Location, Npc
+
+    projected = snapshot["world"]
+    gorgons = tuple(
+        Gorgon.model_validate_json(json.dumps(x))
+        for x in projected["gorgons"]
+        if x["id"] in snapshot["advancing_gorgons"]
+    )
+    locations = tuple(Location.model_validate_json(json.dumps(x)) for x in projected["locations"])
+    npcs = tuple(
+        Npc.model_validate_json(json.dumps(x)) for x in projected["npcs"] if x["cell"] is not None
+    )
+    directed = [x for x in gorgons if x.alive and x.gorgon_class == "directed"]
     unplaced = [
         x
-        for x in world.gorgons
+        for x in gorgons
         if x.alive
         and x.gorgon_class == "aggressive"
-        and not any(loc.cell == x.cell and loc.condition != "destroyed" for loc in world.locations)
+        and not any(loc.cell == x.cell and loc.condition != "destroyed" for loc in locations)
     ]
 
     def build(values: dict[str, Any]) -> list[Field]:
@@ -489,7 +494,8 @@ async def open_end(
                 "step:" + x.id,
                 "Move " + x.name,
                 tuple(
-                    (f"{c[0]},{c[1]}", f"Square {c[0]}, {c[1]}") for c in directed_steps(world, x)
+                    (f"{c[0]},{c[1]}", f"Square {c[0]}, {c[1]}")
+                    for c in snapshot["directed_steps"][x.id]
                 ),
             )
             for x in directed
@@ -511,10 +517,10 @@ async def open_end(
                 goals = (
                     tuple(
                         ("location:" + x.id, x.name)
-                        for x in world.locations
+                        for x in locations
                         if x.condition != "destroyed"
                     )
-                    + tuple(("npc:" + x.id, x.name) for x in world.npcs if x.alive)
+                    + tuple(("npc:" + x.id, x.name) for x in npcs if x.alive)
                     + (("cell", "Another map square"),)
                 )
                 fields.append(Field(key + "goal", "Actual goal", goals))
@@ -528,7 +534,7 @@ async def open_end(
             elif selected == "sprite":
                 leaders = tuple(
                     (x.id, x.name)
-                    for x in world.gorgons
+                    for x in gorgons
                     if x.id != old.id
                     and x.alive
                     and x.gorgon_class != "sprite"
@@ -601,7 +607,13 @@ async def open_end(
     form = DependentForm(
         viewer.user_id,
         "End Off-Duty",
-        "Review the Directed movement and Aggressive consequences. Each is applied once.",
+        "Review the Directed movement and Aggressive consequences. Each is applied once."
+        + (
+            " " + str(len(snapshot["deferred"])) + " actual absent/unknown bodies or goals "
+            "have no map action this period; their original resources and positions are preserved."
+            if snapshot["deferred"]
+            else ""
+        ),
         build,
         submit,
     )

@@ -84,6 +84,9 @@ class Asset(Model):
     family: Literal["girl", "frame", "gorgon"]
     damaged: bool = False
     void: bool = False
+    classification_event: str | None = Field(
+        default=None, min_length=1, exclude_if=lambda value: value is None
+    )
 
 
 class WorldTag(Model):

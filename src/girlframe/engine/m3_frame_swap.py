@@ -44,12 +44,24 @@ def retained_rules(
     actual = resolve(state, actor, bindings, require_current_profile=False)
     if actual.frame_instance is None:
         return ()
-    # This named port has real runtime/acquisition. Other entries are deliberately excluded
-    # until their consumers support a retained rule independently of native playbook labels.
+    from girlframe.engine import m3_enforcer_requisitions as enforcer
+
+    result = []
     if held(state, actor, actual.frame_instance):
         registry.require_available(RULE)
-        return (RULE,)
-    return ()
+        result.append(RULE)
+    for rule in (*enforcer.RULES, *enforcer.BASE):
+        if (
+            enforcer.held(state, actor, rule)
+            or actual.frame == "THE ENFORCER"
+            and rule in enforcer.BASE
+        ):
+            try:
+                registry.require_available(rule)
+            except ValueError:
+                continue
+            result.append(rule)
+    return tuple(result)
 
 
 def bonded_refs(state: GameState, actor: ActorRef) -> tuple[ActorRef, ...]:
@@ -153,7 +165,14 @@ def purchase(
     old_frame = actual.frame_instance
     assert old_frame is not None
     kept = next(x for x in sheet.assets if x.id == selection.retained_asset)
-    grant = held(state, actor, old_frame)[0]
+    from girlframe.engine import m3_enforcer_requisitions as enforcer
+
+    grant = held(state, actor, old_frame)[0] if selection.retained_rule == RULE else None
+    retained_grant = (
+        enforcer.held(state, actor, selection.retained_rule)
+        if selection.retained_rule != RULE
+        else None
+    )
     runtime = FrameRuntime(
         id="swap:" + identity,
         generation=sheet.frame_runtime.generation + 1 if sheet.frame_runtime else 1,
@@ -206,7 +225,34 @@ def purchase(
     sheet.frame, sheet.frame_runtime, sheet.obsolescence_marked = frame, runtime, 0
     sheet.permissions -= 4
     sheet.revision += 1
-    state = retain(state, actor, bindings, grant.id, runtime.id, event)
+    if grant is not None:
+        state = retain(state, actor, bindings, grant.id, runtime.id, event)
+    elif retained_grant is not None:
+        state.facts.append(
+            dict(
+                kind="enforcer_rule_retained",
+                grant=retained_grant.id,
+                actor=actor.model_dump_json(),
+                old_frame=old_frame,
+                frame=runtime.id,
+                source_event=event,
+                requisition=identity,
+            )
+        )
+    elif selection.retained_rule in enforcer.BASE:
+        retained = enforcer.Grant(
+            id="swap-rule:" + identity,
+            actor=actor,
+            frame=runtime.id,
+            rule=selection.retained_rule,
+            purchase=identity,
+            source_event=event,
+            source_kind="frame_swap",
+            source_work=plan,
+        )
+        state.facts.append(dict(kind="enforcer_rule_acquired", body=retained.model_dump_json()))
+    else:
+        raise ValueError("Keep the original actually owned selected Frame rule source")
     state.requisitions.append(
         SwapReceipt(
             id=identity,

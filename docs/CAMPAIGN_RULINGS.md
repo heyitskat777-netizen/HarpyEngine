@@ -1247,3 +1247,572 @@ Reason: Fictional body death does not erase an already-assigned human procedure.
 Alternatives: Transfer the pending ruling to an unrelated human or new body; Deadlock the already-owned procedural question.
 
 Implementation/adjustment: Source-scoped OOC Tags carry an authenticated finite HandlerPlay grant, the actual campaign appointment, and actual creation event; retained same-person Tags preserve this source. Source-scoped OOC Tags carry an authenticated finite HandlerPlay grant, the actual campaign appointment, and actual creation event; retained same-person Tags preserve this source. Review pending source work before revision; preserve original receipts and immutable history.
+
+
+## Current bounded gameplay clarification checkpoint
+
+These delegated recommendations preserve pending independent source review and human acceptance. They change no release gate or enabled module. Exact implementation scope and evidence are in the M3 acceptance report.
+
+### `harpy-optional-extra-maneuver-timing`
+
+The Harpy may take one additional distinct Engage option at any Engage or All Out Assault tier. In Assault it is selected before primary consequences, uses an actual owned usable Asset, adds no separate roll and does not introduce Engage tier damage.
+
+Source: Rulebook PDF25/printed23; PDF181/printed179; delegated recommendation.
+
+Reason: The adjustment says may and for either Play without limiting result tiers. Keeping each Play's own consequence table avoids inventing a second result.
+
+Alternatives: Only permit the extra at successful tiers; Resolve a second Engage roll or add its damage to Assault
+
+Implementation/adjustment: Optional owned native response precedes the actual Assault result; no primary consequences are waived. Requires printed-rule clarity review. Changes exact maneuver count/timing for pending Harpy actions; preserve original source receipts and resolve pending choices before changing.
+
+### `engage-conversation-circumstances`
+
+Engage records each selected maneuver, real actor/opponent/Asset, actual human-authored resulting circumstances and immutable source event. It does not assign an unchosen map cell or invent numeric armour/damage.
+
+Source: Rulebook PDF25/printed23, eight Engage options; delegated recommendation.
+
+Reason: The printed options describe battlefield position and circumstances in the Conversation rather than a coordinate or HP procedure.
+
+Alternatives: Automatically choose a grid destination; Treat a mere handled acknowledgment as a maneuver effect
+
+Implementation/adjustment: Typed canonical Maneuver facts retain exact effects for source review and subsequent Conversation judgments. Actual Asset damage still uses the sole damage/Defeat port. Requires printed-rule clarity review. Any future automated position consumer must require actual player-chosen source facts; preserve historical maneuver records.
+
+### `handler-tag-original-human-choices`
+
+Removing an observed actual Cadre Handler Tag is diceless and may occur during another held Play. Favour asks the original Handler without an automatic reward; Compel lets that original human choose pausing for control or acting on the Tag. Attention is recorded directly.
+
+Source: Rulebook PDF11 / printed9, Handler Tags; delegated recommendation.
+
+Reason: The printed alternatives specify direct attention, optional favours and two Handler responses. They do not grant dice, automatic resources or a new Handler Play.
+
+Alternatives: Infer a favour grant or mechanical reward from the request; Automatically choose the Handler's action; Forbid all Tag uses while a scene is held
+
+Implementation/adjustment: Actual source-bound requests and original-human native replies; attention produces an original-controller private Inbox notice with only a technical read receipt, no fictional answer or required mechanical work. Saved private receipts remain readable under unavailable rules; new gameplay remains strictly gated. Safety pause blocks mechanical mutations. Requires printed-rule clarity review. Preserve consumed Tag receipts and pending original-body ownership when revising.
+
+### `handler-tag-consumption-during-proposals`
+
+Spending a Handler Tag invalidates only uncommitted proposals that relied on it, returning those choices to their original humans without rerolling. An already committed modifier remains; a repeated-Tag decision for the now removed Tag closes without inventing an Identity or rejection action.
+
+Source: Rulebook PDF11 / printed9: other-player Tag window and Handler Tag removal at any time; delegated recommendation.
+
+Reason: Both source rules must coexist. A consumed Tag cannot remain newly selectable, but consumption does not refund or replace a modifier already committed by an actual earlier event.
+
+Alternatives: Disallow removal while any Play is held; Keep an uncommitted removed Tag as an active resource; Undo a committed modifier or invent a required replacement Identity
+
+Implementation/adjustment: Only exact actual Handler body and Tag IDs are matched; known receipts and unrelated human choices remain. Requires printed-rule clarity review. Pending Tag windows and repeated-Tag decisions need source-aware reconciliation before changing timing.
+
+### `handler-tag-source-visibility-and-ending`
+
+The private picker exposes only observed Handler Tags. The original Girl supplies the factual request. If the exact original Handler role subsequently ends, its former human may close only that request against a proved original ending; a successor gains no obligation or fictional action.
+
+Source: Rulebook PDF11 / printed9; existing original-person lifecycle rules; delegated recommendation.
+
+Reason: A private selector must not reveal unobserved content or transfer an old request through a human account to a new character.
+
+Alternatives: Show every private Tag to any account; Let a successor answer as the old Handler; Leave the original request impossible to resolve after a proved ending
+
+Implementation/adjustment: Original ActorRefs, immutable source history and actual ending proof are required. This does not add M4 fictional-knowledge automation. Requires printed-rule clarity review. A different visibility or post-ending policy needs migration of pending source requests; retain immutable consumed Tag records.
+
+### `director-handler-tag-actual-target`
+
+A real Director uses Handler Tag rules on that Director's own world Tag record and controlled body. This never spends the Cadre Handler's Tags or lets the OOC GM answer for the Director. Temporary Girl roll rules do not transfer the original Cadre Handler's Tag ownership to the Director.
+
+Source: Rulebook PDF11/printed9 and PDF192/printed190; delegated recommendation.
+
+Reason: The Director explicitly uses Handler rules. Actual target/controller references keep this distinct from the Cadre Handler and its temporary rules context.
+
+Alternatives: Allow Tag use only on the Cadre Handler; Treat every NPC Handler job as a Director; Use the campaign GM account as every Director's controller
+
+Implementation/adjustment: Known present Director selector uses its sole world Tag authority; original controller owns any reply. A favour agreement gives no automatic help or free mechanical benefit; actual Director help still needs its separate price system. Requires printed-rule clarity review. Preserve exact NPC IDs and source-human audience; never reassign pending requests to successor Directors.
+
+### `mandatory-forbidden-dormant-dive`
+
+An actual Dormant-required Dive forbidden by completed original surgery uses existing source-specific honest manual adjudication. Original appointed or selected scene judge human assigns whole integer pre-Tag total with reason; no RNG/faces/Heat/Identity spend, then normal actual Tag and outcome owners. Inherited prohibition remains after actual rebirth.
+
+Source: official private rulebook PDF24 / printed22; official private rulebook PDF165 / printed163; official private rulebook PDF196 / printed194; delegated recommendation.
+
+Reason: The required Dormant Dive and a completed surgery prohibition can both apply, but the book supplies no exception for the resulting compulsory impossible roll. An owned explicit no-roll decision resolves that conflict without inventing ability restoration or dice.
+
+Alternatives: Deadlock the compulsory source permanently; Invent ability restoration or an automatic favorable result
+
+Implementation/adjustment: Required(dormant_dive_work) authenticates original body/controller, exact work revision, original surgery and source judge; AdjudicationService writes honest faces:null receipt then normal owned Tag/Dive pipeline. Only actual pending Dormant source work and exact original actor/controller; voluntary forbidden Dive remains unavailable.
+
+### `harpy-off-duty-roll`
+
+Retain one real 2d6 roll with base modifier zero because Harpies have no ranked Status; no Heat/Identity gain or spending. All tiers use the printed Harpy hide and recovery replacement, followed by actual owner choices and factual navigation review.
+
+Source: official private rulebook PDF181 / printed179; delegated recommendation.
+
+Reason: Harpy Off-Duty explicitly replaces scenes, whereas the adjacent Sensor exception explicitly replaces rolling. Harpies have no Cadre Status value, leaving the ordinary roll modifier undefined; retaining dice with zero base is a delegated interpretation.
+
+Alternatives: Treat all Harpy Off-Duty as diceless; Invent a current PC Status modifier
+
+Implementation/adjustment: Actual ActorPlay uses one 2d6/base0/noHeat receipt and normal Tags; HarpyRest owns hide facts, original judge review, all-tier recovery and actual reviewed return independently of Cadre Period. No Cadre Period, Status, Permission, mission/reward or same-human sheet mutation.
+
+### `harpy-off-duty-identities`
+
+Owner may author any number of ordinary Identities, preserving actual protected retained Identities. Existing matching names retain stable IDs; new names get new IDs; explicit owner hide/adjustment confirmation clears marks. Transport/UI payload bounds do not become fictional four-Identity cap.
+
+Source: official private rulebook PDF179 / printed177; official private rulebook PDF181 / printed179; delegated recommendation.
+
+Reason: The Harpy rebirth text allows any number of new Identities and the Harpy Off-Duty text allows adjustment freely, while core Girl rules set a four-Identity cap. Applying the Harpy exception avoids silently deleting actual retained larger lists.
+
+Alternatives: Import basic Girl four-Identity cap; Retain current count only
+
+Implementation/adjustment: Source owner explicitly supplies ordinary names and confirms adjustment; protected retained IDs remain, matching names retain actual IDs and chosen marks clear. Existing Embrace threshold interaction remains identified for source clarity rather than automatic truncation. Existing basic Embrace rule still replaces exactly one ordinary Identity at its printed threshold; never shrink an already larger Harpy list. Review existing len(all identities)>=4 threshold versus actual Free additional Identity as a distinct clarity item.
+
+### `owned-director-procedures-after-death`
+
+The original human selected as scene Director may finish only already-owned procedural Tag/Dive/hide questions from the frozen original episode after actual Director death. Exact original cast/history/receipt and real ending proof required; living roles retain their own actual resources, otherwise original human marker is finite OOC plus/minus one without body/Bond authority.
+
+Source: official private rulebook PDF5 / printed3; official private rulebook PDF24 / printed22; official private rulebook PDF192 / printed190; delegated recommendation.
+
+Reason: Actual Director death changes future role authority but does not identify a new author for a human-owned question already created by a committed original episode. The book does not define pending-question reassignment.
+
+Alternatives: Transfer every pending answer to current campaign GM; Deadlock all already-owned questions
+
+Implementation/adjustment: owned_director_procedure proves immutable original episode/cast/receipt, actual Director death and current same Harpy vessel; actual humans finish only finite owned procedures. Marker fallback is OOC plus/minus1/Bond0 and never a dead NPC body. No dead NPC mutation/revival, no new scene-role/global GM privilege. New episodes use actual current adjudicator.
+
+### `harpy-cut-link-original-ending`
+
+An exact original Harpy death closes her standing cut-link fight as original_died with actual ending event; it does not claim Helpless, healing, movement or successor compliance. Proposed original-owned hides/routes end sourcefully; existing offstage body/corpse position stays unknown.
+
+Source: official private rulebook PDF182 / printed180; delegated recommendation.
+
+Reason: A cut-link result requires fighting until Helpless; actual death makes that future body action impossible and is not itself the printed Helpless condition. Source closure must distinguish the two instead of forging compliance.
+
+Alternatives: Invent Helpless to satisfy fight condition; Keep an impossible dead-body fight pending forever
+
+Implementation/adjustment: Authoritative Harpy die records ended_event/original_died on exact standing fight; proposed hides/routes end with actual source, active offstage corpse location stays unknown. Actual already-damaged Girl Assets on unlink instead cause true source-foe Helpless. Only impossible exact-original Off-Duty source choices close without human response; true final-act/death-Tag procedures remain owned.
+
+### `postcareer-harpy-killer-tag`
+
+If factual killer is already an immutable ended original, record the chosen death Tag with stable ID and exact original recipient/giver in actual Harpy Defeat effect, leaving original archive snapshot immutable and replacement untouched. On a genuine same-original return, prove that actual recorded effect and materialize once with same stable ID.
+
+Source: official private rulebook PDF182 / printed180; delegated recommendation.
+
+Reason: The final Tag is inflicted on the actual killer, while a same-account replacement is a different character. Rewriting an immutable archive would falsify the earlier snapshot, and assigning to the successor would change the printed recipient.
+
+Alternatives: Grant Tag to current same-UID successor; Rewrite original archived sheet; Discard the printed final Tag
+
+Implementation/adjustment: DefeatEffect is sole postcareer consequence with exact original recipient/giver and stable TagID; ended_actor_source proves real original ending. Actual original-return hook verifies immutable effect and materializes once; archive/new-body snapshots remain unchanged. Actual archived Handler no-inheritance and ordinary genuine-return regressions are covered; a full combined postcareer-Tag original-return scene is not separately exercised in current fixture. No extra live Tag pool; same-person late rebirth recipient handling remains separate and requires actual birth proof, never UID fallback.
+
+### `handler-void-performed-self-cut`
+
+Knife removal records the actual patient-authored cut, body site and persistent wound with actual source event; it does not invent numeric Asset damage or another Handler Asset-replacement trigger.
+
+Source: official private rulebook PDF19 / printed17; delegated recommendation.
+
+Reason: The knife option describes actual removal but supplies no numerical damage cost or extra Handler Asset trigger. Inventing one could recurse into unrelated death/Asset replacement choices.
+
+Alternatives: Fabricate a numeric Handler Asset injury; Treat choosing the label as removal without actual performed account
+
+Implementation/adjustment: HandlerVoid stores performed wound, localized site and removal event under actual patient audit; no Asset damage/HP, Pilot resources or movement changes. Only actual source body/controller; no Pilot resources, transport or unrelated healing.
+
+### `handler-void-drugs-immediate-vs-treatment`
+
+Actual localized experimental-drug manifestation and halted spread satisfy the immediate printed choice while retaining void_present and an owned source treatment task. Subsequent actual removal remains necessary; no automatic execution or fictional timer is invented.
+
+Source: official private rulebook PDF19 / printed17; official private rulebook PDF20 / printed18; delegated recommendation.
+
+Reason: The printed drugs option halts spread; the subsequent note separately requires corruption removal or institutional consequences. The book gives no timer or automatic institution response, so immediate choice completion and persistent treatment must remain distinct.
+
+Alternatives: Pretend drugs removed all corruption; Hold unrelated completed interaction forever pending later surgery; Automatically execute the Handler
+
+Implementation/adjustment: Drugs creates real localized manifestation/spread_halted with void_present; source immediate work completes only after authenticated actual choice. Separate owned treatment remains visible even after source work resolves, with real later removal or actual original death. Original source parent may proceed after actual stabilization; actual biological condition remains pending on same original body until real removal or death.
+
+### `handler-void-performed-surgery`
+
+Choosing surgery requests actual immediate treatment; completion requires actual original human factual attestation that personnel performed the procedure and removed corruption, with specific account. It grants no other healing, coordinates, transport or NPC dialogue.
+
+Source: official private rulebook PDF19 / printed17; delegated recommendation.
+
+Reason: Requesting personnel and recording that surgery occurred are different facts. No automatic destination, surgeon controller or dialogue is supplied, and the text does not grant unrelated healing.
+
+Alternatives: Auto-teleport to a medical bay and manufacture a surgeon response; Treat request alone as performed removal
+
+Implementation/adjustment: Surgery choice leaves Void present and original source held; actual original human later attests performed procedure and removal with account. Completion proves the actual surgical event; physical coordinates/resources are untouched. Source remains held until actual performed-procedure source, and no fake consent or fake human reply is emitted.
+
+### `handler-director-void-rule-precedence`
+
+Actual Director NPC uses normal Handler physiology with its own original body/controller, independently of main Handler. Main Handler in an actual Director Girl-rules context uses actual Girl Asset corruption, never the normal Handler option list.
+
+Source: official private rulebook PDF19 / printed17; official private rulebook PDF192 / printed190; delegated recommendation.
+
+Reason: PDF192 explicitly assigns Handler rules to the actual Director and Girl rules to the Handler in that presence. An ActorRef kind or human GM account cannot override that printed rule context.
+
+Alternatives: Apply normal Handler physiology to every Handler ActorRef; Impersonate the main GM body when Director NPC gains Void
+
+Implementation/adjustment: Normal Handler and actual Director NPC use original-body HandlerVoid; actual Handler Girl context uses distinct HandlerGirlVoid and sole real Item Assets. Controller, body and rule context remain separate and source-proved. No Kind/UID coercion or copied Pilot/Frame resources.
+
+### `handler-girl-existing-asset-factual-registration`
+
+Zero modeled mechanical Girl Assets require an actual owner proposal of real preexisting gear/cybernetics/capability plus original source GM/selected judge factual review. Preserve actual damage and weapon facts, cap at four, store one sole HeldItem Asset authority with immutable proposal/review proofs. No automatic baseline two, new gear, paid Ability, repair or Frame is granted.
+
+Source: official private rulebook PDF15 / printed13; official private rulebook PDF19 / printed17; official private rulebook PDF192 / printed190; delegated recommendation.
+
+Reason: The Director rule grants zero Heat and two Identities but does not assign a Frame or mechanical starting Assets. Girl Void requires an actual uncorrupted Asset; zero unknown Assets cannot be treated as an all-Void set or a license to invent two defaults.
+
+Alternatives: Invent two starting Assets; Treat zero Assets as all Void; Use normal Handler physiology despite Girl-rule context
+
+Implementation/adjustment: Original patient proposes real existing capability/gear, frozen source judge factually reviews, cap4 is rechecked and actual existing damage/weapon status is preserved. HeldItem is sole mechanical authority; immutable proposal/review/origin proof is checked by Item.prove_item. Failed facts leave forced source pending, not cancelled. If no eligible facts can be established, actual factual review stays pending. Rejecting an unproved proposal does not veto the forced Void consequence.
+
+### `handler-girl-void-choice-ownership`
+
+For Mockingbird high source, original caster chooses the actual existing counterpart Asset; affected Handler Girl writes its Void change. Factual registration owner/judge roles remain separate.
+
+Source: official private rulebook PDF19 / printed17; official private rulebook PDF36 / printed34; official private rulebook PDF192 / printed190; delegated recommendation.
+
+Reason: Mockingbird high explicitly gives the caster the Asset choice, while the general Void rule describes the affected person rewriting the change. Factual setup must not transfer the caster choice to patient or bot.
+
+Alternatives: Allow patient or bot to substitute for original caster target choice
+
+Implementation/adjustment: After actual owner/judge fact setup, frozen original caster selects eligible AssetID, then affected original patient supplies Void description. Completion proves both actual audited steps and actual sole Item mutation, with rollback for label-only completion. Source audit proves original caster selection, actual patient rewrite and actual sole Item mutation before completing held work.
+
+### `handler-girl-allure-without-assigned-frame`
+
+A nonempty all-Voided actual Girl Asset set records persistent source-bound allure. Handler Girl has no granted assigned Frame; occupying a foreign Frame cannot cause invented fusion, acquisition or transformation.
+
+Source: official private rulebook PDF19 / printed17; official private rulebook PDF192 / printed190; delegated recommendation.
+
+Reason: General Girl allure is conditioned on entry into your Frame, but the temporary Handler Girl context provides no assigned Frame. Inferring one from a foreign occupied vessel would grant resources and a transformation not established by source.
+
+Alternatives: Create an assigned Frame from an occupied foreign vessel; Convert immediately without actual own Frame entry
+
+Implementation/adjustment: A nonempty all-Voided actual Girl Asset set records original-body allure/assigned_frame=None. Asset consequence and original parent complete; no Frame/Harpy/Pilot or transport is created. Any future real assignment requires a separate proved continuation. Actual Asset rewrite and original interaction complete while typed original-body allure remains, with no Frame/Harpy/Pilot fabrication.
+
+### `handler-girl-already-void-source-coalescence`
+
+An additional actual forced Void source on a NONEMPTY already all-Voided Girl Asset set coalesces its true allure condition without a fabricated Asset choice, rewrite or acknowledgment. Source proof and real actual high response must precede automatic callback.
+
+Source: official private rulebook PDF19 / printed17; official private rulebook PDF36 / printed34; official private rulebook PDF192 / printed190; delegated recommendation.
+
+Reason: Once a nonempty actual Girl Asset set is already all Void, a further forced gain has no new uncorrupted Asset to choose. The actual allure condition remains true, but an extra choice or acknowledgment would be fabricated.
+
+Alternatives: Treat empty unknown Assets as all Void; Ask for a fictitious already-corrupted target mutation; Deadlock a proven source with no eligible new Asset
+
+Implementation/adjustment: Real accepted trigger/high receipt/actual response precede post-response source synchronization, which proves nonempty actual all-Void Item Assets and automatically completes exact source. Empty or unknown sets remain factual-review work; no duplicate mutation or fake human reply. No additional resource mutation or RNG; each actual source is traced; no fake human answer.
+
+### `owned-handler-girl-void-after-director-death`
+
+Actual already-committed Girl-rule Void source preserves its original body/context and original human factual judge after Director death. Only that prior owned procedural review and patient/caster choices may finish; Director NPC remains dead and no new Girl role/global GM authority is granted.
+
+Source: official private rulebook PDF19 / printed17; official private rulebook PDF36 / printed34; official private rulebook PDF192 / printed190; delegated recommendation.
+
+Reason: A committed original Girl-rule corruption effect remains causally owed even if the Director later dies and future Handler rules change. The source does not reassign that pending human factual review or undo the original physical effect.
+
+Alternatives: Silently switch to normal Handler physiology; Transfer all original questions to a new principal; Deadlock a real already-committed source
+
+Implementation/adjustment: Frozen original context/body/caster/judge proof allows only prior owned factual review and original patient/caster steps. Original human reviewer may act OOC after NPC death, with no NPC revival or new role authority; actual Handler body death closes only its impossible source without rewrite/removal/Frame fabrication. Same physical body proofs and immutable source epoch required; actual Handler body death closes only its impossible source work without fake rewrite/removal or successor inheritance.
+
+### `offstage-world-advance-preserves-absence`
+
+Advance the actual on-map eligible Gorgons once; a source-proved offstage body or Directed goal has no invented map action. Preserve its cached canonical World coordinates only as historical storage, mask them in all current physical views.
+
+Source: Rulebook PDF 123, 166, 182 / printed 121, 164, 180; delegated recommendation.
+
+Reason: The printed map operations require actual presence; a Rift crossing does not magically return someone for an end-of-period step.
+
+Alternatives: Block the entire period until every actor physically returns; silently move cached offstage coordinates.
+
+Implementation/adjustment: Implemented only within this bounded source workflow; source eligibility, original human choices, release gates and immutable history remain. Requires printed-rule clarity review. Periods may continue while the absent actual actors retain source-bound offstage obligations; no rewards, travel or relocation is invented.
+
+### `last-base-aftermath-timing`
+
+Apply concrete destruction and real Budget trigger before the originating strike completes. Preserve actual required job-loss/aftermath work that blocks mission/period progression, without holding the strike chat through transport, rescue or replacement character setup.
+
+Source: Rulebook PDF 25, 122, 150 / printed 23, 120, 148; delegated recommendation.
+
+Reason: Printed immediate collateral and longer institutional consequences occur at different fictional times.
+
+Alternatives: Keep strike channel locked until all employment/transport/new persona steps finish; acknowledge the aftermath without actual effects.
+
+Implementation/adjustment: Implemented only within this bounded source workflow; source eligibility, original human choices, release gates and immutable history remain. Requires printed-rule clarity review. Actual mission/OffDuty remains blocked until the real source episode completes; unrelated strike chat can restore safely.
+
+### `last-base-institutional-outcome`
+
+The frozen original human judge makes the source employment review, including retained-under-review because the book says likely, or actual living fired/prison outcomes. New Handler requires genuine creation/acceptance; execution requires separate real Foundation agent acceptance and actual performance; reassignment requires each original owner transport facts and a real new map.
+
+Source: Rulebook PDF 122 / printed 120; delegated recommendation.
+
+Reason: Likely is not automatic death; firing and imprisonment do not erase or replace the original body.
+
+Alternatives: Automatically kill the Handler; auto-spawn a replacement; teleport all actors onto a new map; manufacture an executor reply.
+
+Implementation/adjustment: Implemented only within this bounded source workflow; source eligibility, original human choices, release gates and immutable history remain. Requires printed-rule clarity review. Historical original bodies/resources/custody and old map are privately preserved. Known contradictory access/custody blocks execution or transport. The institutional judge remains an OOC source role if its prior fiction body ended.
+
+### `sprite-finite-physical-interception`
+
+Offer living known co-located actual Sprites one source opportunity per human controller before an incoming physical Asset/destroying/fatal blow, excluding Engage and deliberate self-cost. First real interception damages the chosen intact Sprite Asset and shields the original body, including fatal Core strikes; original roll, modifiers and target remain frozen.
+
+Source: Rulebook PDF 15, 26, 162, 166 / printed 13, 24, 160, 164; delegated recommendation.
+
+Reason: Leap in to take a blow names a physical interception, not a new Core strike against an unexposed Sprite or a new RNG decision.
+
+Alternatives: Retarget the original receipt/Asset modifier; automatically expose/kill the Sprite Core; allow self-cost escape; forge every nonresponding controller pass.
+
+Implementation/adjustment: Implemented only within this bounded source workflow; source eligibility, original human choices, release gates and immutable history remain. Requires printed-rule clarity review. An actual explicit decline applies the original source consequence. Multiple actual Sprites per human share an ID dropdown. Other opportunities are source-superseded without fake human responses.
+
+### `gorgon-damaged-asset-capability`
+
+A Gorgon may declare a real damaged owned Asset only after actual frozen judge confirms its described capability before any effect. It remains damaged; arbitrary gear or body description is not a mechanical Asset.
+
+Source: Rulebook PDF 15, 162 / printed 13, 160; delegated recommendation.
+
+Reason: The Gorgon Play requires stating its actual Assets; damaged-vs-functional fighting is a Conversation fact rather than invented repair.
+
+Alternatives: Ban all damaged Assets categorically; silently treat the damaged Asset as repaired; admit any untracked gear as an Asset.
+
+Implementation/adjustment: Implemented only within this bounded source workflow; source eligibility, original human choices, release gates and immutable history remain. Requires printed-rule clarity review. Source intent, resource hash, current ownership, judge account and approval remain auditable. Denial performs no effect.
+
+### `vacant-current-frame-snoop-loss`
+
+Out-of-battle Snoop damage to an exactly proved vacant current Frame changes its actual Asset only. Losing its final intact Frame Asset disables that actual Frame; it does not teleport or roll Defeat for an absent Girl. Real repair is required before later piloting. Independent Core or other actual occupant is gated to its own source port.
+
+Source: Rulebook PDF 15, 29 / printed 13, 27; delegated recommendation.
+
+Reason: Defeat says defeated in battle; the note assumes a present Pilot in a Frame. Vacancy is a separate actual physical source fact.
+
+Alternatives: Roll Defeat for the remotely absent owner; silently place the owner inside; damage a replacement/parked Frame alias.
+
+Implementation/adjustment: Implemented only within this bounded source workflow; source eligibility, original human choices, release gates and immutable history remain. Requires printed-rule clarity review. Original Girl body/vessel/position/custody/resources remain untouched. Exact current Frame instance and real discovery/relevance/reach are mandatory.
+
+### `gorgon-attack-target-owned-asset`
+
+When an attacked Girl accepts Asset damage instead of a response Play, her actual controller selects her currently intact physically available Asset. Source counter/response ownership never transfers to the attacking Gorgon human.
+
+Source: Rulebook PDF 162 / printed 160; delegated recommendation.
+
+Reason: The Girl must make a Play or it will damage an Asset, while the source does not explicitly name who selects the slot; owner choice preserves actual resource agency.
+
+Alternatives: Attacking Gorgon controller chooses all victim Assets; actual judge chooses every slot.
+
+Implementation/adjustment: Implemented only within this bounded source workflow; source eligibility, original human choices, release gates and immutable history remain. Requires printed-rule clarity review. Only the slot-choice default changes; the mandatory incoming blow, real last-family consequences, and optional Sprite opportunity remain source-owned.
+
+### `gorgon-contest-real-asset-destruction`
+
+Judge selects the actual losing Asset among the actual pitted Assets. Remove that exact active resource and preserve immutable destroyed provenance; a real Harpy final Frame loss creates actual HarpyDefeat. Directed protection still requires real judge-confirmed indirect approach.
+
+Source: Rulebook PDF 162, 164 / printed 160, 162; delegated recommendation.
+
+Reason: The book says destroying the losing Asset, not merely marking damage on a resource that can be freely repaired.
+
+Alternatives: Use ordinary damage; remove an unrelated resource; infer fictional Core death or fake numerical HP.
+
+Implementation/adjustment: Implemented only within this bounded source workflow; source eligibility, original human choices, release gates and immutable history remain. Requires printed-rule clarity review. Current sole-origin base/HeldItem resource is removed once; actual wreckage/original JSON/source event remains private and cannot be repaired back into a duplicate pool.
+
+### `city-threat-two-successful-collateral-plays`
+
+Count each distinct actual Collateral Damage Play once if any of its real selected effects applies. Wholly interrupted, unreachable, or capability-denied Plays add no success. On the actual second success at the threatened City, destroy that same City through the ordinary sole collateral/Budget/territory source port.
+
+Source: Rulebook PDF 144, 162 / printed 142, 160; delegated recommendation.
+
+Reason: The source says successfully uses Collateral Damage twice, rather than requiring the structure option or counting each chosen option as a separate Play.
+
+Alternatives: Count only successful structure destruction options; Count each chosen effect separately; Count interrupted or retried Plays
+
+Implementation/adjustment: Implemented only within this bounded source workflow; source eligibility, original human choices, release gates and immutable history remain. Requires printed-rule clarity review. Source-bound once-only counters; real City destruction and many-residents casualty population fact, while individual NPC fates remain unconfirmed unless actually selected/proved caught. Actual absent/dead source Gorgon does not gain map effects from a cached cell.
+
+### `directed-ended-person-goal-deferral`
+
+If its actual NPC goal is canonically dead, defer only that Directed Gorgon with reason actual_goal_ended and the exact original dead-body snapshot. Preserve corpse position and the existing goal; other present Gorgons advance normally.
+
+Source: Rulebook PDF 123, 166 / printed 121, 164; delegated recommendation.
+
+Reason: The body has ended. Requiring its resurrection or advancing from an unrelated replacement would invent physical facts. The printed rule supplies no automatic new person/goal after the target dies.
+
+Alternatives: Block the entire period; Treat the goal automatically fulfilled; Retarget a same-human successor; Automatically chase the corpse as a living person
+
+Implementation/adjustment: Implemented only within this bounded source workflow; source eligibility, original human choices, release gates and immutable history remain. Requires printed-rule clarity review. No automatic goal replacement, fulfillment, movement, resurrection, rewards or corpse transport. Actual later goal decisions remain explicit source actions.
+
+### `mockingbird-risk-order`
+
+After actual Tags and any source-owned finite roll adjustments, the original owner may pay real Void to choose 8,9,10. Preserve raw receipt; finish original primary effect choices before resolving genuine Void continuation.
+
+Source: Rulebook PDF 35, 24 / printed 33, 22; delegated recommendation.
+
+Reason: Risk replaces the actual final pre-consequence total. Preserving original Tags, primary effects and one raw receipt avoids inventing a reroll or applying original effects to a successor.
+
+Alternatives: Resolve transformation before original effects or adjust before Tags.
+
+Implementation/adjustment: Implemented only within this bounded source workflow; source eligibility, original human choices, release gates and immutable history remain. Requires printed-rule clarity review. No wrongbody primary effects; no duplicate RNG/Heat; exact source roll preserved.
+
+### `mockingbird-risk-existing-resistance`
+
+A Risk cost while already resisting the same original current threshold is covered by that actual threshold; do not create another Keep or circular child continuation.
+
+Source: Rulebook PDF 35 / printed 33; delegated recommendation.
+
+Reason: The cost contributes to the same actual current all-Void threshold. A second circular resistance would not describe a distinct body or threshold.
+
+Alternatives: Create an independent resistance for every voluntary cost.
+
+Implementation/adjustment: Implemented only within this bounded source workflow; source eligibility, original human choices, release gates and immutable history remain. Requires printed-rule clarity review. One real source resistance resolves actual ongoing threshold, cost still paid.
+
+### `mockingbird-risk-off-duty-boundary`
+
+Synchronize the final shifted OffDuty/Observation roll once to its original period before actual Risk consequence; future independent scenes/recovery retain originalCID and actual ending semantics and do not hold roll chat indefinitely.
+
+Source: Rulebook PDF 35, 25, 26 / printed 33, 23, 24; delegated recommendation.
+
+Reason: The original roll qualifies the real period before future scenes. Holding its chat lock over the whole period prevents actual required scenes and risks successor benefit inheritance.
+
+Alternatives: Keep all future period scenes/recovery under original roll lock or transform before saving actual final period result.
+
+Implementation/adjustment: Implemented only within this bounded source workflow; source eligibility, original human choices, release gates and immutable history remain. Requires printed-rule clarity review. No globalpending deadlock, no period roll resync or successor benefit inheritance.
+
+### `mockingbird-immunity-only-harpy`
+
+Risk suppresses Girl allure/Harpy outside the stated own-Frame criterion, but preserves the assigned fully-Voided Frame consequence; actual outside body uses abandoned Frame/Gorgon source, unknown pose gets actual physical review.
+
+Source: Rulebook PDF 19, 35 / printed 17, 33; delegated recommendation.
+
+Reason: The printed immunity is specifically to becoming a Harpy under the named condition; it does not waive the separate actual fully corrupted Frame consequence.
+
+Alternatives: Existing broad no-followup branch outside Frame also waived Frame growth.
+
+Implementation/adjustment: Implemented only within this bounded source workflow; source eligibility, original human choices, release gates and immutable history remain. Requires printed-rule clarity review. No invented immunity, no movement into cockpit or copied body, original Girl stays outside while real Frame can become Gorgon.
+
+### `call-classification-caps-and-intrinsic`
+
+Batch real family changes obey final4Girl/5Frame caps and explicit excess non-Void ordinary replacements; preserve original intrinsic ID/marker/sourceclassification. Additional privilege applies only actual current Frame intrinsic in Frame family.
+
+Source: Rulebook PDF 15, 35 / printed 13, 33; delegated recommendation.
+
+Reason: Moving existing Assets changes their actual family without erasing their origin or waiving the ordinary family caps. A former Frame intrinsic is not a permanent transferable free slot.
+
+Alternatives: Waive caps for any-number wording, discard intrinsic history or keep oldFrame privileged forever.
+
+Implementation/adjustment: Implemented only within this bounded source workflow; source eligibility, original human choices, release gates and immutable history remain. Requires printed-rule clarity review. No automatic overflow deletion/freeAsset/copy; movedGirl countsGirl, movedback oldFrame intrinsic counts ordinary after replacement.
+
+### `npc-beyond-intense-real-heat-only`
+
+Preserve actual Intense Bonds with ordinary NPCs; deepening beyond Intense grants +2 only to each actual Heat-bearing participant. Ordinary NPCs gain no invented Heat resource.
+
+Source: Rulebook PDF 14, 36 / printed 12, 34; delegated recommendation.
+
+Reason: The printed Bond rule can coexist with NPC Bonds even though ordinary NPCs have no Heat resource; preserving the edge and applying existing real resources avoids excluding printed social relations.
+
+Alternatives: Disallow further deepening Intense NPC Bonds, or invent NPC Heat.
+
+Implementation/adjustment: Implemented only within this bounded source workflow; source eligibility, original human choices, release gates and immutable history remain. Requires printed-rule clarity review. Snoop, intimacy and source-supported social Punishments may deepen valid NPC Bonds; current Pilot/Handler/Harpy counterpart gains actual +2 Heat, no proxy sheet or new NPC runtime. External actors with unimplemented resource ports remain gated.
+
+### `starry-current-tag-capability-lifetime`
+
+Preserve the immutable printed Person choices separately; derive Starry capability extras only while its exact original Tag remains present on the actual source holder. Marking alone keeps the Tag; actual removal stops the extra. Same-person Harpy continuity requires real conversion proof and retained exact Tag ID.
+
+Source: Rulebook PDF 35, 36 / printed 33, 34; delegated recommendation.
+
+Reason: The printed duration depends on still having this Tag; storing its capability as a permanent native choice would outlive that condition.
+
+Alternatives: Permanently merge the extra into the conversation snapshot, or end it merely on marking.
+
+Implementation/adjustment: Implemented only within this bounded source workflow; source eligibility, original human choices, release gates and immutable history remain. Requires printed-rule clarity review. No permanent free capability, no successor UID inheritance, no rewrite of original roll/Tag consequence.
+
+### `enforcer-master-known-total-order`
+
+Master's Dog settles its finite optional +2, -2 or decline after actual Tags, before Risk chooses final8/9/10 and before all final ordinary Off-Duty benefit qualifications.
+
+Source: Book PDF79 / printed77; interaction with Risk PDF35 / printed33; delegated recommendation.
+
+Reason: Both mechanics change the known roll. A single ordered pipeline preserves actual raw receipts and prevents a benefit qualifying on an intermediate total.
+
+Alternatives: Settle Risk before Master; qualify benefits on intermediate totals.
+
+Implementation/adjustment: Current Enforcer candidate; independent source review and actual owner testing remain pending. No typed Rulings configuration field is implied by this documentation label. A future ordering change affects pending known receipts; retain source modifiers and do not reroll.
+
+### `enforcer-master-actual-handler`
+
+Master's Dog initial Bond and sleeping-room entitlement bind the actual fictional Handler body at acquisition, while Director scene adjudication is separate.
+
+Source: Book PDF79 / printed77; delegated recommendation.
+
+Reason: The benefit names your Handler; a selected Director source role does not become a replacement body or transfer an earned Bond. The room is fictional entitlement only, with no Discord staff access, human attendance, teleport or extra qualifying scene.
+
+Alternatives: Transfer room and Bond automatically to every temporary Director or successor Handler.
+
+Implementation/adjustment: Current Enforcer candidate; independent source review and actual owner testing remain pending. No typed Rulings configuration field is implied by this documentation label. Actual source relationship changes require source-backed adjustments; no silent transfer.
+
+### `enforcer-pavlov-owned-obedience`
+
+The original owner records actually following an order before Keep; optional good-soldier and bliss positives add to the normal tier results. A formal bot-issued numeric order is not required by the printed trigger.
+
+Source: Book PDF79 / printed77; delegated recommendation.
+
+Reason: The trigger is fictional obedience, not a software order-ID requirement. Its extra positives do not remove low negatives or alter ordinary Handler enough adjudication.
+
+Alternatives: Require a numeric formal order; replace rather than add normal positives.
+
+Implementation/adjustment: Current Enforcer candidate; independent source review and actual owner testing remain pending. No typed Rulings configuration field is implied by this documentation label. Changing trigger evidence affects future preparation; recorded prior own factual accounts stay history.
+
+### `enforcer-firepower-effect-order`
+
+The optional additional enemy Asset hit is selected, source-reviewed and applied inside the same actual Assault before its normal primary tier consequences are resolved; all actual follow-ups still block root completion.
+
+Source: Book PDF79 / printed77; Assault PDF25 / printed23; delegated recommendation.
+
+Reason: A high Assault can remove the original acting Frame through its own ordinary consequences. Applying its simultaneous earned extra hit first prevents that effect being stranded or reassigned to a successor body. No extra roll is granted.
+
+Alternatives: Resolve all original high consequences first even if the source Frame is then lost.
+
+Implementation/adjustment: Current Enforcer candidate; independent source review and actual owner testing remain pending. No typed Rulings configuration field is implied by this documentation label. Changing order requires preserving original known rolls, exact acting body and pending effect proofs.
+
+### `enforcer-snoop-high-bond`
+
+Snoop11+ asks one or two printed questions and trashes remaining relevant property, without implicitly also granting the8-10 Bond increase.
+
+Source: Book PDF80 / printed78; delegated recommendation.
+
+Reason: The high branch does not say as8-10 and omits the Bond clause, so effects follow their actual named tier.
+
+Alternatives: Inherit the mid Bond increase on high.
+
+Implementation/adjustment: Current Enforcer candidate; independent source review and actual owner testing remain pending. No typed Rulings configuration field is implied by this documentation label. If clarified otherwise, adjust actual source Bonds explicitly rather than rewriting completed rolls.
+
+### `enforcer-snoop-absent-owner`
+
+Snoop may concern an absent owner's actual accessible stored property. The original target controller supplies private printed findings; the OOC facilitator confirms existence/access for unmodeled ordinary props. This does not give an absent body scene knowledge or impose an OOC veto over fictional theft.
+
+Source: Book PDF80 / printed78; physical source reconciliation; delegated recommendation.
+
+Reason: The printed trigger concerns another person's stuff, not mandatory physical attendance by its owner. Canonical contradictory body/object positions still prohibit teleporting a carried item; ordinary descriptions create no mechanical Asset slots.
+
+Alternatives: Require the owner physically present; invent objects from caster descriptions; require fictional target consent for theft.
+
+Implementation/adjustment: Current Enforcer candidate; independent source review and actual owner testing remain pending. No typed Rulings configuration field is implied by this documentation label. Future location clarification affects pending source facts; actual object IDs/custody and private original answers remain immutable.
+
+### `enforcer-explicit-source-rule-retention`
+
+Frame Grafting may acquire actual reviewed Enforcer base rules for3; Ability Unlock2 remains Requisitions only. Paid Frame Swap may retain one actually owned supported base or acquired rule, with its original source and exact new Frame binding.
+
+Source: Book PDF16 / printed14; Enforcer PDFs78–80 / printed76–78; delegated recommendation.
+
+Reason: The book says rule for Grafting and Swap and Requisition for Unlock. A retained initial-effect rule does not re-run its acquisition effect. Native rule retention gets an actual paid Swap receipt; acquired rules keep their original grant and verified retention chain.
+
+Alternatives: Allow only Personal Firearm retention; treat any Frame label as an unlock; grant all old Frame rules.
+
+Implementation/adjustment: Bounded Enforcer candidate source workflow; real independent review and human player acceptance remain pending. Documentation key does not imply a new typed Rulings setting. Changing eligibility affects new selections and actual pending plans. Preserve completed paid swaps, original rule receipts, real physical objects and previously earned Bonds.
+
+### `retained-enforcer-trigger-source-order`
+
+A genuinely acquired or retained Enforcer Permission Trigger has a separate once-per-period review beside a different native trigger. Eligibility uses the actual pre-roll Off-Duty source, so later acquisition/restoration cannot qualify retroactively.
+
+Source: Book PDFs16,78 / printed14,76; delegated recommendation.
+
+Reason: Picking a rule preserves its actual consumer. Distinct genuinely owned triggers can each award their printed bonus; repeating one custody delivery for the same character and same trigger cannot award again. No new roll or synthetic delivery is granted.
+
+Alternatives: Let a retained trigger stop working outside Enforcer; qualify a new rule against an old known roll; count one delivery repeatedly for the same trigger.
+
+Implementation/adjustment: Bounded Enforcer candidate source workflow; real independent review and human player acceptance remain pending. Documentation key does not imply a new typed Rulings setting. Existing bonus and custody histories remain immutable. New rule ownership or delivery changes must use actual source events; never silently replay a completed award.
+
+### `harpy-enforcer-low-status-capability`
+
+An actual retained Enforcer Initiative uses the original Harpy actor/controller and real Frame contact. Its low Status-loss option is unavailable when that actual role has no Cadre Status resource; other source-supported printed low choices remain available.
+
+Source: Book PDF79 / printed77; Harpy role resources PDFs177–181 / printed175–179; delegated recommendation.
+
+Reason: A source does not create a missing Cadre Status track. Omitting the inapplicable option avoids pretending to lower a replacement Girl or converting an actual Harpy into a Pilot proxy. Original typed Tag, object custody, grasp and source-supported Punishment ports still operate.
+
+Alternatives: Create a proxy Girl Status; apply disapproval with no mechanical Status loss; disable the whole retained Play.
+
+Implementation/adjustment: Bounded Enforcer candidate source workflow; real independent review and human player acceptance remain pending. Documentation key does not imply a new typed Rulings setting. If Harpy Cadre membership is later explicitly supported, add a source-backed actual role resource before exposing the missing option. Do not rewrite original player characters or prior receipts.

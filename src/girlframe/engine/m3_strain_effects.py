@@ -221,15 +221,67 @@ def apply(
             )
             if victim is None:
                 raise ValueError("Choose an actual living NPC at the event's location")
-            changes = (
-                {"alive": False} if rule == "strain.void.low.4.1" else {"captive_of": incoming.id}
-            )
-            world = world_rules.update(
-                world,
-                npcs=tuple(
-                    x.model_copy(update=changes) if x.id == victim.id else x for x in world.npcs
-                ),
-            )
+            if rule == "strain.void.low.4.1":
+                from girlframe.engine.m3_actor_state import ActorRef
+                from girlframe.engine.m3_battle import category, end_actor_casts
+                from girlframe.engine.m3_enforcer import end_grasps
+                from girlframe.engine.m3_physical import interrupt_journeys
+
+                ref = ActorRef(kind="npc", entity=victim.id)
+                if source_event is None:
+                    raise ValueError(
+                        "The actual Aggressive introduction needs its real source event"
+                    )
+                if category(state, ref) == "harpy":
+                    raise ValueError(
+                        "A captured Harpy Core is not an ordinary NPC introduction victim"
+                    )
+                state.world = world
+                if "director" in victim.jobs:
+                    from girlframe.engine.m3_battle_director import die
+
+                    state = die(state, ref, source_event, choice.account)
+                else:
+                    state = end_actor_casts(
+                        end_grasps(
+                            interrupt_journeys(state, ref, source_event, choice.account),
+                            ref,
+                            source_event,
+                        ),
+                        ref,
+                        source_event,
+                    )
+                    assert state.world is not None
+                    state.world = world_rules.update(
+                        state.world,
+                        npcs=tuple(
+                            x.model_copy(update={"alive": False}) if x.id == victim.id else x
+                            for x in state.world.npcs
+                        ),
+                    )
+                assert state.world is not None
+                world = state.world
+                state.facts.append(
+                    dict(
+                        kind="aggressive_introduction_consumed",
+                        source_work=source_work,
+                        source_event=source_event,
+                        gorgon=incoming.id,
+                        followup="aggressive_introduction_npc_death",
+                        source_pdf="165",
+                        victim=ref.model_dump_json(),
+                        original_body=victim.model_dump_json(),
+                        account=choice.account,
+                    )
+                )
+            else:
+                world = world_rules.update(
+                    world,
+                    npcs=tuple(
+                        x.model_copy(update={"captive_of": incoming.id}) if x.id == victim.id else x
+                        for x in world.npcs
+                    ),
+                )
     elif rule == "strain.void.high.3.1":
         fields(choice, {"target", "new_assets", "new_type", "core_plan"})
         target = next((x for x in world.gorgons if x.id == choice.target and not x.alive), None)
@@ -353,6 +405,7 @@ def apply(
             ),
         )
     elif rule == "strain.budget.high.2.2":
+        assert state.handler is not None
         fields(choice, {"tags"})
         expected = set(state.order) | {state.handler}
         if len(choice.tags) != len(expected) or {x.owner for x in choice.tags} != expected:

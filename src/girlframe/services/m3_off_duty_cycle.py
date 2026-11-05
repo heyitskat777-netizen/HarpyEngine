@@ -215,6 +215,9 @@ class CycleService:
             self.missions._handler(c, viewer)
             self.missions.access.authorize(c, viewer, "strain")
             self.missions.access.authorize(c, viewer, "world")
+            from girlframe.services.m3_quadrant_loss import require_aftermath_clear
+
+            require_aftermath_clear(state)
             strain = state.strain
             if (
                 state.world is None
@@ -748,6 +751,9 @@ class CycleService:
             self.missions._handler(c, viewer)
             self.missions.access.authorize(c, viewer, "world")
             period, state = self._current(c, viewer, identity, game_revision)
+            from girlframe.services.m3_quadrant_loss import require_aftermath_clear
+
+            require_aftermath_clear(state)
             if period.status_review_game_revision != state.revision:
                 raise WorkflowError(
                     "Review current performance again after the intervening state change."
@@ -771,10 +777,17 @@ class CycleService:
                 raise WorkflowError("Initialize the actual world and Strain before period end.")
             followups: tuple[world_rules.Followup, ...] = ()
             if identity not in updated.world.completed_off_duty:
-                from girlframe.services.m3_world import require_world_advancement
+                from girlframe.engine.m3_world_advance import advance
 
-                require_world_advancement(updated)
-                result = world_rules.end_off_duty(updated.world, identity, movements, changes)
+                result, deferred_positions = advance(updated, identity, movements, changes)
+                if deferred_positions:
+                    updated.facts.append(
+                        dict(
+                            kind="world_advancement_absent",
+                            period=identity,
+                            actors=json.dumps(deferred_positions, sort_keys=True),
+                        )
+                    )
                 updated.world = result.world
                 followups = result.followups
             elif movements or changes:
@@ -788,6 +801,20 @@ class CycleService:
                     state.model_copy(update={"world": updated.world}).model_dump_json()
                 )
             event = str(uuid4())
+            from girlframe.engine.m3_collateral import stage_loss
+            from girlframe.engine.m3_handler_consequences import active_handler
+            from girlframe.services.m3_medical import MedicalService
+
+            judge, appointment = MedicalService(self.store)._handler(c)
+            loss_episode = stage_loss(
+                state,
+                updated,
+                source="world-period:" + identity,
+                event=event,
+                judge=judge,
+                appointment=appointment,
+                handler=active_handler(state),
+            )
             additions = tuple(
                 Trigger(
                     id=identity + ":structure:" + x.entity,
@@ -818,6 +845,10 @@ class CycleService:
                 completed=not severe,
             )
             self.periods._save(c, finished, event)
+            if loss_episode is not None:
+                from girlframe.services.m3_quadrant_loss import materialize_loss
+
+                materialize_loss(self.game, c, loss_episode, event, period=identity)
             if severe:
                 table = t.m3["m3_required_work"]
                 anchor = (
@@ -836,6 +867,8 @@ class CycleService:
                 from girlframe.services.m3_work import related
 
                 for item in severe:
+                    if item.kind == "quadrant_lost_handler_outcome":
+                        continue
                     related(
                         c,
                         self.store,

@@ -58,7 +58,12 @@ def assets(
         actual.occupied_frame_instance in (None, actual.frame_instance)
         and (placement is None or placement.occupied_frame_owner is None)
     )
-    own = [x for x in actual.assets if x.family != "frame" or own_frame_present]
+    scene_objects = {x.asset_id for x in state.held_items if x.location_mode == "scene"}
+    own = [
+        x
+        for x in actual.assets
+        if x.id not in scene_objects and (x.family != "frame" or own_frame_present)
+    ]
     for item in mechanical_assets(state, actor):
         if not any(x.id == item.id for x in own):
             own.append(
@@ -257,6 +262,7 @@ def damage(
     *,
     opponent: ActorRef | None = None,
     indirect: bool = False,
+    inside_frame: bool | None = None,
 ) -> tuple[GameState, tuple[Required, ...]]:
     """Apply actual damage, or return the exact printed owner's replacement obligation.
 
@@ -268,6 +274,14 @@ def damage(
     kind = category(state, target)
     if not event.strip():
         raise ValueError("Combat effects require their actual immutable source event")
+    if kind == "handler" and actual.rules == "handler_girl":
+        from girlframe.engine.m3_items import damage_mechanical_asset
+
+        if identity is None or opponent is None:
+            raise ValueError("Actual HandlerGirl damage needs its real owned Asset and opponent")
+        return damage_mechanical_asset(
+            state, target, identity, event, opponent=opponent, inside_frame=inside_frame
+        ), ()
     if kind == "handler":
         if identity is not None:
             owned_asset(state, target, identity, bindings)

@@ -791,6 +791,122 @@ class InboxService:
                         task="m3_dormant",
                     )
                 )
+            from girlframe.services.m3_handler_void import HandlerVoidService
+            from girlframe.services.m3_mockingbird_plays import MockingbirdService
+
+            for handler_void in (
+                HandlerVoidService(self.store)._tasks(connection, viewer)
+                if canon.handler_void
+                else ()
+            ):
+                items.append(
+                    InboxItem(
+                        "handler-void:" + handler_void["id"],
+                        "handler_void",
+                        handler_void["id"],
+                        canon.revision,
+                        "plays",
+                        handler_void["label"],
+                        "Actual original Handler body",
+                        handler_void["state"],
+                        handler_void["can_act"],
+                        False,
+                        "Choose actual removal or stabilization; later treatment stays saved.",
+                        "A successor body cannot answer for the original Handler.",
+                        "Review actual Handler Void",
+                        task="handler_void",
+                    )
+                )
+            from girlframe.services.m3_handler_girl_void import HandlerGirlVoidService
+            from girlframe.services.m3_sprite import SpriteService
+
+            for girl_void in (
+                HandlerGirlVoidService(self.store)._tasks(connection, viewer)
+                if canon.handler_girl_void
+                else ()
+            ):
+                items.append(
+                    InboxItem(
+                        "handler-girl-void:" + girl_void["id"],
+                        "handler_girl_void",
+                        girl_void["id"],
+                        canon.revision,
+                        "plays",
+                        girl_void["label"],
+                        "Original source body and caster",
+                        girl_void["state"],
+                        girl_void["can_act"],
+                        False,
+                        "Use only real existing Assets and your own source-owned response.",
+                        "No assigned Frame, copied resources or automatic recovery is created.",
+                        "Review actual Void effect",
+                        task="handler_girl_void",
+                    )
+                )
+            for sprite in SpriteService(self.store)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "sprite-intercept:" + sprite["id"],
+                        "sprite_intercept",
+                        sprite["id"],
+                        sprite["revision"],
+                        "plays",
+                        sprite["label"],
+                        "Actual original Sprite controller",
+                        sprite["state"],
+                        sprite["incoming"],
+                        False,
+                        "Choose your own real Sprite to intercept this actual blow, or pass.",
+                        "No role, resources, movement or dice are created for another controller.",
+                        "Review interception",
+                        task="sprite_intercept",
+                    )
+                )
+            from girlframe.services.m3_quadrant_loss import LossService
+
+            for source_task in (
+                LossService(self.store)._tasks(connection, viewer)
+                if any(x.get("kind") == "quadrant_loss" for x in canon.facts)
+                else ()
+            ):
+                items.append(
+                    InboxItem(
+                        "quadrant-loss:" + source_task["id"],
+                        "quadrant_loss",
+                        source_task["id"],
+                        source_task["revision"],
+                        "world",
+                        source_task["label"],
+                        "Actual original aftermath participants",
+                        "pending",
+                        source_task["incoming"],
+                        False,
+                        "Resolve the actual source loss aftermath without inventing a new body.",
+                        "Employment, replacement and transport remain separate actual owned steps.",
+                        "Review actual aftermath",
+                        task="quadrant_loss",
+                    )
+                )
+            for mock_task in MockingbirdService(physical.game)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "mockingbird:" + mock_task["id"],
+                        mock_task["kind"],
+                        mock_task["id"],
+                        canon.revision,
+                        "plays",
+                        "Mockingbird: " + mock_task["kind"].replace("mockingbird_", ""),
+                        "Actual original participants",
+                        mock_task["state"],
+                        mock_task["actionable"],
+                        False,
+                        "Review only your original role's trigger or conversation permission.",
+                        "Actual conversations use only their selected capabilities; "
+                        "no out-of-character explanation.",
+                        "Review actual source",
+                        task="m3_mockingbird",
+                    )
+                )
             for battle_context in BattleService(self.store)._tasks(connection, viewer):
                 items.append(
                     InboxItem(
@@ -856,6 +972,28 @@ class InboxService:
                         "mechanical follow-ups remain separate.",
                         "Read actual Handler notice",
                         task="m3_handler_notice",
+                    )
+                )
+            from girlframe.services.m3_handler_tags import HandlerTagService
+
+            for notice in HandlerTagService(GameService(self.store)).notices(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "handler-tag-notice:" + notice["id"],
+                        "handler_tag_notice",
+                        notice["id"],
+                        notice["revision"],
+                        "plays",
+                        "A Girl requests your undivided attention",
+                        "Your original Handler role",
+                        "resolved" if notice["read"] else "pending",
+                        True,
+                        False,
+                        "Read the actual private request made by spending your observed Tag.",
+                        "Reading records only receipt of this notice; "
+                        "it creates no fictional answer, dialogue or resource.",
+                        "Read the attention request",
+                        task="handler_tag_notice",
                     )
                 )
             for request in HandlerCreationService(self.store)._tasks(
@@ -1540,6 +1678,10 @@ class InboxService:
                     "dormant_void",
                     "harpy_physical_help",
                     "harpy_defeat",
+                    "quadrant_loss",
+                    "mockingbird_handler_void",
+                    "mockingbird_handler_girl_void",
+                    "sprite_intercept",
                 ):
                     continue
                 if work["id"] in visible_role_work:
@@ -1564,6 +1706,8 @@ class InboxService:
                     "punishment_frame_loss",
                 ):
                     primary, task_name = "Review discipline", "m3_discipline"
+                elif kind == "handler_tag_response":
+                    primary, task_name = "Reply to Handler Tag", "handler_tag_response"
                 elif kind == "defeat":
                     primary, task_name = "Resolve actual Defeat", "m3_defeat"
                 elif kind in (
@@ -1598,6 +1742,7 @@ class InboxService:
                         primary, task_name = "Apply Strain consequences", "m3_strain_effect"
                 title = {
                     "punishment": "Required Punishment",
+                    "handler_tag_response": "Reply to Handler Tag",
                     "doctor_frame_replacement": "Choose replacement Frame",
                     "defeat_frame_replacement_active": "Choose replacement for lost Frame",
                     "defeat_frame_replacement": "Destroyed Frame: replacement next Off-Duty",

@@ -75,6 +75,8 @@ class Context(Model):
     judge_controller: Snowflake | None = None
     judge_source: str | None = None
     core_capability_confirmed: bool = False
+    actor_outside_frame: bool | None = None
+    target_outside_frame: bool | None = None
 
     @model_validator(mode="after")
     def actual_facts(self) -> "Context":
@@ -151,6 +153,7 @@ class Required(Model):
         "collateral",
         "dormant_void",
         "aggressive_damage",
+        "sprite_intercept",
     ]
     target: ActorRef
     opponent: ActorRef | None = None

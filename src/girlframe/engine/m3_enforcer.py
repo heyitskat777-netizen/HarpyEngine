@@ -10,7 +10,18 @@ INITIATIVE = "frame.enforcer.enforcement-initiative"
 
 
 def initiative(state: GameState, actor: ActorRef) -> bool:
+    if actor.kind == "external_pilot":
+        from girlframe.engine.m3_harpy_defeat import harpy
+
+        body = harpy(state, actor)
+        return bool(
+            getattr(body, "alive", True)
+            and not body.frame_shutdown
+            and INITIATIVE in getattr(body, "plays", ())
+        )
     sheet = state.sheets.get(actor.entity)
+    from girlframe.engine.m3_enforcer_requisitions import held
+
     return bool(
         actor.kind == "pilot"
         and sheet
@@ -19,6 +30,7 @@ def initiative(state: GameState, actor: ActorRef) -> bool:
         and not sheet.frame_scrapped
         and (
             sheet.frame == "THE ENFORCER"
+            or held(state, actor, INITIATIVE) is not None
             or sheet.frame_runtime is not None
             and INITIATIVE in sheet.frame_runtime.acquired_rules
         )
@@ -65,6 +77,7 @@ def grasp(
     if (
         girl
         or target.kind == "npc"
+        and target_view.rules != "director"
         or target.kind == "handler"
         and target_view.rules == "handler_girl"
     ):
@@ -113,6 +126,8 @@ def end_grasps(original: GameState, actor: ActorRef, event: str) -> GameState:
 
 def conditioning(state: GameState, actor: ActorRef) -> bool:
     sheet = state.sheets.get(actor.entity)
+    from girlframe.engine.m3_enforcer_requisitions import held
+
     return bool(
         actor.kind == "pilot"
         and sheet
@@ -121,6 +136,7 @@ def conditioning(state: GameState, actor: ActorRef) -> bool:
         and not sheet.frame_scrapped
         and (
             sheet.frame == "THE ENFORCER"
+            or held(state, actor, OBEDIENCE) is not None
             or sheet.frame_runtime is not None
             and OBEDIENCE in sheet.frame_runtime.acquired_rules
         )
@@ -313,16 +329,24 @@ def end_lost_frame_grasps(original: GameState, event: str) -> GameState:
     """Only actual Frame-contact grips end on sourceful loss of their original vessel."""
     state = GameState.model_validate_json(original.model_dump_json())
     for grip in tuple(state.enforcer_grasps):
-        sheet = state.sheets.get(grip.actor.entity)
-        if (
-            not grip.held
-            or grip.contact != "frame"
-            or sheet is None
-            or sheet.character_id != grip.actor.incarnation
-        ):
+        if not grip.held or grip.contact != "frame":
             continue
-        current = sheet.frame_runtime.id if sheet.frame_runtime else None
-        if sheet.frame_scrapped or current is not None and current != grip.frame_instance:
+        if grip.actor.kind == "external_pilot":
+            from girlframe.engine.m3_harpy_defeat import harpy
+
+            body = harpy(state, grip.actor)
+            lost = (
+                body.frame_shutdown
+                or not getattr(body, "alive", True)
+                or body.frame_instance != grip.frame_instance
+            )
+        else:
+            sheet = state.sheets.get(grip.actor.entity)
+            if sheet is None or sheet.character_id != grip.actor.incarnation:
+                continue
+            current = sheet.frame_runtime.id if sheet.frame_runtime else None
+            lost = sheet.frame_scrapped or current is not None and current != grip.frame_instance
+        if lost:
             state.enforcer_grasps = [
                 x.model_copy(
                     update=dict(

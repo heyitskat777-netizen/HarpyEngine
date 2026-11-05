@@ -50,14 +50,6 @@ def eligible(state: GameState, attacker: ActorRef, target: ActorRef) -> None:
         raise ValueError(
             "UNSUPPORTED_RULE: this branch covers co-located targets; ranged reach needs review"
         )
-    if any(
-        x.alive
-        and x.goal is not None
-        and x.goal.kind == "npc"
-        and x.goal.entity_id == target.entity
-        for x in state.world.gorgons
-    ):
-        raise ValueError("UNSUPPORTED_RULE: resolve the Directed goal's death consequence first")
     if not any(not x.damaged for x in first.assets):
         raise ValueError("The Gorgon needs an undamaged actual Asset for its Attack")
 

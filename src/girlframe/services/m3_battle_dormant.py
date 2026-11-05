@@ -261,6 +261,12 @@ class DormantService:
                 identities=[x.model_dump(mode="json") for x in identities if not x.marked]
                 if own
                 else [],
+                forbidden_dive=bool(
+                    actual
+                    and own
+                    and sheet is not None
+                    and any(x.play == "dive_deep" for x in sheet.blocked_plays)
+                ),
                 heat=view.heat if view is not None and own else 0,
                 piloting=action["data"]["prepared"]["piloting"] if action else False,
             )

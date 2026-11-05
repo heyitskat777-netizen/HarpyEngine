@@ -32,6 +32,16 @@ class ReplacementService:
     def __init__(self, missions: MissionService):
         self.missions, self.store, self.game = missions, missions.store, missions.game
 
+    @staticmethod
+    def _package_available(supplied: Package) -> None:
+        from girlframe.engine.m3_personal_firearm import RULE
+
+        if RULE in supplied.additional_rules:
+            raise WorkflowError(
+                "UNSUPPORTED_RULE: a free Personal Firearm package needs its actual owned "
+                "pistol and Girl Asset-cap issuance procedure"
+            )
+
     def _row(self, c: Connection, identity: str) -> dict[str, Any]:
         table = t.m3["m3_required_work"]
         row = (
@@ -348,6 +358,7 @@ class ReplacementService:
             registry = self.missions.access.registry
             if registry is None:
                 raise WorkflowError("A reviewed source registry is required.")
+            self._package_available(supplied)
             parent = self._body(root)
             rules.package(
                 load_state(c, self.store.campaign_id),
@@ -470,11 +481,13 @@ class ReplacementService:
             ):
                 raise WorkflowError("The Court recipient is unavailable; choose a new proposal.")
             frame_id = str(uuid4())
+            supplied = Package.model_validate_json(json.dumps(body["package"]))
+            self._package_available(supplied)
             updated = rules.replace(
                 load_state(c, self.store.campaign_id),
                 viewer.user_id,
                 selected,
-                Package.model_validate_json(json.dumps(body["package"])),
+                supplied,
                 registry,
                 work_id=identity,
                 frame_id=frame_id,
@@ -505,12 +518,24 @@ class ReplacementService:
                 .values(revision=sheet.source_profile_revision, public_json=json.dumps(public))
             )
             self.store._enqueue_sync(c, viewer.user_id, sheet.source_profile_revision, draft)
+            from girlframe.engine.m3_actor_state import ActorRef
+            from girlframe.engine.m3_enforcer_requisitions import replacement_grants
+
+            replacement_event = str(uuid4())
+            updated = replacement_grants(
+                updated,
+                ActorRef(kind="pilot", entity=str(viewer.user_id), incarnation=sheet.character_id),
+                identity,
+                replacement_event,
+                registry,
+            )
             event = self.game.event(
                 c,
                 viewer.user_id,
                 key,
                 "m3.compulsory_frame_replaced",
                 updated,
+                event_id=replacement_event,
                 work_id=identity,
                 owner=viewer.user_id,
                 frame=sheet.frame,

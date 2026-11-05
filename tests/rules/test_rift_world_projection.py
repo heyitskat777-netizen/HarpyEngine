@@ -165,12 +165,12 @@ def test_actual_gorgon_crossing_masks_map_and_blocks_cached_actions_until_real_r
         await pages.show(interaction)
         content = interaction.edit_original_response.call_args.kwargs["content"]
         assert "position unknown or offstage" in content
-        with pytest.raises(WorkflowError, match="offstage support"):
-            await open_end(
-                current(1),
-                CycleService(OffDutyService(missions)),
-                dict(game_revision=before.revision),
-            )
+        end_view = current(1)
+        await end_view.response.defer(ephemeral=True)
+        await open_end(
+            end_view, CycleService(OffDutyService(missions)), dict(game_revision=before.revision)
+        )
+        assert end_view.edit_original_response.call_args.kwargs["view"] is not None
 
     asyncio.run(show())
     assert state(game) == before

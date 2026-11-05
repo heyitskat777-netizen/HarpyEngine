@@ -24,6 +24,10 @@ def select(state: GameState, identity: str, play: Play, effect: Effect, event: s
     expected = "mess" if effect.kind in ("status", "tag", "damage") else effect.kind
     if grant.state != "pending" or play != expected or not event.strip():
         raise ValueError("Use this actual pending Handler Play and its matching effect")
+    if grant.nonbody_only and effect.kind not in ("brief", "escalate", "support", "expectation"):
+        raise ValueError(
+            "The actual original ended; only the source-owned nonbody procedure remains"
+        )
     if effect.target is not None and effect.target not in grant.targets:
         raise ValueError("This grant cannot affect another original character")
     replace(

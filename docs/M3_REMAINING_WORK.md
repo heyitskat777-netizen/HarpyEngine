@@ -4,7 +4,11 @@ M3 is **IN_PROGRESS / RULES_SUBSET** and is not ready for full player testing.
 This snapshot separates implemented workflows from remaining agreed scope; it
 does not narrow the milestone.
 
-The current four-agent implementation map is [M3_PARALLEL_WORK.md](M3_PARALLEL_WORK.md). It supersedes older per-feature statements below. The latest combat/Harpy/original-person candidate passes **1,983 automated tests**; the earlier `e9e528b` / 1,796-test checkpoint is historical. M3 remains incomplete and work continues.
+The current four-agent implementation map is [M3_PARALLEL_WORK.md](M3_PARALLEL_WORK.md).
+The new bounded gameplay candidate passes its full regression: **2,200 tests**,
+zero failures/errors/skips. Scoped checks cover Engage/Harpy extras, Handler Tag use and notices, Enforcer
+acquisition/Snoop/retention, Mockingbird subsets, lifecycle/Handler Void, and
+Gorgon combat/collateral/world consequences. The earlier **1,983-test** full checkpoint remains historical evidence. M3 remains incomplete and work continues.
 
 The owner's subsequent cost/progress review is recorded in
 [the completion audit and bounded delivery plan](M3_COMPLETION_AUDIT.md).
@@ -25,11 +29,11 @@ keeps real Defeat work pending. Complete Defeat, broader actor targets and cross
 consequences before closing this unit. See the current acceptance report for the
 latest candidate's checks; the 1,399-test result below is the unit-1b baseline.
 
-Current integrated candidate: **1,983 automated tests passed** (`var/m3-combat-harpy-full-fixed.xml`). Unit 2a remains
+Current integrated candidate: **2,200 automated tests passed** (`var/m3-bounded-gameplay-full-fixed.xml`). Unit 2a remains
 IN_PROGRESS and does not change independent/player acceptance.
 
 The registry contains 473 source/table entries: **436 required core entries** and
-37 deferred Ancillary entries. Of the required core, **81 are partial and 355 are
+37 deferred Ancillary entries. Of the required core, **104 are partial and 332 are
 unimplemented**. None is independently approved. Entries are inventory units,
 not equal-size coding tasks or a completion percentage. The acceptance tracker
 currently has 44 cases: 27 in progress and 17 not run, with no completed milestone
@@ -42,10 +46,10 @@ earlier failures/corrections, checks and the difference from human acceptance.
 | Package | Remaining completion work |
 |---|---|
 | M3A — source audit | Finish nested branches, book/sheet comparisons, dependency contracts and the M2 cross-rule audit. Frame categories/aliases are corrected; the overall branch audit remains pending. |
-| M3B — shared rules | Finish broader social/role consumers, Engage's remaining actual consequences and Harpy extras. Dive/Defeat and Pilot combat now have source-bound candidates; complete collateral, Gorgon branches, broader target/tier coverage, remaining original-ending callbacks and all affected actual actor/resource ports before ungating whole combat. |
-| M3C — playbooks | Complete all ten Girl, nine Frame and seven Handler runtimes: passives, Plays, counters, special resources, control/Core/AM interactions, temporary effects and acquisition consequences. Handler creation and fresh persona generations are implemented; remaining runtime abilities are not. |
-| M3D — economy/discipline | Privacy/Home/Retirement and the four severe discipline workflows now have bounded automated evidence. Finish remaining Unlock/Grafting destinations, full Frame Swap runtime consumers, future benefit suspension and broader role-specific discipline. Preserve actual original character/persona ownership through every source continuation. |
-| M3E — recovery/lifecycle | Core original-character archives, medical/Void/Defeat, free replacement and returned-original obligations are implemented within their documented scopes. Finish remaining role/playbook follow-ups, inherited mandatory Harpy Dive, Harpy Off-Duty, source-ended continuing fight, archived killer Tags and exact pending procedures after body changes. |
+| M3B — shared rules | Engage/Harpy extras and source-bound Gorgon response/collateral now have bounded candidates. Finish broader social/role/playbook consumers, deeper mandatory-chain recovery, exact Core Tag eligibility and remaining source ports before whole combat acceptance. |
+| M3C — playbooks | Finish Mockingbird Sex/Call, Enforcer Compliance Virus and all remaining ten-Girl/nine-Frame/seven-Handler runtime branches: passives, Plays, counters, control/Core/AM, temporary effects and acquisitions. Creation and tested book subsets do not make every playbook playable. |
+| M3D — economy/discipline | Finish actual free Personal Firearm package issuance/cap handling, remaining Unlock/Grafting destinations, full Frame Swap consumers and broader role discipline. Existing paid PF, paid scenes, severe discipline and new Enforcer retention have bounded evidence; original body/receipt ownership must persist throughout. |
+| M3E — recovery/lifecycle | The frozen candidate closes inherited mandatory Harpy Dive, Harpy Off-Duty, original-ending fight/procedure work and source Handler Void. Finish further playbook/source adapters, a genuine positive combined postcareer killer-Tag return trace and all affected cross-rule continuations. |
 | M3F — Strain | Implement every remaining consequence across all 72 cells and 22 Endgames, including actual recursive effects, prisoner escape escalation, mission obligations, deadlines and mandatory work completion. Scheduling a result is not applying it. |
 | M3G — world/physical state | Implement actual movement/time, Frame occupancy/link/control, transport/custody, Harpy/Core consent, full NPC/Gorgon/Harpy/Director rules and prices/breach consequences. Original placement and some Gorgon operations exist; they do not supply these missing mechanics. |
 | M3H — integration/acceptance | Native controls and durable owned responses for every remaining mechanic; complete source-backed golden traces, migration/recovery/privacy checks, independent rules review, then the agreed player tests and owner review. |

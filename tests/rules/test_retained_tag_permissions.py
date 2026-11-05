@@ -27,8 +27,18 @@ from girlframe.services.onboarding import WorkflowError
 ledger = ledger_fixture
 
 
-def reborn_with_lock(store, *, locker_converts=False, retain=True):
-    _, game = service(store, girl="ALPHA")
+def reborn_with_lock(
+    store,
+    *,
+    locker_converts=False,
+    retain=True,
+    frame="JANUS-B",
+    configure=None,
+    retained_plays=None,
+):
+    _, game = service(store, girl="ALPHA", frame=frame)
+    if configure:
+        configure(game)
     policy = store.policy
     store.policy = policy.model_copy(
         update={
@@ -139,6 +149,9 @@ def reborn_with_lock(store, *, locker_converts=False, retain=True):
         retained_tags=[tag.id] if retain and not locker_converts else [],
         account="Actual selected birth choices",
     )
+    if retained_plays:
+        available = [x["id"] for x in view["plays"] if x["id"] not in retained_plays]
+        package["retained_plays"] = list(retained_plays) + available[: 4 - len(retained_plays)]
     respond(void, work, "save_rebirth", dict(choice=package, account="Actual owned choices"))
     respond(void, work, "rebirth", dict(choice=package, account="Actual original conversion"))
     tick(worker, gateway, 7)

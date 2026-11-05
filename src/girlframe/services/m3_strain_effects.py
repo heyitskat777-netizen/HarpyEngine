@@ -213,6 +213,17 @@ class EffectService:
                 from girlframe.services.m3_world import require_onstage
 
                 require_onstage(state, ActorRef(kind="npc", entity=choice.victim))
+                victim_body = resolve(state, ActorRef(kind="npc", entity=choice.victim), ())
+                if victim_body.cell is None or (
+                    choice.gorgon is not None and victim_body.cell != choice.gorgon.cell
+                ):
+                    raise WorkflowError(
+                        "Choose the present original NPC at the introduction's actual location."
+                    )
+            if choice.rule_id == "strain.void.low.4.1":
+                from girlframe.services.m3_battle_director import bind_legacy_context_bodies
+
+                state = bind_legacy_context_bodies(self.game, c, state)
             updated = rules.apply(
                 state,
                 choice,
@@ -257,6 +268,14 @@ class EffectService:
                 work_id=identity,
                 rule_id=choice.rule_id,
             )
+            if choice.rule_id == "strain.void.low.4.1":
+                from girlframe.services.m3_battle import synchronize_casts
+                from girlframe.services.m3_battle_director import create_replacements
+                from girlframe.services.m3_handler_void import synchronize_endings
+
+                synchronize_casts(self.game, c, event)
+                synchronize_endings(self.game, c, event, viewer, key)
+                create_replacements(self.game, c, event)
             for event_index, (subject, child_event) in enumerate(scientific_events, start=1):
                 self.game.event(
                     c,

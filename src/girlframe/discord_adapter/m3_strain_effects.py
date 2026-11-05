@@ -112,6 +112,9 @@ async def open_effect(
     }
     gorgons = {x["id"]: x for x in world["gorgons"]}
 
+    from girlframe.engine.m3_actor_state import ActorRef
+    from girlframe.engine.m3_battle import category
+
     def build(values: dict[str, Any]) -> list[Field]:
         fields: list[Field] = []
         if rule == "strain.rebellion.low.2.2":
@@ -241,6 +244,7 @@ async def open_effect(
                     x
                     for x in world["npcs"]
                     if x["alive"]
+                    and category(state, ActorRef(kind="npc", entity=x["id"])) != "harpy"
                     and x["cell"] is not None
                     and f"{x['cell'][0]},{x['cell'][1]}" == selected_cell
                 ]

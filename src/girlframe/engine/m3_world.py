@@ -182,10 +182,12 @@ def destroy(world: World, identity: str, *, gorgon_cause: bool) -> Result:
         ),
     )
     followups = [Followup(kind="budget_structure_destroyed", entity=identity, source_pdf=150)]
-    if all(
-        x.condition == "destroyed"
+    if any(
+        x.kind == "base" and x.allegiance == "foundation" and x.condition != "destroyed"
+        for x in world.locations
+    ) and not any(
+        x.kind == "base" and x.allegiance == "foundation" and x.condition != "destroyed"
         for x in updated.locations
-        if x.kind == "base" and x.allegiance == "foundation"
     ):
         followups.append(
             Followup(kind="quadrant_lost_handler_outcome", entity=identity, source_pdf=122)
@@ -209,10 +211,17 @@ def end_off_duty(
     period_id: str,
     movements: tuple[Movement, ...],
     changes: tuple[ClassChange, ...],
+    *,
+    present_gorgons: frozenset[str] | None = None,
 ) -> Result:
     if period_id in world.completed_off_duty or not period_id.strip():
         raise ValueError("World effects apply once at an explicit Off-Duty end")
-    directed = {x.id: x for x in world.gorgons if x.alive and x.gorgon_class == "directed"}
+    present = {x.id for x in world.gorgons} if present_gorgons is None else present_gorgons
+    directed = {
+        x.id: x
+        for x in world.gorgons
+        if x.alive and x.gorgon_class == "directed" and x.id in present
+    }
     if len(movements) != len(directed) or {x.gorgon for x in movements} != set(directed):
         raise ValueError(
             "The Handler must choose a legal one-square step for every Directed Gorgon"
@@ -221,6 +230,7 @@ def end_off_duty(
         x.id: x
         for x in world.gorgons
         if x.alive
+        and x.id in present
         and x.gorgon_class == "aggressive"
         and not any(loc.cell == x.cell and loc.condition != "destroyed" for loc in world.locations)
     }
@@ -260,7 +270,12 @@ def end_off_duty(
     # Simultaneous attackers destroy one location once.
     destroyed = set()
     for gorgon in world.gorgons:
-        if gorgon.alive and gorgon.gorgon_class == "aggressive" and gorgon.id not in unplaced:
+        if (
+            gorgon.alive
+            and gorgon.id in present
+            and gorgon.gorgon_class == "aggressive"
+            and gorgon.id not in unplaced
+        ):
             target = next(
                 x for x in world.locations if x.cell == gorgon.cell and x.condition != "destroyed"
             )

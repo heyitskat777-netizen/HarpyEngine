@@ -21,6 +21,9 @@ def die(original: GameState, actor: ActorRef, event: str, account: str) -> GameS
     npc = body(state, actor)
     if not event or not account.strip():
         raise ValueError("The actual Director ending needs its real cause and event")
+    from girlframe.engine.m3_handler_void import end_actor
+
+    state = end_actor(state, actor, event)
     state = end_actor_casts(
         end_grasps(interrupt_journeys(state, actor, event, account), actor, event), actor, event
     )

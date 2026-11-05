@@ -110,7 +110,7 @@ def test_actual_low_allout_defender_damage_then_real_mandatory_handler_play(ledg
     assert game.inspect(PLAYER, identity)["state"] == "complete" and game.dice.calls == 1
 
 
-def core(store, monkeypatch, faces, *, heat=0):
+def core(store, monkeypatch, faces, *, heat=0, sprites=False):
     import girlframe.services.m2_game as shared
 
     monkeypatch.setattr(
@@ -120,6 +120,16 @@ def core(store, monkeypatch, faces, *, heat=0):
     with store.transaction() as c:
         canon = state(game)
         canon.sheets["2"].heat = heat
+        if sprites:
+            from test_world import gorgon
+
+            from girlframe.engine.m3_world import update
+
+            canon.world = update(
+                canon.world,
+                gorgons=canon.world.gorgons
+                + (gorgon("sprite", "actual-core-shield", revealed=True),),
+            )
         game.event(c, 2, "actual-core-heat", "synthetic.state", canon)
     data = svc.preview(PLAYER, 900)
     actor = next(x for x in data["actors"] if x["ref"]["entity"] == "2")
@@ -262,7 +272,7 @@ def test_real_owned_counter_child_finishes_before_fixed_asset_cost_and_keeps_ori
     assert game.inspect(PLAYER, identity)["state"] == "complete"
 
 
-def dormant_source(store, monkeypatch, *, close=False, prevoid_frame=False, girl=None):
+def dormant_source(store, monkeypatch, *, close=False, prevoid_frame=False, girl=None, faces=None):
     import sqlalchemy as sa
     from test_world import gorgon
 
@@ -277,6 +287,8 @@ def dormant_source(store, monkeypatch, *, close=False, prevoid_frame=False, girl
         shared, "M3_HEAT_IDS", (*shared.M3_HEAT_IDS, "all_out_assault", "go_for_the_core")
     )
     game, worker, gateway, svc, _, _ = prepared(store, girl=girl)
+    if faces is not None:
+        game.dice.faces = faces
     approval = store.policy.m3_approval
     store.policy = store.policy.model_copy(
         update={

@@ -50,7 +50,12 @@ def test_source_gorgon_placement_and_immediate_npc_consequences_are_applied(
         ),
     )
     extra = {"victim": "npc"} if kind in ("aggressive", "sprite") else {}
-    result = rules.apply(canon, choice(rule, gorgon=gorgon(kind, "new", cell), **extra), "work")
+    result = rules.apply(
+        canon,
+        choice(rule, gorgon=gorgon(kind, "new", cell), **extra),
+        "work",
+        source_event="actual-pure-introduction-event",
+    )
     assert len(result.world.gorgons) == 2 and len(canon.world.gorgons) == 1
     if kind == "aggressive":
         assert not result.world.npcs[0].alive
@@ -85,6 +90,7 @@ def test_city_threat_counts_only_successful_resolved_collateral_and_destroys_on_
         canon,
         choice("void.low.4.1", gorgon=gorgon("aggressive", "attack", (0, 4)), victim="victim"),
         "work",
+        source_event="actual-city-introduction-event",
     )
     stopped = world_rules.collateral_city(applied.world, "attack", intercepted=True)
     assert stopped.world.gorgons[-1].collateral_successes == 0
@@ -236,3 +242,48 @@ def test_sanctions_create_named_faction_with_map_area_and_problems(canon):
     assert result.world.factions[-1].description == "An actual human-described source event"
     with pytest.raises(ValueError, match="UNSUPPORTED_RULE"):
         rules.apply(canon, choice("budget.low.1.1"), "unimplemented")
+
+
+def test_actual_director_introduction_death_ends_only_original_context_and_consumes_same_victim(
+    canon,
+):
+    from girlframe.engine.m3_director import enter
+
+    canon.world = world_rules.introduce_npc(
+        canon.world,
+        Npc(
+            id="actual-director",
+            name="Actual Director",
+            jobs=("director",),
+            controller=3,
+            detail="The actual original Director at this City",
+            cell=(0, 4),
+        ),
+    )
+    canon = enter(
+        canon,
+        1,
+        "actual-director",
+        "actual-contact",
+        ("Nervous", "Composed"),
+        "actual-context-source",
+    )
+    original = canon.director_contexts[-1]
+    old_sheet = canon.sheets["3"].model_dump_json()
+    result = rules.apply(
+        canon,
+        choice(
+            "void.low.4.1",
+            gorgon=gorgon("aggressive", "actual-introduction", (0, 4)),
+            victim="actual-director",
+        ),
+        "actual-strain-effect",
+        source_event="actual-introduction-event",
+    )
+    context = next(x for x in result.director_contexts if x.id == original.id)
+    assert not context.active and context.termination_reason == "director_death"
+    assert context.identities == original.identities
+    assert not result.handler_archives and result.sheets["3"].model_dump_json() == old_sheet
+    consumed = [x for x in result.facts if x.get("kind") == "aggressive_introduction_consumed"]
+    assert len(consumed) == 1 and consumed[0]["source_work"] == "actual-strain-effect"
+    assert not next(x for x in result.world.npcs if x.id == "actual-director").alive

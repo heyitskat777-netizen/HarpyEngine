@@ -122,7 +122,10 @@ def capture(
     cancellable = (
         not known
         and len(actual) == 1
-        and root["data"]["play"] in (*PLAY_IDS, *HEAT_IDS)
+        and (
+            root["data"]["play"] in (*PLAY_IDS, *HEAT_IDS)
+            or root["data"].get("gorgon_play", {}).get("started") is False
+        )
         and not root["data"]["choices"]
     )
     choices = t.m2["m2_choices"]
@@ -196,11 +199,22 @@ class RecoveryService:
             self.game.authorize(c, viewer, game=False)
             from girlframe.services.m3_access import Access
 
-            Access(self.store).authorize(c, viewer, "plays")
             action = self.game.action(c, identity)
+            if action["data"].get("gorgon_play"):
+                from girlframe.services.m3_gorgon_play import GorgonPlayService
+
+                GorgonPlayService(self.game).authorize(c, viewer, action)
+            else:
+                Access(self.store).authorize(c, viewer, "plays")
             if action["actor_id"] != str(viewer.user_id) or action["parent_id"] is not None:
                 raise WorkflowError("Only the actual root actor may recover this response chain.")
-            authorize(self.game, c, viewer, action)
+            authorize(
+                self.game,
+                c,
+                viewer,
+                action,
+                director_response=bool(action["data"].get("gorgon_play")),
+            )
 
         def operation(c: Connection) -> dict[str, Any]:
             if not cancel:
@@ -272,12 +286,44 @@ class RecoveryService:
                         "The saved interruption evidence changed; recover it explicitly."
                     )
                 if not cancel:
-                    self.game.action_characters(c, action, state)
+                    gorgon_chain = bool(
+                        root["data"].get("gorgon_play")
+                        and (
+                            action["id"] == root["id"]
+                            or action["data"].get("gorgon_counter_source")
+                        )
+                    )
+                    if gorgon_chain:
+                        from girlframe.services.m3_gorgon_play import (
+                            allowed_archived,
+                            recovery_cast,
+                        )
+
+                        recovery_cast(self.game, c, state, root)
+                        if action["data"].get("actor_basic"):
+                            from girlframe.services.m3_actor_plays import ActorPlayService
+
+                            actual = ActorPlayService(self.game).validate(c, state, action)
+                            if actual.ref.model_dump(mode="json") != action["data"][
+                                "gorgon_counter_source"
+                            ].get("actor") or actual.controller != int(action["actor_id"]):
+                                raise WorkflowError("Recover the original response body's role")
+                        else:
+                            self.game.action_characters(
+                                c,
+                                action,
+                                state,
+                                allowed_archived=allowed_archived(self.game, c, state, action),
+                            )
+                    else:
+                        self.game.action_characters(c, action, state)
                     if (action["data"].get("battle") or {}).get(
                         "procedural_gm", action["data"]["handler"]
                     ) != state.handler:
                         raise WorkflowError("The original response Handler changed.")
-                    if set(scene["participants"]) != set(action["data"]["participants"]):
+                    if not gorgon_chain and set(scene["participants"]) != set(
+                        action["data"]["participants"]
+                    ):
                         raise WorkflowError("Recover the original scene participants first.")
                     if any(
                         not HandlerService(self.store)._member(c, uid)

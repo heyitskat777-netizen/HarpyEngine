@@ -4,6 +4,7 @@ from collections.abc import Sequence
 
 from girlframe.engine.m2 import AssetState, GameState
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_item_state import HeldItem
 from girlframe.engine.m3_void_state import HarpyAsset, HarpyState
 from girlframe.engine.m3_world_state import Asset
 
@@ -30,6 +31,7 @@ def assets(state: GameState, actor: ActorRef) -> tuple[HarpyResource, ...]:
         actual
         for item in state.held_items
         if same_holder(state, item.holder, actor)
+        and item.location_mode == "carried"
         and (actual := actual_asset(state, item)) is not None
     )
     if len({x.id for x in result}) != len(result):
@@ -89,7 +91,11 @@ def set_assets(
         )
     revised = []
     for item in state.held_items:
-        actual = actual_asset(state, item) if same_holder(state, item.holder, actor) else None
+        actual = (
+            actual_asset(state, item)
+            if (same_holder(state, item.holder, actor) and item.location_mode == "carried")
+            else None
+        )
         replacement = proposed[actual.id] if actual is not None else None
         if replacement is not None and replacement != actual:
             item = item.model_copy(
@@ -98,3 +104,88 @@ def set_assets(
         revised.append(item)
     state.held_items = revised
     return state
+
+
+def destroy_asset(original: GameState, actor: ActorRef, asset_id: str, *, event: str) -> GameState:
+    """Remove one actual source Asset; physical wreckage retains its immutable origin."""
+    from girlframe.engine.m3_items import actual_asset, same_holder
+
+    selected = next((x for x in assets(original, actor) if x.id == asset_id), None)
+    if selected is None or not event.strip():
+        raise ValueError("Destroy an actual original Harpy Asset with its real source event")
+    if any(
+        x.get("kind") == "harpy_asset_destroyed"
+        and x.get("actor") == actor.model_dump_json()
+        and x.get("asset_id") == asset_id
+        and x.get("event") == event
+        for x in original.facts
+    ):
+        raise ValueError("This actual Asset destruction already has its original source")
+    state = GameState.model_validate_json(original.model_dump_json())
+    base = _base(state, actor)
+    source_item = None
+    if any(x.id == asset_id for x in base):
+        body = next((x for x in state.harpy_states if x.id == actor.entity), None)
+        if body is not None:
+            state.harpy_states = [
+                x.model_copy(update=dict(assets=tuple(a for a in x.assets if a.id != asset_id)))
+                if x.id == actor.entity
+                else x
+                for x in state.harpy_states
+            ]
+        else:
+            assert state.world is not None
+            state.world = state.world.model_copy(
+                update=dict(
+                    pilots=tuple(
+                        x.model_copy(
+                            update=dict(assets=tuple(a for a in x.assets if a.id != asset_id))
+                        )
+                        if x.id == actor.entity
+                        else x
+                        for x in state.world.pilots
+                    )
+                )
+            )
+    else:
+        item = next(
+            (
+                x
+                for x in state.held_items
+                if same_holder(state, x.holder, actor)
+                and x.location_mode == "carried"
+                and (a := actual_asset(state, x)) is not None
+                and a.id == asset_id
+            ),
+            None,
+        )
+        if item is None:
+            raise ValueError("Recover the Asset's sole actual original resource authority")
+        source_item = item.model_dump_json()
+        state.held_items = [
+            HeldItem.model_validate_json(
+                x.model_copy(
+                    update=dict(
+                        asset_json=None,
+                        asset_id=None,
+                        asset_owner=None,
+                        condition="ruined",
+                        state_event=event,
+                    )
+                ).model_dump_json()
+            )
+            if x.id == item.id
+            else x
+            for x in state.held_items
+        ]
+    state.facts.append(
+        dict(
+            kind="harpy_asset_destroyed",
+            actor=actor.model_dump_json(),
+            asset_id=asset_id,
+            asset_json=selected.model_dump_json(),
+            source_item=source_item or "",
+            event=event,
+        )
+    )
+    return GameState.model_validate_json(state.model_dump_json())

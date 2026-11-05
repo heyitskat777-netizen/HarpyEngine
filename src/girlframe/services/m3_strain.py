@@ -57,6 +57,9 @@ class StrainService:
                     "The starting scenario is already recorded; do not reset Strain."
                 )
             state.strain = rules.initial(scenario, high)
+            from girlframe.engine.m3_collateral import install_budget
+
+            install_budget(state)
             self.game.event(c, viewer.user_id, key, "m3.strain_initialized", state)
             return {"game_revision": state.revision, "levels": dict(state.strain.levels)}
 

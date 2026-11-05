@@ -164,7 +164,19 @@ class HandlerHistory(discord.ui.View):
         await self.show(interaction)
 
 
-async def open_handler(interaction: discord.Interaction, service: HandlerCreationService) -> None:
+async def open_handler(
+    interaction: discord.Interaction,
+    service: HandlerCreationService,
+    *,
+    source_work: str | None = None,
+) -> None:
+    if source_work is not None:
+        await asyncio.to_thread(
+            service.start_source,
+            viewer_from_interaction(interaction),
+            str(interaction.id),
+            source_work,
+        )
     data = await asyncio.to_thread(service.view, viewer_from_interaction(interaction))
     text = "**Your Handler creation**\n" + (
         "Activated."

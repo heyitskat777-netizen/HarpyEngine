@@ -15,7 +15,16 @@ play-testing are pending. See [the review handoff](docs/M2_REVIEW_HANDOFF.md) an
 [M2 evidence](reports/M2_ACCEPTANCE.md). The live policy does not activate characters
 or certify rules automatically. M1 raw dice remain a separate test primitive.
 
-M3 is in development and remains **RULES_SUBSET**. Its offline mission flow now
+M3 is in development and remains **RULES_SUBSET**. The current bounded candidate adds
+actual Engage/Harpy extra maneuvers, owned Handler Tag requests and attention notices,
+Enforcer acquisition/Snoop/retention workflows, Mockingbird subsets, original-person
+Harpy recovery and Handler Void, and source-bound Gorgon combat/collateral/world
+consequences. Its full regression passes **2,200 tests**, with source scope and remaining gates
+in [M3 evidence](reports/M3_ACCEPTANCE.md).
+Remaining Sex/Call/Virus branches, other playbooks, Strain effects and world
+consumers still prevent whole-M3 acceptance.
+
+Its offline mission flow now
 persists private invitations, explicit player responses, dispatch and mission-end
 rewards, with required consequences blocking completion. The discipline flow adds
 inflictor-owned selectors, delegation, exact-proposal Handler consultation and
@@ -24,8 +33,9 @@ Obsolescence and Princess mission-end standards now have private review controls
 before rewards. Last-Girl-Asset Beating reviews apply Helplessness from confirmed
 Frame context. DoctorDoctor scrapping now supports free replacement through player
 proposal, an exact Handler package and player confirmation, including required
-Court consent and safe Discord-label updates. Four Severe Punishment types,
-Defeat/recovery integration and some other follow-ups remain unfinished. These changes
+Court consent and safe Discord-label updates. Severe Punishment and Defeat/recovery
+have bounded automated candidates; other playbook and cross-rule follow-ups remain
+unfinished. These changes
 require a separate, scoped M3 release approval and are not enabled in the running
 bot. See [M3 evidence](reports/M3_ACCEPTANCE.md) and
 [source coverage](docs/M3_SOURCE_AUDIT.md). Ancillary playbooks are deferred and

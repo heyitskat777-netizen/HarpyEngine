@@ -209,6 +209,64 @@ def case_proof(c: Connection, game: GameService, identity: str) -> RolePunishmen
             if approved_state
             else None
         )
+        director_instruction = False
+        if (
+            case.source_kind == "enforcement_initiative"
+            and case.action
+            and case.chooser is not None
+            and case.chooser.kind == "npc"
+            and approved_state is not None
+            and source_event is not None
+            and case.handler_approval_event == case.instruction_event
+            and str(case.chooser_controller) == source_event["actor_id"]
+        ):
+            from girlframe.engine.m3_actor_state import SceneCast
+
+            source_action = game.action(c, case.action)
+            context = source_action["data"].get("enforcement", {})
+            cast = SceneCast.model_validate_json(json.dumps(context["cast"]))
+            raw_judge = (
+                c.execute(
+                    sa.select(t.events).where(
+                        t.events.c.campaign_id == game.store.campaign_id,
+                        t.events.c.id == context.get("judge_source"),
+                    )
+                )
+                .mappings()
+                .first()
+            )
+            raw_cast = c.scalar(
+                sa.select(t.m2["m2_state_history"].c.body_json).where(
+                    t.m2["m2_state_history"].c.campaign_id == game.store.campaign_id,
+                    t.m2["m2_state_history"].c.event_id == context.get("judge_source"),
+                )
+            )
+            judge_state = GameState.model_validate_json(raw_cast) if raw_cast else None
+            saved_cast = (
+                next((x for x in judge_state.scene_casts if x.id == cast.id), None)
+                if judge_state
+                else None
+            )
+            director_instruction = bool(
+                raw_judge is not None
+                and raw_judge["kind"] == "m3.scene_cast_changed"
+                and raw_judge["actor_id"] == str(case.chooser_controller)
+                and json.loads(raw_judge["payload_json"]).get("action") == "adjudicate"
+                and json.loads(raw_judge["payload_json"]).get("scene") == cast.id
+                and saved_cast is not None
+                and saved_cast.adjudicator == case.chooser
+                and any(
+                    x.actor == case.chooser and x.controller == case.chooser_controller
+                    for x in saved_cast.roles
+                )
+                and context.get("handler") == case.chooser.model_dump(mode="json")
+                and context.get("handler_controller") == case.chooser_controller
+                and approved_state.world is not None
+                and any(
+                    x.id == case.chooser.entity and x.alive and "director" in x.jobs
+                    for x in approved_state.world.npcs
+                )
+            )
         if (
             source_event is None
             or approved_state is None
@@ -217,6 +275,7 @@ def case_proof(c: Connection, game: GameService, identity: str) -> RolePunishmen
             not in ("m3.role_punishment_instructed", "m3.role_punishment_consulted")
             or (
                 case.source_kind != "handler_play"
+                and not director_instruction
                 and approved_state.handler != int(source_event["actor_id"])
             )
             or approved.instruction != case.instruction
@@ -259,6 +318,12 @@ def current(c: Connection, game: GameService, state: GameState, case: RolePunish
             raise WorkflowError("Recover the original Handler's actual instruction authority.")
     else:
         resolve(state, case.chooser, bound, require_current_profile=False)
+        if case.source_kind == "enforcement_initiative" and case.action:
+            from girlframe.services.m3_enforcement_initiative import instruction_authority
+
+            actual, controller = instruction_authority(game, c, state, game.action(c, case.action))
+            if actual != case.chooser or controller != case.chooser_controller:
+                raise WorkflowError("Recover the actual source Director's original instruction.")
 
 
 def pc_execution(
@@ -706,21 +771,23 @@ class RolePunishmentService:
                         event,
                         "preview-validation",
                     )
+                source_approval = bool(
+                    viewer.user_id == case.chooser_controller
+                    and (
+                        case.source_kind == "enforcement_initiative"
+                        or case.source_kind == "handler_play"
+                        and viewer.user_id == state.handler
+                        or case.chooser is not None
+                        and case.chooser.kind == "handler"
+                        and viewer.user_id == state.handler
+                    )
+                )
                 case = case.model_copy(
                     update=dict(
                         instruction=instruction,
                         instruction_event=event,
-                        handler_approval_event=event
-                        if viewer.user_id == state.handler
-                        and (
-                            case.source_kind == "handler_play"
-                            or case.chooser is not None
-                            and case.chooser.kind == "handler"
-                        )
-                        else None,
-                        handler_approver=case.chooser
-                        if case.chooser is not None and case.chooser.kind == "handler"
-                        else None,
+                        handler_approval_event=event if source_approval else None,
+                        handler_approver=case.chooser if source_approval else None,
                     )
                 )
                 kind = "instructed"

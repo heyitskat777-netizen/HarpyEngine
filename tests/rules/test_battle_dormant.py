@@ -226,3 +226,111 @@ def test_real_dormant_threshold_conversion_retains_actual_forced_harpy_dive_debt
     assert game.inspect(PLAYER, child)["state"] == "complete"
     table(game)
     assert game.inspect(PLAYER, root)["state"] == "complete" and game.dice.calls == 2
+
+
+def test_actual_low_dormant_rebirth_preserves_owned_nonbody_handler_play_without_successor_damage(
+    ledger, monkeypatch
+):
+    import json
+
+    import sqlalchemy as sa
+    from test_void_service import five_no, respond
+
+    from girlframe.database import tables as t
+    from girlframe.engine.m3_handler_play_state import Effect
+    from girlframe.services.m3_handler_plays import HandlerPlayService
+    from girlframe.services.m3_void import VoidService
+
+    game, worker, gateway, root, work = dormant_source(
+        ledger, monkeypatch, close=False, prevoid_frame=True, girl="ALPHA", faces=(1, 1)
+    )
+    service = DormantService(ledger, game)
+    source = service.get(PLAYER, work)
+    selected = next(x for x in source["assets"] if x["family"] == "frame")
+    assert (
+        service.alter(
+            PLAYER,
+            str(uuid4()),
+            work,
+            source["revision"],
+            source["game_revision"],
+            selected["id"],
+            "Actual final original Frame Void alteration",
+            piloting=True,
+        )["phase"]
+        == "thresholds"
+    )
+    threshold = service.get(PLAYER, work)["body"]["thresholds"][0]
+    void = VoidService(ledger)
+    five_no(void, threshold)
+    choice = void.get(PLAYER, threshold)["rebirth_choice"] | dict(
+        new_identities=["Actual reborn self"], account="Actual source-proved original rebirth"
+    )
+    respond(
+        void,
+        threshold,
+        "rebirth",
+        dict(choice=choice, account="Actual irreversible original rebirth"),
+    )
+    canon = state(game)
+    assert (
+        "2" not in canon.sheets and canon.harpy_states[-1].origin == canon.career_archives[-1].actor
+    )
+    assert service.get(PLAYER, work)["state"] == "resolved"
+    grant = next(x for x in canon.handler_plays if x.source_action == root)
+    assert grant.nonbody_only and grant.targets == (canon.harpy_states[-1].origin,)
+    handler = HandlerPlayService(ledger)
+    menu = handler.get(ADMIN, grant.id)
+    assert set(dict(menu["plays"])) == {"brief", "escalate", "support", "expectation"}
+    with pytest.raises(WorkflowError):
+        handler.submit(
+            ADMIN,
+            str(uuid4()),
+            grant.id,
+            canon.revision,
+            "mess",
+            Effect(
+                kind="damage",
+                target=canon.harpy_states[-1].origin,
+                asset=json.loads(canon.career_archives[-1].sheet_json)["assets"][0]["id"],
+                account="No successor damage",
+            ),
+        )
+    before = state(game).harpy_states[-1]
+    handler.submit(
+        ADMIN,
+        str(uuid4()),
+        grant.id,
+        state(game).revision,
+        "brief",
+        Effect(
+            kind="brief",
+            account="Actual source-scoped tactical information after the original assault",
+        ),
+    )
+    assert state(game).harpy_states[-1] == before
+    assert game.inspect(PLAYER, root)["state"] == "complete" and game.dice.calls == 1
+    with ledger.engine.connect() as c:
+        choices, responses = t.m2["m2_choices"], t.m2["m2_responses"]
+        ended = (
+            c.execute(
+                sa.select(choices).where(
+                    choices.c.action_id == root, choices.c.kind == "battle_low_damage"
+                )
+            )
+            .mappings()
+            .one()
+        )
+        assert ended["state"] == "completed_original_ended"
+        assert (
+            c.scalar(
+                sa.select(sa.func.count())
+                .select_from(responses)
+                .where(responses.c.choice_id == ended["id"])
+            )
+            == 0
+        )
+        assert json.loads(ended["body_json"])["actor"] == before.origin.model_dump(mode="json")
+    tick(worker, gateway, 5)
+    with ledger.engine.connect() as c:
+        assert game.lock(c, 900)["state"] == "released"

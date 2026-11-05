@@ -300,6 +300,9 @@ class OffDutyService:
         def operation(c: Connection) -> dict[str, Any]:
             self.missions._handler(c, viewer)
             state = load_state(c, self.store.campaign_id)
+            from girlframe.services.m3_quadrant_loss import require_aftermath_clear
+
+            require_aftermath_clear(state)
             if self.game.pending_actions(c):
                 raise WorkflowError("Finish the pending scene Play before starting Off-Duty.")
             existing = t.m3["m3_off_duty"]

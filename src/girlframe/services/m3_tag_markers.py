@@ -51,6 +51,8 @@ def context(action: dict[str, Any]) -> dict[str, Any] | None:
     if not isinstance(value, dict):
         raise WorkflowError("Recover the actual source Tag context.")
     result = dict(value)
+    if data.get("enforcement") is value and "marker_handler" in result:
+        result["handler"] = result["marker_handler"]
     if "cast_sha256" not in result and action["data"].get("void_keep") is value:
         result["cast_sha256"] = fingerprint(
             SceneCast.model_validate_json(json.dumps(result["cast"]))
@@ -152,8 +154,13 @@ def current(
         if fingerprint(original) != source["cast_sha256"]:
             raise ValueError("STALE_TAG_MARKER: recover the actual original cast")
         coordinator = original.facilitator
+        from girlframe.services.m3_harpy_defeat import owned_director_procedure
+
+        continued = owned_director_procedure(game, c, state, action)
         if fingerprint(cast) != fingerprint(original) and not (
-            coordinator is not None and _ended_handler_cast(state, original, cast, coordinator)
+            coordinator is not None
+            and _ended_handler_cast(state, original, cast, coordinator)
+            or continued is not None
         ):
             raise ValueError("STALE_TAG_MARKER: recover the actual original cast")
         handler = (
@@ -167,16 +174,20 @@ def current(
             handler = None
         # A proven ended role is no longer a fictional candidate; the same actual human
         # facilitator can still make their printed other-player Tag proposal.
-        effective = original.model_copy(
-            update={
-                "roles": tuple(
-                    x
-                    for x in original.roles
-                    if not any(x.actor == a.actor for a in state.handler_archives)
-                )
-            }
+        effective = (
+            cast
+            if continued is not None
+            else original.model_copy(
+                update={
+                    "roles": tuple(
+                        x
+                        for x in original.roles
+                        if not any(x.actor == a.actor for a in state.handler_archives)
+                    )
+                }
+            )
         )
-        return rules.markers(
+        markers = rules.markers(
             state,
             profiles(c, game.store.campaign_id),
             effective,
@@ -184,6 +195,21 @@ def current(
             roller(state, action),
             handler,
         )
+        meta = action["data"].get("actor_basic", {})
+        if (
+            continued is not None
+            and not markers
+            and owner == meta.get("adjudicator_controller")
+            and owner != continued.controller
+        ):
+            return (
+                rules.ooc_marker(
+                    owner,
+                    "original-director-procedure:" + action["id"],
+                    source["cast_sha256"] + ":" + fingerprint(cast) + ":" + continued.source_sha256,
+                ).model_copy(update={"label": "Original OOC scene human (no fictional body)"}),
+            )
+        return markers
     except ValueError as error:
         raise WorkflowError(str(error)) from None
 

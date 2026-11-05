@@ -1,5 +1,82 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Bounded gameplay candidate — automated verification passed
+
+The current development changes extend source baseline `262c3fc`. This bounded
+candidate passes the complete regression; its exact source commit is recorded in
+the following evidence checkpoint. M3 remains **IN_PROGRESS / RULES_SUBSET**.
+The four development agents are frozen while root runs the integrated checks.
+No independent rules certification or human Discord acceptance is inferred.
+
+Executed, overlapping scoped checks include:
+
+| Scope | Result | Private artifact |
+|---|---|---|
+| Engage, Harpy Assault, Handler Tags and carried resources | 51 passed in 24.26s | `var/m3-root-source-workflows.xml` |
+| Handler Tag technical review repairs and original-human notices | 22 passed in 13.60s | `var/m3-handler-tag-reviewed-whole.xml` |
+| Actual Gorgon parent/native/PC-Harpy child recovery and existing shared recovery | 30 passed in 18.71s | `var/m3-gorgon-parent-recovery-whole.xml` |
+| Enforcer retention, paid/free source, passives, actual Snoop and legacy replay | 58 passed in 52.73s | `var/m3-enforcer-retention-passive-legacy-checkpoint.xml` |
+| Mockingbird implemented source subsets | 22 passed in 18.04s | `var/m3-mockingbird-source-subsets-checkpoint.xml` |
+| Harpy lifecycle and real normal Handler/Director/HandlerGirl Void | 81 passed in 68.52s | `var/m3-life-void-whole-checkpoint.xml` |
+| Original legacy Travel/Defeat signed JSON | 2 passed in 0.25s | `var/m3-life-legacy-signatures.xml` |
+| Physical/Gorgon/world/Strain composition | 95 passed in 69.33s | `var/m3-physical-battle-world-final.xml` |
+| Free package source admission plus replacement/requisition regression | 22 passed in 11.83s | `var/m3-replacement-free-source-admission.xml` |
+| Registry and Frame classification contracts | 38 passed in 0.54s | `var/m3-current-registry-contracts.xml` |
+
+These totals overlap and must not be summed or treated as a completion percentage.
+The first full run completed **2,194 passed / 4 failed in 1,133.74s**, no
+errors or skips: `var/m3-bounded-gameplay-full-first.xml`. All four failures
+are described and repaired below. The final full rerun passed **2,200 tests in 1,070.22s**, zero failures, errors
+or skips, at `var/m3-bounded-gameplay-full-fixed.xml`. JUnit was read back
+and all frozen source hashes still match the tested candidate.
+The last completed full checkpoint remains the 1,983-test build documented below.
+
+Source review corrected two Handler Tag defects before integration: attention now
+creates an original-controller private Inbox notice with only a technical read
+receipt, and saved private requests remain readable when registry availability
+changes while gameplay writes stay gated. A separate agent re-reviewed both
+repairs without claiming human certification. Actual retained Initiative tests
+also caught and fixed an ActorPlay working-state persistence bug; true grasp and
+owned release now survive the real source transaction. New optional HeldItem,
+Travel and Defeat fields preserve legacy signed default JSON and real source proof.
+
+The first integrated run exposed two regression causes, now repaired. Two native
+forms were blocked by an unconditional mandatory obedience field. The native
+Pilot form now offers optional invocation only for the actual source-proved owned
+Pavlov rule; it appears only as a bonus choice after actual invocation. Two physical
+source tests caught an invalid outside-Frame inference from an absent Passenger
+record. Actual HandlerGirl occupancy/control now stays unknown without real pose
+facts, preserving the new sole mechanical Asset support and factual inside/outside
+reviews. All four existing failing cases and affected source regressions pass;
+new real acquired native Keep tests cover invoked and unclaimed Pavlov. Focused
+repair result: **23 passed in 23.48s**, `var/m3-bounded-integration-repairs-native.xml`.
+The earlier direct repair result was **21 passed in 23.48s** at
+`var/m3-bounded-integration-repairs-first.xml`. No expected test was relaxed.
+
+Locked install passes. Global Ruff passes, **692 files** are formatted and mypy
+checks **369 source files**. Original handoff verification passes its unchanged
+34 required files / 86 planned cases / 4 schemas / 4 synthetic fixtures (planning
+only). Public-source scan: **778 publishable files / 40 original manifest entries /
+zero findings**. Isolated temporary SQLite upgrade/check/health, downgrade and
+repeat upgrade/check/health all pass; `var/m3-bounded-gameplay-migrations.log`.
+No live database was migrated.
+
+The registry now records **166 adjustable clarifications**, including 47 new
+source-bound recommendations, and 35 updated partial contracts/evidence. It still
+reports 473 entries, 104 subsets / 369 unimplemented (including 37 deferred Ancillary),
+436 required core and **zero independent verifications**. No source entry was
+promoted to independently executable status. Ancillary stays disabled. No live
+policy or environment configuration was changed.
+
+Remaining whole-workflow boundaries include Compliance Virus, free Personal
+Firearm package issuance, Mockingbird Sex/Call closure, further actual Frame/Gorgon
+and Handler/Girl playbook consumers, full Strain/Endgames and final source/Discord
+acceptance. Unknown physical sources and unsupported Gorgon/Dormant/no-Asset
+interactions fail before effects rather than creating impossible pending choices.
+The bot has **zero running processes**; no restart, deployment, real Discord message
+or environment publication occurred. Work continues after this checkpoint.
+
+
 ## Combat, Harpy and original-person checkpoint — automated verification passed
 
 Verified source: **`57392d0bfd6cfc2d93df480e524f16b86c38675e`**, successfully

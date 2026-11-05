@@ -4,8 +4,6 @@ from girlframe.engine.m2 import AssetState, PilotSheet
 
 
 def wyvern_intrinsic(sheet: PilotSheet, asset: AssetState) -> bool:
-    if asset.intrinsic == "wyvern_enormous":
-        return True
     if (
         asset.family != "frame"
         or sheet.frame != "WYVERN 0.4"

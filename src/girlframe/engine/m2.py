@@ -22,12 +22,15 @@ from girlframe.engine.m3_girl_runtime_state import GirlRuntime
 from girlframe.engine.m3_handler_consequence_state import (
     HandlerArchive,
     HandlerConsequence,
+    HandlerDeparture,
     HandlerFatalSource,
     HandlerInjury,
     HandlerOpportunity,
 )
+from girlframe.engine.m3_handler_girl_void_state import HandlerGirlVoid
 from girlframe.engine.m3_handler_play_state import HandlerPlay
 from girlframe.engine.m3_handler_state import HandlerPersona
+from girlframe.engine.m3_handler_void_state import HandlerVoid
 from girlframe.engine.m3_harpy_defeat_state import (
     Declaration as HarpyDefeatDeclaration,
 )
@@ -38,8 +41,11 @@ from girlframe.engine.m3_harpy_defeat_state import (
     Rift,
     Travel,
 )
+from girlframe.engine.m3_harpy_rest_state import Rest as HarpyRest
 from girlframe.engine.m3_item_state import HeldItem, ItemTransfer
 from girlframe.engine.m3_lobotomy_state import BlockedPlay, Surgery
+from girlframe.engine.m3_mockingbird_state import MockingbirdState
+from girlframe.engine.m3_passenger_state import Passenger
 from girlframe.engine.m3_physical_state import EscortJourney, FrameLock, ParkedFrame, Placement
 from girlframe.engine.m3_refusal_state import RefusalBonus
 from girlframe.engine.m3_regulation_state import Regulation
@@ -96,11 +102,14 @@ class AssetState(Model):
     damaged: bool = False
     void: bool = False
     intrinsic: Literal["wyvern_enormous"] | None = None
+    classification_event: str | None = Field(
+        default=None, min_length=1, exclude_if=lambda value: value is None
+    )
     concealed: bool = False
 
     @model_validator(mode="after")
     def actual_intrinsic_family(self) -> "AssetState":
-        if self.intrinsic is not None and self.family != "frame":
+        if self.intrinsic is not None and self.family != "frame" and not self.classification_event:
             raise ValueError("The printed WYVERN intrinsic belongs to its Frame Asset")
         return self
 
@@ -191,7 +200,9 @@ class DirectorContext(Model):
     body_actor: ActorRef | None = None
     active: bool = True
     revision: int = 1
-    termination_reason: Literal["handler_death", "director_death"] | None = None
+    termination_reason: Literal["handler_death", "director_death", "handler_departure"] | None = (
+        None
+    )
     termination_event: str | None = None
 
     @model_validator(mode="after")
@@ -236,6 +247,9 @@ class GameState(Model):
     handler_tags: list[TagState] = Field(default_factory=list)
     handler_persona: HandlerPersona | None = None
     handler_archives: list[HandlerArchive] = Field(default_factory=list)
+    handler_departures: list[HandlerDeparture] = Field(default_factory=list)
+    mockingbird: MockingbirdState = Field(default_factory=MockingbirdState)
+    passengers: list[Passenger] = Field(default_factory=list)
     handler_consequences: list[HandlerConsequence] = Field(default_factory=list)
     handler_injuries: list[HandlerInjury] = Field(default_factory=list)
     handler_opportunities: list[HandlerOpportunity] = Field(default_factory=list)
@@ -273,6 +287,9 @@ class GameState(Model):
     harpy_states: list[HarpyState] = Field(default_factory=list)
     native_harpies: list[NativeHarpyRuntime] = Field(default_factory=list)
     harpy_setups: list[HarpySetup] = Field(default_factory=list)
+    handler_girl_void: list[HandlerGirlVoid] = Field(default_factory=list)
+    handler_void: list[HandlerVoid] = Field(default_factory=list)
+    harpy_rests: list[HarpyRest] = Field(default_factory=list)
     harpy_defeats: list[DefeatEffect] = Field(default_factory=list)
     harpy_defeat_declarations: list[HarpyDefeatDeclaration] = Field(default_factory=list)
     void_rifts: list[Rift] = Field(default_factory=list)
@@ -320,12 +337,18 @@ class PlayInput(Model):
     piloting: bool = False
     order_id: str | None = None
     witnessed: bool = False
+    obeying_orders: bool = Field(default=False, exclude_if=lambda value: value is False)
+    order_account: str = Field(default="", max_length=1200, exclude_if=lambda value: value == "")
     parent: str | None = None
     off_duty_id: str | None = None
     source_work: str | None = Field(default=None, max_length=100)
 
     @model_validator(mode="after")
     def battle_fields_only(self) -> "PlayInput":
+        if self.play != "keep_your_head" and (self.obeying_orders or self.order_account):
+            raise ValueError("Only actual Keep accepts current-order obedience details")
+        if self.obeying_orders != bool(self.order_account.strip()):
+            raise ValueError("Actual obedience and its nonblank account must be supplied together")
         if self.play not in ("all_out_assault", "go_for_the_core") and any(
             x is not None for x in (self.attacking_asset, self.target_asset, self.battle_context)
         ):

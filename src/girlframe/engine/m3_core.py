@@ -104,8 +104,14 @@ def corrupt(sheet: PilotSheet, asset_id: str, description: str, *, piloting: boo
     girls = [x for x in updated.assets if x.family == "girl"]
     frames = [x for x in updated.assets if x.family == "frame"]
     if has_rule(updated, "girl.mockingbird.risk-factor", "MOCKINGBIRD"):
-        if piloting and frames and all(x.void for x in frames):
-            required.append(Followup(kind="mockingbird_resist", owner=sheet.owner, source_pdf=35))
+        if frames and all(x.void for x in frames):
+            required.append(
+                Followup(
+                    kind="mockingbird_resist" if piloting else "frame_void_threshold",
+                    owner=sheet.owner,
+                    source_pdf=35 if piloting else 19,
+                )
+            )
     else:
         if girls and all(x.void for x in girls):
             required.append(Followup(kind="girl_void_threshold", owner=sheet.owner, source_pdf=19))

@@ -138,6 +138,18 @@ def source(
                     or fact is None
                 ):
                     raise ValueError()
+            elif transfer.source_kind == "enforcer_snoop":
+                meta = action["data"].get("snoop") if action else None
+                if (
+                    meta is None
+                    or transfer.id not in meta.get("transfers", [])
+                    or meta.get("physical_event") != transfer.event
+                    or body.get("item_source") != "enforcer_snoop"
+                    or body.get("source_action") != transfer.action
+                    or transfer.source.model_dump(mode="json") != meta.get("target")
+                    or transfer.recipient.model_dump(mode="json") != meta.get("actor")
+                ):
+                    raise ValueError()
             else:
                 if action is None:
                     raise ValueError()
@@ -162,6 +174,11 @@ def source(
                 or family != "girl"
             ):
                 raise ValueError()
+            return current, body, actor
+        if body.get("reason") == "mockingbird_risk":
+            from girlframe.services.m3_mockingbird import prove_void_source as prove_risk
+
+            prove_risk(game, c, first, body, actor)
             return current, body, actor
         if body.get("reason") == "dormant_void":
             from girlframe.services.m3_battle_dormant import prove_void_source
@@ -369,10 +386,22 @@ def complete(
                 from girlframe.services.m3_battle_npc import complete_void_continuation
 
                 complete_void_continuation(game, c, identity, event, viewer, key)
+            elif body.get("item_source") == "enforcer_snoop":
+                from girlframe.services.m3_enforcer_snoop import (
+                    complete_item_void as snoop_complete,
+                )
+
+                snoop_complete(game, c, identity, event, viewer, key)
             else:
                 from girlframe.services.m3_enforcement_initiative import complete_item_void
 
                 complete_item_void(game, c, identity, event)
+        elif body.get("reason") == "mockingbird_risk":
+            from girlframe.services.m3_mockingbird import (
+                complete_void_continuation as complete_risk,
+            )
+
+            complete_risk(game, c, identity, event, viewer, key)
         elif body.get("reason") == "dormant_void":
             from girlframe.services.m3_battle_dormant import complete_void
 
@@ -437,6 +466,9 @@ class VoidService:
                 and entry.kind in ("play", "mechanic")
             ):
                 result.append(dict(id=entry.id, name=entry.title))
+        from girlframe.engine.m3_enforcer_requisitions import owned_plays as enforcer_plays
+
+        result.extend(enforcer_plays(state, actor, load_registry()))
         return list({x["id"]: x for x in result}.values())
 
     def _view(self, c: Connection, viewer: GuildViewer, identity: str) -> dict[str, Any]:

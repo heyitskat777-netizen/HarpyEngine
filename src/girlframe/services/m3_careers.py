@@ -82,11 +82,21 @@ def synchronize_end(
     for row in c.execute(
         sa.select(scenes).where(
             scenes.c.campaign_id == game.store.campaign_id,
+            scenes.c.open.is_(True),
         )
     ).mappings():
         people = json.loads(row["participants_json"])
         owner = int(archive.actor.entity)
-        if owner in people:
+        cast = next((x for x in proof.scene_casts if x.id == row["id"] and x.open), None)
+        actual = (
+            sorted(
+                {x.controller for x in cast.roles}
+                | ({cast.facilitator} if cast.facilitator else set())
+            )
+            if cast
+            else [x for x in people if x != owner]
+        )
+        if sorted(people) != actual:
             c.execute(
                 scenes.update()
                 .where(
@@ -95,7 +105,7 @@ def synchronize_end(
                 )
                 .values(
                     revision=row["revision"] + 1,
-                    participants_json=json.dumps([x for x in people if x != owner]),
+                    participants_json=json.dumps(actual),
                 )
             )
     work = t.m3["m3_required_work"]
@@ -113,6 +123,16 @@ def synchronize_end(
     for task in latest.values():
         if task["id"] in exclude_work or task["state"] == "resolved":
             continue
+        declared_owner = json.loads(task["body_json"]).get("owner")
+        if isinstance(declared_owner, dict) and declared_owner.get("kind"):
+            subject = ActorRef.model_validate(declared_owner)
+            if (
+                subject.kind != "pilot"
+                or subject.entity != archive.actor.entity
+                or subject.incarnation is not None
+                and subject != archive.actor
+            ):
+                continue
         if work_subject_character(c, game, task) != archive.actor.incarnation:
             continue
         body = json.loads(task["body_json"]) | dict(
@@ -795,6 +815,9 @@ class CareerService:
                 profile_revision=new_revision,
                 account=account,
             )
+            from girlframe.services.m3_harpy_defeat import restore_death_tags
+
+            state = restore_death_tags(self.game, c, state, archive.actor, source)
             restored = state.sheets[str(viewer.user_id)]
             original_private = c.scalar(
                 sa.select(t.snapshots.c.private_json).where(

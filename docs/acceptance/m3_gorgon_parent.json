@@ -1,0 +1,57 @@
+{
+  "unit": "Actual Gorgon parent, private declaration and mixed-role recovery",
+  "implementation": "IMPLEMENTED_AUTOMATED_WITHIN_STATED_SCOPE",
+  "source": {
+    "document": "rulebook",
+    "pdf": 162,
+    "printed": 160
+  },
+  "checks": [
+    {
+      "artifact": "var/m3-gorgon-parent-recovery-whole.xml",
+      "passed": 30,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 18.71,
+      "scope": "Root declaration/recovery, actual Harpy child recovery and existing shared recovery regression"
+    },
+    {
+      "artifact": "var/m3-gorgon-director-recovery.xml",
+      "passed": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 7.16
+    },
+    {
+      "artifact": "var/m3-gorgon-root-shared-recovery.xml",
+      "passed": 26,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 15.94,
+      "scope": "Earlier six source cases plus existing shared recovery regression; overlaps first artifact"
+    }
+  ],
+  "implemented": [
+    "Actual owned Gorgon intent with immutable original body, resources, target and source table",
+    "Existing chat lock and durable choices; no Gorgon dice, Heat spending or fabricated roll receipt",
+    "Original judge reviews damaged Asset capability or uncertain reach before effects",
+    "Private role, Play, Asset and target dropdowns; no effect before owned confirmation",
+    "Original mixed-role table recovery, including actual selected Director",
+    "Known actual Pilot response child receipt and prior human answers survive whole-chain recovery",
+    "Started diceless effects cannot be discarded as unrolled; actual unstarted declaration may be cancelled under safety pause",
+    "Changed source roles and rewritten participant lists rejected"
+  ],
+  "limitations": [
+    "Actual runtime damage, contests, collateral and Warp have separate source workflow tests",
+    "External non-Harpy Pilot resource/Defeat ports remain unavailable; factual Harpy runtime required before lock",
+    "Only proved actual original endings may remove source cast roles during recovery; no successor substitution",
+    "Production requires reviewed source availability and scoped approval; tests narrowly permit only these candidate source IDs",
+    "Independent rules review and human Discord acceptance NOT_RUN",
+    "Bot remains off; no live migration, deployment or publication",
+    "Actual Dormant awakening against a Gorgon attacker and exhausted no-available-Asset bodies remain explicit pre-lock admission limits pending actual source ports."
+  ],
+  "source_commit": "262c3fc baseline plus active integration changes; commit pending"
+}

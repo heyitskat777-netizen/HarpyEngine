@@ -12,7 +12,7 @@ from girlframe.database import tables as t
 from girlframe.engine import m3_actor_plays as rules
 from girlframe.engine import m3_cast
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput, tier
-from girlframe.engine.m3_actor_resources import Commitment, commit
+from girlframe.engine.m3_actor_resources import Commitment, Committed, commit
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_policy import RULESET
@@ -222,6 +222,15 @@ class ActorPlayService:
             ):
                 raise WorkflowError("Select your actual Handler Girl-rules role or Harpy body.")
             judge = self._judge(c, state, cast, ref)
+            from girlframe.engine.m3_enforcer_requisitions import PAVLOV, SNOOP
+            from girlframe.engine.m3_harpy_defeat import harpy
+            from girlframe.services.m3_battle import _visible
+            from girlframe.services.m3_enforcement_initiative import preview as initiative_preview
+            from girlframe.services.m3_enforcer_requisitions import owned
+            from girlframe.services.m3_enforcer_snoop import _targets as snoop_targets
+
+            initiative = initiative_preview(self.game, viewer, channel, actor_ref=ref)
+
             return {
                 "actor": actor.model_dump(mode="json"),
                 "adjudicator": {
@@ -230,6 +239,22 @@ class ActorPlayService:
                 },
                 "cast_revision": cast.revision,
                 "game_revision": state.revision,
+                "opponents": [
+                    {"ref": x.ref.model_dump(mode="json"), "token": x.ref.token, "name": x.label}
+                    for x in actors
+                    if x.ref != ref and _visible(state, x.ref, viewer.user_id)
+                ],
+                "pavlov": owned(c, self.game, state, ref, PAVLOV) is not None,
+                "snoop_targets": snoop_targets(self.game, c, state, ref)
+                if owned(c, self.game, state, ref, SNOOP) is not None
+                else [],
+                "enforcement_targets": initiative["targets"] if initiative["available"] else [],
+                "forbidden_plays": [x.play for x in harpy(state, ref).blocked_plays]
+                if actor.girl == "harpy"
+                else [],
+                "retained_plays": list(getattr(harpy(state, ref), "plays", ()))
+                if actor.girl == "harpy"
+                else [],
             }
 
     def begin(
@@ -247,34 +272,52 @@ class ActorPlayService:
     ) -> dict[str, Any]:
         prepared = PlayInput.model_validate_json(prepared.model_dump_json())
         battle_play = prepared.play in ("all_out_assault", "go_for_the_core")
+        mockingbird_play = prepared.play in ("mockingbird_person", "mockingbird_sex")
         if battle_play:
             from girlframe.engine.m3_plays import HEAT_IDS
 
             if prepared.play not in HEAT_IDS:
                 raise WorkflowError("M3_REVIEW_PENDING: actual-role combat remains release-gated")
-            if prepared.play == "all_out_assault":
-                raise WorkflowError(
-                    "UNSUPPORTED_RULE: the Harpy's extra maneuver needs its resolver"
-                )
         if (
             (
                 prepared.play != "actor_reject_tag"
                 if rejection
                 else prepared.play
-                not in ("keep_your_head", "dive_deep", "check_sensors", "go_for_the_core")
+                not in (
+                    "keep_your_head",
+                    "dive_deep",
+                    "check_sensors",
+                    "engage",
+                    "go_off_duty",
+                    "mockingbird_person",
+                    "mockingbird_sex",
+                    "snoop",
+                    "enforcement_initiative",
+                    "all_out_assault",
+                    "go_for_the_core",
+                )
             )
             or prepared.target is not None
             or prepared.parent is not None
             and rejection is not None
             or prepared.off_duty_id is not None
             or prepared.piloting
-            and not battle_play
+            and not (
+                battle_play
+                or prepared.play in ("engage", "snoop", "enforcement_initiative")
+                or mockingbird_play
+            )
             or prepared.order_id is not None
             or prepared.witnessed
             or prepared.target_actor is not None
-            and not battle_play
+            and not (
+                battle_play
+                or prepared.play in ("engage", "snoop", "enforcement_initiative")
+                or mockingbird_play
+            )
             or prepared.source_work is not None
             and prepared.play != "dive_deep"
+            and not mockingbird_play
         ):
             raise WorkflowError("UNSUPPORTED_RULE: select an implemented actual-role Play.")
 
@@ -304,7 +347,14 @@ class ActorPlayService:
             counter = None
             dive = None
             battle = None
+            engage = None
             dormant_source = None
+            required_adjudication = None
+            harpy_rest = None
+            mockingbird = None
+            snoop = None
+            enforcement = None
+            gorgon_counter = None
             if battle_play:
                 from girlframe.services.m3_battle import prepare
 
@@ -313,6 +363,40 @@ class ActorPlayService:
                 battle = prepare(self.game, c, viewer, state, self.game.scene(c, channel), prepared)
                 if battle["actor"] != ref.model_dump(mode="json"):
                     raise ValueError("The declared combatant must be this exact Harpy body")
+            if prepared.play == "engage":
+                from girlframe.services.m3_engage import prepare as prepare_engage
+
+                engage = prepare_engage(
+                    self.game,
+                    c,
+                    viewer,
+                    state,
+                    self.game.scene(c, channel),
+                    prepared,
+                    actor_ref=ref,
+                )
+            if prepared.play == "snoop":
+                from girlframe.services.m3_enforcer_snoop import prepare as prepare_snoop
+
+                snoop = prepare_snoop(
+                    self.game, c, viewer, prepared, state, channel=channel, actor_ref=ref
+                )
+            if prepared.play == "enforcement_initiative":
+                from girlframe.services.m3_enforcement_initiative import prepare as prepare_enforcer
+
+                enforcement = prepare_enforcer(
+                    self.game, c, viewer, prepared, state, channel=channel, actor_ref=ref
+                )
+            if prepared.play == "go_off_duty":
+                from girlframe.services.m3_harpy_rest import prepare as prepare_rest
+
+                harpy_rest = prepare_rest(self.game, c, viewer, state, cast, prepared, ref)
+            if mockingbird_play:
+                from girlframe.services.m3_mockingbird_plays import prepare as prepare_mockingbird
+
+                mockingbird = prepare_mockingbird(
+                    self.game, c, viewer, prepared, state, channel=channel, actor_ref=ref
+                )
             if prepared.play == "dive_deep":
                 from girlframe.services.m3_dive import prepare_actor
 
@@ -323,12 +407,28 @@ class ActorPlayService:
                     dormant_source = prepare_dive_source(
                         self.game, c, viewer, prepared, state, channel
                     )
+                from girlframe.services.m3_adjudication import prepare_required_dive
+
+                required_adjudication = prepare_required_dive(
+                    self.game,
+                    c,
+                    viewer,
+                    prepared,
+                    state,
+                    actor=ref,
+                    channel=channel,
+                    source=dormant_source,
+                )
             if parent is not None:
                 from girlframe.services.m3_battle import validate_counter_child
 
                 if parent["scene_id"] != cast.id or int(parent["channel_id"]) != channel:
                     raise ValueError("Continue this counter-Play in its original source scene")
-                if dormant_source is None:
+                if parent["data"].get("gorgon_play"):
+                    from girlframe.services.m3_gorgon_play import validate_child
+
+                    gorgon_counter = validate_child(self.game, c, parent, ref, prepared)
+                elif dormant_source is None:
                     counter = validate_counter_child(self.game, c, parent, ref, prepared)
             if self.game.pending_actions(c) and parent is None:
                 raise ValueError("SCENE_BUSY: finish or recover the pending Play first")
@@ -341,11 +441,17 @@ class ActorPlayService:
                 gain=prepared.gain,
                 pair_share=prepared.pair_share,
             )
-            self._eligible_play(state, ref, rejection=rejection is not None, play=prepared.play)
+            if required_adjudication is None:
+                self._eligible_play(state, ref, rejection=rejection is not None, play=prepared.play)
+            elif actor.ref.kind == "external_pilot":
+                from girlframe.engine.m3_harpy_defeat import harpy
+
+                if harpy(state, actor.ref).body_incapacitated:
+                    raise WorkflowError("The actual Harpy body is incapacitated.")
             if prepared.play == "check_sensors":
                 if actor.girl != "harpy" or commitment != Commitment(heat=0):
                     raise ValueError("A Harpy asks honest Sensor questions without dice or Heat")
-            elif not rejection:
+            elif not rejection and required_adjudication is None and harpy_rest is None:
                 commit(state, ref, profiles(c, self.store.campaign_id), commitment, expected)
             if rejection:
                 item = next((x for x in state.obligations if x.id == rejection), None)
@@ -408,13 +514,35 @@ class ActorPlayService:
                 data["dive"] = dive
             if battle is not None:
                 data["battle"] = battle
+            if engage is not None:
+                data["engage"] = engage
+            if snoop is not None:
+                data["snoop"] = snoop
+            if enforcement is not None:
+                data["enforcement"] = enforcement
+            if prepared.play == "keep_your_head":
+                from girlframe.services.m3_enforcer_requisitions import prepare_keep
+
+                data["enforcer_keep"] = prepare_keep(self.game, c, state, ref, prepared)
             if dormant_source is not None:
                 data["dormant_dive_source"] = dormant_source
+            if required_adjudication is not None:
+                data["adjudication"] = required_adjudication
+            if harpy_rest is not None:
+                data["harpy_off_duty"] = harpy_rest
+            if mockingbird is not None:
+                data["mockingbird"] = mockingbird
             if parent is not None and counter is not None:
                 data["battle_counter_source"] = dict(
                     choice=counter["id"],
                     actor=ref.model_dump(mode="json"),
                     attacker=parent["data"]["battle"]["actor"],
+                )
+            if parent is not None and gorgon_counter is not None:
+                data["gorgon_counter_source"] = dict(
+                    choice=gorgon_counter["id"],
+                    actor=ref.model_dump(mode="json"),
+                    attacker=parent["data"]["gorgon_play"]["actor"],
                 )
             c.execute(
                 t.m2["m2_actions"]
@@ -481,6 +609,17 @@ class ActorPlayService:
             raise WorkflowError(str(error)) from None
 
     def validate(self, c: Connection, state: GameState, action: dict[str, Any]) -> ActorView:
+        from girlframe.services.m3_harpy_defeat import (
+            owned_director_procedure,
+            source_actor_continuation,
+        )
+
+        continued = source_actor_continuation(self.game, c, state, action)
+        if continued is not None:
+            return continued
+        continued = owned_director_procedure(self.game, c, state, action)
+        if continued is not None:
+            return continued
         meta = action["data"]["actor_basic"]
         ref = ActorRef.model_validate(meta["ref"])
         cast, actors = self.actors(c, state, int(action["channel_id"]), fresh=False)
@@ -543,6 +682,28 @@ class ActorPlayService:
         state = load_state(c, self.store.campaign_id)
         actor = self.validate(c, state, action)
         meta = action["data"]["actor_basic"]
+        if action["data"].get("harpy_off_duty"):
+            from girlframe.services.m3_harpy_rest import prepare as prepare_rest
+
+            cast, _ = self.actors(c, state, int(action["channel_id"]), fresh=False)
+            current = prepare_rest(
+                self.game,
+                c,
+                viewer,
+                state,
+                cast,
+                PlayInput.model_validate(action["data"]["prepared"]),
+                actor.ref,
+            )
+            if current != action["data"]["harpy_off_duty"]:
+                raise WorkflowError("STALE_HARPY_REST: refresh the actual original hide resources")
+        if action["data"].get("adjudication"):
+            from girlframe.engine.m3_harpy_defeat import harpy
+            from girlframe.services.m3_adjudication import reserve_request
+
+            if actor.ref.kind == "external_pilot" and harpy(state, actor.ref).body_incapacitated:
+                raise WorkflowError("The actual Harpy body is incapacitated.")
+            return reserve_request(self.game, c, viewer, action, key=key)
         self._eligible_play(
             state,
             actor.ref,
@@ -569,6 +730,25 @@ class ActorPlayService:
             item.state = "fulfilled"
             self.finish(c, state, action)
         else:
+            if action["data"].get("mockingbird"):
+                from girlframe.services.m3_mockingbird_plays import pre_roll as mockingbird_pre_roll
+
+                mockingbird_pre_roll(self.game, c, state, action)
+            if action["data"].get("snoop"):
+                from girlframe.services.m3_enforcer_snoop import pre_roll as snoop_pre_roll
+
+                snoop_pre_roll(self.game, c, viewer, state, action)
+            if action["data"].get("enforcement"):
+                from girlframe.services.m3_enforcement_initiative import (
+                    pre_roll as enforcer_pre_roll,
+                )
+
+                action["data"]["enforcement"]["roll_event"] = str(uuid4())
+                enforcer_pre_roll(self.game, c, viewer, state, action)
+            if action["data"].get("engage"):
+                from girlframe.services.m3_engage import pre_roll as engage_pre_roll
+
+                engage_pre_roll(self.game, c, state, action)
             if action["data"].get("battle"):
                 from girlframe.services.m3_battle import pre_roll as battle_pre_roll
 
@@ -577,12 +757,16 @@ class ActorPlayService:
                 from girlframe.services.m3_dive import pre_roll
 
                 pre_roll(self.game, c, viewer, state, action)
-            committed = commit(
-                state,
-                actor.ref,
-                profiles(c, self.store.campaign_id),
-                Commitment.model_validate(meta["commitment"]),
-                meta["source_sha256"],
+            committed = (
+                Committed(state=state)
+                if action["data"].get("harpy_off_duty")
+                else commit(
+                    state,
+                    actor.ref,
+                    profiles(c, self.store.campaign_id),
+                    Commitment.model_validate(meta["commitment"]),
+                    meta["source_sha256"],
+                )
             )
             if committed.followups:
                 raise ValueError(
@@ -641,6 +825,8 @@ class ActorPlayService:
             action_id=action["id"],
             event_id=action["data"]["battle"]["roll_event"]
             if action["data"].get("battle")
+            else action["data"]["enforcement"]["roll_event"]
+            if action["data"].get("enforcement")
             else None,
         )
         return {"action_id": action["id"], "receipt": action["data"]["receipt"]}
@@ -648,6 +834,10 @@ class ActorPlayService:
     def finish(self, c: Connection, state: GameState, action: dict[str, Any]) -> None:
         if self.game.pending(c, action["id"]):
             raise ValueError("Mandatory actual-role responses remain pending")
+        from girlframe.services.m3_mockingbird import intercept_finish
+
+        if intercept_finish(self.game, c, state, action):
+            return
         action["state"] = "complete"
         self.game.queue(
             c,
@@ -680,17 +870,53 @@ class ActorPlayService:
             from girlframe.services.m3_battle import complete_counter_play
 
             complete_counter_play(self.game, c, action, event, viewer, key)
+        elif action["state"] == "complete" and action["data"].get("gorgon_counter_source"):
+            from girlframe.services.m3_gorgon_play import complete_response
 
-    def results(self, c: Connection, action: dict[str, Any]) -> None:
+            complete_response(self.game, c, action, event, viewer, key)
+
+    def results(
+        self, c: Connection, action: dict[str, Any], *, state: GameState | None = None
+    ) -> None:
         total = action["data"]["receipt"]["pre_total"] + sum(
             x["amount"] for x in action["data"]["modifiers"]
         )
         action["data"]["result"].update(total=total, tier=tier(total))
         action["state"] = "awaiting_choices"
-        if action["data"].get("battle"):
-            from girlframe.services.m3_battle import results as battle_results
+        from girlframe.services.m3_mockingbird import intercept_results
 
-            battle_results(self.game, c, action)
+        state = state or load_state(c, self.store.campaign_id)
+        if intercept_results(self.game, c, state, action):
+            return
+        if action["data"].get("enforcement"):
+            from girlframe.services.m3_enforcement_initiative import results as enforcer_results
+
+            enforcer_results(self.game, c, state, action)
+        elif action["data"].get("snoop"):
+            from girlframe.services.m3_enforcer_snoop import results as snoop_results
+
+            snoop_results(self.game, c, state, action)
+        elif action["data"].get("mockingbird"):
+            from girlframe.services.m3_mockingbird_plays import results as mockingbird_results
+
+            mockingbird_results(self.game, c, state, action)
+        elif action["data"].get("harpy_off_duty"):
+            from girlframe.services.m3_harpy_rest import results as rest_results
+
+            rest_results(self.game, c, state, action)
+        elif action["data"].get("battle"):
+            if action["data"]["play"] == "all_out_assault":
+                from girlframe.services.m3_engage import start_assault_extra
+
+                start_assault_extra(self.game, c, action)
+            else:
+                from girlframe.services.m3_battle import results as battle_results
+
+                battle_results(self.game, c, action)
+        elif action["data"].get("engage"):
+            from girlframe.services.m3_engage import results as engage_results
+
+            engage_results(self.game, c, state, action)
         elif action["data"].get("dive"):
             from girlframe.services.m3_dive import results
 
@@ -728,6 +954,9 @@ class ActorPlayService:
             action["scene_id"],
             selected["direction"],
             selected["account"],
+            ooc_controller=selected["controller"]
+            if saved_marker is not None and saved_marker["actor"] is None
+            else None,
         )
         repeated = rules.mark(state, ref, selected["tag"], action["scene_id"])
         action["data"]["modifiers"].append(
@@ -743,7 +972,7 @@ class ActorPlayService:
                 c, action, int(action["actor_id"]), "tag_resolution", {"tag": selected["tag"]}
             )
         else:
-            self.results(c, action)
+            self.results(c, action, state=state)
 
     def apply(
         self,
@@ -759,7 +988,39 @@ class ActorPlayService:
         owner, kind = int(row["actor_id"]), row["kind"]
         body, meta = json.loads(row["body_json"]), action["data"]["actor_basic"]
         judge = meta["adjudicator_controller"]
-        if action["data"].get("battle") and kind.startswith("battle_"):
+        if kind.startswith("snoop_") and action["data"].get("snoop"):
+            from girlframe.services.m3_enforcer_snoop import apply as snoop_apply
+
+            snoop_apply(self.game, c, state, action, row, answer)
+        elif kind.startswith("enforcer_") and action["data"].get("enforcement"):
+            from girlframe.services.m3_enforcement_initiative import apply as enforcer_apply
+
+            enforcer_apply(self.game, c, state, action, row, answer)
+        elif kind.startswith("harpy_off_duty_"):
+            from girlframe.services.m3_harpy_rest import respond as rest_respond
+
+            rest_respond(self.game, c, state, action, row, answer)
+        elif (
+            kind.startswith("mockingbird_")
+            and action["data"].get("mockingbird")
+            and kind not in ("mockingbird_risk", "mockingbird_void_threshold")
+        ):
+            from girlframe.services.m3_mockingbird_plays import apply as book_apply
+
+            book_apply(self.game, c, state, action, row, answer)
+        elif kind in ("mockingbird_risk", "mockingbird_void_threshold"):
+            from girlframe.services.m3_mockingbird import apply as mockingbird_apply
+
+            mockingbird_apply(self.game, c, state, action, row, answer)
+        elif kind.startswith("engage_"):
+            from girlframe.services.m3_engage import apply as engage_apply
+
+            engage_apply(self.game, c, state, action, row, answer)
+        elif action["data"].get("engage") and kind.startswith("battle_"):
+            from girlframe.services.m3_battle import apply_damage_response
+
+            apply_damage_response(self.game, c, state, action, row, answer)
+        elif action["data"].get("battle") and kind.startswith("battle_"):
             from girlframe.services.m3_battle import apply as battle_apply
 
             battle_apply(self.game, c, state, action, row, answer)
@@ -807,6 +1068,7 @@ class ActorPlayService:
                     action["scene_id"],
                     answer.number or 0,
                     answer.text,
+                    ooc_controller=marker.controller if marker.actor is None else None,
                 )
                 action["data"].setdefault("tag_proposals", []).append(
                     dict(
@@ -828,7 +1090,7 @@ class ActorPlayService:
                 elif proposals:
                     self.game.request(c, action, judge, "actor_tag_selection")
                 else:
-                    self.results(c, action)
+                    self.results(c, action, state=state)
         elif kind == "actor_tag_selection" and owner == judge:
             selected = next(
                 (x for x in action["data"]["tag_proposals"] if answer.options == (x["id"],)), None
@@ -884,7 +1146,7 @@ class ActorPlayService:
                 raise ValueError(
                     "Choose to embrace or take action to reject the actual repeated Tag"
                 )
-            self.results(c, action)
+            self.results(c, action, state=state)
         elif kind == "harpy_sensor_answers" and owner == judge:
             if (
                 actor.girl != "harpy"
@@ -901,11 +1163,22 @@ class ActorPlayService:
             action["data"]["result"].update(answers=answer.text, honest_attested=True)
             self.finish(c, state, action)
         elif kind == "actor_keep" and owner == actor.controller:
-            result = (
-                rules.harpy_keep(state, actor.ref, action["data"]["result"]["tier"], answer)
-                if actor.girl == "harpy"
-                else rules.keep(action["data"]["result"]["tier"], answer)
+            from girlframe.services.m3_enforcer_requisitions import keep_extras
+
+            extra = keep_extras(self.game, c, state, action, answer)
+            ordinary = answer.model_copy(
+                update={
+                    "fields": {
+                        k: v for k, v in answer.fields.items() if not k.startswith("pavlov_")
+                    }
+                }
             )
+            result = (
+                rules.harpy_keep(state, actor.ref, action["data"]["result"]["tier"], ordinary)
+                if actor.girl == "harpy"
+                else rules.keep(action["data"]["result"]["tier"], ordinary)
+            )
+            result["positive"] = sorted(set(result["positive"]) | extra)
             if action["data"]["result"]["tier"] == "high":
                 rules.add_tag(state, actor.ref, answer.text, tuple(action["data"]["participants"]))
             action["data"]["result"].update(result)
@@ -935,6 +1208,8 @@ class ActorPlayService:
             "body": json.loads(row["body_json"]),
             "play": action["data"]["play"],
             "result": action["data"]["result"],
+            "enforcer_keep": action["data"].get("enforcer_keep"),
+            "harpy_off_duty": bool(action["data"].get("harpy_off_duty")),
             "actor": actor.controller,
             "own": {
                 "girl": "harpy" if actor.girl == "harpy" else None,
@@ -942,7 +1217,7 @@ class ActorPlayService:
                 "retained_plays": list(getattr(harpy(state, actor.ref), "plays", ()))
                 if actor.girl == "harpy"
                 else [],
-                "assets": [],
+                "assets": [x.model_dump(mode="json") for x in actor.assets],
                 "identities": [x.model_dump(mode="json") for x in actor.identities],
             }
             if own
@@ -985,8 +1260,42 @@ class ActorPlayService:
             from girlframe.services.m3_battle import projection as battle_projection
 
             result["battle"] = battle_projection(self.game, c, state, action, row)
+        if row["kind"].startswith("engage_"):
+            from girlframe.services.m3_engage import projection as engage_projection
+
+            result["engage"] = engage_projection(self.game, c, state, action, row)
+        if action["data"].get("harpy_off_duty"):
+            from girlframe.services.m3_harpy_rest import projection as rest_projection
+
+            result.update(rest_projection(state, action, row))
+        if (
+            row["kind"].startswith("mockingbird_")
+            and action["data"].get("mockingbird")
+            and row["kind"] not in ("mockingbird_risk", "mockingbird_void_threshold")
+        ):
+            from girlframe.services.m3_mockingbird_plays import projection as book_projection
+
+            result["mockingbird_play"] = book_projection(self.game, c, state, action, row)
+        elif row["kind"] in ("mockingbird_risk", "mockingbird_void_threshold"):
+            from girlframe.services.m3_mockingbird import projection as mockingbird_projection
+
+            result["mockingbird"] = mockingbird_projection(self.game, c, state, action, row)
+        if action["data"].get("engage") and row["kind"].startswith("battle_"):
+            from girlframe.services.m3_battle import damage_projection
+
+            result["battle"] = damage_projection(self.game, c, state, action, row)
         if row["kind"] == "tag_resolution" and actor.ref.kind == "external_pilot":
             from girlframe.engine.m3_tag_permissions import can_reject
 
             result["rejection_blocked"] = not can_reject(state, actor.ref, result["body"]["tag"])
+        if row["kind"].startswith("snoop_") and action["data"].get("snoop"):
+            from girlframe.services.m3_enforcer_snoop import projection as snoop_projection
+
+            result["snoop"] = snoop_projection(self.game, c, viewer, state, action, row)
+        if row["kind"].startswith("enforcer_") and action["data"].get("enforcement"):
+            from girlframe.services.m3_enforcement_initiative import (
+                projection as enforcer_projection,
+            )
+
+            result["enforcement"] = enforcer_projection(self.game, c, viewer, state, action, row)
         return result

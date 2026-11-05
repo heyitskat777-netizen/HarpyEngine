@@ -48,6 +48,11 @@ class EnforcerService:
         )
         if not rules.conditioning(state, actor):
             raise WorkflowError("Obedience Conditioning requires your actual non-Dog Enforcer.")
+        if state.sheets[actor.entity].frame != "THE ENFORCER":
+            from girlframe.services.m3_enforcer_requisitions import owned
+
+            if owned(c, self.game, state, actor, rules.OBEDIENCE) is None:
+                raise WorkflowError("Recover the actually acquired Obedience Conditioning source.")
         return actor
 
     def _known(self, state: GameState, actor: ActorRef) -> set[str]:
@@ -138,8 +143,23 @@ class EnforcerService:
                 actionable=x.held,
             )
             for x in state.enforcer_grasps
-            if x.actor.entity == str(viewer.user_id)
+            if self._grasp_controller(c, x.id, x.source_event) == viewer.user_id
         ]
+
+    def _grasp_controller(self, c: Connection, identity: str, event: str) -> int | None:
+        from girlframe.engine.m3_harpy_defeat import controller
+
+        raw = c.scalar(
+            sa.select(t.m2["m2_state_history"].c.body_json).where(
+                t.m2["m2_state_history"].c.campaign_id == self.store.campaign_id,
+                t.m2["m2_state_history"].c.event_id == event,
+            )
+        )
+        source = GameState.model_validate_json(raw) if raw else None
+        saved = (
+            next((x for x in source.enforcer_grasps if x.id == identity), None) if source else None
+        )
+        return controller(source, saved.actor) if source is not None and saved is not None else None
 
     def grasps(self, viewer: GuildViewer) -> list[dict[str, Any]]:
         with self.store.engine.connect() as c:
@@ -154,7 +174,7 @@ class EnforcerService:
                     revision=state.revision,
                 )
                 for x in state.enforcer_grasps
-                if x.actor.entity == str(viewer.user_id)
+                if self._grasp_controller(c, x.id, x.source_event) == viewer.user_id
             ]
 
     def release_grasp(
@@ -165,7 +185,14 @@ class EnforcerService:
             saved = next((x for x in state.enforcer_grasps if x.id == identity), None)
             if (
                 saved is None
-                or saved.actor.entity != str(viewer.user_id)
+                or self._grasp_controller(c, saved.id, saved.source_event) != viewer.user_id
+                or resolve(
+                    state,
+                    saved.actor,
+                    profiles(c, self.store.campaign_id),
+                    require_current_profile=False,
+                ).controller
+                != viewer.user_id
                 or state.revision != revision
             ):
                 raise WorkflowError("Refresh your actual original held grasp.")

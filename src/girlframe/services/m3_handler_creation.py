@@ -43,6 +43,8 @@ def _source_hash(value: SavedDraft | Offer, raw: dict[str, Any]) -> str:
     excluded: dict[str, Any] = {}
     if "generation" not in raw:
         excluded["generation"] = True
+    if isinstance(value, SavedDraft) and "source_work" not in raw:
+        excluded["source_work"] = True
     if isinstance(value, SavedDraft) and "npc_starting" not in raw.get("draft", {}):
         excluded["draft"] = {"npc_starting"}
     return hashlib.sha256(value.model_dump_json(exclude=excluded).encode()).hexdigest()
@@ -334,6 +336,7 @@ class HandlerCreationService:
         draft: Draft,
         *,
         generation: str | None = None,
+        source_work: str | None = None,
     ) -> dict[str, Any]:
         def access(c: Connection) -> None:
             self._policy(c, viewer)
@@ -352,19 +355,47 @@ class HandlerCreationService:
             if type(expected) is not int or expected != (row["revision"] if row else 0):
                 raise WorkflowError("STALE_HANDLER_DRAFT: reopen the current saved draft.")
             previous = self._draft(c, row) if row else None
+            actual_source = source_work or (previous.source_work if previous else None)
+            source_context = None
+            if actual_source is not None:
+                from girlframe.services.m3_quadrant_loss import creation_context
+
+                source_context = creation_context(
+                    self.game,
+                    c,
+                    load_state(c, self.store.campaign_id),
+                    actual_source,
+                    viewer.user_id,
+                )
+            if previous and previous.source_work and actual_source != previous.source_work:
+                raise WorkflowError("Resume the exact source Handler creation")
             saved = SavedDraft(
                 persona_id=previous.persona_id if previous else str(uuid4()),
                 appointment=appointment,
                 draft=draft,
                 generation=rules.generation(load_state(c, self.store.campaign_id)),
+                source_work=actual_source,
             )
             self._actual(c, saved, complete=False)
             identity, source = row["id"] if row else str(uuid4()), str(uuid4())
+            linked_state = None
+            if source_context is not None:
+                from girlframe.services.m3_quadrant_loss import link_creation
+
+                linked_state = link_creation(
+                    self.game,
+                    c,
+                    load_state(c, self.store.campaign_id),
+                    source_context["loss"],
+                    saved.persona_id,
+                    source,
+                )
             self.game.event(
                 c,
                 viewer.user_id,
                 key,
                 "m3.handler_draft_saved",
+                linked_state,
                 event_id=source,
                 work_id=identity,
                 body_sha256=fingerprint(saved),
@@ -395,6 +426,7 @@ class HandlerCreationService:
                     expected=expected,
                     appointment=appointment,
                     generation=generation,
+                    source_work=source_work,
                     draft=draft.model_dump(mode="json"),
                 ),
                 operation,
@@ -407,6 +439,18 @@ class HandlerCreationService:
             ) from None
         except ValueError as error:
             raise WorkflowError(str(error)) from None
+
+    def start_source(self, viewer: GuildViewer, key: str, source_work: str) -> dict[str, Any]:
+        data = self.view(viewer)
+        return self.save(
+            viewer,
+            key,
+            data["revision"],
+            data["appointment"],
+            Draft.model_validate_json(json.dumps(data["draft"])),
+            generation=data["generation"],
+            source_work=source_work,
+        )
 
     def _requests(self, c: Connection, persona: str) -> list[dict[str, Any]]:
         table = t.m3["m3_required_work"]
@@ -688,6 +732,14 @@ class HandlerCreationService:
                 .limit(1)
             ):
                 raise WorkflowError("Restore chat permissions before Handler activation.")
+            saved = self._draft(c, row)
+            source_context = None
+            if saved.source_work is not None:
+                from girlframe.services.m3_quadrant_loss import creation_context
+
+                source_context = creation_context(
+                    self.game, c, state, saved.source_work, viewer.user_id
+                )
             for name in ("m3_missions", "m3_off_duty"):
                 table = t.m3[name]
                 if c.scalar(
@@ -695,6 +747,9 @@ class HandlerCreationService:
                     .where(
                         table.c.campaign_id == self.store.campaign_id,
                         table.c.phase.not_in(("complete", "cancelled")),
+                        table.c.id.not_in(source_context["active_phases"].get(name, ()))
+                        if source_context is not None
+                        else sa.true(),
                     )
                     .limit(1)
                 ):
@@ -757,6 +812,10 @@ class HandlerCreationService:
                         },
                         state="resolved",
                     )
+            if saved.source_work is not None:
+                from girlframe.services.m3_quadrant_loss import synchronize_handler_replacement
+
+                synchronize_handler_replacement(self.game, c, saved.persona_id, source, viewer, key)
             return dict(id=saved.persona_id, activated=True)
 
         try:

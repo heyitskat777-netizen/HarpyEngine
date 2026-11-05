@@ -17,6 +17,16 @@ comparisons still need further audit. Current implementation counts come from
 `tools/check_rules_registry.py`; partial implementations retain the `subset`
 marker and no entry has independent verification.
 
+The current frozen bounded candidate updates contracts/evidence for **35 entries**
+and records **166 adjustable campaign clarifications**. Current inventory state is
+**104 subset entries / 369 unimplemented entries**, including 37 deferred Ancillary
+entries. All 436 required core entries still await independent review. This
+corrects stale per-feature inventory metadata; these unequal source entries are
+not a progress percentage. The new full regression passes **2,200 tests**; the 1,983-test build remains
+historical evidence. See
+[the current implementation map](M3_PARALLEL_WORK.md) and
+[the remaining-work inventory](M3_REMAINING_WORK.md).
+
 ## Current module scope
 
 Per owner instruction, the eight ancillary playbooks are an optional `ancillary`

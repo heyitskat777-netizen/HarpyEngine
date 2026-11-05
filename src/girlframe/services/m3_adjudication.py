@@ -12,6 +12,7 @@ from girlframe.database import tables as t
 from girlframe.engine import m3_adjudication as rules
 from girlframe.engine.m2 import GameState, PlayInput
 from girlframe.engine.m3_actor_bonds import current_ref
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_adjudication_state import Decision, Required
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_lobotomy import blocked_play
@@ -33,7 +34,21 @@ def prepare_required(
     prepared: PlayInput,
     state: GameState,
     source: dict[str, Any] | None = None,
+    channel: int | None = None,
 ) -> dict[str, Any] | None:
+    if prepared.play == "dive_deep":
+        if channel is None and prepared.parent:
+            channel = int(game.action(c, prepared.parent)["channel_id"])
+        return prepare_required_dive(
+            game,
+            c,
+            viewer,
+            prepared,
+            state,
+            actor=current_ref(state, viewer.user_id),
+            channel=channel,
+            source=source,
+        )
     sheet = state.sheets.get(str(viewer.user_id))
     prohibition = blocked_play(sheet, prepared.play) if sheet else None
     if prohibition is None:
@@ -99,6 +114,73 @@ def prepare_required(
     return required.model_dump(mode="json")
 
 
+def prepare_required_dive(
+    game: "GameService",
+    c: Connection,
+    viewer: GuildViewer,
+    prepared: PlayInput,
+    state: GameState,
+    *,
+    actor: ActorRef,
+    channel: int | None,
+    source: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Only the actual Dormant-imposed Dive can replace its forbidden roll."""
+    if actor.kind == "external_pilot":
+        from girlframe.engine.m3_harpy_defeat import harpy
+
+        body = harpy(state, actor)
+        prohibition = next((x for x in body.blocked_plays if x.play == "dive_deep"), None)
+    else:
+        sheet = state.sheets.get(actor.entity)
+        prohibition = blocked_play(sheet, "dive_deep") if sheet else None
+    if prohibition is None:
+        return None
+    if not prepared.source_work or channel is None:
+        raise WorkflowError("This forbidden Dive needs the actual mandatory Dormant source.")
+    if prepared.heat or prepared.identity or prepared.gain or prepared.pair_share:
+        raise WorkflowError("Manual mandatory Dive cannot spend Heat or mark an Identity.")
+    from girlframe.services.m3_battle_dormant import DormantService, prepare_dive_source
+
+    actual = prepare_dive_source(game, c, viewer, prepared, state, channel)
+    if source is not None and source != actual:
+        raise WorkflowError("Recover the original actual Dormant Dive source.")
+    if ActorRef.model_validate(actual["actor"]) != actor:
+        raise WorkflowError("No successor may inherit an original body's required Dive.")
+    row, _, _ = DormantService(game.store, game)._source(c, prepared.source_work)
+    from girlframe.services.m3_medical import MedicalService
+
+    gm, appointment = MedicalService(game.store)._handler(c)
+    judge_ref = None
+    if actor.kind == "external_pilot":
+        from girlframe.services.m3_actor_plays import ActorPlayService
+
+        service = ActorPlayService(game)
+        cast, _ = service.actors(c, state, channel, fresh=False)
+        judge = service._judge(c, state, cast, actor)
+        gm, judge_ref = judge.controller, judge.ref
+    approval = game.store.policy.m3_approval
+    if approval is None:
+        raise WorkflowError("Mandatory Dive requires approved M3 rules.")
+    required = Required(
+        play="dive_deep",
+        actor=actor,
+        actor_controller=viewer.user_id if actor.kind == "external_pilot" else None,
+        adjudicator=judge_ref,
+        handler=active_handler(state) if judge_ref is None else None,
+        gm_controller=gm,
+        appointment=appointment,
+        prohibition=prohibition,
+        source_kind="dormant_dive_work",
+        source_id=row["id"],
+        source_revision=row["revision"],
+        registry=approval.registry_sha256,
+        channel=channel,
+    )
+    verify(game, c, state, required)
+    return required.model_dump(mode="json")
+
+
 def verify(game: "GameService", c: Connection, state: GameState, required: Required) -> None:
     rules.validate(state, required)
     from girlframe.services.m3_medical import MedicalService
@@ -134,13 +216,53 @@ def verify(game: "GameService", c: Connection, state: GameState, required: Requi
         or surgery.subject
         != (
             next(x.origin for x in state.harpy_states if x.id == required.actor.entity)
-            if required.play == "harpy_defeat"
+            if required.actor.kind == "external_pilot"
             else required.actor
         )
         or (event.actor_id != surgery.inflictor.entity)
     ):
         raise WorkflowError("The actual source surgery and original patient have changed.")
-    if required.source_kind == "harpy_defeat_work":
+    if required.source_kind == "dormant_dive_work":
+        from girlframe.services.m3_battle_dormant import DormantService, actual_actor
+
+        dormant_row, body, original = DormantService(game.store, game)._source(
+            c, required.source_id
+        )
+        if (
+            dormant_row["state"] == "resolved"
+            or body.get("phase") != "dive"
+            or dormant_row["revision"] != required.source_revision
+            or dormant_row["subject_id"] != str(required.patient_controller)
+            or actual_actor(game, c, state, original) != required.actor
+        ):
+            raise WorkflowError("Recover the exact original Dormant-imposed Dive revision.")
+        if required.actor.kind == "external_pilot":
+            from girlframe.services.m3_actor_plays import ActorPlayService
+
+            actor_service = ActorPlayService(game)
+            assert required.channel is not None
+            cast, _ = actor_service.actors(c, state, required.channel, fresh=False)
+            judge = actor_service._judge(c, state, cast, required.actor)
+            if judge.ref != required.adjudicator or judge.controller != required.controller:
+                from girlframe.services.m3_harpy_defeat import owned_director_procedure
+
+                actions = t.m2["m2_actions"]
+                candidates = c.scalars(
+                    sa.select(actions.c.id).where(
+                        actions.c.campaign_id == game.store.campaign_id,
+                        actions.c.state == "awaiting_adjudication",
+                        sa.func.json_extract(actions.c.body_json, "$.adjudication.source_id")
+                        == required.source_id,
+                    )
+                )
+                if not any(
+                    candidate["data"].get("adjudication") == required.model_dump(mode="json")
+                    and owned_director_procedure(game, c, state, candidate) is not None
+                    for identity in candidates
+                    for candidate in (game.action(c, identity),)
+                ):
+                    raise WorkflowError("Recover the actual mandatory Dive's original scene judge.")
+    elif required.source_kind == "harpy_defeat_work":
         from girlframe.services.m3_harpy_defeat import HarpyDefeatService
 
         service = HarpyDefeatService(game.store, game=game)
@@ -257,6 +379,10 @@ def written_receipt(
 
         return HarpyDefeatService(game.store, game=game).manual_receipt(
             c, viewer, key, action, total, reason, request_id
+        )
+    if action["data"].get("actor_basic") is not None:
+        return written_actor_receipt(
+            game, c, viewer, action, total, reason, request_id=request_id, key=key
         )
     HandlerService(game.store).authorize(c, viewer)
     game.unpaused(c)
@@ -384,6 +510,121 @@ def written_receipt(
     return {"action_id": action["id"], "receipt": receipt}
 
 
+def written_actor_receipt(
+    game: "GameService",
+    c: Connection,
+    viewer: GuildViewer,
+    action: dict[str, Any],
+    total: int,
+    reason: str,
+    *,
+    request_id: str,
+    key: str,
+) -> dict[str, Any]:
+    """The frozen actual judge writes an honest mandatory Actor Dive receipt."""
+    from girlframe.services.m3_actor_plays import ActorPlayService
+
+    required = Required.model_validate(action["data"]["adjudication"])
+    if required.play != "dive_deep" or required.source_kind != "dormant_dive_work":
+        raise WorkflowError("Use this exact mandatory Actor Dive source.")
+    game.unpaused(c)
+    state = load_state(c, game.store.campaign_id)
+    verify(game, c, state, required)
+    actor = ActorPlayService(game).validate(c, state, action)
+    if (
+        viewer.user_id != required.controller
+        or actor.ref != required.actor
+        or actor.controller != required.patient_controller
+        or action["state"] != "awaiting_adjudication"
+        or action["data"].get("receipt")
+    ):
+        raise WorkflowError("Resume the original actual judge's unadjudicated Dive.")
+    lock = game.lock(c, action["channel_id"])
+    if not lock or lock["state"] != "held":
+        raise WorkflowError("LOCK_NOT_ACKNOWLEDGED: no adjudication was applied.")
+    request = next(
+        (
+            x
+            for x in game.pending(c, action["id"])
+            if x["id"] == request_id
+            and x["kind"] == "manual_adjudication"
+            and x["actor_id"] == str(required.controller)
+        ),
+        None,
+    )
+    if request is None:
+        raise WorkflowError("Resume the actual owned manual Dive decision.")
+    source = str(uuid4())
+    decision = Decision(
+        id=str(uuid4()),
+        action=action["id"],
+        request=request_id,
+        required=required,
+        total=total,
+        reason=reason.strip(),
+        source_event=source,
+    )
+    receipt = rules.receipt(decision, str(uuid4()), datetime.now(UTC).isoformat())
+    receipt["ruleset"] = RULESET
+    c.execute(
+        t.m2["m2_receipts"]
+        .insert()
+        .values(
+            campaign_id=game.store.campaign_id,
+            action_id=action["id"],
+            id=receipt["id"],
+            body_json=json.dumps(receipt, sort_keys=True),
+        )
+    )
+    c.execute(
+        t.m2["m2_choices"]
+        .update()
+        .where(
+            t.m2["m2_choices"].c.campaign_id == game.store.campaign_id,
+            t.m2["m2_choices"].c.id == request_id,
+            t.m2["m2_choices"].c.state == "pending",
+        )
+        .values(
+            state="resolved",
+            revision=request["revision"] + 1,
+            body_json=json.dumps(
+                json.loads(request["body_json"]) | {"decision": decision.model_dump(mode="json")},
+                sort_keys=True,
+            ),
+        )
+    )
+    action["data"]["receipt"] = receipt
+    game.save_action(c, action, state="tag_window")
+    for person in action["data"]["participants"]:
+        game.request(c, action, person, "tag_window")
+    game.queue(c, action, "receipt", dict(receipt=receipt, callsign=actor.label, play="dive_deep"))
+    event = game.event(
+        c,
+        viewer.user_id,
+        key,
+        "m3.manual_adjudicated",
+        state,
+        event_id=source,
+        action_id=action["id"],
+        receipt_id=receipt["id"],
+        adjudication_id=decision.id,
+    )
+    c.execute(
+        t.m2["m2_responses"]
+        .insert()
+        .values(
+            campaign_id=game.store.campaign_id,
+            choice_id=request_id,
+            actor_id=str(viewer.user_id),
+            event_id=event,
+            answer_json=json.dumps(
+                {"manual_adjudication": decision.model_dump(mode="json")}, sort_keys=True
+            ),
+        )
+    )
+    return {"action_id": action["id"], "receipt": receipt}
+
+
 class AdjudicationService:
     def __init__(self, store: OnboardingStore):
         from girlframe.services.m2_game import GameService
@@ -436,7 +677,7 @@ class AdjudicationService:
             from girlframe.engine.m3_careers import original_sheet
 
             state = load_state(c, self.store.campaign_id)
-            if required.play == "harpy_defeat":
+            if required.actor.kind == "external_pilot":
                 from girlframe.engine.m3_actors import resolve
                 from girlframe.services.m3_actors import profiles
 
@@ -465,7 +706,7 @@ class AdjudicationService:
         def authorize(c: Connection) -> None:
             self.access.authorize(c, viewer, "plays")
             _, _, required = self._get(c, viewer, identity)
-            if required.play != "harpy_defeat":
+            if required.play != "harpy_defeat" and required.actor.kind != "external_pilot":
                 HandlerService(self.store).authorize(c, viewer)
             elif viewer.user_id != required.controller:
                 raise WorkflowError("Only this source's actual human adjudicator can decide.")

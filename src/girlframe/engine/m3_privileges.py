@@ -2,6 +2,7 @@
 
 from girlframe.engine.m2 import AssetState, GameState, Obligation
 from girlframe.engine.m3_core import install
+from girlframe.engine.m3_frame_swap_state import SwapReceipt
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt, Requisition, SceneReceipt
 
 KIND = "revoked_requisition"
@@ -15,6 +16,8 @@ def suspended(state: GameState, purchase: str) -> bool:
 
 
 def available(state: GameState, subject: int, character: str) -> list[Requisition]:
+    from girlframe.engine.m3_enforcer_requisitions import binding, grants, held
+
     sheet = state.sheets[str(subject)]
     frame = sheet.frame_runtime.id if sheet.frame_runtime else "initial:" + character
     return [
@@ -60,6 +63,20 @@ def available(state: GameState, subject: int, character: str) -> list[Requisitio
                     for grant in state.personal_firearms
                 )
             )
+            or (
+                isinstance(x, FrameRuleReceipt)
+                and any(
+                    grant.purchase == x.id
+                    and grant.actor == x.actor
+                    and binding(state, grant)[1] == frame
+                    and grant.rule == x.rule_id
+                    and held(state, x.actor, grant.rule) is not None
+                    for grant in grants(state)
+                )
+            )
+            or isinstance(x, SwapReceipt)
+            and x.new_frame == frame
+            and held(state, x.actor, x.selection.retained_rule) is not None
         )
     ]
 
@@ -103,23 +120,40 @@ def revoke(
             asset=asset.model_dump_json(), frame=receipt.frame_instance, label=asset.name
         )
         sheet.assets.remove(asset)
-    elif isinstance(receipt, FrameRuleReceipt):
-        grant = next(
-            x
-            for x in state.personal_firearms
-            if x.purchase == receipt.id and x.actor == receipt.actor
+    elif isinstance(receipt, (FrameRuleReceipt, SwapReceipt)):
+        from girlframe.engine.m3_enforcer_requisitions import TITLES, frame, grants, held
+
+        acquired = (
+            held(state, receipt.actor, receipt.selection.retained_rule)
+            if isinstance(receipt, SwapReceipt)
+            else next((x for x in grants(state) if x.purchase == receipt.id), None)
         )
-        details.update(
-            grant=grant.id,
-            grant_issues=json_dump_issues(grant),
-            frame=grant.frame_instance,
-            label="Personal Firearm",
-            rule_id=receipt.rule_id,
-        )
-        pistol = next((x for x in sheet.assets if x.id == grant.issues[-1].asset), None)
-        if pistol is not None:
-            details["asset"] = pistol.model_dump_json()
-            sheet.assets.remove(pistol)
+        if acquired is not None:
+            details.update(
+                enforcer_grant=acquired.model_dump_json(),
+                frame=frame(state, receipt.actor) or "",
+                label=TITLES[acquired.rule],
+                rule_id=acquired.rule,
+            )
+        else:
+            if not isinstance(receipt, FrameRuleReceipt):
+                raise ValueError("This paid exchange has no removable retained rule source")
+            grant = next(
+                x
+                for x in state.personal_firearms
+                if x.purchase == receipt.id and x.actor == receipt.actor
+            )
+            details.update(
+                grant=grant.id,
+                grant_issues=json_dump_issues(grant),
+                frame=grant.frame_instance,
+                label="Personal Firearm",
+                rule_id=receipt.rule_id,
+            )
+            pistol = next((x for x in sheet.assets if x.id == grant.issues[-1].asset), None)
+            if pistol is not None:
+                details["asset"] = pistol.model_dump_json()
+                sheet.assets.remove(pistol)
     elif isinstance(receipt, SceneReceipt):
         details["label"] = "Privacy" if receipt.kind == "privacy" else "Visiting Home"
     else:
@@ -149,11 +183,24 @@ def restore(original: GameState, identity: str, character: str, replace: str | N
     ):
         raise ValueError("The original inflictor must first confirm the restoration condition")
     sheet = state.sheets[str(gate.target)]
-    if gate.details["kind"] in ("asset_installment", "ability_unlock", "frame_grafting"):
+    if gate.details["kind"] in (
+        "asset_installment",
+        "ability_unlock",
+        "frame_grafting",
+        "frame_swap",
+    ):
         frame = sheet.frame_runtime.id if sheet.frame_runtime else "initial:" + character
         if frame != gate.details["frame"] or sheet.frame_scrapped:
             raise ValueError("Recover the original Frame before restoring its suspended Asset")
-        if gate.details["kind"] != "asset_installment":
+        if "enforcer_grant" in gate.details:
+            from girlframe.engine.m3_enforcer_requisitions import Grant, binding, grants
+
+            original_grant = Grant.model_validate_json(gate.details["enforcer_grant"])
+            if original_grant not in grants(state) or binding(state, original_grant)[1] != frame:
+                raise ValueError("Recover the exact original suspended Enforcer entitlement")
+            if replace is not None:
+                raise ValueError("Restoring this rule grants no new Asset or acquisition effect")
+        elif gate.details["kind"] != "asset_installment":
             grant = next(
                 (x for x in state.personal_firearms if x.id == gate.details["grant"]), None
             )

@@ -208,6 +208,49 @@ def give_tag(
     return state
 
 
+def apply_returned_death_tags(original: GameState, actor: ActorRef, event: str) -> GameState:
+    """Materialize a recorded postcareer Tag only on an explicitly returned SAME original."""
+    from girlframe.engine.m3_actor_bonds import current_ref
+
+    if actor.kind != "pilot" or current_ref(original, int(actor.entity)) != actor:
+        raise ValueError("Only the genuinely returned original may receive her recorded Tag")
+    returned = {
+        x.archive
+        for x in original.career_returns
+        if x.state == "returned" and x.owner == int(actor.entity) and x.response_event == event
+    }
+    if not any(x.id in returned and x.actor == actor for x in original.career_archives):
+        raise ValueError("An actual original-return response must own this materialization")
+    state = original
+    for effect in original.harpy_defeats:
+        if not (
+            effect.archived_tag
+            and effect.killer == actor
+            and effect.tag_recipient == actor
+            and effect.tag
+            and effect.tag_id
+            and effect.tag_applied_event is None
+            and effect.phase == "complete"
+        ):
+            continue
+        if any(x.id == effect.tag_id for x in state.sheets[actor.entity].tags):
+            raise ValueError("A recorded postcareer Tag cannot duplicate an existing authority")
+        state = give_tag(
+            state,
+            actor,
+            effect.actor,
+            effect.tag,
+            event,
+            effect.tag_id,
+            tuple(x.controller for x in effect.source_cast.roles),
+        )
+        state.harpy_defeats = [
+            x.model_copy(update={"tag_applied_event": event}) if x.id == effect.id else x
+            for x in state.harpy_defeats
+        ]
+    return state
+
+
 def escape(original: GameState, actor: ActorRef, event: str) -> GameState:
     body = harpy(original, actor)
     if body.subsumed or not body.vitals_active:
@@ -263,6 +306,26 @@ def die(original: GameState, actor: ActorRef, event: str) -> GameState:
     from girlframe.engine.m3_physical import interrupt_journeys
 
     state = end_grasps(interrupt_journeys(state, actor, event, "Actual Harpy death"), actor, event)
+    state.harpy_defeats = [
+        x.model_copy(
+            update={"phase": "complete", "ended_event": event, "ended_reason": "original_died"}
+        )
+        if x.actor == actor and x.cut_link and x.phase == "awaiting_physical"
+        else x
+        for x in state.harpy_defeats
+    ]
+    state.harpy_rests = [
+        x.model_copy(update={"phase": "ended", "completion_event": event})
+        if x.actor == actor and x.phase == "proposed"
+        else x
+        for x in state.harpy_rests
+    ]
+    state.harpy_travels = [
+        x.model_copy(update={"state": "ended", "ended_event": event})
+        if x.actor == actor and x.state == "proposed"
+        else x
+        for x in state.harpy_travels
+    ]
     return end_actor_casts(state, actor, event)
 
 

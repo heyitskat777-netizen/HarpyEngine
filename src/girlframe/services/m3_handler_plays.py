@@ -251,8 +251,25 @@ def request_from_play(
     ):
         raise WorkflowError("This actual source choice already has its owned Handler Play.")
     bound = profiles(c, game.store.campaign_id)
+    target_controllers = {}
+    nonbody_only = False
     for target in targets:
-        resolve(state, target, bound, require_current_profile=False)
+        try:
+            target_controllers[target.token] = resolve(
+                state, target, bound, require_current_profile=False
+            ).controller
+        except ValueError:
+            from girlframe.services.m3_battle import proved_ended_original
+
+            if (
+                source_play != "all_out_assault"
+                or clause != "all_out_assault.low"
+                or len(targets) != 1
+                or not proved_ended_original(game, c, state, action, target)
+            ):
+                raise
+            target_controllers[target.token] = int(target.entity)
+            nonbody_only = True
     changed = GameState.model_validate_json(state.model_dump_json())
     identity = str(uuid4())
     changed.handler_plays.append(
@@ -269,12 +286,8 @@ def request_from_play(
             adjudicator_ref=adjudicator_ref,
             adjudicator_source=adjudicator_source,
             targets=targets,
-            target_controllers={
-                target.token: resolve(
-                    state, target, bound, require_current_profile=False
-                ).controller
-                for target in targets
-            },
+            target_controllers=target_controllers,
+            nonbody_only=nonbody_only,
             scope=WorkScope(scene_id=action["scene_id"]),
         )
     )
@@ -383,6 +396,7 @@ def _source(c: Connection, game: "GameService", identity: str) -> tuple[GameStat
         "target_controllers",
         "scope",
         "final_original",
+        "nonbody_only",
     )
     if first is None or any(getattr(first, k) != getattr(grant, k) for k in fields):
         raise WorkflowError(
@@ -476,6 +490,13 @@ def _authority(c: Connection, game: "GameService", state: GameState, grant: Hand
                 grant.appointment,
             ) or source_action["data"]["battle"].get("judge_source") != grant.adjudicator_source:
                 raise WorkflowError("Recover the exact original battle judge episode.")
+            if grant.nonbody_only:
+                from girlframe.services.m3_battle import proved_ended_original
+
+                if not proved_ended_original(game, c, state, source_action, grant.targets[0]):
+                    raise WorkflowError(
+                        "Recover the actual original-ended source before its procedure."
+                    )
             return
         if MedicalService(game.store)._handler(c) != (grant.chooser_controller, grant.appointment):
             raise WorkflowError(
@@ -1030,11 +1051,12 @@ class HandlerPlayService:
                                 rules="archived",
                             )
                         )
-                        stale = (
-                            stale
-                            or "The original affected character ended; no replacement "
-                            "can inherit this effect."
-                        )
+                        if not grant.nonbody_only:
+                            stale = (
+                                stale
+                                or "The original affected character ended; no replacement "
+                                "can inherit this effect."
+                            )
                         continue
                 targets.append(
                     dict(
@@ -1086,7 +1108,12 @@ class HandlerPlayService:
                 grant=grant.model_dump(mode="json"),
                 stale=stale,
                 targets=targets,
-                plays=BASIC,
+                plays=tuple(
+                    x
+                    for x in BASIC
+                    if not grant.nonbody_only
+                    or x[0] in ("brief", "escalate", "support", "expectation")
+                ),
                 executors=executors,
                 locations=tuple((x.id, x.name) for x in state.world.locations)
                 if state.world

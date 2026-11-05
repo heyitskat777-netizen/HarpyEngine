@@ -192,6 +192,22 @@ class WorldService:
                 },
             }
 
+    def advancement(self, viewer: GuildViewer) -> dict[str, Any]:
+        from girlframe.engine.m3_world_advance import plan, steps
+
+        data = self.get(viewer, private=True)
+        with self.store.engine.connect() as c:
+            state = load_state(c, self.store.campaign_id)
+            if state.revision != data["game_revision"]:
+                raise WorkflowError("STALE_STATE: refresh the actual map advancement source.")
+            present, deferred = plan(state)
+            data.update(
+                advancing_gorgons=sorted(present),
+                directed_steps=steps(state),
+                deferred=list(deferred),
+            )
+            return data
+
     def npc(self, viewer: GuildViewer, key: str, expected: int, npc: Npc) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             state = self._state(c, expected)

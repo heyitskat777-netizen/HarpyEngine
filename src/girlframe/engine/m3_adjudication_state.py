@@ -8,7 +8,7 @@ from girlframe.engine.identity import Snowflake
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_lobotomy_state import BlockedPlay
 
-MandatoryPlay = Literal["defeat", "go_off_duty", "void_observation", "harpy_defeat"]
+MandatoryPlay = Literal["defeat", "go_off_duty", "void_observation", "harpy_defeat", "dive_deep"]
 
 
 class Required(Model):
@@ -20,10 +20,13 @@ class Required(Model):
     gm_controller: Snowflake | None = None
     appointment: str | None = None
     prohibition: BlockedPlay
-    source_kind: Literal["defeat_work", "defeat_response", "off_duty", "harpy_defeat_work"]
+    source_kind: Literal[
+        "defeat_work", "defeat_response", "off_duty", "harpy_defeat_work", "dormant_dive_work"
+    ]
     source_id: str = Field(min_length=1)
     source_revision: int = Field(ge=1)
     registry: str = Field(min_length=1)
+    channel: Snowflake | None = None
 
     @model_validator(mode="after")
     def source_owned(self) -> "Required":
@@ -31,7 +34,7 @@ class Required(Model):
             (
                 self.actor.kind != "pilot"
                 and not (
-                    self.play == "harpy_defeat"
+                    self.play in ("harpy_defeat", "dive_deep")
                     and self.actor.kind == "external_pilot"
                     and self.actor_controller is not None
                 )
@@ -41,7 +44,7 @@ class Required(Model):
         ):
             raise ValueError("The actual original Girl and current Handler own this exception")
         if self.adjudicator is not None and (
-            self.play != "harpy_defeat" or self.adjudicator.kind != "npc"
+            self.play not in ("harpy_defeat", "dive_deep") or self.adjudicator.kind != "npc"
         ):
             raise ValueError(
                 "Only this actual Harpy source may retain its scene Director adjudicator"
@@ -54,15 +57,19 @@ class Required(Model):
             and (str(self.gm_controller) != self.handler.entity)
         ):
             raise ValueError("The historical Handler body cannot impersonate a different human GM")
+        if self.play == "dive_deep" and self.channel is None:
+            raise ValueError("Keep the actual mandatory Dive scene source")
         actual_play = self.prohibition.play
         if (
-            (
-                actual_play != self.play
-                and not (self.play == "harpy_defeat" and actual_play == "defeat")
-            )
-            or (self.play in ("defeat", "harpy_defeat")) != (self.source_kind != "off_duty")
-            or (self.play == "harpy_defeat") != (self.source_kind == "harpy_defeat_work")
-        ):
+            actual_play != self.play
+            and not (self.play == "harpy_defeat" and actual_play == "defeat")
+        ) or self.source_kind not in {
+            "defeat": ("defeat_work", "defeat_response"),
+            "harpy_defeat": ("harpy_defeat_work",),
+            "go_off_duty": ("off_duty",),
+            "void_observation": ("off_duty",),
+            "dive_deep": ("dormant_dive_work",),
+        }[self.play]:
             raise ValueError("Use the actual mandatory source and forbidden Play")
         return self
 

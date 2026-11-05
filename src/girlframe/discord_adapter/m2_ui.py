@@ -175,6 +175,14 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
             harpy_mode and "girl.oldgen.elder-bitch" in retained
         ):
             fields.append(flags("Also choose experienced?"))
+        if decision.get("enforcer_keep", {}).get("available"):
+            for key, label in (
+                ("pavlov_good_soldier", "Also choose Good soldier"),
+                ("pavlov_bliss", "Also choose Feels as good as sex"),
+            ):
+                fields.append(
+                    Field("fields." + key, label, (("yes", "Yes"),), minimum=0, required=False)
+                )
     elif kind == "handler_keep":
         fields = [flags("Is it enough?"), text("text", "Explain the outcome")]
     elif kind == "harpy_sensor_answers":
@@ -420,6 +428,22 @@ def answer_values(values: dict[str, Any]) -> ChoiceAnswer:
 
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
     decision = await threaded(lambda: game.decision(viewer_from_interaction(interaction), identity))
+    if decision.get("gorgon_play"):
+        from girlframe.discord_adapter.m3_gorgon_runtime import open_choice as open_gorgon_choice
+
+        await open_gorgon_choice(interaction, game, identity)
+        return
+    if decision.get("snoop") is not None:
+        from girlframe.discord_adapter.m3_enforcer_snoop import open_snoop
+
+        await open_snoop(interaction, game, identity)
+        return
+    if decision.get("sprite_intercept"):
+        from girlframe.discord_adapter.m3_sprite import open_sprite
+        from girlframe.services.m3_sprite import SpriteService
+
+        await open_sprite(interaction, SpriteService(game.store), decision["work_id"])
+        return
     if decision.get("harpy_defeat"):
         from girlframe.discord_adapter.m3_harpy_defeat import open_choice as open_harpy_choice
         from girlframe.services.m3_harpy_defeat import HarpyDefeatService
@@ -439,6 +463,40 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         from girlframe.services.m3_void import VoidService
 
         await open_void(interaction, VoidService(game.store), decision["body"]["work_id"])
+        return
+    if decision["kind"] in (
+        "enforcer_firepower",
+        "enforcer_firepower_context",
+        "enforcer_firepower_confirm",
+    ):
+        from girlframe.discord_adapter.m3_enforcer_firepower import open_firepower
+
+        await open_firepower(interaction, game, identity)
+        return
+    if decision["kind"] in ("harpy_off_duty_hide", "harpy_off_duty_route"):
+        from girlframe.discord_adapter.m3_harpy_rest import open_rest
+
+        await open_rest(interaction, game, identity)
+        return
+    if decision.get("mockingbird_play") is not None:
+        from girlframe.discord_adapter.m3_mockingbird_plays import open_choice as open_mock_play
+
+        await open_mock_play(interaction, game, identity)
+        return
+    if decision["kind"].startswith("mockingbird_") and decision.get("mockingbird") is not None:
+        from girlframe.discord_adapter.m3_mockingbird import open_mockingbird
+
+        await open_mockingbird(interaction, game, identity)
+        return
+    if decision["kind"] == "enforcer_master_dog":
+        from girlframe.discord_adapter.m3_enforcer_requisitions import open_master
+
+        await open_master(interaction, game, identity)
+        return
+    if decision["kind"].startswith("engage_") and decision.get("engage") is not None:
+        from girlframe.discord_adapter.m3_engage import open_engage
+
+        await open_engage(interaction, game, identity)
         return
     if decision["kind"].startswith("battle_") and decision.get("battle") is not None:
         from girlframe.discord_adapter.m3_battle import open_battle
@@ -675,7 +733,15 @@ async def open_play(
     plays = tuple(
         x
         for x in plays
-        if x not in ("enforcement_initiative", "all_out_assault", "go_for_the_core")
+        if x
+        not in (
+            "enforcement_initiative",
+            "all_out_assault",
+            "go_for_the_core",
+            "mockingbird_person",
+            "mockingbird_sex",
+            "snoop",
+        )
     )
     if (
         not parent
@@ -689,6 +755,20 @@ async def open_play(
         if enforcement["available"]:
             plays = (*plays, "enforcement_initiative")
             enforcement_targets = {x["token"]: x for x in enforcement["targets"]}
+    engage_targets: dict[str, Any] = {}
+    if approval is not None and "plays" in approval.subsystems and "engage" in plays:
+        from girlframe.services.m3_battle import BattleService
+
+        battlefield = await threaded(lambda: BattleService(game.store).preview(viewer, channel))
+        engage_targets = {x["token"]: x for x in battlefield["actors"] if not x["owned"]}
+    snoop_targets: dict[str, Any] = {}
+    if approval is not None and "plays" in approval.subsystems and "snoop" in HEAT_IDS:
+        from girlframe.services.m3_enforcer_snoop import preview as snoop_preview
+
+        snooping = await threaded(lambda: snoop_preview(game, viewer, channel))
+        if snooping["available"]:
+            plays = (*plays, "snoop")
+            snoop_targets = {x["token"]: x for x in snooping["targets"]}
     identities = [x for x in sheet["identities"] if not x["marked"]]
     fields = [
         menu("play", "Choose a Play", plays),
@@ -716,6 +796,23 @@ async def open_play(
         ),
     ]
 
+    if approval is not None and "plays" in approval.subsystems and "keep_your_head" in plays:
+        from girlframe.services.m3_enforcer_requisitions import pavlov_available
+
+        if await threaded(lambda: pavlov_available(game, viewer)):
+            fields.extend(
+                [
+                    Field(
+                        "obeying_orders",
+                        "Keep only: invoke Pavlov while obeying orders?",
+                        YES,
+                        minimum=0,
+                        required=False,
+                    ),
+                    text("order_account", "Keep only: describe your actual obedience", False),
+                ]
+            )
+
     if enforcement_targets:
         fields.insert(
             2,
@@ -723,6 +820,30 @@ async def open_play(
                 "enforcer_target",
                 "Actual Enforcement Initiative target",
                 tuple((token, item["label"]) for token, item in enforcement_targets.items()),
+                minimum=0,
+                required=False,
+            ),
+        )
+
+    if engage_targets:
+        fields.insert(
+            2,
+            Field(
+                "engage_target",
+                "Actual opposing battlefield actor for Engage",
+                tuple((token, item["name"]) for token, item in engage_targets.items()),
+                minimum=0,
+                required=False,
+            ),
+        )
+
+    if snoop_targets:
+        fields.insert(
+            2,
+            Field(
+                "snoop_target",
+                "Whose things are you actually going through?",
+                tuple((token, item["label"]) for token, item in snoop_targets.items()),
                 minimum=0,
                 required=False,
             ),
@@ -740,11 +861,27 @@ async def open_play(
             if selected is None or selected not in enforcement_targets:
                 raise WorkflowError("Choose the actual original Enforcement Initiative target.")
             target_actor = ActorRef.model_validate(enforcement_targets[selected]["ref"])
+        if play == "engage" and approval is not None and "plays" in approval.subsystems:
+            from girlframe.engine.m3_actor_state import ActorRef
+
+            selected = one(values, "engage_target")
+            if selected is None or selected not in engage_targets:
+                raise WorkflowError("Choose the actual opposing battlefield actor for Engage.")
+            target_actor = ActorRef.model_validate(engage_targets[selected]["ref"])
+        if play == "snoop":
+            from girlframe.engine.m3_actor_state import ActorRef
+
+            selected = one(values, "snoop_target")
+            if selected is None or selected not in snoop_targets:
+                raise WorkflowError("Choose the actual known original Snoop target")
+            target_actor = ActorRef.model_validate(snoop_targets[selected]["ref"])
         prepared = PlayInput(
             play=play,
             context=values["context"],
             trigger_confirmed=True,
             target_actor=target_actor,
+            obeying_orders=play == "keep_your_head" and one(values, "obeying_orders") == "yes",
+            order_account=values.get("order_account", "") if play == "keep_your_head" else "",
             heat=int(one(values, "heat")),
             identity=identity,
             gain=int(one(values, "gain")),
@@ -887,6 +1024,11 @@ class SceneControls(discord.ui.View):
         super().__init__(timeout=None)
         self.game = game
         approval = game.store.policy.m3_approval
+        if not approval or "plays" not in approval.subsystems:
+            self.remove_item(self.handler_tag)
+            self.remove_item(self.mockingbird)
+        if not approval or not {"plays", "world"} <= set(approval.subsystems):
+            self.remove_item(self.gorgon)
         if not (
             approval
             and "plays" in approval.subsystems
@@ -894,6 +1036,53 @@ class SceneControls(discord.ui.View):
             and "go_for_the_core" in HEAT_IDS
         ):
             self.remove_item(self.battle)
+
+    @discord.ui.button(label="Gorgon Plays", custom_id="m3:scene:gorgon", row=1)
+    async def gorgon(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        await interaction.response.defer(ephemeral=True)
+        try:
+            from girlframe.discord_adapter.m3_gorgon_play import open_gorgon_play
+
+            await open_gorgon_play(interaction, self.game)
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @discord.ui.button(label="Mockingbird Plays", custom_id="m3:scene:mockingbird", row=1)
+    async def mockingbird(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        await interaction.response.defer(ephemeral=True)
+        try:
+            from girlframe.discord_adapter.m3_mockingbird_plays import open_book
+            from girlframe.engine.m3_actor_state import ActorRef
+
+            viewer = viewer_from_interaction(interaction)
+            sheet = await threaded(lambda: self.game.sheet(viewer))
+            if sheet["character_id"] is None:
+                raise WorkflowError("Bind the original canonical character before using its book")
+            await open_book(
+                interaction,
+                self.game,
+                actor_ref=ActorRef(
+                    kind="pilot", entity=str(viewer.user_id), incarnation=sheet["character_id"]
+                ),
+            )
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @discord.ui.button(label="Use a Handler Tag", custom_id="m3:scene:handler_tag", row=1)
+    async def handler_tag(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        await interaction.response.defer(ephemeral=True)
+        try:
+            from girlframe.discord_adapter.m3_handler_tags import open_handler_tags
+
+            await open_handler_tags(interaction, self.game)
+        except WorkflowError as error:
+            await reply(interaction, str(error))
 
     @discord.ui.button(label="Declare combat", custom_id="m3:scene:battle", row=0)
     async def battle(

@@ -832,8 +832,16 @@ class GameService:
             dive = None
             enforcement = None
             battle = None
+            engage = None
+            mockingbird = None
+            snoop = None
             void_keep = None
             dormant_dive_source = None
+            from girlframe.services.m3_gorgon_play import (
+                prepare_response as prepare_gorgon_response,
+            )
+
+            gorgon_response = prepare_gorgon_response(self, c, viewer, prepared, state, channel)
             from girlframe.services.m3_beneath import no_conflict
 
             no_conflict(self, c, viewer, prepared)
@@ -849,6 +857,10 @@ class GameService:
                 from girlframe.services.m3_battle_dormant import prepare_dive_source
 
                 dormant_dive_source = prepare_dive_source(self, c, viewer, prepared, state, channel)
+            elif prepared.play in ("mockingbird_person", "mockingbird_sex"):
+                from girlframe.services.m3_mockingbird_plays import prepare as prepare_mockingbird
+
+                mockingbird = prepare_mockingbird(self, c, viewer, prepared, state, channel=channel)
             elif prepared.source_work is not None:
                 raise WorkflowError("A source work reference belongs to its actual mandatory Play.")
             if prepared.play in ("all_out_assault", "go_for_the_core"):
@@ -869,6 +881,18 @@ class GameService:
                         "UNSUPPORTED_BATTLE_ACTOR: use this original role's real resource port; "
                         "a human account's Pilot sheet cannot substitute for it."
                     )
+            if (
+                prepared.play == "engage"
+                and self.store.policy.m3_approval is not None
+                and "plays" in self.store.policy.m3_approval.subsystems
+            ):
+                from girlframe.services.m3_engage import prepare as prepare_engage
+
+                engage = prepare_engage(self, c, viewer, state, self.scene(c, channel), prepared)
+            if prepared.play == "snoop":
+                from girlframe.services.m3_enforcer_snoop import prepare as prepare_snoop
+
+                snoop = prepare_snoop(self, c, viewer, prepared, state, channel=channel)
             if prepared.play == "enforcement_initiative":
                 from girlframe.services.m3_enforcement_initiative import (
                     prepare as prepare_enforcement,
@@ -891,7 +915,15 @@ class GameService:
                 raise WorkflowError("A period reference belongs only to its actual M3 Play.")
             from girlframe.services.m3_adjudication import prepare_required
 
-            adjudication = prepare_required(self, c, viewer, prepared, state, source=defeat or m3)
+            adjudication = prepare_required(
+                self,
+                c,
+                viewer,
+                prepared,
+                state,
+                source=defeat or m3 or dormant_dive_source,
+                channel=channel,
+            )
             sheet = state.sheets.get(str(viewer.user_id))
             if sheet is None or sheet.revision != sheet_revision:
                 raise WorkflowError("STALE_SHEET: refresh the Play wizard.")
@@ -951,7 +983,33 @@ class GameService:
             if HandlerService(self.store).current(c)[1].handler_id != state.handler:
                 raise WorkflowError("STALE_HANDLER: canonical Handler replacement needs review.")
             scene = self.scene(c, channel)
-            if dive is None and void_keep is None and enforcement is None and battle is None:
+            scoped_defeat = False
+            if defeat is not None and defeat.get("source_work"):
+                from girlframe.services.m3_defeat import work as defeat_work
+
+                source_defeat_work = defeat_work(self, c, defeat["source_work"])
+                # prepare_defeat already proves the actual damage fact, original CID and parent.
+                scoped_defeat = (
+                    isinstance(json.loads(source_defeat_work["body_json"]).get("requirement"), dict)
+                    and source_defeat_work["scene_id"] == scene["id"]
+                    and prepared.parent is not None
+                )
+            if (
+                all(
+                    x is None
+                    for x in (
+                        dive,
+                        void_keep,
+                        enforcement,
+                        battle,
+                        engage,
+                        mockingbird,
+                        snoop,
+                        gorgon_response,
+                    )
+                )
+                and not scoped_defeat
+            ):
                 self.pilot_cast(c, state, scene)
             else:
                 from girlframe.engine.m3_actor_state import SceneCast
@@ -964,6 +1022,22 @@ class GameService:
                     source_cast, _ = CastService(ActorService(MissionService(self.store)))._current(
                         c, state, channel
                     )
+                elif gorgon_response is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(gorgon_response["cast"]))
+                elif scoped_defeat:
+                    from girlframe.services.m3_actors import ActorService
+                    from girlframe.services.m3_cast import CastService
+                    from girlframe.services.m3_missions import MissionService
+
+                    source_cast, _ = CastService(ActorService(MissionService(self.store)))._current(
+                        c, state, channel
+                    )
+                elif snoop is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(snoop["cast"]))
+                elif mockingbird is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(mockingbird["cast"]))
+                elif engage is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(engage["cast"]))
                 elif enforcement is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(enforcement["cast"]))
                 elif dive is not None:
@@ -1012,7 +1086,14 @@ class GameService:
             counter_source = None
             if prepared.parent:
                 parent = self.action(c, prepared.parent)
-                self.action_characters(c, parent, state)
+                if parent["data"].get("gorgon_play"):
+                    from girlframe.services.m3_gorgon_play import allowed_archived
+
+                    self.action_characters(
+                        c, parent, state, allowed_archived=allowed_archived(self, c, state, parent)
+                    )
+                else:
+                    self.action_characters(c, parent, state)
                 from girlframe.services.m3_recovery import authorize as authorize_shared
 
                 authorize_shared(self, c, viewer, parent)
@@ -1042,6 +1123,9 @@ class GameService:
                             "battle_counter_play",
                             "battle_dormant_dive",
                             "battle_dormant_threshold",
+                            "mockingbird_void_threshold",
+                            "snoop_item_void_threshold",
+                            "gorgon_response_play",
                         )
                         and x["actor_id"] == str(viewer.user_id)
                     ),
@@ -1060,6 +1144,8 @@ class GameService:
                     "enforcer_void_threshold",
                     "battle_item_void_threshold",
                     "battle_dormant_threshold",
+                    "mockingbird_void_threshold",
+                    "snoop_item_void_threshold",
                 ) and (void_keep is None or prepared.play != "keep_your_head"):
                     raise WorkflowError("Use the actual source-owned Void resistance controls.")
                 if required["kind"] == "battle_dormant_dive" and dormant_dive_source is None:
@@ -1086,6 +1172,10 @@ class GameService:
                         actor=counter_body["actor"],
                         attacker=counter_body["attacker"],
                     )
+                if required["kind"] == "gorgon_response_play" and (
+                    gorgon_response is None or gorgon_response["choice"] != required["id"]
+                ):
+                    raise WorkflowError("Use this exact original Gorgon source response")
                 if required["kind"] == "order_disobey" and (
                     prepared.play != "disobey_orders"
                     or prepared.order_id != parent["data"]["order_id"]
@@ -1110,7 +1200,9 @@ class GameService:
                     )
             elif root_lock and root_lock["state"] != "released":
                 raise WorkflowError("SCENE_BUSY: resolve the pending Play first.")
-            if prepared.target_actor is not None and enforcement is None and battle is None:
+            if prepared.target_actor is not None and all(
+                x is None for x in (enforcement, battle, engage, mockingbird, snoop)
+            ):
                 raise WorkflowError("This implemented Play does not take a fictional actor target.")
             if prepared.play in ("flirt", "put_someone_beneath_you"):
                 if (
@@ -1159,6 +1251,12 @@ class GameService:
             private_audience = private_scene_audience(c, self.store, scene["id"])
             if private_audience is not None:
                 data["private_audience"] = list(private_audience)
+            if prepared.play == "keep_your_head":
+                from girlframe.services.m3_enforcer_requisitions import (
+                    prepare_keep as prepare_pavlov,
+                )
+
+                data["enforcer_keep"] = prepare_pavlov(self, c, state, acting_ref, prepared)
             if dormant_dive_source is not None:
                 data["dormant_dive_source"] = dormant_dive_source
             if m3 is not None:
@@ -1167,6 +1265,41 @@ class GameService:
                 data["beneath"] = beneath
             if defeat is not None:
                 data["defeat"] = defeat
+            if scoped_defeat:
+                from girlframe.engine.m3_actors import fingerprint
+                from girlframe.engine.m3_handler_consequences import active_handler
+
+                assert defeat is not None
+                handler_body = active_handler(state)
+                table_humans = sorted(
+                    {x.controller for x in source_cast.roles}
+                    | ({source_cast.facilitator} if source_cast.facilitator else set())
+                )
+                data["participants"] = table_humans
+                data["tag_context"] = dict(
+                    actor=defeat["actor"],
+                    handler=handler_body.model_dump(mode="json") if handler_body else None,
+                    gm_controller=state.handler,
+                    table=table_humans,
+                    cast=source_cast.model_dump(mode="json"),
+                    cast_sha256=fingerprint(source_cast),
+                )
+            if gorgon_response is not None:
+                from girlframe.engine.m3_handler_consequences import active_handler
+
+                data["gorgon_counter_source"] = {
+                    k: gorgon_response[k] for k in ("choice", "actor", "attacker")
+                }
+                data["participants"] = list(gorgon_response["table"])
+                handler_body = active_handler(state)
+                data["tag_context"] = dict(
+                    actor=gorgon_response["actor"],
+                    handler=handler_body.model_dump(mode="json") if handler_body else None,
+                    gm_controller=state.handler,
+                    table=list(gorgon_response["table"]),
+                    cast=gorgon_response["cast"],
+                    cast_sha256=gorgon_response["cast_sha256"],
+                )
             if counter_source is not None:
                 data["battle_counter_source"] = counter_source
             if battle is not None:
@@ -1184,6 +1317,48 @@ class GameService:
                     table=list(battle["table"]),
                     cast=source_cast.model_dump(mode="json"),
                     cast_sha256=fingerprint(source_cast),
+                )
+            if engage is not None:
+                from girlframe.engine.m3_handler_consequences import active_handler
+
+                data["engage"] = engage
+                data["participants"] = list(engage["table"])
+                handler_body = active_handler(state)
+                data["tag_context"] = dict(
+                    actor=engage["actor"],
+                    handler=handler_body.model_dump(mode="json") if handler_body else None,
+                    gm_controller=state.handler,
+                    table=list(engage["table"]),
+                    cast=engage["cast"],
+                    cast_sha256=engage["cast_sha256"],
+                )
+            if snoop is not None:
+                from girlframe.engine.m3_handler_consequences import active_handler
+
+                data["snoop"] = snoop
+                data["participants"] = list(snoop["table"])
+                handler_body = active_handler(state)
+                data["tag_context"] = dict(
+                    actor=snoop["actor"],
+                    handler=handler_body.model_dump(mode="json") if handler_body else None,
+                    gm_controller=snoop["procedural_gm"],
+                    table=list(snoop["table"]),
+                    cast=snoop["cast"],
+                    cast_sha256=snoop["cast_sha256"],
+                )
+            if mockingbird is not None:
+                from girlframe.engine.m3_handler_consequences import active_handler
+
+                data["mockingbird"] = mockingbird
+                data["participants"] = list(mockingbird["table"])
+                handler_body = active_handler(state)
+                data["tag_context"] = dict(
+                    actor=mockingbird["actor"],
+                    handler=handler_body.model_dump(mode="json") if handler_body else None,
+                    gm_controller=state.handler,
+                    table=list(mockingbird["table"]),
+                    cast=mockingbird["cast"],
+                    cast_sha256=mockingbird["cast_sha256"],
                 )
             if enforcement is not None:
                 data["enforcement"] = enforcement
@@ -1256,6 +1431,9 @@ class GameService:
                 or dive is not None
                 or enforcement is not None
                 or battle is not None
+                or mockingbird is not None
+                or snoop is not None
+                or engage is not None
                 or void_keep is not None
                 else "m2.play_confirmed",
                 state if void_keep is not None else None,
@@ -1343,6 +1521,11 @@ class GameService:
         def authorize(c: Connection) -> None:
             self.authorize(c, viewer, game=False)
             action = self.action(c, identity)
+            if action["data"].get("gorgon_play"):
+                from girlframe.services.m3_gorgon_play import GorgonPlayService
+
+                GorgonPlayService(self).authorize(c, viewer, action)
+                return
             if action["data"].get("actor_basic"):
                 from girlframe.services.m3_actor_plays import ActorPlayService
 
@@ -1370,6 +1553,10 @@ class GameService:
                 )
 
                 authorize_enforcement(self, c, viewer, action)
+            if action["data"].get("snoop"):
+                from girlframe.services.m3_enforcer_snoop import authorize as authorize_snoop
+
+                authorize_snoop(self, c, viewer, action)
             if action["data"].get("battle"):
                 from girlframe.services.m3_battle import authorize as authorize_battle
 
@@ -1381,6 +1568,8 @@ class GameService:
                 raise WorkflowError("Only the acting Pilot can confirm this roll.")
             if action["data"]["receipt"]:
                 return {"action_id": identity, "receipt": action["data"]["receipt"]}
+            if action["data"].get("gorgon_play", {}).get("started"):
+                return {"action_id": identity, "receipt": None}
             self.unpaused(c)
             lock = self.lock(c, action["channel_id"])
             if (
@@ -1389,6 +1578,10 @@ class GameService:
                 or action["state"] not in ("acquiring", "ready_to_roll")
             ):
                 raise WorkflowError("LOCK_NOT_ACKNOWLEDGED: no dice or Heat were consumed.")
+            if action["data"].get("gorgon_play"):
+                from girlframe.services.m3_gorgon_play import GorgonPlayService
+
+                return GorgonPlayService(self).advance(c, viewer, key, action)
             if action["data"].get("actor_basic"):
                 from girlframe.services.m3_actor_plays import ActorPlayService
 
@@ -1431,6 +1624,18 @@ class GameService:
                 from girlframe.services.m3_battle import pre_roll as battle_pre_roll
 
                 battle_pre_roll(self, c, state, action)
+            if action["data"].get("engage"):
+                from girlframe.services.m3_engage import pre_roll as engage_pre_roll
+
+                engage_pre_roll(self, c, state, action)
+            if action["data"].get("mockingbird"):
+                from girlframe.services.m3_mockingbird_plays import pre_roll as mockingbird_pre_roll
+
+                mockingbird_pre_roll(self, c, state, action)
+            if action["data"].get("snoop"):
+                from girlframe.services.m3_enforcer_snoop import pre_roll as snoop_pre_roll
+
+                snoop_pre_roll(self, c, viewer, state, action)
             m3 = action["data"].get("m3")
             defeat = action["data"].get("defeat")
             if defeat is not None:
@@ -1506,6 +1711,9 @@ class GameService:
                 or action["data"].get("void_keep")
                 or action["data"].get("enforcement")
                 or action["data"].get("battle")
+                or action["data"].get("engage")
+                or action["data"].get("mockingbird")
+                or action["data"].get("snoop")
                 or defeat is not None
                 else RULESET,
             }
@@ -1558,6 +1766,9 @@ class GameService:
                 or action["data"].get("beneath")
                 or action["data"].get("enforcement")
                 or action["data"].get("battle")
+                or action["data"].get("engage")
+                or action["data"].get("mockingbird")
+                or action["data"].get("snoop")
                 or defeat is not None
                 else "m2.rolled",
                 state,
@@ -1621,12 +1832,16 @@ class GameService:
             self.authorize(c, viewer, game=False)
             choices = t.m2["m2_choices"]
             original = c.execute(
-                sa.select(choices.c.action_id).where(
+                sa.select(choices.c.action_id, choices.c.kind).where(
                     choices.c.campaign_id == self.store.campaign_id,
                     choices.c.id == choice_id,
                     choices.c.actor_id == str(viewer.user_id),
                 )
             ).first()
+            if original and original.kind == "battle_sprite_intercept":
+                raise WorkflowError(
+                    "Use your actual Sprite interception controls; a generic response cannot choose"
+                )
             harpy_defeat = bool(
                 original and self.action(c, original.action_id)["data"].get("harpy_defeat")
             )
@@ -1654,8 +1869,27 @@ class GameService:
             if row is None:
                 raise WorkflowError("This decision belongs to another player or is unavailable.")
             action = self.action(c, row["action_id"])
+            if action["data"].get("gorgon_play"):
+                from girlframe.services.m3_gorgon_play import GorgonPlayService
+
+                GorgonPlayService(self).authorize(c, viewer, action)
+                return dict(row)
             director_tag_response = False
-            if action["data"].get("actor_basic"):
+            if action["data"].get("snoop"):
+                from girlframe.services.m3_enforcer_snoop import authorize as authorize_snoop
+
+                authorize_snoop(self, c, viewer, action)
+                meta = action["data"]["snoop"]
+                if viewer.user_id not in {
+                    *meta["table"],
+                    meta["target_controller"],
+                    meta["procedural_gm"],
+                }:
+                    raise WorkflowError(
+                        "Only the original source participants own this Snoop response"
+                    )
+                director_tag_response = True
+            elif action["data"].get("actor_basic"):
                 from girlframe.services.m3_actor_plays import ActorPlayService
 
                 ActorPlayService(self).authorize(c, viewer, action)
@@ -1733,7 +1967,7 @@ class GameService:
             if not lock or lock["state"] != "held":
                 raise WorkflowError("SCENE_LOCK_RECOVERY: decisions await a confirmed scene lock.")
             state = load_state(c, self.store.campaign_id)
-            if not action["data"].get("actor_basic"):
+            if not action["data"].get("actor_basic") and not action["data"].get("gorgon_play"):
                 from girlframe.services.m3_battle_dormant import proved_converted_originals
 
                 self.action_characters(
@@ -1762,7 +1996,11 @@ class GameService:
                 from girlframe.services.m3_defeat import authorize as authorize_defeat
 
                 authorize_defeat(self, c, viewer, action)
-            if action["data"].get("actor_basic"):
+            if action["data"].get("gorgon_play"):
+                from girlframe.services.m3_gorgon_play import GorgonPlayService
+
+                GorgonPlayService(self).apply(c, state, action, row, answer)
+            elif action["data"].get("actor_basic"):
                 from girlframe.services.m3_actor_plays import ActorPlayService
 
                 ActorPlayService(self).apply(c, state, action, row, answer, viewer=viewer)
@@ -1783,16 +2021,38 @@ class GameService:
                 or action["data"].get("enforcement")
                 or action["data"].get("handler_play_m3")
                 or action["data"].get("battle")
+                or action["data"].get("engage")
+                or action["data"].get("mockingbird")
+                or action["data"].get("snoop")
+                or action["data"].get("gorgon_play")
                 else "m2.choice_resolved",
                 state,
                 event_id=action["data"]["response_event"],
                 action_id=action["id"],
                 choice_id=choice_id,
             )
+            if action["data"].get("gorgon_play"):
+                from girlframe.services.m3_gorgon_play import GorgonPlayService
+
+                GorgonPlayService(self).synchronize(c, action, event, viewer, key)
+                action = self.action(c, action["id"])
+            if action["data"].get("mockingbird"):
+                from girlframe.services.m3_mockingbird_plays import (
+                    synchronize as synchronize_mock_play,
+                )
+
+                synchronize_mock_play(self, c, action, event)
+            if action["data"].get("risk_factor"):
+                from girlframe.services.m3_mockingbird import synchronize as synchronize_mockingbird
+
+                synchronize_mockingbird(self, c, action, event)
             if action["data"].get("m3_finished"):
                 from girlframe.services.m3_play_support import sync_finished_roll
 
                 sync_finished_roll(self, c, action, event)
+                if action["data"].get("risk_factor"):
+                    action["data"]["risk_factor"]["period_roll_synced"] = event
+                    self.save_action(c, action)
             if action["data"].get("beneath"):
                 from girlframe.services.m3_beneath import synchronize as synchronize_beneath
 
@@ -1815,11 +2075,21 @@ class GameService:
                 from girlframe.services.m3_battle import synchronize as synchronize_battle
 
                 synchronize_battle(self, c, action, event, viewer, key)
+            if action["data"].get("engage"):
+                from girlframe.services.m3_engage import synchronize as synchronize_engage
+
+                synchronize_engage(self, c, action, event, viewer, key)
             if action["data"].get("void_keep"):
                 from girlframe.services.m3_void_keep import synchronize_keep
 
                 synchronize_keep(self, c, action, event, viewer, key)
             current_action = self.action(c, action["id"])
+            if current_action["state"] == "complete" and current_action["data"].get(
+                "gorgon_counter_source"
+            ):
+                from girlframe.services.m3_gorgon_play import complete_response
+
+                complete_response(self, c, current_action, event, viewer, key)
             if (
                 current_action["state"] == "complete"
                 and current_action.get("parent_id")
@@ -1852,6 +2122,16 @@ class GameService:
                     event_id=event,
                 )
             )
+            if action["data"].get("mockingbird"):
+                from girlframe.services.m3_mockingbird_plays import (
+                    post_synchronize as post_mockingbird,
+                )
+
+                post_mockingbird(self, c, action, event, viewer, key)
+            if action["data"].get("snoop"):
+                from girlframe.services.m3_enforcer_snoop import synchronize as synchronize_snoop
+
+                synchronize_snoop(self, c, action, event)
             return {"action_id": action["id"], "state": action["state"], "choice_id": choice_id}
 
         try:
@@ -2106,11 +2386,19 @@ class GameService:
                 from girlframe.services.m3_harpy_defeat import HarpyDefeatService
 
                 return HarpyDefeatService(self.store, self).inspect(viewer, identity)
-            if viewer.user_id not in action["data"]["participants"]:
+            snoop = action["data"].get("snoop")
+            allowed = set(action["data"]["participants"])
+            if snoop:
+                allowed.update((snoop["target_controller"], snoop["procedural_gm"]))
+            if viewer.user_id not in allowed:
                 raise WorkflowError("This action is not visible to you.")
             result = action["data"]["result"] if action["state"] == "complete" else None
             parties = {int(action["actor_id"]), action["data"].get("prepared", {}).get("target")}
-            if result and viewer.user_id not in parties:
+            if result and snoop:
+                from girlframe.services.m3_enforcer_snoop import visible_result
+
+                result = visible_result(action, viewer, result)
+            elif result and viewer.user_id not in parties:
                 result = {k: v for k, v in result.items() if k in ("total", "tier")}
             return {
                 "id": identity,
@@ -2472,7 +2760,32 @@ class GameService:
             )
             if row is None:
                 raise WorkflowError("This decision is no longer available to you.")
+            if row["kind"] == "battle_sprite_intercept":
+                from girlframe.services.m3_sprite import SpriteService
+
+                return SpriteService(self.store).decision(viewer, choice_id)
             action = self.action(c, row["action_id"])
+            if action["data"].get("gorgon_play"):
+                from girlframe.services.m3_gorgon_play import GorgonPlayService
+
+                return GorgonPlayService(self).decision(c, viewer, action, dict(row))
+            if action["data"].get("snoop") and row["kind"].startswith("snoop_"):
+                from girlframe.services.m3_enforcer_snoop import authorize as authorize_snoop
+                from girlframe.services.m3_enforcer_snoop import projection as snoop_projection
+
+                authorize_snoop(self, c, viewer, action)
+                state = load_state(c, self.store.campaign_id)
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    play=action["data"]["play"],
+                    result={
+                        k: v for k, v in action["data"]["result"].items() if k in ("tier", "total")
+                    },
+                    actor=int(action["actor_id"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    snoop=snoop_projection(self, c, viewer, state, action, dict(row)),
+                )
             if action["data"].get("harpy_defeat"):
                 from girlframe.services.m3_harpy_defeat import HarpyDefeatService
 
@@ -2549,6 +2862,40 @@ class GameService:
                 from girlframe.services.m3_battle import projection as battle_projection
 
                 result["battle"] = battle_projection(self, c, state, action, dict(row))
+            if row["kind"] in (
+                "enforcer_firepower",
+                "enforcer_firepower_context",
+                "enforcer_firepower_confirm",
+            ):
+                from girlframe.services.m3_enforcer_firepower import (
+                    projection as firepower_projection,
+                )
+
+                result["enforcer_firepower"] = firepower_projection(
+                    self, c, state, action, dict(row)
+                )
+            if (
+                row["kind"].startswith("mockingbird_")
+                and row["kind"] not in ("mockingbird_risk", "mockingbird_void_threshold")
+                and action["data"].get("mockingbird")
+            ):
+                from girlframe.services.m3_mockingbird_plays import (
+                    projection as mock_play_projection,
+                )
+
+                result["mockingbird_play"] = mock_play_projection(self, c, state, action, dict(row))
+            if row["kind"] in ("mockingbird_risk", "mockingbird_void_threshold"):
+                from girlframe.services.m3_mockingbird import projection as mockingbird_projection
+
+                result["mockingbird"] = mockingbird_projection(self, c, state, action, dict(row))
+            if row["kind"].startswith("engage_"):
+                from girlframe.services.m3_engage import projection as engage_projection
+
+                result["engage"] = engage_projection(self, c, state, action, dict(row))
+            if action["data"].get("engage") and row["kind"].startswith("battle_"):
+                from girlframe.services.m3_battle import damage_projection
+
+                result["battle"] = damage_projection(self, c, state, action, dict(row))
             if action["data"].get("enforcement") and row["kind"].startswith("enforcer_"):
                 from girlframe.services.m3_enforcement_initiative import (
                     projection as enforcement_projection,
@@ -2557,6 +2904,8 @@ class GameService:
                 result["enforcement"] = enforcement_projection(
                     self, c, viewer, state, action, dict(row)
                 )
+            if action["data"].get("enforcer_keep"):
+                result["enforcer_keep"] = action["data"]["enforcer_keep"]
             if row["kind"] == "tag_window":
                 from girlframe.services.m3_tag_markers import projection as marker_projection
 

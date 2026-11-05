@@ -107,12 +107,18 @@ def test_another_handler_is_an_npc_and_does_not_borrow_the_campaign_handler_rule
     assert result.sheets == canon.sheets and result.director_contexts == canon.director_contexts
 
 
-def test_directed_goal_death_is_blocked_until_its_own_consequence_port_exists(canon):
+def test_directed_goal_death_defers_only_actual_hunter_through_existing_world_port(canon):
     attack = prepared(canon)
     directed = gorgon("directed", "goal-seeker", goal=Goal(kind="npc", entity_id="2"))
     canon.world = update(canon.world, gorgons=(*canon.world.gorgons, directed))
-    with pytest.raises(ValueError, match="Directed goal"):
-        rules.eligible(canon, attack.attacker, attack.target)
+    from girlframe.engine.m3_world_advance import plan
+
+    result = rules.attack_npc(canon, attack, "actual-directed-goal-ending")
+    present, deferred = plan(result)
+    assert "goal-seeker" not in present
+    assert next(x for x in deferred if x["source"] == "actual_goal_ended")
+    assert result.world.npcs[0].cell == canon.world.npcs[0].cell
+    assert not result.world.npcs[0].alive and result.sheets == canon.sheets
 
 
 def test_no_invented_ranged_reach_movement_or_forged_player_target(canon):

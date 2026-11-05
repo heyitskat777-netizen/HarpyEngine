@@ -153,6 +153,12 @@ def finish_callback(
 ) -> None:
     if record.state == "pending" or not record.effect_event:
         raise WorkflowError("The actual Handler must choose the source replacement effect first.")
+    from girlframe.services.m3_handler_void import synchronize_endings
+
+    synchronize_endings(game, c, event, viewer, key)
+    from girlframe.services.m3_handler_girl_void import synchronize_endings as sync_girl_void
+
+    sync_girl_void(game, c, event, viewer, key)
     if not record.source_request:
         from girlframe.services.m3_battle import complete_handler_consequence as complete_battle
 

@@ -116,6 +116,12 @@ async def open_enforcer_choice(
             interaction, HandlerConsequenceService(game.store), detail["consequence"]
         )
         return
+    if kind == "enforcer_director_consequence":
+        from girlframe.discord_adapter.m3_battle_director import open_director
+        from girlframe.services.m3_battle_director import DirectorService
+
+        await open_director(interaction, DirectorService(game.store), detail["work_id"])
+        return
     fields: list[Field] = []
     if kind == "enforcer_select":
         fields.append(

@@ -13,6 +13,7 @@ from girlframe.engine.m2 import ChoiceAnswer
 from girlframe.services.m2_game import GameService
 
 LABELS = {
+    "call_reclassify_assets": "Call: move actual Assets between Girl and Frame",
     "void_and_unmark_all": "Gain Void; unmark unlocked Identities",
     "erase_identity_and_table_question": "Erase an Identity; ask the table",
     "nearby_npcs_gain_void": "Nearby actual NPCs gain Void",
@@ -74,7 +75,29 @@ async def open_dive(
         ]
     elif kind == "dive_effect":
         option = detail["option"]
-        if option == "void_and_unmark_all":
+        if option == "call_reclassify_assets":
+            assets = tuple(
+                (x["id"], x["label"] + " (" + x["family"] + ")") for x in detail["assets"]
+            )
+            fields = [
+                Field(
+                    "moves",
+                    "Move selected Assets to their other family",
+                    assets,
+                    minimum=0,
+                    maximum=max(1, len(assets)),
+                    required=False,
+                ),
+                Field(
+                    "replaced",
+                    "Only if above a cap: replace excess non-Void Assets",
+                    tuple((x["id"], x["label"]) for x in detail["assets"] if not x["void"]),
+                    minimum=0,
+                    maximum=max(1, len(detail["assets"])),
+                    required=False,
+                ),
+            ]
+        elif option == "void_and_unmark_all":
             fields = [
                 Field(
                     "asset",
@@ -148,7 +171,11 @@ async def open_dive(
             answer = ChoiceAnswer(options=(values["option"][0],), text=values["account"])
         elif kind == "dive_effect":
             option = detail["option"]
-            if option == "void_and_unmark_all":
+            if option == "call_reclassify_assets":
+                answer = ChoiceAnswer(
+                    options=tuple(values.get("moves", ())), denied=tuple(values.get("replaced", ()))
+                )
+            elif option == "void_and_unmark_all":
                 answer = ChoiceAnswer(
                     fields=dict(asset=values["asset"][0]), text=values["description"]
                 )

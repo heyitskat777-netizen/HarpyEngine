@@ -355,6 +355,10 @@ def prepare(
         )
     if declaration.target_asset is not None:
         rules.owned_asset(state, declaration.target, declaration.target_asset, bound)
+        if declaration.target.kind == "pilot" and target.inside_frame is None:
+            raise WorkflowError(
+                "Record the attacked original Girl's actual cockpit occupancy before rolling."
+            )
     source = (
         rules.core_available(state, declaration.target, declaration.actor, bound)
         if prepared.play == "go_for_the_core"
@@ -373,6 +377,20 @@ def prepare(
         and not context.outside_permission
     ):
         raise WorkflowError("The Conversation must establish this actual outside-Frame attack.")
+    for body, outside in (
+        (acting, context.actor_outside_frame),
+        (target, context.target_outside_frame),
+    ):
+        if body.ref.kind == "external_pilot" and rules.category(state, body.ref) != "harpy":
+            raise WorkflowError(
+                "UNSUPPORTED_RULE: support actual external Pilot Defeat/resources "
+                "before this battle can roll."
+            )
+        if body.rules == "handler_girl" and outside is not True:
+            raise WorkflowError(
+                "Record this actual HandlerGirl body outside a Frame before combat; "
+                "cockpit custody needs its actual physical port."
+            )
     handler, appointment = MedicalService(game.store)._handler(c)
     if handler != context.adjudicator or appointment != context.appointment:
         raise WorkflowError("Recover the original actual human adjudicator.")
@@ -384,7 +402,10 @@ def prepare(
         or judge_source != context.judge_source
     ):
         raise WorkflowError("STALE_JUDGE: recover the actual selected scene adjudicator.")
+    from girlframe.services.m3_enforcer_firepower import prepare_firepower
+
     return dict(
+        firepower=prepare_firepower(game, c, state, declaration.actor, cast, prepared),
         actor=declaration.actor.model_dump(mode="json"),
         target=declaration.target.model_dump(mode="json"),
         attacking_asset=declaration.attacking_asset,
@@ -413,6 +434,14 @@ def prepare(
         defense=context.defense.model_dump(mode="json") if context.defense else None,
         dormant_awakened=context.dormant_awakened,
         dormant_close=context.dormant_close,
+        occupancy={
+            ref.token: False
+            for ref, outside in (
+                (declaration.actor, context.actor_outside_frame),
+                (declaration.target, context.target_outside_frame),
+            )
+            if outside is True
+        },
     )
 
 
@@ -465,6 +494,10 @@ def _refs(action: dict[str, Any]) -> tuple[ActorRef, ActorRef]:
 
 
 def results(game: "GameService", c: Connection, action: dict[str, Any]) -> None:
+    from girlframe.services.m3_enforcer_firepower import results_firepower
+
+    if results_firepower(game, c, action):
+        return
     meta = action["data"]["battle"]
     level = action["data"]["result"]["tier"]
     if action["data"]["play"] == "go_for_the_core" and level == "high":
@@ -498,6 +531,57 @@ def results(game: "GameService", c: Connection, action: dict[str, Any]) -> None:
     meta["state"] = "choices"
 
 
+def damage_projection(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    request: dict[str, Any],
+) -> dict[str, Any]:
+    """Source-owned consequence controls shared by actual combat/Engage consumers."""
+    body = json.loads(request["body_json"])
+    identity = body.get("work_id")
+    table = t.m3["m3_required_work"]
+    row = (
+        c.execute(
+            sa.select(table)
+            .where(
+                table.c.campaign_id == game.store.campaign_id,
+                table.c.id == identity,
+            )
+            .order_by(table.c.revision.desc())
+            .limit(1)
+        )
+        .mappings()
+        .first()
+    )
+    if row is None or body.get("source_action") != action["id"]:
+        raise WorkflowError("Recover the exact actual source-owned damage continuation.")
+    saved = json.loads(row["body_json"])
+    if saved.get("continuation") != request["id"] or saved.get("source_action") != action["id"]:
+        raise WorkflowError("This consequence belongs to another original source Play.")
+    return dict(
+        kind=request["kind"],
+        work_id=identity,
+        owner=saved.get("owner"),
+        requirement=saved.get("requirement"),
+    )
+
+
+def apply_damage_response(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    request: dict[str, Any],
+    answer: ChoiceAnswer,
+) -> None:
+    damage_projection(game, c, state, action, request)
+    raise WorkflowError(
+        "Open and complete this actual source-owned consequence; it cannot be acknowledged away."
+    )
+
+
 def projection(
     game: "GameService",
     c: Connection,
@@ -505,6 +589,8 @@ def projection(
     action: dict[str, Any],
     request: dict[str, Any],
 ) -> dict[str, Any]:
+    if request["kind"] in ("battle_collateral", "battle_quadrant_loss", "battle_aggressive_damage"):
+        return damage_projection(game, c, state, action, request)
     meta = action["data"]["battle"]
     actor, target = _refs(action)
     bound = profiles(c, game.store.campaign_id)
@@ -681,7 +767,7 @@ def apply(
             game.request(
                 c,
                 action,
-                int(actor.entity),
+                meta["actor_controller"],
                 "battle_actor_damage",
                 dict(target=meta["actor"], actor=meta["actor"]),
             )
@@ -690,12 +776,26 @@ def apply(
         if "collateral_damage" in answer.options:
             if not answer.text.strip():
                 raise WorkflowError("Describe the actual reasonably destroyed collateral.")
+            from girlframe.engine.m3_collateral import Source
+            from girlframe.engine.m3_handler_consequences import active_handler
+
+            collateral = Source(
+                id=str(uuid5(NAMESPACE_URL, request["id"] + ":collateral")),
+                action=action["id"],
+                choice=request["id"],
+                event=event,
+                actor=actor,
+                actor_controller=meta["actor_controller"],
+                judge=meta["handler"],
+                appointment=meta["appointment"],
+                handler=active_handler(state),
+            )
             state.facts.append(
                 dict(
-                    kind="battle_collateral",
-                    source_action=action["id"],
+                    kind="collateral_stage",
+                    id=collateral.id,
                     event=event,
-                    account=answer.text,
+                    body=collateral.model_dump_json(),
                 )
             )
         return
@@ -906,6 +1006,79 @@ def _forced_handler(
     )
 
 
+def _close_ended_actor_damage(
+    game: "GameService",
+    c: Connection,
+    action: dict[str, Any],
+    event: str,
+    viewer: GuildViewer | None,
+    key: str,
+) -> str:
+    state = load_state(c, game.store.campaign_id)
+    actor, _ = _refs(action)
+    if not proved_ended_original(game, c, state, action, actor):
+        return event
+    for request in game.pending(c, action["id"]):
+        if request["kind"] not in ("battle_low_damage", "battle_actor_damage"):
+            continue
+        body = json.loads(request["body_json"])
+        if body.get("actor") != actor.model_dump(mode="json"):
+            raise WorkflowError("Recover the exact unavailable original body's damage source.")
+        source = str(uuid4())
+        choices = t.m2["m2_choices"]
+        c.execute(
+            choices.update()
+            .where(
+                choices.c.campaign_id == game.store.campaign_id,
+                choices.c.id == request["id"],
+                choices.c.state == "pending",
+            )
+            .values(state="completed_original_ended", revision=choices.c.revision + 1)
+        )
+        if request["kind"] == "battle_low_damage":
+            _forced_handler(game, c, state, action, request, source, "low")
+        state.facts.append(
+            dict(
+                kind="battle_original_damage_unavailable",
+                action=action["id"],
+                actor=actor.model_dump_json(),
+                source_choice=request["id"],
+                event=source,
+            )
+        )
+        game.save_action(c, action)
+        human = (
+            viewer.user_id
+            if viewer is not None
+            else c.scalar(
+                sa.select(t.events.c.actor_id).where(
+                    t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == event
+                )
+            )
+        )
+        if human is None:
+            raise WorkflowError("Recover the real source command for original-body closure.")
+        index = c.scalar(
+            sa.select(sa.func.max(t.events.c.event_index)).where(
+                t.events.c.campaign_id == game.store.campaign_id, t.events.c.command_key == key
+            )
+        )
+        game.event(
+            c,
+            human,
+            key,
+            "m3.battle_original_damage_unavailable",
+            state,
+            event_id=source,
+            event_index=index + 1 if index is not None else 0,
+            source_event=event,
+            source_action=action["id"],
+            source_choice=request["id"],
+        )
+        event = source
+    return event
+
+
 def synchronize(
     game: "GameService",
     c: Connection,
@@ -920,7 +1093,13 @@ def synchronize(
         and not action["data"]["battle"].get("dormant_staged")
     ):
         event = _dormant_awakening(game, c, action, event, viewer, key)
+    from girlframe.services.m3_collateral import materialize
+    from girlframe.services.m3_collateral import synchronize as synchronize_collateral
+
+    materialize(game, c, action, event)
     synchronize_damage(game, c, event)
+    synchronize_collateral(game, c, action, event)
+    event = _close_ended_actor_damage(game, c, action, event, viewer, key)
     state = load_state(c, game.store.campaign_id)
     meta = action["data"]["battle"]
     if not game.pending(c, action["id"]) and meta.get("fixed_due") and not meta.get("fixed_paid"):
@@ -958,6 +1137,11 @@ def synchronize(
             synchronize_end(
                 c, game, archive, exclude_work=tuple(action["data"]["battle"]["followups"])
             )
+    from girlframe.services.m3_engage import ensure_assault_extra
+
+    if not ensure_assault_extra(game, c, state, action, event, viewer, key):
+        game.save_action(c, action)
+        return
     if not game.pending(c, action["id"]):
         from girlframe.services.m2_choices import ChoiceEngine
 
@@ -970,6 +1154,10 @@ def synchronize(
         game.save_action(c, action)
         if action["data"].get("battle_counter_source"):
             complete_counter_play(game, c, action, event, viewer, key)
+        if action["state"] == "complete" and action["data"].get("gorgon_counter_source"):
+            from girlframe.services.m3_gorgon_play import complete_response
+
+            complete_response(game, c, action, event, viewer, key)
 
 
 def _dormant_awakening(
@@ -1068,6 +1256,8 @@ def _apply_fatal(
     source_event: str,
     viewer: GuildViewer | None,
     key: str,
+    *,
+    allow_sprite: bool = True,
 ) -> None:
     """A printed deterministic death is an effect, never a fabricated Handler-owned answer."""
     from girlframe.engine.m3_physical import interrupt_journeys
@@ -1096,6 +1286,44 @@ def _apply_fatal(
         game.save_action(c, action)
         return
     event = str(uuid4())
+    if allow_sprite:
+        from girlframe.services.m3_sprite import defer_fatal
+
+        actor, _ = _refs(action)
+        deferred, interceptions = defer_fatal(
+            game, c, state, action, target, event, opponent=actor, chooser=meta["actor_controller"]
+        )
+        if interceptions:
+            meta.update(
+                fatal_pending=False, fixed_paid="awaiting_sprite", fatal_sprite=interceptions[0]
+            )
+            meta["followups"].extend(interceptions)
+            game.save_action(c, action)
+            human = c.scalar(
+                sa.select(t.events.c.actor_id).where(
+                    t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == source_event
+                )
+            )
+            if human is None:
+                raise WorkflowError("Recover the actual source command for the Core interception.")
+            index = c.scalar(
+                sa.select(sa.func.max(t.events.c.event_index)).where(
+                    t.events.c.campaign_id == game.store.campaign_id, t.events.c.command_key == key
+                )
+            )
+            game.event(
+                c,
+                viewer.user_id if viewer else human,
+                key,
+                "m3.core_strike_awaits_sprite",
+                deferred,
+                event_id=event,
+                event_index=index + 1 if index is not None else 0,
+                source_event=source_event,
+                source_action=action["id"],
+            )
+            synchronize_damage(game, c, event)
+            return
     account = "Actual decisive Core strike, " + action["data"]["result"]["tier"] + " result"
     if target.kind == "pilot":
         from girlframe.engine.m3_careers import end
@@ -1140,12 +1368,10 @@ def _apply_fatal(
     else:
         state = interrupt_journeys(state, target, event, account)
         state = rules.end_actor_casts(state, target, event)
-        harpy = next((x for x in state.harpy_states if x.id == target.entity), None)
-        if harpy is not None:
-            state.harpy_states = [
-                x.model_copy(update={"alive": False}) if x.id == target.entity else x
-                for x in state.harpy_states
-            ]
+        if target.kind == "external_pilot" and rules.category(state, target) == "harpy":
+            from girlframe.engine.m3_harpy_defeat import die as die_harpy
+
+            state = die_harpy(state, target, event)
         elif state.world is not None:
             if target.kind == "gorgon":
                 # This exact original Core was exposed when the strike was made.
@@ -1206,9 +1432,17 @@ def _apply_fatal(
         target=target.model_dump(mode="json"),
     )
     synchronize_casts(game, c, event)
+    if target.kind == "external_pilot" and rules.category(state, target) == "harpy":
+        from girlframe.services.m3_harpy_rest import synchronize_endings
+
+        synchronize_endings(game, c, event)
     if target.kind == "npc" and meta["target_category"] == "handler":
         from girlframe.services.m3_battle_director import create_replacements
+        from girlframe.services.m3_handler_void import (
+            synchronize_endings as synchronize_handler_void,
+        )
 
+        synchronize_handler_void(game, c, event, viewer, key)
         create_replacements(game, c, event)
     if target.kind == "pilot":
         from girlframe.services.m3_careers import synchronize_end
@@ -1269,6 +1503,8 @@ def damage_actor(
     chooser_controller: int | None = None,
     occurrence: str = "damage",
     indirect: bool = False,
+    physical_blow: bool | None = None,
+    allow_sprite: bool = True,
 ) -> tuple[GameState, tuple[str, ...]]:
     """Trusted consumer port; exact source grant/action, no fictitious GM body or audit event."""
     if not source_action and not source_work:
@@ -1314,9 +1550,59 @@ def damage_actor(
     )
     if any(x.get("kind") == "battle_damage_stage" and x.get("id") == stamp for x in state.facts):
         raise WorkflowError("This actual damage occurrence already has its original effect.")
+    if allow_sprite:
+        from girlframe.services.m3_sprite import defer, physical_incoming
+
+        if physical_incoming(game, c, source_action, occurrence, physical_blow):
+            deferred, interceptions = defer(
+                game,
+                c,
+                state,
+                target=target,
+                asset=asset_id,
+                source_action=source_action,
+                source_work=source_work,
+                event=event,
+                opponent=opponent or actor,
+                chooser=chooser_controller,
+                occurrence=occurrence,
+                indirect=indirect,
+            )
+            if interceptions:
+                return deferred, interceptions
+    source_inside = None
+    if source_action:
+        source_data = game.action(c, source_action)["data"]
+        source_inside = source_data.get("battle", {}).get("occupancy", {}).get(target.token)
+        if source_inside is None and source_data.get("snoop"):
+            source_inside = source_data["snoop"].get("occupancy", {}).get(target.token)
     changed, required = rules.damage(
-        state, target, asset_id, bound, event, opponent=opponent or actor, indirect=indirect
+        state,
+        target,
+        asset_id,
+        bound,
+        event,
+        opponent=opponent or actor,
+        indirect=indirect,
+        inside_frame=source_inside,
     )
+    foe = opponent or actor
+    if (
+        foe is not None
+        and foe.kind == "gorgon"
+        and state.world is not None
+        and any(x.id == foe.entity and x.gorgon_class == "aggressive" for x in state.world.gorgons)
+        and any(x.kind in ("defeat", "harpy_defeat") for x in required)
+    ):
+        aggressive_id = str(uuid5(NAMESPACE_URL, stamp + ":0"))
+        required = (
+            Required(kind="aggressive_damage", target=target, opponent=foe, source_pdf=165),
+        ) + tuple(
+            x.model_copy(update=dict(details=x.details | dict(aggressive=aggressive_id)))
+            if x.kind in ("defeat", "harpy_defeat")
+            else x
+            for x in required
+        )
     ids: list[str] = []
     for index, obligation in enumerate(required):
         identity = str(uuid5(NAMESPACE_URL, stamp + ":" + str(index)))
@@ -1364,6 +1650,126 @@ def damage_actor(
     return changed, tuple(ids)
 
 
+def damage_frame_at_scene(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    *,
+    target: ActorRef,
+    frame_instance: str,
+    asset_id: str,
+    source_action: str,
+    event: str,
+    actor: ActorRef,
+    chooser_controller: int,
+    occurrence: str,
+) -> tuple[GameState, tuple[str, ...]]:
+    """Actual Snoop damage to a proven current vacant Frame, never its absent Girl."""
+    from girlframe.engine.m3_physical import occupied_frame
+    from girlframe.services.m3_enforcer_snoop import validate_frame_damage_source
+
+    validate_frame_damage_source(c, game, state, source_action, target, frame_instance, asset_id)
+    if target.kind != "pilot":
+        raise WorkflowError("The actual assigned Frame port requires its original Pilot owner.")
+    bound = profiles(c, game.store.campaign_id)
+    actual = resolve(state, target, bound, require_current_profile=False)
+    if actual.frame_instance != frame_instance:
+        raise WorkflowError(
+            "The discovered Frame instance has changed; do not damage its replacement."
+        )
+    body = next((x for x in state.placements if x.actor == target), None)
+    if body is None:
+        raise WorkflowError("Record actual original cockpit occupancy before damaging this Frame.")
+    occupants = [x for x in state.placements if occupied_frame(x) == (target, frame_instance)]
+    if occupants:
+        if any(x.actor != target for x in occupants):
+            raise WorkflowError("This occupied Frame needs its actual occupant consequence port.")
+        return damage_actor(
+            game,
+            c,
+            state,
+            target=target,
+            asset_id=asset_id,
+            source_action=source_action,
+            source_work=None,
+            event=event,
+            actor=actor,
+            chooser_controller=chooser_controller,
+            occurrence=occurrence,
+            physical_blow=False,
+        )
+    if body.mode != "outside_frame":
+        raise WorkflowError("Prove actual vacancy; missing or passenger facts are not permission.")
+    sheet = state.sheets[target.entity]
+    runtime = sheet.frame_runtime
+    if (runtime and runtime.core_id) or (runtime is None and sheet.frame in ("JANUS", "JANUS-B")):
+        raise WorkflowError(
+            "An inhabited independent Core requires its own actual control/damage port."
+        )
+    selected = next((x for x in sheet.assets if x.id == asset_id and x.family == "frame"), None)
+    if selected is None or selected.damaged:
+        raise WorkflowError("Choose an actual intact Asset of this exact discovered Frame.")
+    changed = GameState.model_validate_json(state.model_dump_json())
+    destination = changed.sheets[target.entity]
+    for item in destination.assets:
+        if item.id == asset_id:
+            item.damaged = True
+    destination.revision += 1
+    changed.facts.append(
+        dict(
+            kind="vacant_frame_asset_damaged",
+            actor=target.model_dump_json(),
+            frame=frame_instance,
+            asset=asset_id,
+            source_action=source_action,
+            event=event,
+            occurrence=occurrence,
+            disabled=str(
+                not any(x.family == "frame" and not x.damaged for x in destination.assets)
+            ),
+        )
+    )
+    return changed, ()
+
+
+def require_director_helpless(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    *,
+    target: ActorRef,
+    opponent: ActorRef,
+    source_action: str,
+    event: str,
+) -> tuple[GameState, tuple[str, ...]]:
+    bound = profiles(c, game.store.campaign_id)
+    actual = resolve(state, target, bound, require_current_profile=False)
+    foe = resolve(state, opponent, bound, require_current_profile=False)
+    if actual.rules != "director" or target.kind != "npc":
+        raise WorkflowError("Only this actual Director uses its Handler-rule Helpless choice.")
+    action = game.action(c, source_action)
+    if not action["data"].get("enforcement") or action["state"] in ("complete", "aborted"):
+        raise WorkflowError("Recover the exact held Enforcer source of this Director Helplessness.")
+    identity = str(uuid5(NAMESPACE_URL, "actual-director-helpless:" + event + ":" + target.token))
+    if any(x.get("id") == identity for x in state.facts):
+        raise WorkflowError("This actual Director Helpless trigger already exists.")
+    changed = GameState.model_validate_json(state.model_dump_json())
+    required = Required(kind="director_helpless", target=target, opponent=opponent, source_pdf=15)
+    changed.facts.append(
+        dict(
+            kind="battle_damage_stage",
+            id=identity,
+            stamp=identity,
+            event=event,
+            source_action=source_action,
+            source_work="",
+            requirement=required.model_dump_json(),
+            chooser=str(foe.controller),
+        )
+    )
+    return changed, (identity,)
+
+
 def synchronize_damage(game: "GameService", c: Connection, event: str) -> None:
     """Materialize only staged facts present in the immutable actual event's canonical history."""
     raw = c.scalar(
@@ -1398,6 +1804,12 @@ def synchronize_damage(game: "GameService", c: Connection, event: str) -> None:
             require_current_profile=False,
         )
         owner = int(fact["chooser"]) if obligation.kind == "npc_damage" else actual.controller
+        if obligation.kind == "aggressive_damage":
+            if obligation.opponent is None:
+                raise WorkflowError(
+                    "Recover the actual Aggressive attacker for this immediate hit."
+                )
+            owner = resolve(state, obligation.opponent, ()).controller
         body: dict[str, Any] = dict(
             owner=obligation.target.model_dump(mode="json"),
             character=obligation.target.incarnation,
@@ -1406,12 +1818,26 @@ def synchronize_damage(game: "GameService", c: Connection, event: str) -> None:
             requirement=obligation.model_dump(mode="json"),
             immediate=True,
         )
+        if obligation.kind == "sprite_intercept":
+            from girlframe.services.m3_sprite import materialize as materialize_sprite
+
+            materialize_sprite(game, c, fact, obligation, body, parent, action, event)
+            continue
         if obligation.kind == "npc_damage":
             source_handler, source_appointment = MedicalService(game.store)._handler(c)
             body.update(handler=source_handler, appointment=source_appointment)
         if action:
             choice = game.request(
-                c, action, owner, "battle_" + obligation.kind, dict(work_id=fact["id"], **body)
+                c,
+                action,
+                owner,
+                "snoop_damage_consequence"
+                if action["data"].get("snoop")
+                else "enforcer_director_consequence"
+                if action["data"].get("enforcement")
+                and obligation.kind in ("director_damage", "director_helpless")
+                else "battle_" + obligation.kind,
+                dict(work_id=fact["id"], **body),
             )
             body["continuation"] = choice
             game.save_action(c, action)
@@ -1479,6 +1905,11 @@ def complete_damage_work(
             )
             .values(state="completed_by_work", revision=choices.c.revision + 1)
         )
+    if body.get("source_work"):
+        from girlframe.services.m3_sprite import complete_children
+
+        if complete_children(game, c, body["source_work"], event, viewer, key):
+            return
     if any(x.id == body.get("source_work") for x in state.handler_plays):
         from girlframe.services.m3_handler_plays import complete_damage
 
@@ -1487,6 +1918,44 @@ def complete_damage_work(
         action = game.action(c, body["source_action"])
         if action["data"].get("battle"):
             synchronize(game, c, action, event, viewer, key)
+        elif action["data"].get("gorgon_play"):
+            from girlframe.services.m3_gorgon_play import (
+                complete_damage_work as complete_gorgon_damage,
+            )
+
+            complete_gorgon_damage(game, c, dict(latest), event, viewer, key)
+        elif action["data"].get("snoop"):
+            from girlframe.services.m3_enforcer_snoop import complete_damage as complete_snoop
+
+            complete_snoop(game, c, action, dict(latest), event, viewer, key)
+        elif action["data"].get("enforcement"):
+            from girlframe.services.m3_enforcement_initiative import complete_director_consequence
+
+            complete_director_consequence(game, c, action, dict(latest), event, viewer, key)
+        elif action["data"].get("engage"):
+            from girlframe.services.m3_engage import complete_damage_work as complete_engage_damage
+
+            complete_engage_damage(game, c, dict(latest), event, viewer, key)
+
+
+def damage_prerequisites(game: "GameService", c: Connection, row: dict[str, Any]) -> None:
+    from girlframe.services.m3_collateral import latest
+
+    body = json.loads(row["body_json"])
+    aggressive = body.get("requirement", {}).get("details", {}).get("aggressive")
+    if aggressive:
+        other = latest(game, c, aggressive)
+        sibling = json.loads(other["body_json"])
+        if (
+            other["kind"] != "aggressive_damage"
+            or sibling.get("owner") != body.get("owner")
+            or sibling.get("source_action") != body.get("source_action")
+        ):
+            raise WorkflowError("Recover the exact original Aggressive sibling consequence.")
+        if other["state"] != "resolved":
+            raise WorkflowError(
+                "Resolve the actual Aggressive immediate Girl-Asset choice before Defeat can roll."
+            )
 
 
 def source_parent_for_defeat(
@@ -1527,6 +1996,7 @@ def source_parent_for_defeat(
         or body.get("character") != actor.incarnation
     ):
         raise WorkflowError("SOURCE_BATTLE_DAMAGE_MISSING: recover the actual original exhaustion.")
+    damage_prerequisites(game, c, row)
     parent = body.get("source_action")
     return str(parent) if parent is not None else None
 
@@ -1914,19 +2384,25 @@ class BattleService:
             source_choice = None
             if parent:
                 source = self.game.action(c, parent)
-                request = next(
-                    (
-                        x
-                        for x in self.game.pending(c, parent)
-                        if x["kind"] == "battle_counter_play"
-                        and x["actor_id"] == str(viewer.user_id)
-                        and json.loads(x["body_json"]).get("actor")
-                        == declaration.actor.model_dump(mode="json")
-                        and json.loads(x["body_json"]).get("attacker")
-                        == declaration.target.model_dump(mode="json")
-                    ),
-                    None,
-                )
+                request: dict[str, Any] | None
+                if source["data"].get("gorgon_play"):
+                    from girlframe.services.m3_gorgon_play import counter_declaration
+
+                    request = counter_declaration(self.game, c, source, declaration)
+                else:
+                    request = next(
+                        (
+                            x
+                            for x in self.game.pending(c, parent)
+                            if x["kind"] == "battle_counter_play"
+                            and x["actor_id"] == str(viewer.user_id)
+                            and json.loads(x["body_json"]).get("actor")
+                            == declaration.actor.model_dump(mode="json")
+                            and json.loads(x["body_json"]).get("attacker")
+                            == declaration.target.model_dump(mode="json")
+                        ),
+                        None,
+                    )
                 if source["channel_id"] != str(channel) or request is None:
                     raise WorkflowError(
                         "Declare the actual target's counter against the original attacker."
@@ -2035,6 +2511,99 @@ class BattleService:
             authorize=lambda c: authorize(self.game, c, viewer),
         )
 
+    def defenses(self, viewer: GuildViewer, identity: str) -> list[dict[str, Any]]:
+        """Only pre-declaration actual NPC possessions, capability Tags and real cover."""
+        with self.store.engine.connect() as c:
+            self.game.authorize(c, viewer, game=False)
+            state = load_state(c, self.store.campaign_id)
+            raw = next(
+                (
+                    x
+                    for x in reversed(state.facts)
+                    if x.get("kind") == "battle_context" and x.get("id") == identity
+                ),
+                None,
+            )
+            context = Context.model_validate_json(raw["body"]) if raw else None
+            if context is None or viewer.user_id != context.adjudicator:
+                raise WorkflowError("Only the actual source adjudicator reviews NPC defenses.")
+            target = context.declaration.target
+            if rules.category(state, target) != "npc":
+                return []
+            actual = resolve(state, target, profiles(c, self.store.campaign_id))
+            if actual.cell is None:
+                return []
+            assert state.world is not None
+            npc = next(x for x in state.world.npcs if x.id == target.entity)
+            possible: list[tuple[str, str, str]] = []
+            from girlframe.engine.m3_items import same_holder
+            from girlframe.services.m3_items import prove_item
+
+            for item in state.held_items:
+                if (
+                    not same_holder(state, item.holder, target)
+                    or item.location_mode != "carried"
+                    or item.condition == "ruined"
+                ):
+                    continue
+                try:
+                    prove_item(c, self.game, state, item.id)
+                except WorkflowError:
+                    continue
+                possible.append(("item", item.id, "Held object: " + item.name))
+            possible.extend(("capability", x.id, "Capability Tag: " + x.label) for x in npc.tags)
+            possible.extend(
+                ("cover", x.id, "Protective place: " + x.name)
+                for x in state.world.locations
+                if x.cell == actual.cell and x.condition != "destroyed"
+            )
+            proposed = c.scalar(
+                sa.select(t.events.c.seq).where(
+                    t.events.c.campaign_id == self.store.campaign_id,
+                    t.events.c.id == context.proposed_event,
+                )
+            )
+            histories = (
+                c.execute(
+                    sa.select(t.events.c.id, t.m2["m2_state_history"].c.body_json)
+                    .join(
+                        t.m2["m2_state_history"],
+                        t.events.c.id == t.m2["m2_state_history"].c.event_id,
+                    )
+                    .where(
+                        t.events.c.campaign_id == self.store.campaign_id, t.events.c.seq < proposed
+                    )
+                    .order_by(t.events.c.seq)
+                ).all()
+                if proposed is not None
+                else []
+            )
+            result = []
+            for kind, source, label in possible:
+                for historical in histories:
+                    value = Defense.model_validate(
+                        dict(
+                            target=target,
+                            kind=kind,
+                            source_id=source,
+                            source_event=historical.id,
+                            account="Actual source relevance still requires adjudication",
+                        )
+                    )
+                    try:
+                        self._defense(c, state, context, value)
+                    except WorkflowError:
+                        continue
+                    result.append(
+                        dict(
+                            id=str(uuid5(NAMESPACE_URL, identity + ":" + kind + ":" + source)),
+                            label=label,
+                            value=value.model_dump(mode="json"),
+                        )
+                    )
+                    break
+            return result
+
     def confirm(
         self,
         viewer: GuildViewer,
@@ -2051,6 +2620,8 @@ class BattleService:
         dormant_awakened: bool = False,
         dormant_close: bool = False,
         core_capability_confirmed: bool = False,
+        actor_outside_frame: bool | None = None,
+        target_outside_frame: bool | None = None,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             if dormant_close and not dormant_awakened:
@@ -2130,6 +2701,8 @@ class BattleService:
                         dormant_awakened=dormant_awakened,
                         dormant_close=dormant_close,
                         core_capability_confirmed=core_capability_confirmed,
+                        actor_outside_frame=actor_outside_frame,
+                        target_outside_frame=target_outside_frame,
                     )
                 ).model_dump_json()
             )
@@ -2164,6 +2737,8 @@ class BattleService:
                 dormant_awakened=dormant_awakened,
                 dormant_close=dormant_close,
                 core_capability_confirmed=core_capability_confirmed,
+                actor_outside_frame=actor_outside_frame,
+                target_outside_frame=target_outside_frame,
             ),
             operation,
             auto_audit=False,
@@ -2207,9 +2782,17 @@ class BattleService:
             )
             if npc is None:
                 raise WorkflowError("Recover this actual NPC's original living body and defense.")
+            if resolve(check, value.target, (), require_current_profile=False).cell is None:
+                raise WorkflowError(
+                    "An actually offstage NPC cannot defend from a cached map square."
+                )
             if value.kind == "item":
                 if not any(
-                    x.id == value.source_id and x.holder == value.target for x in check.held_items
+                    x.id == value.source_id
+                    and x.holder == value.target
+                    and x.location_mode == "carried"
+                    and x.condition == "intact"
+                    for x in check.held_items
                 ):
                     raise WorkflowError(
                         "This actual NPC must really hold the preexisting defense item."

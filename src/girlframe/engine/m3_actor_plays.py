@@ -136,12 +136,14 @@ def proposal(
     scene: str,
     direction: int,
     account: str,
+    *,
+    ooc_controller: int | None = None,
 ) -> int:
     actual_target = resolve(state, target, bindings, require_current_profile=False)
     actual = resolve(state, proposer, bindings, require_current_profile=False) if proposer else None
     if (
         (actual is not None and actual.controller != controller)
-        or (actual is None and controller != state.handler)
+        or (actual is None and controller not in (state.handler, ooc_controller))
         or controller == actual_target.controller
     ):
         raise ValueError("Only another human can propose a Tag through their actual role")

@@ -116,6 +116,7 @@ class Travel(Model):
     source_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     rift: str | None = None
     escape_effect: str | None = None
+    off_duty_action: str | None = Field(default=None, exclude_if=lambda value: value is None)
     frame_instance: str | None = None
     travels_frame: bool
     destination: Cell | None
@@ -124,18 +125,25 @@ class Travel(Model):
     judge: Snowflake
     adjudicator: ActorRef | None = None
     appointment: str = Field(min_length=1)
-    state: Literal["proposed", "offstage", "returned", "rejected"] = "proposed"
+    state: Literal["proposed", "offstage", "returned", "rejected", "ended"] = "proposed"
+    ended_event: str | None = Field(default=None, exclude_if=lambda value: value is None)
     response_event: str | None = None
     review: str = Field(default="", max_length=1200)
     return_of: str | None = None
 
     @model_validator(mode="after")
     def actual_route(self) -> "Travel":
-        if (self.rift is None) == (self.escape_effect is None):
-            raise ValueError("A route belongs to exactly one actual Rift or printed escape")
+        if sum(x is not None for x in (self.rift, self.escape_effect, self.off_duty_action)) != 1:
+            raise ValueError(
+                "A route belongs to exactly one actual Rift, printed escape or Harpy hide"
+            )
         if self.travels_frame and self.frame_instance is None:
             raise ValueError("Traveling with a Frame records its actual instance")
-        if self.rift is not None and self.return_of is None and self.destination is not None:
+        if (
+            (self.rift is not None or self.off_duty_action is not None)
+            and self.return_of is None
+            and self.destination is not None
+        ):
             raise ValueError("A Rift crossing preserves its unknown offstage destination")
         if self.return_of is not None and self.destination is None:
             raise ValueError("A real reviewed return names its actual known destination")
@@ -173,7 +181,14 @@ class DefeatEffect(Model):
     cut_link: bool = False
     tag: str | None = None
     tag_id: str | None = None
+    archived_tag: bool = Field(default=False, exclude_if=lambda value: not value)
+    tag_recipient: ActorRef | None = Field(default=None, exclude_if=lambda value: value is None)
+    tag_applied_event: str | None = Field(default=None, exclude_if=lambda value: value is None)
     factual_source: str | None = None
+    ended_event: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    ended_reason: Literal["original_died"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     source_cast: SceneCast
 
 

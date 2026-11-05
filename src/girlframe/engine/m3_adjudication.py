@@ -7,13 +7,18 @@ from girlframe.engine.m3_lobotomy import blocked_play
 
 
 def validate(state: GameState, required: Required) -> None:
-    if required.play == "harpy_defeat":
+    if required.actor.kind == "external_pilot":
         from girlframe.engine.m3_harpy_defeat import harpy
         from girlframe.engine.m3_void_state import HarpyState
 
         body = harpy(state, required.actor)
         prohibition = next(
-            (x for x in body.blocked_plays if x.play in ("defeat", "harpy_defeat")), None
+            (
+                x
+                for x in body.blocked_plays
+                if x.play == ("defeat" if required.play == "harpy_defeat" else required.play)
+            ),
+            None,
         )
         surgery = next(
             (
@@ -33,7 +38,8 @@ def validate(state: GameState, required: Required) -> None:
             or surgery.subject != body.origin
             or surgery.applied_event != prohibition.source_event
             or surgery.plan is None
-            or surgery.plan.forbidden_play != "defeat"
+            or surgery.plan.forbidden_play
+            != ("defeat" if required.play == "harpy_defeat" else required.play)
         ):
             raise ValueError("Recover the actual Harpy's inherited original surgery prohibition")
         return

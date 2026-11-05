@@ -229,7 +229,7 @@ async def open_play(
         Picker(
             viewer_from_interaction(interaction).user_id,
             "Your Handler Play",
-            BASIC
+            tuple(data["plays"])
             + (
                 (("decline", "Decline this optional counter"),)
                 if grant["source"] == "battle_counter"

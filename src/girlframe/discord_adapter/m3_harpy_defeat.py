@@ -307,12 +307,20 @@ async def open_choice(
                 Field("account", "Your actual response", paragraph=True),
             )
         )
-    elif kind in ("harpy_killer_fact", "harpy_capture_fact"):
+    elif kind in ("harpy_killer_fact", "harpy_capture_fact", "harpy_foe_fact"):
         if kind == "harpy_killer_fact" and data.get("needs_killer"):
             fields.append(
                 Field(
                     "killer",
                     "Actual original killer",
+                    tuple((x["token"], x["label"]) for x in data["actors"]),
+                )
+            )
+        if kind == "harpy_foe_fact":
+            fields.append(
+                Field(
+                    "foe",
+                    "Actual original body's foe",
                     tuple((x["token"], x["label"]) for x in data["actors"]),
                 )
             )
@@ -326,7 +334,7 @@ async def open_choice(
             )
         fields.extend(
             (
-                Field("account", "Actual killer or custody facts", paragraph=True),
+                Field("account", "Actual source facts", paragraph=True),
                 Field(
                     "confirm", "Confirm actual source facts", (("yes", "These are actual facts"),)
                 ),
@@ -371,9 +379,15 @@ async def open_choice(
                 text=values["account"],
                 fields={"tag": values.get("tag", "")},
             )
-        elif kind in ("harpy_killer_fact", "harpy_capture_fact"):
+        elif kind in ("harpy_killer_fact", "harpy_capture_fact", "harpy_foe_fact"):
+            field = {
+                "harpy_killer_fact": "killer",
+                "harpy_capture_fact": "captor",
+                "harpy_foe_fact": "foe",
+            }[kind]
+            selected = one(values, field, "")
             answer = ChoiceAnswer(
-                text=values["account"], flag=True, fields={"captor": one(values, "captor", "")}
+                text=values["account"], flag=True, fields={field: selected} if selected else {}
             )
         elif kind == "harpy_tag_select":
             answer = ChoiceAnswer(options=(one(values, "candidate"),), text=values["account"])

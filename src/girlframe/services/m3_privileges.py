@@ -92,13 +92,22 @@ def choices(
                 x.name for x in state.sheets[str(subject)].assets if x.id == receipt.asset_id
             )
         else:
+            from girlframe.engine.m3_enforcer_requisitions import TITLES
+
             label = {
                 "creature_comforts": "Creature Comforts",
                 "privacy": "Privacy",
                 "visiting_home": "Visiting Home",
                 "ability_unlock": "Personal Firearm",
                 "frame_grafting": "Personal Firearm",
+                "frame_swap": "Frame Swap retained rule",
             }[receipt.kind]
+            if hasattr(receipt, "rule_id"):
+                label = TITLES.get(receipt.rule_id, label)
+            elif receipt.kind == "frame_swap":
+                label = "Frame Swap: " + TITLES.get(
+                    receipt.selection.retained_rule, "retained rule"
+                )
         result.append(dict(id=receipt.id, name=label))
     return result
 

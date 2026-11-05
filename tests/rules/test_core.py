@@ -69,7 +69,9 @@ def test_void_does_not_create_assets_and_mockingbird_threshold_is_special(sheet)
     assert not next(x for x in sheet.assets if x.id == "frame:0").void
     with pytest.raises(ValueError):
         corrupt(result.sheet, "frame:0", "Again", piloting=True)
-    assert not corrupt(sheet, "frame:0", "Alteration while outside", piloting=False).followups
+    outside = corrupt(sheet, "frame:0", "Alteration while outside", piloting=False)
+    assert [x.kind for x in outside.followups] == ["frame_void_threshold"]
+    assert outside.followups[0].source_pdf == 19
 
 
 def test_off_duty_only_unmarks_one_and_preserves_sedation_locks(sheet):

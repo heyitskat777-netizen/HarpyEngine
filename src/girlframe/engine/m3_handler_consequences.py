@@ -1,6 +1,7 @@
 """Printed Handler Assets replacement choices, body endings and source-owned history."""
 
 import json
+from typing import Literal
 from uuid import NAMESPACE_URL, uuid5
 
 from girlframe.engine.m2 import GameState
@@ -10,6 +11,7 @@ from girlframe.engine.m3_handler_consequence_state import (
     HandlerArchive,
     HandlerBody,
     HandlerConsequence,
+    HandlerDeparture,
     HandlerFatalSource,
     HandlerInjury,
     HandlerOpportunity,
@@ -148,22 +150,28 @@ def require(
 def _end(
     state: GameState,
     target: ActorRef,
-    request: HandlerConsequence | HandlerFatalSource,
+    request: HandlerConsequence | HandlerFatalSource | HandlerDeparture,
     source_event: str,
     account: str,
 ) -> GameState:
     from girlframe.engine.m3_actor_bonds import migrate_actor, migrate_helpless
+    from girlframe.engine.m3_actors import physical_cell
     from girlframe.engine.m3_enforcer import end_grasps
     from girlframe.engine.m3_physical import interrupt_journeys
 
     body = body_original(state, target)
+    ending = request.reason if isinstance(request, HandlerDeparture) else "death"
+    contexts = [
+        x
+        for x in state.director_contexts
+        if same_handler_body(
+            state, ActorRef(kind="handler", entity=str(x.handler), incarnation=x.id)
+        )
+    ]
+    position = physical_cell(state, target, ())
     body_refs = {
         target,
-        *(
-            ActorRef(kind="handler", entity=target.entity, incarnation=x.id)
-            for x in state.director_contexts
-            if x.active and x.handler == int(target.entity)
-        ),
+        *(ActorRef(kind="handler", entity=target.entity, incarnation=x.id) for x in contexts),
     }
     if not state.handler_archives:
         body_refs.add(ActorRef(kind="handler", entity=target.entity))
@@ -175,10 +183,16 @@ def _end(
             for x in state.actor_bonds
             if x.first in body_refs or x.second in body_refs
         ],
-        director_contexts=[
+        director_contexts=[x.model_dump(mode="json") for x in contexts],
+        handler_girl_void=[
             x.model_dump(mode="json")
-            for x in state.director_contexts
-            if x.handler == int(target.entity)
+            for x in state.handler_girl_void
+            if x.actor in body_refs or x.body in body_refs
+        ],
+        handler_void=[
+            x.model_dump(mode="json")
+            for x in state.handler_void
+            if x.actor in body_refs or x.body in body_refs
         ],
         legacy_alias=not state.handler_archives,
         casts=[
@@ -195,6 +209,13 @@ def _end(
         state = end_grasps(
             interrupt_journeys(state, actual, source_event, account), actual, source_event
         )
+        if ending == "death":
+            from girlframe.engine.m3_handler_void import end_actor
+
+            state = end_actor(state, actual, source_event)
+            from girlframe.engine.m3_handler_girl_void import end_actor as end_girl_void
+
+            state = end_girl_void(state, actual, source_event)
     for sheet in state.sheets.values():
         for tag in sheet.tags:
             if (
@@ -208,7 +229,7 @@ def _end(
     }
     state.handler_archives.append(
         HandlerArchive(
-            id="handler-death:" + request.id,
+            id="handler-" + ending + ":" + request.id,
             actor=target,
             body=body,
             source_event=source_event,
@@ -216,6 +237,10 @@ def _end(
             account=account,
             appointment=request.appointment,
             links_json=json.dumps(links, sort_keys=True),
+            ending=ending,
+            alive=ending != "death",
+            custody="foundation_prison" if ending == "imprisoned" else "free",
+            position=position,
         )
     )
     state.handler_persona = None
@@ -224,7 +249,7 @@ def _end(
         context.model_copy(
             update={
                 "active": False,
-                "termination_reason": "handler_death",
+                "termination_reason": "handler_death" if ending == "death" else "handler_departure",
                 "termination_event": source_event,
                 "revision": context.revision + 1,
             }
@@ -263,6 +288,40 @@ def _end(
         for x in state.handler_consequences
     ]
     return state
+
+
+def depart(
+    original: GameState,
+    actor: ActorRef,
+    *,
+    reason: Literal["fired", "retired", "imprisoned"],
+    source_work: str,
+    event: str,
+    appointment: str,
+    account: str,
+) -> GameState:
+    """Trusted source episode ends employment, without claiming an actual body died."""
+    if not same_handler_body(original, actor) or not account.strip():
+        raise ValueError("Depart only this actual original Handler with its real source decision")
+    current = active_handler(original)
+    assert current is not None
+    identity = str(uuid5(NAMESPACE_URL, source_work + ":" + current.token + ":" + reason))
+    if any(x.id == identity for x in original.handler_departures):
+        raise ValueError("This original Handler source departure is already recorded")
+    state = GameState.model_validate_json(original.model_dump_json())
+    request = HandlerDeparture(
+        id=identity,
+        actor=current,
+        reason=reason,
+        source_work=source_work,
+        source_event=event,
+        appointment=appointment,
+        account=account.strip(),
+    )
+    state.handler_departures.append(request)
+    return GameState.model_validate_json(
+        _end(state, current, request, event, account.strip()).model_dump_json()
+    )
 
 
 def apply(

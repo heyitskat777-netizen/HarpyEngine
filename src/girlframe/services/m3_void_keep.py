@@ -148,6 +148,7 @@ def prepare_keep(
                 "enforcer_void_threshold",
                 "battle_item_void_threshold",
                 "battle_dormant_threshold",
+                "mockingbird_void_threshold",
             )
             and x["actor_id"] == actor.entity
             and json.loads(x["body_json"]).get("work_id") == row["id"]

@@ -581,6 +581,45 @@ class InboxView(discord.ui.View):
                     physical_service,
                     ActorRef(kind="external_pilot", entity=item.identity),
                 )
+        elif item.task == "handler_girl_void":
+            from girlframe.discord_adapter.m3_handler_girl_void import open_handler_girl_void
+            from girlframe.services.m3_handler_girl_void import HandlerGirlVoidService
+
+            await open_handler_girl_void(
+                interaction, HandlerGirlVoidService(self.service.store), item.identity
+            )
+        elif item.task == "sprite_intercept":
+            from girlframe.discord_adapter.m3_sprite import open_sprite
+            from girlframe.services.m3_sprite import SpriteService
+
+            await open_sprite(interaction, SpriteService(self.service.store), item.identity)
+        elif item.task == "handler_void":
+            from girlframe.discord_adapter.m3_handler_void import open_handler_void
+            from girlframe.services.m3_handler_void import HandlerVoidService
+
+            await open_handler_void(
+                interaction, HandlerVoidService(self.service.store), item.identity
+            )
+        elif item.task == "quadrant_loss":
+            from girlframe.discord_adapter.m3_quadrant_loss import open_loss
+            from girlframe.services.m3_quadrant_loss import LossService
+
+            await open_loss(interaction, LossService(self.service.store), item.identity)
+        elif item.task == "m3_mockingbird":
+            from girlframe.discord_adapter.m3_mockingbird_plays import open_request
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_mockingbird_plays import MockingbirdService
+
+            await open_request(
+                interaction, MockingbirdService(GameService(self.service.store)), item.identity
+            )
+        elif item.task in ("handler_tag_response", "handler_tag_notice"):
+            from girlframe.discord_adapter.m3_handler_tags import open_handler_tags
+            from girlframe.services.m2_game import GameService
+
+            await open_handler_tags(
+                interaction, GameService(self.service.store), identity=item.identity
+            )
         elif item.task == "m3_dormant":
             from girlframe.discord_adapter.m3_battle_dormant import open_dormant
             from girlframe.services.m3_battle_dormant import DormantService

@@ -315,6 +315,10 @@ class MissionService:
                 self._authorize(c, viewer)
             if authorize:
                 authorize(c)
+            if kind.startswith("m3.mission_"):
+                from girlframe.services.m3_quadrant_loss import require_aftermath_clear
+
+                require_aftermath_clear(load_state(c, self.store.campaign_id))
 
         try:
             return self.store._write(

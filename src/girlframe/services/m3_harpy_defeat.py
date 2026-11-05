@@ -11,7 +11,7 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_harpy_defeat as rules
 from girlframe.engine.m2 import ChoiceAnswer, GameState, tier
-from girlframe.engine.m3_actor_state import ActorRef, SceneCast
+from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_battle_state import Required as DamageRequired
 from girlframe.engine.m3_handler_consequences import active_handler
@@ -112,6 +112,431 @@ def ended_director_judge(
         if fingerprint(predicted) == fingerprint(current):
             return True
     return False
+
+
+def ended_actor_source(
+    game: "GameService", c: Connection, state: GameState, actor: ActorRef
+) -> str | None:
+    """Prove the exact original's ending without reading a successor through its human UID."""
+    from girlframe.engine.m3_handler_consequences import body_original
+
+    candidates = []
+    if actor.kind == "pilot":
+        candidates = [x.source_event for x in state.career_archives if x.actor == actor]
+    elif actor.kind == "handler":
+        try:
+            original_body = body_original(state, actor)
+        except ValueError:
+            original_body = None
+        candidates = [x.source_event for x in state.handler_archives if x.body == original_body]
+    else:
+        candidates = [
+            str(x["event"])
+            for x in state.facts
+            if x.get("kind") in ("battle_actor_cast_ended", "director_body_ended")
+            and x.get("actor") == actor.model_dump_json()
+            and x.get("event")
+        ]
+        if actor.kind == "external_pilot":
+            try:
+                condition = rules.harpy(state, actor).condition_event
+                if condition:
+                    candidates.append(condition)
+            except ValueError:
+                pass
+    for event in reversed(candidates):
+        raw = c.scalar(
+            sa.select(t.m2["m2_state_history"].c.body_json).where(
+                t.m2["m2_state_history"].c.campaign_id == game.store.campaign_id,
+                t.m2["m2_state_history"].c.event_id == event,
+            )
+        )
+        if raw is None:
+            continue
+        proof = GameState.model_validate_json(raw)
+        if actor.kind == "pilot" and any(
+            x.actor == actor and x.source_event == event for x in proof.career_archives
+        ):
+            return event
+        if actor.kind == "handler":
+            try:
+                proved_body = body_original(proof, actor)
+            except ValueError:
+                proved_body = None
+            if any(
+                x.body == proved_body and x.source_event == event for x in proof.handler_archives
+            ):
+                return event
+        try:
+            view = resolve(
+                proof,
+                actor,
+                profiles(c, game.store.campaign_id),
+                require_alive=False,
+                require_current_profile=False,
+            )
+        except ValueError:
+            continue
+        if not view.alive:
+            if actor.kind == "npc" and any(
+                x.get("kind") == "director_body_ended"
+                and x.get("actor") == actor.model_dump_json()
+                and x.get("event") == event
+                for x in state.facts
+            ):
+                from girlframe.engine.m3_world_state import Npc
+
+                facts = [
+                    x
+                    for x in state.facts
+                    if x.get("kind") == "director_body_ended"
+                    and x.get("actor") == actor.model_dump_json()
+                    and x.get("event") == event
+                ]
+                valid = False
+                for fact in facts:
+                    if fact not in proof.facts or not fact.get("body"):
+                        continue
+                    previous = Npc.model_validate_json(fact["body"])
+                    current = resolve(
+                        state,
+                        actor,
+                        profiles(c, game.store.campaign_id),
+                        require_alive=False,
+                        require_current_profile=False,
+                    )
+                    if (
+                        previous.id == actor.entity
+                        and previous.alive
+                        and "director" in previous.jobs
+                        and previous.controller == view.controller == current.controller
+                        and not current.alive
+                    ):
+                        valid = True
+                if not valid:
+                    continue
+            return event
+    return None
+
+
+def restore_death_tags(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    actor: ActorRef,
+    event: str,
+) -> GameState:
+    """Immutable actual death-choice proof precedes original-return materialization."""
+    for effect in state.harpy_defeats:
+        if not (
+            effect.archived_tag and effect.killer == actor and effect.tag_applied_event is None
+        ):
+            continue
+        source = effect.response_event
+        raw = (
+            c.scalar(
+                sa.select(t.m2["m2_state_history"].c.body_json).where(
+                    t.m2["m2_state_history"].c.campaign_id == game.store.campaign_id,
+                    t.m2["m2_state_history"].c.event_id == source,
+                )
+            )
+            if source
+            else None
+        )
+        proof = GameState.model_validate_json(raw) if raw else None
+        declared = HarpyDefeatService(game.store, game=game)._declaration(
+            c, game.action(c, effect.action)
+        )
+        if (
+            proof is None
+            or effect not in proof.harpy_defeats
+            or effect.phase != "complete"
+            or effect.choice != "death"
+            or effect.actor != declared.actor
+            or effect.work != declared.work
+            or effect.source_cast != declared.cast
+            or effect.tag_recipient != actor
+        ):
+            raise WorkflowError("Recover the immutable original Harpy death-Tag consequence.")
+    return rules.apply_returned_death_tags(state, actor, event)
+
+
+def owned_director_procedure(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+) -> ActorView | None:
+    """Only this frozen original episode's procedural humans survive its Director's death."""
+    meta = action["data"].get("actor_basic")
+    frozen = action["data"].get("tag_context")
+    if (
+        not meta
+        or not frozen
+        or action["state"] == "complete"
+        or action["data"].get("play") not in ("dive_deep", "go_off_duty")
+        or not meta.get("adjudicator")
+    ):
+        return None
+    ref = ActorRef.model_validate(meta["ref"])
+    judge = ActorRef.model_validate(meta["adjudicator"])
+    if ref.kind != "external_pilot" or judge.kind != "npc":
+        return None
+    original = SceneCast.model_validate_json(json.dumps(frozen["cast"]))
+    current = next((x for x in state.scene_casts if x.id == original.id and x.open), None)
+    if (
+        current is None
+        or fingerprint(original) != frozen["cast_sha256"]
+        or original.revision != meta["cast_revision"]
+        or original.id != action["scene_id"]
+        or not ended_director_judge(
+            game, c, state, original, current, judge, meta["adjudicator_controller"]
+        )
+    ):
+        return None
+    allowed = {
+        "tag_window",
+        "actor_tag_selection",
+        "actor_tag_agreement",
+        "tag_resolution",
+        "dive_select",
+        "dive_effect",
+        "dive_table_answer",
+        "dive_table_agreement",
+        "dive_void_threshold",
+        "manual_adjudication",
+        "harpy_off_duty_hide",
+        "harpy_off_duty_route",
+    }
+    pending = game.pending(c, action["id"])
+    if not pending:
+        # Game.respond authenticates the human before marking this exact SQL row answered;
+        # apply() then revalidates before the new response event/action is committed.
+        saved = game.action(c, action["id"])
+        source = action["data"].get("response_event")
+        if not source or source == saved["data"].get("response_event"):
+            return None
+        choices, responses = t.m2["m2_choices"], t.m2["m2_responses"]
+        pending = [
+            dict(x)
+            for x in c.execute(
+                sa.select(choices).where(
+                    choices.c.campaign_id == game.store.campaign_id,
+                    choices.c.action_id == action["id"],
+                    choices.c.state == "answered",
+                    ~sa.exists(
+                        sa.select(responses.c.choice_id).where(
+                            responses.c.campaign_id == choices.c.campaign_id,
+                            responses.c.choice_id == choices.c.id,
+                        )
+                    ),
+                )
+            ).mappings()
+            if (x["kind"] + ":" + x["actor_id"]) in action["data"]["choices"]
+        ]
+    if not pending or any(x["kind"] not in allowed for x in pending):
+        return None
+    raw_receipt = c.scalar(
+        sa.select(t.m2["m2_receipts"].c.body_json).where(
+            t.m2["m2_receipts"].c.campaign_id == game.store.campaign_id,
+            t.m2["m2_receipts"].c.action_id == action["id"],
+        )
+    )
+    if raw_receipt is not None:
+        if json.loads(raw_receipt) != action["data"].get("receipt"):
+            return None
+    elif not (
+        action["state"] == "awaiting_adjudication"
+        and action["data"].get("adjudication")
+        and any(x["kind"] == "manual_adjudication" for x in pending)
+    ):
+        return None
+    histories = list(
+        c.scalars(
+            sa.select(t.m2["m2_state_history"].c.body_json)
+            .join(t.events, t.events.c.id == t.m2["m2_state_history"].c.event_id)
+            .where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.kind.in_(
+                    ("m3.play_confirmed", "m3.actor_play_advanced", "m3.manual_adjudicated")
+                ),
+                sa.func.json_extract(t.events.c.payload_json, "$.action_id") == action["id"],
+            )
+        )
+    )
+    if not histories and action["state"] == "awaiting_adjudication":
+        requested = c.scalar(
+            sa.select(t.events.c.seq).where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.kind == "m3.manual_adjudication_requested",
+                t.events.c.actor_id == action["actor_id"],
+                sa.func.json_extract(t.events.c.payload_json, "$.action_id") == action["id"],
+            )
+        )
+        if requested is not None:
+            previous = c.scalar(
+                sa.select(t.m2["m2_state_history"].c.body_json)
+                .join(t.events, t.events.c.id == t.m2["m2_state_history"].c.event_id)
+                .where(t.events.c.campaign_id == game.store.campaign_id, t.events.c.seq < requested)
+                .order_by(t.events.c.seq.desc())
+                .limit(1)
+            )
+            if previous is not None:
+                histories.append(previous)
+    for raw in histories:
+        proof = GameState.model_validate_json(raw)
+        if not any(x == original for x in proof.scene_casts):
+            continue
+        npc = (
+            next((x for x in proof.world.npcs if x.id == judge.entity), None)
+            if proof.world
+            else None
+        )
+        if npc is None or not npc.alive or npc.controller != meta["adjudicator_controller"]:
+            continue
+        try:
+            before = resolve(
+                proof, ref, profiles(c, game.store.campaign_id), require_current_profile=False
+            )
+            now = resolve(
+                state, ref, profiles(c, game.store.campaign_id), require_current_profile=False
+            )
+        except ValueError:
+            continue
+        if (
+            before.controller == now.controller == int(action["actor_id"])
+            and before.girl == now.girl == "harpy"
+            and before.vessel_id == now.vessel_id
+            and before.frame_instance == now.frame_instance
+        ):
+            return now
+    return None
+
+
+def source_actor_continuation(
+    game: "GameService", c: Connection, state: GameState, action: dict[str, Any]
+) -> ActorView | None:
+    """Read the same actual body after its source-owned Defeat, never a fresh declaration."""
+    meta = action["data"].get("actor_basic")
+    combat = action["data"].get("engage") or action["data"].get("battle")
+    if meta is None or combat is None or not action["data"].get("receipt"):
+        return None
+    actor = ActorRef.model_validate(meta["ref"])
+    if actor.kind != "external_pilot" or combat.get("actor") != actor.model_dump(mode="json"):
+        return None
+    current = next((x for x in state.scene_casts if x.id == action["scene_id"] and x.open), None)
+    if current is None:
+        return None
+    receipt = c.scalar(
+        sa.select(t.m2["m2_receipts"].c.body_json).where(
+            t.m2["m2_receipts"].c.campaign_id == game.store.campaign_id,
+            t.m2["m2_receipts"].c.action_id == action["id"],
+        )
+    )
+    if receipt is None or json.loads(receipt) != action["data"]["receipt"]:
+        return None
+    service = HarpyDefeatService(game.store, game)
+    bound = profiles(c, game.store.campaign_id)
+    for effect in state.harpy_defeats:
+        if effect.actor != actor or actor not in effect.departed or effect.phase != "complete":
+            continue
+        child = game.action(c, effect.action)
+        declared = service._declaration(c, child)
+        if (
+            child["state"] != "complete"
+            or child["parent_id"] != action["id"]
+            or declared.source_action != action["id"]
+            or declared.actor != actor
+            or declared.controller != int(action["actor_id"])
+        ):
+            continue
+        work, body, owner = service._source(c, declared.work, pending=False)
+        if (
+            owner != actor
+            or work["state"] != "resolved"
+            or body.get("defeat_action") != child["id"]
+            or body.get("source_action") != action["id"]
+        ):
+            continue
+        event = effect.response_event or effect.source_event
+        raw = c.scalar(
+            sa.select(t.m2["m2_state_history"].c.body_json).where(
+                t.m2["m2_state_history"].c.campaign_id == game.store.campaign_id,
+                t.m2["m2_state_history"].c.event_id == event,
+            )
+        )
+        source = GameState.model_validate_json(raw) if raw else None
+        first = (
+            next((x for x in source.harpy_defeats if x.id == effect.id), None) if source else None
+        )
+        if first != effect or source is None:
+            continue
+        if any(
+            not any(
+                fact.get("kind") == "battle_actor_cast_ended"
+                and fact.get("actor") == ref.model_dump_json()
+                and fact.get("event") == event
+                for fact in source.facts
+            )
+            for ref in effect.departed
+        ):
+            continue
+        projected = declared.cast.model_copy(
+            update={
+                "roles": tuple(x for x in declared.cast.roles if x.actor not in effect.departed),
+                "revision": declared.cast.revision
+                + sum(any(x.actor == ref for x in declared.cast.roles) for ref in effect.departed),
+                "adjudicator": None
+                if declared.cast.adjudicator in effect.departed
+                else declared.cast.adjudicator,
+            }
+        )
+        if fingerprint(projected) != fingerprint(current):
+            continue
+        original = SceneCast.model_validate(
+            (combat if combat.get("cast") else action["data"]["tag_context"])["cast"]
+        )
+        if (
+            fingerprint(original)
+            != (combat if combat.get("cast") else action["data"]["tag_context"])["cast_sha256"]
+        ):
+            continue
+        if original != declared.cast:
+            old = original.adjudicator
+            human = next((x.controller for x in original.roles if x.actor == old), None)
+            if (
+                old is None
+                or human is None
+                or not ended_director_judge(game, c, source, original, declared.cast, old, human)
+            ):
+                continue
+        rows = c.execute(
+            sa.select(t.m2["m2_state_history"].c.body_json)
+            .join(t.events, t.events.c.id == t.m2["m2_state_history"].c.event_id)
+            .where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.actor_id == action["actor_id"],
+                t.events.c.kind.in_(("m3.actor_play_advanced", "m3.rolled")),
+                sa.func.json_extract(t.events.c.payload_json, "$.action_id") == action["id"],
+            )
+            .order_by(t.events.c.seq)
+        ).scalars()
+        for saved in rows:
+            rolled = GameState.model_validate_json(saved)
+            if not any(x == original for x in rolled.scene_casts):
+                continue
+            original_view = resolve(rolled, actor, bound, require_current_profile=False)
+            current_view = resolve(
+                state, actor, bound, require_alive=False, require_current_profile=False
+            )
+            if (
+                original_view.controller == current_view.controller == int(action["actor_id"])
+                and original_view.vessel_id == current_view.vessel_id
+                and original_view.frame_instance == current_view.frame_instance
+            ):
+                service._runtime(c, state, actor)
+                return current_view
+    return None
 
 
 class HarpyDefeatService:
@@ -737,6 +1162,9 @@ class HarpyDefeatService:
 
             self.game.unpaused(c)
             row, source, actor = self._source(c, identity)
+            from girlframe.services.m3_battle import damage_prerequisites
+
+            damage_prerequisites(self.game, c, row)
             if row["owner_id"] != str(viewer.user_id):
                 raise WorkflowError("Only the original Harpy's actual human may begin this Defeat.")
             state = load_state(c, self.store.campaign_id)
@@ -981,7 +1409,11 @@ class HarpyDefeatService:
         if body.controller != declared.controller or body.frame_instance != declared.frame_instance:
             raise WorkflowError("Recover the exact original Harpy body and Frame instance.")
         if action["state"] != "complete":
-            self._source(c, declared.work)
+            work_row, _, _ = self._source(c, declared.work)
+            if unrolled:
+                from girlframe.services.m3_battle import damage_prerequisites
+
+                damage_prerequisites(self.game, c, work_row)
         cast = next((x for x in state.scene_casts if x.id == declared.cast.id and x.open), None)
         if cast is None:
             raise WorkflowError("Recover the original actual Harpy scene before continuing.")
@@ -1647,6 +2079,36 @@ class HarpyDefeatService:
                     effect = effect.model_copy(
                         update={"cut_link": True, "phase": "awaiting_physical"}
                     )
+                    girl_assets = tuple(
+                        x for x in rules.assets(state, declared.actor) if x.family == "girl"
+                    )
+                    if girl_assets and all(x.damaged for x in girl_assets):
+                        _, work_body, _ = self._source(c, declared.work)
+                        foe = DamageRequired.model_validate(work_body["requirement"]).opponent
+                        try:
+                            if foe is None:
+                                raise ValueError("No original actual foe source")
+                            resolve(
+                                state,
+                                foe,
+                                profiles(c, self.store.campaign_id),
+                                require_current_profile=False,
+                            )
+                        except ValueError:
+                            self.game.request(
+                                c,
+                                action,
+                                declared.gm_controller,
+                                "harpy_foe_fact",
+                                {"effect": effect.id},
+                            )
+                        else:
+                            from girlframe.engine.m3_actor_bonds import make_helpless
+
+                            _copy(state, make_helpless(state, declared.actor, foe, source))
+                            effect = effect.model_copy(
+                                update={"phase": "complete", "factual_source": source}
+                            )
                 else:
                     _copy(state, rules.shutdown(state, declared.actor, source, cut_link=False))
                     effect = effect.model_copy(update={"phase": "awaiting_captor"})
@@ -1744,6 +2206,46 @@ class HarpyDefeatService:
             state.harpy_defeats = [
                 revised if x.id == existing.id else x for x in state.harpy_defeats
             ]
+        elif kind == "harpy_foe_fact":
+            if (
+                int(row["actor_id"]) != declared.gm_controller
+                or answer.flag is not True
+                or not answer.text.strip()
+            ):
+                raise WorkflowError(
+                    "The actual source judge must identify the original body's actual foe."
+                )
+            foe = self._ref(state, declared, answer.fields.get("foe", ""))
+            resolve(state, foe, profiles(c, self.store.campaign_id), require_current_profile=False)
+            girl_assets = tuple(
+                x for x in rules.assets(state, declared.actor) if x.family == "girl"
+            )
+            if not (
+                existing
+                and existing.cut_link
+                and not rules.harpy(state, declared.actor).linked
+                and girl_assets
+                and all(x.damaged for x in girl_assets)
+            ):
+                raise WorkflowError(
+                    "Recover the actual all-Girl-Assets-damaged outside-body source."
+                )
+            from girlframe.engine.m3_actor_bonds import make_helpless
+
+            _copy(state, make_helpless(state, declared.actor, foe, source))
+            state.harpy_defeats = [
+                x.model_copy(
+                    update={
+                        "phase": "complete",
+                        "factual_source": source,
+                        "response_event": source,
+                        "response": answer.text,
+                    }
+                )
+                if x.id == existing.id
+                else x
+                for x in state.harpy_defeats
+            ]
         elif kind in ("harpy_killer_fact", "harpy_capture_fact"):
             if (
                 int(row["actor_id"]) != declared.gm_controller
@@ -1760,21 +2262,30 @@ class HarpyDefeatService:
                 )
                 assert existing.tag is not None
                 tag_id = str(uuid4())
-                _copy(
-                    state,
-                    rules.give_tag(
+                ended = ended_actor_source(self.game, c, state, killer)
+                if ended is None:
+                    _copy(
                         state,
-                        killer,
-                        declared.actor,
-                        existing.tag,
-                        source,
-                        tag_id,
-                        tuple(action["data"]["participants"]),
-                    ),
-                )
-                _copy(state, rules.die(state, declared.actor, source))
+                        rules.give_tag(
+                            state,
+                            killer,
+                            declared.actor,
+                            existing.tag,
+                            source,
+                            tag_id,
+                            tuple(action["data"]["participants"]),
+                        ),
+                    )
+                own_ending = ended_actor_source(self.game, c, state, declared.actor)
+                if own_ending is None:
+                    _copy(state, rules.die(state, declared.actor, source))
                 values: dict[str, Any] = dict(
-                    tag_id=tag_id, killer=killer, departed=(declared.actor,)
+                    tag_id=tag_id,
+                    killer=killer,
+                    tag_recipient=killer,
+                    archived_tag=ended is not None,
+                    tag_applied_event=source if ended is None else None,
+                    departed=(declared.actor,),
                 )
             else:
                 captor = self._ref(state, declared, answer.fields.get("captor", ""))
@@ -1924,6 +2435,9 @@ class HarpyDefeatService:
                     answer_json=answer.model_dump_json(),
                 )
             )
+            from girlframe.services.m3_harpy_rest import synchronize_endings
+
+            synchronize_endings(self.game, c, event)
             if action["state"] == "complete":
                 self._complete_work(c, action, event, viewer, key)
             return dict(action_id=action["id"], state=action["state"], choice_id=identity)
@@ -2004,7 +2518,8 @@ class HarpyDefeatService:
                     _visible(state, role.actor, viewer.user_id)
                     or (
                         viewer.user_id == state.handler
-                        and row["kind"] in ("harpy_killer_fact", "harpy_capture_fact")
+                        and row["kind"]
+                        in ("harpy_killer_fact", "harpy_capture_fact", "harpy_foe_fact")
                     )
                 ):
                     continue
@@ -2345,6 +2860,37 @@ class HarpyDefeatService:
                 t.events.c.kind == "m3.harpy_route_proposed",
             )
         )
+        if actor is None and value.off_duty_action is not None and state is not None:
+            rest = next(
+                (
+                    x
+                    for x in state.harpy_rests
+                    if x.route == value.id
+                    and x.action == value.off_duty_action
+                    and x.source_event == value.source_event
+                    and x.actor == value.actor
+                    and x.controller == value.controller
+                ),
+                None,
+            )
+            responses, choices = t.m2["m2_responses"], t.m2["m2_choices"]
+            if rest is not None:
+                actor = c.scalar(
+                    sa.select(responses.c.actor_id)
+                    .join(
+                        choices,
+                        sa.and_(
+                            choices.c.campaign_id == responses.c.campaign_id,
+                            choices.c.id == responses.c.choice_id,
+                        ),
+                    )
+                    .where(
+                        responses.c.campaign_id == self.store.campaign_id,
+                        responses.c.event_id == value.source_event,
+                        choices.c.action_id == value.off_duty_action,
+                        choices.c.kind == "harpy_off_duty_hide",
+                    )
+                )
         if (
             original is None
             or actor != str(value.controller)
@@ -2375,6 +2921,7 @@ class HarpyDefeatService:
 
         def operation(c: Connection) -> dict[str, Any]:
             chosen_rift, chosen_escape = rift, escape_effect
+            chosen_rest = None
             self.game.unpaused(c)
             canon = load_state(c, self.store.campaign_id)
             view = resolve(
@@ -2409,6 +2956,7 @@ class HarpyDefeatService:
                     )
                 self._travel_proof(c, prior)
                 chosen_rift, chosen_escape = prior.rift, prior.escape_effect
+                chosen_rest = prior.off_duty_action
                 travels_frame, instance = prior.travels_frame, prior.frame_instance
                 if (
                     destination is None
@@ -2480,6 +3028,7 @@ class HarpyDefeatService:
                 source_sha256=view.source_sha256,
                 rift=chosen_rift,
                 escape_effect=chosen_escape,
+                off_duty_action=chosen_rest,
                 frame_instance=instance,
                 travels_frame=travels_frame,
                 destination=destination,
@@ -2645,6 +3194,10 @@ class HarpyDefeatService:
                     from girlframe.engine.m3_battle import end_actor_casts
 
                     _copy(canon, end_actor_casts(canon, value.actor, event))
+            if value.off_duty_action is not None:
+                from girlframe.services.m3_harpy_rest import complete_route
+
+                complete_route(self.game, c, canon, revised, event)
             self.game.event(
                 c,
                 viewer.user_id,

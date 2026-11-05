@@ -153,8 +153,7 @@ def specifications(
         frame = rules.official(sheet.frame)
         if frame not in rules.PAGES:
             raise WorkflowError("Resolve the unsupported current Frame before Off-Duty rewards.")
-        if frame == "DOCTORDOCTOR MK. II" and uid in period.credit_recorded:
-            continue
+        doctor_recorded = frame == "DOCTORDOCTOR MK. II" and uid in period.credit_recorded
         identity = str(
             uuid5(
                 NAMESPACE_URL,
@@ -183,23 +182,60 @@ def specifications(
             "mode": mode,
             "reward_source_event": source,
         }
-        result.append(
-            {
-                "id": identity,
-                "owner_id": str(owner),
-                "subject_id": str(uid),
-                "kind": kind,
-                "body": body,
-            }
-        )
+        if not doctor_recorded:
+            result.append(
+                {
+                    "id": identity,
+                    "owner_id": str(owner),
+                    "subject_id": str(uid),
+                    "kind": kind,
+                    "body": body,
+                }
+            )
+        if frame != "THE ENFORCER":
+            from girlframe.engine.m3_actor_state import ActorRef
+            from girlframe.engine.m3_enforcer_requisitions import PERMISSION
+            from girlframe.services.m3_enforcer_requisitions import owned
+
+            grant = owned(
+                c,
+                GameService(store),
+                facts,
+                ActorRef(kind="pilot", entity=str(uid), incarnation=character),
+                PERMISSION,
+            )
+            if grant is not None:
+                result.append(
+                    dict(
+                        id=str(uuid5(NAMESPACE_URL, identity + ":retained-enforcer-trigger")),
+                        owner_id=str(uid),
+                        subject_id=str(uid),
+                        kind="frame_off_duty_reward",
+                        body=body
+                        | dict(
+                            origin_frame="THE ENFORCER",
+                            source_pdf=78,
+                            due_stage="active",
+                            mode="conditional",
+                            source_rule=PERMISSION,
+                            source_rule_grant=grant.id,
+                        ),
+                    )
+                )
     return result
 
 
 def matches(row: dict[str, Any], spec: dict[str, Any]) -> bool:
     body = json.loads(row["body_json"])
     header = all(
-        body.get(k) == spec["body"][k]
-        for k in ("origin_frame", "origin_frame_id", "origin_character_id")
+        body.get(k) == spec["body"].get(k)
+        for k in (
+            "origin_frame",
+            "origin_frame_id",
+            "origin_character_id",
+            "source_rule",
+            "source_rule_grant",
+        )
     )
     return header and (
         row["state"] == "resolved"
@@ -666,6 +702,7 @@ class RewardService:
                     identity,
                     eligibility=facts,
                     character_id=period.character_ids[row["subject_id"]],
+                    source_rule=spec["body"].get("source_rule"),
                 )
                 details = claim.model_dump(mode="json")
                 granted = claim.fulfilled

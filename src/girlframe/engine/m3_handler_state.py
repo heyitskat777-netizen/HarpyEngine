@@ -143,6 +143,7 @@ class SavedDraft(Model):
     appointment: str = Field(min_length=1)
     draft: Draft
     generation: str = "initial"
+    source_work: str | None = None
 
 
 class Agreement(Model):
