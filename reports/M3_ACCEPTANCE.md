@@ -2,9 +2,10 @@
 
 ## Bounded gameplay candidate — automated verification passed
 
-The current development changes extend source baseline `262c3fc`. This bounded
-candidate passes the complete regression; its exact source commit is recorded in
-the following evidence checkpoint. M3 remains **IN_PROGRESS / RULES_SUBSET**.
+Verified source: **`c46e9005bed43c25db46e653c69400db1a668e81`**, extending `262c3fc` on
+`codex/m3-rules`. This bounded candidate passes the complete regression. Only
+sanitized source/evidence are included; private references, drafts, real state and
+credentials remain outside Git. Remote push verification is recorded separately. M3 remains **IN_PROGRESS / RULES_SUBSET**.
 The four development agents are frozen while root runs the integrated checks.
 No independent rules certification or human Discord acceptance is inferred.
 

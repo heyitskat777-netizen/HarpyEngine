@@ -33,7 +33,7 @@
   ],
   "independent_review": "NOT_RUN",
   "human_discord_acceptance": "NOT_RUN",
-  "source_commit": "262c3fc baseline plus active integration changes; commit pending",
+  "source_commit": "c46e9005bed43c25db46e653c69400db1a668e81",
   "source_unit_cases": 22,
   "latest_source_checks": {
     "artifact": "var/m3-handler-tag-reviewed-whole.xml",
@@ -48,5 +48,14 @@
     "reviewer": "Separate development agent; no human certification",
     "findings": "Two confirmed findings corrected and tested; one pre-roll source-staleness question tested",
     "human_rules_review": "NOT_RUN"
+  },
+  "full_regression": {
+    "artifact": "var/m3-bounded-gameplay-full-fixed.xml",
+    "passed": 2200,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 1070.22,
+    "scope": "Exact frozen source; separate next-work drafts excluded"
   }
 }

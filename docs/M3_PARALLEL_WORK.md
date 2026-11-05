@@ -95,3 +95,8 @@ After these paths, agreed M3 still includes All-Out Assault/Go for the Core,
 remaining Girl/Frame/Handler runtime abilities, all outstanding Strain consequences
 and Endgames, remaining world/Harpy/NPC mechanics, and independent/player review.
 Ancillary playbooks remain deferred. AI and M4 onward remain outside this work.
+
+Current verified bounded source: `c46e9005bed43c25db46e653c69400db1a668e81`. Its **2,200-test**
+full result, source contracts, first-run repairs and remaining scope are recorded
+in `reports/M3_ACCEPTANCE.md`. Subsequent ignored staged drafts are not covered
+by this passing checkpoint. M3 work continues; no milestone sign-off applies.

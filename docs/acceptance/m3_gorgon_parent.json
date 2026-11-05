@@ -53,5 +53,14 @@
     "Bot remains off; no live migration, deployment or publication",
     "Actual Dormant awakening against a Gorgon attacker and exhausted no-available-Asset bodies remain explicit pre-lock admission limits pending actual source ports."
   ],
-  "source_commit": "262c3fc baseline plus active integration changes; commit pending"
+  "source_commit": "c46e9005bed43c25db46e653c69400db1a668e81",
+  "full_regression": {
+    "artifact": "var/m3-bounded-gameplay-full-fixed.xml",
+    "passed": 2200,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 1070.22,
+    "scope": "Exact frozen source; separate next-work drafts excluded"
+  }
 }
