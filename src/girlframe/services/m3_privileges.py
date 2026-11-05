@@ -104,6 +104,14 @@ def choices(
             }[receipt.kind]
             if hasattr(receipt, "rule_id"):
                 label = TITLES.get(receipt.rule_id, label)
+                if receipt.rule_id == "frame.class.autocrat.untouchable-frame":
+                    label = "Untouchable Frame"
+                elif receipt.rule_id == "frame.class.autocrat.martyr":
+                    label = "Martyr"
+                elif receipt.rule_id == "frame.class.legion.dampener-link":
+                    label = "Dampener Link"
+                elif receipt.rule_id == "frame.class.legion.kicked-puppy":
+                    label = "Kicked Puppy"
             elif receipt.kind == "frame_swap":
                 label = "Frame Swap: " + TITLES.get(
                     receipt.selection.retained_rule, "retained rule"

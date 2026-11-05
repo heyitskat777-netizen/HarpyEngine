@@ -3994,6 +3994,138 @@
       "revision": 1,
       "implementation_note": "Implemented for original native Pilot/Doctor workflows through actual acquisition, resources and owned native controls. Unsupported class, graft, retention and lifetime endpoints remain guarded as listed in the acceptance report.",
       "change_impact": "Preserves actual body/custody/subsumption/journey and original source identity."
+    },
+    {
+      "id": "am-limiter-remaining-freedom",
+      "summary": "Each installed Limiter restricts one remaining Jailbroken benefit and one eligible ordinary original Identity slot. Preserve stable Identity ID and its real mark, restore that slot\u2019s printed default label, protect it against replacement/erasure and keep it within the ordinary four-slot cap.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Official rulebook PDF55\u201356 / printed53\u201354",
+      "authority": "delegated_recommendation",
+      "rationale": "The text ties four Limiters to loss of all freedoms but does not define overlapping choices or slot/mark bookkeeping. Distinct remaining benefits avoid redundant restrictions and protected extras creating a fifth ordinary slot.",
+      "alternatives": [
+        "Permit repeated restrictions with an independent four-Limiter reset counter",
+        "Treat Limited as an extra protected Identity"
+      ],
+      "policy_key": "am_limiter_remaining_freedom",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only for the named supported normal workflow with original actors, source proof and owned native controls. Missing actor, lifetime, graft and other source ports remain gaps in reports/M3_ACCEPTANCE.md; no independent or release approval.",
+      "change_impact": "Limiter records preserve selected slot, original identity JSON, freedom, discoverer, actual source action/event and original CID; future revisions can distinguish campaign interpretation from immutable past outcomes."
+    },
+    {
+      "id": "am-new-npc-discovery-facts",
+      "summary": "Require actual AM owner proposal and original NPC controller confirmation of a genuine new realization. The actual canonical Handler records NPC rank and human/nonhuman body facts. Starting knowing PC Bonds do not produce fabricated new discoveries.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Official rulebook PDF54\u201355 / printed52\u201353",
+      "authority": "delegated_recommendation",
+      "rationale": "The trigger is a new factual realization; the program cannot infer another person\u2019s knowledge, rank or body physiology from their controller account.",
+      "alternatives": [
+        "Infer knowledge from cast membership",
+        "Treat every knowing Bond as a fresh trigger"
+      ],
+      "policy_key": "am_new_npc_discovery_facts",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only for the named supported normal workflow with original actors, source proof and owned native controls. Missing actor, lifetime, graft and other source ports remain gaps in reports/M3_ACCEPTANCE.md; no independent or release approval.",
+      "change_impact": "Original actors/controllers, factual answers, scene cast and source history remain bound. Non-NPC/Director adjudicator endpoints remain unavailable until their own actual source ports exist."
+    },
+    {
+      "id": "am-unbelieved-until-real-evidence",
+      "summary": "A confirmed lower-Status discoverer is not believed for now. A later actual Handler-authored factual evidence event can end that protection; it performs no report by itself. The original discoverer separately reports and owns the resulting real Limiter installation.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Official rulebook PDF55 / printed53",
+      "authority": "delegated_recommendation",
+      "rationale": "The printed temporary disbelief has no specified endpoint. Explicit new evidence preserves the original benefit while providing an auditable nonautomatic endpoint.",
+      "alternatives": [
+        "Protection lasts forever",
+        "Automatically expire at next turn"
+      ],
+      "policy_key": "am_unbelieved_until_real_evidence",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only for the named supported normal workflow with original actors, source proof and owned native controls. Missing actor, lifetime, graft and other source ports remain gaps in reports/M3_ACCEPTANCE.md; no independent or release approval.",
+      "change_impact": "Keep the original disbelief and separate evidence/report/installation events. No historical decision or roll is rewritten."
+    },
+    {
+      "id": "martyr-death-budget-relief",
+      "summary": "Actual unprevented paid/native Martyr death immediately lowers Budget and Rebellion. Its exact actual death archive/event is excluded from undoing its own Budget relief in the next factual preparation; unrelated deaths, Severe punishments and other High causes still count. Preserve immutable committed rolls/effects and all death provenance; do not fake a consumed period or clear history.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 92",
+      "authority": "delegated_recommendation",
+      "rationale": "The printed death benefit would otherwise immediately undo itself at the next required Budget review. Excluding only its exact proved death preserves the actual relief while all independent causes remain effective.",
+      "alternatives": [
+        "Immediately lower current tracks but automatically re-raise Budget from that same death at next preparation."
+      ],
+      "policy_key": "martyr_death_budget_relief",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only for the named supported normal workflow with original actors, source proof and owned native controls. Missing actor, lifetime, graft and other source ports remain gaps in reports/M3_ACCEPTANCE.md; no independent or release approval.",
+      "change_impact": "Makes the printed death relief effective while preserving source facts, independent causes and real later preparation. Original dead humans own the memorial response; no living successor inherits that fictional body."
+    },
+    {
+      "id": "kicked-puppy-no-heat-exception",
+      "summary": "The printed alternative to spending Heat spends zero even when ordinary rules would require spending all held Heat at5+. Explicit choice is required; ordinary Heat/default still uses the existing mandatory spending rule. Record actual cost0 and actual damaged-Girl-Asset basis in the same receipt.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 10, 94",
+      "authority": "delegated_recommendation",
+      "rationale": "The specific alternative expressly replaces spending Heat; applying both that basis and mandatory Heat would remove the stated alternative or fabricate a refund.",
+      "alternatives": [
+        "Force spending all Heat at5 while also or instead adding damaged Assets."
+      ],
+      "policy_key": "kicked_puppy_no_heat_exception",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only for the named supported normal workflow with original actors, source proof and owned native controls. Missing actor, lifetime, graft and other source ports remain gaps in reports/M3_ACCEPTANCE.md; no independent or release approval.",
+      "change_impact": "Honors the specific instead-of-spending-Heat exception without fake spend, invisible refund, duplicate basis or extra RNG."
+    },
+    {
+      "id": "kicked-puppy-care-question-quota",
+      "summary": "How do you want to care for me is an additional available caster question within the ordinary Flirt quota, not an automatic additional question. Target owns their actual answer and existing followthrough remains pending until real action.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 94",
+      "authority": "delegated_recommendation",
+      "rationale": "The rule adds a named question without explicitly expanding the ordinary number of questions. Offering it within the existing quota adds no unprinted action.",
+      "alternatives": [
+        "Grant an extra automatic question beyond the printed Flirt quota."
+      ],
+      "policy_key": "kicked_puppy_care_question_quota",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only for the named supported normal workflow with original actors, source proof and owned native controls. Missing actor, lifetime, graft and other source ports remain gaps in reports/M3_ACCEPTANCE.md; no independent or release approval.",
+      "change_impact": "Adds the named choice and no unsupported extra quota or manufactured coordination."
+    },
+    {
+      "id": "kicked-puppy-self-tag-source",
+      "summary": "Permit only an own Tag proved given by this exact original Flirt target. Reuse ordinary self-role Tag relevance/modifier/repeat/dispute rules, with no Bond to self or inferred current-account giver.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 94",
+      "authority": "delegated_recommendation",
+      "rationale": "The exception names Tags given by the actual current target. Original giver proof and existing self-role marking avoid borrowing another character identity or inventing a Bond to oneself.",
+      "alternatives": [
+        "Use the giver-target Bond for an additional2 modifier, permit every own Tag, or infer an unresolved setter from current UID."
+      ],
+      "policy_key": "kicked_puppy_self_tag_source",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only for the named supported normal workflow with original actors, source proof and owned native controls. Missing actor, lifetime, graft and other source ports remain gaps in reports/M3_ACCEPTANCE.md; no independent or release approval.",
+      "change_impact": "Native Class exception works while preserving exact original source ownership and existing Tag authority."
+    },
+    {
+      "id": "budget-sabotage-actual-asset-scope",
+      "summary": "A revealed card defeats maneuvers that actually use that Asset. Other maneuvers and original printed costs remain. Engage selects Assets after its roll, so keep that real receipt, Heat and Tags; the original Handler authors the actual calamity. Consume only revealed cards once, with no extra roll or invented damage.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF150/printed148",
+      "authority": "delegated_recommendation",
+      "rationale": "The text substitutes failure for the affected Asset use without explicitly cancelling unrelated capabilities or refunding an already completed roll. This applies its smallest actual scope and preserves source costs.",
+      "alternatives": [
+        "Cancel the whole Play regardless of which Assets failed.",
+        "Waive printed costs or roll again after revealing the card."
+      ],
+      "policy_key": "budget_sabotage_actual_asset_scope",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only for the named supported normal workflow with original actors, source proof and owned native controls. Missing actor, lifetime, graft and other source ports remain gaps in reports/M3_ACCEPTANCE.md; no independent or release approval.",
+      "change_impact": "Future Asset-use ports must intercept at their real declaration point. Other battle uses stay gated before RNG until a true continuation exists; original source identities and receipts must survive revisions."
     }
   ],
   "entries": [
@@ -6421,14 +6553,16 @@
         "heading": "Scrutinized"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_am_scrutinized.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -9470,14 +9604,16 @@
         "heading": "Martyr"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_martyr.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "aliases": [
@@ -9528,14 +9664,16 @@
         "heading": "Untouchable Frame"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_untouchable.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "aliases": [
@@ -9673,14 +9811,16 @@
         "heading": "Dampener Link"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_dampener.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "aliases": [
@@ -9731,14 +9871,16 @@
         "heading": "Kicked Puppy"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_kicked_puppy.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "aliases": [
@@ -13593,14 +13735,45 @@
         "heading": "Budget low: die 2, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Actual selected Low Budget die2 column2 private Asset cards",
+        "actor_type": "Original Handler and actual native Pilot Asset user",
+        "pre_roll_sources": [
+          "Two distinct actual nonconcealed Cadre Assets",
+          "Actual original actors and immutable source cards"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "source": [
+            "Secretly arm two cards",
+            "Reveal matching actual attempted Asset cards",
+            "Original Handler authors calamities; consume revealed cards once"
+          ]
+        },
+        "choice_ownership": "Handler selects cards privately and describes actual failures; original actor owns actual signed maneuver choice",
+        "target_policy": "Original Asset/source/person; regular native root Engage consumer; other declarations gated until their source port",
+        "post_roll_effects": [
+          "Suppress only failed-Asset maneuvers",
+          "Preserve known receipt/Heat/Tags and original printed costs; unused cards remain armed/private"
+        ],
+        "mandatory_followups": [
+          "Owned actual calamities before original effect completion and chat restoration"
+        ],
+        "handler_or_gm_intervention": "No automated player/NPC dialogue or invented damage; source ActorPlay/nested/other-rule continuations remain required gaps",
+        "test_fixture_ids": [
+          "tests/rules/test_budget_sabotage.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_budget_sabotage.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -13668,14 +13841,44 @@
         "heading": "Budget low: die 4, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Actual selected Low Budget die4 column1 cleanup",
+        "actor_type": "Original Handler and original period Cadre",
+        "pre_roll_sources": [
+          "Real completed past mission and existing map site",
+          "Frozen original cohort and real single random index for exposure"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "source": [
+            "Actual cleanup scene attendance and ending",
+            "One original randomly selected Girl gains Void"
+          ]
+        },
+        "choice_ownership": "Handler selects source route/site; humans own real attendance; selected Girl owns alteration/Storage; existing source owners resolve Void consequences",
+        "target_policy": "Current original actors and actual Asset/Frame; no fabricated movement or rerolled exposure",
+        "post_roll_effects": [
+          "Actual scene closure or actual owned Void alteration",
+          "Source-proved Storage and effective whole-family Void continuation"
+        ],
+        "mandatory_followups": [
+          "Actual attendance/end or real Void consequence endpoint before cleanup work resolves"
+        ],
+        "handler_or_gm_intervention": "Handler attests historical mission/site relationship; source records currently lack a typed historical location. Unknown physical position stays unknown.",
+        "test_fixture_ids": [
+          "tests/rules/test_budget_cleanup.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_budget_cleanup.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

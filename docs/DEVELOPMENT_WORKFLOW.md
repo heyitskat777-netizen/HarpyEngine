@@ -32,9 +32,9 @@ a required M3 rule complete; required gaps stay in the milestone backlog.
 
 | Order | Assignment | Completion boundary |
 |---|---|---|
-| 1, parallel | Economy agent: bounded AM Scrutinized after completed Alpha/Orders/Hound delivery | Actual source discoverer, owned results and live AM restrictions; mind/vessel and fourth-Limiter dependencies remain explicit. |
+| 1, parallel | Economy agent: remaining AM lifecycle after frozen Scrutinized delivery | Actual fourth-Limiter factory reset using the existing original-person career/body path, then dependency-ready Just Code work; no fake NPC/body alias or broad speculative framework. |
 | 1, parallel | Handler agent: next dependency-ready Class Requisition after frozen Doctor delivery | One actual acquisition/use/lifecycle consumer using existing source receipts; no blanket class/graft framework. |
-| 1, root | Shared integration and selected Strain workflows | Finished Budget function, meeting, Candidate and Anarchy normal paths; consolidate source contracts/rulings/evidence, then finish Budget cleanup scene/exposure with existing Void/Storage. |
+| 1, root | Shared integration and selected Strain workflows | Finished Budget function, meeting, Candidate and Anarchy normal paths; consolidate source contracts/rulings/evidence, then finish remaining dependency-ready Strain consequences and their actual mandatory endpoints. |
 | 2 | Remaining required gameplay systems | Select the next dependency-ready whole workflow from M3_REMAINING_WORK.md and M3_COMPLETION_AUDIT.md. Freeze its contract, reuse implemented dependencies and complete it before opening unrelated work. |
 | 3 | M3 review candidate | Account for required core scope, complete expected gameplay flows and final integrated checks; provide a concise player-test checklist and stop for owner review. |
 

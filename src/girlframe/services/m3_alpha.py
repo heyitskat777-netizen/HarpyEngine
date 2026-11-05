@@ -694,6 +694,8 @@ def removable(
     if order is None:
         return None
     if json.loads(order["body_json"]).get("npc_order"):
+        if json.loads(order["body_json"])["npc_order"].get("origin_kind", "broken") != "broken":
+            return None
         from girlframe.services.m3_npc_orders import removable as npc_removable
 
         return npc_removable(game, c, state, action)

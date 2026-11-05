@@ -90,14 +90,14 @@ def prove(game: GameService, c: Connection, state: GameState, point: rules.Store
     )
     source = GameState.model_validate_json(raw) if raw else None
     original = next((x for x in rules.points(source) if x.id == point.id), None) if source else None
-    action = game.action(c, point.action)
+    action = {} if point.source_kind == "budget_cleanup" else game.action(c, point.action)
     response = c.scalar(
         sa.select(t.m2["m2_responses"].c.choice_id).where(
             t.m2["m2_responses"].c.campaign_id == game.store.campaign_id,
             t.m2["m2_responses"].c.choice_id == point.choice,
         )
     )
-    meta = action["data"].get("dive") or {}
+    meta = action.get("data", {}).get("dive") or {}
     selected = meta.get("steps", [])[point.step] if len(meta.get("steps", [])) > point.step else {}
     if (
         original is None
@@ -168,7 +168,21 @@ def prove_gain_source(
     )
     if event is None:
         raise WorkflowError("Recover the actual stored-gain source event")
-    if point.source_kind == "dormant_void":
+    if point.source_kind == "budget_cleanup":
+        from girlframe.services.m3_budget_cleanup import prove_gain
+
+        cleanup = prove_gain(game, c, source, point.choice)
+        if (
+            cleanup.selected is None
+            or cleanup.people[cleanup.selected] != point.actor
+            or not cleanup.storage
+            or cleanup.asset != point.asset
+            or cleanup.description != point.description
+            or cleanup.gain_event != point.source_event
+            or point.action != cleanup.id
+        ):
+            raise WorkflowError("Recover the selected Girl's actual cleanup Storage choice")
+    elif point.source_kind == "dormant_void":
         proof = next(
             (
                 x

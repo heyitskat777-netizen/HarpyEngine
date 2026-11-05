@@ -412,7 +412,7 @@ def apply(
             tag = next((x for x in sheet.tags if x.id == details.embrace_tag), None)
             if tag is None:
                 raise ValueError("Choose a current Tag to embrace")
-            ordinary = [x for x in sheet.identities if not x.protected or x.paired]
+            ordinary = [x for x in sheet.identities if not x.protected or x.paired or x.am_limiter]
             if len(ordinary) >= 4:
                 if len(details.identities) != 1:
                     raise ValueError("Choose the Identity replaced at the cap")

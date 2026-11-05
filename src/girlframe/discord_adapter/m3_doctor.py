@@ -61,6 +61,13 @@ async def open_roll(interaction: discord.Interaction, service: DoctorService) ->
             "No reviewed native Doctor ability is available. Track: " + str(data["track"]) + "/8.",
         )
         return
+    from girlframe.discord_adapter.m3_dampener import fields as dampener_fields
+    from girlframe.discord_adapter.m3_dampener import modifier as dampener_modifier
+    from girlframe.services.m3_dampener import DampenerService
+
+    dampener_controls = await dampener_fields(
+        interaction, DampenerService(service.game), ActorRef.model_validate(data["actor"])
+    )
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         target = next(x for x in data["targets"] if x["token"] == values["target"][0])
@@ -75,6 +82,7 @@ async def open_roll(interaction: discord.Interaction, service: DoctorService) ->
                 play=values["play"][0],
                 target_actor=ActorRef.model_validate(target["ref"]),
                 heat=int(values["heat"][0]),
+                dampener_modifier=dampener_modifier(values),
                 context=values["account"],
                 trigger_confirmed=True,
             ),
@@ -98,7 +106,8 @@ async def open_roll(interaction: discord.Interaction, service: DoctorService) ->
             ),
             Field("heat", "Heat", tuple((str(x), str(x)) for x in range(data["heat"] + 1))),
             Field("account", "Describe the actual medical trigger", paragraph=True),
-        ],
+        ]
+        + dampener_controls,
         submit,
     ).present(interaction)
 

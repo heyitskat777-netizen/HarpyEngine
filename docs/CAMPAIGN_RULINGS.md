@@ -2825,3 +2825,103 @@ Rationale: The arrival wording moves the called Doctor, while existing physical 
 Alternative: Always move both independent Girl and parked Frame.
 
 Change impact: Preserves actual body/custody/subsumption/journey and original source identity.
+
+## AM, Class and Asset-use clarifications — 2026-11-05
+
+Delegated recommendations; each remains adjustable and requires printed-rule clarity review. AM's currently same-place refuge restriction and missing conversion/travel ports are implementation limits, not house rules that waive required behavior.
+
+### `am-limiter-remaining-freedom`
+
+Source: Official rulebook PDF55–56 / printed53–54.
+
+Each installed Limiter restricts one remaining Jailbroken benefit and one eligible ordinary original Identity slot. Preserve stable Identity ID and its real mark, restore that slot’s printed default label, protect it against replacement/erasure and keep it within the ordinary four-slot cap.
+
+Rationale: The text ties four Limiters to loss of all freedoms but does not define overlapping choices or slot/mark bookkeeping. Distinct remaining benefits avoid redundant restrictions and protected extras creating a fifth ordinary slot.
+
+Alternatives: Permit repeated restrictions with an independent four-Limiter reset counter; Treat Limited as an extra protected Identity
+
+Change impact: Limiter records preserve selected slot, original identity JSON, freedom, discoverer, actual source action/event and original CID; future revisions can distinguish campaign interpretation from immutable past outcomes.
+
+### `am-new-npc-discovery-facts`
+
+Source: Official rulebook PDF54–55 / printed52–53.
+
+Require actual AM owner proposal and original NPC controller confirmation of a genuine new realization. The actual canonical Handler records NPC rank and human/nonhuman body facts. Starting knowing PC Bonds do not produce fabricated new discoveries.
+
+Rationale: The trigger is a new factual realization; the program cannot infer another person’s knowledge, rank or body physiology from their controller account.
+
+Alternatives: Infer knowledge from cast membership; Treat every knowing Bond as a fresh trigger
+
+Change impact: Original actors/controllers, factual answers, scene cast and source history remain bound. Non-NPC/Director adjudicator endpoints remain unavailable until their own actual source ports exist.
+
+### `am-unbelieved-until-real-evidence`
+
+Source: Official rulebook PDF55 / printed53.
+
+A confirmed lower-Status discoverer is not believed for now. A later actual Handler-authored factual evidence event can end that protection; it performs no report by itself. The original discoverer separately reports and owns the resulting real Limiter installation.
+
+Rationale: The printed temporary disbelief has no specified endpoint. Explicit new evidence preserves the original benefit while providing an auditable nonautomatic endpoint.
+
+Alternatives: Protection lasts forever; Automatically expire at next turn
+
+Change impact: Keep the original disbelief and separate evidence/report/installation events. No historical decision or roll is rewritten.
+
+### `martyr-death-budget-relief`
+
+Source: Rulebook PDF 92.
+
+Actual unprevented paid/native Martyr death immediately lowers Budget and Rebellion. Its exact actual death archive/event is excluded from undoing its own Budget relief in the next factual preparation; unrelated deaths, Severe punishments and other High causes still count. Preserve immutable committed rolls/effects and all death provenance; do not fake a consumed period or clear history.
+
+Rationale: The printed death benefit would otherwise immediately undo itself at the next required Budget review. Excluding only its exact proved death preserves the actual relief while all independent causes remain effective.
+
+Alternatives: Immediately lower current tracks but automatically re-raise Budget from that same death at next preparation.
+
+Change impact: Makes the printed death relief effective while preserving source facts, independent causes and real later preparation. Original dead humans own the memorial response; no living successor inherits that fictional body.
+
+### `kicked-puppy-no-heat-exception`
+
+Source: Rulebook PDF 10, 94.
+
+The printed alternative to spending Heat spends zero even when ordinary rules would require spending all held Heat at5+. Explicit choice is required; ordinary Heat/default still uses the existing mandatory spending rule. Record actual cost0 and actual damaged-Girl-Asset basis in the same receipt.
+
+Rationale: The specific alternative expressly replaces spending Heat; applying both that basis and mandatory Heat would remove the stated alternative or fabricate a refund.
+
+Alternatives: Force spending all Heat at5 while also or instead adding damaged Assets.
+
+Change impact: Honors the specific instead-of-spending-Heat exception without fake spend, invisible refund, duplicate basis or extra RNG.
+
+### `kicked-puppy-care-question-quota`
+
+Source: Rulebook PDF 94.
+
+How do you want to care for me is an additional available caster question within the ordinary Flirt quota, not an automatic additional question. Target owns their actual answer and existing followthrough remains pending until real action.
+
+Rationale: The rule adds a named question without explicitly expanding the ordinary number of questions. Offering it within the existing quota adds no unprinted action.
+
+Alternatives: Grant an extra automatic question beyond the printed Flirt quota.
+
+Change impact: Adds the named choice and no unsupported extra quota or manufactured coordination.
+
+### `kicked-puppy-self-tag-source`
+
+Source: Rulebook PDF 94.
+
+Permit only an own Tag proved given by this exact original Flirt target. Reuse ordinary self-role Tag relevance/modifier/repeat/dispute rules, with no Bond to self or inferred current-account giver.
+
+Rationale: The exception names Tags given by the actual current target. Original giver proof and existing self-role marking avoid borrowing another character identity or inventing a Bond to oneself.
+
+Alternatives: Use the giver-target Bond for an additional2 modifier, permit every own Tag, or infer an unresolved setter from current UID.
+
+Change impact: Native Class exception works while preserving exact original source ownership and existing Tag authority.
+
+### `budget-sabotage-actual-asset-scope`
+
+Source: Rulebook PDF150/printed148.
+
+A revealed card defeats maneuvers that actually use that Asset. Other maneuvers and original printed costs remain. Engage selects Assets after its roll, so keep that real receipt, Heat and Tags; the original Handler authors the actual calamity. Consume only revealed cards once, with no extra roll or invented damage.
+
+Rationale: The text substitutes failure for the affected Asset use without explicitly cancelling unrelated capabilities or refunding an already completed roll. This applies its smallest actual scope and preserves source costs.
+
+Alternatives: Cancel the whole Play regardless of which Assets failed.; Waive printed costs or roll again after revealing the card.
+
+Change impact: Future Asset-use ports must intercept at their real declaration point. Other battle uses stay gated before RNG until a true continuation exists; original source identities and receipts must survive revisions.

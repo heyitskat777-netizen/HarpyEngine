@@ -433,7 +433,8 @@ class PunishmentService:
                         "handler": state.handler,
                         "requisitions": [],
                         "identity_cap_reached": sum(
-                            not x.protected or x.paired for x in sheet.identities
+                            not x.protected or x.paired or x.am_limiter is not None
+                            for x in sheet.identities
                         )
                         >= 4,
                     }
@@ -579,6 +580,25 @@ class PunishmentService:
                     self._save(c, item, event, owner_id=str(target), body=body)
                 return {"id": identity, "state": "delegated", "cause_count": len(bundle)}
             inflictor = int(role_case.executor.entity) if role_case is not None else viewer.user_id
+            if details.kind in (
+                "beating",
+                "compliance_surgery",
+                "lobotomization",
+                "frame_disassembly",
+            ):
+                from girlframe.engine.m3_actor_bonds import current_ref as harm_original
+                from girlframe.engine.m3_am import require_harm
+
+                actual_inflictor = (
+                    role_case.executor
+                    if role_case is not None
+                    else (
+                        harm_original(state, inflictor)
+                        if str(inflictor) in state.sheets and inflictor != state.handler
+                        else None
+                    )
+                )
+                require_harm(state, actual_inflictor, harm_original(state, int(row["subject_id"])))
             consulted = bool(role_case and role_case.handler_approval_event) or self._approved(
                 c, row, bundle, details
             )

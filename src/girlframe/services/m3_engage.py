@@ -120,14 +120,53 @@ def apply(
     actor = resolve(state, ref, profiles(c, game.store.campaign_id), require_current_profile=False)
     if int(row["actor_id"]) != actor.controller or actor.controller != int(action["actor_id"]):
         raise WorkflowError("Only the actual acting body's human chooses its maneuvers")
+    from girlframe.engine import m3_untouchable as untouchable
+    from girlframe.services.m3_untouchable import entitlement
+
+    selected_tag = answer.fields.get("untouchable_tag")
+    receipt = None
+    if selected_tag is not None:
+        receipt = entitlement(game, c, state, ref)
+        if receipt is None:
+            raise WorkflowError(
+                "Acquire the actual current native Autocrat Untouchable Frame first"
+            )
+    maneuver_answer = answer.model_copy(
+        update={"fields": {k: v for k, v in answer.fields.items() if k != "untouchable_tag"}}
+    )
     maneuvers, damage = rules.select(
-        actor, action["data"]["result"]["tier"], answer, assault_extra=extra
+        actor,
+        action["data"]["result"]["tier"],
+        maneuver_answer,
+        assault_extra=extra,
+        substitute_damage=selected_tag is not None,
     )
     if meta.get("extra_selected" if extra else "applied"):
         raise WorkflowError("This actual source maneuver choice has already resolved")
+    from girlframe.services.m3_budget_sabotage import intercept as intercept_sabotage
+
+    if intercept_sabotage(game, c, state, action, row, answer, ref, set(maneuvers.values())):
+        return
     event = action["data"]["response_event"]
+    if selected_tag is not None:
+        assert receipt is not None
+        untouchable.substitute(
+            state,
+            ref,
+            selected_tag,
+            action=action["id"],
+            choice=row["id"],
+            event=event,
+            receipt=receipt,
+        )
+        action["data"]["result"]["untouchable_tag"] = selected_tag
     opponent = ActorRef.model_validate(meta["target"])
-    for kind, asset in maneuvers.items():
+    executed = {
+        k: v
+        for k, v in maneuvers.items()
+        if v not in action["data"].get("sabotage_failed_assets", [])
+    }
+    for kind, asset in executed.items():
         effect = rules.Maneuver.model_validate(
             dict(
                 kind=kind,
@@ -143,13 +182,13 @@ def apply(
         state.facts.append(dict(kind="engage_maneuver", body=effect.model_dump_json(), event=event))
     if extra:
         meta["extra_selected"] = True
-        action["data"]["result"]["extra_maneuver"] = maneuvers
+        action["data"]["result"]["extra_maneuver"] = executed
         from girlframe.services.m3_battle import results as battle_results
 
         battle_results(game, c, action)
     else:
         meta["applied"] = True
-        action["data"]["result"].update(maneuvers=maneuvers, damaged=[damage] if damage else [])
+        action["data"]["result"].update(maneuvers=executed, damaged=[damage] if damage else [])
         if damage:
             changed, required = damage_actor(
                 game,
@@ -180,6 +219,13 @@ def projection(
     ref = _actor(game, c, state, action)
     actor = resolve(state, ref, profiles(c, game.store.campaign_id), require_current_profile=False)
     extra = row["kind"] == "engage_assault_extra"
+    from girlframe.services.m3_untouchable import tags as untouchable_tags
+
+    substitutions = (
+        untouchable_tags(game, c, state, ref)
+        if not extra and action["data"]["result"]["tier"] != "mid"
+        else []
+    )
     count = 0 if extra else {"low": 1, "mid": 2, "high": 3}[action["data"]["result"]["tier"]]
     return dict(
         minimum=count,
@@ -190,6 +236,7 @@ def projection(
             if not asset.damaged
         ],
         damage=not extra and action["data"]["result"]["tier"] != "mid",
+        untouchable_tags=substitutions,
         opponent=(action["data"].get("engage") or action["data"]["battle"])["target"],
     )
 

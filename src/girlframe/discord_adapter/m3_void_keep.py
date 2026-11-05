@@ -9,6 +9,7 @@ from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m2 import PlayInput
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_void_keep import start_view
 from girlframe.services.onboarding import WorkflowError
@@ -32,6 +33,13 @@ async def open_keep(interaction: discord.Interaction, game: GameService, identit
         )
     if not data["channels"]:
         raise WorkflowError("Join an actual bound scene with the Handler before this resistance.")
+    from girlframe.discord_adapter.m3_dampener import fields as dampener_fields
+    from girlframe.discord_adapter.m3_dampener import modifier as dampener_modifier
+    from girlframe.services.m3_dampener import DampenerService
+
+    dampener_controls = await dampener_fields(
+        interaction, DampenerService(game), ActorRef.model_validate(data["actor"])
+    )
     fields = [
         Field(
             "heat",
@@ -42,7 +50,7 @@ async def open_keep(interaction: discord.Interaction, game: GameService, identit
             ),
         ),
         Field("account", "Actual resistance to the Frame's Void", paragraph=True),
-    ]
+    ] + dampener_controls
     channel = (
         interaction.channel_id
         if interaction.channel_id in data["channels"]
@@ -69,6 +77,7 @@ async def open_keep(interaction: discord.Interaction, game: GameService, identit
             PlayInput(
                 play="keep_your_head",
                 heat=int(values["heat"][0]),
+                dampener_modifier=dampener_modifier(values),
                 context=values["account"],
                 trigger_confirmed=True,
                 parent=data["parent"],

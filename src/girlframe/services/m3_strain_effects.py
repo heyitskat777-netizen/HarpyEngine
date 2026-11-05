@@ -110,10 +110,14 @@ class EffectService:
             supply = None
             contraband = None
             public_appointment = None
+            cleanup_index = None
+            cleanup_rng = None
             if choice.rule_id in (
                 "strain.budget.low.1.1",
                 "strain.budget.low.1.2",
                 "strain.budget.low.2.1",
+                "strain.budget.low.2.2",
+                "strain.budget.low.4.1",
             ):
                 period = self.strain.periods._get(c, row["off_duty_id"])
                 if set(period.pilots) != set(state.order) or any(
@@ -125,6 +129,43 @@ class EffectService:
                     from girlframe.services.m3_medical import MedicalService
 
                     _, public_appointment = MedicalService(self.store)._handler(c)
+            if choice.rule_id == "strain.budget.low.4.1":
+                rules.fields(choice, {"target", "victim", "cleanup_mode"})
+                past = self.strain.missions._mission(c, choice.victim or "")
+                site = (
+                    next((x for x in state.world.locations if x.id == choice.target), None)
+                    if state.world
+                    else None
+                )
+                if past.phase != "complete" or site is None or choice.cleanup_mode is None:
+                    raise WorkflowError("Choose a completed past mission and its actual map site")
+                if choice.cleanup_mode == "exposure":
+                    from girlframe.engine.m3_actor_bonds import current_ref
+
+                    for uid in state.order:
+                        actual = resolve(
+                            state,
+                            current_ref(state, uid),
+                            profiles(c, self.store.campaign_id),
+                            require_current_profile=False,
+                        )
+                        if (
+                            actual.offstage_source
+                            or actual.custody
+                            or actual.subsumed
+                            or actual.vitals_active is False
+                            or actual.cell is not None
+                            and actual.cell != site.cell
+                        ):
+                            raise WorkflowError(
+                                "Recover cleanup exposure at this site before its random draw"
+                            )
+                    cleanup_index = self.selector.choose(len(state.order))
+                    if type(cleanup_index) is not int or not 0 <= cleanup_index < len(state.order):
+                        raise WorkflowError(
+                            "The cleanup random source returned an invalid Cadre index"
+                        )
+                    cleanup_rng = self.selection_source
             if choice.rule_id == "strain.rebellion.low.2.2":
                 rules.fields(choice, {"target"})
                 period = self.strain.periods._get(c, row["off_duty_id"])
@@ -249,6 +290,8 @@ class EffectService:
                 source_event=event_id,
                 contraband=contraband,
                 tag_setter_appointment=public_appointment,
+                cleanup_index=cleanup_index,
+                cleanup_rng=cleanup_rng,
             )
             scientific_period, scientific_events = None, []
             if choice.rule_id == "strain.budget.low.3.1":
@@ -306,6 +349,27 @@ class EffectService:
                 )
             if scientific_period is not None:
                 self.strain.periods._save(c, scientific_period, event)
+            if choice.rule_id == "strain.budget.low.4.1":
+                from girlframe.engine.m3_budget_cleanup import get as get_cleanup
+                from girlframe.services.m3_work import related
+
+                cleanup = get_cleanup(updated, identity + ":cleanup")
+                owner = (
+                    int(cleanup.people[cleanup.selected].entity)
+                    if cleanup.selected is not None
+                    else viewer.user_id
+                )
+                related(
+                    c,
+                    self.store,
+                    row,
+                    cleanup.id,
+                    owner,
+                    owner,
+                    "budget_cleanup",
+                    dict(cleanup=cleanup.id, source_work=identity),
+                    event,
+                )
             if choice.rule_id == "strain.budget.high.4.2":
                 from girlframe.services.m3_work import related
 

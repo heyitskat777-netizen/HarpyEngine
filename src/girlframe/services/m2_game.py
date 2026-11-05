@@ -148,6 +148,13 @@ class GameService:
                 from girlframe.services.m3_doctor_lifecycle import prepare as doctor_lifecycle
 
                 doctor_lifecycle(self, c, previous_state, state, event)
+            if any(
+                getattr(x, "rule_id", None) == "frame.class.autocrat.martyr"
+                for x in previous_state.requisitions
+            ):
+                from girlframe.services.m3_martyr import prepare as prepare_martyr
+
+                prepare_martyr(self, c, previous_state, state, event)
             if state.neural_connections:
                 from girlframe.engine.m3_frame_control import prepare_endings as end_neural_sources
 
@@ -227,6 +234,10 @@ class GameService:
                 )
 
                 sync_doctor_lifecycle(self, c, state, event)
+            if any(x.get("kind") == "martyr_episode" for x in state.facts):
+                from girlframe.services.m3_martyr import synchronize as sync_martyr
+
+                sync_martyr(self, c, state, event)
         if state is not None and any(
             fact.get("kind") == "compliance_virus_purge" for fact in state.facts
         ):
@@ -312,6 +323,20 @@ class GameService:
                 ]
                 if broken:
                     data["broken_against"] = [x.inflictor.model_dump(mode="json") for x in broken]
+            if sheet.owner == viewer.user_id and sheet.character_id:
+                from girlframe.engine import m3_am as am_rules
+
+                am_actor = ActorRef(
+                    kind="pilot", entity=str(sheet.owner), incarnation=sheet.character_id
+                )
+                if sheet.girl == "AM" or am_rules.limiters(state, am_actor):
+                    data["am_runtime"] = dict(
+                        presentation=am_rules.presentation(state, am_actor),
+                        limited=[
+                            dict(identity=x.identity, slot=x.slot, freedom=x.freedom)
+                            for x in am_rules.limiters(state, am_actor)
+                        ],
+                    )
             return data
 
     def helpless_status(self, viewer: GuildViewer) -> bool:
@@ -963,6 +988,7 @@ class GameService:
             doctor = None
             alpha = None
             alpha_sex = None
+            am_scrutinized = None
             alpha_sex_counter_scope = None
             alpha_counter_scope = None
             npc_order_scope = None
@@ -992,7 +1018,10 @@ class GameService:
                 from girlframe.services.m3_mockingbird_plays import prepare as prepare_mockingbird
 
                 mockingbird = prepare_mockingbird(self, c, viewer, prepared, state, channel=channel)
-            elif prepared.source_work is not None and prepared.play != "alpha_sex":
+            elif prepared.source_work is not None and prepared.play not in (
+                "alpha_sex",
+                "am_scrutinized",
+            ):
                 raise WorkflowError("A source work reference belongs to its actual mandatory Play.")
             if prepared.play in ("all_out_assault", "go_for_the_core"):
                 from girlframe.engine.m3_actor_state import ActorRef
@@ -1024,6 +1053,10 @@ class GameService:
                 from girlframe.services.m3_janus_play import prepare as prepare_janus
 
                 janus = prepare_janus(self, c, viewer, prepared, state, channel=channel)
+            if prepared.play == "am_scrutinized":
+                from girlframe.services.m3_am_scrutinized import prepare as prepare_am
+
+                am_scrutinized = prepare_am(self, c, viewer, state, prepared, channel)
             if prepared.play == "alpha_sex":
                 from girlframe.services.m3_alpha_sex import prepare as prepare_alpha_sex
 
@@ -1205,6 +1238,7 @@ class GameService:
                         doctor,
                         alpha,
                         alpha_sex,
+                        am_scrutinized,
                         alpha_sex_counter_scope,
                         alpha_counter_scope,
                         npc_order_scope,
@@ -1237,6 +1271,8 @@ class GameService:
                     )
                 elif npc_order_scope is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(npc_order_scope["cast"]))
+                elif am_scrutinized is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(am_scrutinized["cast"]))
                 elif alpha_sex is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(alpha_sex["cast"]))
                 elif alpha_sex_counter_scope is not None:
@@ -1294,6 +1330,23 @@ class GameService:
                     c, state, viewer.user_id, require_current_profile=False
                 ),
             )
+            from girlframe.engine.m3_am import require_freedom, require_harm
+
+            if prepared.play == "disobey_orders":
+                require_freedom(state, acting_ref, "refuse")
+            if (
+                prepared.play in ("brutalize", "alpha_sex", "go_for_the_core")
+                and prepared.target_actor is not None
+            ):
+                require_harm(state, acting_ref, prepared.target_actor)
+            if prepared.play == "all_out_assault" and prepared.target_actor is not None:
+                from girlframe.engine.m3_am import free as am_free
+
+                if not am_free(state, acting_ref, "harm_humans"):
+                    raise WorkflowError(
+                        "UNSUPPORTED_AM_HARM_CONTEXT: resolve actual crew "
+                        "and human-harm source before Frame combat"
+                    )
             guard_private_scene(
                 c, self.store, scene["id"], acting_ref, continuation=prepared.parent is not None
             )
@@ -1333,6 +1386,7 @@ class GameService:
                         in (
                             "escape_play",
                             "order_disobey",
+                            "am_prepare",
                             "beneath_response_play",
                             "beneath_defeat",
                             "required_defeat",
@@ -1424,6 +1478,13 @@ class GameService:
                     gorgon_response is None or gorgon_response["choice"] != required["id"]
                 ):
                     raise WorkflowError("Use this exact original Gorgon source response")
+                if required["kind"] == "am_prepare" and (
+                    am_scrutinized is None
+                    or prepared.play != "am_scrutinized"
+                    or parent["data"].get("am_source", {}).get("discovery")
+                    != am_scrutinized["discovery"]
+                ):
+                    raise WorkflowError("Use this actual original AM's required Scrutinized child")
                 if required["kind"] == "order_disobey" and (
                     prepared.play != "disobey_orders"
                     or prepared.order_id != parent["data"]["order_id"]
@@ -1459,6 +1520,7 @@ class GameService:
                     janus,
                     alpha,
                     alpha_sex,
+                    am_scrutinized,
                     doctor,
                 )
             ):
@@ -1476,6 +1538,11 @@ class GameService:
                 raise WorkflowError("No legal undamaged Asset is available for Engage.")
             if prepared.play == "disobey_orders":
                 self.valid_order(c, state, viewer.user_id, channel, prepared.order_id)
+            kicked_puppy = None
+            if prepared.play == "flirt" or prepared.kicked_puppy_basis:
+                from girlframe.services.m3_kicked_puppy import prepare as prepare_kicked_puppy
+
+                kicked_puppy = prepare_kicked_puppy(self, c, viewer, state, prepared)
             preview = PilotSheet.model_validate_json(sheet.model_dump_json())
             if prepared.identity:
                 share = mark_identity(
@@ -1485,8 +1552,17 @@ class GameService:
                     raise WorkflowError("The Pair must have an active sheet to receive Heat.")
             elif prepared.gain or prepared.pair_share:
                 raise WorkflowError("Heat gain requires an eligible Identity.")
-            if m3 is None and (janus is None or janus.get("mode") == "pandora"):
+            if (
+                m3 is None
+                and (janus is None or janus.get("mode") == "pandora")
+                and not prepared.kicked_puppy_basis
+            ):
                 spend_heat(preview, prepared.heat)
+            dampener = None
+            if prepared.dampener_modifier is not None:
+                from girlframe.services.m3_dampener import prepare as prepare_dampener
+
+                dampener = prepare_dampener(self, c, viewer, state, prepared)
             identity = str(uuid4())
             data = {
                 "prepared": prepared.model_dump(mode="json"),
@@ -1505,6 +1581,10 @@ class GameService:
                 "result": {},
                 "choices": {},
             }
+            if dampener is not None:
+                data["dampener"] = dampener
+            if kicked_puppy is not None:
+                data["kicked_puppy"] = kicked_puppy
             from girlframe.services.m3_scene_requisitions import audience as private_scene_audience
 
             private_audience = private_scene_audience(c, self.store, scene["id"])
@@ -1621,6 +1701,20 @@ class GameService:
                     table=npc_source_table,
                     cast=source_cast.model_dump(mode="json"),
                     cast_sha256=fingerprint(source_cast),
+                )
+            if am_scrutinized is not None:
+                from girlframe.engine.m3_handler_consequences import active_handler
+
+                data["am_scrutinized"] = am_scrutinized
+                data["participants"] = list(am_scrutinized["table"])
+                am_handler = active_handler(state)
+                data["tag_context"] = dict(
+                    actor=am_scrutinized["actor"],
+                    handler=am_handler.model_dump(mode="json") if am_handler else None,
+                    gm_controller=state.handler,
+                    table=list(am_scrutinized["table"]),
+                    cast=am_scrutinized["cast"],
+                    cast_sha256=am_scrutinized["cast_sha256"],
                 )
             if alpha_sex is not None:
                 from girlframe.engine.m3_handler_consequences import active_handler
@@ -1780,6 +1874,10 @@ class GameService:
                             campaign_id=self.store.campaign_id, channel_id=str(channel), **values
                         )
                     )
+            if am_scrutinized is not None:
+                from girlframe.services.m3_am_scrutinized import bind as bind_am
+
+                bind_am(state, self.action(c, identity))
             if alpha_sex is not None:
                 from girlframe.services.m3_alpha_sex import bind as bind_alpha_sex
 
@@ -1801,11 +1899,16 @@ class GameService:
                 or doctor is not None
                 or alpha is not None
                 or alpha_sex is not None
+                or am_scrutinized is not None
                 or npc_order_scope is not None
                 or engage is not None
                 or void_keep is not None
+                or dampener is not None
+                or kicked_puppy is not None
                 else "m2.play_confirmed",
-                state if void_keep is not None or alpha_sex is not None else None,
+                state
+                if void_keep is not None or alpha_sex is not None or am_scrutinized is not None
+                else None,
                 action_id=identity,
                 play=prepared.play,
             )
@@ -1944,6 +2047,10 @@ class GameService:
                 )
 
                 authorize_enforcement(self, c, viewer, action)
+            if action["data"].get("am_scrutinized"):
+                from girlframe.services.m3_am_scrutinized import authorize as authorize_am
+
+                authorize_am(self, c, viewer, action)
             if action["data"].get("alpha_sex"):
                 from girlframe.services.m3_alpha_sex import authorize as authorize_alpha_sex
 
@@ -2017,6 +2124,14 @@ class GameService:
             if sheet.revision != action["data"]["sheet_revision"]:
                 raise WorkflowError("STALE_SHEET: recover the unrolled action; no dice consumed.")
             prepared = PlayInput.model_validate_json(json.dumps(action["data"]["prepared"]))
+            if action["data"].get("kicked_puppy") is not None or prepared.kicked_puppy_basis:
+                from girlframe.services.m3_kicked_puppy import pre_roll as kicked_pre_roll
+
+                kicked_pre_roll(self, c, viewer, state, action)
+            if action["data"].get("dampener") is not None or prepared.dampener_modifier is not None:
+                from girlframe.services.m3_dampener import pre_roll as dampener_pre_roll
+
+                dampener_pre_roll(self, c, viewer, state, action)
             if action["data"].get("beneath"):
                 from girlframe.services.m3_beneath import pre_roll as beneath_pre_roll
 
@@ -2049,6 +2164,15 @@ class GameService:
                 self.valid_order(
                     c, state, viewer.user_id, int(action["channel_id"]), prepared.order_id
                 )
+            if action["data"].get("am_scrutinized"):
+                from girlframe.services.m3_am_scrutinized import pre_roll as pre_roll_am
+
+                pre_roll_am(self, c, viewer, state, action)
+            if prepared.play == "disobey_orders":
+                from girlframe.engine.m3_actor_bonds import current_ref as am_original
+                from girlframe.engine.m3_am import require_freedom
+
+                require_freedom(state, am_original(state, viewer.user_id), "refuse")
             if action["data"].get("alpha_sex"):
                 from girlframe.services.m3_alpha_sex import pre_roll as pre_roll_alpha_sex
 
@@ -2102,8 +2226,13 @@ class GameService:
                 if share:
                     state.sheets[str(sheet.pair)].heat += share
                     state.sheets[str(sheet.pair)].revision += 1
-            if m3 is None and (
-                not action["data"].get("janus") or action["data"]["janus"].get("mode") == "pandora"
+            if (
+                m3 is None
+                and (
+                    not action["data"].get("janus")
+                    or action["data"]["janus"].get("mode") == "pandora"
+                )
+                and not prepared.kicked_puppy_basis
             ):
                 spend_heat(sheet, prepared.heat)
             faces = self.dice.roll()
@@ -2139,6 +2268,10 @@ class GameService:
                     if m3 is not None
                     else defeat["modifier"]
                     if defeat is not None
+                    else action["data"]["kicked_puppy"]["modifier"]
+                    if prepared.kicked_puppy_basis
+                    else action["data"]["dampener"]["modifier"]
+                    if action["data"].get("dampener")
                     else prepared.heat
                 )
                 + sum(x["amount"] for x in pre_modifiers),
@@ -2159,7 +2292,10 @@ class GameService:
                 or action["data"].get("janus")
                 or action["data"].get("alpha")
                 or action["data"].get("alpha_sex")
+                or action["data"].get("am_scrutinized")
                 or action["data"].get("npc_order")
+                or action["data"].get("dampener")
+                or action["data"].get("kicked_puppy")
                 or defeat is not None
                 else RULESET,
             }
@@ -2191,6 +2327,22 @@ class GameService:
                 receipt.update(
                     pre_modifiers=pre_modifiers, base_modifier=prepared.heat, modifier_source="Heat"
                 )
+            if action["data"].get("dampener"):
+                receipt.update(
+                    pre_modifiers=pre_modifiers,
+                    base_modifier=action["data"]["dampener"]["modifier"],
+                    modifier_source="Dampener Link",
+                    dampener_purchase=action["data"]["dampener"]["purchase"],
+                )
+            if action["data"].get("kicked_puppy"):
+                receipt["kicked_purchase"] = action["data"]["kicked_puppy"]["purchase"]
+                if prepared.kicked_puppy_basis:
+                    receipt.update(
+                        pre_modifiers=pre_modifiers,
+                        base_modifier=action["data"]["kicked_puppy"]["modifier"],
+                        modifier_source="Damaged Girl Assets (Kicked Puppy)",
+                        kicked_basis=True,
+                    )
             c.execute(
                 t.m2["m2_receipts"]
                 .insert()
@@ -2229,7 +2381,10 @@ class GameService:
                 or action["data"].get("janus")
                 or action["data"].get("alpha")
                 or action["data"].get("alpha_sex")
+                or action["data"].get("am_scrutinized")
                 or action["data"].get("npc_order")
+                or action["data"].get("dampener")
+                or action["data"].get("kicked_puppy")
                 or defeat is not None
                 else "m2.rolled",
                 state,
@@ -2365,13 +2520,22 @@ class GameService:
 
                 GorgonPlayService(self).authorize(c, viewer, action)
                 return dict(row)
+            if row["kind"] == "budget_asset_calamity":
+                from girlframe.services.m3_access import Access
+
+                Access(self.store).authorize(c, viewer, "strain")
             director_tag_response = False
             if action["data"].get("doctor"):
                 from girlframe.services.m3_doctor import authorize as authorize_doctor
 
                 authorize_doctor(self, c, viewer, action)
                 director_tag_response = True
-            if action["data"].get("alpha_sex"):
+            if action["data"].get("am_scrutinized"):
+                from girlframe.services.m3_am_scrutinized import authorize as authorize_am
+
+                authorize_am(self, c, viewer, action)
+                director_tag_response = True
+            elif action["data"].get("alpha_sex"):
                 from girlframe.services.m3_alpha_sex import authorize as authorize_alpha_sex
 
                 authorize_alpha_sex(self, c, viewer, action)
@@ -2548,6 +2712,8 @@ class GameService:
                 key,
                 "m3.choice_resolved"
                 if action["data"].get("m3")
+                or action["data"].get("dampener")
+                or action["data"].get("kicked_puppy")
                 or action["data"].get("actor_basic")
                 or action["data"].get("beneath")
                 or action["data"].get("doctor")
@@ -2563,6 +2729,7 @@ class GameService:
                 or action["data"].get("janus")
                 or action["data"].get("alpha")
                 or action["data"].get("alpha_sex")
+                or action["data"].get("am_scrutinized")
                 or action["data"].get("npc_order")
                 or action["data"].get("gorgon_play")
                 else "m2.choice_resolved",
@@ -3366,6 +3533,36 @@ class GameService:
                 from girlframe.services.m3_gorgon_play import GorgonPlayService
 
                 return GorgonPlayService(self).decision(c, viewer, action, dict(row))
+            if action["data"].get("am_source") and row["kind"] == "am_prepare":
+                from girlframe.services.m3_am_scrutinized import preparation as prepare_source_am
+
+                state = load_state(c, self.store.campaign_id)
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    play="am_discovery",
+                    result={},
+                    actor=int(action["actor_id"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    am_scrutinized=prepare_source_am(self, c, state, action, viewer),
+                )
+            if action["data"].get("am_scrutinized") and row["kind"].startswith("am_"):
+                from girlframe.services.m3_am_scrutinized import authorize as authorize_am
+                from girlframe.services.m3_am_scrutinized import projection as project_am
+
+                authorize_am(self, c, viewer, action)
+                state = load_state(c, self.store.campaign_id)
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    play="am_scrutinized",
+                    result={
+                        k: v for k, v in action["data"]["result"].items() if k in ("tier", "total")
+                    },
+                    actor=int(action["actor_id"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    am_scrutinized=project_am(self, c, state, action, dict(row)),
+                )
             if action["data"].get("alpha_sex") and (
                 row["kind"].startswith("alpha_sex_") or row["kind"].startswith("battle_")
             ):
@@ -3512,6 +3709,22 @@ class GameService:
                 for x in actor.tags
                 if viewer.user_id in x.observers or viewer.user_id == actor.owner
             ]
+            if (
+                action["data"].get("kicked_puppy")
+                and row["kind"] == "tag_window"
+                and viewer.user_id == actor.owner
+            ):
+                from girlframe.engine.m3_girl_runtime_state import has_rule as kicked_has_rule
+                from girlframe.engine.m3_girl_runtime_state import mentor_tag as kicked_mentor_tag
+                from girlframe.services.m3_kicked_puppy import self_tag as kicked_self_tag
+
+                tags = [
+                    x.model_dump(mode="json")
+                    for x in actor.tags
+                    if kicked_self_tag(self, c, state, action, viewer.user_id, x)
+                    or kicked_mentor_tag(actor, x, state)
+                    or kicked_has_rule(actor, "girl.princess.objectively-beautiful", "PRINCESS")
+                ]
             result = dict(row) | {
                 "body": body,
                 "play": action["data"]["play"],
@@ -3538,6 +3751,13 @@ class GameService:
                     if k in ("order_id", "target")
                 },
             }
+            if row["kind"] == "order_response":
+                from girlframe.engine.m3_actor_bonds import current_ref as am_order_original
+                from girlframe.engine.m3_am import free as am_free
+
+                result["am_can_refuse"] = am_free(
+                    state, am_order_original(state, int(action["actor_id"])), "refuse"
+                )
             if action["data"].get("npc_order"):
                 from girlframe.engine.m3_actors import resolve as resolve_npc_issuer
                 from girlframe.services.m3_npc_orders import order as original_npc_order
@@ -3590,6 +3810,10 @@ class GameService:
                 from girlframe.services.m3_engage import projection as engage_projection
 
                 result["engage"] = engage_projection(self, c, state, action, dict(row))
+            if row["kind"] == "budget_asset_calamity":
+                from girlframe.services.m3_budget_sabotage import projection as sabotage_projection
+
+                result["asset_calamities"] = sabotage_projection(self, c, state, action)
             if action["data"].get("engage") and row["kind"].startswith("battle_"):
                 from girlframe.services.m3_battle import damage_projection
 
@@ -3612,6 +3836,10 @@ class GameService:
                 from girlframe.services.m3_tag_markers import projection as marker_projection
 
                 result["tag_markers"] = marker_projection(self, c, state, action, viewer.user_id)
+            if action["data"].get("kicked_puppy") and row["kind"] == "actor_flirt":
+                from girlframe.services.m3_kicked_puppy import questions as kicked_questions
+
+                result["flirt_questions"] = kicked_questions(self, c, state, action)
             if row["kind"] in ("tag_marker_selection", "tag_marker_agreement"):
                 from girlframe.services.m3_tag_markers import discussion_projection
 

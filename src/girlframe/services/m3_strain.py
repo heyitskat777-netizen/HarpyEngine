@@ -211,6 +211,37 @@ class StrainService:
             ) or (bool(frames) and all(any(a.damaged for a in assets) for assets in frames))
             if repair_trigger and not facts.frame_full_or_all_frames_some_repairs:
                 raise WorkflowError("The canonical Frame damage already triggers High Budget.")
+            from girlframe.engine.m3_martyr import budget_death_excluded, episodes
+
+            prior_preparation = (
+                c.scalar(
+                    sa.select(sa.func.max(t.events.c.seq)).where(
+                        t.events.c.campaign_id == self.store.campaign_id,
+                        t.events.c.kind == "m3.strain_start_prepared",
+                    )
+                )
+                or 0
+            )
+            martyr_deaths = []
+            for archive in state.career_archives:
+                if archive.actor.kind != "pilot" or archive.ending not in ("death", "execution"):
+                    continue
+                actual_seq = c.scalar(
+                    sa.select(t.events.c.seq).where(
+                        t.events.c.campaign_id == self.store.campaign_id,
+                        t.events.c.id == archive.source_event,
+                    )
+                )
+                if actual_seq is None or actual_seq <= prior_preparation:
+                    continue
+                if budget_death_excluded(state, archive.source_event) and any(
+                    x.archive == archive.id and x.actor == archive.actor for x in episodes(state)
+                ):
+                    martyr_deaths.append(archive.id)
+                elif not facts.girl_death_or_severe:
+                    raise WorkflowError(
+                        "An actual non-Martyr Girl death requires the Budget death/severe fact"
+                    )
             if facts.last_mission_success_no_frame_death_infrastructure_loss:
                 history = t.m3["m3_mission_history"]
                 body = c.scalar(
@@ -243,6 +274,7 @@ class StrainService:
                 state,
                 period_id=period_id,
                 levels=dict(state.strain.levels),
+                martyr_budget_deaths=martyr_deaths,
             )
             updated = clone_period(period)
             updated.revision += 1

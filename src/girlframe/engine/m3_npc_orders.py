@@ -1,11 +1,15 @@
 """An actual NPC order's original Broken-relative authority, never controller rank."""
 
+from typing import Literal
+
 from pydantic import Field
 
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
 from girlframe.engine.m3_alpha import conditions, current
 from girlframe.engine.m3_alpha_state import Broken
+
+Origin = Literal["broken", "am_secret"]
 
 
 class Order(Model):
@@ -19,6 +23,7 @@ class Order(Model):
     cast: SceneCast
     registry: str
     instruction: str = Field(min_length=1, max_length=1200)
+    origin_kind: Origin = Field(default="broken", exclude_if=lambda value: value == "broken")
 
 
 def authority(state: GameState, issuer: ActorRef, target: ActorRef) -> Broken:

@@ -29,6 +29,7 @@ def select(
     answer: ChoiceAnswer,
     *,
     assault_extra: bool = False,
+    substitute_damage: bool = False,
 ) -> tuple[dict[str, str], str | None]:
     """Exact human choices, one real owned Asset per maneuver, one optional Harpy extra."""
     if answer.flag is not None or answer.number is not None or answer.member is not None:
@@ -51,6 +52,10 @@ def select(
     if answer.options and not answer.text.strip():
         raise ValueError("Describe the actual battlefield circumstances these maneuvers create")
     damage = not assault_extra and level in ("low", "high")
+    if substitute_damage:
+        if not damage or answer.denied:
+            raise ValueError("Substitute only the actual Engage Asset damage, never both costs")
+        return dict(answer.fields), None
     if damage:
         if len(answer.denied) != 1 or answer.denied[0] not in answer.fields.values():
             raise ValueError("Damage exactly one of the actual Assets used for these maneuvers")

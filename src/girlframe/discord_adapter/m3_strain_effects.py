@@ -119,9 +119,33 @@ async def open_effect(
         "strain.void.low.5.1",
     }
     gorgons = {x["id"]: x for x in world["gorgons"]}
+    past_missions = []
+    if rule == "strain.budget.low.4.1":
+        past_missions = [
+            x
+            for x in await asyncio.to_thread(service.strain.missions.list, viewer)
+            if x["phase"] == "complete"
+        ]
+        if not past_missions:
+            await reply(interaction, "This cleanup needs an actual completed past mission first.")
+            return
 
+    from girlframe.engine.m3_actor_bonds import current_ref
     from girlframe.engine.m3_actor_state import ActorRef
     from girlframe.engine.m3_battle import category
+    from girlframe.engine.m3_budget_sabotage import Pin
+
+    asset_pins = {}
+    asset_labels = {}
+    if rule == "strain.budget.low.2.2":
+        for uid in state.order:
+            sheet = state.sheets[str(uid)]
+            for asset in sheet.assets:
+                if asset.concealed:
+                    continue
+                pin = Pin(owner=current_ref(state, uid), asset=asset.id)
+                asset_pins[pin.token] = pin
+                asset_labels[pin.token] = sheet.callsign + " · " + asset.name
 
     def build(values: dict[str, Any]) -> list[Field]:
         fields: list[Field] = []
@@ -333,6 +357,27 @@ async def open_effect(
                         25,
                     )
                 )
+        elif rule == "strain.budget.low.2.2":
+            fields.append(
+                Field("assets", "Two secret Cadre Assets", tuple(asset_labels.items()), 2, 2)
+            )
+        elif rule == "strain.budget.low.4.1":
+            fields += [
+                Field(
+                    "mission",
+                    "Which completed past mission?",
+                    tuple((x["id"], x["objective"][:100]) for x in past_missions),
+                ),
+                Field("site", "Where did that mission take place?", options(world["locations"])),
+                Field(
+                    "cleanup_mode",
+                    "How will cleanup be played?",
+                    (
+                        ("scene", "Play a cleanup scene"),
+                        ("exposure", "Cleanup occurred: one random Girl gains Void"),
+                    ),
+                ),
+            ]
         elif rule == "strain.budget.low.3.1":
             fields.append(
                 Field(
@@ -573,6 +618,16 @@ async def open_effect(
             payload["rooms"] = tuple(tuple(x) for x in grouped.values())
         elif rule == "strain.budget.low.6.2":
             payload.update(target=values["target"][0], npc_jobs=tuple(values["jobs"]))
+        elif rule == "strain.budget.low.2.2":
+            if any(x not in asset_pins for x in values["assets"]):
+                raise WorkflowError("Reopen the original actual Cadre Asset choices")
+            payload["planned_assets"] = tuple(asset_pins[x] for x in values["assets"])
+        elif rule == "strain.budget.low.4.1":
+            payload.update(
+                target=values["site"][0],
+                victim=values["mission"][0],
+                cleanup_mode=values["cleanup_mode"][0],
+            )
         elif rule == "strain.budget.low.3.1":
             payload["scientific_demand"] = Demand(
                 subjects=tuple(int(x) for x in values["subjects"]),

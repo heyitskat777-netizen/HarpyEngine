@@ -140,6 +140,16 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         sheet = state.sheets.get(str(owner))
         body = json.loads(request["body_json"])
+        if kind == "budget_asset_calamity":
+            from girlframe.services.m3_budget_sabotage import apply as apply_asset_calamity
+
+            apply_asset_calamity(self.game, c, state, action, request, answer)
+            return
+        if kind.startswith("am_") and action["data"].get("am_scrutinized"):
+            from girlframe.services.m3_am_scrutinized import apply as apply_am
+
+            apply_am(self.game, c, state, action, request, answer)
+            return
         if kind.startswith("alpha_sex_") and action["data"].get("alpha_sex"):
             from girlframe.services.m3_alpha_sex import apply as apply_alpha_sex
 
@@ -534,9 +544,14 @@ class ChoiceEngine:
                 self.finish(c, state, action)
             return
         if kind == "actor_flirt":
-            picks(answer.options, set(FLIRT_QUESTIONS), 1)
+            from girlframe.engine.m3_kicked_puppy import QUESTION, QUESTION_TEXT
+            from girlframe.services.m3_kicked_puppy import questions as kicked_questions
+
+            picks(answer.options, set(kicked_questions(self.game, c, state, action)), 1)
             self.unmark(acting, answer.denied, 2)
             result["question"] = answer.options[0]
+            if result["question"] == QUESTION:
+                result["question_text"] = QUESTION_TEXT
             if level == "high":
                 require(
                     answer.fields.get("extra") in ("escape", "handler", "owe")
@@ -664,6 +679,11 @@ class ChoiceEngine:
             self.finish(c, state, action)
             return
         if kind == "order_response":
+            if answer.options == ("disobey",):
+                from girlframe.engine.m3_actor_bonds import current_ref as am_original
+                from girlframe.engine.m3_am import require_freedom
+
+                require_freedom(state, am_original(state, actor), "refuse")
             picks(
                 answer.options,
                 {"obedient", "immediate", "hesitant", "mouthing_off", "gritted_teeth", "disobey"},
@@ -702,6 +722,7 @@ class ChoiceEngine:
         answer: ChoiceAnswer,
     ) -> None:
         from girlframe.services import m3_tag_markers as markers
+        from girlframe.services.m3_kicked_puppy import self_tag as kicked_self_tag
 
         actor = int(action["actor_id"])
         sheet = state.sheets[str(actor)]
@@ -738,7 +759,8 @@ class ChoiceEngine:
                 or (
                     has_rule(sheet, "girl.princess.objectively-beautiful", "PRINCESS")
                     and action["data"]["play"] == "flirt"
-                ),
+                )
+                or kicked_self_tag(self.game, c, state, action, owner, tag),
                 "Only another player or a printed self-mark exception can mark this Girl Tag.",
             )
             require(
@@ -878,6 +900,11 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         play = action["data"]["play"]
         level = action["data"]["result"]["tier"]
+        if action["data"].get("am_scrutinized"):
+            from girlframe.services.m3_am_scrutinized import results as results_am
+
+            results_am(self.game, c, state, action)
+            return
         if action["data"].get("alpha_sex"):
             from girlframe.services.m3_alpha_sex import results as results_alpha_sex
 
@@ -990,6 +1017,7 @@ class ChoiceEngine:
                 "receipt": action["data"]["receipt"],
                 "total": action["data"]["result"].get("total"),
                 "tier": action["data"]["result"].get("tier"),
+                "asset_calamities": action["data"]["result"].get("asset_calamities", []),
             },
         )
         if any(
@@ -1018,6 +1046,7 @@ class ChoiceEngine:
                 in (
                     "escape_play",
                     "order_disobey",
+                    "am_prepare",
                     "beneath_response_play",
                     "beneath_defeat",
                     "required_defeat",

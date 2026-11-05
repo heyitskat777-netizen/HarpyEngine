@@ -213,6 +213,17 @@ def request_from_play(
             and action["data"].get("result", {}).get("tier") == "low"
             and targets == (ActorRef.model_validate(meta["actor"]),)
         )
+    elif source_play == "am_scrutinized":
+        meta = action["data"].get("am_scrutinized", {})
+        valid = (
+            clause == "am_scrutinized.refuge"
+            and row is not None
+            and row["kind"] == "am_handler"
+            and row["actor_id"] == str(chooser)
+            and meta.get("handler_controller") == chooser
+            and action["data"].get("result", {}).get("tier") in ("mid", "high")
+            and targets == (ActorRef.model_validate(meta["actor"]),)
+        )
     elif source_play == "flirt":
         valid = (
             clause == "flirt.high.handler"
@@ -837,6 +848,11 @@ def finish_callback(
     if grant.source == "required":
         assert grant.source_action is not None and grant.source_choice is not None
         action = game.action(c, grant.source_action)
+        if action["data"].get("am_scrutinized"):
+            from girlframe.services.m3_am_scrutinized import complete_handler
+
+            complete_handler(game, c, grant, event)
+            return
         if action["data"].get("play") not in ("flirt", "doctor_support"):
             from girlframe.services.m3_battle import complete_handler_play
 

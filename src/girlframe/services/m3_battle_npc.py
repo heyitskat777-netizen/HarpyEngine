@@ -125,6 +125,13 @@ class NpcDamageService:
                 else []
             )
 
+            from girlframe.engine.m3_am import require_harm
+
+            can_harm = True
+            try:
+                require_harm(state, attacker, target)
+            except ValueError:
+                can_harm = False
             return dict(
                 id=identity,
                 revision=row["revision"],
@@ -138,6 +145,7 @@ class NpcDamageService:
                 if state.world
                 else [],
                 can_take=attacker is not None,
+                can_harm=can_harm,
                 effect=body.get("effect"),
                 replacements=replacements,
                 can_respond=viewer.user_id == owner
@@ -191,6 +199,10 @@ class NpcDamageService:
                 raise WorkflowError(
                     "The original NPC is no longer alive; recover the actual source."
                 )
+            if effect in ("kill", "injure_tag"):
+                from girlframe.engine.m3_am import require_harm
+
+                require_harm(state, attacker, target)
             event = str(uuid4())
             if effect == "take_item":
                 if attacker is None:

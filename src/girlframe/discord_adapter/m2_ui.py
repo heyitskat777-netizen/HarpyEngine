@@ -45,6 +45,7 @@ def menu(
         "fears": "How can I ease your fears?",
         "name": "What name would you like me to use?",
         "intimacy": "Do you want to be intimate with me?",
+        "kicked_care": "How do you want to care for me?",
     }
     return Field(
         key,
@@ -261,7 +262,12 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
     elif kind == "follow_disobey":
         fields = [flags("Follow immediately without thinking?")]
     elif kind == "actor_flirt":
-        fields = [menu("options", "Ask the other player", FLIRT_QUESTIONS), unmark(2)]
+        fields = [
+            menu(
+                "options", "Ask the other player", decision.get("flirt_questions", FLIRT_QUESTIONS)
+            ),
+            unmark(2),
+        ]
         if level == "high":
             fields.extend(
                 [
@@ -294,7 +300,18 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
             menu(
                 "options",
                 "Respond to the direct order",
-                ("obedient", "immediate", "hesitant", "mouthing_off", "gritted_teeth", "disobey"),
+                tuple(
+                    x
+                    for x in (
+                        "obedient",
+                        "immediate",
+                        "hesitant",
+                        "mouthing_off",
+                        "gritted_teeth",
+                        "disobey",
+                    )
+                    if x != "disobey" or decision.get("am_can_refuse", True)
+                ),
             )
         ]
     elif kind == "followthrough_confirm":
@@ -446,6 +463,11 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
 
         await open_gorgon_choice(interaction, game, identity)
         return
+    if decision.get("am_scrutinized") is not None:
+        from girlframe.discord_adapter.m3_am import open_choice as open_am_choice
+
+        await open_am_choice(interaction, game, identity)
+        return
     if decision.get("alpha_sex") is not None:
         from girlframe.discord_adapter.m3_alpha_sex import (
             open_alpha_choice as open_alpha_sex_choice,
@@ -538,6 +560,11 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         from girlframe.discord_adapter.m3_enforcer_requisitions import open_master
 
         await open_master(interaction, game, identity)
+        return
+    if decision["kind"] == "budget_asset_calamity":
+        from girlframe.discord_adapter.m3_budget_sabotage import open_calamity
+
+        await open_calamity(interaction, game, identity)
         return
     if decision["kind"].startswith("engage_") and decision.get("engage") is not None:
         from girlframe.discord_adapter.m3_engage import open_engage
@@ -680,7 +707,8 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         )
     if decision["kind"] == "target_flirt":
         instructions += "\nQuestion: " + str(
-            decision["result"].get("question", "Why did you withdraw?")
+            decision["result"].get("question_text")
+            or decision["result"].get("question", "Why did you withdraw?")
         )
     if decision.get("npc_order_issuer"):
         instructions += "\nActual NPC issuer: " + clean(decision["npc_order_issuer"])
@@ -797,8 +825,11 @@ async def open_play(
             "mockingbird_sex",
             "snoop",
             "alpha_sex",
+            "am_scrutinized",
         )
     )
+    if parent and parent["kind"] == "am_prepare":
+        plays = ("am_scrutinized",)
     if (
         not parent
         and approval is not None
@@ -842,6 +873,16 @@ async def open_play(
             plays = (*plays, "alpha_sex")
             alpha_sex_sources = {x["id"]: x for x in accepted_sex["sessions"]}
     identities = [x for x in sheet["identities"] if not x["marked"]]
+    from girlframe.discord_adapter.m3_dampener import fields as dampener_fields
+    from girlframe.discord_adapter.m3_dampener import modifier as dampener_modifier
+    from girlframe.services.m3_dampener import DampenerService
+
+    dampener_controls = await dampener_fields(interaction, DampenerService(game))
+    from girlframe.discord_adapter.m3_kicked_puppy import damaged_basis
+    from girlframe.discord_adapter.m3_kicked_puppy import fields as kicked_fields
+    from girlframe.services.m3_kicked_puppy import KickedPuppyService
+
+    kicked_controls = await kicked_fields(interaction, KickedPuppyService(game))
     fields = [
         menu("play", "Choose a Play", plays),
         Field(
@@ -867,6 +908,8 @@ async def open_play(
             (("yes", "I confirm the trigger applies"),),
         ),
     ]
+    fields.extend(dampener_controls)
+    fields.extend(kicked_controls)
 
     if approval is not None and "plays" in approval.subsystems and "keep_your_head" in plays:
         from girlframe.services.m3_enforcer_requisitions import pavlov_available
@@ -987,6 +1030,14 @@ async def open_play(
 
             target_actor = ActorRef.model_validate(alpha_sex_sources[selected]["ref"])
             sex_source = selected
+        am_source = None
+        if play == "am_scrutinized":
+            from girlframe.engine.m3_actor_state import ActorRef
+
+            if not parent or parent["kind"] != "am_prepare":
+                raise WorkflowError("Use your actual confirmed AM discovery preparation")
+            am_source = parent["body"]["discovery"]
+            target_actor = ActorRef.model_validate(parent["body"]["target"])
         prepared = PlayInput(
             play=play,
             context=values["context"],
@@ -995,6 +1046,8 @@ async def open_play(
             obeying_orders=play == "keep_your_head" and one(values, "obeying_orders") == "yes",
             order_account=values.get("order_account", "") if play == "keep_your_head" else "",
             heat=int(one(values, "heat")),
+            dampener_modifier=dampener_modifier(values),
+            kicked_puppy_basis=damaged_basis(values),
             identity=identity,
             gain=int(one(values, "gain")),
             pair_share=int(one(values, "pair_share")),
@@ -1005,7 +1058,7 @@ async def open_play(
             witnessed=one(values, "witnessed") == "yes",
             parent=parent["parent"] if parent else None,
             order_id=parent["body"].get("order_id") if parent else None,
-            source_work=sex_source,
+            source_work=am_source or sex_source,
         )
         result = await threaded(
             lambda: game.begin(
@@ -1587,6 +1640,17 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
                 )
             ),
         )
+
+    @campaign.command(name="am", description="Owned AM discovery, Limiter and secret controls")
+    async def am_controls(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_am import open_am
+        from girlframe.services.m3_am_scrutinized import ScrutinyService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_am(interaction, ScrutinyService(game))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
 
     @campaign.command(
         name="alpha", description="Owned Alpha source interactions and scent tracking"

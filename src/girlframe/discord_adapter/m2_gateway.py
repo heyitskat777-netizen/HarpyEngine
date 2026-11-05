@@ -126,6 +126,9 @@ class DiscordGameGateway:
             )
             if payload.get("total") is not None:
                 text += f" · {payload['total']} · {clean(payload['tier'])}"
+            calamities = payload.get("asset_calamities", [])
+            if calamities:
+                text += "\n**Asset failure:** " + clean("; ".join(calamities))[:1400]
             text += (
                 "\nRequired immediate choices are saved. Private details remain in "
                 "the player's sheet."

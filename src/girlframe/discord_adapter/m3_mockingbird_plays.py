@@ -263,6 +263,11 @@ async def open_request(
         actor = ActorRef.model_validate(body["actor"])
         channel = body["channel"]
         fresh = await asyncio.to_thread(service.preview, viewer, channel, actor)
+        from girlframe.discord_adapter.m3_dampener import fields as dampener_fields
+        from girlframe.discord_adapter.m3_dampener import modifier as dampener_modifier
+        from girlframe.services.m3_dampener import DampenerService
+
+        dampener_controls = await dampener_fields(interaction, DampenerService(service.game), actor)
         fields = [
             Field(
                 "heat",
@@ -280,7 +285,7 @@ async def open_request(
                 required=False,
             ),
             Field("gain", "Identity Heat gained", tuple((str(x), str(x)) for x in range(6))),
-        ]
+        ] + dampener_controls
 
         async def start(current: discord.Interaction, values: dict[str, Any]) -> str:
             prepared = PlayInput(
@@ -288,6 +293,7 @@ async def open_request(
                 context=body["account"],
                 trigger_confirmed=True,
                 heat=int(values["heat"][0]),
+                dampener_modifier=dampener_modifier(values),
                 identity=values["identity"][0] if values.get("identity") else None,
                 gain=int(values["gain"][0]),
                 source_work=identity,

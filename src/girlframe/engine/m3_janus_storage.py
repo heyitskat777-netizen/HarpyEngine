@@ -36,7 +36,14 @@ class StoredVoid(Model):
 class GainSource(Model):
     purchase: str
     choice: str
-    kind: Literal["dive_deep", "mockingbird_risk", "mockingbird_sex", "dormant_void", "call_guest"]
+    kind: Literal[
+        "dive_deep",
+        "mockingbird_risk",
+        "mockingbird_sex",
+        "dormant_void",
+        "call_guest",
+        "budget_cleanup",
+    ]
     action: str | None = None
 
 

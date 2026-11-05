@@ -123,6 +123,11 @@ def synchronize_end(
     for task in latest.values():
         if task["id"] in exclude_work or task["state"] == "resolved":
             continue
+        if task["kind"] == "martyr_memorial":
+            from girlframe.engine.m3_martyr import memorial_survives_ending
+
+            if memorial_survives_ending(proof, task["id"], archive):
+                continue
         declared_owner = json.loads(task["body_json"]).get("owner")
         if isinstance(declared_owner, dict) and declared_owner.get("kind"):
             subject = ActorRef.model_validate(declared_owner)

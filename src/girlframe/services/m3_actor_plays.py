@@ -284,6 +284,10 @@ class ActorPlayService:
         rejection: str | None = None,
     ) -> dict[str, Any]:
         prepared = PlayInput.model_validate_json(prepared.model_dump_json())
+        if prepared.dampener_modifier is not None:
+            raise WorkflowError("Dampener Link currently requires its native original Pilot port")
+        if prepared.kicked_puppy_basis:
+            raise WorkflowError("Kicked Puppy currently requires its native original Pilot port")
         virus_disobey_play = (
             prepared.play == "disobey_orders"
             and prepared.parent is not None

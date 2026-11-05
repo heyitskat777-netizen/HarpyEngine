@@ -520,6 +520,27 @@ class InboxView(discord.ui.View):
             await open_consent(
                 interaction, SexService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_am_source":
+            from girlframe.discord_adapter.m3_am import open_source
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_am_scrutinized import ScrutinyService
+
+            await open_source(
+                interaction, ScrutinyService(GameService(self.service.store)), item.identity
+            )
+        elif item.task == "m3_martyr":
+            from girlframe.discord_adapter.m3_martyr import open_memorial
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_martyr import MartyrService
+
+            await open_memorial(
+                interaction, MartyrService(GameService(self.service.store)), item.identity
+            )
+        elif item.task == "m3_budget_cleanup":
+            from girlframe.discord_adapter.m3_budget_cleanup import open_cleanup
+            from girlframe.services.m3_budget_cleanup import CleanupService
+
+            await open_cleanup(interaction, CleanupService(self.service.store), item.identity)
         elif item.task == "m3_budget_anarchy":
             from girlframe.discord_adapter.m3_budget_anarchy import open_anarchy
             from girlframe.services.m3_budget_anarchy import AnarchyService

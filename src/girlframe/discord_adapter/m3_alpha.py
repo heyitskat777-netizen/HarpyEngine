@@ -80,6 +80,11 @@ async def open_alpha_choice(
         )
     else:
         sheet = await asyncio.to_thread(game.sheet, viewer)
+        from girlframe.discord_adapter.m3_dampener import fields as dampener_fields
+        from girlframe.discord_adapter.m3_dampener import modifier as dampener_modifier
+        from girlframe.services.m3_dampener import DampenerService
+
+        dampener_controls = await dampener_fields(interaction, DampenerService(game))
         available = sheet["heat"]
         fields = [
             Field("context", "Your actual counter under this pressure", paragraph=True),
@@ -96,6 +101,7 @@ async def open_alpha_choice(
             "Make the actual source-bound Keep Your Head counter. "
             "Its roll and required choices must finish."
         )
+        fields.extend(dampener_controls)
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         if data["kind"] == "alpha_counter_play":
@@ -108,6 +114,7 @@ async def open_alpha_choice(
                 PlayInput(
                     play="keep_your_head",
                     heat=int(values["heat"][0]),
+                    dampener_modifier=dampener_modifier(values),
                     context=values["context"],
                     trigger_confirmed=True,
                     parent=data["parent"],

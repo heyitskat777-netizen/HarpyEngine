@@ -51,11 +51,13 @@ def _condition(
     return found
 
 
-def _access(game: GameService, c: Connection, viewer: GuildViewer) -> None:
+def _access(
+    game: GameService, c: Connection, viewer: GuildViewer, origin_kind: rules.Origin = "broken"
+) -> None:
     access = Access(game.store)
     access.authorize(c, viewer, "plays", director_response=True)
     assert access.registry is not None
-    access.registry.require_available(RULE)
+    access.registry.require_available(RULE if origin_kind == "broken" else "girl.am.scrutinized")
 
 
 def source(
@@ -78,14 +80,31 @@ def source(
         (
             x
             for x in original.facts
-            if x.get("kind") == "npc_broken_order" and x.get("id") == value.id
+            if x.get("kind")
+            == ("npc_broken_order" if value.origin_kind == "broken" else "npc_am_secret_order")
+            and x.get("id") == value.id
         ),
         None,
     )
     actual = resolve(state, value.issuer, profiles(c, game.store.campaign_id))
     recipient = resolve(state, value.target, profiles(c, game.store.campaign_id))
-    condition = next((x for x in state.alpha_broken if x.id == value.condition), None)
-    birth = _condition(game, c, original, value.issuer, value.target)
+    if value.origin_kind == "am_secret":
+        from girlframe.services.m3_am_scrutinized import prove_order_grant
+
+        prove_order_grant(game, c, state, value)
+        condition_invalid = False
+    else:
+        condition = next((x for x in state.alpha_broken if x.id == value.condition), None)
+        birth = _condition(game, c, original, value.issuer, value.target)
+        condition_invalid = (
+            birth.id != value.condition
+            or condition is None
+            or condition.subject != value.target
+            or condition.inflictor != value.issuer
+            or condition.source_event != birth.source_event
+            or condition.removed_event is not None
+            and (removal_action is None or condition.removed_action != removal_action)
+        )
     if (
         approval is None
         or value.registry != approval.registry_sha256
@@ -97,13 +116,7 @@ def source(
         or actual.controller != value.controller
         or recipient.controller != int(value.target.entity)
         or fingerprint(_cast(game, c, state, value.cast.channel)) != fingerprint(value.cast)
-        or birth.id != value.condition
-        or condition is None
-        or condition.subject != value.target
-        or condition.inflictor != value.issuer
-        or condition.source_event != birth.source_event
-        or condition.removed_event is not None
-        and (removal_action is None or condition.removed_action != removal_action)
+        or condition_invalid
     ):
         raise WorkflowError("Recover this original NPC, recipient, cast and Broken-source order")
 
@@ -138,8 +151,8 @@ def order(game: GameService, c: Connection, action: dict[str, Any]) -> rules.Ord
 def authorize(
     game: GameService, c: Connection, viewer: GuildViewer, action: dict[str, Any]
 ) -> None:
-    _access(game, c, viewer)
     value = order(game, c, action)
+    _access(game, c, viewer, value.origin_kind)
     if viewer.user_id not in action["data"]["participants"]:
         raise WorkflowError("Only the original source table owns this NPC Order response")
     source(game, c, load_state(c, game.store.campaign_id), value, removal_action=action["id"])
@@ -247,7 +260,11 @@ class NpcOrderService:
         target: int,
         expected: int,
         text: str,
+        *,
+        origin_kind: rules.Origin = "broken",
     ) -> dict[str, Any]:
+        if origin_kind not in ("broken", "am_secret"):
+            raise WorkflowError("Use only an implemented actual NPC order source")
         if not text.strip() or len(text) > 1200:
             raise WorkflowError("State the actual direct order in 1–1200 characters")
 
@@ -261,7 +278,12 @@ class NpcOrderService:
             recipient = ActorRef(
                 kind="pilot", entity=str(target), incarnation=state.sheets[str(target)].character_id
             )
-            condition = _condition(self.game, c, state, issuer, recipient)
+            if origin_kind == "am_secret":
+                from girlframe.services.m3_am_scrutinized import secret_authority
+
+                condition_id = secret_authority(self.game, c, state, issuer, recipient).id
+            else:
+                condition_id = _condition(self.game, c, state, issuer, recipient).id
             if (
                 state.revision != expected
                 or self.game.pending_actions(c)
@@ -280,7 +302,8 @@ class NpcOrderService:
                 issuer=issuer,
                 target=recipient,
                 controller=viewer.user_id,
-                condition=condition.id,
+                condition=condition_id,
+                origin_kind=origin_kind,
                 event=event,
                 cast=cast,
                 registry=self.store.policy.m3_approval.registry_sha256,
@@ -368,7 +391,11 @@ class NpcOrderService:
                     )
                 )
             state.facts.append(
-                dict(kind="npc_broken_order", id=identity, body=value.model_dump_json())
+                dict(
+                    kind="npc_broken_order" if origin_kind == "broken" else "npc_am_secret_order",
+                    id=identity,
+                    body=value.model_dump_json(),
+                )
             )
             self.game.event(
                 c,
@@ -392,8 +419,9 @@ class NpcOrderService:
                 target=target,
                 expected=expected,
                 text=text,
-            ),
+            )
+            | (dict(origin_kind=origin_kind) if origin_kind != "broken" else {}),
             operation,
             auto_audit=False,
-            authorize=lambda c: _access(self.game, c, viewer),
+            authorize=lambda c: _access(self.game, c, viewer, origin_kind),
         )

@@ -10,6 +10,7 @@ HEAT_IDS = (
     "snoop",
     "brutalize",
     "alpha_sex",
+    "am_scrutinized",
     "nanobot_injection",
     "doctor_support",
 )

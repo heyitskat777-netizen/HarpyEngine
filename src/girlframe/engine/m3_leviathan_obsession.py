@@ -453,6 +453,9 @@ def active(state: GameState, actor: ActorRef) -> tuple[Obsession, ...]:
 
 def require_identity_change(state: GameState, actor: ActorRef, identities: Iterable[str]) -> None:
     selected = set(identities)
+    from girlframe.engine.m3_am import require_identity_change as require_am_identity_change
+
+    require_am_identity_change(state, actor, tuple(selected))
     if any(selected & set(x.identity_ids) for x in active(state, actor)):
         raise ValueError(
             "This original obsessed Identity cannot be removed until its Leviathan dies"

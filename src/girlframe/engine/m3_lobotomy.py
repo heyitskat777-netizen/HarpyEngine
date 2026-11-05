@@ -171,7 +171,7 @@ def _effects(
         require_unlocked(
             sheet.identities, (plan.replace_identity,) if plan.replace_identity else ()
         )
-        ordinary = [x for x in sheet.identities if not x.protected or x.paired]
+        ordinary = [x for x in sheet.identities if not x.protected or x.paired or x.am_limiter]
         replaced = next(
             (x for x in sheet.identities if x.id == plan.replace_identity and not x.protected), None
         )

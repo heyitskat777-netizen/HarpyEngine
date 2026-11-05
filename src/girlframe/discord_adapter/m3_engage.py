@@ -42,15 +42,37 @@ async def open_engage(interaction: discord.Interaction, game: GameService, ident
         ),
     ]
     if detail["damage"]:
-        fields.append(Field("denied", "Damage one of the Assets actually used", assets))
+        substitutions = detail.get("untouchable_tags", [])
+        fields.append(
+            Field(
+                "denied",
+                "Damage a used Asset (or choose Untouchable Tag)",
+                assets,
+                minimum=0 if substitutions else 1,
+                required=not substitutions,
+            )
+        )
+        if substitutions:
+            fields.append(
+                Field(
+                    "untouchable_tag",
+                    "Instead: mark your own Untouchable Tag",
+                    tuple((x["id"], x["label"]) for x in substitutions),
+                    minimum=0,
+                    required=False,
+                )
+            )
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         choices = tuple(values.get("maneuvers", ()))
+        selected_fields = {
+            kind: values["asset_" + kind][0] for kind in choices if values.get("asset_" + kind)
+        }
+        if values.get("untouchable_tag"):
+            selected_fields["untouchable_tag"] = values["untouchable_tag"][0]
         answer = ChoiceAnswer(
             options=choices,
-            fields={
-                kind: values["asset_" + kind][0] for kind in choices if values.get("asset_" + kind)
-            },
+            fields=selected_fields,
             denied=tuple(values.get("denied", ())),
             text=values.get("text", ""),
         )

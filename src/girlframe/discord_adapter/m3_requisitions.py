@@ -118,6 +118,30 @@ async def open_requisitions(interaction: discord.Interaction, service: Requisiti
         ("ability-unlock", "Ability Unlock — supported owned Frame rule"),
         ("frame-grafting", "Frame Grafting — supported donor Frame rule"),
     )
+    from girlframe.services.m3_untouchable import UntouchableService
+
+    untouchable = UntouchableService(service.game)
+    class_option = await asyncio.to_thread(untouchable.menu, viewer)
+    if class_option["available"]:
+        options += (("untouchable", "Untouchable Frame — native Autocrat (2 Permissions)"),)
+    from girlframe.services.m3_martyr import MartyrService
+
+    martyr = MartyrService(service.game)
+    martyr_option = await asyncio.to_thread(martyr.menu, viewer)
+    if martyr_option["available"]:
+        options += (("martyr", "Martyr — native Autocrat (2 Permissions)"),)
+    from girlframe.services.m3_dampener import DampenerService
+
+    dampener = DampenerService(service.game)
+    dampener_option = await asyncio.to_thread(dampener.menu, viewer)
+    if dampener_option["available"]:
+        options += (("dampener", "Dampener Link — native LEGION (2 Permissions)"),)
+    from girlframe.services.m3_kicked_puppy import KickedPuppyService
+
+    kicked_puppy = KickedPuppyService(service.game)
+    kicked_option = await asyncio.to_thread(kicked_puppy.menu, viewer)
+    if kicked_option["available"]:
+        options += (("kicked-puppy", "Kicked Puppy — native LEGION (2 Permissions)"),)
     from girlframe.services.m3_frame_swap import FrameSwapService
     from girlframe.services.m3_personal_firearm import PersonalFirearmService
 
@@ -158,6 +182,26 @@ async def open_requisitions(interaction: discord.Interaction, service: Requisiti
     )
 
     async def choose(current: discord.Interaction, token: str) -> None:
+        if token == "kicked-puppy":
+            from girlframe.discord_adapter.m3_kicked_puppy import open_purchase as open_kicked_puppy
+
+            await open_kicked_puppy(current, kicked_puppy)
+            return
+        if token == "dampener":
+            from girlframe.discord_adapter.m3_dampener import open_purchase as open_dampener
+
+            await open_dampener(current, dampener)
+            return
+        if token == "martyr":
+            from girlframe.discord_adapter.m3_martyr import open_purchase as open_martyr
+
+            await open_martyr(current, martyr)
+            return
+        if token == "untouchable":
+            from girlframe.discord_adapter.m3_untouchable import open_purchase as open_untouchable
+
+            await open_untouchable(current, untouchable)
+            return
         if token == "frame-swap" or token.startswith("frame-swap:"):
             from girlframe.discord_adapter.m3_frame_swap import open_plan, open_swap
 

@@ -4,11 +4,12 @@ Current development has source-owned Alpha/Guard/NPC Orders paths, normal paid
 JANUS Storage with threshold/reconnect/surgery consumers, and further Budget
 meeting, Candidate and Anarchy lifecycles. Focused evidence and exact remaining
 limits are at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md). Current
-registry: 135 subsets, 338 unimplemented entries, 240 adjustable clarifications;
+registry: 142 subsets, 331 unimplemented entries, 248 adjustable clarifications;
 no independent approvals. These inventory units are not a progress percentage.
-AM Scrutinized and a dependency-ready Class Requisition consumer are the next
-implementation assignments; DoctorDoctor normal native flows are frozen with
-explicit remaining source limits. Root integrates their APIs and completes dependency-ready Strain
+Bounded AM Scrutinized, four native Class consumers, cleanup duty and Engage
+sabotage now have focused evidence. Next required AM dependencies include fourth-
+Limiter reset and Just Code; remaining Class and Strain systems continue as named
+units. DoctorDoctor and every new unit retain explicit broader source limits. Root integrates their APIs and completes dependency-ready Strain
 workflows. No new full regression or whole-M3 completion is claimed. Historical
 snapshots below retain their original counts and limitations.
 

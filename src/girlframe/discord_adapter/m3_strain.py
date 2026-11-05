@@ -24,7 +24,7 @@ FACT_LABELS = {
     "rebel_handler_killed": "Was a rebel Handler killed?",
     "rebel_pilot_captured_and_broken": "Was a rebel Pilot captured and broken?",
     "structure_destroyed": "Was a city, base or major structure destroyed?",
-    "girl_death_or_severe": "Did a Girl die or face Severe Punishment?",
+    "girl_death_or_severe": "Any Girl deaths or Severe Punishments besides proved Martyr deaths?",
     "frame_full_or_all_frames_some_repairs": (
         "Did one Frame need full repairs, or every Frame some repair?"
     ),

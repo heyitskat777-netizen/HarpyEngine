@@ -111,6 +111,11 @@ def source(
 
             for point in for_family(proof, actor, family):
                 prove_stored_point(game, c, proof, point)
+        if body.get("reason") == "budget_cleanup":
+            from girlframe.services.m3_budget_cleanup import prove_void_source as prove_cleanup
+
+            prove_cleanup(game, c, first, body, actor)
+            return current, body, actor
         if body.get("reason") == "janus_storage_replug":
             from girlframe.services.m3_janus_storage import prove_replug
 
@@ -458,6 +463,10 @@ def complete(
             from girlframe.services.m3_battle_dormant import complete_void
 
             complete_void(game, c, identity, event, viewer, key)
+        elif body.get("reason") == "budget_cleanup":
+            from girlframe.services.m3_budget_cleanup import complete_void as complete_cleanup
+
+            complete_cleanup(game, c, identity, event, viewer, key)
         elif body.get("reason") != "physical_entry":
             from girlframe.services.m3_dive import complete_void_continuation as dive_complete
 

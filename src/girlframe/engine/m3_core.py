@@ -123,6 +123,11 @@ def void_followups(
             required.append(Followup(kind="girl_void_threshold", owner=sheet.owner, source_pdf=19))
         if full(frames):
             required.append(Followup(kind="frame_void_threshold", owner=sheet.owner, source_pdf=19))
+    if required and any(getattr(x, "am_limiter", None) for x in sheet.identities):
+        raise ValueError(
+            "SOURCE_PORT_REQUIRED: preserve AM Limited Identities "
+            "before whole-family Void conversion"
+        )
     return tuple(required)
 
 
@@ -163,7 +168,7 @@ def recover_off_duty(sheet: PilotSheet, choice: Recovery) -> Result:
             | {x.id for x in updated.tags}
         ):
             raise ValueError("Embrace an owned current Tag with a distinct new Identity ID")
-        ordinary = [x for x in updated.identities if not x.protected or x.paired]
+        ordinary = [x for x in updated.identities if not x.protected or x.paired or x.am_limiter]
         replaced = next(
             (x for x in updated.identities if x.id == choice.replace_identity and not x.protected),
             None,

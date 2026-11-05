@@ -180,6 +180,13 @@ async def open_context(
                 service.game.sheet, viewer_from_interaction(interaction)
             )
         identities = tuple((x["id"], x["name"]) for x in resources["identities"] if not x["marked"])
+        from girlframe.discord_adapter.m3_dampener import fields as dampener_fields
+        from girlframe.discord_adapter.m3_dampener import modifier as dampener_modifier
+        from girlframe.services.m3_dampener import DampenerService
+
+        dampener_controls = await dampener_fields(
+            interaction, DampenerService(service.game), ActorRef.model_validate(actor["ref"])
+        )
 
         async def start(current: discord.Interaction, values: dict[str, Any]) -> str:
             declared = value["declaration"]
@@ -187,6 +194,7 @@ async def open_context(
             prepared = PlayInput(
                 play=declared["play"],
                 heat=int(values["heat"][0]),
+                dampener_modifier=dampener_modifier(values),
                 identity=None if chosen == "none" else chosen,
                 gain=int(values["gain"][0]),
                 pair_share=int(values["pair_share"][0]),
@@ -246,7 +254,8 @@ async def open_context(
                     "Heat to spend",
                     tuple((str(x), str(x)) for x in range(resources["heat"] + 6)),
                 ),
-            ],
+            ]
+            + dampener_controls,
             start,
         )
         await reply(interaction, form.text(), form)
@@ -601,6 +610,8 @@ async def open_npc_damage(
         ("advantage", "Gain an actual Conversation advantage"),
         ("kill", "Kill this actual NPC"),
     ]
+    if not data.get("can_harm", True):
+        options = [x for x in options if x[0] not in ("injure_tag", "kill")]
     if data["can_take"] and data["items"]:
         options.append(("take_item", "Take an actual held object"))
 

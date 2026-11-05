@@ -8,7 +8,7 @@ def bind(sheet: PilotSheet) -> PilotSheet:
     if CATALOG.get(sheet.girl, {}).get("family") != "girl":
         raise ValueError("Identity slots require an actual base Girl playbook")
     updated = PilotSheet.model_validate_json(sheet.model_dump_json())
-    ordinary = [x for x in updated.identities if not x.protected or x.paired]
+    ordinary = [x for x in updated.identities if not x.protected or x.paired or x.am_limiter]
     occupied = {x.slot for x in ordinary if x.slot is not None}
     pair = next((x for x in ordinary if x.paired), None)
     if pair is not None:
@@ -33,7 +33,7 @@ def bind(sheet: PilotSheet) -> PilotSheet:
 
 
 def replacement_slot(sheet: PilotSheet, replaced: str | None) -> int | None:
-    ordinary = [x for x in sheet.identities if not x.protected or x.paired]
+    ordinary = [x for x in sheet.identities if not x.protected or x.paired or x.am_limiter]
     if replaced is not None:
         return next(x.slot for x in ordinary if x.id == replaced)
     if any(x.slot is None for x in ordinary):

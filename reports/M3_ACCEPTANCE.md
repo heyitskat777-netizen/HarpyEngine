@@ -1,5 +1,59 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Additional normal gameplay workflows — 2026-11-05
+
+Sanitized source checkpoint `d2a403f9ac6300155fa50c1ed8d52dd6eb8a5b8f` was pushed
+to `codex/m3-rules` and its exact remote SHA verified. New work below extends that
+checkpoint. M3 remains **RULES_SUBSET**, the bot remains off, and final regression,
+independent review and player testing remain pending.
+
+| Normal workflow | Actual focused evidence |
+|---|---|
+| Cleanup duty | Real completed mission/site; owned scene attendance/ending or one saved random original-Girl exposure; actual Void resistance endpoint and genuine JANUS Storage gain. Three final checks pass in 7.52s (`var/m3-budget-cleanup-final-normal.xml`). |
+| Secret Asset sabotage | Two private source cards; actual Engage use reveals only matching cards; original Handler supplies calamities; failed-Asset maneuvers suppressed while known receipt, costs and other maneuvers remain. Unused card stays secret; real subsequent reuse and chat restoration: 1/2.60s (`var/m3-budget-sabotage-normal.xml`). |
+| AM Scrutinized | Real original NPC discovery/confirmation, held source root, one rolled child, source-owned outcomes/Handler refuge, protected ordinary Limited slot and typed secret NPC Orders. Five expected traces: 5/7.76s. Changed cross-channel Inbox plus existing NPC/ordinary Orders compatibility: 5/6.38s (`var/m3-am-scrutinized-normal.xml`, `var/m3-am-native-and-orders-compatibility.xml`). |
+| Untouchable Frame | Native paid Autocrat acquisition; real Engage uses own eligible Tag instead of its Asset-damage cost, preserving actual receipt/maneuvers/chat: 1/2.03s (`var/m3-untouchable-native-normal.xml`). |
+| Martyr | Native paid Autocrat acquisition; actual unprevented original death lowers Budget/Rebellion; original human owns memorial; genuine next preparation preserves that exact death relief: 1/1.81s (`var/m3-martyr-native-normal.xml`). |
+| Dampener Link | Native paid LEGION acquisition; actual spend5/use3 choice, one roll, truthful cost/basis receipt, actual Tag/outcome and chat completion: 1/2.03s (`var/m3-dampener-native-normal.xml`). |
+| Kicked Puppy | Native paid LEGION acquisition; actual damaged-Asset Flirt basis with zero cost/held5 retained; original-target-given own Tag; actual care question and other human answer: 1/2.28s (`var/m3-kicked-puppy-native-normal.xml`). Future followthrough remains pending until actual action. |
+
+These selections overlap and do not constitute a new full regression or a
+completion percentage. Cleanup fixture corrections used actual bundled discipline,
+real worker construction and mandatory retained Heat; no source behavior was waived.
+AM corrected an event-before-required-work ordering issue and the reused native
+trace verifies its frozen scene from an Inbox opened in another channel.
+
+Remaining source limits are explicit. Cleanup's historical mission/site relation
+is a Handler factual attestation because old missions have no typed location.
+Sabotage currently consumes regular native root Engage; other declared battle
+uses are gated before RNG, and nested/ActorPlay/transferred-hardware continuations
+remain unfinished. No free-form chat inference is claimed. AM's fourth-Limiter
+factory reset, Just Code/mind/vessel, broader actors and indirect-harm ports remain
+unfinished. Generic whole-family Void alterations with live Limited IDs are guarded
+to prevent losing source state in an unported transformation. Same-place AM refuge
+is an implementation limit, not a house rule waiving required travel.
+
+Class consumers are native original Pilots in their actual Class/Frame. Grafts,
+retained sources and broader role/actor ports remain unfinished. Martyr does not
+revive or rebind its original body; independent death/Severe/other High causes still
+count. Dampener retains full actual cost; Kicked Puppy's explicit alternative uses
+its own no-Heat exception and does not grant an extra automatic question quota.
+
+Central source evidence marks seven further entries as subsets and adds eight
+adjustable clarifications: **248 clarifications, 142 subsets, 331 unimplemented
+entries, zero independent approvals**. Core/deferred inventory is unchanged.
+AM same-place/travel and conversion gaps are recorded as missing implementations,
+not converted into campaign rulings. Cleanup and sabotage have source contracts.
+One coherent checkpoint check passed Ruff and formatting for all **72 changed
+Python files**; six formatting findings were fixed. Mypy passed the nine changed
+shared interfaces. The publishable-tree check preserved all 40 original handoff
+manifest entries and found zero issues across 948 files. Read-only process probe:
+zero bot processes. No schema, live database, Discord connection, environment or
+private recovered-engine mutation was performed. The full regression remains
+reserved for the final M3 candidate.
+
+Older snapshots below retain their original source and verification boundaries.
+
 ## New focused source workflows — 2026-11-05
 
 M3 remains **IN_PROGRESS / RULES_SUBSET**. The bot is intentionally off. These

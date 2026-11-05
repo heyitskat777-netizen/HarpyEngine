@@ -714,10 +714,32 @@ class InboxService:
                 )
             from girlframe.services.m3_budget_anarchy import AnarchyService
             from girlframe.services.m3_budget_candidate import CandidateService
+            from girlframe.services.m3_budget_cleanup import CleanupService
             from girlframe.services.m3_budget_director import MeetingService
             from girlframe.services.m3_budget_patron import PatronService
             from girlframe.services.m3_collective_handler_tags import CollectiveTagService
             from girlframe.services.m3_political_function import FunctionService
+
+            for cleanup in CleanupService(self.store).available(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "cleanup:" + cleanup["id"],
+                        "budget_cleanup",
+                        cleanup["id"],
+                        canon.revision,
+                        "off_duty",
+                        "Past mission: cleanup duty",
+                        "Original participants",
+                        "pending" if cleanup["actionable"] else "waiting",
+                        cleanup["actionable"],
+                        False,
+                        "Report your attendance or your selected Void alteration.",
+                        "The original exposure draw is saved; "
+                        "required consequences remain pending.",
+                        "Review cleanup",
+                        task="m3_budget_cleanup",
+                    )
+                )
 
             for anarchy in AnarchyService(self.store).available(connection, viewer):
                 items.append(
@@ -840,7 +862,49 @@ class InboxService:
                     )
                 )
             from girlframe.services.m3_alpha_sex import SexService
+            from girlframe.services.m3_am_scrutinized import ScrutinyService
             from girlframe.services.m3_janus_play import BatteryService
+
+            for source in ScrutinyService(GameService(self.store))._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "am-source:" + source["id"],
+                        "am_source",
+                        source["id"],
+                        source["revision"],
+                        "plays",
+                        source["label"],
+                        "Original source scene",
+                        "pending" if source["actionable"] else "waiting",
+                        source["actionable"],
+                        False,
+                        "Give your own response to this original discovery or Limiter source.",
+                        "The original scene and its human roles remain bound.",
+                        "Review AM source",
+                        task="m3_am_source",
+                    )
+                )
+            from girlframe.services.m3_martyr import MartyrService
+
+            for memorial in MartyrService(GameService(self.store))._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "martyr:" + memorial["id"],
+                        "martyr_memorial",
+                        memorial["id"],
+                        memorial["revision"],
+                        "playbook",
+                        "Choose your character's memorial",
+                        "Your original character",
+                        "pending",
+                        memorial["actionable"],
+                        False,
+                        "Choose how your original character is remembered.",
+                        "This preserves its death and belongs to its original human.",
+                        "Choose memorial",
+                        task="m3_martyr",
+                    )
+                )
 
             for invitation in SexService(GameService(self.store))._tasks(connection, viewer):
                 items.append(

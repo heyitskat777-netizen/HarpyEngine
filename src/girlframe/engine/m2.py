@@ -99,6 +99,9 @@ class IdentityState(Model):
     paired: bool = False
     slot: int | None = Field(default=None, ge=0, le=3)
     obsession_sources: tuple[str, ...] = Field(default=(), exclude_if=lambda value: not value)
+    am_limiter: str | None = Field(
+        default=None, min_length=1, exclude_if=lambda value: value is None
+    )
 
 
 class AssetState(Model):
@@ -194,15 +197,21 @@ class PilotSheet(Model):
             ids = [x.id for x in collection]
             if len(ids) != len(set(ids)):
                 raise ValueError("Canonical entity IDs must be distinct")
-        if len([x for x in self.identities if not x.protected or x.paired]) > 4:
+        if len([x for x in self.identities if not x.protected or x.paired or x.am_limiter]) > 4:
             raise ValueError("A Girl has at most four ordinary/Paired Identities")
         slots = [x.slot for x in self.identities if x.slot is not None]
         if len(set(slots)) != len(slots) or any(
-            x.slot is not None and x.protected and not x.paired for x in self.identities
+            x.slot is not None and x.protected and not x.paired and x.am_limiter is None
+            for x in self.identities
         ):
             raise ValueError(
                 "Ordinary/Paired Identity slots are distinct; protected extras are separate"
             )
+        if any(
+            x.am_limiter and (not x.protected or x.paired or x.slot is None)
+            for x in self.identities
+        ):
+            raise ValueError("An actual Limiter protects its one ordinary Identity slot")
         return self
 
 
@@ -342,6 +351,12 @@ class GameState(Model):
 
     @model_validator(mode="after")
     def distinct_original_placements(self) -> "GameState":
+        if any(x.get("kind") == "am_limiter" for x in self.facts) or any(
+            x.am_limiter for sheet in self.sheets.values() for x in sheet.identities
+        ):
+            from girlframe.engine.m3_am import validate_slots
+
+            validate_slots(self)
         edges = [frozenset((x.first, x.second)) for x in self.actor_bonds]
         if len(edges) != len(set(edges)):
             raise ValueError("One actual Bond has one canonical relationship authority")
@@ -366,6 +381,10 @@ class PlayInput(Model):
     context: str = Field(min_length=1, max_length=1200)
     trigger_confirmed: Literal[True]
     heat: int = Field(ge=0)
+    dampener_modifier: Literal[2, 3] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    kicked_puppy_basis: bool = Field(default=False, exclude_if=lambda value: value is False)
     identity: str | None = None
     gain: int = Field(default=0, ge=0, le=5)
     pair_share: int = Field(default=0, ge=0, le=5)
@@ -385,6 +404,10 @@ class PlayInput(Model):
 
     @model_validator(mode="after")
     def battle_fields_only(self) -> "PlayInput":
+        if self.kicked_puppy_basis and (self.play != "flirt" or self.heat != 0):
+            raise ValueError("Kicked Puppy's alternative is only actual Flirt with zero Heat spent")
+        if self.dampener_modifier is not None and self.heat < 5:
+            raise ValueError("Dampener Link still requires at least five actual Heat spent")
         if self.play != "keep_your_head" and (self.obeying_orders or self.order_account):
             raise ValueError("Only actual Keep accepts current-order obedience details")
         if self.obeying_orders != bool(self.order_account.strip()):

@@ -477,6 +477,12 @@ def pre_roll(game: "GameService", c: Connection, state: GameState, action: dict[
     ):
         if rules.resource_sha(state, ref, bound) != old_sha:
             raise WorkflowError("STALE_BATTLE: actual combat resources changed before dice.")
+    from girlframe.engine.m3_budget_sabotage import matching as trapped_assets
+
+    if trapped_assets(state, context.declaration.actor, {context.declaration.attacking_asset}):
+        raise WorkflowError(
+            "SOURCE_PORT_REQUIRED: resolve this battle Asset's sabotage before dice"
+        )
     meta["roll_event"] = str(uuid4())
     state.facts.append(
         dict(
@@ -1517,7 +1523,11 @@ def damage_actor(
     if not source_action and not source_work:
         raise WorkflowError("Damage needs its actual source Play or source-owned effect grant.")
     bound = profiles(c, game.store.campaign_id)
-    resolve(state, target, bound, require_current_profile=False)
+    target_view = resolve(state, target, bound, require_current_profile=False)
+    if any(x.id == asset_id and x.family == "girl" for x in target_view.assets):
+        from girlframe.engine.m3_am import require_harm
+
+        require_harm(state, actor, target)
     grant = next((x for x in state.handler_plays if x.id == source_work), None)
     if grant is not None:
         from girlframe.services.m3_handler_plays import validate_damage_source

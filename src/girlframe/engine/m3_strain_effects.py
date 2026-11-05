@@ -7,6 +7,7 @@ from pydantic import Field
 
 from girlframe.engine import m3_world as world_rules
 from girlframe.engine.m2 import GameState, Model, TagState, pair_key
+from girlframe.engine.m3_budget_sabotage import Pin
 from girlframe.engine.m3_contraband_state import ContrabandFind
 from girlframe.engine.m3_refusal_state import RefusalBonus
 from girlframe.engine.m3_scientific_observation import Demand, require_orders
@@ -36,7 +37,9 @@ SUPPORTED = frozenset(
         "strain.budget.low.1.1",
         "strain.budget.low.1.2",
         "strain.budget.low.2.1",
+        "strain.budget.low.2.2",
         "strain.budget.low.4.2",
+        "strain.budget.low.4.1",
         "strain.budget.low.3.2",
         "strain.budget.low.3.1",
         "strain.budget.low.6.2",
@@ -73,6 +76,10 @@ class Choice(Model):
     function_kind: Literal["auction", "fundraiser", "ball", "orgy"] | None = Field(
         default=None, exclude_if=lambda value: value is None
     )
+    cleanup_mode: Literal["scene", "exposure"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    planned_assets: tuple[Pin, ...] = Field(default=(), exclude_if=lambda value: not value)
 
 
 def fields(choice: Choice, allowed: set[str]) -> None:
@@ -96,6 +103,8 @@ def apply(
     source_event: str | None = None,
     contraband: ContrabandFind | None = None,
     tag_setter_appointment: str | None = None,
+    cleanup_index: int | None = None,
+    cleanup_rng: Literal["os", "test_injected"] | None = None,
 ) -> GameState:
     if choice.rule_id not in SUPPORTED:
         raise ValueError("UNSUPPORTED_RULE: this Strain effect has no complete typed resolver")
@@ -130,6 +139,41 @@ def apply(
                 id=source_work, period=period_id, handler=state.handler, source_event=source_event
             )
         )
+    elif rule == "strain.budget.low.2.2":
+        from girlframe.engine.m3_budget_sabotage import create as create_sabotage
+
+        fields(choice, {"planned_assets"})
+        if source_event is None:
+            raise ValueError("Record the actual private Asset-card source event")
+        state = create_sabotage(
+            state, source_work, source_event, choice.planned_assets, choice.account
+        )
+        world = state.world
+    elif rule == "strain.budget.low.4.1":
+        from girlframe.engine.m3_budget_cleanup import create as create_cleanup
+
+        fields(choice, {"target", "victim", "cleanup_mode"})
+        if (
+            period_id is None
+            or source_event is None
+            or choice.target is None
+            or choice.victim is None
+            or choice.cleanup_mode is None
+        ):
+            raise ValueError("Choose the actual past mission, site and cleanup route")
+        state = create_cleanup(
+            state,
+            source_work,
+            source_event,
+            period_id,
+            choice.victim,
+            choice.target,
+            choice.cleanup_mode,
+            choice.account,
+            cleanup_index,
+            cleanup_rng,
+        )
+        world = state.world
     elif rule == "strain.budget.high.4.2":
         from girlframe.engine.m3_budget_candidate import create as create_candidate
 

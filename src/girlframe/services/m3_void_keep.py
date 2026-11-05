@@ -386,6 +386,7 @@ def start_view(game: "GameService", viewer: GuildViewer, identity: str) -> dict[
                     channels.append(int(saved["channel_id"]))
         return dict(
             work=identity,
+            actor=actor.model_dump(mode="json"),
             parent=body["source_action"],
             stage=value.stage,
             child=child["id"] if child else None,
