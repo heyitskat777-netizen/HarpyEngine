@@ -51,6 +51,8 @@ async def open_mission(
     with service.store.engine.connect() as c:
         current_handler = HandlerService(service.store).current(c)[1].handler_id
     if current_handler == viewer.user_id:
+        if mission["phase"] == "offered" and "accept" not in mission["responses"].values():
+            actions.append(("cancel", "Cancel this undispatched offer"))
         if (
             mission["phase"] == "offered"
             and len(mission["responses"]) == len(mission["offered_to"])
@@ -79,6 +81,10 @@ async def open_mission(
         if operation in ("accept", "decline"):
             result = await asyncio.to_thread(
                 service.respond, actor, key, identity, mission["revision"], cast(Any, operation)
+            )
+        elif operation == "cancel":
+            result = await asyncio.to_thread(
+                service.cancel, actor, key, identity, mission["revision"]
             )
         elif operation == "start":
             result = await asyncio.to_thread(

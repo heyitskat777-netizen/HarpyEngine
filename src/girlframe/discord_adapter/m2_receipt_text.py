@@ -15,7 +15,7 @@ def expression(receipt: dict[str, Any]) -> str:
     text += " " + str(receipt.get("modifier_source", "Heat"))
     if receipt.get("dampener_purchase"):
         text += " (" + str(receipt["heat"]) + " Heat spent)"
-    if receipt.get("kicked_basis"):
+    if receipt.get("kicked_basis") or receipt.get("nightmare_purchase"):
         text += " (no Heat spent)"
     for modifier in receipt.get("pre_modifiers", []):
         text += " + (" + str(modifier["amount"]) + ") " + str(modifier["source"]).replace("_", " ")

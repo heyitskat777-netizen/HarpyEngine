@@ -13,6 +13,7 @@ from girlframe.engine.m2 import GameState, Model, PilotSheet, tier
 from girlframe.engine.m3_adjudication_state import Decision
 from girlframe.engine.m3_choices import OFF_DUTY, off_duty_modifier
 from girlframe.engine.m3_core import Recovery, RepairSelection, recover_off_duty
+from girlframe.engine.m3_modular import Replacement
 from girlframe.engine.m3_observation_state import Observation
 from girlframe.engine.rolls import Face
 
@@ -135,6 +136,7 @@ class RecoveryChoice(Model):
     replace_identity: str | None = None
     repair_assets: bool = True
     repairs: RepairSelection | None = None
+    modular_replacements: tuple[Replacement, ...] = Field(default=(), exclude_if=lambda x: not x)
 
 
 HANDLER_SCENES = ("punish", "permission", "npc_employment", "prisoner", "exploit", "routine")

@@ -357,6 +357,37 @@ async def open_effect(
                         25,
                     )
                 )
+        elif rule in ("strain.budget.low.5.1", "strain.budget.low.6.1"):
+            fields.append(
+                Field(
+                    "visitor",
+                    "Actual NPC higher-up or politician (introduce through /mission world first)",
+                    options(
+                        [
+                            x
+                            for x in world["npcs"]
+                            if x["alive"] and x["cell"] is not None and "director" not in x["jobs"]
+                        ]
+                    ),
+                )
+            )
+        elif rule == "strain.budget.high.4.1":
+            fields.extend(
+                (
+                    Field(
+                        "fighters",
+                        "Which two Girls will fight?",
+                        tuple((str(uid), state.sheets[str(uid)].callsign) for uid in state.order),
+                        2,
+                        2,
+                    ),
+                    Field(
+                        "fight_channel",
+                        "Actual Play scene for the televised fight",
+                        ((str(interaction.channel_id), "Use this Play scene"),),
+                    ),
+                )
+            )
         elif rule == "strain.budget.low.2.2":
             fields.append(
                 Field("assets", "Two secret Cadre Assets", tuple(asset_labels.items()), 2, 2)
@@ -618,6 +649,17 @@ async def open_effect(
             payload["rooms"] = tuple(tuple(x) for x in grouped.values())
         elif rule == "strain.budget.low.6.2":
             payload.update(target=values["target"][0], npc_jobs=tuple(values["jobs"]))
+        elif rule in ("strain.budget.low.5.1", "strain.budget.low.6.1"):
+            payload["target"] = values["visitor"][0]
+        elif rule == "strain.budget.high.4.1":
+            channel = int(values["fight_channel"][0])
+            with service.store.engine.connect() as c:
+                source_scene = service.game.scene(c, channel)
+            payload.update(
+                target=source_scene["id"],
+                fighters=tuple(int(x) for x in values["fighters"]),
+                fight_channel=channel,
+            )
         elif rule == "strain.budget.low.2.2":
             if any(x not in asset_pins for x in values["assets"]):
                 raise WorkflowError("Reopen the original actual Cadre Asset choices")

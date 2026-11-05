@@ -12,7 +12,7 @@ Owner requested this audit after questioning the earlier 600-credit estimate.
 is available.** Work resumes by finished workflows, rather than another open-ended
 foundation pass. This document changes neither the agreed scope nor release gates.
 
-The current four-agent candidate is tracked in [M3_PARALLEL_WORK.md](M3_PARALLEL_WORK.md) and the top of the acceptance report. The original audit and earlier checkpoint counts below are historical; they are not the current candidate's completion claim.
+The historical four-agent candidate is tracked in [M3_PARALLEL_WORK.md](M3_PARALLEL_WORK.md) and the top of the acceptance report. The original audit and earlier checkpoint counts below are historical; they are not the current candidate's completion claim.
 
 Subsequent checkpoints: **1a, Asset Installment** (`af0a221`) and **1b, Creature
 Comforts** (`620e879`) are **IMPLEMENTED_AUTOMATED** within their stated flows.
@@ -20,7 +20,7 @@ Final full suite: **1,399 passed**. Independent review and human acceptance rema
 pending. See [unit evidence](acceptance/m3_units.json).
 The audit counts below are the original snapshot, not a recalculated percentage.
 
-Current unit **2a is IN_PROGRESS**: human-Pilot effects, consent, native responses
+Historical audit status: unit **2a was IN_PROGRESS**: human-Pilot effects, consent, native responses
 and linked discipline are implemented; complete Defeat and broader actor/lifecycle
 interactions still block closure. Temporary revocation/restoration now works for
 implemented paid Requisitions. Last usable Frame removal has source-owned context
@@ -113,7 +113,7 @@ into a project percentage. Billing is not exposed here, so no replacement credit
 promise is made. Actual per-unit cost, if supplied by the owner, can support a later
 forecast; tests, lines of code and registry entry counts cannot substitute for it.
 
-Next implementation: **unit 2a, Put Someone Beneath You**, followed by Dive Deep as
+Historical next action at the audit: **unit 2a, Put Someone Beneath You**, followed by Dive Deep as
 unit 2b. Each must complete its printed trigger, legal target, exact choices,
 Status/Bond/Tag consequences, human responses, Discord flow and durable state.
 The first two purchase units are closed for automated implementation; other

@@ -40,14 +40,17 @@ async def open_keep(interaction: discord.Interaction, game: GameService, identit
     dampener_controls = await dampener_fields(
         interaction, DampenerService(game), ActorRef.model_validate(data["actor"])
     )
+    from girlframe.discord_adapter.m3_nightmare import keep_heat, keep_info
+    from girlframe.services.m3_nightmare import NightmareService
+
+    nightmare = await keep_info(
+        interaction, NightmareService(game), ActorRef.model_validate(data["actor"])
+    )
     fields = [
         Field(
             "heat",
             "Heat for this actual Keep Your Head",
-            tuple(
-                (str(x), str(x))
-                for x in ((data["heat"],) if data["heat"] >= 5 else range(data["heat"] + 1))
-            ),
+            tuple((str(x), str(x)) for x in keep_heat(nightmare, data["heat"])),
         ),
         Field("account", "Actual resistance to the Frame's Void", paragraph=True),
     ] + dampener_controls
@@ -93,7 +96,12 @@ async def open_keep(interaction: discord.Interaction, game: GameService, identit
         "Resist the Frame's Void",
         "Make an actual Keep Your Head. Prevention requires in control and the Handler's "
         "actual sufficient-result ruling. Failed resistance keeps this chat paused for the "
-        "remaining owned Void choices.",
+        "remaining owned Void choices."
+        + (
+            " Nightmare Core uses Void Assets and no Heat; terrifying is established."
+            if nightmare
+            else ""
+        ),
         fields,
         submit,
     )

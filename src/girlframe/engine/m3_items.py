@@ -243,6 +243,7 @@ def take(
                 actual,
                 replace=replace,
                 effective_void=stored_ids(state, recipient),
+                state=state,
             )
             state.sheets[recipient.entity] = result.sheet
         elif replace is not None:

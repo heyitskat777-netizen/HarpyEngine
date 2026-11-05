@@ -72,6 +72,16 @@ completion points. Do not repeat installation, source audits or successful check
 without a relevant change or failure. Required missing M3 behavior remains visible
 in the backlog and prevents a rules-complete claim.
 
+The owner's November 5 workflow handoff reaffirms the existing lean policy.
+Preserve newer work; `12a08c2` is historical. Verify distinct printed normal
+result branches and immediate consequences without role/lifecycle matrices.
+Static handoffs include every changed shared module and test file, with applicable
+source types. Keep CI's explicit focused selection and final-candidate full mode
+aligned with `docs/DEVELOPMENT_WORKFLOW.md`; preserve security/release checks.
+Use exact commit/snapshot evidence and distinguish local checks from remote CI.
+Do not restart completed Alpha, JANUS, Call, Leviathan or Budget work based on
+superseded roadmap text.
+
 - Run `bash tools/install.sh`, then the checks in `README.md`.
 - Use the existing checkout. Cloud tasks are isolated; create no worktree unless requested.
 - Keep the original planning package unchanged, including its historical reports.

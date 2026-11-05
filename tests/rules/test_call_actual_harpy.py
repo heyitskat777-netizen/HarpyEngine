@@ -5,12 +5,13 @@ from uuid import uuid4
 from test_cast_service import change
 from test_dive import choose, threshold_source
 from test_harpy_actor_plays import begin
-from test_ledger import PLAYER, OTHER
+from test_ledger import OTHER, PLAYER
 from test_ledger import ledger as ledger
 from test_m2_game import answer, pass_tags, state, tick
 from test_mockingbird_communion import respond
 from test_void_keep import keep
-from test_void_service import five_no, respond as void_respond
+from test_void_service import five_no
+from test_void_service import respond as void_respond
 
 from girlframe.engine import m3_physical
 from girlframe.engine.m2 import PlayInput

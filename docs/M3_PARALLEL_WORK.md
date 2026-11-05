@@ -1,25 +1,19 @@
 # M3 parallel implementation checkpoint
 
-Current staffing is **two implementation agents by default**, with root integrating.
-JANUS/Call/Leviathan normal workflows are now handed off. The next assignments
-are Alpha Brutalize and remaining Storage consumers, with root integrating.
-Physical and Lifecycle hand off their existing work and stop. Follow the
-[current development workflow](DEVELOPMENT_WORKFLOW.md) for fixed deliverables,
-compact handoffs and reduced testing. Four-agent descriptions below are historical
-checkpoint evidence, not the current staffing instruction.
+Current staffing is **two implementation agents**, with root integrating.
+The current assignments and verification policy are in
+[Development workflow](DEVELOPMENT_WORKFLOW.md); latest completed boundaries and
+evidence are at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md).
+Alpha Brutalize and JANUS Storage closure have newer handoffs; do not reopen them
+because this document once listed them as next actions. Current AM/Class work
+preserves their remaining required actor/source limits. The bot stays off.
 
-Current focused checkpoint: 15 normal-path tests passed in 27.15s, covering
-JANUS source/native/control/partial Storage, Leviathan and further Budget effects.
-No new full regression or deployment is claimed; Storage acquisition stays hidden.
+Everything below is historical checkpoint evidence, including the earlier
+four-agent staffing, 15-test selection, incomplete Storage acquisition note and
+2,200-test candidate. It is not the current assignment plan, a newer full-suite
+result or whole-M3 acceptance. Preserve these records without replaying the work.
 
-M3 remains **IN_PROGRESS / RULES_SUBSET**. This document tracks bounded workflows,
-including their limits; it does not certify the milestone or replace the full
-remaining-work inventory. The owner authorized four development agents. The root
-agent integrates shared state, source ownership, routing and regression checks.
-The bot stays off. No live migration, restart or environment publication is authorized
-by this checkpoint.
-
-## Current frozen bounded gameplay candidate
+## Historical frozen bounded gameplay candidate
 
 Four development agents and root completed the following bounded candidate. Its
 full regression passes **2,200 tests in 1,070.22s**, zero failures/errors/skips, at

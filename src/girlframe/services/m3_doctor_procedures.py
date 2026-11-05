@@ -10,7 +10,7 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import resolve
-from girlframe.engine.m3_assets import counts_toward_limit
+from girlframe.engine.m3_assets import counts_toward_limit, frame_capacity
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
@@ -95,11 +95,10 @@ class ProcedureService:
                     raise WorkflowError(
                         "Tear off an actual damaged Frame Asset and spend at least two Heat"
                     )
-                if (
-                    sum(x.family == "frame" and counts_toward_limit(own, x) for x in own.assets)
-                    >= 5
-                ):
-                    raise WorkflowError("Make room within the five Frame-Asset limit first")
+                if sum(
+                    x.family == "frame" and counts_toward_limit(own, x) for x in own.assets
+                ) >= frame_capacity(own, state):
+                    raise WorkflowError("Make room within the actual Frame-Asset limit first")
                 wings_thresholds(state, counterpart, selected.id)
                 giver = resolve(state, actor, profiles(c, self.store.campaign_id))
                 if giver.cell is not None and target.cell is not None and giver.cell != target.cell:
@@ -249,7 +248,7 @@ class ProcedureService:
                     or donor.frame_scrapped
                     or own.heat < value.heat
                     or sum(x.family == "frame" and counts_toward_limit(own, x) for x in own.assets)
-                    >= 5
+                    >= frame_capacity(own, state)
                 ):
                     raise WorkflowError(
                         "Refresh the actual damaged donor Asset, Heat and available slot"

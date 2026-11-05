@@ -15,6 +15,7 @@ from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m2 import PlayInput, tier
 from girlframe.engine.m3_choices import OFF_DUTY
 from girlframe.engine.m3_core import RepairSelection
+from girlframe.engine.m3_modular import Replacement
 from girlframe.engine.m3_off_duty import HANDLER_SCENES, HandlerContext, RecoveryChoice
 from girlframe.engine.m3_world import ClassChange, Movement
 from girlframe.engine.m3_world_state import Goal, Gorgon
@@ -308,11 +309,48 @@ async def open_action(
                         )
                     )
 
+        modular_assets = [x for x in sheet["assets"] if x["id"] in data.get("modular", ())]
+        if modular_assets:
+            fields.append(
+                Field(
+                    "modular_assets",
+                    "Optional repair replacements — Modular Build",
+                    tuple((x["id"], entity_label(x)) for x in modular_assets),
+                    0,
+                    min(len(modular_assets), data.get("repair_limit") or len(modular_assets)),
+                    required=False,
+                )
+            )
+            for asset in modular_assets:
+                fields.extend(
+                    [
+                        Field(
+                            "modular_name:" + asset["id"],
+                            "New Asset for " + asset["name"],
+                            required=False,
+                        ),
+                        Field(
+                            "modular_description:" + asset["id"],
+                            "Describe replacement for " + asset["name"],
+                            paragraph=True,
+                            required=False,
+                        ),
+                    ]
+                )
+
         async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
             return await change(
                 current,
                 "recover",
                 RecoveryChoice(
+                    modular_replacements=tuple(
+                        Replacement(
+                            asset=asset,
+                            name=values.get("modular_name:" + asset, ""),
+                            description=values.get("modular_description:" + asset, ""),
+                        )
+                        for asset in values.get("modular_assets", ())
+                    ),
                     embrace_tag=one(values, "embrace"),
                     replace_identity=one(values, "replace"),
                     unmark_identity=one(values, "unmark"),

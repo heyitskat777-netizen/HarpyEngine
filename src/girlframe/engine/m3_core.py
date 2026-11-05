@@ -5,8 +5,8 @@ from typing import Literal
 from pydantic import Field
 
 from girlframe.engine.creation_catalog import CATALOG
-from girlframe.engine.m2 import AssetState, IdentityState, Model, PilotSheet
-from girlframe.engine.m3_assets import can_replace_at_limit, counts_toward_limit
+from girlframe.engine.m2 import AssetState, GameState, IdentityState, Model, PilotSheet
+from girlframe.engine.m3_assets import can_replace_at_limit, counts_toward_limit, frame_capacity
 from girlframe.engine.m3_girl_runtime_state import has_rule
 from girlframe.engine.m3_identity_slots import replacement_slot
 
@@ -73,6 +73,7 @@ def install(
     *,
     replace: str | None = None,
     effective_void: frozenset[str] = frozenset(),
+    state: GameState | None = None,
 ) -> Result:
     if replace in effective_void:
         raise ValueError("An active stored-Void Asset cannot be replaced at the cap")
@@ -80,8 +81,12 @@ def install(
     if any(x.id == asset.id for x in updated.assets):
         raise ValueError("Asset IDs must be distinct")
     family = [x for x in updated.assets if x.family == asset.family]
-    maximum = 4 if asset.family == "girl" else 5
+    maximum = 4 if asset.family == "girl" else frame_capacity(sheet, state)
     count = sum(counts_toward_limit(updated, x) for x in family)
+    if count > maximum and counts_toward_limit(updated, asset):
+        raise ValueError(
+            "Restore the actual extra-slot source or make legal space before adding Assets"
+        )
     if not counts_toward_limit(updated, asset):
         if replace is not None:
             raise ValueError(

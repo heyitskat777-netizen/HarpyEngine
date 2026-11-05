@@ -1,20 +1,11 @@
 # M3 remaining work — verified development snapshot
 
-Current development has source-owned Alpha/Guard/NPC Orders paths, normal paid
-JANUS Storage with threshold/reconnect/surgery consumers, and further Budget
-meeting, Candidate and Anarchy lifecycles. Focused evidence and exact remaining
-limits are at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md). Current
-registry: 142 subsets, 331 unimplemented entries, 248 adjustable clarifications;
-no independent approvals. These inventory units are not a progress percentage.
-Bounded AM Scrutinized, four native Class consumers, cleanup duty and Engage
-sabotage now have focused evidence. Next required AM dependencies include fourth-
-Limiter reset and Just Code; remaining Class and Strain systems continue as named
-units. DoctorDoctor and every new unit retain explicit broader source limits. Root integrates their APIs and completes dependency-ready Strain
-workflows. No new full regression or whole-M3 completion is claimed. Historical
-snapshots below retain their original counts and limitations.
+The latest completed workflows include bounded AM fourth-Limiter reset, Nightmare Core, Void Physiotherapist, actual native Class privilege restoration and the remaining Low Budget visitor/assassination source paths. All twelve Low Budget entries now have bounded implementation paths; their broader actor/source gaps still prevent whole-table completion. Evidence and physical/actor limits are at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md). Current registry: **151 subsets, 322 unimplemented entries, 259 adjustable clarifications**, zero independent approvals. These inventory counts are not a progress percentage.
+
+AM Just Code identity maintenance, Modular Build native Off-Duty replacement and the supported televised-fight source are now handed off, with distinct required normal outcomes verified. Their remaining printed options, independent repair producers, actor/source lifetimes and graft/retention ports stay required. Root is consolidating the sanitized source/CI checkpoint before the next dependency-ready High Budget and AM/Class assignments. No new full regression or whole-M3 completion is claimed. Historical snapshots below preserve their original counts and limitations.
 
 Execution now follows the [lower-usage development path](DEVELOPMENT_WORKFLOW.md):
-finish current JANUS, Call and Leviathan workflows, consolidate once, then select
+preserve the handed-off JANUS, Call, Leviathan and Alpha workflows, then select
 the next dependency-ready whole system. Two implementation agents are the default;
 focused normal-flow checks replace exhaustive per-change testing. Required scope
 and remaining gaps below are unchanged; historical evidence predates newer edits.
@@ -35,8 +26,8 @@ M3 is **IN_PROGRESS / RULES_SUBSET** and is not ready for full player testing.
 This snapshot separates implemented workflows from remaining agreed scope; it
 does not narrow the milestone.
 
-The current four-agent implementation map is [M3_PARALLEL_WORK.md](M3_PARALLEL_WORK.md).
-The new bounded gameplay candidate passes its full regression: **2,200 tests**,
+The historical four-agent implementation map is [M3_PARALLEL_WORK.md](M3_PARALLEL_WORK.md).
+The historical bounded candidate at `c46e9005bed43c25db46e653c69400db1a668e81` passed **2,200 tests**,
 zero failures/errors/skips. Scoped checks cover Engage/Harpy extras, Handler Tag use and notices, Enforcer
 acquisition/Snoop/retention, Mockingbird subsets, lifecycle/Handler Void, and
 Gorgon combat/collateral/world consequences. The earlier **1,983-test** full checkpoint remains historical evidence. M3 remains incomplete and work continues.
@@ -60,7 +51,7 @@ keeps real Defeat work pending. Complete Defeat, broader actor targets and cross
 consequences before closing this unit. See the current acceptance report for the
 latest candidate's checks; the 1,399-test result below is the unit-1b baseline.
 
-Current integrated candidate: **2,200 automated tests passed** (`var/m3-bounded-gameplay-full-fixed.xml`). Unit 2a remains
+Historical integrated candidate: **2,200 automated tests passed** (`var/m3-bounded-gameplay-full-fixed.xml`). Unit 2a remains
 IN_PROGRESS and does not change independent/player acceptance.
 
 The registry contains 473 source/table entries: **436 required core entries** and

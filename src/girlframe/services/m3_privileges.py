@@ -104,6 +104,8 @@ def choices(
             }[receipt.kind]
             if hasattr(receipt, "rule_id"):
                 label = TITLES.get(receipt.rule_id, label)
+                if receipt.rule_id.startswith("frame.class."):
+                    label = receipt.rule_id.rsplit(".", 1)[1].replace("-", " ").title()
                 if receipt.rule_id == "frame.class.autocrat.untouchable-frame":
                     label = "Untouchable Frame"
                 elif receipt.rule_id == "frame.class.autocrat.martyr":

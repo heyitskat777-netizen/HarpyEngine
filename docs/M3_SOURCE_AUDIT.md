@@ -3,10 +3,10 @@
 Status: IN_PROGRESS / RULES_SUBSET. This is not a complete branch audit or an
 independent rules certification. M3 is not complete.
 
-Latest focused development records 248 adjustable clarifications and 142 subset /
-331 unimplemented entries, including the 37 deferred Ancillary entries. No entry
+Latest focused development records 259 adjustable clarifications and 151 subset /
+322 unimplemented entries, including the 37 deferred Ancillary entries. No entry
 has independent verification. New evidence covers bounded Alpha/Guard/NPC Orders,
-normal JANUS Storage, bounded AM, four native Class consumers and selected Budget
+normal JANUS Storage, bounded AM reset/maintenance, seven native Class consumers and selected Budget
 lifecycles; additional cleanup/sabotage source contracts
 were added. Remaining playbooks, table branches and world interactions still
 prevent completion. The 2,200-test full regression below covers earlier source.
@@ -27,12 +27,12 @@ comparisons still need further audit. Current implementation counts come from
 `tools/check_rules_registry.py`; partial implementations retain the `subset`
 marker and no entry has independent verification.
 
-The current frozen bounded candidate updates contracts/evidence for **35 entries**
+The historical frozen bounded candidate updated contracts/evidence for **35 entries**
 and records **166 adjustable campaign clarifications**. Current inventory state is
 **104 subset entries / 369 unimplemented entries**, including 37 deferred Ancillary
 entries. All 436 required core entries still await independent review. This
 corrects stale per-feature inventory metadata; these unequal source entries are
-not a progress percentage. The new full regression passes **2,200 tests**; the 1,983-test build remains
+not a progress percentage. That historical full regression passed **2,200 tests**; the 1,983-test build remains
 historical evidence. See
 [the current implementation map](M3_PARALLEL_WORK.md) and
 [the remaining-work inventory](M3_REMAINING_WORK.md).

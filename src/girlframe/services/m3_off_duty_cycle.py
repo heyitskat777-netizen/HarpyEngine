@@ -256,6 +256,10 @@ class CycleService:
                     and json.loads(x["body_json"]).get("due_stage") == "active"
                 )
                 and not (
+                    x["kind"] == "budget_fight"
+                    and json.loads(x["body_json"]).get("due_stage") == "active"
+                )
+                and not (
                     x["kind"] == "frame_off_duty_reward"
                     and json.loads(x["body_json"]).get("due_stage") == "active"
                 )
@@ -511,7 +515,7 @@ class CycleService:
                     "Resolve the actual compulsory sheet consequences before recovery."
                 )
             trusted = Recovery(
-                **choice.model_dump(),
+                **choice.model_dump(exclude={"modular_replacements"}),
                 repair_limit=1 if shortage else None,
                 allow_duplicate_labels=bool(
                     self.store.policy.owner_m3_rulings
@@ -524,6 +528,17 @@ class CycleService:
                 if choice.embrace_tag
                 else None,
             )
+            before = state.sheets[str(viewer.user_id)]
+            if choice.modular_replacements:
+                from girlframe.services.m3_modular import entitlement
+
+                actor = ActorRef(
+                    kind="pilot",
+                    entity=str(viewer.user_id),
+                    incarnation=period.character_ids[str(viewer.user_id)],
+                )
+                if entitlement(self.game, c, state, actor) is None:
+                    raise WorkflowError("Restore the original Modular Build repair entitlement")
             updated, sheet = rules.recovery(
                 period,
                 expected,
@@ -533,6 +548,10 @@ class CycleService:
                 pending_effects=pending,
             )
             state.sheets[str(viewer.user_id)] = sheet
+            if choice.modular_replacements:
+                from girlframe.engine.m3_modular import replace_repaired
+
+                replace_repaired(state, actor, before, choice.modular_replacements, identity)
             if choice.embrace_tag:
                 ChoiceEngine(self.game).tag_resolved(state, viewer.user_id, choice.embrace_tag)
             return updated, state, [], {}
@@ -700,9 +719,25 @@ class CycleService:
                 from girlframe.engine.m3_observation import scene_roles
 
                 observation_people = scene_roles(period, state, viewer.user_id)
+            modular: tuple[str, ...] = ()
+            if (
+                viewer.user_id in period.pilots
+                and str(viewer.user_id) not in period.ended_characters
+            ):
+                from girlframe.engine.m3_modular import replaceable
+                from girlframe.services.m3_modular import entitlement
+
+                actor = ActorRef(
+                    kind="pilot",
+                    entity=str(viewer.user_id),
+                    incarnation=period.character_ids[str(viewer.user_id)],
+                )
+                if entitlement(self.game, c, state, actor) is not None:
+                    modular = replaceable(state, actor)
             return {
                 **self.periods.get(viewer, identity),
                 "game_revision": state.revision,
+                "modular": modular,
                 "handler": period.handler,
                 "participants": tuple(
                     (str(uid), state.sheets[str(uid)].callsign) for uid in state.order

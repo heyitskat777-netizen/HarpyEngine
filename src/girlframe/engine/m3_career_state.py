@@ -7,7 +7,9 @@ from pydantic import Field
 from girlframe.engine.identity import Snowflake
 from girlframe.engine.m3_actor_state import ActorRef, Model
 
-Ending = Literal["death", "execution", "imprisonment", "retirement", "reserve", "harpy"]
+Ending = Literal[
+    "death", "execution", "imprisonment", "retirement", "reserve", "harpy", "factory_reset"
+]
 
 
 class CareerArchive(Model):

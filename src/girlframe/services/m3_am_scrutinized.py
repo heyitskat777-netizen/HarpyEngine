@@ -282,7 +282,7 @@ def _finish(game: GameService, c: Connection, state: GameState, action: dict[str
     from girlframe.services.m2_choices import ChoiceEngine
 
     value = rules.discovery(state, action["data"]["am_scrutinized"]["discovery"])
-    if value.phase != "limited":
+    if value.phase not in ("limited", "reset"):
         rules.put(state, value.model_copy(update={"phase": "complete"}))
     ChoiceEngine(game).finish(c, state, action)
     game.save_action(c, action)
@@ -352,6 +352,14 @@ def apply(
             ),
         )
         action["data"]["result"]["limited"] = True
+        from girlframe.services.m3_am_reset import schedule
+
+        if schedule(state, value.id):
+            meta["phase"] = "reset_pending"
+            game.request(
+                c, action, value.handler_controller, "am_factory_reset", dict(discovery=value.id)
+            )
+            return
         meta["phase"] = "effects"
         _finish(game, c, state, action)
         return
@@ -469,6 +477,15 @@ def projection(
 
 
 def synchronize(game: GameService, c: Connection, action: dict[str, Any], event: str) -> None:
+    from girlframe.services.m3_am_reset import materialize
+
+    materialize(
+        game,
+        c,
+        load_state(c, game.store.campaign_id),
+        action["data"]["am_scrutinized"]["discovery"],
+        event,
+    )
     game.save_action(c, action)
 
 
@@ -859,6 +876,7 @@ class ScrutinyService:
                         outcome=value.outcome,
                         proposal=value.proposal,
                         report_work=value.report_work,
+                        reset_work=value.reset_work,
                         action=value.action,
                         root_action=value.root_action,
                         can_report=rules.can_report(state, value),
@@ -895,6 +913,8 @@ class ScrutinyService:
                 label=(
                     "Confirm the actual new AM discovery"
                     if value.phase == "proposed"
+                    else "Complete the actual fourth-Limiter factory reset"
+                    if value.phase == "reset_pending"
                     else "Install the actual reported AM Limiter"
                 ),
                 channel=value.cast.channel,
@@ -904,7 +924,10 @@ class ScrutinyService:
             if value.controller == viewer.user_id
             and current(state, value.actor)
             and current(state, value.discoverer)
-            and (value.phase == "proposed" or (value.report_work and not value.limiter))
+            and (
+                value.phase in ("proposed", "reset_pending")
+                or (value.report_work and not value.limiter)
+            )
         ]
 
     def source_channel(self, viewer: GuildViewer, identity: str) -> int:
@@ -1056,6 +1079,9 @@ class ScrutinyService:
                 raise WorkflowError("Recover the actual report and original required work")
             event = str(uuid4())
             changed = rules.install(state, value, selected, benefit, str(uuid4()), event)
+            from girlframe.services.m3_am_reset import materialize, schedule
+
+            reset = schedule(changed, identity)
             self.game.event(
                 c,
                 viewer.user_id,
@@ -1080,7 +1106,11 @@ class ScrutinyService:
                     body_json=json.dumps(body),
                 )
             )
-            return dict(id=identity, limiter=rules.discovery(changed, identity).limiter)
+            if reset:
+                materialize(self.game, c, changed, identity, event)
+            return dict(
+                id=identity, limiter=rules.discovery(changed, identity).limiter, reset=reset
+            )
 
         return self.store._write(
             viewer,

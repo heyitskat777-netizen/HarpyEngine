@@ -320,7 +320,7 @@ def write_self_asset(
         if replace in stored_ids(original, actor):
             raise ValueError("Do not replace an actual active stored-Void Asset at the cap")
         state.sheets[actor.entity] = install(
-            sheet, value, replace=replace, effective_void=stored_ids(state, actor)
+            sheet, value, replace=replace, effective_void=stored_ids(state, actor), state=state
         ).sheet
         if storage:
             store(

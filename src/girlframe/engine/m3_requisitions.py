@@ -57,7 +57,9 @@ def purchase(
         name=asset_name(choice),
         description=choice.description.strip(),
     )
-    result = install(sheet, asset, replace=choice.replace, effective_void=stored_ids(state, actor))
+    result = install(
+        sheet, asset, replace=choice.replace, effective_void=stored_ids(state, actor), state=state
+    )
     result.sheet.permissions -= 1
     state.sheets[actor.entity] = result.sheet
     assert view.frame_instance is not None

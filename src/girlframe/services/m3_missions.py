@@ -334,7 +334,13 @@ class MissionService:
             raise WorkflowError(str(error)) from None
 
     def offer(
-        self, viewer: GuildViewer, key: str, objective: str, players: tuple[int, ...]
+        self,
+        viewer: GuildViewer,
+        key: str,
+        objective: str,
+        players: tuple[int, ...],
+        *,
+        assassination: str | None = None,
     ) -> dict[str, Any]:
         if not objective.strip() or len(objective) > 1200:
             raise WorkflowError("Describe the mission objective in 1–1200 characters.")
@@ -369,8 +375,19 @@ class MissionService:
                     for uid in players
                 },
             )
+            if assassination is not None:
+                from girlframe.services.m3_budget_assassination import bind
+
+                self.access.authorize(c, viewer, "strain")
+                bind(c, self.store, state, assassination, mission)
             event = self.game.event(
-                c, viewer.user_id, key, "m3.mission_offered", mission_id=mission.id, revision=1
+                c,
+                viewer.user_id,
+                key,
+                "m3.mission_offered",
+                state if assassination is not None else None,
+                mission_id=mission.id,
+                revision=1,
             )
             self._save(c, mission, event)
             return {"id": mission.id, "revision": mission.revision, "phase": mission.phase}
@@ -379,7 +396,44 @@ class MissionService:
             viewer,
             key,
             "m3.mission_offered",
-            {"objective": objective, "players": list(players)},
+            {"objective": objective, "players": list(players)}
+            | ({"assassination": assassination} if assassination is not None else {}),
+            operation,
+            lambda c: HandlerService(self.store).authorize(c, viewer),
+        )
+
+    def cancel(self, viewer: GuildViewer, key: str, identity: str, expected: int) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self._handler(c, viewer)
+            mission = self._mission(c, identity)
+            rules.handler(mission, viewer.user_id, self._current_handler(c))
+            rules.revision(mission, expected)
+            if mission.phase != "offered":
+                raise WorkflowError("Only an undispatched mission offer can be cancelled")
+            updated = rules.changed(mission, phase="cancelled")
+            state = load_state(c, self.store.campaign_id)
+            from girlframe.services.m3_budget_assassination import finish
+
+            event = str(uuid4())
+            changed = finish(c, self.store, state, updated, event)
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.mission_cancelled",
+                state if changed else None,
+                event_id=event,
+                mission_id=identity,
+                revision=updated.revision,
+            )
+            self._save(c, updated, event)
+            return dict(id=identity, revision=updated.revision, phase=updated.phase)
+
+        return self._write(
+            viewer,
+            key,
+            "m3.mission_cancelled",
+            dict(id=identity, expected=expected),
             operation,
             lambda c: HandlerService(self.store).authorize(c, viewer),
         )
@@ -561,6 +615,9 @@ class MissionService:
             if type(success) is not bool:
                 raise WorkflowError("Record an explicit mission success or failure.")
             state = load_state(c, self.store.campaign_id)
+            from girlframe.services.m3_budget_assassination import before_rewards
+
+            before_rewards(c, self.store, state, mission, success)
             # These reactions must occur before taking the final reward/Status snapshot.
             reactions = []
             for uid, sheet in state.sheets.items():
@@ -615,6 +672,9 @@ class MissionService:
         self, c: Connection, viewer: GuildViewer, key: str, mission: rules.Mission, success: bool
     ) -> dict[str, Any]:
         state = load_state(c, self.store.campaign_id)
+        from girlframe.services.m3_budget_assassination import before_rewards
+
+        before_rewards(c, self.store, state, mission, success)
         rulings = self.store.policy.owner_m3_rulings
         if rulings is None:
             raise WorkflowError("M3 campaign rulings are missing.")
@@ -705,14 +765,23 @@ class MissionService:
                 resolved_consequences=frozenset(mission.consequence_ids),
                 all_other_mandatory_work_resolved=True,
             )
+            from girlframe.services.m3_budget_assassination import finish, resolve_completed
+
+            state = load_state(c, self.store.campaign_id)
+            event = str(uuid4())
+            assignment_changed = finish(c, self.store, state, updated, event)
             event = self.game.event(
                 c,
                 viewer.user_id,
                 key,
                 "m3.mission_completed",
+                state if assignment_changed else None,
+                event_id=event,
                 mission_id=identity,
                 revision=updated.revision,
             )
+            if assignment_changed:
+                resolve_completed(c, self.store, state, event)
             self._save(c, updated, event)
             return {"id": identity, "revision": updated.revision, "phase": updated.phase}
 

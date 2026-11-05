@@ -34,7 +34,9 @@ class Discovery(Model):
     proposal: str = Field(min_length=1, max_length=1200)
     confirmed_event: str | None = None
     confirmation: str = Field(default="", max_length=1200)
-    phase: Literal["proposed", "ready", "declined", "active", "limited", "complete"] = "proposed"
+    phase: Literal[
+        "proposed", "ready", "declined", "active", "limited", "complete", "reset_pending", "reset"
+    ] = "proposed"
     lower_status: bool = False
     human: bool = True
     handler: ActorRef | None = None
@@ -50,6 +52,8 @@ class Discovery(Model):
     limiter: str | None = None
     report_work: str | None = None
     refuge_grant: str | None = None
+    reset_work: str | None = None
+    factory_reset: str | None = None
 
 
 class Limiter(Model):
@@ -88,6 +92,10 @@ def put(state: GameState, value: Discovery) -> None:
 
 
 def limiters(state: GameState, actor: ActorRef) -> tuple[Limiter, ...]:
+    if actor.kind == "npc":
+        from girlframe.engine.m3_am_reset import origin
+
+        actor = origin(state, actor)
     return tuple(
         value
         for fact in state.facts
@@ -120,11 +128,14 @@ def identities(state: GameState, actor: ActorRef) -> tuple[IdentityState, ...]:
 
 
 def can_add_limiter(state: GameState, actor: ActorRef) -> bool:
+    from girlframe.engine.m3_am_reset import eligible
+
+    count = len(limiters(state, actor))
     return (
         actor.kind == "pilot"
         and state.sheets.get(actor.entity) is not None
         and state.sheets[actor.entity].girl == "AM"
-        and len(limiters(state, actor)) < 3
+        and (count < 3 or count == 3 and eligible(state, actor))
         and bool(identities(state, actor))
     )
 
@@ -224,6 +235,10 @@ def human_target(state: GameState, target: ActorRef) -> bool | None:
     if target.kind == "gorgon":
         return False
     if target.kind == "npc":
+        from girlframe.engine.m3_am_reset import body
+
+        if body(state, target) is not None:
+            return False
         known = [
             x
             for x in discoveries(state)

@@ -528,6 +528,22 @@ class InboxView(discord.ui.View):
             await open_source(
                 interaction, ScrutinyService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_am_code_source":
+            from girlframe.discord_adapter.m3_am_code import open_source as open_am_code
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_am_code import CodeService
+
+            await open_am_code(
+                interaction, CodeService(GameService(self.service.store)), item.identity
+            )
+        elif item.task == "m3_physiotherapist":
+            from girlframe.discord_adapter.m3_physiotherapist import open_request as open_therapy
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_physiotherapist import PhysiotherapistService
+
+            await open_therapy(
+                interaction, PhysiotherapistService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_martyr":
             from girlframe.discord_adapter.m3_martyr import open_memorial
             from girlframe.services.m2_game import GameService
@@ -556,6 +572,23 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_budget_director import MeetingService
 
             await open_meeting(interaction, MeetingService(self.service.store), item.identity)
+        elif item.task == "m3_budget_fight":
+            from girlframe.discord_adapter.m3_budget_fight import open_fight
+            from girlframe.services.m3_budget_fight import FightService
+
+            await open_fight(interaction, FightService(self.service.store), item.identity)
+        elif item.task == "m3_budget_assassination":
+            from girlframe.discord_adapter.m3_budget_assassination import open_assignment
+            from girlframe.services.m3_budget_assassination import AssassinationService
+
+            await open_assignment(
+                interaction, AssassinationService(self.service.store), item.identity
+            )
+        elif item.task == "m3_budget_visitor":
+            from girlframe.discord_adapter.m3_budget_visitor import open_visit
+            from girlframe.services.m3_budget_visitor import VisitorService
+
+            await open_visit(interaction, VisitorService(self.service.store), item.identity)
         elif item.task == "m3_political_function":
             from girlframe.discord_adapter.m3_political_function import open_function
             from girlframe.services.m3_political_function import FunctionService

@@ -801,6 +801,72 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_budget_fight import FightService
+
+            for fight in FightService(self.store).available(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "fight:" + fight["id"],
+                        "budget_fight",
+                        fight["id"],
+                        canon.revision,
+                        "off_duty",
+                        "Televised fight",
+                        "Two original Girls and source Handler",
+                        "pending",
+                        True,
+                        False,
+                        "Confirm only your actual participation or the real fight ending.",
+                        "Combat declarations and consequences use the actual Play scene.",
+                        "Review fight",
+                        task="m3_budget_fight",
+                    )
+                )
+
+            from girlframe.services.m3_budget_assassination import AssassinationService
+
+            for assignment in AssassinationService(self.store).available(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "assassination:" + assignment["id"],
+                        "budget_assassination",
+                        assignment["id"],
+                        canon.revision,
+                        "mission",
+                        "Political assassination assignment",
+                        "Original Handler and genuine mission",
+                        "pending",
+                        True,
+                        False,
+                        "Offer or review the actual source-bound assassination mission.",
+                        "Players own acceptance; success requires actual target death.",
+                        "Review assignment",
+                        task="m3_budget_assassination",
+                    )
+                )
+
+            from girlframe.services.m3_budget_visitor import VisitorService
+
+            for visit in VisitorService(self.store).available(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "visit:" + visit["id"],
+                        "budget_visitor",
+                        visit["id"],
+                        canon.revision,
+                        "off_duty",
+                        "Higher-up visit and reparations",
+                        "Original NPC controller or affected Girl",
+                        "pending",
+                        True,
+                        False,
+                        "Record actual demands or your own performed response.",
+                        "No automated charge or forced player dialogue.",
+                        "Review visit",
+                        task="m3_budget_visitor",
+                    )
+                )
+
             for activity in FunctionService(self.store).available(connection, viewer):
                 items.append(
                     InboxItem(
@@ -884,6 +950,52 @@ class InboxService:
                         task="m3_am_source",
                     )
                 )
+            from girlframe.services.m3_am_code import CodeService
+
+            for maintenance in CodeService(GameService(self.store))._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "am-code:" + maintenance["id"],
+                        "am_code_source",
+                        maintenance["id"],
+                        canon.revision,
+                        "plays",
+                        "AM circuit maintenance",
+                        "Original AM and actual operator",
+                        "pending" if maintenance["actionable"] else "waiting",
+                        maintenance["actionable"],
+                        False,
+                        "Give your own response to this circuit maintenance source.",
+                        "The original person, operator and actual scene remain bound.",
+                        "Review AM maintenance",
+                        task="m3_am_code_source",
+                    )
+                )
+
+            from girlframe.services.m3_physiotherapist import PhysiotherapistService
+
+            for therapy in PhysiotherapistService(GameService(self.store))._tasks(
+                connection, viewer
+            ):
+                items.append(
+                    InboxItem(
+                        "physiotherapist:" + therapy["id"],
+                        "physiotherapist",
+                        therapy["id"],
+                        canon.revision,
+                        "off_duty",
+                        "Void Physiotherapist",
+                        "Original patient and NPC controller",
+                        "pending" if therapy["actionable"] else "waiting",
+                        therapy["actionable"],
+                        False,
+                        "Review your actual relationship or therapy scene.",
+                        "Only the original participants supply their responses.",
+                        "Review physiotherapist",
+                        task="m3_physiotherapist",
+                    )
+                )
+
             from girlframe.services.m3_martyr import MartyrService
 
             for memorial in MartyrService(GameService(self.store))._tasks(connection, viewer):

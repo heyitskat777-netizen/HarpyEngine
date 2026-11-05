@@ -82,11 +82,15 @@ def awakened_source(
     ):
         raise WorkflowError("Recover the actual committed attack/capability awakening source")
     if marker.get("cause") == "own_type_play":
-        if event_row.kind in ("m3.leviathan_obsessed_tag_given", "m3.leviathan_obsession_trigger_paid"):
+        if event_row.kind in (
+            "m3.leviathan_obsessed_tag_given",
+            "m3.leviathan_obsession_trigger_paid",
+        ):
             from girlframe.services.m3_leviathan_obsession import ObsessionService
 
             if actor != dormant or marker.get("source_type") not in (
-                "gorgon-type.leviathan.leviathan-type", "gorgon-type.leviathan.succumb-to-obsession"
+                "gorgon-type.leviathan.leviathan-type",
+                "gorgon-type.leviathan.succumb-to-obsession",
             ):
                 raise WorkflowError("The awakening must belong to this actual original Type actor")
             ObsessionService(game).prove_type_event(c, proof, event, dormant)

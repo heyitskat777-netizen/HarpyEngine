@@ -328,6 +328,30 @@ class GameWorker:
                             state,
                             action_id=row["id"],
                         )
+                elif action["data"]["play"] == "am_code_maintenance":
+                    with self.game.store.transaction() as c:
+                        self.game.unpaused(c)
+                        current = self.game.action(c, row["id"])
+                        if current["state"] != "acquiring":
+                            continue
+                        self.game.request(
+                            c,
+                            current,
+                            int(row["actor_id"]),
+                            "am_code_prepare",
+                            dict(
+                                maintenance=current["data"]["am_code_source"]["maintenance"],
+                                target=current["data"]["am_code_source"]["target"],
+                            ),
+                        )
+                        self.game.save_action(c, current, state="awaiting_choices")
+                        self.game.event(
+                            c,
+                            "system:confirmed_am_code",
+                            "am.code.ready:" + row["id"],
+                            "m3.am_code_preparation_ready",
+                            action_id=row["id"],
+                        )
                 elif action["data"]["play"] == "am_discovery":
                     with self.game.store.transaction() as c:
                         self.game.unpaused(c)

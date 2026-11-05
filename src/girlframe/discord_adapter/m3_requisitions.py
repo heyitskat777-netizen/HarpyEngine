@@ -142,6 +142,24 @@ async def open_requisitions(interaction: discord.Interaction, service: Requisiti
     kicked_option = await asyncio.to_thread(kicked_puppy.menu, viewer)
     if kicked_option["available"]:
         options += (("kicked-puppy", "Kicked Puppy — native LEGION (2 Permissions)"),)
+    from girlframe.services.m3_nightmare import NightmareService
+
+    nightmare = NightmareService(service.game)
+    nightmare_option = await asyncio.to_thread(nightmare.menu, viewer)
+    if nightmare_option["available"]:
+        options += (("nightmare-core", "Nightmare Core — native Priestess (2 Permissions)"),)
+    from girlframe.services.m3_physiotherapist import PhysiotherapistService
+
+    physiotherapist = PhysiotherapistService(service.game)
+    therapy_option = await asyncio.to_thread(physiotherapist.menu, viewer)
+    if therapy_option["available"]:
+        options += (("physiotherapist", "Void Physiotherapist — native Priestess (2 Permissions)"),)
+    from girlframe.services.m3_modular import ModularService
+
+    modular = ModularService(service.game)
+    modular_option = await asyncio.to_thread(modular.menu, viewer)
+    if modular_option["available"]:
+        options += (("modular", "Modular Build — native LEGION (2 Permissions)"),)
     from girlframe.services.m3_frame_swap import FrameSwapService
     from girlframe.services.m3_personal_firearm import PersonalFirearmService
 
@@ -182,6 +200,21 @@ async def open_requisitions(interaction: discord.Interaction, service: Requisiti
     )
 
     async def choose(current: discord.Interaction, token: str) -> None:
+        if token == "modular":
+            from girlframe.discord_adapter.m3_modular import open_purchase as open_modular
+
+            await open_modular(current, modular)
+            return
+        if token == "physiotherapist":
+            from girlframe.discord_adapter.m3_physiotherapist import open_purchase as open_therapy
+
+            await open_therapy(current, physiotherapist)
+            return
+        if token == "nightmare-core":
+            from girlframe.discord_adapter.m3_nightmare import open_purchase as open_nightmare
+
+            await open_nightmare(current, nightmare)
+            return
         if token == "kicked-puppy":
             from girlframe.discord_adapter.m3_kicked_puppy import open_purchase as open_kicked_puppy
 
@@ -292,7 +325,15 @@ async def open_requisitions(interaction: discord.Interaction, service: Requisiti
         ) + (("custom", "Write my own ordinary Frame Asset"),)
 
         async def select_asset(selected: discord.Interaction, source: str) -> None:
-            at_limit = sum(x["counts_toward_limit"] for x in data["frame_assets"]) >= 5
+            count = sum(x["counts_toward_limit"] for x in data["frame_assets"])
+            if count > data["frame_capacity"]:
+                await reply(
+                    selected,
+                    "Restore your original extra-slot entitlement or make legal "
+                    "space before adding another Frame Asset. Existing Assets remain intact.",
+                )
+                return
+            at_limit = count >= data["frame_capacity"]
             replaceable = [x for x in data["frame_assets"] if x["can_replace_at_limit"]]
             if at_limit and not replaceable:
                 await reply(

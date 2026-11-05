@@ -4126,6 +4126,186 @@
       "revision": 1,
       "implementation_note": "Implemented only for the named supported normal workflow with original actors, source proof and owned native controls. Missing actor, lifetime, graft and other source ports remain gaps in reports/M3_ACCEPTANCE.md; no independent or release approval.",
       "change_impact": "Future Asset-use ports must intercept at their real declaration point. Other battle uses stay gated before RNG until a true continuation exists; original source identities and receipts must survive revisions."
+    },
+    {
+      "id": "nightmare-core-no-heat-specific-basis",
+      "summary": "For actual paid native Nightmare Core Keep Your Head, roll the actual effective owned Void Asset count instead of Heat and spend zero Heat, including while holding at least five. This mandatory specific basis is distinct from ordinary spend-all-at-five. Freeze the actual source and count before the single roll and record actual cost zero in its receipt.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 10, 93",
+      "authority": "delegated_recommendation",
+      "rationale": "The specific alternative expressly replaces Heat spending, so requiring that cost as well would defeat the stated rule.",
+      "alternatives": [
+        "Spend all held Heat at five despite the printed instead-of-spending-Heat clause, or make the named basis optional."
+      ],
+      "policy_key": "nightmare_core_no_heat_specific_basis",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Named supported original actor/source only. Missing physical, role, graft, retention and lifecycle ports remain implementation gaps; no independent or production approval.",
+      "change_impact": "Preserves the specific printed exception, actual resource accounting and one saved RNG receipt without adding or refunding Heat."
+    },
+    {
+      "id": "nightmare-core-distinct-established-quality",
+      "summary": "Establish terrifying as a distinct automatic positive quality for the actual source-owned Keep. Preserve the ordinary positive/negative trait quota; terrifying does not replace a selected positive, become an available negative, or silently mean vicious. The actual Handler still judges whether the overall action is enough while accepting that the character is terrifying enough.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 21, 93",
+      "authority": "delegated_recommendation",
+      "rationale": "The guarantee names a separate quality without changing ordinary trait quotas or giving up the actual Handler ruling.",
+      "alternatives": [
+        "Map terrifying to vicious, consume an ordinary selected trait, or automatically mark every intended outcome successful."
+      ],
+      "policy_key": "nightmare_core_distinct_established_quality",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Named supported original actor/source only. Missing physical, role, graft, retention and lifecycle ports remain implementation gaps; no independent or production approval.",
+      "change_impact": "Implements the printed guaranteed quality without manufacturing a separate trait quota, extra question, or forced overall success."
+    },
+    {
+      "id": "nightmare-core-effective-owned-void-count",
+      "summary": "Count all effective Void Assets actually owned by this original Pilot at declaration and validate that count/source again before RNG, using the existing canonical ActorView resource union and proved active overlays read-only. Do not create a separate Nightmare Core actor or additional Void Assets.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 93",
+      "authority": "delegated_recommendation",
+      "rationale": "Actual ownership and effective source lifetimes already have canonical authority; counting through it avoids copying or losing real resources.",
+      "alternatives": [
+        "Count only permanently void baseline sheet Assets, exclude actual held resources/active proved stored alterations, or copy resource records into a new Core."
+      ],
+      "policy_key": "nightmare_core_effective_owned_void_count",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Named supported original actor/source only. Missing physical, role, graft, retention and lifecycle ports remain implementation gaps; no independent or production approval.",
+      "change_impact": "Uses the existing ownership and overlay lifetime authority without mutating Assets, inventing points or changing threshold lifecycles."
+    },
+    {
+      "id": "am-factory-reset-preserves-unmentioned-person-state",
+      "summary": "End original player-character authority and continue the same actual person as an NPC. Preserve the existing vessel, physical hardware/damage, four actual default Limited Identities with their real marks, Tags, genuine relationships and immutable history. Do not invent memory erasure, healing, a new body, new equipment or NPC Heat.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF56 / printed54: all four Identities Limited, reset and become NPC",
+      "authority": "delegated_recommendation",
+      "rationale": "The clause changes control/rules status after four already reverted Identities but does not specify any further resource erasure or physical transformation.",
+      "alternatives": [
+        "Erase memories/Tags/Bonds or heal hardware on reset",
+        "Treat it as death plus an unrelated replacement NPC"
+      ],
+      "policy_key": "am_factory_reset_preserves_unmentioned_person_state",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Named supported original actor/source only. Missing physical, role, graft, retention and lifecycle ports remain implementation gaps; no independent or production approval.",
+      "change_impact": "Keep exact pre-ending archive, original placement/vessel, source-only reset record and original events. Future printed clarification can define later changes explicitly without rewriting completed history."
+    },
+    {
+      "id": "am-factory-reset-actual-npc-claim",
+      "summary": "The current original source Handler explicitly takes the resulting NPC under their own human control and chooses a factual printed NPC role. The demonstrated normal choice is Ex-Pilot. A different human must use actual recipient-owned acceptance before assignment; that alternative is not exposed by this bounded endpoint.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF56 / printed54, ordinary NPC role/control structures",
+      "authority": "delegated_recommendation",
+      "rationale": "The reset clause does not choose a human controller or NPC playbook. Explicit actual claim preserves role ownership and avoids giving the former player\u2019s current/future PC authority over this NPC.",
+      "alternatives": [
+        "Silently give another human the NPC",
+        "Automatically manufacture a new PC incarnation"
+      ],
+      "policy_key": "am_factory_reset_actual_npc_claim",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Named supported original actor/source only. Missing physical, role, graft, retention and lifecycle ports remain implementation gaps; no independent or production approval.",
+      "change_impact": "Actual Handler role/account and resulting NPC identity are frozen in the reset event; a future recipient-owned controller transfer can use the existing NPC role acceptance machinery."
+    },
+    {
+      "id": "physiotherapist-owned-starting-npc-bond",
+      "summary": "Native acquisition costs two Permissions and selects an existing actual living ordinary NPC with a current campaign human controller. The controller separately confirms this original NPC relationship and Void-leakage expertise. Establish a Personal Bond while preserving any existing deeper Bond; do not fabricate an NPC, assign another human or infer their acceptance.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 93",
+      "authority": "delegated_recommendation",
+      "rationale": "A starting NPC Bond needs a genuine fictional person and real human role ownership. Existing deeper relationships are not demoted by receiving a Personal Bond.",
+      "alternatives": [
+        "Automatically create an NPC and assign the Handler, or grant the new Bond without the real NPC controller response."
+      ],
+      "policy_key": "physiotherapist_owned_starting_npc_bond",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Supported native original Pilot/ordinary NPC, actual source-owned Bond and scene. Other actor, graft, overlay and carried-resource ports remain gaps; no release approval.",
+      "change_impact": "The printed NPC Bond is playable through existing source identities and the canonical Bond graph, with genuine human role ownership."
+    },
+    {
+      "id": "physiotherapist-owned-scene-treatment",
+      "summary": "The original purchasing Girl records a real active-Off-Duty scene with the actual NPC in the current source cast and may request removal from one eligible owned permanent-Void Asset or decline removal. The actual NPC controller confirms their attendance, authors the NPC-given Tag and records completed treatment; then remove the requested Void without destroying the Asset or repairing damage. Each distinct source-owned treatment scene has its own Off-Duty-scoped work; no automatic additional per-period quota is imposed.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 93",
+      "authority": "delegated_recommendation",
+      "rationale": "The scene is the printed trigger. Distinct scenes require their own real source; no printed per-period quota or automatic attendance is supplied.",
+      "alternatives": [
+        "Automatically issue a Tag/removal on scene declaration, infer attendance from a shared controller account, or impose an unprinted once-per-period cap."
+      ],
+      "policy_key": "physiotherapist_owned_scene_treatment",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Supported native original Pilot/ordinary NPC, actual source-owned Bond and scene. Other actor, graft, overlay and carried-resource ports remain gaps; no release approval.",
+      "change_impact": "Preserves the mandatory NPC-given Tag, optional actual treatment, original humans and saved scene while preventing silent consent or Asset destruction. Existing work-context immutability is preserved by separate scene work."
+    },
+    {
+      "id": "am-just-code-source-rewrite-keeps-marks",
+      "summary": "A genuine identity rewrite creates actual new Identity IDs/labels in their original slots, preserving current marks and actual sedation slot locks. Limited/protected/Paired/source-locked identities cannot be rewritten by this bounded source. Record original-to-new ID mapping and retain immutable prior history.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF56 / printed54 Just Code Identity replacement option",
+      "authority": "delegated_recommendation",
+      "rationale": "The option replaces Identities but does not say to grant recovery or bypass another printed restriction. Preserving marks prevents repeated circuit maintenance from manufacturing free Heat recovery.",
+      "alternatives": [
+        "New identities automatically unmarked",
+        "Reuse old ID while silently renaming"
+      ],
+      "policy_key": "am_just_code_source_rewrite_keeps_marks",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Named supported source workflows only. Remaining role, source, mechanical-Order, graft/retention and independent-repair ports are implementation gaps, not waivers of required rules.",
+      "change_impact": "Original marks, slots, actual replacement event and ID map remain auditable. Future explicit campaign clarification may choose another mark rule without rewriting history."
+    },
+    {
+      "id": "am-just-code-known-high-immediate-status",
+      "summary": "After actual final high tier, lower current AM Status immediately when the exact original operator already genuinely knew from a proved prior source; then retain their actual rewrite/no-effect choice. No separate Scrutinized roll is fabricated.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF56 / printed54 Just Code high already-known branch",
+      "authority": "delegated_recommendation",
+      "rationale": "Both high consequences must happen, and choosing zero edits does not waive the printed Status loss. New/unknown operator realization needs its own source-bound Scrutinized consequence and is unavailable before RNG here.",
+      "alternatives": [
+        "Delay or waive Status loss if no edit chosen",
+        "Roll a new unprinted Scrutinized result"
+      ],
+      "policy_key": "am_just_code_known_high_immediate_status",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Named supported source workflows only. Remaining role, source, mechanical-Order, graft/retention and independent-repair ports are implementation gaps, not waivers of required rules.",
+      "change_impact": "Known-discovery source, raw receipt, actual Status order and operator choice remain separate audited facts."
+    },
+    {
+      "id": "modular-build-source-capacity-and-suspension",
+      "summary": "An actual current native LEGION Modular Build receipt adds one counted Frame slot (six rather than five) and grants its one authored Frame Asset at actual acquisition. Source-intrinsic free Assets retain their existing exclusion. Temporary suspension returns the entitlement limit to five while preserving all actual physical Assets; when already above that limit, further counted installations fail until original restoration or actual legal space. Restoring the original receipt restores six without another Asset or charge.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 15, 94",
+      "authority": "delegated_recommendation",
+      "rationale": "The printed acquisition grants an extra slot and physical Asset once. Temporary suspension withdraws its entitlement without an unprinted physical destruction or repeated acquisition.",
+      "alternatives": [
+        "Destroy or automatically confiscate extra physical Assets on suspension, keep the extra slot active while suspended, or grant a new Asset on every restore."
+      ],
+      "policy_key": "modular_build_source_capacity_and_suspension",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Named supported source workflows only. Remaining role, source, mechanical-Order, graft/retention and independent-repair ports are implementation gaps, not waivers of required rules.",
+      "change_impact": "Physical state and original receipt remain truthful without duplicate benefit, hidden extra-capacity authority or invented Asset deletion."
+    },
+    {
+      "id": "modular-build-damaged-void-repair-replacement",
+      "summary": "An actual source-legal Modular repair may replace a damaged permanent-Void Frame Asset with a new ordinary Frame Asset in the same slot. PDF94 imposes no non-Void restriction; PDF15 restricts replacement when gaining above the maximum, which is a distinct trigger. The actual repaired Asset must be selected within the existing repair quota. No completed transformation is undone, and actual stored-point hosts, intrinsic hardware and borrowed Doctor loan hardware remain outside this replacement port.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 15, 94",
+      "authority": "delegated_recommendation",
+      "rationale": "The repair alternative has no non-Void restriction. Applying the separate above-maximum gain restriction would add a condition to a distinct source trigger.",
+      "alternatives": [
+        "Restrict all Modular repair replacements to non-Void Assets by extending the above-maximum gain rule to this separate printed trigger."
+      ],
+      "policy_key": "modular_build_damaged_void_repair_replacement",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Named supported source workflows only. Remaining role, source, mechanical-Order, graft/retention and independent-repair ports are implementation gaps, not waivers of required rules.",
+      "change_impact": "The specific printed repair alternative works for both ordinary and permanent-Void damaged Frame Assets while retaining real repair opportunity/quota, conditional sources and exact original ownership. Requires printed-rule clarity review."
     }
   ],
   "entries": [
@@ -5096,14 +5276,16 @@
         "heading": "All Out Assault"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_battle_pipeline.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -5205,14 +5387,16 @@
         "heading": "Go For the Core"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_battle_pipeline.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -6561,7 +6745,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_am_scrutinized.py"
+        "tests/rules/test_am_scrutinized.py",
+        "tests/rules/test_am_factory_reset.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -6578,14 +6763,16 @@
         "heading": "Just Code"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_am_code.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -9612,7 +9799,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_martyr.py"
+        "tests/rules/test_martyr.py",
+        "tests/rules/test_class_privileges.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -9672,7 +9860,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_untouchable.py"
+        "tests/rules/test_untouchable.py",
+        "tests/rules/test_class_privileges.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -9724,14 +9913,17 @@
         "heading": "Nightmare Core"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_nightmare.py",
+        "tests/rules/test_class_privileges.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "aliases": [
@@ -9782,14 +9974,16 @@
         "heading": "Void Physiotherapist"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_physiotherapist.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "aliases": [
@@ -9819,7 +10013,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_dampener.py"
+        "tests/rules/test_dampener.py",
+        "tests/rules/test_class_privileges.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -9879,7 +10074,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_kicked_puppy.py"
+        "tests/rules/test_kicked_puppy.py",
+        "tests/rules/test_class_privileges.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -9902,14 +10098,16 @@
         "heading": "Modular Build"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_modular.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "aliases": [
@@ -13920,14 +14118,45 @@
         "heading": "Budget low: die 5, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Actual Low Budget5 column1 source",
+        "actor_type": "Original Handler, actual ordinary NPC controller and original native Pilot cohort",
+        "pre_roll_sources": [
+          "Existing genuine claimed NPC at known visit location",
+          "Factual superior relationship and frozen source people"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "source": [
+            "NPC controller authors observed co-present offense and exact reparation demand",
+            "Original Girl reports actual response; NPC controller confirms settlement",
+            "Actual visit ending preserves unsettled demands"
+          ]
+        },
+        "choice_ownership": "Actual NPC controller owns demands/settlement/ending; original affected Girl owns her actual response",
+        "target_policy": "Original current bodies and source roles; no inferred dialogue, movement or automatic payment",
+        "post_roll_effects": [
+          "Durable actual demand/response/settlement facts",
+          "Visit work resolves only on actual ending; unsettled demands stay visible"
+        ],
+        "mandatory_followups": [
+          "Actual visit ending; no unprinted settlement deadline"
+        ],
+        "handler_or_gm_intervention": "Human factual relationship, offense, reparations and observed settlement; any resource consequence requires its real existing command/source",
+        "test_fixture_ids": [
+          "tests/rules/test_budget_visitor.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_budget_visitor.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -13970,14 +14199,45 @@
         "heading": "Budget low: die 6, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Actual Low Budget6 column1 selection",
+        "actor_type": "Original Handler/current native Cadre and actual ordinary NPC politician",
+        "pre_roll_sources": [
+          "Actual source NPC/political context and original CIDs",
+          "Real mission offer/acceptance/dispatch and actual NPC death source"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "source": [
+            "Schedule source-owned assignment without blocking current OffDuty",
+            "Genuine mission with actual target objective; players own acceptance",
+            "Actual target death before rewards and genuine successful mission completion"
+          ]
+        },
+        "choice_ownership": "Original Handler assigns/advances; each invited player accepts or declines; actual damage-source owner chooses the NPC consequence",
+        "target_policy": "Same original NPC/current Cadre; success requires genuine implemented NPC-damage death after real dispatch",
+        "post_roll_effects": [
+          "Preserve actual mission attempts, rewards/consequences and target death",
+          "Undispatched cancellation or completed failure preserves assignment for an actual later attempt"
+        ],
+        "mandatory_followups": [
+          "Actual mission and real target-death provenance before successful assignment closure"
+        ],
+        "handler_or_gm_intervention": "Factual political context and actual printed damage choices; no automatic murder, movement or player dialogue. Other death/source/actor ports remain unavailable",
+        "test_fixture_ids": [
+          "tests/rules/test_budget_assassination.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_budget_assassination.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -14198,14 +14458,45 @@
         "heading": "Budget high: die 4, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Actual selected High Budget4 column1 during this OffDuty",
+        "actor_type": "Two original native Pilot fighters and original Handler",
+        "pre_roll_sources": [
+          "Actual scene/cast/co-present bodies and source broadcast setup",
+          "Both original humans confirm their own participation",
+          "Completed opposing root AllOut after actual OffDuty activation and attendance"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "source": [
+            "Actual participation and existing real combat",
+            "Original Handler confirms actual televised ending"
+          ]
+        },
+        "choice_ownership": "Girls own participation, declarations and ordinary combat responses; original Handler records factual setup/ending",
+        "target_policy": "Original pair/scene/people; known immutable combat receipt; no generated player combat or mandatory two-roll quota",
+        "post_roll_effects": [
+          "Existing combat effects and known receipt are preserved",
+          "Specific active-stage work allows activation but blocks finish until actual supported ending"
+        ],
+        "mandatory_followups": [
+          "All genuine combat consequences complete before source ending"
+        ],
+        "handler_or_gm_intervention": "Handler records actual fictional broadcast/end, not a real-world stream. Current ending port is rootAllOut/currentnativepair; Core/counter/Engage-only/endedactor source ports remain required gaps.",
+        "test_fixture_ids": [
+          "tests/rules/test_budget_fight.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_budget_fight.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

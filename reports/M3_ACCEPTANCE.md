@@ -1,5 +1,65 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Integrated source handoff — 2026-11-05
+
+Current completed source is retained in reproducible ignored snapshot `var/m3-integrated-freeze/manifest.json` over base `9f2dcf96e970899760e5f64c81b67edc89e5ad89`. It includes actual changed-file bytes and hashes. Source-only checkpointing does not deploy gameplay. M3 remains **IN_PROGRESS / RULES_SUBSET**.
+
+| Named workflow | Supported boundary and focused evidence |
+|---|---|
+| AM Just Code | Existing-knowing ordinary NPC/operator and original AM, actual identity maintenance. Distinct mid/high/low traces pass **3/7.46s** (`var/m3-am-code-normal.xml`): actual replacement preserves marks/slots, high applies real Status loss, low requires a predeclared spoken Order and original-AM matching performance with no Disobey bypass. Global Inbox confirmation preserves the original scene when opened elsewhere. Backups, memory erasure, new operators, body/vessel and broader mechanical Orders remain required gaps. |
+| Modular Build | Actual native LEGION paid slot/Asset, real source suspension/restoration without deleting or duplicating physical Assets, actual Off-Duty repair replacement. Ordinary and permanent-Void alternatives pass **2/5.40s** (`var/m3-modular-native-normal.xml`). Other instant/quoted repair producers and graft/retention/other actors remain unfinished. Existing Doctor Wings capacity/real-return compatibility passes **1/2.03s** (`var/m3-modular-wings-cap-compatibility.xml`). |
+| Native battle entry | The actual existing All Out Assault and Go For the Core paths are now in the roll catalog; reused normal helpers no longer bypass it. Both actual mid-entry flows pass **2/3.06s** (`var/m3-native-battle-entry-normal.xml`). This repairs routing without inventing release approval or claiming complete combat/actor coverage. |
+| High Budget televised fight | Two original humans confirm participation in an actual proved scene; real Off-Duty activates with this active-stage work pending. A genuine opposing All Out Assault and all its immediate consequences complete, then the original Handler records the actual televised ending. No invented two-roll quota. One actual source/native/activation/combat/damage/lock/ending trace passes **1/3.57s** (`var/m3-budget-fight-normal.xml`). Other fight-Play/ended-actor source ports remain required gaps. |
+
+Complete changed-file static scope is **73 Python files**, including all changed shared modules and **13 test files**: Ruff passes; four formatting findings were corrected and all 73 now pass formatting; mypy passes all **60 changed production modules**. No tests or assertions were removed to fix CI. Publishable-tree verification found **zero findings across 982 files**, preserving all 40 original manifest entries. These focused selections overlap; they are not summed into a milestone score and do not replace the final full regression.
+
+Four further adjustable AM/Modular clarifications were recorded. Current registry validates at **259 clarifications, 151 subsets, 322 unimplemented entries**, including 37 deferred Ancillary entries; zero independent approvals. Basic battle entries now accurately record bounded implementation rather than pretending the underlying tested paths do not exist. Remaining required behaviors stay in the backlog. CI's explicit selection is updated for this integration handoff; its actual result belongs to its checked commit, not these older local runs.
+
+Bot remains intentionally off. No live data migration, restart, deployment, environment publication, recovered-engine write or AI/M4 work occurred. Independent review, human acceptance and final M3 completion remain pending. Historical snapshots below preserve their original scope and results.
+
+## Workflow handoff reconciliation — 2026-11-05
+
+The owner-supplied handoff references historical `12a08c2`; current branch `codex/m3-rules` remains based on sanitized checkpoint `9f2dcf96e970899760e5f64c81b67edc89e5ad89`, with newer work preserved. Current local workflow/static files and their SHA256 hashes are recorded in ignored reproducible snapshot `var/m3-workflow-reconciliation.json`. This reconciliation does not certify the newer gameplay candidate.
+
+Remote CI was checked against that exact pushed source. Historical run [42076956058](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42076956058) failed lint with twelve findings; latest applicable run [42104056576](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42104056576) still failed lint with seven findings and skipped gameplay tests. Five earlier findings were already repaired. The remaining long line in Dormant and six import-order findings across three Call/Mockingbird tests are now fixed locally without changing behavior or assertions. Ruff/format pass those four files; mypy passes the changed Dormant source. This is local repair evidence, **not remote CI success**.
+
+The existing execution policy and AGENTS now explicitly require distinct printed normal result branches and immediate consequences, complete changed shared/test static scope, two implementation agents, exact source evidence and compact handoffs. Historical four-agent/next-action notes are labelled as historical; completed Alpha/Storage and newer work are preserved.
+
+CI keeps the `offline-foundation` job and read-only token permission. Normal gameplay changes use the explicit `.github/ci-tests.txt` selection and changed-file static checks, including shared modules/tests. Ordinary documentation skips gameplay tests; runtime rules/configuration/JSON contracts/deletions/renames do not. Full regression/global static remain explicitly runnable with `full_suite=true` for the required final M3 candidate; local final verification remains available before dispatch exists on the default branch. Planning, runtime-registry and publishable/manifest checks remain, with no required-branch or release-policy changes. Concurrency cancels obsolete same-branch push/PR runs.
+
+Local verification: actual workflow YAML/readonly permission/job identity, every shell script and embedded Python syntax, five docs/runtime scope cases and explicit paths passed (`python var/verify_m3_ci_policy.py`). Seven manifest paths collect **13 tests in 1.39s**; collection is not execution. Registry validation passes with subset coverage; original planning verification passes 34 files/86 planned cases/four schemas/four synthetic fixtures. No full suite, repeated gameplay regression, deployment, live migration, restart or environment publication was performed.
+
+## Low Budget assassination assignment — 2026-11-05
+
+Actual Low Budget6.1 now schedules an original-person campaign assignment without blocking the current Off-Duty. Its native control offers a genuine mission after that period ends. Players own acceptance/decline; undispatched offers can be cancelled and reoffered without losing the source or attempt history. Success cannot be claimed while the target is alive: the current supported proof is actual NPC-damage death after the genuine dispatch. Ordinary mission rewards, owned consequences and successful completion then resolve the source assignment once.
+
+One complete normal trace passes in **3.26s** (`var/m3-budget-assassination-normal.xml`), including actual Off-Duty completion, decline/cancel/reoffer, target-alive denial with unchanged state, real target death and actual mission closure. Existing native mission offer/acceptance/dispatch compatibility passes **1/1.38s** (`var/m3-mission-native-compatibility.xml`). Scoped Ruff and mypy10 pass across new/shared interfaces. No new ruling or full regression was needed.
+
+All twelve Low Budget inventory entries now have bounded implementation paths and named evidence. This does **not** close their broader actor/source dependencies: ordinary/native scopes, original-character recovery, other NPC-death producers and the earlier documented cleanup/sabotage ports remain required gaps. Registry: **255 clarifications, 146 subsets, 327 unimplemented entries**, zero independent approvals; counts are not a milestone percentage. Bot remains off, with no live or environment changes.
+
+## Void Physiotherapist and higher-up visits — 2026-11-05
+
+Two further supported source workflows have focused expected-path evidence:
+
+- **Void Physiotherapist:** actual paid native Priestess acquisition, genuine NPC controller Bond acceptance, real Off-Duty scene/cast, actual NPC-given Tag and nondestructive permanent-Void removal. The global Inbox completes treatment from another channel using the original scene. One trace passes in 2.14s (`var/m3-physiotherapist-native-normal.xml`); scoped Ruff5/mypy4 pass. Conditional Storage/active Living Battery/sole carried-object treatment and graft/retained/broader actors remain unfinished. Original campaign Bond work and separate Off-Duty scene work retain their real scopes.
+- **Low Budget higher-up visit:** actual source NPC/controller, observed co-present offense, exact demand, original Girl's actual response and NPC-owned settlement. Ending the visit preserves unsettled demands and imposes no invented deadline or price. Full private records are readable through Discord controls. One trace passes in 2.04s (`var/m3-budget-visitor-normal.xml`); scoped Ruff9/mypy8 pass. Global Inbox mypy2 passes after an import alias correction. Other actors/source ports remain gaps; actual resource consequences use their existing commands.
+
+Two adjustable Physiotherapist clarifications were recorded. Registry: **255 clarifications, 145 subsets, 328 unimplemented entries, zero independent approvals**. These are inventory counts, not progress percentages. No new full regression or whole-M3 completion is claimed; bot, deployment and environment publication remain off.
+
+## AM reset, Nightmare Core and Class restoration — 2026-11-05
+
+These source-only workflows extend sanitized checkpoint `9f2dcf96e970899760e5f64c81b67edc89e5ad89` (pushed to the development branch with exact remote SHA verified). M3 remains **RULES_SUBSET**; the bot remains off.
+
+| Workflow | Focused evidence |
+|---|---|
+| AM fourth-Limiter reset | Four actual low results lead to original Handler-owned NPC claim, same person/vessel/cell/hardware/marked Limited Identities, original held-object custody and parked Frame. Original PC authority ends and the held source/root/chat lock completes. One normal trace passes in 5.00s (`var/m3-am-factory-reset-normal.xml`); Ruff9/mypy9 pass. |
+| Nightmare Core | Actual paid native Priestess Keep uses effective owned Void Asset count, spends zero Heat even at five, preserves ordinary trait quotas and adds the distinct guaranteed terrifying quality. Actual Handler ruling and source Play finish with one receipt. One trace passes in 2.47s (`var/m3-nightmare-native-normal.xml`); Ruff12/mypy11 pass. |
+| Native Class privilege restoration | Real mission Punishment suspends the exact paid native Class receipt; existing purchase validation blocks duplicate acquisition without charge or state change. Original inflictor confirms the condition, then the original owner restores the same receipt without acquisition effects. One trace passes in 1.74s (`var/m3-class-privileges-normal.xml`); scoped Ruff/format and mypy2 pass. |
+
+AM reset currently requires a free, healthy, known outside-Frame body without active custody/escort/grasp/neural/passenger conflicts. Other physical contexts, assigning another NPC controller, Just Code and broader AM actors remain required gaps. Nothing invents memory erasure, healing, movement, equipment or NPC Heat. Nightmare and Class restoration cover the original native Pilot/Class/Frame; graft/retained and broader actors remain unfinished. No whole-playbook completion or new full regression is claimed.
+
+Five adjustable source clarifications were recorded with rationale, alternatives and change impact: **253 clarifications, 143 subsets, 330 unimplemented inventory entries, zero independent approvals**. Inventory counts are not a completion percentage. No release approval, player acceptance, live migration, restart or environment publication occurred. Historical snapshots below preserve their original boundaries.
+
 ## Additional normal gameplay workflows — 2026-11-05
 
 Sanitized source checkpoint `d2a403f9ac6300155fa50c1ed8d52dd6eb8a5b8f` was pushed

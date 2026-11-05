@@ -34,6 +34,8 @@ SUPPORTED = frozenset(
         "strain.rebellion.low.2.2",
         "strain.rebellion.low.6.1",
         "strain.budget.low.5.2",
+        "strain.budget.low.5.1",
+        "strain.budget.low.6.1",
         "strain.budget.low.1.1",
         "strain.budget.low.1.2",
         "strain.budget.low.2.1",
@@ -46,6 +48,7 @@ SUPPORTED = frozenset(
         "strain.budget.high.2.2",
         "strain.budget.high.1.1",
         "strain.budget.high.4.2",
+        "strain.budget.high.4.1",
         "strain.budget.high.3.2",
         "strain.budget.high.5.1",
     }
@@ -80,6 +83,8 @@ class Choice(Model):
         default=None, exclude_if=lambda value: value is None
     )
     planned_assets: tuple[Pin, ...] = Field(default=(), exclude_if=lambda value: not value)
+    fighters: tuple[int, ...] = Field(default=(), exclude_if=lambda value: not value)
+    fight_channel: int | None = Field(default=None, ge=1, exclude_if=lambda value: value is None)
 
 
 def fields(choice: Choice, allowed: set[str]) -> None:
@@ -172,6 +177,48 @@ def apply(
             choice.account,
             cleanup_index,
             cleanup_rng,
+        )
+        world = state.world
+    elif rule == "strain.budget.low.6.1":
+        from girlframe.engine.m3_budget_assassination import create as create_assignment
+
+        fields(choice, {"target"})
+        if period_id is None or source_event is None or choice.target is None:
+            raise ValueError("Choose the actual NPC politician and source period")
+        state = create_assignment(
+            state, source_work, period_id, source_event, choice.target, choice.account
+        )
+        world = state.world
+    elif rule == "strain.budget.low.5.1":
+        from girlframe.engine.m3_budget_visitor import create as create_visit
+
+        fields(choice, {"target"})
+        if period_id is None or source_event is None or choice.target is None:
+            raise ValueError("Choose the actual higher-up for this source period")
+        state = create_visit(
+            state, source_work, period_id, source_event, choice.target, choice.account
+        )
+        world = state.world
+    elif rule == "strain.budget.high.4.1":
+        from girlframe.engine.m3_budget_fight import create as create_fight
+
+        fields(choice, {"target", "fighters", "fight_channel"})
+        if (
+            period_id is None
+            or source_event is None
+            or choice.target is None
+            or choice.fight_channel is None
+        ):
+            raise ValueError("Choose the original fight scene and source period")
+        state = create_fight(
+            state,
+            source_work,
+            period_id,
+            source_event,
+            choice.target,
+            choice.fight_channel,
+            choice.fighters,
+            choice.account,
         )
         world = state.world
     elif rule == "strain.budget.high.4.2":

@@ -238,15 +238,16 @@ async def open_alpha_choice(
         from girlframe.services.m3_dampener import DampenerService
 
         dampener_controls = await dampener_fields(interaction, DampenerService(game))
+        from girlframe.discord_adapter.m3_nightmare import keep_heat, keep_info
+        from girlframe.services.m3_nightmare import NightmareService
+
+        nightmare = await keep_info(interaction, NightmareService(game))
         fields = [
             Field("account", "Your genuine counter under this pressure", paragraph=True),
             Field(
                 "heat",
                 "Heat to spend",
-                tuple(
-                    (str(n), str(n))
-                    for n in ([sheet["heat"]] if sheet["heat"] >= 5 else range(sheet["heat"] + 1))
-                ),
+                tuple((str(n), str(n)) for n in keep_heat(nightmare, sheet["heat"])),
             ),
         ] + dampener_controls
 

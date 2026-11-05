@@ -14,6 +14,7 @@ from girlframe.engine.creation_catalog import CATALOG
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, ActorView
 from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_assets import frame_capacity
 from girlframe.engine.m3_requisition_state import Installation, Receipt
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
@@ -144,6 +145,7 @@ class RequisitionService:
                 "actor": actor.ref.model_dump(mode="json"),
                 "source_sha256": actor.source_sha256,
                 "frame_instance": actor.frame_instance,
+                "frame_capacity": frame_capacity(state.sheets[actor.ref.entity], state),
                 "permissions": state.sheets[actor.ref.entity].permissions,
                 "frame_assets": [
                     x.model_dump(mode="json") for x in actor.assets if x.family == "frame"

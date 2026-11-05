@@ -9,6 +9,32 @@ from girlframe.engine.m3_requisition_state import FrameRuleReceipt, Requisition,
 KIND = "revoked_requisition"
 
 
+def native_class_receipt(state: GameState, receipt: FrameRuleReceipt) -> bool:
+    from girlframe.engine.frame_classes import frame_class
+
+    parts = receipt.rule_id.split(".")
+    sheet = state.sheets.get(receipt.actor.entity)
+    if (
+        receipt.actor.kind != "pilot"
+        or receipt.kind != "ability_unlock"
+        or len(parts) != 4
+        or parts[:2] != ["frame", "class"]
+        or not parts[3]
+        or sheet is None
+        or sheet.character_id != receipt.actor.incarnation
+        or sheet.frame_scrapped
+        or receipt.donor_frame != sheet.frame
+        or receipt.frame != sheet.frame
+        or receipt.frame_instance
+        != (sheet.frame_runtime.id if sheet.frame_runtime else "initial:" + str(sheet.character_id))
+    ):
+        return False
+    try:
+        return frame_class(sheet.frame) == parts[2]
+    except KeyError:
+        return False
+
+
 def suspended(state: GameState, purchase: str) -> bool:
     return any(
         x.kind == KIND and x.state == "pending" and x.details.get("purchase") == purchase
@@ -56,6 +82,7 @@ def available(state: GameState, subject: int, character: str) -> list[Requisitio
                     for fact in state.facts
                 )
             )
+            or (isinstance(x, FrameRuleReceipt) and native_class_receipt(state, x))
             or (
                 isinstance(x, FrameRuleReceipt)
                 and x.donor_frame == "JANUS"
@@ -127,6 +154,13 @@ def revoke(
             asset=asset.model_dump_json(), frame=receipt.frame_instance, label=asset.name
         )
         sheet.assets.remove(asset)
+    elif isinstance(receipt, FrameRuleReceipt) and native_class_receipt(state, receipt):
+        details.update(
+            native_class_receipt=receipt.model_dump_json(),
+            frame=receipt.frame_instance,
+            rule_id=receipt.rule_id,
+            label=receipt.rule_id.rsplit(".", 1)[1].replace("-", " ").title(),
+        )
     elif isinstance(receipt, FrameRuleReceipt) and receipt.donor_frame == "JANUS":
         from girlframe.engine.m3_janus_requisitions import TITLES as JANUS_TITLES
 
@@ -208,7 +242,17 @@ def restore(original: GameState, identity: str, character: str, replace: str | N
         frame = sheet.frame_runtime.id if sheet.frame_runtime else "initial:" + character
         if frame != gate.details["frame"] or sheet.frame_scrapped:
             raise ValueError("Recover the original Frame before restoring its suspended Asset")
-        if "janus_receipt" in gate.details:
+        if "native_class_receipt" in gate.details:
+            source_receipt = FrameRuleReceipt.model_validate_json(
+                gate.details["native_class_receipt"]
+            )
+            if source_receipt not in state.requisitions or not native_class_receipt(
+                state, source_receipt
+            ):
+                raise ValueError("Recover the original native Class receipt and actual Frame")
+            if replace is not None:
+                raise ValueError("Class restoration adds no purchase, Asset or acquisition effect")
+        elif "janus_receipt" in gate.details:
             source_receipt = FrameRuleReceipt.model_validate_json(gate.details["janus_receipt"])
             if source_receipt not in state.requisitions or source_receipt.frame_instance != frame:
                 raise ValueError("Recover the exact original suspended JANUS entitlement")
@@ -247,6 +291,7 @@ def restore(original: GameState, identity: str, character: str, replace: str | N
                 effective_void=stored_ids(
                     state, ActorRef(kind="pilot", entity=str(gate.target), incarnation=character)
                 ),
+                state=state,
             ).sheet
         elif replace is not None:
             raise ValueError(

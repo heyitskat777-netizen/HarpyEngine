@@ -14,11 +14,6 @@ from girlframe.services.m3_handler_plays import HandlerPlayService
 
 
 def rolled(store, monkeypatch, faces=(4, 5)):
-    import girlframe.services.m2_game as shared
-
-    monkeypatch.setattr(
-        shared, "M3_HEAT_IDS", (*shared.M3_HEAT_IDS, "all_out_assault", "go_for_the_core")
-    )
     game, worker, gateway, svc, data, declaration = prepared(store)
     game.dice.faces = faces
     identity = confirm(svc, game, data, declaration)
@@ -111,11 +106,6 @@ def test_actual_low_allout_defender_damage_then_real_mandatory_handler_play(ledg
 
 
 def core(store, monkeypatch, faces, *, heat=0, sprites=False):
-    import girlframe.services.m2_game as shared
-
-    monkeypatch.setattr(
-        shared, "M3_HEAT_IDS", (*shared.M3_HEAT_IDS, "all_out_assault", "go_for_the_core")
-    )
     game, worker, gateway, svc, _, _ = prepared(store)
     with store.transaction() as c:
         canon = state(game)

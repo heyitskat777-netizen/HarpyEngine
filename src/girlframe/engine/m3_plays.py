@@ -2,6 +2,8 @@
 
 ROLL_IDS = ("go_off_duty", "void_observation")
 HEAT_IDS = (
+    "all_out_assault",
+    "go_for_the_core",
     "put_someone_beneath_you",
     "dive_deep",
     "enforcement_initiative",
@@ -11,6 +13,7 @@ HEAT_IDS = (
     "brutalize",
     "alpha_sex",
     "am_scrutinized",
+    "am_just_code",
     "nanobot_injection",
     "doctor_support",
 )

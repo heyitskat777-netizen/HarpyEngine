@@ -11,12 +11,10 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_strain_effects as rules
 from girlframe.engine.m3_actor_state import ActorRef
-from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_contraband_state import ContrabandFind
 from girlframe.engine.m3_supply_state import SupplyLoss
 from girlframe.engine.rolls import IndexSource, OsIndex
 from girlframe.services.m2_state import load_state
-from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_strain import StrainService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
@@ -118,6 +116,9 @@ class EffectService:
                 "strain.budget.low.2.1",
                 "strain.budget.low.2.2",
                 "strain.budget.low.4.1",
+                "strain.budget.low.5.1",
+                "strain.budget.low.6.1",
+                "strain.budget.high.4.1",
             ):
                 period = self.strain.periods._get(c, row["off_duty_id"])
                 if set(period.pilots) != set(state.order) or any(
@@ -129,6 +130,44 @@ class EffectService:
                     from girlframe.services.m3_medical import MedicalService
 
                     _, public_appointment = MedicalService(self.store)._handler(c)
+            if choice.rule_id == "strain.budget.high.4.1":
+                from girlframe.engine.m3_actor_bonds import current_ref
+                from girlframe.engine.m3_actors import resolve
+                from girlframe.services.m3_actors import ActorService, profiles
+                from girlframe.services.m3_cast import CastService
+
+                rules.fields(choice, {"target", "fighters", "fight_channel"})
+                if (
+                    choice.fight_channel is None
+                    or len(set(choice.fighters)) != 2
+                    or len(choice.fighters) != 2
+                ):
+                    raise WorkflowError("Choose two actual distinct Girls and this real Play scene")
+                scene = self.game.scene(c, choice.fight_channel)
+                cast, _ = CastService(ActorService(self.strain.missions))._current(
+                    c, state, choice.fight_channel
+                )
+                fight_refs = tuple(current_ref(state, uid) for uid in choice.fighters)
+                if (
+                    scene["id"] != choice.target
+                    or cast.facilitator != state.handler
+                    or any(
+                        not any(
+                            x.actor == ref and x.controller == int(ref.entity) for x in cast.roles
+                        )
+                        for ref in fight_refs
+                    )
+                ):
+                    raise WorkflowError(
+                        "Join both original Girls and the actual facilitator to this fight scene"
+                    )
+                bodies = [
+                    resolve(state, x, profiles(c, self.store.campaign_id)) for x in fight_refs
+                ]
+                if bodies[0].cell is None or bodies[0].cell != bodies[1].cell:
+                    raise WorkflowError(
+                        "Record known actual co-present fight bodies; no movement is inferred"
+                    )
             if choice.rule_id == "strain.budget.low.4.1":
                 rules.fields(choice, {"target", "victim", "cleanup_mode"})
                 past = self.strain.missions._mission(c, choice.victim or "")
@@ -370,6 +409,20 @@ class EffectService:
                     dict(cleanup=cleanup.id, source_work=identity),
                     event,
                 )
+            if choice.rule_id == "strain.budget.high.4.1":
+                from girlframe.services.m3_work import related
+
+                related(
+                    c,
+                    self.store,
+                    row,
+                    identity + ":fight",
+                    viewer.user_id,
+                    viewer.user_id,
+                    "budget_fight",
+                    dict(fight=identity + ":fight", source_work=identity, due_stage="active"),
+                    event,
+                )
             if choice.rule_id == "strain.budget.high.4.2":
                 from girlframe.services.m3_work import related
 
@@ -396,6 +449,39 @@ class EffectService:
                     viewer.user_id,
                     "budget_director_meeting",
                     dict(meeting=identity + ":meeting", source_work=identity),
+                    event,
+                )
+            if choice.rule_id == "strain.budget.low.6.1":
+                from girlframe.services.m3_work import related
+
+                related(
+                    c,
+                    self.store,
+                    dict(row)
+                    | dict(off_duty_id=None, scene_id=None, mission_id=None, campaign_context=True),
+                    identity + ":assassination",
+                    viewer.user_id,
+                    viewer.user_id,
+                    "budget_assassination",
+                    dict(
+                        assignment=identity + ":assassination",
+                        source_work=identity,
+                        source_period=row["off_duty_id"],
+                    ),
+                    event,
+                )
+            if choice.rule_id == "strain.budget.low.5.1":
+                from girlframe.services.m3_work import related
+
+                related(
+                    c,
+                    self.store,
+                    row,
+                    identity + ":visit",
+                    viewer.user_id,
+                    viewer.user_id,
+                    "budget_visitor",
+                    dict(visit=identity + ":visit", source_work=identity),
                     event,
                 )
             if choice.rule_id == "strain.budget.low.2.1":

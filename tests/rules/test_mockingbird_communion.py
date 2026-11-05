@@ -41,6 +41,7 @@ def source(
         from test_enforcer_requisitions import approved
         from test_janus_core import facts
         from test_janus_core_service import change
+
         from girlframe.engine.m3_janus import CORE
         from girlframe.services.m3_janus import JanusService
 
@@ -94,13 +95,14 @@ def source(
     target = current_ref(state(game), 3)
     if npc_guest:
         from test_cast_service import change
+
         from girlframe.engine.m3_actor_state import ActorRef
         from girlframe.engine.m3_world_state import Npc
         from girlframe.services.m3_actors import ActorService
         from girlframe.services.m3_cast import CastService
+        from girlframe.services.m3_missions import MissionService
         from girlframe.services.m3_npc_roles import NpcRoleService
         from girlframe.services.m3_world import WorldService
-        from girlframe.services.m3_missions import MissionService
 
         store.policy = store.policy.model_copy(
             update={
@@ -306,8 +308,8 @@ def test_actual_guest_invitation_is_pause_safe_and_replay_does_not_reboard_or_re
 def test_actual_guest_subsumption_requires_genuine_core_voice_and_real_extraction_then_medical_help(
     ledger, monkeypatch, tmp_path
 ):
-    from girlframe.services.m3_passengers import PassengerService
     from girlframe.discord_adapter.m3_passengers import open_passenger
+    from girlframe.services.m3_passengers import PassengerService
 
     game, _, _, identity = source(ledger, monkeypatch, core=True, tmp_path=tmp_path)
     communion = CallService(game)
@@ -388,10 +390,11 @@ def test_actual_guest_last_frame_void_finishes_real_owned_frame_growth_before_pa
     ledger, monkeypatch
 ):
     import sqlalchemy as sa
+    from test_void_service import respond as void_respond
+
     from girlframe.database import tables as t
     from girlframe.engine.m3_world_state import Asset, CorePlan, Gorgon
     from girlframe.services.m3_void import VoidService
-    from test_void_service import respond as void_respond
 
     game, _, _, identity = source(ledger, monkeypatch, prevoid_frame=True)
     service = CallService(game)

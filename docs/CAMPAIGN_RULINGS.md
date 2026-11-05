@@ -2925,3 +2925,147 @@ Rationale: The text substitutes failure for the affected Asset use without expli
 Alternatives: Cancel the whole Play regardless of which Assets failed.; Waive printed costs or roll again after revealing the card.
 
 Change impact: Future Asset-use ports must intercept at their real declaration point. Other battle uses stay gated before RNG until a true continuation exists; original source identities and receipts must survive revisions.
+
+## Nightmare Core and AM reset clarifications — 2026-11-05
+
+Delegated recommendations, adjustable and pending printed-rule clarity review. Unsupported physical contexts are implementation gaps and remain required work.
+
+### `nightmare-core-no-heat-specific-basis`
+
+Source: Rulebook PDF 10, 93.
+
+For actual paid native Nightmare Core Keep Your Head, roll the actual effective owned Void Asset count instead of Heat and spend zero Heat, including while holding at least five. This mandatory specific basis is distinct from ordinary spend-all-at-five. Freeze the actual source and count before the single roll and record actual cost zero in its receipt.
+
+Rationale: The specific alternative expressly replaces Heat spending, so requiring that cost as well would defeat the stated rule.
+
+Alternatives: Spend all held Heat at five despite the printed instead-of-spending-Heat clause, or make the named basis optional.
+
+Change impact: Preserves the specific printed exception, actual resource accounting and one saved RNG receipt without adding or refunding Heat.
+
+### `nightmare-core-distinct-established-quality`
+
+Source: Rulebook PDF 21, 93.
+
+Establish terrifying as a distinct automatic positive quality for the actual source-owned Keep. Preserve the ordinary positive/negative trait quota; terrifying does not replace a selected positive, become an available negative, or silently mean vicious. The actual Handler still judges whether the overall action is enough while accepting that the character is terrifying enough.
+
+Rationale: The guarantee names a separate quality without changing ordinary trait quotas or giving up the actual Handler ruling.
+
+Alternatives: Map terrifying to vicious, consume an ordinary selected trait, or automatically mark every intended outcome successful.
+
+Change impact: Implements the printed guaranteed quality without manufacturing a separate trait quota, extra question, or forced overall success.
+
+### `nightmare-core-effective-owned-void-count`
+
+Source: Rulebook PDF 93.
+
+Count all effective Void Assets actually owned by this original Pilot at declaration and validate that count/source again before RNG, using the existing canonical ActorView resource union and proved active overlays read-only. Do not create a separate Nightmare Core actor or additional Void Assets.
+
+Rationale: Actual ownership and effective source lifetimes already have canonical authority; counting through it avoids copying or losing real resources.
+
+Alternatives: Count only permanently void baseline sheet Assets, exclude actual held resources/active proved stored alterations, or copy resource records into a new Core.
+
+Change impact: Uses the existing ownership and overlay lifetime authority without mutating Assets, inventing points or changing threshold lifecycles.
+
+### `am-factory-reset-preserves-unmentioned-person-state`
+
+Source: Rulebook PDF56 / printed54: all four Identities Limited, reset and become NPC.
+
+End original player-character authority and continue the same actual person as an NPC. Preserve the existing vessel, physical hardware/damage, four actual default Limited Identities with their real marks, Tags, genuine relationships and immutable history. Do not invent memory erasure, healing, a new body, new equipment or NPC Heat.
+
+Rationale: The clause changes control/rules status after four already reverted Identities but does not specify any further resource erasure or physical transformation.
+
+Alternatives: Erase memories/Tags/Bonds or heal hardware on reset; Treat it as death plus an unrelated replacement NPC
+
+Change impact: Keep exact pre-ending archive, original placement/vessel, source-only reset record and original events. Future printed clarification can define later changes explicitly without rewriting completed history.
+
+### `am-factory-reset-actual-npc-claim`
+
+Source: Rulebook PDF56 / printed54, ordinary NPC role/control structures.
+
+The current original source Handler explicitly takes the resulting NPC under their own human control and chooses a factual printed NPC role. The demonstrated normal choice is Ex-Pilot. A different human must use actual recipient-owned acceptance before assignment; that alternative is not exposed by this bounded endpoint.
+
+Rationale: The reset clause does not choose a human controller or NPC playbook. Explicit actual claim preserves role ownership and avoids giving the former player’s current/future PC authority over this NPC.
+
+Alternatives: Silently give another human the NPC; Automatically manufacture a new PC incarnation
+
+Change impact: Actual Handler role/account and resulting NPC identity are frozen in the reset event; a future recipient-owned controller transfer can use the existing NPC role acceptance machinery.
+
+## Void Physiotherapist clarifications — 2026-11-05
+
+Adjustable delegated recommendations requiring printed-rule clarity review.
+
+### `physiotherapist-owned-starting-npc-bond`
+
+Source: Rulebook PDF 93.
+
+Native acquisition costs two Permissions and selects an existing actual living ordinary NPC with a current campaign human controller. The controller separately confirms this original NPC relationship and Void-leakage expertise. Establish a Personal Bond while preserving any existing deeper Bond; do not fabricate an NPC, assign another human or infer their acceptance.
+
+Rationale: A starting NPC Bond needs a genuine fictional person and real human role ownership. Existing deeper relationships are not demoted by receiving a Personal Bond.
+
+Alternative: Automatically create an NPC and assign the Handler, or grant the new Bond without the real NPC controller response.
+
+Change impact: The printed NPC Bond is playable through existing source identities and the canonical Bond graph, with genuine human role ownership.
+
+### `physiotherapist-owned-scene-treatment`
+
+Source: Rulebook PDF 93.
+
+The original purchasing Girl records a real active-Off-Duty scene with the actual NPC in the current source cast and may request removal from one eligible owned permanent-Void Asset or decline removal. The actual NPC controller confirms their attendance, authors the NPC-given Tag and records completed treatment; then remove the requested Void without destroying the Asset or repairing damage. Each distinct source-owned treatment scene has its own Off-Duty-scoped work; no automatic additional per-period quota is imposed.
+
+Rationale: The scene is the printed trigger. Distinct scenes require their own real source; no printed per-period quota or automatic attendance is supplied.
+
+Alternative: Automatically issue a Tag/removal on scene declaration, infer attendance from a shared controller account, or impose an unprinted once-per-period cap.
+
+Change impact: Preserves the mandatory NPC-given Tag, optional actual treatment, original humans and saved scene while preventing silent consent or Asset destruction. Existing work-context immutability is preserved by separate scene work.
+
+## Just Code and Modular Build clarifications — 2026-11-05
+
+Delegated recommendations, adjustable and pending printed-rule clarity review. Restricted spoken Orders and missing repair/actor ports are implementation limits, not general house rules.
+
+### `am-just-code-source-rewrite-keeps-marks`
+
+Source: Rulebook PDF56 / printed54 Just Code Identity replacement option.
+
+A genuine identity rewrite creates actual new Identity IDs/labels in their original slots, preserving current marks and actual sedation slot locks. Limited/protected/Paired/source-locked identities cannot be rewritten by this bounded source. Record original-to-new ID mapping and retain immutable prior history.
+
+Rationale: The option replaces Identities but does not say to grant recovery or bypass another printed restriction. Preserving marks prevents repeated circuit maintenance from manufacturing free Heat recovery.
+
+Alternatives: New identities automatically unmarked; Reuse old ID while silently renaming
+
+Change impact: Original marks, slots, actual replacement event and ID map remain auditable. Future explicit campaign clarification may choose another mark rule without rewriting history.
+
+### `am-just-code-known-high-immediate-status`
+
+Source: Rulebook PDF56 / printed54 Just Code high already-known branch.
+
+After actual final high tier, lower current AM Status immediately when the exact original operator already genuinely knew from a proved prior source; then retain their actual rewrite/no-effect choice. No separate Scrutinized roll is fabricated.
+
+Rationale: Both high consequences must happen, and choosing zero edits does not waive the printed Status loss. New/unknown operator realization needs its own source-bound Scrutinized consequence and is unavailable before RNG here.
+
+Alternatives: Delay or waive Status loss if no edit chosen; Roll a new unprinted Scrutinized result
+
+Change impact: Known-discovery source, raw receipt, actual Status order and operator choice remain separate audited facts.
+
+### `modular-build-source-capacity-and-suspension`
+
+Source: Rulebook PDF 15, 94.
+
+An actual current native LEGION Modular Build receipt adds one counted Frame slot (six rather than five) and grants its one authored Frame Asset at actual acquisition. Source-intrinsic free Assets retain their existing exclusion. Temporary suspension returns the entitlement limit to five while preserving all actual physical Assets; when already above that limit, further counted installations fail until original restoration or actual legal space. Restoring the original receipt restores six without another Asset or charge.
+
+Rationale: The printed acquisition grants an extra slot and physical Asset once. Temporary suspension withdraws its entitlement without an unprinted physical destruction or repeated acquisition.
+
+Alternatives: Destroy or automatically confiscate extra physical Assets on suspension, keep the extra slot active while suspended, or grant a new Asset on every restore.
+
+Change impact: Physical state and original receipt remain truthful without duplicate benefit, hidden extra-capacity authority or invented Asset deletion.
+
+### `modular-build-damaged-void-repair-replacement`
+
+Source: Rulebook PDF 15, 94.
+
+An actual source-legal Modular repair may replace a damaged permanent-Void Frame Asset with a new ordinary Frame Asset in the same slot. PDF94 imposes no non-Void restriction; PDF15 restricts replacement when gaining above the maximum, which is a distinct trigger. The actual repaired Asset must be selected within the existing repair quota. No completed transformation is undone, and actual stored-point hosts, intrinsic hardware and borrowed Doctor loan hardware remain outside this replacement port.
+
+Rationale: The repair alternative has no non-Void restriction. Applying the separate above-maximum gain restriction would add a condition to a distinct source trigger.
+
+Alternatives: Restrict all Modular repair replacements to non-Void Assets by extending the above-maximum gain rule to this separate printed trigger.
+
+Change impact: The specific printed repair alternative works for both ordinary and permanent-Void damaged Frame Assets while retaining real repair opportunity/quota, conditional sources and exact original ownership. Requires printed-rule clarity review.

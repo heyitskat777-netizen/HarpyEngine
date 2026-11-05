@@ -463,6 +463,11 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
 
         await open_gorgon_choice(interaction, game, identity)
         return
+    if decision.get("am_code") is not None:
+        from girlframe.discord_adapter.m3_am_code import open_choice as open_code_choice
+
+        await open_code_choice(interaction, game, identity)
+        return
     if decision.get("am_scrutinized") is not None:
         from girlframe.discord_adapter.m3_am import open_choice as open_am_choice
 
@@ -710,6 +715,11 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             decision["result"].get("question_text")
             or decision["result"].get("question", "Why did you withdraw?")
         )
+    if decision.get("nightmare_core"):
+        instructions += (
+            "\nYou are always terrifying enough. "
+            "Other traits and the Handler's overall ruling apply."
+        )
     if decision.get("npc_order_issuer"):
         instructions += "\nActual NPC issuer: " + clean(decision["npc_order_issuer"])
     if decision.get("order_text"):
@@ -826,8 +836,11 @@ async def open_play(
             "snoop",
             "alpha_sex",
             "am_scrutinized",
+            "am_just_code",
         )
     )
+    if parent and parent["kind"] == "am_code_prepare":
+        plays = ("am_just_code",)
     if parent and parent["kind"] == "am_prepare":
         plays = ("am_scrutinized",)
     if (
@@ -883,6 +896,10 @@ async def open_play(
     from girlframe.services.m3_kicked_puppy import KickedPuppyService
 
     kicked_controls = await kicked_fields(interaction, KickedPuppyService(game))
+    from girlframe.discord_adapter.m3_nightmare import keep_info as nightmare_info
+    from girlframe.services.m3_nightmare import NightmareService
+
+    nightmare = await nightmare_info(interaction, NightmareService(game))
     fields = [
         menu("play", "Choose a Play", plays),
         Field(
@@ -898,7 +915,11 @@ async def open_play(
         entities("identity", "Optional Identity to mark", identities, 0, 1, False),
         menu("gain", "Identity Heat gained", range(6)),
         menu("pair_share", "Paired Heat sent to Pair", range(6)),
-        menu("heat", "Heat to spend", range(sheet["heat"] + 6)),
+        menu(
+            "heat",
+            "Heat for other Plays; Nightmare Keep uses 0" if nightmare else "Heat to spend",
+            range(sheet["heat"] + 6),
+        ),
         Field("piloting", "Are you piloting your Frame?", YES),
         Field("witnessed", "Foundation member witnesses refusal?", YES),
         text("context", "Describe the trigger and intended action"),
@@ -1030,6 +1051,14 @@ async def open_play(
 
             target_actor = ActorRef.model_validate(alpha_sex_sources[selected]["ref"])
             sex_source = selected
+        code_source = None
+        if play == "am_just_code":
+            from girlframe.engine.m3_actor_state import ActorRef
+
+            if not parent or parent["kind"] != "am_code_prepare":
+                raise WorkflowError("Use your actual confirmed circuit-maintenance preparation")
+            code_source = parent["body"]["maintenance"]
+            target_actor = ActorRef.model_validate(parent["body"]["target"])
         am_source = None
         if play == "am_scrutinized":
             from girlframe.engine.m3_actor_state import ActorRef
@@ -1045,7 +1074,7 @@ async def open_play(
             target_actor=target_actor,
             obeying_orders=play == "keep_your_head" and one(values, "obeying_orders") == "yes",
             order_account=values.get("order_account", "") if play == "keep_your_head" else "",
-            heat=int(one(values, "heat")),
+            heat=0 if play == "keep_your_head" and nightmare else int(one(values, "heat")),
             dampener_modifier=dampener_modifier(values),
             kicked_puppy_basis=damaged_basis(values),
             identity=identity,
@@ -1058,7 +1087,7 @@ async def open_play(
             witnessed=one(values, "witnessed") == "yes",
             parent=parent["parent"] if parent else None,
             order_id=parent["body"].get("order_id") if parent else None,
-            source_work=am_source or sex_source,
+            source_work=code_source or am_source or sex_source,
         )
         result = await threaded(
             lambda: game.begin(
@@ -1084,6 +1113,11 @@ async def open_play(
         (
             "Choose resources, describe the trigger, then Confirm & Roll. No "
             "dice are sampled before the channel lock is acknowledged."
+        )
+        + (
+            " Nightmare Core: Keep Your Head uses Void Assets and spends no Heat."
+            if nightmare
+            else ""
         )
         + (
             " Your next Disobey Orders roll has +"

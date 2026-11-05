@@ -219,6 +219,7 @@ def apply(
                 ),
                 replace=chosen.replace,
                 effective_void=stored_ids(state, actor),
+                state=state,
             )
             state.sheets[actor.entity] = result.sheet
             from girlframe.engine.m3_girl_runtime_state import has_rule

@@ -145,6 +145,11 @@ class ChoiceEngine:
 
             apply_asset_calamity(self.game, c, state, action, request, answer)
             return
+        if kind.startswith("am_code_") and action["data"].get("am_code"):
+            from girlframe.services.m3_am_code import apply as apply_code
+
+            apply_code(self.game, c, state, action, request, answer)
+            return
         if kind.startswith("am_") and action["data"].get("am_scrutinized"):
             from girlframe.services.m3_am_scrutinized import apply as apply_am
 
@@ -353,9 +358,10 @@ class ChoiceEngine:
         level = result.get("tier")
         if kind == "actor_keep":
             from girlframe.services.m3_enforcer_requisitions import keep_extras
+            from girlframe.services.m3_nightmare import automatic as nightmare_automatic
 
             pavlov = keep_extras(self.game, c, state, action, answer)
-            automatic = keep_automatic(acting) | pavlov
+            automatic = keep_automatic(acting) | pavlov | nightmare_automatic(action)
             if level == "mid":
                 picks(answer.options, set(TRAITS), 2)
                 picks(answer.denied, set(TRAITS) - set(answer.options) - automatic, 1)
@@ -900,6 +906,11 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         play = action["data"]["play"]
         level = action["data"]["result"]["tier"]
+        if action["data"].get("am_code"):
+            from girlframe.services.m3_am_code import results as results_code
+
+            results_code(self.game, c, state, action)
+            return
         if action["data"].get("am_scrutinized"):
             from girlframe.services.m3_am_scrutinized import results as results_am
 
@@ -1047,6 +1058,7 @@ class ChoiceEngine:
                     "escape_play",
                     "order_disobey",
                     "am_prepare",
+                    "am_code_prepare",
                     "beneath_response_play",
                     "beneath_defeat",
                     "required_defeat",

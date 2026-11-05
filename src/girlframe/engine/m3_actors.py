@@ -212,13 +212,17 @@ def resolve(
     stored = stored_void(state, ref)
     if stored:
         asset_ids = {x.asset for x in stored}
-        actual = actual.model_copy(update={
-            "assets": tuple(x.model_copy(update={"void": True}) if x.id in asset_ids else x
-                            for x in actual.assets),
-            "source_sha256": hashlib.sha256((actual.source_sha256 + "".join(
-                x.model_dump_json() for x in stored
-            )).encode()).hexdigest(),
-        })
+        actual = actual.model_copy(
+            update={
+                "assets": tuple(
+                    x.model_copy(update={"void": True}) if x.id in asset_ids else x
+                    for x in actual.assets
+                ),
+                "source_sha256": hashlib.sha256(
+                    (actual.source_sha256 + "".join(x.model_dump_json() for x in stored)).encode()
+                ).hexdigest(),
+            }
+        )
     if state.external_poses or state.leviathan_arrivals:
         from girlframe.engine.m3_leviathan_arrival import body_pose, external_pose
 
@@ -720,6 +724,20 @@ def _resolve(
         detained = case is not None and case.detained
         unknown_release = case is not None and not case.detained and case.position_event is None
         sources = [fingerprint(npc)]
+        from girlframe.engine.m3_am_reset import body as reset_body
+        from girlframe.engine.m3_am_reset import prove as prove_reset
+
+        reset = reset_body(state, ref)
+        reset_assets: tuple[AssetView, ...] = ()
+        if reset is not None:
+            prove_reset(state, reset)
+            from girlframe.engine.m3_items import mechanical_assets
+
+            combined = {x.id: x for x in reset.assets}
+            combined.update({x.id: x for x in mechanical_assets(state, ref)})
+            reset_assets = assets(tuple(combined.values()))
+            sources.append(fingerprint(reset))
+            sources.extend(fingerprint(x) for x in state.held_items if x.holder == ref)
         if case is not None:
             sources.append(fingerprint(case))
         if journey is not None:
@@ -731,6 +749,13 @@ def _resolve(
             alive=npc.alive,
             rules="director" if "director" in npc.jobs else "npc",
             jobs=npc.jobs,
+            assets=reset_assets,
+            identities=identities(reset.identities) if reset else (),
+            vessel_id=reset.body.vessel_id if reset else None,
+            inside_frame=False if reset else None,
+            piloting=False if reset else None,
+            vitals_active=bool(npc.alive and reset.body.vitals_active) if reset else None,
+            subsumed=False if reset else None,
             cell=None if journey is not None or detained or unknown_release else npc.cell,
             custody="foundation_detention:" + case.id
             if detained and case is not None

@@ -30,9 +30,20 @@ async def open_am(
     channel = channel if channel is not None else int(interaction.channel_id or 0)
     data = await asyncio.to_thread(service.menu, viewer, channel)
     options = [("propose", "Establish an actual new discovery")] if data["targets"] else []
+    from girlframe.services.m3_am_code import CodeService
+    from girlframe.services.onboarding import WorkflowError
+
+    try:
+        code = await asyncio.to_thread(CodeService(service.game).menu, viewer, channel)
+        if code["known"] or code["sessions"]:
+            options.append(("code", "Actual identity-only circuit maintenance"))
+    except (ValueError, WorkflowError):
+        pass
     if data["native"]:
         options.append(("presentation", "Your actual expression and presentation"))
     for value in data["discoveries"]:
+        if value["phase"] == "reset_pending" and value["handler_controller"] == viewer.user_id:
+            options.append(("reset:" + value["id"], "Take the actual factory-reset NPC"))
         if value["phase"] == "proposed" and value["controller"] == viewer.user_id:
             options.append(("confirm:" + value["id"], "Factual new discovery: " + value["label"]))
         if value["needs_evidence"] and value["handler_controller"] == viewer.user_id:
@@ -67,11 +78,22 @@ async def open_am(
 
     async def choose(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         action = values["action"][0]
+        if action == "code":
+            from girlframe.discord_adapter.m3_am_code import open_code
+
+            await open_code(current, CodeService(service.game), channel=channel)
+            return None
         if action.startswith("choice:"):
             await open_choice(current, service.game, action.removeprefix("choice:"))
             return None
         operation, _, identity = action.partition(":")
         value = next((x for x in data["discoveries"] if x["id"] == identity), None)
+        if operation == "reset":
+            from girlframe.discord_adapter.m3_am_reset import open_reset
+            from girlframe.services.m3_am_reset import FactoryResetService
+
+            await open_reset(current, FactoryResetService(service.game), identity)
+            return None
         if operation == "limiter":
             await open_report_limiter(current, service, identity)
             return None
@@ -241,11 +263,22 @@ async def open_source(
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(game.decision, viewer, identity)
+    if data.get("am_code") is not None:
+        from girlframe.discord_adapter.m3_am_code import open_choice as open_code_choice
+
+        await open_code_choice(interaction, game, identity)
+        return
     detail = data["am_scrutinized"]
     if data["kind"] == "am_prepare":
         from girlframe.discord_adapter.m2_ui import open_play
 
         await open_play(interaction, game, parent=data)
+        return
+    if data["kind"] == "am_factory_reset":
+        from girlframe.discord_adapter.m3_am_reset import open_reset
+        from girlframe.services.m3_am_reset import FactoryResetService
+
+        await open_reset(interaction, FactoryResetService(game), detail["discovery"])
         return
     if data["kind"] == "am_handler":
         from girlframe.discord_adapter.m3_handler_plays import open_play as open_handler
@@ -323,8 +356,8 @@ async def open_report_limiter(
         service.limiter_view, viewer_from_interaction(interaction), identity
     )
 
-    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
-        await asyncio.to_thread(
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str | None:
+        result = await asyncio.to_thread(
             service.resolve_limiter,
             viewer_from_interaction(current),
             str(current.id),
@@ -334,6 +367,12 @@ async def open_report_limiter(
             cast(rules.Freedom, values["freedom"][0]),
             values["account"],
         )
+        if result.get("reset"):
+            from girlframe.discord_adapter.m3_am_reset import open_reset
+            from girlframe.services.m3_am_reset import FactoryResetService
+
+            await open_reset(current, FactoryResetService(service.game), identity)
+            return None
         return (
             "The actual original Limiter is installed "
             "and this report's required effect is complete."
@@ -343,7 +382,7 @@ async def open_report_limiter(
         interaction.user.id,
         "Actual report: install Limiter",
         "A real report requires one "
-        "actual protected default-slot Identity; no new body or NPC reset is fabricated.",
+        "actual protected default-slot Identity. A fourth Limiter requires the real NPC reset.",
         [
             Field(
                 "identity",

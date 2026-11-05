@@ -1,6 +1,6 @@
 """Printed Asset properties follow actual source identity, never a custom label."""
 
-from girlframe.engine.m2 import AssetState, PilotSheet
+from girlframe.engine.m2 import AssetState, GameState, PilotSheet
 
 
 def wyvern_intrinsic(sheet: PilotSheet, asset: AssetState) -> bool:
@@ -27,3 +27,22 @@ def counts_toward_limit(sheet: PilotSheet, asset: AssetState) -> bool:
 
 def can_replace_at_limit(sheet: PilotSheet, asset: AssetState) -> bool:
     return not asset.void and not wyvern_intrinsic(sheet, asset) and asset.battery_asset is None
+
+
+def frame_capacity(sheet: PilotSheet, state: GameState | None = None) -> int:
+    if state is None or sheet.character_id is None:
+        return 5
+    current = state.sheets.get(str(sheet.owner))
+    if (
+        current is None
+        or current.character_id != sheet.character_id
+        or current.frame != sheet.frame
+        or (current.frame_runtime.id if current.frame_runtime else None)
+        != (sheet.frame_runtime.id if sheet.frame_runtime else None)
+    ):
+        return 5
+    from girlframe.engine.m3_actor_state import ActorRef
+    from girlframe.engine.m3_modular import held
+
+    actor = ActorRef(kind="pilot", entity=str(sheet.owner), incarnation=sheet.character_id)
+    return 6 if held(state, actor) is not None else 5

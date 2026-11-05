@@ -19,8 +19,8 @@ from girlframe.engine.m3_physical_state import InitialPlacement
 from girlframe.services import m3_mockingbird_call as call
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_handler_girl_void import HandlerGirlVoidService
-from girlframe.services.m3_mockingbird_plays import MockingbirdService
 from girlframe.services.m3_mockingbird_communion import CallService
+from girlframe.services.m3_mockingbird_plays import MockingbirdService
 
 
 def test_actual_handler_girl_guest_chooses_own_existing_asset_without_frame_or_fake_ack(

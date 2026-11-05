@@ -989,6 +989,7 @@ class GameService:
             alpha = None
             alpha_sex = None
             am_scrutinized = None
+            am_code = None
             alpha_sex_counter_scope = None
             alpha_counter_scope = None
             npc_order_scope = None
@@ -1021,6 +1022,7 @@ class GameService:
             elif prepared.source_work is not None and prepared.play not in (
                 "alpha_sex",
                 "am_scrutinized",
+                "am_just_code",
             ):
                 raise WorkflowError("A source work reference belongs to its actual mandatory Play.")
             if prepared.play in ("all_out_assault", "go_for_the_core"):
@@ -1053,6 +1055,10 @@ class GameService:
                 from girlframe.services.m3_janus_play import prepare as prepare_janus
 
                 janus = prepare_janus(self, c, viewer, prepared, state, channel=channel)
+            if prepared.play == "am_just_code":
+                from girlframe.services.m3_am_code import prepare as prepare_am_code
+
+                am_code = prepare_am_code(self, c, viewer, state, prepared, channel)
             if prepared.play == "am_scrutinized":
                 from girlframe.services.m3_am_scrutinized import prepare as prepare_am
 
@@ -1239,6 +1245,7 @@ class GameService:
                         alpha,
                         alpha_sex,
                         am_scrutinized,
+                        am_code,
                         alpha_sex_counter_scope,
                         alpha_counter_scope,
                         npc_order_scope,
@@ -1271,6 +1278,8 @@ class GameService:
                     )
                 elif npc_order_scope is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(npc_order_scope["cast"]))
+                elif am_code is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(am_code["cast"]))
                 elif am_scrutinized is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(am_scrutinized["cast"]))
                 elif alpha_sex is not None:
@@ -1387,6 +1396,7 @@ class GameService:
                             "escape_play",
                             "order_disobey",
                             "am_prepare",
+                            "am_code_prepare",
                             "beneath_response_play",
                             "beneath_defeat",
                             "required_defeat",
@@ -1478,6 +1488,13 @@ class GameService:
                     gorgon_response is None or gorgon_response["choice"] != required["id"]
                 ):
                     raise WorkflowError("Use this exact original Gorgon source response")
+                if required["kind"] == "am_code_prepare" and (
+                    am_code is None
+                    or prepared.play != "am_just_code"
+                    or parent["data"].get("am_code_source", {}).get("maintenance")
+                    != am_code["maintenance"]
+                ):
+                    raise WorkflowError("Use this actual original circuit-maintenance child")
                 if required["kind"] == "am_prepare" and (
                     am_scrutinized is None
                     or prepared.play != "am_scrutinized"
@@ -1521,6 +1538,7 @@ class GameService:
                     alpha,
                     alpha_sex,
                     am_scrutinized,
+                    am_code,
                     doctor,
                 )
             ):
@@ -1543,6 +1561,11 @@ class GameService:
                 from girlframe.services.m3_kicked_puppy import prepare as prepare_kicked_puppy
 
                 kicked_puppy = prepare_kicked_puppy(self, c, viewer, state, prepared)
+            nightmare_core = None
+            if prepared.play == "keep_your_head":
+                from girlframe.services.m3_nightmare import prepare as prepare_nightmare
+
+                nightmare_core = prepare_nightmare(self, c, viewer, state, prepared)
             preview = PilotSheet.model_validate_json(sheet.model_dump_json())
             if prepared.identity:
                 share = mark_identity(
@@ -1556,6 +1579,7 @@ class GameService:
                 m3 is None
                 and (janus is None or janus.get("mode") == "pandora")
                 and not prepared.kicked_puppy_basis
+                and nightmare_core is None
             ):
                 spend_heat(preview, prepared.heat)
             dampener = None
@@ -1585,6 +1609,8 @@ class GameService:
                 data["dampener"] = dampener
             if kicked_puppy is not None:
                 data["kicked_puppy"] = kicked_puppy
+            if nightmare_core is not None:
+                data["nightmare_core"] = nightmare_core
             from girlframe.services.m3_scene_requisitions import audience as private_scene_audience
 
             private_audience = private_scene_audience(c, self.store, scene["id"])
@@ -1701,6 +1727,20 @@ class GameService:
                     table=npc_source_table,
                     cast=source_cast.model_dump(mode="json"),
                     cast_sha256=fingerprint(source_cast),
+                )
+            if am_code is not None:
+                from girlframe.engine.m3_handler_consequences import active_handler
+
+                data["am_code"] = am_code
+                data["participants"] = list(am_code["table"])
+                code_handler = active_handler(state)
+                data["tag_context"] = dict(
+                    actor=am_code["actor"],
+                    handler=code_handler.model_dump(mode="json") if code_handler else None,
+                    gm_controller=state.handler,
+                    table=list(am_code["table"]),
+                    cast=am_code["cast"],
+                    cast_sha256=am_code["cast_sha256"],
                 )
             if am_scrutinized is not None:
                 from girlframe.engine.m3_handler_consequences import active_handler
@@ -1874,6 +1914,10 @@ class GameService:
                             campaign_id=self.store.campaign_id, channel_id=str(channel), **values
                         )
                     )
+            if am_code is not None:
+                from girlframe.services.m3_am_code import bind as bind_am_code
+
+                bind_am_code(state, self.action(c, identity))
             if am_scrutinized is not None:
                 from girlframe.services.m3_am_scrutinized import bind as bind_am
 
@@ -1900,14 +1944,21 @@ class GameService:
                 or alpha is not None
                 or alpha_sex is not None
                 or am_scrutinized is not None
+                or am_code is not None
                 or npc_order_scope is not None
                 or engage is not None
                 or void_keep is not None
                 or dampener is not None
                 or kicked_puppy is not None
+                or nightmare_core is not None
                 else "m2.play_confirmed",
                 state
-                if void_keep is not None or alpha_sex is not None or am_scrutinized is not None
+                if (
+                    void_keep is not None
+                    or alpha_sex is not None
+                    or am_scrutinized is not None
+                    or am_code is not None
+                )
                 else None,
                 action_id=identity,
                 play=prepared.play,
@@ -2047,6 +2098,10 @@ class GameService:
                 )
 
                 authorize_enforcement(self, c, viewer, action)
+            if action["data"].get("am_code"):
+                from girlframe.services.m3_am_code import authorize as authorize_am_code
+
+                authorize_am_code(self, c, viewer, action)
             if action["data"].get("am_scrutinized"):
                 from girlframe.services.m3_am_scrutinized import authorize as authorize_am
 
@@ -2124,6 +2179,10 @@ class GameService:
             if sheet.revision != action["data"]["sheet_revision"]:
                 raise WorkflowError("STALE_SHEET: recover the unrolled action; no dice consumed.")
             prepared = PlayInput.model_validate_json(json.dumps(action["data"]["prepared"]))
+            if prepared.play == "keep_your_head":
+                from girlframe.services.m3_nightmare import pre_roll as nightmare_pre_roll
+
+                nightmare_pre_roll(self, c, viewer, state, action)
             if action["data"].get("kicked_puppy") is not None or prepared.kicked_puppy_basis:
                 from girlframe.services.m3_kicked_puppy import pre_roll as kicked_pre_roll
 
@@ -2164,6 +2223,10 @@ class GameService:
                 self.valid_order(
                     c, state, viewer.user_id, int(action["channel_id"]), prepared.order_id
                 )
+            if action["data"].get("am_code"):
+                from girlframe.services.m3_am_code import pre_roll as pre_roll_am_code
+
+                pre_roll_am_code(self, c, viewer, state, action)
             if action["data"].get("am_scrutinized"):
                 from girlframe.services.m3_am_scrutinized import pre_roll as pre_roll_am
 
@@ -2233,6 +2296,7 @@ class GameService:
                     or action["data"]["janus"].get("mode") == "pandora"
                 )
                 and not prepared.kicked_puppy_basis
+                and not action["data"].get("nightmare_core")
             ):
                 spend_heat(sheet, prepared.heat)
             faces = self.dice.roll()
@@ -2268,6 +2332,8 @@ class GameService:
                     if m3 is not None
                     else defeat["modifier"]
                     if defeat is not None
+                    else action["data"]["nightmare_core"]["modifier"]
+                    if action["data"].get("nightmare_core")
                     else action["data"]["kicked_puppy"]["modifier"]
                     if prepared.kicked_puppy_basis
                     else action["data"]["dampener"]["modifier"]
@@ -2293,9 +2359,11 @@ class GameService:
                 or action["data"].get("alpha")
                 or action["data"].get("alpha_sex")
                 or action["data"].get("am_scrutinized")
+                or action["data"].get("am_code")
                 or action["data"].get("npc_order")
                 or action["data"].get("dampener")
                 or action["data"].get("kicked_puppy")
+                or action["data"].get("nightmare_core")
                 or defeat is not None
                 else RULESET,
             }
@@ -2343,6 +2411,13 @@ class GameService:
                         modifier_source="Damaged Girl Assets (Kicked Puppy)",
                         kicked_basis=True,
                     )
+            if action["data"].get("nightmare_core"):
+                receipt.update(
+                    pre_modifiers=pre_modifiers,
+                    base_modifier=action["data"]["nightmare_core"]["modifier"],
+                    modifier_source="Void Assets (Nightmare Core)",
+                    nightmare_purchase=action["data"]["nightmare_core"]["purchase"],
+                )
             c.execute(
                 t.m2["m2_receipts"]
                 .insert()
@@ -2382,9 +2457,11 @@ class GameService:
                 or action["data"].get("alpha")
                 or action["data"].get("alpha_sex")
                 or action["data"].get("am_scrutinized")
+                or action["data"].get("am_code")
                 or action["data"].get("npc_order")
                 or action["data"].get("dampener")
                 or action["data"].get("kicked_puppy")
+                or action["data"].get("nightmare_core")
                 or defeat is not None
                 else "m2.rolled",
                 state,
@@ -2529,6 +2606,11 @@ class GameService:
                 from girlframe.services.m3_doctor import authorize as authorize_doctor
 
                 authorize_doctor(self, c, viewer, action)
+                director_tag_response = True
+            if action["data"].get("am_code"):
+                from girlframe.services.m3_am_code import authorize as authorize_am_code
+
+                authorize_am_code(self, c, viewer, action)
                 director_tag_response = True
             if action["data"].get("am_scrutinized"):
                 from girlframe.services.m3_am_scrutinized import authorize as authorize_am
@@ -2714,6 +2796,7 @@ class GameService:
                 if action["data"].get("m3")
                 or action["data"].get("dampener")
                 or action["data"].get("kicked_puppy")
+                or action["data"].get("nightmare_core")
                 or action["data"].get("actor_basic")
                 or action["data"].get("beneath")
                 or action["data"].get("doctor")
@@ -2730,6 +2813,7 @@ class GameService:
                 or action["data"].get("alpha")
                 or action["data"].get("alpha_sex")
                 or action["data"].get("am_scrutinized")
+                or action["data"].get("am_code")
                 or action["data"].get("npc_order")
                 or action["data"].get("gorgon_play")
                 else "m2.choice_resolved",
@@ -2839,6 +2923,10 @@ class GameService:
                 )
 
                 post_mockingbird(self, c, action, event, viewer, key)
+            if action["data"].get("am_scrutinized"):
+                from girlframe.services.m3_am_scrutinized import synchronize as synchronize_am
+
+                synchronize_am(self, c, action, event)
             if action["data"].get("alpha_sex"):
                 from girlframe.services.m3_alpha_sex import synchronize as synchronize_alpha_sex
 
@@ -3533,6 +3621,38 @@ class GameService:
                 from girlframe.services.m3_gorgon_play import GorgonPlayService
 
                 return GorgonPlayService(self).decision(c, viewer, action, dict(row))
+            if action["data"].get("am_code_source") and row["kind"] == "am_code_prepare":
+                from girlframe.services.m3_am_code import access as code_access
+
+                code_access(self, c, viewer)
+                if int(action["actor_id"]) != viewer.user_id:
+                    raise WorkflowError("Only the original AM prepares her actual maintenance")
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    play="am_code_maintenance",
+                    result={},
+                    actor=int(action["actor_id"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    am_code=dict(prepare=True),
+                )
+            if action["data"].get("am_code") and row["kind"].startswith("am_code_"):
+                from girlframe.services.m3_am_code import authorize as authorize_code
+                from girlframe.services.m3_am_code import projection as project_code
+
+                authorize_code(self, c, viewer, action)
+                state = load_state(c, self.store.campaign_id)
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    play="am_just_code",
+                    result={
+                        k: v for k, v in action["data"]["result"].items() if k in ("tier", "total")
+                    },
+                    actor=int(action["actor_id"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    am_code=project_code(self, c, state, action, dict(row)),
+                )
             if action["data"].get("am_source") and row["kind"] == "am_prepare":
                 from girlframe.services.m3_am_scrutinized import preparation as prepare_source_am
 
@@ -3836,6 +3956,13 @@ class GameService:
                 from girlframe.services.m3_tag_markers import projection as marker_projection
 
                 result["tag_markers"] = marker_projection(self, c, state, action, viewer.user_id)
+            if action["data"].get("nightmare_core") and row["kind"] in (
+                "actor_keep",
+                "handler_keep",
+            ):
+                from girlframe.services.m3_nightmare import automatic as nightmare_automatic
+
+                result["nightmare_core"] = bool(nightmare_automatic(action))
             if action["data"].get("kicked_puppy") and row["kind"] == "actor_flirt":
                 from girlframe.services.m3_kicked_puppy import questions as kicked_questions
 

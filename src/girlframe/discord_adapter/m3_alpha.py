@@ -85,22 +85,25 @@ async def open_alpha_choice(
         from girlframe.services.m3_dampener import DampenerService
 
         dampener_controls = await dampener_fields(interaction, DampenerService(game))
+        from girlframe.discord_adapter.m3_nightmare import keep_heat, keep_info
+        from girlframe.services.m3_nightmare import NightmareService
+
+        nightmare = await keep_info(interaction, NightmareService(game))
         available = sheet["heat"]
         fields = [
             Field("context", "Your actual counter under this pressure", paragraph=True),
             Field(
                 "heat",
                 "Heat to spend",
-                tuple(
-                    (str(n), str(n))
-                    for n in ([available] if available >= 5 else range(available + 1))
-                ),
+                tuple((str(n), str(n)) for n in keep_heat(nightmare, available)),
             ),
         ]
         text = (
             "Make the actual source-bound Keep Your Head counter. "
             "Its roll and required choices must finish."
         )
+        if nightmare:
+            text += " Nightmare Core uses Void Assets and no Heat; terrifying is established."
         fields.extend(dampener_controls)
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
