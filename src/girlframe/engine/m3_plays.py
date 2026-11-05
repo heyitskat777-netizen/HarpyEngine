@@ -10,3 +10,5 @@ HEAT_IDS = (
     "snoop",
 )
 ASSET_IDS = ("defeat",)
+
+JANUS_ROLL_IDS = ("living_battery", "pandora_birth")

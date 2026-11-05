@@ -316,9 +316,13 @@ class MissionService:
             if authorize:
                 authorize(c)
             if kind.startswith("m3.mission_"):
+                from girlframe.services.m3_gorgon_dormant import (
+                    require_clear as require_gorgon_costs_clear,
+                )
                 from girlframe.services.m3_quadrant_loss import require_aftermath_clear
 
                 require_aftermath_clear(load_state(c, self.store.campaign_id))
+                require_gorgon_costs_clear(self.game, c)
 
         try:
             return self.store._write(

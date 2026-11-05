@@ -170,6 +170,8 @@ class GorgonService:
             return {"game_revision": state.revision, "attackers": entries}
 
     def cores(self, viewer: GuildViewer) -> dict[str, Any]:
+        from girlframe.engine.m3_leviathan import layers_clear
+
         with self.store.engine.connect() as c:
             self._authorize(c, viewer)
             state = load_state(c, self.store.campaign_id)
@@ -182,6 +184,7 @@ class GorgonService:
                     not gorgon.alive
                     or gorgon.exposed
                     or not set(gorgon.core_plan.assets) <= dealt_with
+                    or not layers_clear(gorgon)
                 ):
                     continue
                 actor = resolve(state, ActorRef(kind="gorgon", entity=gorgon.id), ())

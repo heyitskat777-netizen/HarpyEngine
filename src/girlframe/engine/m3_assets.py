@@ -22,8 +22,8 @@ def wyvern_intrinsic(sheet: PilotSheet, asset: AssetState) -> bool:
 
 
 def counts_toward_limit(sheet: PilotSheet, asset: AssetState) -> bool:
-    return not wyvern_intrinsic(sheet, asset)
+    return not wyvern_intrinsic(sheet, asset) and asset.battery_asset is None
 
 
 def can_replace_at_limit(sheet: PilotSheet, asset: AssetState) -> bool:
-    return not asset.void and not wyvern_intrinsic(sheet, asset)
+    return not asset.void and not wyvern_intrinsic(sheet, asset) and asset.battery_asset is None

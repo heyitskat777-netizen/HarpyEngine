@@ -818,6 +818,9 @@ class CareerService:
             from girlframe.services.m3_harpy_defeat import restore_death_tags
 
             state = restore_death_tags(self.game, c, state, archive.actor, source)
+            from girlframe.services.m3_frame_control import expire_returned_assets
+
+            state = expire_returned_assets(state, archive.actor, source)
             restored = state.sheets[str(viewer.user_id)]
             original_private = c.scalar(
                 sa.select(t.snapshots.c.private_json).where(

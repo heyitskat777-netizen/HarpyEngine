@@ -30,8 +30,9 @@ def _current(state: GameState, actor: ActorRef) -> bool:
     if actor.kind == "pilot":
         sheet = state.sheets.get(actor.entity)
         return bool(sheet and sheet.character_id == actor.incarnation)
-    if actor.kind == "external_pilot" and any(
-        x.id == actor.entity and x.alive for x in state.harpy_states
+    if actor.kind == "external_pilot" and (
+        any(x.id == actor.entity and x.alive for x in state.harpy_states)
+        or any(x.id == actor.entity and x.alive for x in state.janus_cores)
     ):
         return True
     if state.world is None:
@@ -51,7 +52,11 @@ def _known(state: GameState, actor: ActorRef) -> bool:
         or any(actor in (x.first, x.second) for x in state.actor_bonds)
         or any(actor in (x.subject, x.foe) for x in state.helpless_conditions)
         or (
-            actor.kind == "external_pilot" and any(x.id == actor.entity for x in state.harpy_states)
+            actor.kind == "external_pilot"
+            and (
+                any(x.id == actor.entity for x in state.harpy_states)
+                or any(x.id == actor.entity for x in state.janus_cores)
+            )
         )
     ):
         return True
@@ -160,29 +165,59 @@ def set_depth(
     return state
 
 
-def _heat(state: GameState, actor: ActorRef) -> None:
+def _heat(state: GameState, actor: ActorRef, event: str) -> None:
     if not _current(state, actor):
         return
+    if actor.kind == "handler":
+        from girlframe.engine.m3_handler_consequences import same_handler_body
+
+        if not same_handler_body(state, actor) or not any(
+            x.active
+            and x.handler == int(actor.entity)
+            and same_handler_body(
+                state, ActorRef(kind="handler", entity=actor.entity, incarnation=x.id)
+            )
+            for x in state.director_contexts
+        ):
+            return  # The ordinary Handler has no Heat resource.
+    if actor.kind not in ("pilot", "handler", "external_pilot") or (
+        actor.kind == "external_pilot"
+        and not (
+            any(x.id == actor.entity for x in state.harpy_states)
+            or any(x.id == actor.entity for x in state.native_harpies)
+            or any(x.id == actor.entity for x in state.janus_cores)
+        )
+    ):
+        return
+    from girlframe.engine.m3_leviathan_obsession import allowed_gain
+
+    amount = allowed_gain(state, actor, 2, "Intense Bond overflow", event)
     if actor.kind == "pilot":
         sheet = state.sheets[actor.entity]
-        sheet.heat += 2
+        sheet.heat += amount
         sheet.revision += 1
     elif actor.kind == "handler":
-        state.handler_heat += 2
+        state.handler_heat += amount
     elif actor.kind == "external_pilot":
         rows = getattr(state, "harpy_states", ())
         row = next((x for x in rows if x.id == actor.entity), None)
         if row is not None:
             state.harpy_states = [
-                x.model_copy(update={"heat": x.heat + 2}) if x.id == row.id else x for x in rows
+                x.model_copy(update={"heat": x.heat + amount}) if x.id == row.id else x
+                for x in rows
+            ]
+        elif any(x.id == actor.entity for x in state.janus_cores):
+            state.janus_cores = [
+                x.model_copy(update={"heat": x.heat + amount}) if x.id == actor.entity else x
+                for x in state.janus_cores
             ]
         elif any(x.id == actor.entity for x in state.native_harpies):
             state.native_harpies = [
-                x.model_copy(update={"heat": x.heat + 2}) if x.id == actor.entity else x
+                x.model_copy(update={"heat": x.heat + amount}) if x.id == actor.entity else x
                 for x in state.native_harpies
             ]
         elif state.world is not None and any(x.id == actor.entity for x in state.world.pilots):
-            raise ValueError("An external Pilot needs an actual Heat resource before deepening")
+            return  # No Heat exists here; preserve the otherwise source-legal Bond.
 
 
 def change(
@@ -195,7 +230,7 @@ def change(
     state = set_depth(original, first, second, value, source_event)
     if delta == 1 and old == 2:
         for actor in (first, second):
-            _heat(state, actor)
+            _heat(state, actor, source_event)
     return state
 
 
@@ -256,6 +291,9 @@ def rebind(original: GameState, old: ActorRef, new: ActorRef, source_event: str)
         )
         for x in state.helpless_conditions
     ]
+    from girlframe.engine.m3_leviathan_obsession import rebind as rebind_obsession
+
+    state = rebind_obsession(state, old, new, source_event)
     return GameState.model_validate_json(state.model_dump_json())
 
 
@@ -270,6 +308,10 @@ def _same_body(state: GameState, first: ActorRef, second: ActorRef) -> bool:
 
 
 def is_helpless(state: GameState, subject: ActorRef, foe: ActorRef | None = None) -> bool:
+    from girlframe.engine.m3_janus import drugged
+
+    if drugged(state, subject):
+        return True
     if any(
         x.active
         and _same_body(state, x.subject, subject)

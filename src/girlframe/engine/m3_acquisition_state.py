@@ -38,10 +38,15 @@ class PersonalFirearmGrant(Model):
     frame_instance: str = Field(min_length=1)
     source_event: str = Field(min_length=1)
     purchase: str | None = None
+    source_work: str | None = Field(
+        default=None, min_length=1, exclude_if=lambda value: value is None
+    )
     issues: tuple[FirearmIssue, ...] = Field(min_length=1)
 
     @model_validator(mode="after")
     def actual_original(self) -> "PersonalFirearmGrant":
+        if self.purchase is not None and self.source_work is not None:
+            raise ValueError("A free replacement package is not a paid acquisition receipt")
         if self.actor.kind != "pilot" or len({x.asset for x in self.issues}) != len(self.issues):
             raise ValueError("An original Girl's entitlement keeps distinct actual issued items")
         if any(

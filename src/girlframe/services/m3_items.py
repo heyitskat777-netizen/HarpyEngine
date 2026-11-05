@@ -141,7 +141,7 @@ def available_items(
     bindings: set[str] = set()
     if holder.kind == "pilot":
         for asset in state.sheets[holder.entity].assets:
-            if asset.family != "girl" or asset.concealed:
+            if asset.family != "girl" or asset.concealed or asset.battery_asset is not None:
                 continue
             recorded = next(
                 (

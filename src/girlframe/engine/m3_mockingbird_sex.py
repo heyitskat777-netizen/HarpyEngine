@@ -227,3 +227,302 @@ def helpless(
     return exposure(
         make_helpless(original, actor, target, event), actor, target, "low_tag", action, event
     )
+
+
+def deepen(original: GameState, actor: ActorRef, target: ActorRef, event: str) -> GameState:
+    """Keep the source roles, but write the one actual physical Bond endpoint."""
+    from girlframe.engine.m3_actor_bonds import bond_ref
+
+    return change(original, bond_ref(original, actor), bond_ref(original, target), 1, event)
+
+
+def remove_void(
+    original: GameState, target: ActorRef, asset: str, description: str, event: str
+) -> GameState:
+    """Taking corruption away never repairs damage or changes an Asset's origin."""
+    actual = assets(original, target)
+    chosen = next((x for x in actual if x.id == asset and x.void), None)
+    if chosen is None or not description.strip() or len(description) > 1200:
+        raise ValueError("Describe the actual existing Asset after its Void is taken away")
+    return update_assets(
+        original,
+        target,
+        tuple(
+            x.model_copy(
+                update={
+                    "void": False,
+                    "description": description,
+                    **({"concealed": False} if "concealed" in type(x).model_fields else {}),
+                }
+            )
+            if x.id == asset
+            else x
+            for x in actual
+        ),
+        event,
+    )
+
+
+def write_self_asset(
+    original: GameState,
+    actor: ActorRef,
+    name: str,
+    description: str,
+    action: str,
+    event: str,
+    *,
+    replace: str | None = None,
+) -> GameState:
+    """The explicit self option writes one new Girl Asset, with actual acquisition caps."""
+    from girlframe.engine.m3_core import install
+
+    if not owns(original, actor, SEX) or not name.strip() or len(name) > 120:
+        raise ValueError("Name the one actual self-written Void Asset")
+    if not description.strip() or len(description) > 1200 or not event:
+        raise ValueError("Describe the actual Void taken into yourself")
+    identity = "mock-sex-self:" + action
+    if any(x.id == identity for x in assets(original, actor)):
+        raise ValueError("This original self-written Asset already exists")
+    state = GameState.model_validate_json(original.model_dump_json())
+    value = AssetState(id=identity, family="girl", name=name, description=description, void=True)
+    if actor.kind == "pilot":
+        sheet = state.sheets.get(actor.entity)
+        if sheet is None or sheet.character_id != actor.incarnation:
+            raise ValueError("Use the original caster's actual resources")
+        state.sheets[actor.entity] = install(sheet, value, replace=replace).sheet
+    elif actor.kind == "external_pilot":
+        from girlframe.engine.m3_harpy_defeat import harpy, update
+        from girlframe.engine.m3_void_state import HarpyAsset, HarpyState
+        from girlframe.engine.m3_world_state import Asset
+
+        body = harpy(state, actor)
+        current = assets(state, actor)
+        girls = [x for x in current if x.family == "girl"]
+        if len(girls) >= 4:
+            candidate = next((x for x in girls if x.id == replace and not x.void), None)
+            if candidate is None:
+                raise ValueError("At the Girl cap, replace one actual non-Void Girl Asset")
+            # A carried object's authority stays at its real Item origin.
+            from girlframe.engine.m3_items import actual_asset, same_holder
+
+            held = next(
+                (
+                    x
+                    for x in state.held_items
+                    if same_holder(state, x.holder, actor)
+                    and (old := actual_asset(state, x)) is not None
+                    and old.id == candidate.id
+                ),
+                None,
+            )
+            if held is not None:
+                state.held_items = [
+                    x.model_copy(
+                        update={"asset_id": None, "asset_owner": None, "state_event": event}
+                    )
+                    if x.id == held.id
+                    else x
+                    for x in state.held_items
+                ]
+            elif isinstance(body, HarpyState):
+                state = update(
+                    state, actor, assets=tuple(x for x in body.assets if x.id != replace)
+                )
+            else:
+                assert state.world is not None
+                state.world = state.world.model_copy(
+                    update={
+                        "pilots": tuple(
+                            x.model_copy(
+                                update={"assets": tuple(y for y in x.assets if y.id != replace)}
+                            )
+                            if x.id == actor.entity
+                            else x
+                            for x in state.world.pilots
+                        )
+                    }
+                )
+            body = harpy(state, actor)
+        elif replace is not None:
+            raise ValueError("Do not discard an Asset when no cap replacement is required")
+        if isinstance(body, HarpyState):
+            state = update(state, actor, assets=(*body.assets, HarpyAsset(**value.model_dump())))
+        else:
+            assert state.world is not None
+            new = Asset(
+                id=value.id,
+                family="girl",
+                name=value.name,
+                description=value.description,
+                void=True,
+            )
+            state.world = state.world.model_copy(
+                update={
+                    "pilots": tuple(
+                        x.model_copy(update={"assets": (*x.assets, new)})
+                        if x.id == actor.entity
+                        else x
+                        for x in state.world.pilots
+                    )
+                }
+            )
+    else:
+        raise ValueError("Only the actual owned Girl or retained Harpy writes this self Asset")
+    state.facts.append(
+        dict(
+            kind="mockingbird_self_asset",
+            action=action,
+            actor=actor.model_dump_json(),
+            asset=identity,
+            event=event,
+            replace=replace or "",
+        )
+    )
+    return state
+
+
+def void_criteria(before: GameState, after: GameState, actor: ActorRef) -> tuple[str, ...]:
+    """Only genuinely new nonempty family thresholds; no duplicate Harpy or invented Frame."""
+    if actor.kind != "pilot":
+        return ()
+    old = before.sheets.get(actor.entity)
+    new = after.sheets.get(actor.entity)
+    if old is None or new is None or old.character_id != actor.incarnation:
+        raise ValueError("Use the actual original person's source sheets")
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+
+    immune_girl = has_rule(new, "girl.mockingbird.risk-factor", "MOCKINGBIRD")
+    result = []
+    for family in ("girl", "frame"):
+        prior = [x for x in old.assets if x.family == family]
+        current = [x for x in new.assets if x.family == family]
+        if (
+            current
+            and all(x.void for x in current)
+            and not (prior and all(x.void for x in prior))
+            and (family != "girl" or not immune_girl)
+        ):
+            result.append(family)
+    return tuple(result)
+
+
+def suppress(
+    original: GameState,
+    target: ActorRef,
+    selected: tuple[str, ...],
+    account: str,
+    action: str,
+    event: str,
+) -> GameState:
+    """Teach/perform suppression of real corruption; actual Void and its criteria stay present."""
+    if not selected or len(set(selected)) != len(selected) or not account.strip():
+        raise ValueError("Choose real corruption and describe its actual hiding/suppression")
+    actual = assets(original, target)
+    valid = {identity for identity, _ in corruption_options(original, target)}
+    if not set(selected) <= valid:
+        raise ValueError("Hide only actual existing corruption; no imaginary or removed source")
+    ids = {x.removeprefix("asset:") for x in selected if x.startswith("asset:")}
+    values = tuple(
+        x.model_copy(update={"concealed": True})
+        if x.id in ids and "concealed" in type(x).model_fields
+        else x
+        for x in actual
+    )
+    state = (
+        update_assets(original, target, values, event)
+        if ids
+        else GameState.model_validate_json(original.model_dump_json())
+    )
+    state.facts.append(
+        dict(
+            kind="mockingbird_suppression",
+            actor=target.model_dump_json(),
+            selected="|".join(selected),
+            account=account.strip(),
+            action=action,
+            event=event,
+        )
+    )
+    return state
+
+
+def npc_void(
+    original: GameState,
+    target: ActorRef,
+    manifestation: str,
+    giver: ActorRef | None,
+    controller: int,
+    action: str,
+    event: str,
+) -> GameState:
+    from uuid import NAMESPACE_URL, uuid5
+
+    from girlframe.engine.m3_world_state import WorldTag
+
+    if manifestation not in ("brain", "bones", "flesh", "abstract") or target.kind != "npc":
+        raise ValueError("The actual source Handler chooses one printed NPC manifestation")
+    state = GameState.model_validate_json(original.model_dump_json())
+    npc = (
+        next((x for x in state.world.npcs if x.id == target.entity and x.alive), None)
+        if state.world
+        else None
+    )
+    if npc is None or "director" in npc.jobs:
+        raise ValueError("Normal NPC physiology only; a Director uses the real Handler source port")
+    tag = WorldTag(
+        id=str(uuid5(NAMESPACE_URL, event + ":sex-void:" + target.entity)),
+        label="Void of the " + manifestation,
+        giver_entity=giver.model_dump_json() if giver else "gm:" + str(controller) + ":" + event,
+    )
+    assert state.world is not None
+    state.world = state.world.model_copy(
+        update={
+            "npcs": tuple(
+                x.model_copy(update={"tags": (*x.tags, tag)}) if x.id == npc.id else x
+                for x in state.world.npcs
+            )
+        }
+    )
+    state.facts.append(
+        dict(
+            kind="mockingbird_npc_void",
+            actor=target.model_dump_json(),
+            tag=tag.id,
+            manifestation=manifestation,
+            action=action,
+            event=event,
+        )
+    )
+    return state
+
+
+def corruption_options(state: GameState, target: ActorRef) -> tuple[tuple[str, str], ...]:
+    """Names identify actual corruption records, never a fabricated Asset from a descriptor."""
+    import json
+    from uuid import NAMESPACE_URL, uuid5
+
+    result = [("asset:" + x.id, x.name) for x in assets(state, target) if x.void]
+    if target.kind == "npc" and state.world:
+        proven = {
+            x["tag"]
+            for x in state.facts
+            if x.get("kind") == "mockingbird_npc_void"
+            and x.get("actor") == target.model_dump_json()
+        }
+        for fact in state.facts:
+            if fact.get("kind") == "dive_effect" and fact.get("option") == "nearby_npcs_gain_void":
+                if any(x.get("npc") == target.entity for x in json.loads(fact["effect"])["npcs"]):
+                    proven.add(
+                        str(uuid5(NAMESPACE_URL, fact["source_event"] + ":" + target.entity))
+                    )
+        npc = next((x for x in state.world.npcs if x.id == target.entity and x.alive), None)
+        result += [("tag:" + x.id, x.label) for x in (npc.tags if npc else ()) if x.id in proven]
+    from girlframe.engine.m3_actor_bonds import bond_ref
+
+    body = bond_ref(state, target)
+    result += [
+        ("physiology:" + x.id, "Actual localized " + (x.manifestation or "Void"))
+        for x in state.handler_void
+        if x.body == body and x.void_present and x.phase != "ended"
+    ]
+    return tuple(result)

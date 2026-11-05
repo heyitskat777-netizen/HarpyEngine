@@ -16,6 +16,7 @@ from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_battle_state import Required as DamageRequired
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_harpy_defeat_state import HarpySetup, NativeHarpyFacts, NativeHarpyRuntime
+from girlframe.engine.m3_janus_state import JanusCore
 from girlframe.engine.m3_policy import RULESET
 from girlframe.engine.m3_void_state import HarpyState
 from girlframe.services.handler_setup import HandlerService
@@ -622,7 +623,16 @@ class HarpyDefeatService:
             if source.world
             else None
         )
-        controller = original.controller if original else world.controller if world else None
+        admitted_core = next((x for x in source.janus_cores if x.id == actor.entity), None)
+        controller = (
+            original.controller
+            if original
+            else admitted_core.controller
+            if admitted_core
+            else world.controller
+            if world
+            else None
+        )
         if (
             controller is None
             or str(controller) != first["owner_id"]
@@ -635,8 +645,12 @@ class HarpyDefeatService:
 
     def _runtime(
         self, c: Connection, state: GameState, actor: ActorRef
-    ) -> HarpyState | NativeHarpyRuntime:
+    ) -> HarpyState | NativeHarpyRuntime | JanusCore:
         body = rules.harpy(state, actor)
+        if isinstance(body, JanusCore):
+            from girlframe.services.m3_janus import prove_core
+
+            return prove_core(c, self.game, state, actor)
         raw = c.scalar(
             sa.select(t.m2["m2_state_history"].c.body_json).where(
                 t.m2["m2_state_history"].c.campaign_id == self.store.campaign_id,
@@ -1402,7 +1416,7 @@ class HarpyDefeatService:
 
     def _current(
         self, c: Connection, action: dict[str, Any], *, unrolled: bool = False
-    ) -> tuple[GameState, HarpyState | NativeHarpyRuntime, "Declaration"]:
+    ) -> tuple[GameState, HarpyState | NativeHarpyRuntime | JanusCore, "Declaration"]:
         declared = self._declaration(c, action)
         state = load_state(c, self.store.campaign_id)
         body = self._runtime(c, state, declared.actor)
@@ -1869,6 +1883,9 @@ class HarpyDefeatService:
                 raise WorkflowError("Only this actual Harpy's human resolves the repeated Tag.")
             tag_id = json.loads(row["body_json"])["tag"]
             if answer.options == ("embrace",):
+                from girlframe.engine.m3_leviathan_obsession import require_identity_change
+
+                require_identity_change(state, declared.actor, answer.denied)
                 actor_rules.embrace(state, declared.actor, tag_id, answer.denied)
             else:
                 if answer.denied:

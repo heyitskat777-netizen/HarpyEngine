@@ -1,5 +1,98 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Focused workflow development — 2026-11-05
+
+Final focused integration selection: **15 passed / 27.15s**, zero failures,
+errors or skips (`var/m3-normal-workflows-checkpoint.xml`). Command:
+`.venv/bin/pytest -q tests/rules/test_leviathan_obsession_flow.py
+tests/rules/test_budget_ruin.py tests/rules/test_budget_photoshoot.py
+tests/rules/test_budget_patron.py tests/rules/test_janus_requisitions.py
+tests/rules/test_janus_requisitions_native.py tests/rules/test_janus_storage.py
+tests/rules/test_janus_control_lifecycle.py --tb=short
+--junitxml=var/m3-normal-workflows-checkpoint.xml`.
+This is the agreed small normal-path selection, not a new full regression.
+
+JANUS normal source paths now cover Core-owned rolls, Battery and final-Tag
+takeover, actual nonlethal Training, Universal Plug, real PANDORA birth/owned
+newborn and Pet carry/return, with native controls. Remaining Core Punishment,
+grafting/retention/package and Storage ports are explicitly partial. Storage's
+normal Dive gain/unplug/replug/surgery works, but acquisition remains unavailable:
+threshold-completing gains, other gain sources and raw threshold/cost readers
+still need implementation. Unsupported behavior is not a campaign ruling.
+
+Targeted agent/root static checks pass their named changed modules. The public
+repository scan reports 878 publishable files, 40 unchanged original manifest
+entries and zero findings. No live migration, restart or deployment occurred.
+The registry validates at 219 adjustable clarifications, 120 subsets and
+353 unimplemented entries; zero independent approvals. Core scope is unchanged.
+
+The working tree extends `608173a` and has **not** had another full regression.
+The owner-approved reduced-usage workflow uses two implementation agents, fixed
+deliverables and focused functional checks. Final integrated verification remains
+pending; the bot stays off.
+
+Bounded source workflows since the full checkpoint include free Personal Firearm
+issuance (46 focused passes), Compliance Virus (70), supported Mockingbird Sex
+(68), supported Call guest/native/relay/consent (five final functional checks),
+Director Dive physiology (44), Dormant costs/awakening (86), Leviathan layers (73),
+exact Frame Core Tag review, deeper saved-action recovery and native transitions.
+These overlapping totals are scoped evidence, not a completion score.
+
+Budget Endgame5 grants an actual Girl-authored persistent Handler Tag; Endgame6
+provides one optional collective Tag per qualifying real Off-Duty period with
+actual human agreement. Affected checks passed 56 tests before the final ending
+case; final collective source checks passed 11 (`var/m3-collective-tag-final-source.xml`).
+
+Leviathan Obsession now connects real source declarations, subject Tag-count
+rolls without Heat spending, owned Identity consequences and actual low-result
+arrival review. Three expected flows passed in **4.26s**, including native gift
+and Identity-result confirmation: `.venv/bin/pytest -q
+tests/rules/test_leviathan_obsession_flow.py --tb=short
+--junitxml=var/m3-leviathan-expected-flow.xml`. Physical basic effects separately
+passed four checks in 2.18s. Focused mypy passed four integration modules; scoped
+Ruff and formatting pass. Early focused runs found fingerprint serialization,
+strict saved-tuple deserialization and fake-interaction setup/selector mistakes;
+all were corrected before the passing run, without dropping expected behavior.
+
+Known Leviathan gaps include rare locked-Free/birth and imported-Identity/new-
+Director intersections, carried transport permutations and missing physical
+prerequisites. Existing Pilot Tag-rejection follow-through requires a supported
+ordinary Pilot scene. These remain gaps rather than completed source branches.
+JANUS base/Core and normal takeover have focused evidence; remaining JANUS
+Requisition consumers are still being completed.
+
+The registry validates after 37 additional adjustable clarifications and 11 scoped
+evidence updates. It remains RULES_SUBSET with no independent verification or
+production ungate. No live database, Discord service or environment was changed.
+See [the current workflow](../docs/DEVELOPMENT_WORKFLOW.md).
+
+Budget Endgame3 now has an original-Handler native two-location choice, real map
+destruction and Structure-loss triggers, with no invented Gorgon territory. Actual
+last-base loss materializes the existing required aftermath. Both normal checks
+pass (**2 tests / 3.09s**, `var/m3-budget-ruin-normal.xml`), covering actual recursive
+selection, native confirmation, map/triggers, same-key replay and genuine existing
+aftermath proof. Focused mypy and Ruff pass the new service/adapter. Its additional
+adjustable map-condition interpretation is recorded centrally; fewer than two
+surviving locations remains a source gap. No new full regression is claimed.
+
+Low Budget1.1 now records one actual public-perception Tag per original Girl
+through the existing Strain/native flow, with original period/CID guards and
+authenticated OOC public-setter provenance. No Handler Tag, numeric funds or
+player dialogue are invented. One normal actual-selection/native/effect check
+passed in **1.61s** (`var/m3-budget-photoshoot-normal.xml`); scoped Ruff and mypy
+passed three effect modules. Ended/changed original cohorts stay guarded. The
+public-setter interpretation is recorded for later clarity review.
+
+Low Budget1.2 now gives the selected original Girl a canonical Bond with an
+existing real rich patron. Its controller gets optional private visit controls;
+only explicitly witnessed evidence of Punishment produces the authored Tag for
+the original Handler. No private Punishment records are read to infer observation,
+and no movement or player conduct is invented. The normal selected-source/native/
+Bond/two-visit flow passed **1 test / 1.70s** (`var/m3-budget-patron-normal.xml`);
+focused mypy passed six modules and scoped Ruff passes. Existing NPC setup and
+original-person lifetime guards remain explicit boundaries. This closes normal
+flows for both Low Budget row1 columns, not the whole Budget table.
+
 ## Bounded gameplay candidate — automated verification passed
 
 Verified source: **`c46e9005bed43c25db46e653c69400db1a668e81`**, extending `262c3fc` on

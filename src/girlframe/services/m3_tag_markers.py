@@ -53,6 +53,8 @@ def context(action: dict[str, Any]) -> dict[str, Any] | None:
     result = dict(value)
     if data.get("enforcement") is value and "marker_handler" in result:
         result["handler"] = result["marker_handler"]
+    if data.get("dive") is value and "marker_handler" in result:
+        result["handler"] = result["marker_handler"]
     if "cast_sha256" not in result and action["data"].get("void_keep") is value:
         result["cast_sha256"] = fingerprint(
             SceneCast.model_validate_json(json.dumps(result["cast"]))

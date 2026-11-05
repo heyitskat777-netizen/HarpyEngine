@@ -120,6 +120,9 @@ def _effects(
     if plan is None:
         raise ValueError("Recover the actual inflictor's surgery selections")
     if "memories" in plan.options:
+        from girlframe.engine.m3_leviathan_obsession import require_unlocked
+
+        require_unlocked(sheet.identities, (x.id for x in sheet.identities if not x.protected))
         sheet = bind(sheet)
         labels = CATALOG[sheet.girl]["identities"]
         protected = [x for x in sheet.identities if x.protected]
@@ -163,6 +166,11 @@ def _effects(
             state = set_depth(state, surgery.subject, plan.other, plan.other_depth, source_event)
         sheet = state.sheets[surgery.subject.entity]
     if "memory" in plan.options:
+        from girlframe.engine.m3_leviathan_obsession import require_unlocked
+
+        require_unlocked(
+            sheet.identities, (plan.replace_identity,) if plan.replace_identity else ()
+        )
         ordinary = [x for x in sheet.identities if not x.protected or x.paired]
         replaced = next(
             (x for x in sheet.identities if x.id == plan.replace_identity and not x.protected), None

@@ -76,7 +76,7 @@ class Placement(Model):
         if (self.occupied_frame_owner is None) != (self.occupied_frame_instance is None):
             raise ValueError("A passenger records both actual occupied Frame owner and instance")
         if self.occupied_frame_owner is not None and (
-            self.occupied_frame_owner.kind != "pilot"
+            self.occupied_frame_owner.kind not in ("pilot", "external_pilot")
             or self.occupied_frame_owner == self.actor
             or self.mode != "inside_frame"
         ):
@@ -144,10 +144,7 @@ class FrameLock(Model):
 
     @model_validator(mode="after")
     def actual_frame(self) -> "FrameLock":
-        if self.owner.kind not in ("pilot", "external_pilot") or self.subject.kind not in (
-            "pilot",
-            "external_pilot",
-        ):
+        if self.owner.kind not in ("pilot", "external_pilot"):
             raise ValueError("A source-bound cockpit lock names its actual Frame and original Girl")
         if self.active == (self.released_event is not None):
             raise ValueError("Only an explicitly released cockpit lock has a release source")

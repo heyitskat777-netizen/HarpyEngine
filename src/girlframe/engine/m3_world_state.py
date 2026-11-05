@@ -5,6 +5,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from girlframe.engine.identity import Snowflake
+from girlframe.engine.m3_janus_link_state import BatteryAsset
 
 Coordinate = Annotated[int, Field(ge=-100_000, le=100_000)]
 Cell = tuple[Coordinate, Coordinate]
@@ -88,11 +89,26 @@ class Asset(Model):
         default=None, min_length=1, exclude_if=lambda value: value is None
     )
 
+    battery_asset: BatteryAsset | None = Field(default=None, exclude_if=lambda value: value is None)
+
+    @model_validator(mode="after")
+    def exact_mental_source(self) -> "Asset":
+        if self.battery_asset is not None and (
+            self.family != "girl"
+            or self.id != self.battery_asset.asset_id
+            or self.name != self.battery_asset.name
+        ):
+            raise ValueError("Use the exact printed source-linked mental Girl Asset")
+        return self
+
 
 class WorldTag(Model):
     id: str = Field(min_length=1, max_length=100)
     label: str = Field(min_length=1, max_length=120)
     giver_entity: str
+    marked: bool = Field(default=False, exclude_if=lambda value: not value)
+    trigger_scene: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    rejection_pending: bool = Field(default=False, exclude_if=lambda value: not value)
 
 
 class Npc(PlacedEntity):
@@ -150,6 +166,12 @@ class Gorgon(Entity):
     assets: tuple[Asset, ...]
     destroyed_assets: tuple[Asset, ...] = ()
     core_plan: CorePlan
+    flesh_layers: tuple[str, str] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    flesh_layers_event: str | None = Field(
+        default=None, min_length=1, exclude_if=lambda value: value is None
+    )
     exposed: bool = False
     alive: bool = True
     revealed: bool = False
@@ -170,6 +192,16 @@ class Gorgon(Entity):
             raise ValueError("Gorgon Assets and Types must be distinct")
         if not set(self.core_plan.assets) <= ids or any(a.family != "gorgon" for a in records):
             raise ValueError("Core exposure must name current or destroyed original Gorgon Assets")
+        if (self.flesh_layers is None) != (self.flesh_layers_event is None):
+            raise ValueError("Actual flesh layers need their original source event")
+        if self.flesh_layers is not None and (
+            "leviathan" not in self.types
+            or len(set(self.flesh_layers)) != 2
+            or not set(self.flesh_layers) <= ids
+            or not self.flesh_layers_event
+            or not self.flesh_layers_event.strip()
+        ):
+            raise ValueError("Use two distinct actual original Leviathan flesh-layer Assets")
         if self.gorgon_class == "directed" and (
             self.goal is None or self.protected_asset not in ids
         ):

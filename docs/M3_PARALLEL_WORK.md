@@ -1,5 +1,17 @@
 # M3 parallel implementation checkpoint
 
+Current staffing is **two implementation agents by default**, with root integrating.
+JANUS/Call/Leviathan normal workflows are now handed off. The next assignments
+are Alpha Brutalize and remaining Storage consumers, with root integrating.
+Physical and Lifecycle hand off their existing work and stop. Follow the
+[current development workflow](DEVELOPMENT_WORKFLOW.md) for fixed deliverables,
+compact handoffs and reduced testing. Four-agent descriptions below are historical
+checkpoint evidence, not the current staffing instruction.
+
+Current focused checkpoint: 15 normal-path tests passed in 27.15s, covering
+JANUS source/native/control/partial Storage, Leviathan and further Budget effects.
+No new full regression or deployment is claimed; Storage acquisition stays hidden.
+
 M3 remains **IN_PROGRESS / RULES_SUBSET**. This document tracks bounded workflows,
 including their limits; it does not certify the milestone or replace the full
 remaining-work inventory. The owner authorized four development agents. The root

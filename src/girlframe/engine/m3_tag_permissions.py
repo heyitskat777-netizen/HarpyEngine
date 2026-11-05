@@ -150,9 +150,11 @@ def present(state: GameState, actor: ActorRef, tag_id: str) -> bool:
         from girlframe.engine.m3_harpy_defeat import harpy
 
         body = harpy(state, actor)
+        from girlframe.engine.m3_janus_state import JanusCore
+
         alive = (
             body.alive
-            if isinstance(body, HarpyState)
+            if isinstance(body, (HarpyState, JanusCore))
             else bool(
                 state.world and any(x.id == actor.entity and x.alive for x in state.world.pilots)
             )

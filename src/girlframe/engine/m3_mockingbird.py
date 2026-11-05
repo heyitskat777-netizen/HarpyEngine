@@ -133,6 +133,10 @@ def risk(
 def same_person(state: GameState, original: ActorRef, current: ActorRef) -> bool:
     if original == current:
         return True
+    if original.kind == current.kind == "handler":
+        from girlframe.engine.m3_handler_consequences import same_handler_body
+
+        return same_handler_body(state, original) and same_handler_body(state, current)
     if current.kind != "external_pilot":
         return False
     from girlframe.engine.m3_tag_permissions import conversion
@@ -291,7 +295,7 @@ def starry_capabilities(
             and same_person(state, grant.holder, counterpart)
             and grant.tag in ids
         ):
-            if counterpart != grant.holder:
+            if counterpart != grant.holder and counterpart.kind == "external_pilot":
                 from girlframe.engine.m3_tag_permissions import conversion
 
                 _, proof = conversion(state, counterpart)

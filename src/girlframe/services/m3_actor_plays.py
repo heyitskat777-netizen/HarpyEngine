@@ -53,6 +53,9 @@ class ActorPlayService:
     def _eligible_play(
         self, state: GameState, actor: ActorRef, *, rejection: bool, play: str = "keep_your_head"
     ) -> None:
+        from girlframe.engine.m3_janus import can_act
+
+        can_act(state, actor)
         if actor.kind != "external_pilot":
             return
         from girlframe.engine.m3_actor_bonds import is_helpless
@@ -231,8 +234,18 @@ class ActorPlayService:
 
             initiative = initiative_preview(self.game, viewer, channel, actor_ref=ref)
 
+            from girlframe.engine.m3_janus import find as core_body
+            from girlframe.engine.m3_janus import has_tag
+
+            original_core = core_body(state, ref)
             return {
                 "actor": actor.model_dump(mode="json"),
+                "janus_core": {
+                    role: has_tag(original_core, role)
+                    for role in ("restrained", "drugged", "muzzled", "surgery")
+                }
+                if original_core is not None
+                else None,
                 "adjudicator": {
                     "ref": judge.ref.model_dump(mode="json") if judge.ref else None,
                     "label": judge.label,
@@ -271,6 +284,11 @@ class ActorPlayService:
         rejection: str | None = None,
     ) -> dict[str, Any]:
         prepared = PlayInput.model_validate_json(prepared.model_dump_json())
+        virus_disobey_play = (
+            prepared.play == "disobey_orders"
+            and prepared.parent is not None
+            and prepared.order_id is not None
+        )
         battle_play = prepared.play in ("all_out_assault", "go_for_the_core")
         mockingbird_play = prepared.play in ("mockingbird_person", "mockingbird_sex")
         if battle_play:
@@ -284,6 +302,7 @@ class ActorPlayService:
                 if rejection
                 else prepared.play
                 not in (
+                    "disobey_orders",
                     "keep_your_head",
                     "dive_deep",
                     "check_sensors",
@@ -308,7 +327,11 @@ class ActorPlayService:
                 or mockingbird_play
             )
             or prepared.order_id is not None
+            and not virus_disobey_play
             or prepared.witnessed
+            and not virus_disobey_play
+            or prepared.play == "disobey_orders"
+            and not virus_disobey_play
             or prepared.target_actor is not None
             and not (
                 battle_play
@@ -355,6 +378,11 @@ class ActorPlayService:
             snoop = None
             enforcement = None
             gorgon_counter = None
+            virus_disobey = None
+            if virus_disobey_play:
+                from girlframe.services.m3_virus_orders import prepare_disobey
+
+                virus_disobey = prepare_disobey(self.game, c, viewer, state, ref, prepared)
             if battle_play:
                 from girlframe.services.m3_battle import prepare
 
@@ -428,7 +456,7 @@ class ActorPlayService:
                     from girlframe.services.m3_gorgon_play import validate_child
 
                     gorgon_counter = validate_child(self.game, c, parent, ref, prepared)
-                elif dormant_source is None:
+                elif dormant_source is None and virus_disobey is None:
                     counter = validate_counter_child(self.game, c, parent, ref, prepared)
             if self.game.pending_actions(c) and parent is None:
                 raise ValueError("SCENE_BUSY: finish or recover the pending Play first")
@@ -510,6 +538,8 @@ class ActorPlayService:
                 cast_sha256=fingerprint(cast),
                 table=participants,
             )
+            if virus_disobey is not None:
+                data["virus_disobey"] = virus_disobey
             if dive is not None:
                 data["dive"] = dive
             if battle is not None:
@@ -584,6 +614,10 @@ class ActorPlayService:
                         campaign_id=self.store.campaign_id, channel_id=str(channel), **values
                     )
                 )
+            if virus_disobey is not None:
+                assert parent is not None
+                parent["data"]["disobey_child"] = identity
+                self.game.save_action(c, parent)
             self.game.event(c, viewer.user_id, key, "m3.actor_play_confirmed", action_id=identity)
             return {"action_id": identity, "state": "ready_to_roll" if parent else "acquiring"}
 
@@ -888,7 +922,11 @@ class ActorPlayService:
         state = state or load_state(c, self.store.campaign_id)
         if intercept_results(self.game, c, state, action):
             return
-        if action["data"].get("enforcement"):
+        if action["data"].get("virus_disobey"):
+            from girlframe.services.m3_virus_orders import actor_results
+
+            actor_results(self.game, c, state, action)
+        elif action["data"].get("enforcement"):
             from girlframe.services.m3_enforcement_initiative import results as enforcer_results
 
             enforcer_results(self.game, c, state, action)
@@ -988,7 +1026,11 @@ class ActorPlayService:
         owner, kind = int(row["actor_id"]), row["kind"]
         body, meta = json.loads(row["body_json"]), action["data"]["actor_basic"]
         judge = meta["adjudicator_controller"]
-        if kind.startswith("snoop_") and action["data"].get("snoop"):
+        if kind.startswith("virus_disobey_") and action["data"].get("virus_disobey"):
+            from girlframe.services.m3_virus_orders import apply_actor
+
+            apply_actor(self.game, c, state, action, row, answer)
+        elif kind.startswith("snoop_") and action["data"].get("snoop"):
             from girlframe.services.m3_enforcer_snoop import apply as snoop_apply
 
             snoop_apply(self.game, c, state, action, row, answer)
@@ -1264,6 +1306,10 @@ class ActorPlayService:
             from girlframe.services.m3_engage import projection as engage_projection
 
             result["engage"] = engage_projection(self.game, c, state, action, row)
+        if action["data"].get("virus_disobey"):
+            from girlframe.services.m3_virus_orders import projection as disobey_projection
+
+            result.update(disobey_projection(self.game, c, state, action, row))
         if action["data"].get("harpy_off_duty"):
             from girlframe.services.m3_harpy_rest import projection as rest_projection
 

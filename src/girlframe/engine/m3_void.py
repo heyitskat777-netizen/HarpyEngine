@@ -615,6 +615,9 @@ def rebirth(
         prior_event=value.source_event,
         mode="inside_frame",
     )
+    from girlframe.engine.m3_leviathan_obsession import require_unlocked
+
+    require_unlocked(sheet.identities, (x.id for x in sheet.identities if x.id not in retained_identities))
     identities = tuple(
         HarpyIdentity.model_validate(x.model_dump())
         for x in sheet.identities

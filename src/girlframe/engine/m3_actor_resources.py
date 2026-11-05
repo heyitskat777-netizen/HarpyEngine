@@ -39,6 +39,10 @@ def commit(
     prepared = Commitment.model_validate_json(prepared.model_dump_json())
     if view.source_sha256 != expected:
         raise ValueError("STALE_RESOURCES: confirm the actual actor's current resources")
+    if prepared.identity is not None:
+        from girlframe.engine.m3_leviathan_obsession import require_identity_gain
+
+        require_identity_gain(state, actor, prepared.identity)
     followups: list[Followup] = []
     if view.rules == "girl_frame":
         sheet = state.sheets[actor.entity]
@@ -57,7 +61,14 @@ def commit(
                     bindings,
                     require_current_profile=False,
                 )
-                state.sheets[str(pair.owner)].heat += share
+                from girlframe.engine.m3_leviathan_obsession import allowed_gain
+
+                pair_ref = ActorRef(
+                    kind="pilot", entity=str(pair.owner), incarnation=pair.character_id
+                )
+                state.sheets[str(pair.owner)].heat += allowed_gain(
+                    state, pair_ref, share, "Paired Identity received share"
+                )
                 state.sheets[str(pair.owner)].revision += 1
         elif prepared.gain or prepared.pair_share:
             raise ValueError("Heat gain requires an actual eligible Identity")

@@ -55,6 +55,13 @@ class PunishmentService:
             from girlframe.services.m3_debts import check_returned
 
             check_returned(c, self.store, dict(row))
+        if (
+            row["kind"] == "punishment"
+            and json.loads(row["body_json"]).get("reason") == "janus_core_tag_removal"
+        ):
+            from girlframe.services.m3_janus_requisitions import prove_tag_removal
+
+            prove_tag_removal(c, self.game, dict(row))
         return dict(row)
 
     def _body(self, row: dict[str, Any]) -> dict[str, Any]:
@@ -171,6 +178,13 @@ class PunishmentService:
             case = case_proof(c, self.game, self._body(row)["role_case"])
             if case.action:
                 allowed.append(case.action)
+            if case.source_kind == "compliance_virus":
+                from girlframe.services.m3_compliance_virus import source as virus_source
+
+                _, purge = virus_source(c, self.game, case.source_work or "")
+                allowed.append(purge.operational_action)
+                if purge.discovery_action:
+                    allowed.extend(lineage(self.game, c, purge.discovery_action))
         if c.scalar(
             sa.select(actions.c.id)
             .where(
@@ -201,6 +215,7 @@ class PunishmentService:
             "strict_regulations",
             "put_someone_beneath_you",
             "privacy_death",
+            "janus_core_tag_removal",
             "defeat_post_mission",
             "role_punishment",
         ):

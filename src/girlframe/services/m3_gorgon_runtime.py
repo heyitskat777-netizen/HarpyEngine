@@ -87,6 +87,9 @@ def start(game: Any, c: Connection, state: GameState, action: dict[str, Any]) ->
     if not actual.alive:
         raise WorkflowError("A dead original Gorgon cannot begin another attack.")
     meta.update(runtime_started=True, followups=[], effects=[])
+    from girlframe.services.m3_gorgon_dormant import record_own_wake
+
+    record_own_wake(game, c, state, action)
     if meta["kind"] == "warp":
         if not actual.exposed:
             raise WorkflowError("Warp charges an actually exposed Core.")
@@ -95,7 +98,19 @@ def start(game: Any, c: Connection, state: GameState, action: dict[str, Any]) ->
     if meta["kind"] == "collateral":
         _request(game, c, action, meta["controller"], "collateral")
         return
+    from girlframe.services.m3_gorgon_dormant import stage
+
+    if stage(game, c, state, action):
+        return
+    _start_attack(game, c, state, action)
+
+
+def _start_attack(game: Any, c: Connection, state: GameState, action: dict[str, Any]) -> None:
+    meta = _meta(action)
     target = _ref(meta["target"])
+    from girlframe.engine.m3_janus_pandora import require_can_harm
+
+    require_can_harm(state, _ref(meta["actor"]), target)
     victim = resolve(
         state, target, profiles(c, game.store.campaign_id), require_current_profile=False
     )
@@ -114,6 +129,23 @@ def start(game: Any, c: Connection, state: GameState, action: dict[str, Any]) ->
         _request(game, c, action, victim.controller, "defend")
 
 
+def resume_after_dormant(
+    game: Any, c: Connection, state: GameState, action: dict[str, Any], identity: str, event: str
+) -> None:
+    from girlframe.services.m3_gorgon_dormant import paid_source
+
+    meta = _meta(action)
+    if meta.get("dormant_work") != identity:
+        raise WorkflowError("Resume the original source attack that incurred this exact counter")
+    paid = paid_source(game, c, action, identity)
+    if meta.get("dormant_paid"):
+        if meta["dormant_paid"] != paid:
+            raise WorkflowError("This source continuation already has a different real payment")
+        return
+    meta.update(dormant_paid=paid, phase="active", dormant_continuation_event=event)
+    _start_attack(game, c, state, action)
+
+
 def _damage(
     game: Any,
     c: Connection,
@@ -127,6 +159,9 @@ def _damage(
     from girlframe.services.m3_battle import damage_actor
 
     actor = _ref(_meta(action)["actor"])
+    from girlframe.engine.m3_janus_pandora import require_can_harm
+
+    require_can_harm(state, actor, target)
     changed, work = damage_actor(
         game,
         c,
@@ -488,6 +523,9 @@ def _destroy(
     meta, event = _meta(action), _event(action)
     actor = _ref(meta["actor"])
     opponent = _ref(meta["target"]) if target == actor else actor
+    from girlframe.engine.m3_janus_pandora import require_can_harm
+
+    require_can_harm(state, actor, target)
     available = battle.assets(state, target, profiles(c, game.store.campaign_id))
     selected = next((x for x in available if x.id == asset_id), None)
     if selected is None:
@@ -594,7 +632,9 @@ def projection(
     body = json.loads(row["body_json"])
     kind = row["kind"].removeprefix("gorgon_")
     result: dict[str, Any] = dict(kind=kind, account=action["data"].get("context", ""))
-    if kind == "defend":
+    if kind == "dormant_void":
+        result.update(work_id=body["work_id"], actor=body["actor"], source="actual_gorgon_dormant")
+    elif kind == "defend":
         result["options"] = ["play"]
         if battle.intact_assets(state, _ref(body["actor"]), profiles(c, game.store.campaign_id)):
             result["options"].append("damage")
@@ -786,6 +826,9 @@ def synchronize(
     meta = _meta(action)
     if not meta.get("runtime_started"):
         return False
+    from girlframe.services.m3_gorgon_dormant import materialize as materialize_dormant
+
+    materialize_dormant(game, c, action, event)
     synchronize_damage(game, c, event)
     state = load_state(c, game.store.campaign_id)
     if not _actor(state, action).alive:

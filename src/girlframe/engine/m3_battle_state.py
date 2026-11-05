@@ -119,6 +119,7 @@ class FrameExposure(Model):
     source_event: str = Field(min_length=1)
     willing: bool = False
     tag: str | None = None
+    scene: str | None = Field(default=None, min_length=1, exclude_if=lambda value: value is None)
     intense: bool = False
     girl_assets: bool = False
     identities: bool = False

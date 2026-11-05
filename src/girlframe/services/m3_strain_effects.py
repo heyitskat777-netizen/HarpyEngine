@@ -109,6 +109,18 @@ class EffectService:
             event_id = str(uuid4())
             supply = None
             contraband = None
+            public_appointment = None
+            if choice.rule_id in ("strain.budget.low.1.1", "strain.budget.low.1.2"):
+                period = self.strain.periods._get(c, row["off_duty_id"])
+                if set(period.pilots) != set(state.order) or any(
+                    period.character_ids.get(str(uid)) != state.sheets[str(uid)].character_id
+                    for uid in period.pilots
+                ):
+                    raise WorkflowError("Review the original photoshoot participants before Tags")
+                if choice.rule_id == "strain.budget.low.1.1":
+                    from girlframe.services.m3_medical import MedicalService
+
+                    _, public_appointment = MedicalService(self.store)._handler(c)
             if choice.rule_id == "strain.rebellion.low.2.2":
                 rules.fields(choice, {"target"})
                 period = self.strain.periods._get(c, row["off_duty_id"])
@@ -232,6 +244,7 @@ class EffectService:
                 supply=supply,
                 source_event=event_id,
                 contraband=contraband,
+                tag_setter_appointment=public_appointment,
             )
             scientific_period, scientific_events = None, []
             if choice.rule_id == "strain.budget.low.3.1":

@@ -17,6 +17,7 @@ from girlframe.engine.m3_career_state import (
 )
 from girlframe.engine.m3_contraband_state import ContrabandFind
 from girlframe.engine.m3_enforcer_state import Accusation, Grasp, RankFact
+from girlframe.engine.m3_frame_control_state import FrameCommand, NeuralConnection
 from girlframe.engine.m3_frame_state import FrameRuntime
 from girlframe.engine.m3_girl_runtime_state import GirlRuntime
 from girlframe.engine.m3_handler_consequence_state import (
@@ -43,6 +44,10 @@ from girlframe.engine.m3_harpy_defeat_state import (
 )
 from girlframe.engine.m3_harpy_rest_state import Rest as HarpyRest
 from girlframe.engine.m3_item_state import HeldItem, ItemTransfer
+from girlframe.engine.m3_janus_link_state import BatteryAsset, BatteryLink
+from girlframe.engine.m3_janus_state import JanusCore
+from girlframe.engine.m3_leviathan_arrival_state import ExternalPose, LeviathanArrival
+from girlframe.engine.m3_leviathan_obsession_state import IdentityAuthority, Obsession
 from girlframe.engine.m3_lobotomy_state import BlockedPlay, Surgery
 from girlframe.engine.m3_mockingbird_state import MockingbirdState
 from girlframe.engine.m3_passenger_state import Passenger
@@ -92,6 +97,7 @@ class IdentityState(Model):
     protected: bool = False
     paired: bool = False
     slot: int | None = Field(default=None, ge=0, le=3)
+    obsession_sources: tuple[str, ...] = Field(default=(), exclude_if=lambda value: not value)
 
 
 class AssetState(Model):
@@ -106,11 +112,19 @@ class AssetState(Model):
         default=None, min_length=1, exclude_if=lambda value: value is None
     )
     concealed: bool = False
+    battery_asset: BatteryAsset | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def actual_intrinsic_family(self) -> "AssetState":
         if self.intrinsic is not None and self.family != "frame" and not self.classification_event:
             raise ValueError("The printed WYVERN intrinsic belongs to its Frame Asset")
+        if self.battery_asset is not None and (
+            self.family != "girl"
+            or self.id != self.battery_asset.asset_id
+            or self.name != self.battery_asset.name
+            or self.intrinsic is not None
+        ):
+            raise ValueError("Use the exact printed source-linked temporary mental Girl Asset")
         return self
 
 
@@ -152,6 +166,7 @@ class PilotSheet(Model):
     source_profile_revision: int
     review: ReviewSheet
     identities: list[IdentityState]
+    obsession_sources: tuple[str, ...] = Field(default=(), exclude_if=lambda value: not value)
     assets: list[AssetState]
     tags: list[TagState] = Field(default_factory=list)
     heat: int = Field(default=0, ge=0)
@@ -196,6 +211,7 @@ class DirectorContext(Model):
     directors: tuple[str, ...]
     source_works: tuple[str, ...]
     identities: list[IdentityState]
+    obsession_sources: tuple[str, ...] = Field(default=(), exclude_if=lambda value: not value)
     source_event: str
     body_actor: ActorRef | None = None
     active: bool = True
@@ -261,6 +277,10 @@ class GameState(Model):
     bonds: dict[str, int] = Field(default_factory=dict)
     actor_bonds: list[BondEdge] = Field(default_factory=list)
     helpless_conditions: list[HelplessCondition] = Field(default_factory=list)
+    leviathan_obsessions: list[Obsession] = Field(default_factory=list, exclude_if=lambda value: not value)
+    leviathan_identity_authorities: list[IdentityAuthority] = Field(default_factory=list, exclude_if=lambda value: not value)
+    external_poses: list[ExternalPose] = Field(default_factory=list, exclude_if=lambda value: not value)
+    leviathan_arrivals: list[LeviathanArrival] = Field(default_factory=list, exclude_if=lambda value: not value)
     obligations: list[Obligation] = Field(default_factory=list)
     facts: list[dict[str, str]] = Field(default_factory=list)
     intense_tag_bonus: int | None = None
@@ -286,6 +306,16 @@ class GameState(Model):
     unlinked_careers: list[UnlinkedCareer] = Field(default_factory=list)
     harpy_states: list[HarpyState] = Field(default_factory=list)
     native_harpies: list[NativeHarpyRuntime] = Field(default_factory=list)
+    janus_cores: list[JanusCore] = Field(default_factory=list, exclude_if=lambda value: not value)
+    battery_links: list[BatteryLink] = Field(
+        default_factory=list, exclude_if=lambda value: not value
+    )
+    neural_connections: list[NeuralConnection] = Field(
+        default_factory=list, exclude_if=lambda value: not value
+    )
+    frame_commands: list[FrameCommand] = Field(
+        default_factory=list, exclude_if=lambda value: not value
+    )
     harpy_setups: list[HarpySetup] = Field(default_factory=list)
     handler_girl_void: list[HandlerGirlVoid] = Field(default_factory=list)
     handler_void: list[HandlerVoid] = Field(default_factory=list)
@@ -436,6 +466,8 @@ def mark_identity(
     identity = next((x for x in sheet.identities if x.id == entry), None)
     if identity is None or identity.marked:
         raise ValueError("Choose an unmarked Identity")
+    if not set(sheet.obsession_sources) <= set(identity.obsession_sources):
+        raise ValueError("Only an actual source-qualifying obsessed Identity can generate Heat")
     from girlframe.engine.m3_girl_runtime_state import has_rule, relation_current
 
     if identity.paired and has_rule(sheet, "girl.bonded.bonded-pair", "BONDED"):

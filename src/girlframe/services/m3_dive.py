@@ -31,12 +31,42 @@ if TYPE_CHECKING:
     from girlframe.services.m2_game import GameService
 
 
+def source_cast_compatible(
+    game: "GameService", c: Connection, state: GameState, action: dict[str, Any], current: SceneCast
+) -> bool:
+    """Exact original cast, or an immutable original ending's sole recorded cast transition."""
+    from girlframe.services.m3_harpy_defeat import ended_director_judge
+    from girlframe.services.m3_void_keep import _ended_handler_cast
+
+    meta = action["data"]["dive"]
+    original = SceneCast.model_validate_json(json.dumps(meta["cast"]))
+    if fingerprint(original) != meta["cast_sha256"] or original.id != action["scene_id"]:
+        return False
+    if fingerprint(original) == fingerprint(current):
+        return True
+    judge = ActorRef.model_validate(meta["handler"]) if meta["handler"] else None
+    gm_controller = meta.get("gm_controller") or original.facilitator
+    return bool(
+        judge is not None
+        and judge.kind == "npc"
+        and ended_director_judge(
+            game,
+            c,
+            state,
+            original,
+            current,
+            judge,
+            _handler_controller(meta),
+        )
+        or type(gm_controller) is int
+        and _ended_handler_cast(state, original, current, gm_controller)
+    )
+
+
 def authorize(
     game: "GameService", c: Connection, viewer: GuildViewer, action: dict[str, Any] | None = None
 ) -> None:
-    Access(game.store).authorize(
-        c, viewer, "plays", director_response=bool(action and action["data"].get("actor_basic"))
-    )
+    Access(game.store).authorize(c, viewer, "plays", director_response=action is not None)
     if action is None:
         return
     if action["data"].get("actor_basic"):
@@ -52,15 +82,39 @@ def authorize(
     handler, appointment = MedicalService(game.store)._handler(c)
     state = load_state(c, game.store.campaign_id)
     ref = active_handler(state)
-    if (ref.model_dump(mode="json") if ref else None) != meta["handler"] or appointment != meta[
-        "appointment"
-    ]:
+    original_body = meta.get("marker_handler", meta["handler"])
+    body_changed = (ref.model_dump(mode="json") if ref else None) != original_body
+    if appointment != meta["appointment"] or meta.get("gm_controller", handler) != handler:
         raise WorkflowError("Recover this Dive's original current Handler appointment/persona.")
     cast, _ = CastService(ActorService(MissionService(game.store)))._current(
         c, state, int(action["channel_id"])
     )
-    if fingerprint(cast) != meta["cast_sha256"]:
+    if not source_cast_compatible(game, c, state, action, cast):
         raise WorkflowError("SOURCE_TABLE_CHANGED: recover this Dive's actual original table.")
+    if body_changed:
+        from girlframe.services.m3_harpy_defeat import ended_actor_source
+
+        if (
+            original_body is None
+            or ended_actor_source(game, c, state, ActorRef.model_validate(original_body)) is None
+        ):
+            raise WorkflowError("A replacement Handler body cannot inherit the original source")
+    if "marker_handler" in meta:
+        from girlframe.services.m3_battle import _scene_judge
+
+        judge, controller, source = _scene_judge(game, c, state, cast)
+        expected = (
+            judge.model_dump(mode="json")
+            if judge
+            else (ref.model_dump(mode="json") if ref else None)
+        )
+        source_ended = fingerprint(cast) != meta["cast_sha256"]
+        if not source_ended and (
+            expected != meta["handler"]
+            or controller != meta["handler_controller"]
+            or source != meta["judge_source"]
+        ):
+            raise WorkflowError("Recover this actual Dive's original source-bound adjudicator")
 
 
 def prepare(
@@ -118,13 +172,23 @@ def prepare(
     handler, appointment = MedicalService(game.store)._handler(c)
     assert game.store.policy.m3_approval is not None
     actual_handler = active_handler(state)
+    from girlframe.services.m3_battle import _scene_judge
+
+    judge, judge_controller, judge_source = _scene_judge(game, c, state, cast)
     return dict(
         actor=actor.model_dump(mode="json"),
         table=sorted(table),
         cast=cast.model_dump(mode="json"),
         cast_sha256=fingerprint(cast),
-        handler=actual_handler.model_dump(mode="json") if actual_handler else None,
-        handler_controller=handler,
+        handler=judge.model_dump(mode="json")
+        if judge
+        else actual_handler.model_dump(mode="json")
+        if actual_handler
+        else None,
+        handler_controller=judge_controller,
+        marker_handler=actual_handler.model_dump(mode="json") if actual_handler else None,
+        gm_controller=handler,
+        judge_source=judge_source,
         appointment=appointment,
         registry=game.store.policy.m3_approval.registry_sha256,
         steps=[],
@@ -251,8 +315,8 @@ def _next(game: "GameService", c: Connection, state: GameState, action: dict[str
                 )
             )
         meta["status_lowered"] = True
-    if meta["followups"] and not meta.get("thresholds_opened"):
-        for item in meta["followups"]:
+    if any(not item.get("continuation") for item in meta["followups"]):
+        for item in (x for x in meta["followups"] if not x.get("continuation")):
             game.request(
                 c,
                 action,
@@ -317,18 +381,44 @@ def projection(
     )
     if request["kind"] == "dive_select":
         data["options"] = available_options(state, actor, npcs)
+        from girlframe.services.m3_mockingbird_communion import BOARD, RELAY, candidates
+
+        data["options"] = tuple(
+            x
+            for x in data["options"]
+            if x not in (BOARD, RELAY) or candidates(game, c, state, action, x)
+        )
+        return data
+    if request["kind"] == "dive_handler_void":
+        data["work_id"] = body["work_id"]
         return data
     selected = meta["steps"][step]
     data["option"] = selected["option"]
+    if request["kind"] == "dive_call":
+        data["call_session"] = body["session"]
+        return data
     actual_assets, actual_identities = rules.resources(state, actor)
     if request["kind"] == "dive_effect":
         option = selected["option"]
-        if option == "call_reclassify_assets":
+        if option in ("call_cockpit_guest", "call_gorgon_relay"):
+            from girlframe.services.m3_mockingbird_communion import candidates
+
+            data["targets"] = candidates(game, c, state, action, option)
+        elif option == "call_reclassify_assets":
             data["assets"] = [
                 dict(id=x.id, label=x.name, family=x.family, void=x.void) for x in actual_assets
             ]
         elif option == "void_and_unmark_all":
-            data["assets"] = [dict(id=x.id, label=x.name) for x in actual_assets if not x.void]
+            from girlframe.engine.m3_janus_storage import active
+            from girlframe.services.m3_janus_storage import available as storage_available
+
+            stored = {x.asset for x in active(state, actor)}
+            data["assets"] = [
+                dict(id=x.id, label=x.name)
+                for x in actual_assets
+                if not x.void and x.id not in stored
+            ]
+            data["storage_available"] = storage_available(game, c, state, actor)
         elif option in ("erase_identity_and_table_question", "table_replaces_identity"):
             data["identities"] = [
                 dict(id=x.id, label=x.name) for x in actual_identities if not x.protected
@@ -369,7 +459,7 @@ def available_options(
     if not any(not x.protected for x in actual_identities):
         values.remove("erase_identity_and_table_question")
         values.remove("table_replaces_identity")
-    if not rules.nearby(state, actor, cast_npcs):
+    if not rules.nearby_all(state, actor, cast_npcs):
         values.remove("nearby_npcs_gain_void")
     if actor.kind == "external_pilot":
         from girlframe.engine.m3_harpy_defeat import harpy
@@ -421,21 +511,43 @@ def _apply_effect(
         result = apply_classification(game, c, state, action, step, actor)
     else:
         effect = Effect.model_validate_json(json.dumps(selected["effect"]))
-        result = rules.apply(
-            state,
-            actor,
-            profiles(c, game.store.campaign_id),
-            selected["option"],
-            effect,
-            action["id"],
-            step,
-            action["data"]["response_event"],
-            piloting=action["data"]["prepared"]["piloting"],
-            handler=handler,
-            cast_npcs=npcs,
-            handler_controller=_handler_controller(meta),
-        )
+        if selected.get("store_void"):
+            from girlframe.services.m3_janus_storage import gain as store_gain
+
+            store_gain(game, c, state, action, step, request["id"], actor, effect)
+            result = rules.Outcome(state=state)
+        else:
+            result = rules.apply(
+                state,
+                actor,
+                profiles(c, game.store.campaign_id),
+                selected["option"],
+                effect,
+                action["id"],
+                step,
+                action["data"]["response_event"],
+                piloting=action["data"]["prepared"]["piloting"],
+                handler=handler,
+                cast_npcs=npcs,
+                handler_controller=_handler_controller(meta),
+            )
     _copy(state, result.state)
+    if selected["option"] == "nearby_npcs_gain_void":
+        directors = rules.nearby_directors(state, actor, npcs)
+        if directors:
+            from girlframe.services.m3_dive_handler_void import stage
+
+            stage(
+                game,
+                c,
+                state,
+                action,
+                source_choice=request["id"],
+                step=step,
+                actor=actor,
+                candidates=directors,
+                event=action["data"]["response_event"],
+            )
     selected["applied_event"] = action["data"]["response_event"]
     if result.followups:
         for index, item in enumerate(result.followups):
@@ -504,6 +616,8 @@ def apply(
 ) -> None:
     meta = action["data"]["dive"]
     body = json.loads(request["body_json"])
+    if request["kind"] == "dive_handler_void":
+        raise WorkflowError("Resolve the original Director's real Void consequence")
     step = body["step"]
     if request["kind"] == "dive_void_threshold":
         raise WorkflowError(
@@ -523,6 +637,11 @@ def apply(
             raise WorkflowError(
                 "Choose exactly one printed effect and describe the actual connection."
             )
+        if answer.options[0] in ("call_cockpit_guest", "call_gorgon_relay"):
+            from girlframe.services.m3_mockingbird_communion import candidates
+
+            if not candidates(game, c, state, action, answer.options[0]):
+                raise WorkflowError("This original source has no eligible actual guest/Gorgon")
         group = _groups(action)[step]
         expected = int(action["actor_id"]) if group.owner == "actor" else _handler_controller(meta)
         if int(request["actor_id"]) != expected:
@@ -547,7 +666,15 @@ def apply(
         )
         if int(request["actor_id"]) != detail_owner:
             raise WorkflowError("The actual source-specific detail chooser owns this response.")
-        if option == "call_reclassify_assets":
+        if option in ("call_cockpit_guest", "call_gorgon_relay"):
+            from girlframe.services.m3_mockingbird_communion import start
+
+            _strict(answer, {"fields", "text"})
+            if set(answer.fields) != {"target"}:
+                raise WorkflowError("Choose the actual source guest or nearby Gorgon")
+            start(game, c, state, action, step, request, answer.fields["target"], answer.text)
+            return
+        elif option == "call_reclassify_assets":
             from girlframe.services.m3_mockingbird_call import effect as classification_effect
 
             actor, _, _ = _context(action)
@@ -556,8 +683,26 @@ def apply(
             return
         elif option == "void_and_unmark_all":
             _strict(answer, {"text", "fields"})
-            if set(answer.fields) != {"asset"}:
+            if set(answer.fields) not in ({"asset"}, {"asset", "storage"}):
                 raise WorkflowError("Choose the actual uncorrupted Asset to rewrite.")
+            if "storage" in answer.fields:
+                if answer.fields["storage"] != "yes":
+                    raise WorkflowError("Choose only the actual offered Void Storage destination")
+                selected["store_void"] = True
+            from girlframe.engine.m3_janus_storage import active as stored_void
+
+            actor, _, _ = _context(action)
+            stored = stored_void(state, actor)
+            if stored:
+                assets, _ = rules.resources(state, actor)
+                gaining = next((x for x in assets if x.id == answer.fields["asset"]), None)
+                if gaining is None or gaining.id in {x.asset for x in stored}:
+                    raise WorkflowError("Choose an Asset without actual active stored Void")
+                effective = {x.asset for x in stored} | {gaining.id}
+                if all(x.void or x.id in effective for x in assets if x.family == gaining.family):
+                    raise WorkflowError(
+                        "This stored-Void threshold continuation is not implemented; unplug first"
+                    )
             effect = Effect(
                 account=selected["account"], asset=answer.fields["asset"], description=answer.text
             )
@@ -652,10 +797,16 @@ def apply(
         raise WorkflowError(
             "Resolve the actual source Void threshold; this is not an acknowledgment."
         )
+    if kind == "dive_call":
+        raise WorkflowError("Open the source-owned Call response; this is not an acknowledgment")
     raise WorkflowError("Resume the source-specific owned Dive response.")
 
 
 def synchronize(game: "GameService", c: Connection, action: dict[str, Any], event: str) -> None:
+    if action["data"]["dive"].get("handler_void_followups"):
+        from girlframe.services.m3_dive_handler_void import synchronize as sync_handler
+
+        sync_handler(game, c, action, event)
     table = t.m3["m3_required_work"]
     for item in action["data"]["dive"]["followups"]:
         if "continuation" not in item:

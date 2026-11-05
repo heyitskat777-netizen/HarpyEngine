@@ -51,7 +51,14 @@ class HandlerVoidService:
         first, row = self._row(c, work, first=True), self._row(c, work)
         body = json.loads(first["body_json"])
         actor = ActorRef.model_validate(body["owner"])
-        prove_handler_void_source(self.game, c, first, body, actor)
+        if first["kind"] == "dive_handler_void":
+            from girlframe.services.m3_dive_handler_void import (
+                prove_handler_void_source as prove_dive_source,
+            )
+
+            prove_dive_source(self.game, c, first, body, actor)
+        else:
+            prove_handler_void_source(self.game, c, first, body, actor)
         state = load_state(c, self.store.campaign_id)
         episode = next((x for x in state.handler_void if x.work == work), None)
         raw = c.scalar(
@@ -199,9 +206,16 @@ class HandlerVoidService:
                     )
                 )
             )
-            from girlframe.services.m3_mockingbird_void import complete_handler_void
+            if row["kind"] == "dive_handler_void":
+                from girlframe.services.m3_dive_handler_void import (
+                    complete_handler_void as complete_dive_handler_void,
+                )
 
-            complete_handler_void(self.game, c, row["id"], event, viewer, key)
+                complete_dive_handler_void(self.game, c, row["id"], event, viewer, key)
+            else:
+                from girlframe.services.m3_mockingbird_void import complete_handler_void
+
+                complete_handler_void(self.game, c, row["id"], event, viewer, key)
 
     def choose(
         self,

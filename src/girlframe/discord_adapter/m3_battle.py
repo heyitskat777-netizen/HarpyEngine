@@ -52,7 +52,7 @@ async def open_declaration(
         await reply(interaction, "Join your actual Pilot and opposing actor to this scene first.")
         return
 
-    async def choose(current: discord.Interaction, values: dict[str, Any]) -> str:
+    async def choose(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         actor = next(x for x in own if x["token"] == values["actor"][0])
         target = next(x for x in targets if x["token"] == values["target"][0])
         play = values["play"][0]
@@ -111,7 +111,7 @@ async def open_declaration(
             declare,
         )
         await reply(current, form.text(), form)
-        return "Choose the actual Assets in the new private form."
+        return None
 
     form = NativeForm(
         interaction.user.id,
@@ -450,14 +450,14 @@ async def open_battle(interaction: discord.Interaction, game: GameService, ident
             return
         parent = data | dict(action_id=data["parent"], actor=detail["counter_actor"])
 
-        async def select(current: discord.Interaction, values: dict[str, Any]) -> str:
+        async def select(current: discord.Interaction, values: dict[str, Any]) -> str | None:
             if values["type"][0] == "combat":
                 await open_declaration(current, BattleService(game.store), parent=parent)
             else:
                 from girlframe.discord_adapter.m2_ui import open_play
 
                 await open_play(current, game, parent=parent)
-            return "Choose your actual counter in the source-bound private form."
+            return None
 
         choices: tuple[tuple[str, str], ...] = (("basic", "Make an actual basic Play"),)
         if detail["counter_actor"]["kind"] == "pilot":
@@ -604,7 +604,7 @@ async def open_npc_damage(
     if data["can_take"] and data["items"]:
         options.append(("take_item", "Take an actual held object"))
 
-    async def select(current: discord.Interaction, values: dict[str, Any]) -> str:
+    async def select(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         effect = values["effect"][0]
         fields = [Field("account", "Describe the actual consequence", paragraph=True)]
         if effect == "injure_tag":
@@ -655,7 +655,7 @@ async def open_npc_damage(
 
         form = NativeForm(current.user.id, "NPC consequence details", data["target"], fields, apply)
         await reply(current, form.text(), form)
-        return "Complete the actual consequence in the new private form."
+        return None
 
     form = NativeForm(
         interaction.user.id,

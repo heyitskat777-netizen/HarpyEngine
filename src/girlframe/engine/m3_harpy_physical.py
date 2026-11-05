@@ -122,14 +122,14 @@ def extract(
         raise ValueError("An actual other person extracts this original linked Harpy body")
     if helper.ref.kind == "pilot":
         place = next((x for x in state.placements if x.actor == helper.ref), None)
-        cell = place.girl_cell if place else None
+        cell = helper.cell
         if place is None or place.incapacitated or place.subsumed or place.custody is not None:
             raise ValueError("The actual extractor must be physically able and free to help")
     elif helper.ref.kind == "external_pilot":
         other = harpy(state, extractor)
         if other.body_incapacitated or other.subsumed or other.custody != "free":
             raise ValueError("The actual extractor must be physically able and free to help")
-        cell = other.cell
+        cell = helper.cell
     else:
         cell = helper.cell
     if cell is not None and body.frame_cell is not None and cell != body.frame_cell:
@@ -163,6 +163,10 @@ def extract(
 
 
 def recover(state: GameState, actor: ActorRef, event: str, account: str) -> GameState:
+    from girlframe.engine.m3_passengers import passenger_view
+
+    if passenger_view(state,actor) is not None:
+        raise ValueError("Use the actual guest body's source medical controls after extraction")
     _source(state, actor, event, account)
     body = harpy(state, actor)
     if (

@@ -310,6 +310,13 @@ def apply(
             raise ValueError(
                 "Choose a current Asset of the required family; damage needs an undamaged Asset"
             )
+        if kind == "compliance_surgery" and asset.battery_asset is not None:
+            from girlframe.engine.m3_assets import counts_toward_limit
+
+            if sum(x.family == "girl" and counts_toward_limit(sheet, x) for x in sheet.assets) >= 4:
+                raise ValueError(
+                    "Replacing a temporary mental extra cannot create a fifth ordinary Girl Asset"
+                )
         if kind == "beating":
             asset.damaged = True
             if all(x.damaged for x in sheet.assets if x.family == "girl"):
@@ -351,25 +358,54 @@ def apply(
         if state.bonds[key] == 0:
             del state.bonds[key]
     elif kind == "quality_time":
+        from girlframe.engine.m3_actor_bonds import current_ref
+        from girlframe.engine.m3_leviathan_obsession import allowed_gain
+
         if subject == inflictor:
             raise ValueError("A self-Bond is not a legal Quality Time target")
         key = pair_key(subject, inflictor)
         depth = state.bonds.get(key, 0)
         if depth >= 2:
             other = state.sheets.get(str(inflictor))
-            sheet.heat += 2
+            sheet.heat += allowed_gain(
+                state,
+                current_ref(state, subject),
+                2,
+                "Quality Time Intense overflow",
+                source_event or "",
+            )
             if other is not None:
-                other.heat += 2
+                other.heat += allowed_gain(
+                    state,
+                    current_ref(state, inflictor),
+                    2,
+                    "Quality Time Intense overflow",
+                    source_event or "",
+                )
                 other.revision += 1
             else:
-                state.handler_heat += 2
+                state.handler_heat += allowed_gain(
+                    state,
+                    current_ref(state, inflictor),
+                    2,
+                    "Quality Time Intense overflow",
+                    source_event or "",
+                )
         else:
             state.bonds[key] = depth + 1
     elif kind == "demotion":
         shift_status(state, subject, -1)
     elif kind == "stimulant_injection":
-        sheet.heat += 7
+        from girlframe.engine.m3_actor_bonds import current_ref
+        from girlframe.engine.m3_leviathan_obsession import allowed_gain
+
+        sheet.heat += allowed_gain(
+            state, current_ref(state, subject), 7, "Stimulant Injection", source_event or ""
+        )
     elif kind == "correctional_programming":
+        from girlframe.engine.m3_leviathan_obsession import require_unlocked
+
+        require_unlocked(sheet.identities, details.identities)
         if details.embrace_tag:
             tag = next((x for x in sheet.tags if x.id == details.embrace_tag), None)
             if tag is None:

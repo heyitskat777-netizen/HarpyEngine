@@ -22,6 +22,8 @@ if TYPE_CHECKING:
 
 KIND = "mockingbird_handler_void"
 GIRL_KIND = "mockingbird_handler_girl_void"
+REDIRECT_KIND = "mockingbird_redirect_handler_void"
+REDIRECT_GIRL_KIND = "mockingbird_redirect_handler_girl_void"
 
 
 def _stage_handler_void(
@@ -34,12 +36,13 @@ def _stage_handler_void(
     event: str,
     *,
     girl_rules: bool,
+    redirect: bool = False,
 ) -> None:
-    meta = action["data"]["mockingbird"]
     from girlframe.engine.m3_mockingbird import SEX as SEX_RULE
     from girlframe.engine.m3_mockingbird import owns
-    from girlframe.engine.m3_mockingbird_state import SEX
+    from girlframe.services.m3_medical import MedicalService
 
+    meta = action["data"]["mockingbird"]
     actual_choice = (
         c.execute(
             sa.select(t.m2["m2_choices"]).where(
@@ -50,38 +53,45 @@ def _stage_handler_void(
         .mappings()
         .first()
     )
+    source_kind = (
+        (REDIRECT_GIRL_KIND if girl_rules else REDIRECT_KIND)
+        if redirect
+        else (GIRL_KIND if girl_rules else KIND)
+    )
+    expected_kind = "mockingbird_sex_restore" if redirect else "mockingbird_sex_high_commit"
+    expected_human = meta["parties"][0]["controller"] if redirect else int(action["actor_id"])
     if (
-        action["data"]["play"] != SEX
-        or meta["play"] != SEX
-        or action["data"]["result"]["tier"] != "high"
+        action["data"]["play"] != "mockingbird_sex"
+        or meta["play"] != "mockingbird_sex"
+        or action["data"]["result"]["tier"] != ("mid" if redirect else "high")
         or actual_choice is None
-        or actual_choice["kind"] != "mockingbird_sex_high_commit"
+        or actual_choice["kind"] != expected_kind
         or actual_choice["action_id"] != action["id"]
-        or actual_choice["actor_id"] != str(action["actor_id"])
+        or actual_choice["actor_id"] != str(expected_human)
         or not owns(state, ActorRef.model_validate(meta["actor"]), SEX_RULE)
     ):
         raise WorkflowError(
-            "Use the actual owned high Sex Play effect, never another source action"
+            "Use the genuine owned source intimacy effect, never another tier or action"
         )
     actual = resolve(
         state, target, profiles(c, game.store.campaign_id), require_current_profile=False
     )
-    source_kind = GIRL_KIND if girl_rules else KIND
+    selection = meta.get("sex_transfer") if redirect else None
     if (
         actual.rules not in (("handler_girl",) if girl_rules else ("handler", "director"))
         or not actual.alive
-        or target.model_dump(mode="json") != meta["parties"][0]["actor"]
-    ):
-        raise WorkflowError(
-            "Use this actual source interaction's original living Handler counterpart"
+        or (
+            target.model_dump(mode="json") != selection["destination"]
+            if selection
+            else target.model_dump(mode="json") != meta["parties"][0]["actor"]
         )
+    ):
+        raise WorkflowError("Use this source interaction's actual physiological destination")
     identity = str(
         uuid5(NAMESPACE_URL, "girlframe:" + source_kind + ":" + action["id"] + ":" + choice)
     )
     if any(x["id"] == identity for x in meta.get("followups", ())):
-        raise WorkflowError("Resume this actual Handler's existing Void consequence")
-    from girlframe.services.m3_medical import MedicalService
-
+        raise WorkflowError("Resume this actual destination's existing Void source")
     _, appointment = MedicalService(game.store)._handler(c)
     context_source = None
     if girl_rules:
@@ -130,6 +140,9 @@ def _stage_handler_void(
         counterpart=target.model_dump(mode="json"),
         continuation=continuation,
         immediate=True,
+        effect_controller=expected_human,
+        redirect=redirect,
+        transfer=dict(selection) if selection else None,
     )
     meta.setdefault("followups", []).append(body)
     state.facts.append(
@@ -171,7 +184,12 @@ def stage_handler_girl_void(
 def synchronize(game: "GameService", c: Connection, action: dict[str, Any], event: str) -> None:
     table = t.m3["m3_required_work"]
     for body in action["data"].get("mockingbird", {}).get("followups", ()):
-        if body.get("source_pdf") != 19 or body.get("kind") not in (KIND, GIRL_KIND):
+        if body.get("source_pdf") != 19 or body.get("kind") not in (
+            KIND,
+            GIRL_KIND,
+            REDIRECT_KIND,
+            REDIRECT_GIRL_KIND,
+        ):
             continue
         if c.scalar(
             sa.select(table.c.id).where(
@@ -202,24 +220,14 @@ def _prove_handler_source(
     *,
     source_kind: str,
 ) -> None:
+    from girlframe.engine.m3_mockingbird_sex import assets
+    from girlframe.services.m3_mockingbird_effects import source_trigger
+
     action = game.action(c, body["source_action"])
     meta = action["data"]["mockingbird"]
-    original = next(x for x in meta["followups"] if x["id"] == row["id"])
-    if (
-        row["kind"] != source_kind
-        or row["revision"] != 1
-        or row["event_id"] != body["source_event"]
-        or row["owner_id"] != str(body["controller"])
-        or row["subject_id"] != str(body["controller"])
-        or row["scene_id"] != action["scene_id"]
-        or row["campaign_context"]
-        or any(original.get(k) != v for k, v in body.items())
-        or actor.model_dump(mode="json") != body["owner"]
-        or body["character"] != actor.incarnation
-        or body["source_pdf"] != 19
-        or body["rule_source_pdf"] != 36
-    ):
-        raise ValueError("Recover this actual original Handler's exact source Void consequence")
+    original = next((x for x in meta["followups"] if x["id"] == row["id"]), None)
+    redirect = source_kind in (REDIRECT_KIND, REDIRECT_GIRL_KIND)
+    expected_human = meta["parties"][0]["controller"] if redirect else int(action["actor_id"])
     audit = (
         c.execute(
             sa.select(t.events).where(
@@ -230,7 +238,6 @@ def _prove_handler_source(
         .mappings()
         .first()
     )
-    payload = json.loads(audit["payload_json"]) if audit else {}
     raw = c.scalar(
         sa.select(t.m2["m2_state_history"].c.body_json).where(
             t.m2["m2_state_history"].c.campaign_id == game.store.campaign_id,
@@ -247,21 +254,30 @@ def _prove_handler_source(
         body=json.dumps(body, sort_keys=True),
     )
     if (
-        audit is None
-        or audit["actor_id"] != str(action["actor_id"])
-        or payload.get("action_id") != action["id"]
-        or payload.get("choice_id") != body["source_choice"]
+        original is None
+        or row["kind"] != source_kind
+        or row["revision"] != 1
+        or row["event_id"] != body["source_event"]
+        or row["owner_id"] != str(body["controller"])
+        or row["subject_id"] != str(body["controller"])
+        or row["scene_id"] != action["scene_id"]
+        or row["campaign_context"]
+        or any(original.get(k) != v for k, v in body.items())
+        or actor.model_dump(mode="json") != body["owner"]
+        or body["character"] != actor.incarnation
+        or body["source_pdf"] != 19
+        or body["rule_source_pdf"] != 36
+        or bool(body.get("redirect")) != redirect
+        or audit is None
+        or audit["actor_id"] != str(expected_human)
+        or json.loads(audit["payload_json"]).get("action_id") != action["id"]
+        or json.loads(audit["payload_json"]).get("choice_id") != body["source_choice"]
         or saved is None
         or fact not in saved.facts
     ):
         raise ValueError(
-            "Recover the actual authenticated Mockingbird effect and original Handler body"
+            "Recover the actual authenticated intimacy response and physiological source"
         )
-
-    from girlframe.engine.m3_mockingbird import SEX as SEX_RULE
-    from girlframe.engine.m3_mockingbird import owns
-    from girlframe.engine.m3_mockingbird_state import SEX
-
     responses, choices = t.m2["m2_responses"], t.m2["m2_choices"]
     response = c.execute(
         sa.select(choices.c.kind, choices.c.actor_id, choices.c.action_id, responses.c.answer_json)
@@ -286,44 +302,130 @@ def _prove_handler_source(
     )
     receipt = json.loads(immutable) if immutable else None
     answer = ChoiceAnswer.model_validate_json(response.answer_json) if response else None
-    trigger = next((x for x in saved.mockingbird.triggers if x.id == meta["trigger"]), None)
-    caster = ActorRef.model_validate(meta["actor"])
+    total = (
+        receipt["pre_total"] + sum(x["amount"] for x in action["data"]["modifiers"])
+        if receipt
+        else 0
+    )
     if (
-        action["data"]["play"] != SEX
-        or meta["play"] != SEX
-        or response is None
-        or response.kind != "mockingbird_sex_high_commit"
+        response is None
+        or response.kind
+        != ("mockingbird_sex_restore" if redirect else "mockingbird_sex_high_commit")
         or response.action_id != action["id"]
-        or response.actor_id != audit["actor_id"]
-        or response.actor_id != str(action["actor_id"])
-        or answer != ChoiceAnswer(flag=True)
-        or receipt is None
+        or response.actor_id != str(expected_human)
         or receipt != action["data"]["receipt"]
-        or receipt["pre_total"] + sum(x["amount"] for x in action["data"]["modifiers"]) < 11
-        or action["data"]["result"]["tier"] != "high"
-        or not owns(saved, caster, SEX_RULE)
-        or trigger is None
-        or trigger.actor != caster
-        or trigger.play != SEX
-        or trigger.action != action["id"]
-        or trigger.parties[0].actor != actor
-        or any(x.decision != "accepted" for x in trigger.parties)
+        or (not 8 <= total <= 10 if redirect else total < 11)
+        or action["data"]["result"]["tier"] != ("mid" if redirect else "high")
+    ):
+        raise ValueError("Prove the actual source tier and owned response; labels cannot stand in")
+    source_trigger(game, c, action, saved)
+    if not redirect:
+        if answer != ChoiceAnswer(flag=True) or meta["parties"][0]["actor"] != actor.model_dump(
+            mode="json"
+        ):
+            raise ValueError("Prove the actual original high initiator's committed consequence")
+        return
+    selection = body.get("transfer")
+    if (
+        selection is None
+        or selection["destination"] != actor.model_dump(mode="json")
+        or actor.model_dump(mode="json") not in [x["actor"] for x in meta["parties"]]
+        or answer is None
+        or not answer.text.strip()
+        or answer.model_copy(update={"text": ""}) != ChoiceAnswer()
+        or answer.text != selection["restore"]
+    ):
+        raise ValueError("Prove this actual redirected Void's source and destination parties")
+    selected = c.execute(
+        sa.select(choices.c.kind, choices.c.actor_id, responses.c.answer_json)
+        .join(
+            responses,
+            sa.and_(
+                choices.c.campaign_id == responses.c.campaign_id,
+                choices.c.id == responses.c.choice_id,
+            ),
+        )
+        .where(
+            choices.c.campaign_id == game.store.campaign_id,
+            choices.c.id == selection["caster_choice"],
+        )
+    ).first()
+    cast_answer = ChoiceAnswer.model_validate_json(selected.answer_json) if selected else None
+    if (
+        selected is None
+        or selected.kind != "mockingbird_sex_redirect"
+        or selected.actor_id != str(action["actor_id"])
+        or cast_answer is None
+        or cast_answer.fields
+        != {
+            "source_asset": selection["source_asset"],
+            "destination": actor.token,
+            "destination_asset": "",
+        }
     ):
         raise ValueError(
-            "Recover the actual immutable high Sex roll, owned trigger and effect response"
+            "Only the genuine caster's actual source selection grants this destination"
+        )
+    source = ActorRef.model_validate(meta["parties"][0]["actor"])
+    history = t.m2["m2_state_history"]
+    previous = c.scalar(
+        sa.select(history.c.body_json)
+        .select_from(history.join(t.events, history.c.event_id == t.events.c.id))
+        .where(history.c.campaign_id == game.store.campaign_id, t.events.c.seq < audit["seq"])
+        .order_by(t.events.c.seq.desc())
+        .limit(1)
+    )
+    before = GameState.model_validate_json(previous) if previous else None
+    old = (
+        next((x for x in assets(before, source) if x.id == selection["source_asset"]), None)
+        if before
+        else None
+    )
+    new = next((x for x in assets(saved, source) if x.id == selection["source_asset"]), None)
+    if (
+        old is None
+        or new is None
+        or old.model_dump_json() != selection["source_snapshot"]
+        or not old.void
+        or new.void
+        or new.description != answer.text
+        or old.model_dump(exclude={"void", "description", "concealed"})
+        != new.model_dump(exclude={"void", "description", "concealed"})
+    ):
+        raise ValueError(
+            "The genuine source Asset must actually lose Void without repair or replacement"
         )
 
 
 def prove_handler_void_source(
     game: "GameService", c: Connection, row: dict[str, Any], body: dict[str, Any], actor: ActorRef
 ) -> None:
-    _prove_handler_source(game, c, row, body, actor, source_kind=KIND)
+    _prove_handler_source(
+        game,
+        c,
+        row,
+        body,
+        actor,
+        source_kind=REDIRECT_KIND if row["kind"] == REDIRECT_KIND else KIND,
+    )
 
 
 def prove_handler_girl_void_source(
     game: "GameService", c: Connection, row: dict[str, Any], body: dict[str, Any], actor: ActorRef
 ) -> None:
-    _prove_handler_source(game, c, row, body, actor, source_kind=GIRL_KIND)
+    if row["kind"] == "call_guest_handler_girl_void":
+        from girlframe.services.m3_mockingbird_communion import prove_guest_girl_void
+
+        prove_guest_girl_void(game, c, row, body, actor)
+        return
+    _prove_handler_source(
+        game,
+        c,
+        row,
+        body,
+        actor,
+        source_kind=REDIRECT_GIRL_KIND if row["kind"] == REDIRECT_GIRL_KIND else GIRL_KIND,
+    )
 
 
 def _complete_handler_void(
@@ -347,8 +449,8 @@ def _complete_handler_void(
         .mappings()
         .first()
     )
-    source_kind = GIRL_KIND if girl_rules else KIND
-    if row is None or row["state"] != "resolved" or row["kind"] != source_kind:
+    allowed = (GIRL_KIND, REDIRECT_GIRL_KIND) if girl_rules else (KIND, REDIRECT_KIND)
+    if row is None or row["state"] != "resolved" or row["kind"] not in allowed:
         raise WorkflowError("Finish the actual source Handler Void consequence before resuming")
     if girl_rules:
         from girlframe.services.m3_handler_girl_void import completed_effect as girl_completed
@@ -442,4 +544,35 @@ def complete_handler_girl_void(
     viewer: GuildViewer | None,
     key: str,
 ) -> None:
+    if (
+        c.scalar(
+            sa.select(t.m3["m3_required_work"].c.kind)
+            .where(
+                t.m3["m3_required_work"].c.campaign_id == game.store.campaign_id,
+                t.m3["m3_required_work"].c.id == identity,
+            )
+            .limit(1)
+        )
+        == "call_guest_handler_girl_void"
+    ):
+        from girlframe.services.m3_mockingbird_communion import complete_guest_girl_void
+
+        complete_guest_girl_void(game, c, identity, event, viewer, key)
+        return
     _complete_handler_void(game, c, identity, event, viewer, key, girl_rules=True)
+
+
+def stage_redirect_handler_void(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    target: ActorRef,
+    choice: str,
+    event: str,
+    *,
+    girl_rules: bool,
+) -> None:
+    _stage_handler_void(
+        game, c, state, action, target, choice, event, girl_rules=girl_rules, redirect=True
+    )

@@ -73,15 +73,6 @@ def available(
         )
     if subject.kind in ("npc", "handler", "external_pilot", "gorgon"):
         kinds = list(SOCIAL)
-        if depth(state, bond_ref(state, subject), bond_ref(state, executor)) == 2:
-            for ref in (subject, executor):
-                has_heat = ref.kind in ("pilot", "handler", "npc") or (
-                    ref.kind == "external_pilot"
-                    and any(x.id == ref.entity for x in state.harpy_states)
-                )
-                if not has_heat:
-                    kinds.remove("quality_time")
-                    break
         if not any(
             subject in (x.first, x.second) and x.depth > 0 for x in state.actor_bonds
         ) and not any(
@@ -104,13 +95,38 @@ def social(
     bindings: tuple[ProfileBinding, ...],
     event: str,
     identity: str,
+    *,
+    source_kind: str | None = None,
 ) -> GameState:
     state = GameState.model_validate_json(original.model_dump_json())
     target = view(state, subject, bindings)
     acting = view(state, executor, bindings)
     details = Details.model_validate_json(instruction.details_json)
     validate(details)
-    if instruction.kind not in available(state, subject, executor, bindings):
+    if (
+        source_kind in ("compliance_virus", "janus_training")
+        and subject.kind == "external_pilot"
+        and target.girl == "harpy"
+        and instruction.kind == "stimulant_injection"
+    ):
+        from girlframe.engine.m3_harpy_defeat import harpy, update
+
+        if details.kind != instruction.kind or instruction.counterpart is not None:
+            raise ValueError("Use the actual printed Stimulant Injection without unrelated choices")
+        from girlframe.engine.m3_leviathan_obsession import allowed_gain
+
+        body = harpy(state, subject)
+        return update(
+            state,
+            subject,
+            heat=body.heat + allowed_gain(state, subject, 7, "Stimulant Injection", event),
+        )
+    self_virus = subject == executor and source_kind == "compliance_virus"
+    # A source-authenticated self-purge can weaken a real OTHER Bond; no self-Bond.
+    applicable = (
+        ("reduced_socialization",) if self_virus else available(state, subject, executor, bindings)
+    )
+    if instruction.kind not in applicable:
         raise ValueError("This target needs actual resources for every printed Punishment effect")
     if subject.kind == "pilot":
         from girlframe.engine.m3_girl_runtime_state import has_rule
@@ -125,6 +141,20 @@ def social(
                 "Quality Time gives its actual chosen Tag and deepens the executor Bond"
             )
         state = change(state, bond_ref(state, subject), bond_ref(state, executor), 1, event)
+        from girlframe.engine.m3_janus import find as core_body
+
+        if core_body(state, subject) is not None:
+            from girlframe.engine.m3_harpy_defeat import give_tag
+
+            return give_tag(
+                state,
+                subject,
+                executor,
+                details.tag.strip(),
+                event,
+                identity,
+                tuple(sorted({acting.controller, target.controller})),
+            )
         if (
             subject.kind in ("npc", "gorgon", "external_pilot")
             and state.world is not None

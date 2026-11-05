@@ -71,9 +71,9 @@ def grasp(
             contact="frame" if piloting else "body",
         )
     )
-    girl = target.kind == "pilot"
+    girl = target.kind == "pilot" or target_view.girl == "harpy"
     if target.kind == "external_pilot" and state.world:
-        girl = any(x.id == target.entity and x.kind != "harpy" for x in state.world.pilots)
+        girl = girl or any(x.id == target.entity and x.kind != "harpy" for x in state.world.pilots)
     if (
         girl
         or target.kind == "npc"
@@ -84,8 +84,8 @@ def grasp(
         from girlframe.engine.m3_items import body_ref
 
         state = make_helpless(state, body_ref(state, target), actor, event)
-    # Harpies/Gorgons remain unable to escape this actual grip, without being silently
-    # reclassified as Girls or receiving the source's different Helplessness benefit.
+    # Actual Harpies also have their Girl side for this printed Enforcer effect.
+    # Gorgons keep the actual grip without a fabricated Helplessness resource.
     return state
 
 
@@ -262,6 +262,9 @@ def release(
             source_event=event,
         )
     )
+    from girlframe.engine.m3_leviathan_arrival import record_existing_body_position
+
+    state = record_existing_body_position(state, case.subject, None, event, evidence)
     return state
 
 
@@ -322,6 +325,9 @@ def record_released_position(
             source_event=event,
         )
     )
+    from girlframe.engine.m3_leviathan_arrival import record_existing_body_position
+
+    state = record_existing_body_position(state, case.subject, cell, event, account)
     return state
 
 

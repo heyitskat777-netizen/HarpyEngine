@@ -239,6 +239,12 @@ class OffDutyService:
         from girlframe.services.m3_handler_plays import synchronize_off_duty
 
         synchronize_off_duty(c, self.game, period, event)
+        from girlframe.services.m3_janus_pandora import synchronize as janus_pandora
+
+        janus_pandora(c, self.store, period, event)
+        from girlframe.services.m3_janus_pet import synchronize as janus_pet
+
+        janus_pet(c, self.store, period, event)
 
     def _work(
         self,
@@ -300,9 +306,13 @@ class OffDutyService:
         def operation(c: Connection) -> dict[str, Any]:
             self.missions._handler(c, viewer)
             state = load_state(c, self.store.campaign_id)
+            from girlframe.services.m3_gorgon_dormant import (
+                require_clear as require_gorgon_costs_clear,
+            )
             from girlframe.services.m3_quadrant_loss import require_aftermath_clear
 
             require_aftermath_clear(state)
+            require_gorgon_costs_clear(self.game, c)
             if self.game.pending_actions(c):
                 raise WorkflowError("Finish the pending scene Play before starting Off-Duty.")
             existing = t.m3["m3_off_duty"]

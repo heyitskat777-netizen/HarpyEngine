@@ -167,6 +167,11 @@ class CastService:
                     )
                     continue
                 known = actor.ref.kind in ("pilot", "handler") or actor.controller == viewer.user_id
+                known |= any(
+                    ActorRef(kind="external_pilot", entity=x.id) == actor.ref
+                    and (x.revealed or int(x.frame_owner.entity) == viewer.user_id)
+                    for x in state.janus_cores
+                )
                 if state.world and actor.ref.kind in ("npc", "external_pilot", "gorgon"):
                     revealed = {
                         "npc": {x.id for x in state.world.npcs if x.revealed},

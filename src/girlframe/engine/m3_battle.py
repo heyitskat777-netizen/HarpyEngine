@@ -171,6 +171,10 @@ def core_available(
 ) -> str:
     actual = resolve(state, target, bindings)
     if target.kind == "gorgon":
+        from girlframe.engine.m3_leviathan import require_layers_clear
+
+        assert state.world is not None
+        require_layers_clear(next(x for x in state.world.gorgons if x.id == target.entity))
         if not actual.core_exposed:
             raise ValueError("Expose this actual Gorgon's Core before a decisive strike")
         return "gorgon:" + target.entity
@@ -205,6 +209,7 @@ def expose_frame(
     opponent: ActorRef | None = None,
     willing: bool = False,
     tag: str | None = None,
+    scene: str | None = None,
 ) -> GameState:
     """Trusted source adjudication validates every mechanical exposure condition itself."""
     state = GameState.model_validate_json(original.model_dump_json())
@@ -219,13 +224,25 @@ def expose_frame(
     sheet = state.sheets[target.entity]
     enemy = resolve(state, opponent, bindings) if opponent is not None else None
     known_tag = next((x for x in sheet.tags if x.id == tag), None) if tag else None
+    source_cast = next((x for x in state.scene_casts if x.id == scene and x.open), None)
     if tag is not None and (
         known_tag is None
         or enemy is None
         or enemy.controller not in known_tag.observers
         or known_tag.rejection_pending
+        or enemy.controller == actual.controller
+        or known_tag.scene_used == scene
+        or source_cast is None
+        or not any(
+            x.actor == target and x.controller == actual.controller for x in source_cast.roles
+        )
+        or not any(
+            x.actor == opponent and x.controller == enemy.controller for x in source_cast.roles
+        )
     ):
-        raise ValueError("The actual enemy must be able to mark this observed original Girl Tag")
+        raise ValueError(
+            "Another actual scene human must be able to mark this unused observed Girl Tag"
+        )
     girls = [x for x in sheet.assets if x.family == "girl"]
     identities = list(sheet.identities)
     record = FrameExposure(
@@ -235,6 +252,7 @@ def expose_frame(
         source_event=event,
         willing=willing,
         tag=tag,
+        scene=scene if tag else None,
         intense=opponent is not None and depth(state, target, opponent) == 2,
         girl_assets=bool(girls) and all(x.damaged for x in girls),
         identities=bool(identities) and all(x.marked for x in identities),

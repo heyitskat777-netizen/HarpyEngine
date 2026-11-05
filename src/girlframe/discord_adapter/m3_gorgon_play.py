@@ -23,7 +23,7 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
         await reply(interaction, "No reviewed Gorgon Play is available for your actual scene role.")
         return
 
-    async def choose(current: discord.Interaction, values: dict[str, Any]) -> str:
+    async def choose(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         actor = next(x for x in own if x["token"] == values["actor"][0])
         kind = values["play"][0]
         targets = [x for x in data["actors"] if x["ref"] != actor["ref"]]
@@ -102,7 +102,7 @@ async def open_gorgon_play(interaction: discord.Interaction, game: GameService) 
             declare,
         )
         await reply(current, form.text(), form)
-        return "Complete the new private declaration."
+        return None
 
     form = NativeForm(
         interaction.user.id,

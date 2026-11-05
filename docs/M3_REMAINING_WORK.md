@@ -1,5 +1,29 @@
 # M3 remaining work — verified development snapshot
 
+Current bounded checkpoint: 15 expected-path checks pass in 27.15s. JANUS Core,
+Battery, Training, Universal Plug, PANDORA and Pet have normal source/native
+evidence. Storage's normal consumer is tested, but acquisition remains hidden
+pending additional gain/threshold ports. Next units are Alpha Brutalize and Storage
+closure, with root continuing the remaining dependency-ready Strain systems.
+
+Execution now follows the [lower-usage development path](DEVELOPMENT_WORKFLOW.md):
+finish current JANUS, Call and Leviathan workflows, consolidate once, then select
+the next dependency-ready whole system. Two implementation agents are the default;
+focused normal-flow checks replace exhaustive per-change testing. Required scope
+and remaining gaps below are unchanged; historical evidence predates newer edits.
+
+New focused checks close bounded Virus, free Personal Firearm, supported Sex/Call,
+Dormant, Frame Core/native recovery and Budget Endgame5/6 workflows. Leviathan
+Obsession's three expected result flows pass with documented physical and rare-
+intersection limits. JANUS base/Core and takeover have focused evidence; remaining
+JANUS Requisition consumers are in progress. These edits await final integration
+and do not complete M3. See [current evidence](../reports/M3_ACCEPTANCE.md); older
+per-package descriptions below preserve the earlier snapshot.
+
+Budget Endgame3's owned two-location ruin flow now has focused native/map/trigger
+and last-base-aftermath evidence as well. Remaining Budget and other Strain effects
+still prevent whole-table acceptance.
+
 M3 is **IN_PROGRESS / RULES_SUBSET** and is not ready for full player testing.
 This snapshot separates implemented workflows from remaining agreed scope; it
 does not narrow the milestone.

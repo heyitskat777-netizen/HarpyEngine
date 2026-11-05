@@ -505,6 +505,28 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_off_duty import OffDutyService
 
             await open_period(interaction, OffDutyService(MissionService(self.service.store)))
+        elif item.task == "m3_collective_tag":
+            from girlframe.discord_adapter.m3_collective_handler_tags import open_collective
+            from girlframe.services.m3_collective_handler_tags import CollectiveTagService
+
+            await open_collective(
+                interaction, CollectiveTagService(self.service.store), item.identity
+            )
+        elif item.task == "m3_budget_patron":
+            from girlframe.discord_adapter.m3_budget_patron import open_patron
+            from girlframe.services.m3_budget_patron import PatronService
+
+            await open_patron(interaction, PatronService(self.service.store), item.identity)
+        elif item.task == "m3_budget_ruin":
+            from girlframe.discord_adapter.m3_budget_ruin import open_ruin
+            from girlframe.services.m3_budget_ruin import RuinService
+
+            await open_ruin(interaction, RuinService(self.service.store), item.identity)
+        elif item.task == "m3_budget_tag":
+            from girlframe.discord_adapter.m3_budget_tags import open_gift
+            from girlframe.services.m3_budget_tags import BudgetTagService
+
+            await open_gift(interaction, BudgetTagService(self.service.store), item.identity)
         elif item.task == "m3_strain_effect":
             from girlframe.discord_adapter.m3_strain_effects import open_effect
             from girlframe.services.m3_missions import MissionService
@@ -544,6 +566,32 @@ class InboxView(discord.ui.View):
             await open_replacement(
                 interaction, ReplacementService(MissionService(self.service.store)), item.identity
             )
+        elif item.task == "m3_janus_mind":
+            from girlframe.discord_adapter.m3_janus_play import open_brain_link
+            from girlframe.services.m2_game import GameService
+
+            await open_brain_link(interaction, GameService(self.service.store), item.identity)
+        elif item.task == "m3_janus_core":
+            from girlframe.discord_adapter.m3_janus import open_core_setup
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_janus import JanusService
+
+            await open_core_setup(
+                interaction, JanusService(GameService(self.service.store)), item.identity
+            )
+        elif item.task == "m3_janus_pet":
+            from girlframe.discord_adapter.m3_janus_requisitions import open_pet
+            from girlframe.services.m2_game import GameService
+
+            await open_pet(interaction, GameService(self.service.store), item.identity)
+        elif item.task == "m3_janus_storage":
+            from girlframe.discord_adapter.m3_janus_storage import open_surgery
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_janus_storage import StorageService
+
+            await open_surgery(
+                interaction, StorageService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_reaction":
             from girlframe.discord_adapter.m3_reactions import open_reaction
             from girlframe.services.m3_missions import MissionService
@@ -581,6 +629,13 @@ class InboxView(discord.ui.View):
                     physical_service,
                     ActorRef(kind="external_pilot", entity=item.identity),
                 )
+        elif item.task == "m3_virus_exposure":
+            from girlframe.discord_adapter.m3_compliance_virus import (
+                open_exposure as open_virus_exposure,
+            )
+            from girlframe.services.m2_game import GameService
+
+            await open_virus_exposure(interaction, GameService(self.service.store), item.identity)
         elif item.task == "handler_girl_void":
             from girlframe.discord_adapter.m3_handler_girl_void import open_handler_girl_void
             from girlframe.services.m3_handler_girl_void import HandlerGirlVoidService
@@ -612,6 +667,55 @@ class InboxView(discord.ui.View):
 
             await open_request(
                 interaction, MockingbirdService(GameService(self.service.store)), item.identity
+            )
+        elif item.task == "leviathan_layers":
+            from girlframe.discord_adapter.m3_leviathan import open_layers
+            from girlframe.services.m3_leviathan import LeviathanService
+
+            await open_layers(interaction, LeviathanService(self.service.store), item.identity)
+        elif item.task == "gorgon_dormant_void":
+            from girlframe.discord_adapter.m3_gorgon_dormant import open_gorgon_dormant
+            from girlframe.services.m3_gorgon_dormant import GorgonDormantService
+
+            await open_gorgon_dormant(
+                interaction, GorgonDormantService(self.service.store), item.identity
+            )
+        elif item.task in ("mockingbird_exposure", "mockingbird_discovery"):
+            from girlframe.discord_adapter.m3_mockingbird_discovery import (
+                open_discovery,
+                open_exposure,
+            )
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_mockingbird_discovery import DiscoveryService
+
+            discovery = DiscoveryService(GameService(self.service.store))
+            if item.task == "mockingbird_exposure":
+                await open_exposure(interaction, discovery, item.identity)
+            else:
+                await open_discovery(interaction, discovery, item.identity)
+        elif item.task == "call_passenger":
+            from girlframe.discord_adapter.m3_passengers import open_passenger
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_passengers import PassengerService
+
+            await open_passenger(
+                interaction, PassengerService(GameService(self.service.store)), item.identity
+            )
+        elif item.task == "mockingbird_call":
+            from girlframe.discord_adapter.m3_mockingbird_communion import open_call
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_mockingbird_communion import CallService
+
+            await open_call(
+                interaction, CallService(GameService(self.service.store)), item.identity
+            )
+        elif item.task == "mockingbird_sex_revision":
+            from girlframe.discord_adapter.m3_mockingbird_revision import open_revision
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_mockingbird_revision import SexRevisionService
+
+            await open_revision(
+                interaction, SexRevisionService(GameService(self.service.store)), item.identity
             )
         elif item.task in ("handler_tag_response", "handler_tag_notice"):
             from girlframe.discord_adapter.m3_handler_tags import open_handler_tags

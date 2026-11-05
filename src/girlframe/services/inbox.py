@@ -473,6 +473,8 @@ class InboxService:
                     table.c.state == "pending",
                 )
             ).mappings():
+                if play_row["kind"] in ("dive_call", "dive_handler_void"):
+                    continue
                 items.append(
                     InboxItem(
                         "m2:" + play_row["id"],
@@ -710,6 +712,125 @@ class InboxService:
                         task="m3_comforts" if needs else None,
                     )
                 )
+            from girlframe.services.m3_budget_patron import PatronService
+            from girlframe.services.m3_collective_handler_tags import CollectiveTagService
+
+            for patron in PatronService(self.store).available(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "patron:" + patron["id"],
+                        "budget_patron",
+                        patron["id"],
+                        canon.revision,
+                        "playbook",
+                        "Report a real patron visit",
+                        patron["patron"],
+                        "available",
+                        True,
+                        False,
+                        "The patron takes an interest in " + patron["girl"] + ".",
+                        "Only actual witnessed evidence grants a Handler Tag.",
+                        "Report visit",
+                        task="m3_budget_patron",
+                    )
+                )
+
+            for tag_task in CollectiveTagService(self.store)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "collective-tag:" + tag_task["id"],
+                        "collective_handler_tag",
+                        tag_task["id"],
+                        tag_task["revision"],
+                        "off_duty",
+                        tag_task["title"],
+                        "Original Girls",
+                        "pending" if tag_task["actionable"] else "resolved",
+                        tag_task["actionable"],
+                        False,
+                        "Each original Girl supplies her own exact-label agreement.",
+                        "An unused optional opportunity does not block Off-Duty. "
+                        "An actual proposal waits for its human decisions.",
+                        "Review collective Tag" if tag_task["actionable"] else None,
+                        task="m3_collective_tag",
+                    )
+                )
+            from girlframe.services.m3_janus_play import BatteryService
+
+            for mind in BatteryService(GameService(self.store))._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "janus-mind:" + mind["id"],
+                        "janus_brain_link",
+                        mind["id"],
+                        mind["revision"],
+                        "plays",
+                        "Your private brain link",
+                        "Only the two actual linked minds",
+                        "pending",
+                        mind["actionable"],
+                        False,
+                        "Read or send your own private direct brain communication.",
+                        "This actual link must remain connected; no speech or public transcript.",
+                        "Open private brain link",
+                        task="m3_janus_mind",
+                    )
+                )
+            from girlframe.services.m3_janus import JanusService
+            from girlframe.services.m3_janus_pet import PetService
+            from girlframe.services.m3_janus_storage import StorageService
+
+            storage_tasks = StorageService(GameService(self.store))._tasks(connection, viewer)
+            for stored_surgery in storage_tasks:
+                items.append(InboxItem(
+                    "janus-storage:" + stored_surgery["id"], "janus_void_surgery",
+                    stored_surgery["id"],
+                    stored_surgery["revision"], "off_duty", "Actual stored Void surgical request",
+                    "Original patient and Foundation", "pending", stored_surgery["actionable"],
+                    False,
+                    "The Foundation records one actual surgical removal in this period.",
+                    "No permanent Void or Asset damage is undone.", "Review actual surgery",
+                    task="m3_janus_storage",
+                ))
+
+            for outing in PetService(GameService(self.store))._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "janus-pet:" + outing["id"], "janus_pet_outing", outing["id"],
+                        outing["revision"], "off_duty", "Actual Core outing and return",
+                        "Original Pilot and Foundation", outing["phase"], outing["actionable"],
+                        False, "Choose actual Core care or return her to the original Frame.",
+                        "No automatic transport or invented Tag is supplied.",
+                        "Review actual Core care", task="m3_janus_pet",
+                    )
+                )
+
+            for core_task in JanusService(GameService(self.store))._tasks(connection, viewer):
+                pending_core = core_task["phase"] in ("controller", "review")
+                items.append(
+                    InboxItem(
+                        "janus-core:" + core_task["id"],
+                        "janus_core_setup",
+                        core_task["id"],
+                        core_task["revision"],
+                        "playbook",
+                        "Original JANUS Core setup",
+                        "Original Pilot, Core controller and Foundation source judge",
+                        "pending"
+                        if core_task["actionable"]
+                        else "waiting"
+                        if pending_core
+                        else "resolved",
+                        core_task["actionable"],
+                        False,
+                        "A distinct unnamed original Core shares the existing JANUS Frame.",
+                        "The actual controller supplies factual resources. "
+                        "The Foundation reviews them. "
+                        "No other PC, former history or paid ability is copied.",
+                        "Review actual setup",
+                        task="m3_janus_core",
+                    )
+                )
             from girlframe.services.m3_physical import PhysicalService
 
             physical = PhysicalService(self.store)
@@ -907,6 +1028,105 @@ class InboxService:
                         task="m3_mockingbird",
                     )
                 )
+            if any(x.get("kind") == "gorgon_dormant_stage" for x in canon.facts):
+                from girlframe.services.m3_gorgon_dormant import GorgonDormantService
+
+                for debt in GorgonDormantService(self.store)._tasks(connection, viewer):
+                    items.append(
+                        InboxItem(
+                            "gorgon-dormant:" + debt["id"],
+                            "gorgon_dormant_void",
+                            debt["id"],
+                            debt["revision"],
+                            "plays",
+                            debt["label"],
+                            "Your actual original Gorgon",
+                            debt["state"],
+                            debt["incoming"],
+                            False,
+                            "Resolve the real source Dormant counter-Void without a proxy body.",
+                            "The debt remains accessible when its original Play is interrupted.",
+                            "Review actual Dormant consequence",
+                            task="gorgon_dormant_void",
+                        )
+                    )
+            from girlframe.services.m3_mockingbird_discovery import DiscoveryService
+            from girlframe.services.m3_mockingbird_revision import SexRevisionService
+
+            discovery_tasks = (
+                DiscoveryService(physical.game)._tasks(connection, viewer)
+                if canon.mockingbird.exposures or canon.mockingbird.discoveries
+                else []
+            )
+            revision_tasks = SexRevisionService(physical.game)._tasks(connection, viewer)
+            from girlframe.services.m3_mockingbird_communion import CallService
+
+            call_tasks = (
+                [
+                    dict(x, kind="mockingbird_call")
+                    for x in CallService(physical.game)._tasks(connection, viewer)
+                ]
+                if canon.mockingbird.calls
+                else []
+            )
+            from girlframe.services.m3_passengers import PassengerService
+
+            passenger_tasks = (
+                [
+                    dict(x, kind="call_passenger")
+                    for x in PassengerService(physical.game)._tasks(connection, viewer)
+                ]
+                if canon.passengers
+                else []
+            )
+            for source_task in (*discovery_tasks, *revision_tasks, *call_tasks, *passenger_tasks):
+                items.append(
+                    InboxItem(
+                        source_task["kind"] + ":" + source_task["id"],
+                        source_task["kind"],
+                        source_task["id"],
+                        canon.revision,
+                        "plays",
+                        "Actual Call communion"
+                        if source_task["kind"] == "mockingbird_call"
+                        else "Actual discovery"
+                        if source_task["kind"] != "mockingbird_sex_revision"
+                        else "Revise uncommitted resources",
+                        "Your original source-owned role",
+                        source_task["state"],
+                        source_task["actionable"],
+                        False,
+                        "Review actual source facts and only your own choices.",
+                        "Private backend knowledge does not establish discovery, "
+                        "consent or a new resource.",
+                        "Review actual source",
+                        task=source_task["kind"],
+                    )
+                )
+            if canon.world is not None and any(
+                "leviathan" in body.types for body in canon.world.gorgons
+            ):
+                from girlframe.services.m3_leviathan import LeviathanService
+
+                for layer_play in LeviathanService(self.store)._tasks(connection, viewer):
+                    items.append(
+                        InboxItem(
+                            "leviathan-layers:" + layer_play["id"],
+                            "leviathan_layers",
+                            layer_play["id"],
+                            layer_play["revision"],
+                            "plays",
+                            "Protect " + layer_play["label"] + " with flesh layers",
+                            "Your actual original Leviathan",
+                            "available",
+                            True,
+                            False,
+                            "Raise two actual flesh-layer Assets around this Core.",
+                            "Original guards and weakness remain; existing damage cannot reset.",
+                            "Describe actual layers",
+                            task="leviathan_layers",
+                        )
+                    )
             for battle_context in BattleService(self.store)._tasks(connection, viewer):
                 items.append(
                     InboxItem(
@@ -1333,6 +1553,29 @@ class InboxService:
                         task="m3_enforcer",
                     )
                 )
+            if any(fact.get("kind") == "compliance_virus_past_link" for fact in canon.facts):
+                from girlframe.services.m3_virus_exposure import ExposureService
+
+                for request in ExposureService(physical.game)._tasks(connection, viewer):
+                    items.append(
+                        InboxItem(
+                            "virus-exposure:" + request["id"],
+                            "virus_exposure",
+                            request["id"],
+                            canon.revision,
+                            "plays",
+                            "Actual past link exposure",
+                            "Original factual source roles",
+                            "pending",
+                            request["can_act"],
+                            False,
+                            "Only actual original linker, Frame owner and frozen judge "
+                            "own this source.",
+                            "No current control, Frame assignment or location is granted.",
+                            "Review exposure",
+                            task="m3_virus_exposure",
+                        )
+                    )
             careers = CareerService(self.store)
             for archive in canon.career_archives:
                 if archive.actor.entity != user:
@@ -1659,6 +1902,7 @@ class InboxService:
                 if kind in (
                     "creature_comforts",
                     "physical_initial",
+                    "janus_core_setup",
                     "handler_creation",
                     "handler_creation_agreement",
                     "handler_creation_npc_agreement",
@@ -1679,9 +1923,15 @@ class InboxService:
                     "harpy_physical_help",
                     "harpy_defeat",
                     "quadrant_loss",
+                    "compliance_virus_purge",
                     "mockingbird_handler_void",
                     "mockingbird_handler_girl_void",
+                    "mockingbird_redirect_handler_void",
+                    "mockingbird_redirect_handler_girl_void",
+                    "dive_handler_void",
+                    "call_guest_handler_girl_void",
                     "sprite_intercept",
+                    "gorgon_dormant_void",
                 ):
                     continue
                 if work["id"] in visible_role_work:
@@ -1735,6 +1985,23 @@ class InboxService:
                     primary, task_name = "Review Frame bonus", "m3_frame_reward"
                 elif kind in ("off_duty_handler_scene", "off_duty_status_review"):
                     primary, task_name = "Review Off-Duty", "m3_off_duty"
+                elif (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.6"
+                ):
+                    primary, task_name = "Review collective Handler Tags", "m3_collective_tag"
+                elif kind == "collective_handler_tag_vote":
+                    continue  # Canonical proposal projection above retains this actual vote source.
+                elif (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.3"
+                ):
+                    primary, task_name = "Choose two ruined locations", "m3_budget_ruin"
+                elif kind == "budget_handler_tag" or (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.5"
+                ):
+                    primary, task_name = "Review persistent Handler Tag", "m3_budget_tag"
                 elif kind == "strain_event":
                     from girlframe.engine.m3_strain_effects import SUPPORTED
 
@@ -1755,6 +2022,7 @@ class InboxService:
                     "strain_endgame": "Choose an unused Strain Endgame",
                     "strain_event": "Required Strain event effects",
                     "strain_endgame_effect": "Required Endgame effects",
+                    "budget_handler_tag": "Name your persistent Handler Tag",
                     "doctor_credit": "DoctorDoctor credit sharing",
                     "observation_choice": "Your Void Observation consequences",
                     "observation_effect": "Required Observation details",

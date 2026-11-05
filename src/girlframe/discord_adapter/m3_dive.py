@@ -14,6 +14,8 @@ from girlframe.services.m2_game import GameService
 
 LABELS = {
     "call_reclassify_assets": "Call: move actual Assets between Girl and Frame",
+    "call_cockpit_guest": "Call: invite an actual cockpit guest",
+    "call_gorgon_relay": "Call: commune with a nearby Gorgon",
     "void_and_unmark_all": "Gain Void; unmark unlocked Identities",
     "erase_identity_and_table_question": "Erase an Identity; ask the table",
     "nearby_npcs_gain_void": "Nearby actual NPCs gain Void",
@@ -34,6 +36,20 @@ async def open_dive(
     data = await asyncio.to_thread(game.decision, viewer_from_interaction(interaction), identity)
     detail = data["dive"]
     kind = data["kind"]
+    if kind == "dive_call":
+        from girlframe.discord_adapter.m3_mockingbird_communion import open_call
+        from girlframe.services.m3_mockingbird_communion import CallService
+
+        await open_call(interaction, CallService(game), detail["call_session"])
+        return
+    if kind == "dive_handler_void":
+        from girlframe.discord_adapter.m3_handler_void import open_handler_void
+        from girlframe.services.m3_handler_void import HandlerVoidService
+
+        await open_handler_void(
+            interaction, HandlerVoidService(game.store, game), detail["work_id"]
+        )
+        return
     if kind in ("dive_table_answer", "dive_table_agreement") and not reviewed:
         if kind == "dive_table_answer":
             text = "The original Girl asks: " + detail["question"]
@@ -75,7 +91,29 @@ async def open_dive(
         ]
     elif kind == "dive_effect":
         option = detail["option"]
-        if option == "call_reclassify_assets":
+        if option in ("call_cockpit_guest", "call_gorgon_relay"):
+            if not detail["targets"]:
+                await reply(
+                    interaction,
+                    "No actual eligible nearby source participant is available; "
+                    "revise this unapplied choice.",
+                )
+                return
+            fields = [
+                Field(
+                    "target",
+                    "Actual cockpit guest" if option == "call_cockpit_guest" else "Nearby Gorgon",
+                    tuple((x["token"], x["label"]) for x in detail["targets"]),
+                ),
+                Field(
+                    "account",
+                    "Describe actual contact and your invitation"
+                    if option == "call_cockpit_guest"
+                    else "Your actual communion message",
+                    paragraph=True,
+                ),
+            ]
+        elif option == "call_reclassify_assets":
             assets = tuple(
                 (x["id"], x["label"] + " (" + x["family"] + ")") for x in detail["assets"]
             )
@@ -106,6 +144,17 @@ async def open_dive(
                 ),
                 Field("description", "Describe the actual Void alteration", paragraph=True),
             ]
+            if detail.get("storage_available"):
+                fields.append(
+                    Field(
+                        "storage",
+                        "Optional newly gained Void destination",
+                        (("yes", "Store in the actual plugged-in Harpy"),),
+                        minimum=0,
+                        maximum=1,
+                        required=False,
+                    )
+                )
         elif option in ("erase_identity_and_table_question", "table_replaces_identity"):
             fields = [
                 Field(
@@ -171,13 +220,19 @@ async def open_dive(
             answer = ChoiceAnswer(options=(values["option"][0],), text=values["account"])
         elif kind == "dive_effect":
             option = detail["option"]
-            if option == "call_reclassify_assets":
+            if option in ("call_cockpit_guest", "call_gorgon_relay"):
+                answer = ChoiceAnswer(
+                    fields={"target": values["target"][0]}, text=values["account"]
+                )
+            elif option == "call_reclassify_assets":
                 answer = ChoiceAnswer(
                     options=tuple(values.get("moves", ())), denied=tuple(values.get("replaced", ()))
                 )
             elif option == "void_and_unmark_all":
                 answer = ChoiceAnswer(
-                    fields=dict(asset=values["asset"][0]), text=values["description"]
+                    fields=dict(asset=values["asset"][0])
+                    | ({"storage": "yes"} if values.get("storage") else {}),
+                    text=values["description"],
                 )
             elif option in ("erase_identity_and_table_question", "table_replaces_identity"):
                 answer = ChoiceAnswer(

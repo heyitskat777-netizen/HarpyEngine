@@ -35,6 +35,16 @@ async def open_actor_play(
     )
     data = await threaded(lambda: service.preview(viewer, channel, ref))
     actor = data["actor"]
+    restrictions = data.get("janus_core")
+    if restrictions and restrictions["restrained"]:
+        await reply(
+            interaction,
+            "This original Harpy Core is Restrained and cannot make Plays. "
+            "Drugged means Helpless; Muzzled prevents physical speech; "
+            "Recovering from Surgery is an actual pain Tag. "
+            "Only an actual source-authorized change to her Tags changes these restrictions.",
+        )
+        return
     owed = await threaded(lambda: game.own_obligations(viewer))
     rejections = {
         x["id"]: x

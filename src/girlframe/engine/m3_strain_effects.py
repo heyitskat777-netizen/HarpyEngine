@@ -32,6 +32,8 @@ SUPPORTED = frozenset(
         "strain.rebellion.low.2.2",
         "strain.rebellion.low.6.1",
         "strain.budget.low.5.2",
+        "strain.budget.low.1.1",
+        "strain.budget.low.1.2",
         "strain.budget.low.4.2",
         "strain.budget.low.3.2",
         "strain.budget.low.3.1",
@@ -86,6 +88,7 @@ def apply(
     supply: SupplyLoss | None = None,
     source_event: str | None = None,
     contraband: ContrabandFind | None = None,
+    tag_setter_appointment: str | None = None,
 ) -> GameState:
     if choice.rule_id not in SUPPORTED:
         raise ValueError("UNSUPPORTED_RULE: this Strain effect has no complete typed resolver")
@@ -382,8 +385,17 @@ def apply(
                     key = pair_key(first, second)
                     depth = state.bonds.get(key, 0)
                     if depth == 2:
+                        from girlframe.engine.m3_actor_bonds import current_ref
+                        from girlframe.engine.m3_leviathan_obsession import allowed_gain
+
                         for uid in (first, second):
-                            state.sheets[str(uid)].heat += 2
+                            state.sheets[str(uid)].heat += allowed_gain(
+                                state,
+                                current_ref(state, uid),
+                                2,
+                                "Shared room Intense overflow",
+                                source_event or "",
+                            )
                             state.sheets[str(uid)].revision += 1
                     else:
                         state.bonds[key] = depth + 1
@@ -404,13 +416,25 @@ def apply(
                 for x in world.npcs
             ),
         )
-    elif rule == "strain.budget.high.2.2":
+    elif rule == "strain.budget.low.1.2":
+        fields(choice, {"target", "victim"})
+        if not choice.target or not choice.victim or not source_event or not period_id:
+            raise ValueError("Choose the original Girl and existing rich patron for this result")
+        from girlframe.engine.m3_budget_patron import create
+
+        state = create(state, source_work, choice.target, choice.victim, period_id, source_event)
+        world = state.world
+        assert world is not None
+    elif rule in ("strain.budget.high.2.2", "strain.budget.low.1.1"):
         assert state.handler is not None
         fields(choice, {"tags"})
-        expected = set(state.order) | {state.handler}
+        photoshoot = rule == "strain.budget.low.1.1"
+        expected = set(state.order) | (set() if photoshoot else {state.handler})
+        if photoshoot and (tag_setter_appointment is None or not source_event):
+            raise ValueError("The actual public-perception Tags need the appointed human's source")
         if len(choice.tags) != len(expected) or {x.owner for x in choice.tags} != expected:
             raise ValueError(
-                "Every current Girl and the Handler receive one human-authored shortage Tag"
+                "Give exactly one source-authored Tag to every required original participant"
             )
         for selected in choice.tags:
             if not selected.label.strip():
@@ -420,6 +444,7 @@ def apply(
                 label=selected.label,
                 giver=state.handler,
                 observers=tuple(state.order) + (state.handler,),
+                gm_setter_appointment=tag_setter_appointment if photoshoot else None,
             )
             if selected.owner == state.handler:
                 state.handler_tags.append(tag)

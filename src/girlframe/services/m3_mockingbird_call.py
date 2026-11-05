@@ -33,7 +33,7 @@ def enabled(state: GameState, actor: ActorRef) -> bool:
 
 
 def options(state: GameState, actor: ActorRef) -> tuple[str, ...]:
-    return (CLASSIFY,) if enabled(state, actor) else ()
+    return (CLASSIFY, BOARD, RELAY) if enabled(state, actor) else ()
 
 
 def effect(state: GameState, actor: ActorRef, answer: ChoiceAnswer) -> dict[str, Any]:

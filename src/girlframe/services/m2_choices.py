@@ -140,6 +140,11 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         sheet = state.sheets.get(str(owner))
         body = json.loads(request["body_json"])
+        if kind.startswith("janus_") and action["data"].get("janus"):
+            from girlframe.services.m3_janus_play import apply as apply_janus
+
+            apply_janus(self.game, c, state, action, request, answer)
+            return
         if kind.startswith("snoop_") and action["data"].get("snoop"):
             from girlframe.services.m3_enforcer_snoop import apply as apply_snoop
 
@@ -243,6 +248,9 @@ class ChoiceEngine:
                 self.game.obligation(state, action, "reject_tag", actor, tag=tag.id)
             else:
                 picks(answer.denied, {x.id for x in acting.identities if not x.protected}, 1)
+                from girlframe.engine.m3_leviathan_obsession import require_unlocked
+
+                require_unlocked(acting.identities, answer.denied)
                 require(
                     self.duplicate_labels()
                     or not any(
@@ -850,6 +858,11 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         play = action["data"]["play"]
         level = action["data"]["result"]["tier"]
+        if action["data"].get("janus"):
+            from girlframe.services.m3_janus_play import results as janus_results
+
+            janus_results(self.game, c, state, action)
+            return
         if action["data"].get("snoop"):
             from girlframe.services.m3_enforcer_snoop import results as snoop_results
 
@@ -916,6 +929,11 @@ class ChoiceEngine:
         self.game.request(c, action, actor, kind)
 
     def finish(self, c: Connection, state: GameState, action: dict[str, Any]) -> None:
+        if action["data"].get("virus_order"):
+            from girlframe.services.m3_virus_orders import finish_order
+
+            finish_order(self.game, c, state, action)
+            return
         require(not self.game.pending(c, action["id"]), "Mandatory decisions remain pending.")
         if action["data"].get("void_keep"):
             from girlframe.services.m3_void_keep import finish_keep

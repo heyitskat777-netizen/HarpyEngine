@@ -428,10 +428,23 @@ def answer_values(values: dict[str, Any]) -> ChoiceAnswer:
 
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
     decision = await threaded(lambda: game.decision(viewer_from_interaction(interaction), identity))
+    if decision.get("leviathan"):
+        from girlframe.discord_adapter.m3_leviathan_obsession import (
+            open_choice as open_influence_choice,
+        )
+        from girlframe.services.m3_leviathan_obsession import ObsessionService
+
+        await open_influence_choice(interaction, ObsessionService(game), identity)
+        return
     if decision.get("gorgon_play"):
         from girlframe.discord_adapter.m3_gorgon_runtime import open_choice as open_gorgon_choice
 
         await open_gorgon_choice(interaction, game, identity)
+        return
+    if decision.get("janus") is not None:
+        from girlframe.discord_adapter.m3_janus_play import open_battery_choice
+
+        await open_battery_choice(interaction, game, identity)
         return
     if decision.get("snoop") is not None:
         from girlframe.discord_adapter.m3_enforcer_snoop import open_snoop
@@ -443,6 +456,22 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         from girlframe.services.m3_sprite import SpriteService
 
         await open_sprite(interaction, SpriteService(game.store), decision["work_id"])
+        return
+    if decision.get("virus_purge"):
+        from girlframe.discord_adapter.m3_compliance_virus import open_purge
+        from girlframe.services.m3_compliance_virus import VirusService
+
+        await open_purge(interaction, VirusService(game), decision["work_id"])
+        return
+    if decision.get("virus_order"):
+        from girlframe.discord_adapter.m3_compliance_virus import open_order
+
+        await open_order(interaction, game, decision)
+        return
+    if decision.get("virus_disobey") and decision["kind"].startswith("virus_disobey_"):
+        from girlframe.discord_adapter.m3_compliance_virus import open_disobey_choice
+
+        await open_disobey_choice(interaction, game, decision)
         return
     if decision.get("harpy_defeat"):
         from girlframe.discord_adapter.m3_harpy_defeat import open_choice as open_harpy_choice
@@ -1332,6 +1361,21 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         except WorkflowError as error:
             await reply(interaction, str(error))
 
+    @app_commands.command(
+        name="frame_core", description="Review an actual present Frame Core exposure"
+    )
+    @app_commands.guild_only()
+    async def frame_core(interaction: discord.Interaction) -> None:
+        await interaction.response.defer(ephemeral=True)
+        try:
+            from girlframe.discord_adapter.m3_frame_core import open_core
+            from girlframe.services.m3_battle import BattleService
+            from girlframe.services.m3_frame_core import FrameCoreService
+
+            await open_core(interaction, FrameCoreService(BattleService(game.store)))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
     choice = app_commands.Group(
         name="choice", description="Resume durable human Play decisions", guild_only=True
     )
@@ -1638,5 +1682,6 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         and "go_for_the_core" in HEAT_IDS
     ):
         tree.add_command(battle, guild=guild)
+        tree.add_command(frame_core, guild=guild)
     tree.add_command(play, guild=guild)
     tree.add_command(choice, guild=guild)

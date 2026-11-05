@@ -19,10 +19,13 @@ M3 is in development and remains **RULES_SUBSET**. The current bounded candidate
 actual Engage/Harpy extra maneuvers, owned Handler Tag requests and attention notices,
 Enforcer acquisition/Snoop/retention workflows, Mockingbird subsets, original-person
 Harpy recovery and Handler Void, and source-bound Gorgon combat/collateral/world
-consequences. Its full regression passes **2,200 tests**, with source scope and remaining gates
+consequences. The last committed full regression passed **2,200 tests**, with source scope and remaining gates
 in [M3 evidence](reports/M3_ACCEPTANCE.md).
-Remaining Sex/Call/Virus branches, other playbooks, Strain effects and world
-consumers still prevent whole-M3 acceptance.
+Newer development adds tested supported Virus/Sex/Call, JANUS base and selected
+Requisitions, Leviathan Obsession and further Budget workflows. Its small combined
+normal-path selection passes 15 tests; it has not had a new full regression.
+Storage, remaining playbooks, Strain and world consumers still prevent whole-M3
+acceptance.
 
 Its offline mission flow now
 persists private invitations, explicit player responses, dispatch and mission-end
@@ -56,6 +59,9 @@ The bot is currently **intentionally off** at the owner's request. See the
 [M3 completion audit and bounded plan](docs/M3_COMPLETION_AUDIT.md) for implemented
 features, unfinished systems and the next delivery units. No new completion
 percentage or credit estimate is asserted.
+Development follows the [usage-conscious workflow](docs/DEVELOPMENT_WORKFLOW.md):
+two implementation agents by default, fixed deliverables, compact handoffs,
+focused functional checks and final integrated verification.
 Asset Installment and Creature Comforts now have closed automated workflow
 checklists, including original owned receipts. Creature Comforts scenes support
 actual city locations as well as bases. See [unit evidence](docs/acceptance/m3_units.json);

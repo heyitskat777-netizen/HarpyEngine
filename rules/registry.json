@@ -2764,6 +2764,889 @@
       "revision": 1,
       "implementation_note": "Bounded Enforcer candidate source workflow; real independent review and human player acceptance remain pending. Documentation key does not imply a new typed Rulings setting.",
       "change_impact": "If Harpy Cadre membership is later explicitly supported, add a source-backed actual role resource before exposing the missing option. Do not rewrite original player characters or prior receipts."
+    },
+    {
+      "id": "budget-persistent-tag-nomination",
+      "summary": "The original Handler selects one actual original Cadre Girl; that Girl exclusively writes the Tag and account. Retain the exact source identities.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF152/printed150 Endgame5; PDF11/printed9",
+      "rationale": "Handler selects Endgame; source leaves nomination ownership unstated. Preserves human authorship and original recipient.",
+      "alternatives": [
+        "Girls collectively nominate",
+        "A Girl volunteers and Handler confirms"
+      ],
+      "policy_key": "budget_persistent_tag_nomination",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "The original Handler selects one actual original Cadre Girl; that Girl exclusively writes the Tag and account. Retain the exact source identities.",
+      "change_impact": "Changing this ruling requires review of pending source-owned choices; preserve committed receipts and resources."
+    },
+    {
+      "id": "budget-persistent-tag-use-scope",
+      "summary": "Not removed when used means actual Handler Tag favour/attention/compel consumption. It grants no immunity to independently legal erase/conversion effects and does not clear an owed rejection by falsely claiming the Tag was removed.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF152/printed150 Endgame5; PDF11/printed9",
+      "rationale": "Specific printed HandlerTag consumption exception; no general indestructibleTag is printed.",
+      "alternatives": [
+        "Treat Tag as globally indelible until Handler death"
+      ],
+      "policy_key": "budget_persistent_tag_use_scope",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Not removed when used means actual Handler Tag favour/attention/compel consumption. It grants no immunity to independently legal erase/conversion effects and does not clear an owed rejection by falsely claiming the Tag was removed.",
+      "change_impact": "Changing this ruling requires review of pending source-owned choices; preserve committed receipts and resources."
+    },
+    {
+      "id": "budget-gift-original-person-endings",
+      "summary": "The nominated living original Girl retains descriptive gift authorship after actual retirement/custody, without successor resources. Actual original Girl death or Handler source-role ending is reviewed from immutable history and closes the impossible pending gift without transferring its benefit/cost to a successor.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF152/printed150; original-person lifecycle source contracts",
+      "rationale": "Preserve actual original person; no source authorizes recipient substitution or automatic successor inheritance.",
+      "alternatives": [
+        "Keep an impossible source duty pending indefinitely",
+        "Nominate a different Girl/Handler after ending with new explicit source agreement"
+      ],
+      "policy_key": "budget_gift_original_person_endings",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "The nominated living original Girl retains descriptive gift authorship after actual retirement/custody, without successor resources. Actual original Girl death or Handler source-role ending is reviewed from immutable history and closes the impossible pending gift without transferring its benefit/cost to a successor.",
+      "change_impact": "Changing this ruling requires review of pending source-owned choices; preserve committed receipts and resources."
+    },
+    {
+      "id": "budget-collective-tag-period-trigger",
+      "summary": "One optional collective Tag per actual OffDutyperiod afteratleastone genuineordinaryGoOffDuty result occurringafterthisEndgame; observation-only doesnotinventthe namedtrigger.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF152/printed150",
+      "rationale": "Prevents multiplication perGirl while honoring the namedmove and Fromnowon timing.",
+      "alternatives": [
+        "One opportunity perindividualGoOffDutymove",
+        "Treat anyOffDutyroute includingObservation as sufficient"
+      ],
+      "policy_key": "budget_collective_tag_period_trigger",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "One optional collective Tag per actual OffDutyperiod afteratleastone genuineordinaryGoOffDuty result occurringafterthisEndgame; observation-only doesnotinventthe namedtrigger.",
+      "change_impact": "Changing this ruling requires review of pending source-owned choices; preserve committed receipts and resources."
+    },
+    {
+      "id": "budget-collective-tag-exact-consensus",
+      "summary": "A Girl proposes an exactlabel/account andimplicitlyagrees byher explicitproposal; everyotheroriginalperiodGirl mustexplicitlyagree. Anydecline givesnoTag. Proposer maywithdraw andstartanew exactproposal; priorvotesnevercarrytonewwording.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF152/printed150",
+      "rationale": "Printedcollectively leaves mechanismunstated; preserves voluntaryhuman authorship and no forgedconsent.",
+      "alternatives": [
+        "Majorityvote",
+        "OutofbotconsensusattestedbyoneGirl"
+      ],
+      "policy_key": "budget_collective_tag_exact_consensus",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "A Girl proposes an exactlabel/account andimplicitlyagrees byher explicitproposal; everyotheroriginalperiodGirl mustexplicitlyagree. Anydecline givesnoTag. Proposer maywithdraw andstartanew exactproposal; priorvotesnevercarrytonewwording.",
+      "change_impact": "Changing this ruling requires review of pending source-owned choices; preserve committed receipts and resources."
+    },
+    {
+      "id": "budget-collective-tag-optional-lifetime",
+      "summary": "Unusedlatentoption doesnotblockperiodcompletion andisno longeravailableafterrealperiodend; a human-started proposal createsreal requiredvote work untilresolved/withdrawn. No timeoutchoosesorlabelsforaplayer.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF152/printed150 and explicit actualOffDutylifecycle",
+      "rationale": "Anoptional may-rule isnot mandatorywork untilhumans initiate its coordination.",
+      "alternatives": [
+        "RequireeachGirltoexplicitlydecline everyperiod",
+        "Allowoldoptionalopportunitiesindefinitely"
+      ],
+      "policy_key": "budget_collective_tag_optional_lifetime",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Unusedlatentoption doesnotblockperiodcompletion andisno longeravailableafterrealperiodend; a human-started proposal createsreal requiredvote work untilresolved/withdrawn. No timeoutchoosesorlabelsforaplayer.",
+      "change_impact": "Changing this ruling requires review of pending source-owned choices; preserve committed receipts and resources."
+    },
+    {
+      "id": "budget-collective-tag-source-persons",
+      "summary": "BindtoactualoriginalHandler andperiodGirls, withproposerrecordedasordinaryTagprimarygiver andfull actualconsentcohort recorded. Provenoriginalendingscanbeexplicitlyreviewed; no automatic successorinheritance or consentbyUID.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF152/printed150 and original-person lifecycle contracts",
+      "rationale": "The source says you without granting successors its entitlement; explicitsourceprovenance preserves printedhuman decisions.",
+      "alternatives": [
+        "Cadre-wideentitlementtransfersautomatically tonewHandler",
+        "TreatallcohortmembersascoequalTagsetters in a futureextendedTagmodel"
+      ],
+      "policy_key": "budget_collective_tag_source_persons",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "BindtoactualoriginalHandler andperiodGirls, withproposerrecordedasordinaryTagprimarygiver andfull actualconsentcohort recorded. Provenoriginalendingscanbeexplicitlyreviewed; no automatic successorinheritance or consentbyUID.",
+      "change_impact": "Changing this ruling requires review of pending source-owned choices; preserve committed receipts and resources."
+    },
+    {
+      "id": "virus_immediate_pain_restraint",
+      "summary": "Pain remains only through the actual immediate Punishment chain; Helpless uses ordinary real recovery.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "[{\"document\": \"rulebook\", \"pdf_page\": 80, \"printed_page\": 78}]",
+      "rationale": "The source grants an immediate EI result and intolerable pain without duration or physical hands; a permanent source grip would invent contact and indefinite custody.",
+      "alternatives": [
+        "Permanent pain; invented hands-grasp; ending all Helpless on Punishment completion."
+      ],
+      "policy_key": "virus_immediate_pain_restraint",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Typed PainRestraint closes from actual RoleCase completion or original ending, never moves bodies or heals real Helpless.",
+      "change_impact": "Changing this affects restraint duration and existing pending purges."
+    },
+    {
+      "id": "virus_fixed_eleven",
+      "summary": "Resolve the printed fixed 11 as a deterministic high EI effect without RNG, faces, Heat or a dice receipt.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "[{\"document\": \"rulebook\", \"pdf_page\": 80, \"printed_page\": 78}]",
+      "rationale": "A rule-assigned result is already determined; synthetic dice would misrepresent provenance and permit inappropriate spending/modifiers.",
+      "alternatives": [
+        "Manufactured dice receipt; new roll with modifier."
+      ],
+      "policy_key": "virus_fixed_eleven",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Canonical purge effect plus actual instruction/Punishment workflow, operational root receipt is None.",
+      "change_impact": "Changing this alters audit format and would require a distinct source-aware roll rule."
+    },
+    {
+      "id": "harpy_ei_girl_side",
+      "summary": "Actual Harpy receives EI/fixed11 Helpless, while retaining the printed Receive Orders exemption.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "[{\"document\": \"rulebook\", \"pdf_page\": 80, \"printed_page\": 78}, {\"document\": \"rulebook\", \"pdf_page\": 79, \"printed_page\": 77}, {\"document\": \"rulebook\", \"pdf_page\": 178, \"printed_page\": 176}, {\"document\": \"rulebook\", \"pdf_page\": 181, \"printed_page\": 179}]",
+      "rationale": "Combined Girl/Frame rules and the explicit Orders exception do not establish a separate EI immunity.",
+      "alternatives": [
+        "Infer blanket EI immunity from Battle category harpy."
+      ],
+      "policy_key": "harpy_ei_girl_side",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Exact ActorRef Helpless, no source category changes for unrelated Battle rules.",
+      "change_impact": "Changing interpretation affects genuine Harpy targets; no Gorgon Helpless is added."
+    },
+    {
+      "id": "virus_girl_self_purge",
+      "summary": "Self-touch removes own actual infection without a self-superior order.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "[{\"document\": \"rulebook\", \"pdf_page\": 80, \"printed_page\": 78}]",
+      "rationale": "No distinct recipient exists to receive a higher-Status order.",
+      "alternatives": [
+        "Invent self hierarchy or self Receive Orders."
+      ],
+      "policy_key": "virus_girl_self_purge",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Actual purge event retains self-contact and grants no order/Status change.",
+      "change_impact": "Changing affects self-purge bonus only."
+    },
+    {
+      "id": "virus_frame_self_purge",
+      "summary": "Self Frame purge still requires Handler-instructed actual self-Punishment and finite pain, with no self-Helpless or self-Bond.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "[{\"document\": \"rulebook\", \"pdf_page\": 80, \"printed_page\": 78}]",
+      "rationale": "The immediate consequence is printed without an exception; self opposition is not a second person.",
+      "alternatives": [
+        "Waive consequence; invent self foe/grip; block legal self purge."
+      ],
+      "policy_key": "virus_frame_self_purge",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Source-specific RoleCase self exception, real admissible effects; invalid self-Bond/last-Asset self-Helpless options excluded.",
+      "change_impact": "Changing affects current self cases and punishment eligibility."
+    },
+    {
+      "id": "handler_girl_no_rank_disobey",
+      "summary": "Record real witnessed refusal without lowering nonexistent Status, while keeping actual Heat/Identity/Tag and discovered Punishment outcomes.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "[{\"document\": \"rulebook\", \"pdf_page\": 80, \"printed_page\": 78}, {\"document\": \"rulebook\", \"pdf_page\": 23, \"printed_page\": 21}, {\"document\": \"rulebook\", \"pdf_page\": 192, \"printed_page\": 190}]",
+      "rationale": "Director-context Girl has genuine Girl resources but no canonical Cadre rank to lower.",
+      "alternatives": [
+        "Invent rank; skip whole witnessed outcome; proxy a PC sheet."
+      ],
+      "policy_key": "handler_girl_no_rank_disobey",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Source-only actual ActorPlay Disobey, witness fact and unchanged rank, genuine frozen judge decision.",
+      "change_impact": "Changing requires a real Status model and migration, not a numeric UID alias."
+    },
+    {
+      "id": "virus_past_link_factual_exposure",
+      "summary": "Allow append-only factual past-link exposure only with actual original linker, Frame owner and frozen judge and an earlier immutable already-infected episode.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "[{\"document\": \"rulebook\", \"pdf_page\": 80, \"printed_page\": 78}]",
+      "rationale": "Accepted pre-existing histories may omit an actual link producer; chronology and separate original humans establish facts without rewriting history or granting present control.",
+      "alternatives": [
+        "Reject all pre-existing actual exposure; infer from shared human/current cast; retroactive infection."
+      ],
+      "policy_key": "virus_past_link_factual_exposure",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Original body/Frame/incarnation and source event authenticated; proposal then owner confirmation then judge review; unknown cells remain unknown.",
+      "change_impact": "Changing affects accepted factual exposure sources, not current Frame permissions."
+    },
+    {
+      "id": "virus_vacancy_review",
+      "summary": "No link record is unknown, not proof of vacancy. Cure a genuinely reviewed empty Frame without target or bonus.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "[{\"document\": \"rulebook\", \"pdf_page\": 80, \"printed_page\": 78}]",
+      "rationale": "The source affects a linked Pilot but cannot create one; incomplete pose records cannot justify silently evading that consequence.",
+      "alternatives": [
+        "Treat missing row as empty; invent Pilot; forbid known-empty cure."
+      ],
+      "policy_key": "virus_vacancy_review",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Actual owner proposes current facts and actual judge reviews; existing assigned original may be linked with unknown cells but no new body/Frame/control.",
+      "change_impact": "Changing affects no-link review and fixed11 target selection."
+    },
+    {
+      "id": "gorgon-dormant-attacker-real-world-void",
+      "summary": "Actual attacker controller selects one existing uncorrupted World Gorgon Asset and rewrites its Void alteration. Preserve source Asset ID/family/damage and all unrelated resources. No human Pilot, Frame, Heat or Harpy resource is fabricated.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF 19, 162, 165",
+      "rationale": "The Dormant counter addresses the attacker, and actual Gorgon Assets already have a sole World authority with Void flags. No separate Gorgon transformation threshold is printed.",
+      "alternatives": [
+        "Reject all Gorgon-to-Dormant interaction permanently.",
+        "Charge the controller human\u2019s unrelated Pilot.",
+        "Invent a new Void Asset or force a Harpy transformation."
+      ],
+      "policy_key": "gorgon_dormant_attacker_real_world_void",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Actual attacker controller selects one existing uncorrupted World Gorgon Asset and rewrites its Void alteration. Preserve source Asset ID/family/damage and all unrelated resources. No human Pilot, Frame, Heat or Harpy resource is fabricated.",
+      "change_impact": "Replaces the explicit pre-lock unsupported-target gate with a real owner-held immediate corruption and then the original contest. Requires actual source-history proof; no new RNG."
+    },
+    {
+      "id": "gorgon-dormant-already-fully-void",
+      "summary": "Record actual already_fully_void only when a nonempty source-proven set is all Void. No repeat corruption, new Asset, healing, transformation or false Frame consequence. Empty/unknown resources remain gated.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF 19, 165",
+      "rationale": "The ordinary Void procedure selects an uncorrupted existing Asset. With none present, inventing a new resource or using another fictional body changes the printed resource authority.",
+      "alternatives": [
+        "Invent another asset to corrupt.",
+        "Silently skip the required source counter without a canonical outcome.",
+        "Leave the debt forever pending despite complete actual resource proof."
+      ],
+      "policy_key": "gorgon_dormant_already_fully_void",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Record actual already_fully_void only when a nonempty source-proven set is all Void. No repeat corruption, new Asset, healing, transformation or false Frame consequence. Empty/unknown resources remain gated.",
+      "change_impact": "Finite source-proven counter outcome with unchanged original assets. Further printed effects would require a separate source module."
+    },
+    {
+      "id": "gorgon-dormant-no-fabricated-frame-dive",
+      "summary": "Record dive_eligible=false and reason gorgon_has_no_frame_play for this actual Gorgon cost. Do not create a proxy Pilot/Frame or roll an unsupported Dive. Existing actual Pilot/Harpy forced-Dive paths remain source-owned.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF 24, 162, 165",
+      "rationale": "Dive Deep is a Frame Play. A Gorgon body and its World Assets are not an actual Girl piloting a separate Frame; the source does not define that conversion here.",
+      "alternatives": [
+        "Invent a Gorgon Frame/Heat/Identity and use Pilot mechanics.",
+        "Treat the human controller\u2019s unrelated Pilot as the attacker.",
+        "Permanently gate any contact even when the concrete counter can be completed."
+      ],
+      "policy_key": "gorgon_dormant_no_fabricated_frame_dive",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Record dive_eligible=false and reason gorgon_has_no_frame_play for this actual Gorgon cost. Do not create a proxy Pilot/Frame or roll an unsupported Dive. Existing actual Pilot/Harpy forced-Dive paths remain source-owned.",
+      "change_impact": "Explicit bounded source interpretation for review; does not claim a general Gorgon Dive or independent get-close implementation."
+    },
+    {
+      "id": "dormant-own-actual-basic-play-awakens",
+      "summary": "A genuine declared and advanced/approved basic Attack, Collateral or Warp records one persistent cause=own_play marker for that same actual Gorgon. Menu/unstarted/cancelled intentions do not awaken it. No attack-induced Void debt is created by its own action.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF 162, 165",
+      "rationale": "The actual advanced effect demonstrates activity, while Dormant\u2019s printed retaliatory Void cost is specifically induced by forced awakening through attack. A declaration flag alone is no fictional effect.",
+      "alternatives": [
+        "Keep the actually acting Gorgon dormant until another actor attacks it.",
+        "Wake from merely viewing a menu or an abandoned intent.",
+        "Charge attack-induced Void to itself or a controller-owned Pilot."
+      ],
+      "policy_key": "dormant_own_actual_basic_play_awakens",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "A genuine declared and advanced/approved basic Attack, Collateral or Warp records one persistent cause=own_play marker for that same actual Gorgon. Menu/unstarted/cancelled intentions do not awaken it. No attack-induced Void debt is created by its own action.",
+      "change_impact": "Future actual attacks prove immutable source history and avoid duplicate awakening/cost. Existing already-owed counter debt is never cancelled or repaid; class/body/position unchanged. No timer or RNG."
+    },
+    {
+      "id": "leviathan-two-real-flesh-layer-assets",
+      "summary": "An actual chosen protection Play adds exactly two real flesh-layer World Assets to the original living Leviathan once. Track only their ordinary current/destroyed Asset state through source-bound ID pointers. A Type label alone supplies no layer effect; a repeat call never resets damaged/destroyed layers.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF 164, 174",
+      "rationale": "PDF174 says both flesh layers count as Assets. The existing Asset authority and ordinary Core-protecting Asset rules supply concrete damage/destruction consumers; an extra numerical armor pool would duplicate them.",
+      "alternatives": [
+        "Treat the printed circles as separate HP alongside mechanical Assets.",
+        "Automatically add/reset layers whenever the Type label is read.",
+        "Reallocate existing Class Asset slots to layers without an actual chosen action."
+      ],
+      "policy_key": "leviathan_two_real_flesh_layer_assets",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "An actual chosen protection Play adds exactly two real flesh-layer World Assets to the original living Leviathan once. Track only their ordinary current/destroyed Asset state through source-bound ID pointers. A Type label alone supplies no layer effect; a repeat call never resets damaged/destroyed layers.",
+      "change_impact": "Two genuinely targetable Assets with preserved current resources/positions. Initial legacy serialization unchanged while pointer fields are absent. New grants require independent source review; no production ungate."
+    },
+    {
+      "id": "leviathan-piercing-and-conjunctive-core",
+      "summary": "Actual ordinary Asset damage or source destruction pierces that exact layer. Both layers and all original Core-plan guards must be dealt with; the actual original weakness must still be confirmed. No second piercing counter or HP is tracked.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF 15, 164, 174",
+      "rationale": "The source defines the layers as Assets rather than providing a new damage procedure. Existing ordinary Gorgon Core guards already use damaged or actually destroyed Assets.",
+      "alternatives": [
+        "Require destruction only despite ordinary Asset damage.",
+        "Allow one layer or the original guard condition to replace all remaining guards.",
+        "Accept a narrative pierced flag that leaves the real Asset intact."
+      ],
+      "policy_key": "leviathan_piercing_and_conjunctive_core",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Actual ordinary Asset damage or source destruction pierces that exact layer. Both layers and all original Core-plan guards must be dealt with; the actual original weakness must still be confirmed. No second piercing counter or HP is tracked.",
+      "change_impact": "Existing AllOut/Gorgon-contest effects change the real source Assets, and raw World exposure plus new Core admission enforce their conjunction."
+    },
+    {
+      "id": "leviathan-protection-future-source-only",
+      "summary": "Raising actual layers closes the currently exposed Core for future declarations and makes unrolled snapshots stale. It cannot recalculate an already-rolled original strike, retroactively add a modifier, undo frozen required death, or harm a successor instead.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF 26, 174",
+      "rationale": "The actual source resources and exposure change now. Receipt/source identity remains immutable, and the existing fatal-hit timing is already frozen at the real original strike.",
+      "alternatives": [
+        "Let new layers cancel a known fatal receipt.",
+        "Leave the Core available to new strikes despite the new intact layers."
+      ],
+      "policy_key": "leviathan_protection_future_source_only",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Raising actual layers closes the currently exposed Core for future declarations and makes unrolled snapshots stale. It cannot recalculate an already-rolled original strike, retroactively add a modifier, undo frozen required death, or harm a successor instead.",
+      "change_impact": "New exposure/strike requires genuine piercing; existing original fatal effects preserve their source. The trusted after-roll composition test is not a claim that a generic Type-counter menu is implemented."
+    },
+    {
+      "id": "beyond-intense-source-legal-no-heat",
+      "summary": "Preserve real Intense Bonds for every otherwise source-legal participant, including NPCs and actual Gorgons. Beyond-depth deepening grants +2 only to actual Heat-bearing participants; never invent Heat or suppress an independently required Gorgon/Void source.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF 11",
+      "rationale": "A relationship does not by itself create a Heat resource or override an independently required consequence.",
+      "alternatives": [
+        "Exclude any participant lacking Heat, or invent a proxy Heat resource."
+      ],
+      "policy_key": "beyond_intense_source_legal_no_heat",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Preserve real Intense Bonds for every otherwise source-legal participant, including NPCs and actual Gorgons. Beyond-depth deepening grants +2 only to actual Heat-bearing participants; never invent Heat or suppress an independently required Gorgon/Void source.",
+      "change_impact": "No ordinary NPC/Gorgon silently disappears from otherwise legal source choices; actual ActorRefs and existing eligibility remain authoritative."
+    },
+    {
+      "id": "mockingbird-sex-self-asset-family",
+      "summary": "A Void Asset written on the Girl herself through the middle collect result is a Girl Asset, follows the actual four-Asset cap, and requires explicit eligible replacement when full.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF 36, 15",
+      "rationale": "An Asset explicitly written on the Girl uses the existing Girl Asset authority and capacity.",
+      "alternatives": [
+        "Let the player choose Frame family without a Frame-specific source or ignore the cap."
+      ],
+      "policy_key": "mockingbird_sex_self_asset_family",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "A Void Asset written on the Girl herself through the middle collect result is a Girl Asset, follows the actual four-Asset cap, and requires explicit eligible replacement when full.",
+      "change_impact": "No extra free capacity, concealed replacement, repair or copied asset; sole source Void is removed only atomically with the actual destination."
+    },
+    {
+      "id": "mockingbird-sex-already-fully-void",
+      "summary": "A mandatory high result against an actual already fully Void Harpy records the factual saturated outcome and real Bond/risk; do not manufacture another Asset, repeat conversion or a fake patient acknowledgment.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF 36, 19",
+      "rationale": "A mandatory corruption cannot select an uncorrupted resource when no such resource remains.",
+      "alternatives": [
+        "Force an impossible new uncorrupted choice or rerun an already completed conversion."
+      ],
+      "policy_key": "mockingbird_sex_already_fully_void",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "A mandatory high result against an actual already fully Void Harpy records the factual saturated outcome and real Bond/risk; do not manufacture another Asset, repeat conversion or a fake patient acknowledgment.",
+      "change_impact": "One actual source receipt; original resources preserved. Voluntary Risk still needs a real unvoid Asset cost."
+    },
+    {
+      "id": "mockingbird-sex-group-primary",
+      "summary": "For an actual multi-participant interaction, the caster explicitly chooses one primary printed counterpart; all actual source participants independently attest. Collect can redirect only among those real participants.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF 36",
+      "rationale": "The singular printed counterpart does not specify how to select among multiple actual participants.",
+      "alternatives": [
+        "Automatically choose the first account or grant every participant every primary consequence."
+      ],
+      "policy_key": "mockingbird_sex_group_primary",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "For an actual multi-participant interaction, the caster explicitly chooses one primary printed counterpart; all actual source participants independently attest. Collect can redirect only among those real participants.",
+      "change_impact": "Human intent owns the original counterpart; no guessed fictional interaction or hidden target substitution."
+    },
+    {
+      "id": "mockingbird-sex-discovery-not-omniscience",
+      "summary": "Undisclosed risk does not automatically inflict Punishment. Actual source participants may report a current known witness; that real witness attests and the original source Handler confirms discovery. Low conditional Tag is authored only then.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF 36",
+      "rationale": "Procedural access to private state does not establish fictional discovery by a Handler.",
+      "alternatives": [
+        "Treat procedural GM/database knowledge as in-fiction discovery or auto-inflict Punishment."
+      ],
+      "policy_key": "mockingbird_sex_discovery_not_omniscience",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Undisclosed risk does not automatically inflict Punishment. Actual source participants may report a current known witness; that real witness attests and the original source Handler confirms discovery. Low conditional Tag is authored only then.",
+      "change_impact": "Private source material remains private; no generated intimate acts, false discovery or successor Handler authority."
+    },
+    {
+      "id": "mockingbird-starry-original-body-lifetime",
+      "summary": "The extra capability lasts while the exact Starry-Eyed Tag remains on that actual counterpart. Proven same Handler body across a Director rules-context ending retains it; a successor body does not.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF 35, 36, 192",
+      "rationale": "The printed capability depends on the Tag on its original recipient, rather than a temporary rules context.",
+      "alternatives": [
+        "Expire at context ending or grant it to every later role under the same human account."
+      ],
+      "policy_key": "mockingbird_starry_original_body_lifetime",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "The extra capability lasts while the exact Starry-Eyed Tag remains on that actual counterpart. Proven same Handler body across a Director rules-context ending retains it; a successor body does not.",
+      "change_impact": "Immutable original gift/source remains; current capability derives from actual original Tag and same-body proof."
+    },
+    {
+      "id": "call-guest-source-one-effect",
+      "summary": "The original caster invites a real nearby source person; the actual original human accepts boarding. That guest owns exactly one applicable original Dive consequence, including actual table-owned answers/agreement. The original roll stays held through real consequences, without another roll or generic borrowed FramePlay access.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF 24, 35",
+      "rationale": "The named invitation grants a specific consequence without granting a second Frame or a general Play entitlement.",
+      "alternatives": [
+        "Automatically board another player or grant guest a copied Frame/stat pool and independent Plays."
+      ],
+      "policy_key": "call_guest_source_one_effect",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "The original caster invites a real nearby source person; the actual original human accepts boarding. That guest owns exactly one applicable original Dive consequence, including actual table-owned answers/agreement. The original roll stays held through real consequences, without another roll or generic borrowed FramePlay access.",
+      "change_impact": "No manufactured consent, duplicated RNG/Heat, wrong-body resources or unrestricted guest entitlement."
+    },
+    {
+      "id": "call-nearby-communication-source",
+      "summary": "Known same-cell or real source co-presence establishes nearby; relay transmits a player-authored message and the actual Gorgon human owns response or silence. Communication alone does not reveal hidden map entities, compel truth or expose the mental exchange to unrelated table humans.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF 35",
+      "rationale": "The source gives communication without a numeric range, automatic discovery or compelled response.",
+      "alternatives": [
+        "Invent grid radius, automatic hidden-Gorgon discovery, AI reply or compelled honesty."
+      ],
+      "policy_key": "call_nearby_communication_source",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Known same-cell or real source co-presence establishes nearby; relay transmits a player-authored message and the actual Gorgon human owns response or silence. Communication alone does not reveal hidden map entities, compel truth or expose the mental exchange to unrelated table humans.",
+      "change_impact": "Preserves existing source geography and private knowledge; no fictional joins or new permissions."
+    },
+    {
+      "id": "call-guest-physical-help",
+      "summary": "Voluntary boarding needs actual free capable bodies, exact current unlocked carrier cockpit and paired source contact acceptance. Subsumption affects the actual guest body/occupied Frame; real Frame consent and a physically present other role perform extraction. Inactive vital signs persist until actual medical help is reported and factually confirmed.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF 24, 35",
+      "rationale": "The existing boarding, Core consent and medical rules require actual bodily actions and separate human authority.",
+      "alternatives": [
+        "Use Defeat rescue authority, automatic recovery/transport, copied own Frame occupancy or account-based Frame consent."
+      ],
+      "policy_key": "call_guest_physical_help",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Voluntary boarding needs actual free capable bodies, exact current unlocked carrier cockpit and paired source contact acceptance. Subsumption affects the actual guest body/occupied Frame; real Frame consent and a physically present other role perform extraction. Inactive vital signs persist until actual medical help is reported and factually confirmed.",
+      "change_impact": "No fabricated movement, healing, capacity or successor body authority; current JANUS voice can be a different actual human from the Pilot and procedural Handler."
+    },
+    {
+      "id": "leviathan-specific-tag-cost",
+      "summary": "The Type trigger may mark the actual subject\u2019s obsessed Tag even when its controller also controls another body. This cost grants no ordinary Tag modifier; ordinary modifiers retain their separate human/scene restrictions.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF174/printed172 and PDF11/printed9",
+      "rationale": "The specific compulsory trigger names a Tag cost, while the general modifier has different eligibility.",
+      "alternatives": [
+        "Apply the ordinary other-human modifier restriction to the Type cost."
+      ],
+      "policy_key": "leviathan_specific_tag_cost",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Source-owned Leviathan reducers, real shared action/receipt flow and private native choices; unsupported intersections remain gated.",
+      "change_impact": "Review pending original-source choices before changing this interpretation; preserve known dice, existing resources and original ownership."
+    },
+    {
+      "id": "leviathan-protected-ordinary-identities",
+      "summary": "The high result replaces actual eligible ordinary slots while preserving protected extras and another person\u2019s Paired Identity. Missing or lost slots are not invented.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF174/printed172 and PDF58/printed56",
+      "rationale": "Explicit protection from another person changing a Paired Identity constrains the broader four-Identity result.",
+      "alternatives": [
+        "Replace protected extras or create four slots regardless of actual resources."
+      ],
+      "policy_key": "leviathan_protected_ordinary_identities",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Source-owned Leviathan reducers, real shared action/receipt flow and private native choices; unsupported intersections remain gated.",
+      "change_impact": "Review pending original-source choices before changing this interpretation; preserve known dice, existing resources and original ownership."
+    },
+    {
+      "id": "leviathan-multiple-source-locks",
+      "summary": "Reusing an existing obsessed Identity retains every real source lock. Only the corresponding source\u2019s actual recorded death releases its restriction; leaving a map does not count as death.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF174/printed172",
+      "rationale": "A second source effect does not state that it cancels the first source\u2019s until-death condition.",
+      "alternatives": [
+        "Allow the newest source to replace all prior restrictions."
+      ],
+      "policy_key": "leviathan_multiple_source_locks",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Source-owned Leviathan reducers, real shared action/receipt flow and private native choices; unsupported intersections remain gated.",
+      "change_impact": "Review pending original-source choices before changing this interpretation; preserve known dice, existing resources and original ownership."
+    },
+    {
+      "id": "leviathan-heat-gain-scope",
+      "summary": "An obsessed subject gains Heat only through a qualifying marked obsessed Identity. Other positive gains are recorded as blocked; legal spending and negative adjustments retain their normal rules. No Heat pool is created for a role without one.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF174/printed172",
+      "rationale": "The source restricts gains, without canceling unrelated valid effects or creating new resources.",
+      "alternatives": [
+        "Cancel the entire action that otherwise grants Heat, or remove existing Heat."
+      ],
+      "policy_key": "leviathan_heat_gain_scope",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Source-owned Leviathan reducers, real shared action/receipt flow and private native choices; unsupported intersections remain gated.",
+      "change_impact": "Review pending original-source choices before changing this interpretation; preserve known dice, existing resources and original ownership."
+    },
+    {
+      "id": "leviathan-low-actual-arrival",
+      "summary": "The low result completes through actual subject/mover and adjudicator confirmation of travel along the influence trail. Apply the existing body/controlled Frame position authority; preserve parked Frames and unknown endpoints. Physical blockers require their real source operation.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF174/printed172",
+      "rationale": "The endpoint is compulsory, but no extraction, control transfer or transport permission is granted.",
+      "alternatives": [
+        "Teleport the subject and its assigned Frame without control or custody review."
+      ],
+      "policy_key": "leviathan_low_actual_arrival",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Source-owned Leviathan reducers, real shared action/receipt flow and private native choices; unsupported intersections remain gated.",
+      "change_impact": "Review pending original-source choices before changing this interpretation; preserve known dice, existing resources and original ownership."
+    },
+    {
+      "id": "leviathan-roll-resource-order",
+      "summary": "Succumb uses two real dice plus the subject\u2019s actual Tag count, without Heat spending or a proxy character. Pay the trigger Tag and resolve any required repeated-Tag response before counting Tags and rolling; preserve normal post-roll Tag choices.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF174/printed172 and PDF11/printed9",
+      "rationale": "The specified roll modifier comes from the affected person\u2019s actual resources after the committed trigger cost.",
+      "alternatives": [
+        "Count removed Tags or spend the controller\u2019s unrelated Pilot Heat."
+      ],
+      "policy_key": "leviathan_roll_resource_order",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Source-owned Leviathan reducers, real shared action/receipt flow and private native choices; unsupported intersections remain gated.",
+      "change_impact": "Review pending original-source choices before changing this interpretation; preserve known dice, existing resources and original ownership."
+    },
+    {
+      "id": "budget-ruin-map-condition",
+      "summary": "Two locations falling to ruin use the existing destroyed map condition. Record both actual structure-loss triggers, without Gorgon territory growth; losing the last Foundation base invokes the existing real aftermath workflow.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF152/printed150; existing location destruction and last-base rules",
+      "rationale": "The map has one existing unusable/destroyed location state; ruin supplies no repair, territorial expansion or waiver of last-base consequences.",
+      "alternatives": [
+        "Record narrative ruin while leaving both locations mechanically intact.",
+        "Add a separate ruin condition and duplicate destruction consumers."
+      ],
+      "policy_key": "budget_ruin_map_condition",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "RuinService applies two existing destroy reducers, structure triggers and source-proved required aftermath, with original Handler native selectors.",
+      "change_impact": "Review pending location selections if the map condition semantics change; preserve committed losses and their actual source events."
+    },
+    {
+      "id": "budget-photoshoot-public-setter",
+      "summary": "After the actual photoshoot, the appointed human records one public-perception Tag per original Girl. The human represents public opinion through an OOC source appointment; no fictional Handler knowledge or new public NPC is invented. The Handler receives no Tag or invented numeric funds from this result.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF150/printed148, Low Budget1.1; ordinary Tag source rules",
+      "rationale": "The event instructs giving each Girl a public-perception Tag without specifying a separate public actor or quantified income.",
+      "alternatives": [
+        "Create a new public NPC setter.",
+        "Use the fictional Handler body as the public opinion giver."
+      ],
+      "policy_key": "budget_photoshoot_public_setter",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Existing typed Strain effect and native per-Girl Tag fields, with original period/CID guard and authenticated OOC setter source.",
+      "change_impact": "Changing setter representation requires explicit treatment of pending source effects and existing giver provenance; preserve actual Tag events."
+    },
+    {
+      "id": "budget-rich-patron-source-visits",
+      "summary": "The existing rich patron gains a Personal Bond with the selected original Girl, preserving a deeper existing Bond. Its actual controller reports each real visit and any evidence of Punishment actually seen. Only an explicit witnessed-evidence report grants the authored Tag to the original Handler; private database knowledge does not trigger it.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF150/printed148, Low Budget1.2; ordinary Bond and Tag rules",
+      "rationale": "Gaining a Bond does not specify deepening an existing one; seeing evidence is a fictional observation owned by the actual NPC controller, not automatic GM knowledge.",
+      "alternatives": [
+        "Always deepen an existing Bond.",
+        "Automatically grant a Tag from private Punishment history."
+      ],
+      "policy_key": "budget_rich_patron_source_visits",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Source-proved original patron-interest record, canonical Actor Bond, optional owner-only visit inbox/native form and actual patron-given Handler Tag. No movement, player conduct or private Punishment details are generated.",
+      "change_impact": "Review original patron/Girl/Handler bindings and pending visits before changing trigger ownership; preserve existing Bond depth and Tag source history."
+    },
+    {
+      "id": "janus_original_core_admission",
+      "summary": "Admit a distinct original unnamed ex-Girl Core on the existing JANUS only after actual Pilot request, selected real human factual proposal and Foundation source review. No former PC/archive/new Frame/paid abilities. Unspecified existing body Heat, Identity names/marks, actual Girl Asset count/details/damage and appearance are actual controller-approved facts; no automatic2 Girl Assets.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Official rulebook PDF68/printed66; normalHarpy PDF178",
+      "rationale": "Printed original Core exists and functions as a normal Harpy but has no complete source sheet; facts must not be fabricated as former history.",
+      "alternatives": [
+        "Borrow an existing PC as the Core",
+        "Invent a former Pilot archive or resource package",
+        "Retain only four cosmetic strings"
+      ],
+      "policy_key": "janus_original_core_admission",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Admit a distinct original unnamed ex-Girl Core on the existing JANUS only after actual Pilot request, selected real human factual proposal and Foundation source review. No former PC/archive/new Frame/paid abilities. Unspecified existing body Heat, Identity names/marks, actual Girl Asset count/details/damage and appearance are actual controller-approved facts; no automatic2 Girl Assets.",
+      "change_impact": "One actual external_pilot identity and original body; source registry admission events and native response ownership; read old initialFrameIDs unchanged."
+    },
+    {
+      "id": "janus_single_frame_resource_exception",
+      "summary": "Core Girl Assets follow normalHarpy Void physiology. The actual existing JANUS Frame Assets remain at their single original current/parked Frame authority and keep their source-known Void states; the book last-Tag erasure is the actual new Frame-wide corruption event.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Official rulebook PDF68-69; normalHarpy PDF178",
+      "rationale": "JANUS begins with a controlled Core and its ordinary2 chosen Frame Assets, while LivingBattery explicitly names later allFrame corruption. Copying/automatically corrupting that Frame at Core registration erases the printed distinction.",
+      "alternatives": [
+        "Copy all Frame Assets into a second Core pool",
+        "Force all initialJANUS Frame Assets Void on admission"
+      ],
+      "policy_key": "janus_single_frame_resource_exception",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Core Girl Assets follow normalHarpy Void physiology. The actual existing JANUS Frame Assets remain at their single original current/parked Frame authority and keep their source-known Void states; the book last-Tag erasure is the actual new Frame-wide corruption event.",
+      "change_impact": "Damage/corruption/destruction through either pilot/Core view updates exact sole origin. Core registration changes no existing Frame Assets or position."
+    },
+    {
+      "id": "janus_control_tags_live_semantics",
+      "summary": "The four original Tag IDs carry exact printed effects: Drugged means general sourceHelpless without invented opposing person, Restrained blocks actual Plays, Muzzled blocks physical speech, surgery is an actual pain Tag. Do not equate Muzzled with noPlays or erase independent Helpless sources when Drugged is removed.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Official rulebook PDF68",
+      "rationale": "Each printed parenthesis is narrower than a generic incapacitation flag. Actual live Tag identity, not arbitrary wording, governs original baseline treatment.",
+      "alternatives": [
+        "Leave only label strings",
+        "Treat Drugged as death/inactive body",
+        "Treat Muzzled as unable to make anyPlay"
+      ],
+      "policy_key": "janus_control_tags_live_semantics",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "The four original Tag IDs carry exact printed effects: Drugged means general sourceHelpless without invented opposing person, Restrained blocks actual Plays, Muzzled blocks physical speech, surgery is an actual pain Tag. Do not equate Muzzled with noPlays or erase independent Helpless sources when Drugged is removed.",
+      "change_impact": "Actual shared actor begin/preRoll/native restrictions; source Tag marker/private response and actual original Core remain separate from controller otherPC."
+    },
+    {
+      "id": "janus_frame_voice_human_not_conversation",
+      "summary": "Resolve OOC Frame voice to its exact bound living original Core controller; JANUS without actual sourceCore setup fails closed. Returning the human ID does not prove spoken/mental fictional communication or consent. Muzzled remains; explicit real LivingBattery link is the printed direct mental exception.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Official rulebook PDF68-69; physical Frame consent source",
+      "rationale": "An unrelated current Handler or same-human otherPC cannot stand in for the actual original Core. Source authority and fictional communication/contact are separate proofs.",
+      "alternatives": [
+        "Fallback to current Handler",
+        "Borrow controller otherPC persona",
+        "Treat every Frame voice prompt as free Core telepathy"
+      ],
+      "policy_key": "janus_frame_voice_human_not_conversation",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Resolve OOC Frame voice to its exact bound living original Core controller; JANUS without actual sourceCore setup fails closed. Returning the human ID does not prove spoken/mental fictional communication or consent. Muzzled remains; explicit real LivingBattery link is the printed direct mental exception.",
+      "change_impact": "Actual extraction/consent consumers must verify any required fictional request via real source contact/link; no names or ordinary speech inferred."
+    },
+    {
+      "id": "janus_distinct_actual_battery",
+      "summary": "Use a distinct actual battery person. The same human may control both actual roles; no physical self-loop, self-Bond or invented private other-mind answer.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Official rulebook PDF69-70 / printed67-68",
+      "rationale": "The printed other-person trigger and contact need actual separate endpoints. Physical self-jack reach and self-result ownership are not specified.",
+      "alternatives": [
+        "Explicit future self-link module"
+      ],
+      "policy_key": "janus_distinct_actual_battery",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Use a distinct actual battery person. The same human may control both actual roles; no physical self-loop, self-Bond or invented private other-mind answer.",
+      "change_impact": "Real ActorRefs and spinal contact; speaker ownership remains actual role-bound."
+    },
+    {
+      "id": "janus_battery_known_roll_and_current_low_tag",
+      "summary": "Roll once per performed/reviewed spinal contact. Freeze actual pre-roll Tag IDs for +Tag modifier; erase one actual current Tag on low, including a genuinely acquired intervening Tag. Only an actual final Tag erasure triggers takeover.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Official rulebook PDF69 / printed67",
+      "rationale": "A known roll cannot repeat without new actual plugging, and a post-roll Tag change cannot rewrite the saved modifier.",
+      "alternatives": [
+        "Recount at final effect",
+        "Require only original Tags to be erased"
+      ],
+      "policy_key": "janus_battery_known_roll_and_current_low_tag",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Roll once per performed/reviewed spinal contact. Freeze actual pre-roll Tag IDs for +Tag modifier; erase one actual current Tag on low, including a genuinely acquired intervening Tag. Only an actual final Tag erasure triggers takeover.",
+      "change_impact": "Original receipt remains immutable; erasure stores its own actual before-Tag IDs."
+    },
+    {
+      "id": "janus_link_mental_assets_and_private_channel",
+      "summary": "Harpy Cognition/Offset Emotional Load are exact additional mental Girl Assets bound to the actual selected benefit/link, without copying a Core-owned Asset or consuming ordinary four-Asset capacity. They expire on actual unlink/ending. The question option grants the actual two minds a private human-authored ongoing channel; it supplies no Handler knowledge or automatic answer.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Official rulebook PDF69 / printed67",
+      "rationale": "The book names additional mental Assets rather than lending existing body hardware, and explicitly permits free brain communication.",
+      "alternatives": [
+        "Borrow Core assets",
+        "Treat question as a single public answer"
+      ],
+      "policy_key": "janus_link_mental_assets_and_private_channel",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Harpy Cognition/Offset Emotional Load are exact additional mental Girl Assets bound to the actual selected benefit/link, without copying a Core-owned Asset or consuming ordinary four-Asset capacity. They expire on actual unlink/ending. The question option grants the actual two minds a private human-authored ongoing channel; it supplies no Handler knowledge or automatic answer.",
+      "change_impact": "One source pointer per additional Asset; no physical-item transfer, no duplicated base pool."
+    },
+    {
+      "id": "janus_pet_qualifying_roll",
+      "summary": "Pet uses final8+ Living Battery against the actual original Harpy, with entitlement present at that raw roll, creating one next actual Off-Duty carry opportunity.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Official rulebook PDF70 / printed68",
+      "rationale": "Living Battery is the referenced JANUS roll; unrelated dice and retroactive purchases must not qualify.",
+      "alternatives": [
+        "Use Go Off-Duty8+ instead"
+      ],
+      "policy_key": "janus_pet_qualifying_roll",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Pet uses final8+ Living Battery against the actual original Harpy, with entitlement present at that raw roll, creating one next actual Off-Duty carry opportunity.",
+      "change_impact": "Original link/receipt/period proof retained; real owner choice, physical unplug, same original body and return required."
+    },
+    {
+      "id": "janus_pet_equipment_not_bonus_tag",
+      "summary": "Pet grants actual Leash and Collar equipment/custody provenance, without inventing an extra Tag, mechanical Asset or +1 Battery modifier. Carrying changes no Frame assignment or known location by inference.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Official rulebook PDF70 / printed68",
+      "rationale": "The text says she gains Leash and Collar, without labeling either a Tag or Asset.",
+      "alternatives": [
+        "Count it as one extra Tag",
+        "Create a mechanical Girl Asset"
+      ],
+      "policy_key": "janus_pet_equipment_not_bonus_tag",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Pet grants actual Leash and Collar equipment/custody provenance, without inventing an extra Tag, mechanical Asset or +1 Battery modifier. Carrying changes no Frame assignment or known location by inference.",
+      "change_impact": "Current typed outing records actual gear/body custody. Generic held-item transfer of this particular equipment remains a separate unsupported port."
+    },
+    {
+      "id": "janus_foundation_tag_replacement_identity",
+      "summary": "Ordinary actual Off-Duty Foundation care restores the four printed control conditions with fresh source Tag identities; preserve other real personal Tags and immutable original admission IDs. A qualifying Pet carry postpones that treatment until the actual original body returns.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Official rulebook PDF68,70 / printed66,68",
+      "rationale": "New treatment must not inherit old Tag permissions/marks or rewrite creation history. Printed automatic replacement is an actual source effect, without fabricated player dialogue.",
+      "alternatives": [
+        "Reuse old removed Tag IDs",
+        "Replace every personal Tag",
+        "Apply treatment while a carried Core is away"
+      ],
+      "policy_key": "janus_foundation_tag_replacement_identity",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Ordinary actual Off-Duty Foundation care restores the four printed control conditions with fresh source Tag identities; preserve other real personal Tags and immutable original admission IDs. A qualifying Pet carry postpones that treatment until the actual original body returns.",
+      "change_impact": "Current semantic mapping remains separate from original baseline provenance; body position is never changed by routine treatment."
+    },
+    {
+      "id": "janus_detached_body_resource_scope",
+      "summary": "A detached unlinked original Core retains its real Girl Assets but cannot alter her former host Frame through a historical binding. Actual same-Frame Harpy rebirth, when source-proved, instead uses the resulting Harpy current Frame pool as sole shared hardware authority.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Official rulebook PDF68-70 / printed66-68",
+      "rationale": "Neither a historical owner label nor shared controller can transfer physical resource ownership.",
+      "alternatives": [
+        "Keep former host resources forever",
+        "Copy archived Frame resources into another pool"
+      ],
+      "policy_key": "janus_detached_body_resource_scope",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "A detached unlinked original Core retains its real Girl Assets but cannot alter her former host Frame through a historical binding. Actual same-Frame Harpy rebirth, when source-proved, instead uses the resulting Harpy current Frame pool as sole shared hardware authority.",
+      "change_impact": "No old Frame damage through a detached Core; no Frame pool duplication or archive mutation."
+    },
+    {
+      "id": "janus-void-storage-separate-points",
+      "summary": "Newly gained stored Void is a separate source-owned point bound to its original actor, existing Asset, original Harpy and actual gain event. Its alteration is active only while the same Harpy is genuinely plugged in. Permanent Asset.void remains unchanged.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF 70",
+      "rationale": "The printed temporary-while-plugged wording must not allow unplugging to erase unrelated permanent corruption or actual prior conversion.",
+      "alternatives": [
+        "Mutate permanent Asset.void then reverse it on every unplug, or treat stored changes as permanent."
+      ],
+      "policy_key": "janus_void_storage_separate_points",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Newly gained stored Void is a separate source-owned point bound to its original actor, existing Asset, original Harpy and actual gain event. Its alteration is active only while the same Harpy is genuinely plugged in. Permanent Asset.void remains unchanged.",
+      "change_impact": "One sole stored point survives genuine unplug/replug; original permanent resources and required work retain their authority. Active projection does not duplicate an Asset."
+    },
+    {
+      "id": "janus-storage-actual-off-duty-surgery",
+      "summary": "The original patient requests one exact stored point after an actual Go Off-Duty receipt. The period's original Foundation human records performed surgery. At most one point per original patient is removed in that period, without damaging or repairing the original Asset.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF 70",
+      "rationale": "A period label or purchase alone is not performed surgery, and one printed removal must not become repeatable free removal.",
+      "alternatives": [
+        "Automatically delete a stored point on period activation, or permit repeated removals from the same period."
+      ],
+      "policy_key": "janus_storage_actual_off_duty_surgery",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "The original patient requests one exact stored point after an actual Go Off-Duty receipt. The period's original Foundation human records performed surgery. At most one point per original patient is removed in that period, without damaging or repairing the original Asset.",
+      "change_impact": "The optional request is resumable/private and does not invent personnel, transport, medical completion or an Asset repair."
     }
   ],
   "entries": [
@@ -3716,7 +4599,8 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_dormant_adjudication.py",
-        "tests/rules/test_harpy_ended_director_procedures.py"
+        "tests/rules/test_harpy_ended_director_procedures.py",
+        "tests/rules/test_dive_handler_void.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -4268,7 +5152,9 @@
       ],
       "test_evidence": [
         "tests/rules/test_mockingbird_assets.py",
-        "tests/rules/test_mockingbird_call.py"
+        "tests/rules/test_mockingbird_call.py",
+        "tests/rules/test_call_actual_harpy.py",
+        "tests/rules/test_call_guest_handler_girl.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -4418,7 +5304,8 @@
         "tests/rules/test_handler_void_service.py",
         "tests/rules/test_handler_girl_void_service.py",
         "tests/rules/test_handler_void.py",
-        "tests/rules/test_handler_girl_void.py"
+        "tests/rules/test_handler_girl_void.py",
+        "tests/rules/test_mockingbird_sex_closure.py"
       ],
       "m2_play_id": "mockingbird_sex",
       "module": "core"
@@ -5915,14 +6802,17 @@
         "heading": "Harpy Core"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_janus_requisitions.py",
+        "tests/rules/test_janus_core_service.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "JANUS",
@@ -5941,14 +6831,17 @@
         "heading": "JANUS"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_janus_requisitions.py",
+        "tests/rules/test_janus_core_service.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "JANUS",
@@ -5997,14 +6890,17 @@
         "heading": "Living Battery"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_janus_requisitions.py",
+        "tests/rules/test_janus_core_service.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "JANUS",
@@ -6023,14 +6919,17 @@
         "heading": "PANDORA"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_janus_requisitions.py",
+        "tests/rules/test_janus_core_service.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "JANUS",
@@ -6049,14 +6948,17 @@
         "heading": "A Girl is Kinda Like a Pet"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_janus_requisitions.py",
+        "tests/rules/test_janus_core_service.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "JANUS",
@@ -6075,14 +6977,17 @@
         "heading": "Obedience Training"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_janus_requisitions.py",
+        "tests/rules/test_janus_core_service.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "JANUS",
@@ -6101,14 +7006,17 @@
         "heading": "Universal Plug"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_janus_requisitions.py",
+        "tests/rules/test_janus_core_service.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "JANUS",
@@ -6127,14 +7035,16 @@
         "heading": "Void Storage"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_janus_storage.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "JANUS",
@@ -7130,7 +8040,8 @@
         "tests/rules/test_personal_firearm.py",
         "tests/rules/test_personal_firearm_service.py",
         "tests/rules/test_items.py",
-        "tests/rules/test_frame_swap_service.py"
+        "tests/rules/test_frame_swap_service.py",
+        "tests/rules/test_free_personal_firearm_package.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -7150,14 +8061,17 @@
         "heading": "Compliance Virus"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_compliance_virus.py",
+        "tests/rules/test_virus_role_source_bounds.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "THE ENFORCER",
@@ -12229,14 +13143,16 @@
         "heading": "Budget low: die 1, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_budget_photoshoot.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -12252,14 +13168,16 @@
         "heading": "Budget low: die 1, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_budget_patron.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -12856,14 +13774,16 @@
         "heading": "Budget endgame slot 3"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_budget_ruin.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -12902,14 +13822,16 @@
         "heading": "Budget endgame slot 5"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_budget_persistent_tag.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -12925,14 +13847,16 @@
         "heading": "Budget endgame slot 6"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_collective_handler_tag.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -13749,7 +14673,8 @@
         "tests/rules/test_battle.py",
         "tests/rules/test_battle_pipeline.py",
         "tests/rules/test_harpy_core.py",
-        "var/m3-physical-battle-world-final.xml"
+        "var/m3-physical-battle-world-final.xml",
+        "tests/rules/test_frame_core_source.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -13869,7 +14794,8 @@
         "var/m3-gorgon-aggressive-sprite-whole.xml",
         "var/m3-low-dormant-original-nonbody.xml",
         "tests/rules/test_dormant_adjudication.py",
-        "tests/rules/test_harpy_ended_director_procedures.py"
+        "tests/rules/test_harpy_ended_director_procedures.py",
+        "tests/rules/test_gorgon_dormant_source.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -14319,14 +15245,17 @@
         "heading": "Leviathan-Type"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_leviathan_layers.py",
+        "tests/rules/test_leviathan_obsession_flow.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -14342,14 +15271,17 @@
         "heading": "Succumb to Obsession"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_leviathan_effects.py",
+        "tests/rules/test_leviathan_obsession_flow.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

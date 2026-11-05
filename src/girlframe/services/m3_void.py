@@ -104,6 +104,16 @@ def source(
             or not all(x.void for x in assets)
         ):
             raise ValueError()
+        if body.get("reason") == "janus_core_freed":
+            from girlframe.services.m3_janus_requisitions import prove_freed_core_void
+
+            prove_freed_core_void(c, game, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "janus_battery":
+            from girlframe.services.m3_janus_play import prove_void_source as prove_battery_void
+
+            prove_battery_void(game, c, first, body, actor)
+            return current, body, actor
         if body.get("reason") == "item_transfer":
             from girlframe.services.m3_items import new_void_families, prove_transfer
 
@@ -174,6 +184,16 @@ def source(
                 or family != "girl"
             ):
                 raise ValueError()
+            return current, body, actor
+        if body.get("reason") == "call_guest":
+            from girlframe.services.m3_mockingbird_communion import prove_call_guest_void
+
+            prove_call_guest_void(game, c, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "mockingbird_sex":
+            from girlframe.services.m3_mockingbird_effects import prove_void_source as prove_sex
+
+            prove_sex(game, c, first, body, actor)
             return current, body, actor
         if body.get("reason") == "mockingbird_risk":
             from girlframe.services.m3_mockingbird import prove_void_source as prove_risk
@@ -396,6 +416,22 @@ def complete(
                 from girlframe.services.m3_enforcement_initiative import complete_item_void
 
                 complete_item_void(game, c, identity, event)
+        elif body.get("reason") == "janus_battery":
+            from girlframe.services.m3_janus_play import (
+                complete_void_continuation as complete_battery,
+            )
+
+            complete_battery(game, c, identity, event, viewer, key)
+        elif body.get("reason") == "call_guest":
+            from girlframe.services.m3_mockingbird_communion import complete_call_guest_void
+
+            complete_call_guest_void(game, c, identity, event, viewer, key)
+        elif body.get("reason") == "mockingbird_sex":
+            from girlframe.services.m3_mockingbird_effects import (
+                complete_void_continuation as complete_sex,
+            )
+
+            complete_sex(game, c, identity, event, viewer, key)
         elif body.get("reason") == "mockingbird_risk":
             from girlframe.services.m3_mockingbird import (
                 complete_void_continuation as complete_risk,

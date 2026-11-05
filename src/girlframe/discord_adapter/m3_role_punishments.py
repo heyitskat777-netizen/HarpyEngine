@@ -172,6 +172,13 @@ async def open_role_punishment(
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.get, viewer, identity)
     case = data["case"]
+    if case.get("ended_event"):
+        await reply(
+            interaction,
+            "The original source participant ended before this Punishment was performed. "
+            "The actual ending is recorded; no Punishment effect or completion was invented.",
+        )
+        return
     if case["completion_event"]:
         await reply(
             interaction,
@@ -216,7 +223,12 @@ async def open_role_punishment(
         operation = {}
         instructions = (
             "Record the actual scene in which you carry out the saved instruction. "
-            "The other human records attendance. Scene descriptions are shared with participants."
+            + (
+                "Your original role is also the subject of this source self-Punishment. "
+                if case["executor_controller"] == case["subject_controller"]
+                else "The other human records attendance. "
+            )
+            + "Scene descriptions are shared with participants."
         )
     elif data["can_attest"] and case["scene_account"]:
         fields = [

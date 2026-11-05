@@ -41,6 +41,7 @@ def grant(
     *,
     purchase: str | None = None,
     replace: str | None = None,
+    source_work: str | None = None,
 ) -> GameState:
     state = GameState.model_validate_json(original.model_dump_json())
     current = resolve(state, actor, bindings, require_current_profile=False)
@@ -71,12 +72,14 @@ def grant(
             frame_instance=frame,
             source_event=event,
             purchase=purchase,
+            source_work=source_work,
             issues=(
                 FirearmIssue(
                     asset=asset.id,
                     source_event=event,
                     recipient=actor,
                     controller=current.controller,
+                    replaces_asset=replace,
                 ),
             ),
         )

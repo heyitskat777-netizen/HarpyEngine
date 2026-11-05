@@ -57,4 +57,9 @@ def advance(
 ) -> tuple[Result, tuple[dict[str, str], ...]]:
     present, deferred = plan(state)
     assert state.world is not None
-    return end_off_duty(state.world, period, movements, changes, present_gorgons=present), deferred
+    result = end_off_duty(state.world, period, movements, changes, present_gorgons=present)
+    from girlframe.engine.m3_janus_pandora import require_can_move
+
+    for gorgon in result.world.gorgons:
+        require_can_move(state, ActorRef(kind="gorgon", entity=gorgon.id), gorgon.cell)
+    return result, deferred

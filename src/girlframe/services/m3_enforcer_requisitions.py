@@ -19,7 +19,7 @@ from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_privileges import purchase_proof
 from girlframe.services.m3_requisitions import RequisitionService
-from girlframe.services.onboarding import WorkflowError
+from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
 
@@ -61,24 +61,41 @@ def proof(c: Connection, game: GameService, grant: rules.Grant) -> None:
 
 
 def _replacement_proof(c: Connection, game: GameService, grant: rules.Grant) -> None:
+    if grant.source_work is None:
+        raise WorkflowError("Recover the original free package source.")
+    prove_replacement_rule(
+        c, game.store, grant.actor, grant.frame, grant.rule, grant.source_work, grant.source_event
+    )
+
+
+def prove_replacement_rule(
+    c: Connection,
+    store: OnboardingStore,
+    actor: ActorRef,
+    frame: str,
+    rule: str,
+    source_work: str,
+    source_event: str,
+) -> None:
+    """One exact quoted compulsory package and actual owner's confirmation, never a paid receipt."""
     table = t.m3["m3_required_work"]
     rows = [
         dict(x)
         for x in c.execute(
             sa.select(table)
-            .where(table.c.campaign_id == game.store.campaign_id, table.c.id == grant.source_work)
+            .where(table.c.campaign_id == store.campaign_id, table.c.id == source_work)
             .order_by(table.c.revision)
         ).mappings()
     ]
     root = next(
-        (x for x in rows if x["event_id"] == grant.source_event and x["state"] == "resolved"), None
+        (x for x in rows if x["event_id"] == source_event and x["state"] == "resolved"), None
     )
     body = json.loads(root["body_json"]) if root else {}
     quote = (
         c.execute(
             sa.select(table)
             .where(
-                table.c.campaign_id == game.store.campaign_id,
+                table.c.campaign_id == store.campaign_id,
                 table.c.id == body.get("package_id"),
                 table.c.state == "quoted",
             )
@@ -92,8 +109,8 @@ def _replacement_proof(c: Connection, game: GameService, grant: rules.Grant) -> 
     event = (
         c.execute(
             sa.select(t.events).where(
-                t.events.c.campaign_id == game.store.campaign_id,
-                t.events.c.id == grant.source_event,
+                t.events.c.campaign_id == store.campaign_id,
+                t.events.c.id == source_event,
             )
         )
         .mappings()
@@ -102,7 +119,7 @@ def _replacement_proof(c: Connection, game: GameService, grant: rules.Grant) -> 
     proposal = (
         c.execute(
             sa.select(t.events).where(
-                t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == quote["event_id"]
+                t.events.c.campaign_id == store.campaign_id, t.events.c.id == quote["event_id"]
             )
         )
         .mappings()
@@ -112,13 +129,18 @@ def _replacement_proof(c: Connection, game: GameService, grant: rules.Grant) -> 
     )
     if (
         root is None
-        or root["subject_id"] != grant.actor.entity
-        or body.get("applied_event") != grant.source_event
-        or body.get("frame_id") != grant.frame
-        or grant.rule not in supplied.get("package", {}).get("additional_rules", [])
+        or root["kind"] not in ("doctor_frame_replacement", "defeat_frame_replacement_active")
+        or quote is None
+        or quote["subject_id"] != actor.entity
+        or supplied.get("root_id") != source_work
+        or supplied.get("proposal_id") != body.get("proposal_id")
+        or root["subject_id"] != actor.entity
+        or body.get("applied_event") != source_event
+        or body.get("frame_id") != frame
+        or rule not in supplied.get("package", {}).get("additional_rules", [])
         or event is None
         or event["kind"] != "m3.compulsory_frame_replaced"
-        or event["actor_id"] != grant.actor.entity
+        or event["actor_id"] != actor.entity
         or proposal is None
         or proposal["kind"] != "m3.frame_package_quoted"
         or proposal["actor_id"] != str(supplied.get("handler"))

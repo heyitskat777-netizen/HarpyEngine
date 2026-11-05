@@ -29,6 +29,7 @@ from girlframe.engine.m2 import (
 from girlframe.engine.m2_registry import registry_digest
 from girlframe.engine.m3_plays import ASSET_IDS as M3_ASSET_IDS
 from girlframe.engine.m3_plays import HEAT_IDS as M3_HEAT_IDS
+from girlframe.engine.m3_plays import JANUS_ROLL_IDS
 from girlframe.engine.m3_plays import ROLL_IDS as M3_ROLL_IDS
 from girlframe.engine.m3_policy import RULESET as M3_RULESET
 from girlframe.engine.rolls import DiceSource, OsDice
@@ -143,6 +144,25 @@ class GameService:
                     if str(actor) == str(human):
                         principal = (human, appointment)
             previous_state = load_state(c, self.store.campaign_id)
+            if state.neural_connections:
+                from girlframe.engine.m3_frame_control import prepare_endings as end_neural_sources
+
+                neural_state = end_neural_sources(previous_state, state, event)
+                for field in GameState.model_fields:
+                    setattr(state, field, getattr(neural_state, field))
+            for fact in state.facts:
+                if fact.get("kind") == "blocked_by_obsession" and not fact.get("event"):
+                    fact["event"] = event
+            if any(fact.get("kind") == "compliance_virus_frame" for fact in state.facts):
+                from girlframe.services.m3_compliance_virus import (
+                    prepare_endings,
+                    prepare_transmission,
+                )
+
+                transmitted = prepare_transmission(self, c, previous_state, state, event)
+                transmitted = prepare_endings(previous_state, transmitted, event)
+                state.facts = transmitted.facts
+                state.role_punishments = transmitted.role_punishments
             from girlframe.services.m3_handler_plays import verified_tag_grants
 
             actor_text = str(actor)
@@ -194,6 +214,28 @@ class GameService:
             from girlframe.services.m3_debts import synchronize
 
             synchronize(c, self.store, state, event)
+        if state is not None and any(
+            fact.get("kind") == "compliance_virus_purge" for fact in state.facts
+        ):
+            from girlframe.services.m3_compliance_virus import synchronize_endings
+
+            synchronize_endings(self, c, event)
+        if state is not None and any(
+            x.phase == "ended" and x.ended_event == event for x in state.neural_connections
+        ):
+            from girlframe.services.m3_frame_control import synchronize_endings as end_neural_work
+
+            end_neural_work(self, c, event)
+        if (
+            state is not None
+            and state.frame_commands
+            and any(x.source_event == event for x in state.harpy_states)
+        ):
+            from girlframe.services.m3_frame_control import synchronize_birth_controls
+
+            controlled_birth = synchronize_birth_controls(self, c, event)
+            for field in GameState.model_fields:
+                setattr(state, field, getattr(controlled_birth, field))
         return event
 
     def sheet(self, viewer: GuildViewer, owner: int | None = None) -> dict[str, Any]:
@@ -203,6 +245,19 @@ class GameService:
             sheet = state.sheets.get(str(owner if owner is not None else viewer.user_id))
             if sheet is None:
                 raise WorkflowError("This Pilot has no activated M2 sheet.")
+            from girlframe.engine.m3_actor_state import ActorRef
+            from girlframe.engine.m3_janus_storage import active as stored_void
+
+            if sheet.character_id:
+                points = stored_void(state, ActorRef(
+                    kind="pilot", entity=str(sheet.owner), incarnation=sheet.character_id
+                ))
+                if points:
+                    sheet = sheet.model_copy(deep=True)
+                    for asset in sheet.assets:
+                        point = next((x for x in points if x.asset == asset.id), None)
+                        if point is not None:
+                            asset.void, asset.description = True, point.description
             return (
                 sheet.model_dump(mode="json")
                 if sheet.owner == viewer.user_id
@@ -693,6 +748,10 @@ class GameService:
         allow_archived: bool = False,
         allowed_archived: frozenset[tuple[str, str]] = frozenset(),
     ) -> None:
+        if action["data"].get("mockingbird", {}).get("play") == "mockingbird_sex":
+            from girlframe.services.m3_mockingbird_effects import allowed_archived as sex_archived
+
+            allowed_archived = allowed_archived | sex_archived(self, c, state, action)
         saved = action["data"].get("character_ids")
         if saved is None:
             saved = self.legacy_action_bindings(c, action)
@@ -791,7 +850,14 @@ class GameService:
             result[str(owner)] = identity
         return result
 
-    def immediate_work(self, c: Connection, owner: int, *, scene_id: str | None = None) -> bool:
+    def immediate_work(
+        self,
+        c: Connection,
+        owner: int,
+        *,
+        scene_id: str | None = None,
+        excluding: frozenset[str] = frozenset(),
+    ) -> bool:
         work = t.m3["m3_required_work"]
         latest = {
             row["id"]: row
@@ -804,6 +870,8 @@ class GameService:
             ).mappings()
         }
         for row in latest.values():
+            if row["id"] in excluding:
+                continue
             if row["state"] == "resolved" or not json.loads(row["body_json"]).get("immediate"):
                 continue
             if scene_id is not None and row["kind"] == "scene_requisition":
@@ -820,7 +888,13 @@ class GameService:
         self, viewer: GuildViewer, key: str, channel: int, sheet_revision: int, prepared: PlayInput
     ) -> dict[str, Any]:
         prepared = PlayInput.model_validate_json(prepared.model_dump_json())
-        if prepared.play not in (*PLAY_IDS, *M3_ROLL_IDS, *M3_HEAT_IDS, *M3_ASSET_IDS):
+        if prepared.play not in (
+            *PLAY_IDS,
+            *M3_ROLL_IDS,
+            *M3_HEAT_IDS,
+            *M3_ASSET_IDS,
+            *JANUS_ROLL_IDS,
+        ):
             raise WorkflowError("UNSUPPORTED_RULE: this Play is not implemented in M2.")
 
         def operation(c: Connection) -> dict[str, Any]:
@@ -835,6 +909,7 @@ class GameService:
             engage = None
             mockingbird = None
             snoop = None
+            janus = None
             void_keep = None
             dormant_dive_source = None
             from girlframe.services.m3_gorgon_play import (
@@ -889,6 +964,10 @@ class GameService:
                 from girlframe.services.m3_engage import prepare as prepare_engage
 
                 engage = prepare_engage(self, c, viewer, state, self.scene(c, channel), prepared)
+            if prepared.play in JANUS_ROLL_IDS:
+                from girlframe.services.m3_janus_play import prepare as prepare_janus
+
+                janus = prepare_janus(self, c, viewer, prepared, state, channel=channel)
             if prepared.play == "snoop":
                 from girlframe.services.m3_enforcer_snoop import prepare as prepare_snoop
 
@@ -931,8 +1010,16 @@ class GameService:
                 raise WorkflowError(
                     "REQUIRED_FOLLOWUP: replace the scrapped Frame before new Plays."
                 )
+            from girlframe.services.m3_virus_orders import required_disobey
+
+            virus_order_work = required_disobey(self, c, viewer, state, prepared, channel)
             if (
-                self.immediate_work(c, viewer.user_id, scene_id=self.scene(c, channel)["id"])
+                self.immediate_work(
+                    c,
+                    viewer.user_id,
+                    scene_id=self.scene(c, channel)["id"],
+                    excluding=frozenset({virus_order_work}) if virus_order_work else frozenset(),
+                )
                 and defeat is None
                 and void_keep is None
                 and dormant_dive_source is None
@@ -975,7 +1062,12 @@ class GameService:
                 )
             from girlframe.engine.m3_actor_bonds import is_helpless
 
-            if is_helpless(state, current_ref) and defeat is None and void_keep is None:
+            if (
+                is_helpless(state, current_ref)
+                and defeat is None
+                and void_keep is None
+                and janus is None
+            ):
                 raise WorkflowError(
                     "UNSUPPORTED_RULE: recover from Helplessness before a new defensive Play."
                 )
@@ -1005,6 +1097,7 @@ class GameService:
                         engage,
                         mockingbird,
                         snoop,
+                        janus,
                         gorgon_response,
                     )
                 )
@@ -1032,6 +1125,8 @@ class GameService:
                     source_cast, _ = CastService(ActorService(MissionService(self.store)))._current(
                         c, state, channel
                     )
+                elif janus is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(janus["cast"]))
                 elif snoop is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(snoop["cast"]))
                 elif mockingbird is not None:
@@ -1124,6 +1219,8 @@ class GameService:
                             "battle_dormant_dive",
                             "battle_dormant_threshold",
                             "mockingbird_void_threshold",
+                            "mockingbird_sex_void_threshold",
+                            "janus_void_threshold",
                             "snoop_item_void_threshold",
                             "gorgon_response_play",
                         )
@@ -1145,6 +1242,8 @@ class GameService:
                     "battle_item_void_threshold",
                     "battle_dormant_threshold",
                     "mockingbird_void_threshold",
+                    "mockingbird_sex_void_threshold",
+                    "janus_void_threshold",
                     "snoop_item_void_threshold",
                 ) and (void_keep is None or prepared.play != "keep_your_head"):
                     raise WorkflowError("Use the actual source-owned Void resistance controls.")
@@ -1201,7 +1300,7 @@ class GameService:
             elif root_lock and root_lock["state"] != "released":
                 raise WorkflowError("SCENE_BUSY: resolve the pending Play first.")
             if prepared.target_actor is not None and all(
-                x is None for x in (enforcement, battle, engage, mockingbird, snoop)
+                x is None for x in (enforcement, battle, engage, mockingbird, snoop, janus)
             ):
                 raise WorkflowError("This implemented Play does not take a fictional actor target.")
             if prepared.play in ("flirt", "put_someone_beneath_you"):
@@ -1226,7 +1325,7 @@ class GameService:
                     raise WorkflowError("The Pair must have an active sheet to receive Heat.")
             elif prepared.gain or prepared.pair_share:
                 raise WorkflowError("Heat gain requires an eligible Identity.")
-            if m3 is None:
+            if m3 is None and (janus is None or janus.get("mode") == "pandora"):
                 spend_heat(preview, prepared.heat)
             identity = str(uuid4())
             data = {
@@ -1332,6 +1431,20 @@ class GameService:
                     cast=engage["cast"],
                     cast_sha256=engage["cast_sha256"],
                 )
+            if janus is not None:
+                from girlframe.engine.m3_handler_consequences import active_handler
+
+                data["janus"] = janus
+                data["participants"] = list(janus["table"])
+                handler_body = active_handler(state)
+                data["tag_context"] = dict(
+                    actor=janus["actor"],
+                    handler=handler_body.model_dump(mode="json") if handler_body else None,
+                    gm_controller=state.handler,
+                    table=list(janus["table"]),
+                    cast=janus["cast"],
+                    cast_sha256=janus["cast_sha256"],
+                )
             if snoop is not None:
                 from girlframe.engine.m3_handler_consequences import active_handler
 
@@ -1433,6 +1546,7 @@ class GameService:
                 or battle is not None
                 or mockingbird is not None
                 or snoop is not None
+                or janus is not None
                 or engage is not None
                 or void_keep is not None
                 else "m2.play_confirmed",
@@ -1497,6 +1611,11 @@ class GameService:
             .mappings()
             .first()
         )
+        if row is not None and json.loads(row["body_json"]).get("virus_purge"):
+            from girlframe.services.m3_virus_orders import valid_order as valid_virus_order
+
+            if valid_virus_order(self, c, state, owner, channel, dict(row)):
+                return dict(row)
         if row is None or not higher(state, int(row["issuer_id"]), owner):
             raise WorkflowError("A recorded direct order from a current superior is required.")
         if any(
@@ -1513,6 +1632,14 @@ class GameService:
         with self.store.engine.connect() as c:
             self.authorize(c, viewer, game=False)
             original = self.action(c, identity)
+        if original["data"].get("leviathan_obsession"):
+            from girlframe.services.m3_leviathan_obsession import ObsessionService
+
+            return ObsessionService(self).roll(viewer, key, identity)
+        if original["data"].get("virus_purge"):
+            from girlframe.services.m3_virus_operations import OperationService
+
+            return OperationService(self).activate(viewer, key, identity)
         if original["data"].get("harpy_defeat"):
             from girlframe.services.m3_harpy_defeat import HarpyDefeatService
 
@@ -1553,6 +1680,10 @@ class GameService:
                 )
 
                 authorize_enforcement(self, c, viewer, action)
+            if action["data"].get("janus"):
+                from girlframe.services.m3_janus_play import authorize as authorize_janus
+
+                authorize_janus(self, c, viewer, action)
             if action["data"].get("snoop"):
                 from girlframe.services.m3_enforcer_snoop import authorize as authorize_snoop
 
@@ -1590,7 +1721,13 @@ class GameService:
                 from girlframe.services.m3_adjudication import reserve_request
 
                 return reserve_request(self, c, viewer, action, key=key)
-            if action["data"]["play"] not in (*PLAY_IDS, *M3_ROLL_IDS, *M3_HEAT_IDS, *M3_ASSET_IDS):
+            if action["data"]["play"] not in (
+                *PLAY_IDS,
+                *M3_ROLL_IDS,
+                *M3_HEAT_IDS,
+                *M3_ASSET_IDS,
+                *JANUS_ROLL_IDS,
+            ):
                 raise WorkflowError("This action is diceless.")
             state = load_state(c, self.store.campaign_id)
             self.action_characters(c, action, state)
@@ -1632,6 +1769,10 @@ class GameService:
                 from girlframe.services.m3_mockingbird_plays import pre_roll as mockingbird_pre_roll
 
                 mockingbird_pre_roll(self, c, state, action)
+            if action["data"].get("janus"):
+                from girlframe.services.m3_janus_play import pre_roll as janus_pre_roll
+
+                janus_pre_roll(self, c, viewer, state, action)
             if action["data"].get("snoop"):
                 from girlframe.services.m3_enforcer_snoop import pre_roll as snoop_pre_roll
 
@@ -1667,7 +1808,9 @@ class GameService:
                 if share:
                     state.sheets[str(sheet.pair)].heat += share
                     state.sheets[str(sheet.pair)].revision += 1
-            if m3 is None:
+            if m3 is None and (
+                not action["data"].get("janus") or action["data"]["janus"].get("mode") == "pandora"
+            ):
                 spend_heat(sheet, prepared.heat)
             faces = self.dice.roll()
             if len(faces) != 2 or any(type(x) is not int or not 1 <= x <= 6 for x in faces):
@@ -1681,6 +1824,10 @@ class GameService:
                 else []
             )
             pre_modifiers += refusal_modifiers
+            if action["data"].get("janus") and action["data"]["janus"].get("mode") != "pandora":
+                pre_modifiers.append(
+                    dict(source="battery_tags", amount=len(action["data"]["janus"]["tags"]))
+                )
             if action["data"].get("battle"):
                 from girlframe.services.m3_battle import modifier as battle_modifier
 
@@ -1714,6 +1861,7 @@ class GameService:
                 or action["data"].get("engage")
                 or action["data"].get("mockingbird")
                 or action["data"].get("snoop")
+                or action["data"].get("janus")
                 or defeat is not None
                 else RULESET,
             }
@@ -1730,6 +1878,16 @@ class GameService:
                     base_modifier=defeat["modifier"],
                     modifier_source="Undamaged Girl Assets",
                     pre_modifiers=[],
+                )
+            elif action["data"].get("janus"):
+                receipt.update(
+                    pre_modifiers=pre_modifiers,
+                    base_modifier=prepared.heat
+                    if action["data"]["janus"].get("mode") == "pandora"
+                    else 0,
+                    modifier_source="Heat"
+                    if action["data"]["janus"].get("mode") == "pandora"
+                    else "Battery Tags",
                 )
             elif refusal_modifiers:
                 receipt.update(
@@ -1769,6 +1927,7 @@ class GameService:
                 or action["data"].get("engage")
                 or action["data"].get("mockingbird")
                 or action["data"].get("snoop")
+                or action["data"].get("janus")
                 or defeat is not None
                 else "m2.rolled",
                 state,
@@ -1780,6 +1939,8 @@ class GameService:
                 if action["data"].get("enforcement")
                 else action["data"]["battle"]["roll_event"]
                 if action["data"].get("battle")
+                else action["data"]["janus"]["roll_event"]
+                if action["data"].get("janus")
                 else None,
                 action_id=identity,
                 receipt_id=receipt["id"],
@@ -1842,9 +2003,31 @@ class GameService:
                 raise WorkflowError(
                     "Use your actual Sprite interception controls; a generic response cannot choose"
                 )
+            leviathan = bool(
+                original and self.action(c, original.action_id)["data"].get("leviathan_obsession")
+            )
+            virus_order = bool(
+                original and self.action(c, original.action_id)["data"].get("virus_order")
+            )
+            virus_purge = bool(
+                original and self.action(c, original.action_id)["data"].get("virus_purge")
+            )
             harpy_defeat = bool(
                 original and self.action(c, original.action_id)["data"].get("harpy_defeat")
             )
+        if leviathan:
+            from girlframe.services.m3_leviathan_obsession import ObsessionService
+
+            return ObsessionService(self).respond(viewer, key, choice_id, revision, answer)
+        if virus_purge and not virus_order:
+            raise WorkflowError(
+                "Use actual source purge/Punishment controls; "
+                "generic acknowledgement cannot finish it."
+            )
+        if virus_order:
+            from girlframe.services.m3_virus_orders import VirusOrderService
+
+            return VirusOrderService(self).respond(viewer, key, choice_id, revision, answer)
         if harpy_defeat:
             from girlframe.services.m3_harpy_defeat import HarpyDefeatService
 
@@ -1875,7 +2058,15 @@ class GameService:
                 GorgonPlayService(self).authorize(c, viewer, action)
                 return dict(row)
             director_tag_response = False
-            if action["data"].get("snoop"):
+            if action["data"].get("janus"):
+                from girlframe.services.m3_janus_play import authorize as authorize_janus
+
+                authorize_janus(self, c, viewer, action)
+                meta = action["data"]["janus"]
+                if viewer.user_id not in {*meta["table"], meta["target_controller"]}:
+                    raise WorkflowError("Only this original neural-link table owns its responses")
+                director_tag_response = True
+            elif action["data"].get("snoop"):
                 from girlframe.services.m3_enforcer_snoop import authorize as authorize_snoop
 
                 authorize_snoop(self, c, viewer, action)
@@ -1900,6 +2091,20 @@ class GameService:
                 if viewer.user_id not in action["data"]["participants"]:
                     raise WorkflowError(
                         "Only an original source-table human owns this battle response."
+                    )
+                director_tag_response = True
+            elif action["data"].get("mockingbird") and row["kind"].startswith("mockingbird_"):
+                from girlframe.services.m3_mockingbird_plays import authorize_response
+
+                authorize_response(self, c, viewer, action)
+                director_tag_response = True
+            elif action["data"].get("dive") and row["kind"].startswith("dive_"):
+                from girlframe.services.m3_dive import authorize as authorize_dive
+
+                authorize_dive(self, c, viewer, action)
+                if viewer.user_id not in action["data"]["dive"]["table"]:
+                    raise WorkflowError(
+                        "Only the original source-table human owns this Dive response"
                     )
                 director_tag_response = True
             elif row["kind"] in (
@@ -2024,6 +2229,7 @@ class GameService:
                 or action["data"].get("engage")
                 or action["data"].get("mockingbird")
                 or action["data"].get("snoop")
+                or action["data"].get("janus")
                 or action["data"].get("gorgon_play")
                 else "m2.choice_resolved",
                 state,
@@ -2128,10 +2334,17 @@ class GameService:
                 )
 
                 post_mockingbird(self, c, action, event, viewer, key)
+            if action["data"].get("janus"):
+                from girlframe.services.m3_janus_play import synchronize as synchronize_janus
+
+                synchronize_janus(self, c, action, event)
             if action["data"].get("snoop"):
                 from girlframe.services.m3_enforcer_snoop import synchronize as synchronize_snoop
 
                 synchronize_snoop(self, c, action, event)
+            from girlframe.services.m3_virus_orders import post_response as post_virus_order
+
+            post_virus_order(self, c, self.action(c, action["id"]), event)
             return {"action_id": action["id"], "state": action["state"], "choice_id": choice_id}
 
         try:
@@ -2271,6 +2484,14 @@ class GameService:
             raise WorkflowError(str(error)) from None
 
     def abort(self, viewer: GuildViewer, key: str, identity: str) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            self.authorize(c, viewer, game=False)
+            action = self.action(c, identity)
+        if action["data"].get("virus_purge"):
+            from girlframe.services.m3_virus_operations import OperationService
+
+            return OperationService(self).cancel(viewer, key, identity)
+
         def authorize(c: Connection) -> None:
             self.authorize(c, viewer, game=False)
             if (
@@ -2382,10 +2603,22 @@ class GameService:
         with self.store.engine.connect() as c:
             self.authorize(c, viewer, game=False)
             action = self.action(c, identity)
+            if action["data"].get("virus_order"):
+                from girlframe.services.m3_virus_orders import VirusOrderService
+
+                return VirusOrderService(self).inspect(viewer, identity)
+            if action["data"].get("virus_purge"):
+                from girlframe.services.m3_virus_operations import OperationService
+
+                return OperationService(self).inspect(viewer, identity)
             if action["data"].get("harpy_defeat"):
                 from girlframe.services.m3_harpy_defeat import HarpyDefeatService
 
                 return HarpyDefeatService(self.store, self).inspect(viewer, identity)
+            if action["data"].get("leviathan_obsession"):
+                from girlframe.services.m3_leviathan_obsession import ObsessionService
+
+                return ObsessionService(self).inspect(viewer, identity)
             snoop = action["data"].get("snoop")
             allowed = set(action["data"]["participants"])
             if snoop:
@@ -2394,7 +2627,13 @@ class GameService:
                 raise WorkflowError("This action is not visible to you.")
             result = action["data"]["result"] if action["state"] == "complete" else None
             parties = {int(action["actor_id"]), action["data"].get("prepared", {}).get("target")}
-            if result and snoop:
+            if result and action["data"].get("janus"):
+                from girlframe.services.m3_janus_play import visible_result as visible_janus
+
+                result = visible_janus(
+                    result, action["data"]["janus"], viewer, load_state(c, self.store.campaign_id)
+                )
+            elif result and snoop:
                 from girlframe.services.m3_enforcer_snoop import visible_result
 
                 result = visible_result(action, viewer, result)
@@ -2765,10 +3004,39 @@ class GameService:
 
                 return SpriteService(self.store).decision(viewer, choice_id)
             action = self.action(c, row["action_id"])
+            if action["data"].get("leviathan_obsession"):
+                from girlframe.services.m3_leviathan_obsession import ObsessionService
+
+                return ObsessionService(self).decision(c, viewer, action, dict(row))
+            if action["data"].get("virus_order"):
+                from girlframe.services.m3_virus_orders import VirusOrderService
+
+                return VirusOrderService(self).decision(c, viewer, action, dict(row))
+            if action["data"].get("virus_purge"):
+                from girlframe.services.m3_virus_operations import OperationService
+
+                return OperationService(self).decision(c, viewer, action, dict(row))
             if action["data"].get("gorgon_play"):
                 from girlframe.services.m3_gorgon_play import GorgonPlayService
 
                 return GorgonPlayService(self).decision(c, viewer, action, dict(row))
+            if action["data"].get("janus") and row["kind"].startswith("janus_"):
+                from girlframe.services.m3_janus_play import authorize as authorize_janus
+                from girlframe.services.m3_janus_play import projection as janus_projection
+
+                authorize_janus(self, c, viewer, action)
+                state = load_state(c, self.store.campaign_id)
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    play=action["data"]["play"],
+                    result={
+                        k: v for k, v in action["data"]["result"].items() if k in ("tier", "total")
+                    },
+                    actor=int(action["actor_id"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    janus=janus_projection(self, c, viewer, state, action, dict(row)),
+                )
             if action["data"].get("snoop") and row["kind"].startswith("snoop_"):
                 from girlframe.services.m3_enforcer_snoop import authorize as authorize_snoop
                 from girlframe.services.m3_enforcer_snoop import projection as snoop_projection

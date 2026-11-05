@@ -1816,3 +1816,760 @@ Reason: A source does not create a missing Cadre Status track. Omitting the inap
 Alternatives: Create a proxy Girl Status; apply disapproval with no mechanical Status loss; disable the whole retained Play.
 
 Implementation/adjustment: Bounded Enforcer candidate source workflow; real independent review and human player acceptance remain pending. Documentation key does not imply a new typed Rulings setting. If Harpy Cadre membership is later explicitly supported, add a source-backed actual role resource before exposing the missing option. Do not rewrite original player characters or prior receipts.
+
+## Focused workflow clarifications — 2026-11-05
+
+Delegated recommendations below require printed-rule clarity review. They are recorded in `rules/registry.json` with rationale, alternatives and change impact. They do not enable production rules or certify M3.
+
+
+### `budget-persistent-tag-nomination`
+
+Source: Rulebook PDF152/printed150 Endgame5; PDF11/printed9.
+
+The original Handler selects one actual original Cadre Girl; that Girl exclusively writes the Tag and account. Retain the exact source identities.
+
+Rationale: Handler selects Endgame; source leaves nomination ownership unstated. Preserves human authorship and original recipient.
+
+Alternatives: Girls collectively nominate; A Girl volunteers and Handler confirms
+
+Implementation: The original Handler selects one actual original Cadre Girl; that Girl exclusively writes the Tag and account. Retain the exact source identities.
+
+Change impact: Changing this ruling requires review of pending source-owned choices; preserve committed receipts and resources.
+
+
+### `budget-persistent-tag-use-scope`
+
+Source: Rulebook PDF152/printed150 Endgame5; PDF11/printed9.
+
+Not removed when used means actual Handler Tag favour/attention/compel consumption. It grants no immunity to independently legal erase/conversion effects and does not clear an owed rejection by falsely claiming the Tag was removed.
+
+Rationale: Specific printed HandlerTag consumption exception; no general indestructibleTag is printed.
+
+Alternatives: Treat Tag as globally indelible until Handler death
+
+Implementation: Not removed when used means actual Handler Tag favour/attention/compel consumption. It grants no immunity to independently legal erase/conversion effects and does not clear an owed rejection by falsely claiming the Tag was removed.
+
+Change impact: Changing this ruling requires review of pending source-owned choices; preserve committed receipts and resources.
+
+
+### `budget-gift-original-person-endings`
+
+Source: Rulebook PDF152/printed150; original-person lifecycle source contracts.
+
+The nominated living original Girl retains descriptive gift authorship after actual retirement/custody, without successor resources. Actual original Girl death or Handler source-role ending is reviewed from immutable history and closes the impossible pending gift without transferring its benefit/cost to a successor.
+
+Rationale: Preserve actual original person; no source authorizes recipient substitution or automatic successor inheritance.
+
+Alternatives: Keep an impossible source duty pending indefinitely; Nominate a different Girl/Handler after ending with new explicit source agreement
+
+Implementation: The nominated living original Girl retains descriptive gift authorship after actual retirement/custody, without successor resources. Actual original Girl death or Handler source-role ending is reviewed from immutable history and closes the impossible pending gift without transferring its benefit/cost to a successor.
+
+Change impact: Changing this ruling requires review of pending source-owned choices; preserve committed receipts and resources.
+
+
+### `budget-collective-tag-period-trigger`
+
+Source: Rulebook PDF152/printed150.
+
+One optional collective Tag per actual OffDutyperiod afteratleastone genuineordinaryGoOffDuty result occurringafterthisEndgame; observation-only doesnotinventthe namedtrigger.
+
+Rationale: Prevents multiplication perGirl while honoring the namedmove and Fromnowon timing.
+
+Alternatives: One opportunity perindividualGoOffDutymove; Treat anyOffDutyroute includingObservation as sufficient
+
+Implementation: One optional collective Tag per actual OffDutyperiod afteratleastone genuineordinaryGoOffDuty result occurringafterthisEndgame; observation-only doesnotinventthe namedtrigger.
+
+Change impact: Changing this ruling requires review of pending source-owned choices; preserve committed receipts and resources.
+
+
+### `budget-collective-tag-exact-consensus`
+
+Source: Rulebook PDF152/printed150.
+
+A Girl proposes an exactlabel/account andimplicitlyagrees byher explicitproposal; everyotheroriginalperiodGirl mustexplicitlyagree. Anydecline givesnoTag. Proposer maywithdraw andstartanew exactproposal; priorvotesnevercarrytonewwording.
+
+Rationale: Printedcollectively leaves mechanismunstated; preserves voluntaryhuman authorship and no forgedconsent.
+
+Alternatives: Majorityvote; OutofbotconsensusattestedbyoneGirl
+
+Implementation: A Girl proposes an exactlabel/account andimplicitlyagrees byher explicitproposal; everyotheroriginalperiodGirl mustexplicitlyagree. Anydecline givesnoTag. Proposer maywithdraw andstartanew exactproposal; priorvotesnevercarrytonewwording.
+
+Change impact: Changing this ruling requires review of pending source-owned choices; preserve committed receipts and resources.
+
+
+### `budget-collective-tag-optional-lifetime`
+
+Source: Rulebook PDF152/printed150 and explicit actualOffDutylifecycle.
+
+Unusedlatentoption doesnotblockperiodcompletion andisno longeravailableafterrealperiodend; a human-started proposal createsreal requiredvote work untilresolved/withdrawn. No timeoutchoosesorlabelsforaplayer.
+
+Rationale: Anoptional may-rule isnot mandatorywork untilhumans initiate its coordination.
+
+Alternatives: RequireeachGirltoexplicitlydecline everyperiod; Allowoldoptionalopportunitiesindefinitely
+
+Implementation: Unusedlatentoption doesnotblockperiodcompletion andisno longeravailableafterrealperiodend; a human-started proposal createsreal requiredvote work untilresolved/withdrawn. No timeoutchoosesorlabelsforaplayer.
+
+Change impact: Changing this ruling requires review of pending source-owned choices; preserve committed receipts and resources.
+
+
+### `budget-collective-tag-source-persons`
+
+Source: Rulebook PDF152/printed150 and original-person lifecycle contracts.
+
+BindtoactualoriginalHandler andperiodGirls, withproposerrecordedasordinaryTagprimarygiver andfull actualconsentcohort recorded. Provenoriginalendingscanbeexplicitlyreviewed; no automatic successorinheritance or consentbyUID.
+
+Rationale: The source says you without granting successors its entitlement; explicitsourceprovenance preserves printedhuman decisions.
+
+Alternatives: Cadre-wideentitlementtransfersautomatically tonewHandler; TreatallcohortmembersascoequalTagsetters in a futureextendedTagmodel
+
+Implementation: BindtoactualoriginalHandler andperiodGirls, withproposerrecordedasordinaryTagprimarygiver andfull actualconsentcohort recorded. Provenoriginalendingscanbeexplicitlyreviewed; no automatic successorinheritance or consentbyUID.
+
+Change impact: Changing this ruling requires review of pending source-owned choices; preserve committed receipts and resources.
+
+
+### `virus_immediate_pain_restraint`
+
+Source: [{"document": "rulebook", "pdf_page": 80, "printed_page": 78}].
+
+Pain remains only through the actual immediate Punishment chain; Helpless uses ordinary real recovery.
+
+Rationale: The source grants an immediate EI result and intolerable pain without duration or physical hands; a permanent source grip would invent contact and indefinite custody.
+
+Alternatives: Permanent pain; invented hands-grasp; ending all Helpless on Punishment completion.
+
+Implementation: Typed PainRestraint closes from actual RoleCase completion or original ending, never moves bodies or heals real Helpless.
+
+Change impact: Changing this affects restraint duration and existing pending purges.
+
+
+### `virus_fixed_eleven`
+
+Source: [{"document": "rulebook", "pdf_page": 80, "printed_page": 78}].
+
+Resolve the printed fixed 11 as a deterministic high EI effect without RNG, faces, Heat or a dice receipt.
+
+Rationale: A rule-assigned result is already determined; synthetic dice would misrepresent provenance and permit inappropriate spending/modifiers.
+
+Alternatives: Manufactured dice receipt; new roll with modifier.
+
+Implementation: Canonical purge effect plus actual instruction/Punishment workflow, operational root receipt is None.
+
+Change impact: Changing this alters audit format and would require a distinct source-aware roll rule.
+
+
+### `harpy_ei_girl_side`
+
+Source: [{"document": "rulebook", "pdf_page": 80, "printed_page": 78}, {"document": "rulebook", "pdf_page": 79, "printed_page": 77}, {"document": "rulebook", "pdf_page": 178, "printed_page": 176}, {"document": "rulebook", "pdf_page": 181, "printed_page": 179}].
+
+Actual Harpy receives EI/fixed11 Helpless, while retaining the printed Receive Orders exemption.
+
+Rationale: Combined Girl/Frame rules and the explicit Orders exception do not establish a separate EI immunity.
+
+Alternatives: Infer blanket EI immunity from Battle category harpy.
+
+Implementation: Exact ActorRef Helpless, no source category changes for unrelated Battle rules.
+
+Change impact: Changing interpretation affects genuine Harpy targets; no Gorgon Helpless is added.
+
+
+### `virus_girl_self_purge`
+
+Source: [{"document": "rulebook", "pdf_page": 80, "printed_page": 78}].
+
+Self-touch removes own actual infection without a self-superior order.
+
+Rationale: No distinct recipient exists to receive a higher-Status order.
+
+Alternatives: Invent self hierarchy or self Receive Orders.
+
+Implementation: Actual purge event retains self-contact and grants no order/Status change.
+
+Change impact: Changing affects self-purge bonus only.
+
+
+### `virus_frame_self_purge`
+
+Source: [{"document": "rulebook", "pdf_page": 80, "printed_page": 78}].
+
+Self Frame purge still requires Handler-instructed actual self-Punishment and finite pain, with no self-Helpless or self-Bond.
+
+Rationale: The immediate consequence is printed without an exception; self opposition is not a second person.
+
+Alternatives: Waive consequence; invent self foe/grip; block legal self purge.
+
+Implementation: Source-specific RoleCase self exception, real admissible effects; invalid self-Bond/last-Asset self-Helpless options excluded.
+
+Change impact: Changing affects current self cases and punishment eligibility.
+
+
+### `handler_girl_no_rank_disobey`
+
+Source: [{"document": "rulebook", "pdf_page": 80, "printed_page": 78}, {"document": "rulebook", "pdf_page": 23, "printed_page": 21}, {"document": "rulebook", "pdf_page": 192, "printed_page": 190}].
+
+Record real witnessed refusal without lowering nonexistent Status, while keeping actual Heat/Identity/Tag and discovered Punishment outcomes.
+
+Rationale: Director-context Girl has genuine Girl resources but no canonical Cadre rank to lower.
+
+Alternatives: Invent rank; skip whole witnessed outcome; proxy a PC sheet.
+
+Implementation: Source-only actual ActorPlay Disobey, witness fact and unchanged rank, genuine frozen judge decision.
+
+Change impact: Changing requires a real Status model and migration, not a numeric UID alias.
+
+
+### `virus_past_link_factual_exposure`
+
+Source: [{"document": "rulebook", "pdf_page": 80, "printed_page": 78}].
+
+Allow append-only factual past-link exposure only with actual original linker, Frame owner and frozen judge and an earlier immutable already-infected episode.
+
+Rationale: Accepted pre-existing histories may omit an actual link producer; chronology and separate original humans establish facts without rewriting history or granting present control.
+
+Alternatives: Reject all pre-existing actual exposure; infer from shared human/current cast; retroactive infection.
+
+Implementation: Original body/Frame/incarnation and source event authenticated; proposal then owner confirmation then judge review; unknown cells remain unknown.
+
+Change impact: Changing affects accepted factual exposure sources, not current Frame permissions.
+
+
+### `virus_vacancy_review`
+
+Source: [{"document": "rulebook", "pdf_page": 80, "printed_page": 78}].
+
+No link record is unknown, not proof of vacancy. Cure a genuinely reviewed empty Frame without target or bonus.
+
+Rationale: The source affects a linked Pilot but cannot create one; incomplete pose records cannot justify silently evading that consequence.
+
+Alternatives: Treat missing row as empty; invent Pilot; forbid known-empty cure.
+
+Implementation: Actual owner proposes current facts and actual judge reviews; existing assigned original may be linked with unknown cells but no new body/Frame/control.
+
+Change impact: Changing affects no-link review and fixed11 target selection.
+
+
+### `gorgon-dormant-attacker-real-world-void`
+
+Source: Rulebook PDF 19, 162, 165.
+
+Actual attacker controller selects one existing uncorrupted World Gorgon Asset and rewrites its Void alteration. Preserve source Asset ID/family/damage and all unrelated resources. No human Pilot, Frame, Heat or Harpy resource is fabricated.
+
+Rationale: The Dormant counter addresses the attacker, and actual Gorgon Assets already have a sole World authority with Void flags. No separate Gorgon transformation threshold is printed.
+
+Alternatives: Reject all Gorgon-to-Dormant interaction permanently.; Charge the controller human’s unrelated Pilot.; Invent a new Void Asset or force a Harpy transformation.
+
+Implementation: Actual attacker controller selects one existing uncorrupted World Gorgon Asset and rewrites its Void alteration. Preserve source Asset ID/family/damage and all unrelated resources. No human Pilot, Frame, Heat or Harpy resource is fabricated.
+
+Change impact: Replaces the explicit pre-lock unsupported-target gate with a real owner-held immediate corruption and then the original contest. Requires actual source-history proof; no new RNG.
+
+
+### `gorgon-dormant-already-fully-void`
+
+Source: Rulebook PDF 19, 165.
+
+Record actual already_fully_void only when a nonempty source-proven set is all Void. No repeat corruption, new Asset, healing, transformation or false Frame consequence. Empty/unknown resources remain gated.
+
+Rationale: The ordinary Void procedure selects an uncorrupted existing Asset. With none present, inventing a new resource or using another fictional body changes the printed resource authority.
+
+Alternatives: Invent another asset to corrupt.; Silently skip the required source counter without a canonical outcome.; Leave the debt forever pending despite complete actual resource proof.
+
+Implementation: Record actual already_fully_void only when a nonempty source-proven set is all Void. No repeat corruption, new Asset, healing, transformation or false Frame consequence. Empty/unknown resources remain gated.
+
+Change impact: Finite source-proven counter outcome with unchanged original assets. Further printed effects would require a separate source module.
+
+
+### `gorgon-dormant-no-fabricated-frame-dive`
+
+Source: Rulebook PDF 24, 162, 165.
+
+Record dive_eligible=false and reason gorgon_has_no_frame_play for this actual Gorgon cost. Do not create a proxy Pilot/Frame or roll an unsupported Dive. Existing actual Pilot/Harpy forced-Dive paths remain source-owned.
+
+Rationale: Dive Deep is a Frame Play. A Gorgon body and its World Assets are not an actual Girl piloting a separate Frame; the source does not define that conversion here.
+
+Alternatives: Invent a Gorgon Frame/Heat/Identity and use Pilot mechanics.; Treat the human controller’s unrelated Pilot as the attacker.; Permanently gate any contact even when the concrete counter can be completed.
+
+Implementation: Record dive_eligible=false and reason gorgon_has_no_frame_play for this actual Gorgon cost. Do not create a proxy Pilot/Frame or roll an unsupported Dive. Existing actual Pilot/Harpy forced-Dive paths remain source-owned.
+
+Change impact: Explicit bounded source interpretation for review; does not claim a general Gorgon Dive or independent get-close implementation.
+
+
+### `dormant-own-actual-basic-play-awakens`
+
+Source: Rulebook PDF 162, 165.
+
+A genuine declared and advanced/approved basic Attack, Collateral or Warp records one persistent cause=own_play marker for that same actual Gorgon. Menu/unstarted/cancelled intentions do not awaken it. No attack-induced Void debt is created by its own action.
+
+Rationale: The actual advanced effect demonstrates activity, while Dormant’s printed retaliatory Void cost is specifically induced by forced awakening through attack. A declaration flag alone is no fictional effect.
+
+Alternatives: Keep the actually acting Gorgon dormant until another actor attacks it.; Wake from merely viewing a menu or an abandoned intent.; Charge attack-induced Void to itself or a controller-owned Pilot.
+
+Implementation: A genuine declared and advanced/approved basic Attack, Collateral or Warp records one persistent cause=own_play marker for that same actual Gorgon. Menu/unstarted/cancelled intentions do not awaken it. No attack-induced Void debt is created by its own action.
+
+Change impact: Future actual attacks prove immutable source history and avoid duplicate awakening/cost. Existing already-owed counter debt is never cancelled or repaid; class/body/position unchanged. No timer or RNG.
+
+
+### `leviathan-two-real-flesh-layer-assets`
+
+Source: Rulebook PDF 164, 174.
+
+An actual chosen protection Play adds exactly two real flesh-layer World Assets to the original living Leviathan once. Track only their ordinary current/destroyed Asset state through source-bound ID pointers. A Type label alone supplies no layer effect; a repeat call never resets damaged/destroyed layers.
+
+Rationale: PDF174 says both flesh layers count as Assets. The existing Asset authority and ordinary Core-protecting Asset rules supply concrete damage/destruction consumers; an extra numerical armor pool would duplicate them.
+
+Alternatives: Treat the printed circles as separate HP alongside mechanical Assets.; Automatically add/reset layers whenever the Type label is read.; Reallocate existing Class Asset slots to layers without an actual chosen action.
+
+Implementation: An actual chosen protection Play adds exactly two real flesh-layer World Assets to the original living Leviathan once. Track only their ordinary current/destroyed Asset state through source-bound ID pointers. A Type label alone supplies no layer effect; a repeat call never resets damaged/destroyed layers.
+
+Change impact: Two genuinely targetable Assets with preserved current resources/positions. Initial legacy serialization unchanged while pointer fields are absent. New grants require independent source review; no production ungate.
+
+
+### `leviathan-piercing-and-conjunctive-core`
+
+Source: Rulebook PDF 15, 164, 174.
+
+Actual ordinary Asset damage or source destruction pierces that exact layer. Both layers and all original Core-plan guards must be dealt with; the actual original weakness must still be confirmed. No second piercing counter or HP is tracked.
+
+Rationale: The source defines the layers as Assets rather than providing a new damage procedure. Existing ordinary Gorgon Core guards already use damaged or actually destroyed Assets.
+
+Alternatives: Require destruction only despite ordinary Asset damage.; Allow one layer or the original guard condition to replace all remaining guards.; Accept a narrative pierced flag that leaves the real Asset intact.
+
+Implementation: Actual ordinary Asset damage or source destruction pierces that exact layer. Both layers and all original Core-plan guards must be dealt with; the actual original weakness must still be confirmed. No second piercing counter or HP is tracked.
+
+Change impact: Existing AllOut/Gorgon-contest effects change the real source Assets, and raw World exposure plus new Core admission enforce their conjunction.
+
+
+### `leviathan-protection-future-source-only`
+
+Source: Rulebook PDF 26, 174.
+
+Raising actual layers closes the currently exposed Core for future declarations and makes unrolled snapshots stale. It cannot recalculate an already-rolled original strike, retroactively add a modifier, undo frozen required death, or harm a successor instead.
+
+Rationale: The actual source resources and exposure change now. Receipt/source identity remains immutable, and the existing fatal-hit timing is already frozen at the real original strike.
+
+Alternatives: Let new layers cancel a known fatal receipt.; Leave the Core available to new strikes despite the new intact layers.
+
+Implementation: Raising actual layers closes the currently exposed Core for future declarations and makes unrolled snapshots stale. It cannot recalculate an already-rolled original strike, retroactively add a modifier, undo frozen required death, or harm a successor instead.
+
+Change impact: New exposure/strike requires genuine piercing; existing original fatal effects preserve their source. The trusted after-roll composition test is not a claim that a generic Type-counter menu is implemented.
+
+
+### `beyond-intense-source-legal-no-heat`
+
+Source: Rulebook PDF 11.
+
+Preserve real Intense Bonds for every otherwise source-legal participant, including NPCs and actual Gorgons. Beyond-depth deepening grants +2 only to actual Heat-bearing participants; never invent Heat or suppress an independently required Gorgon/Void source.
+
+Rationale: A relationship does not by itself create a Heat resource or override an independently required consequence.
+
+Alternatives: Exclude any participant lacking Heat, or invent a proxy Heat resource.
+
+Implementation: Preserve real Intense Bonds for every otherwise source-legal participant, including NPCs and actual Gorgons. Beyond-depth deepening grants +2 only to actual Heat-bearing participants; never invent Heat or suppress an independently required Gorgon/Void source.
+
+Change impact: No ordinary NPC/Gorgon silently disappears from otherwise legal source choices; actual ActorRefs and existing eligibility remain authoritative.
+
+
+### `mockingbird-sex-self-asset-family`
+
+Source: Rulebook PDF 36, 15.
+
+A Void Asset written on the Girl herself through the middle collect result is a Girl Asset, follows the actual four-Asset cap, and requires explicit eligible replacement when full.
+
+Rationale: An Asset explicitly written on the Girl uses the existing Girl Asset authority and capacity.
+
+Alternatives: Let the player choose Frame family without a Frame-specific source or ignore the cap.
+
+Implementation: A Void Asset written on the Girl herself through the middle collect result is a Girl Asset, follows the actual four-Asset cap, and requires explicit eligible replacement when full.
+
+Change impact: No extra free capacity, concealed replacement, repair or copied asset; sole source Void is removed only atomically with the actual destination.
+
+
+### `mockingbird-sex-already-fully-void`
+
+Source: Rulebook PDF 36, 19.
+
+A mandatory high result against an actual already fully Void Harpy records the factual saturated outcome and real Bond/risk; do not manufacture another Asset, repeat conversion or a fake patient acknowledgment.
+
+Rationale: A mandatory corruption cannot select an uncorrupted resource when no such resource remains.
+
+Alternatives: Force an impossible new uncorrupted choice or rerun an already completed conversion.
+
+Implementation: A mandatory high result against an actual already fully Void Harpy records the factual saturated outcome and real Bond/risk; do not manufacture another Asset, repeat conversion or a fake patient acknowledgment.
+
+Change impact: One actual source receipt; original resources preserved. Voluntary Risk still needs a real unvoid Asset cost.
+
+
+### `mockingbird-sex-group-primary`
+
+Source: Rulebook PDF 36.
+
+For an actual multi-participant interaction, the caster explicitly chooses one primary printed counterpart; all actual source participants independently attest. Collect can redirect only among those real participants.
+
+Rationale: The singular printed counterpart does not specify how to select among multiple actual participants.
+
+Alternatives: Automatically choose the first account or grant every participant every primary consequence.
+
+Implementation: For an actual multi-participant interaction, the caster explicitly chooses one primary printed counterpart; all actual source participants independently attest. Collect can redirect only among those real participants.
+
+Change impact: Human intent owns the original counterpart; no guessed fictional interaction or hidden target substitution.
+
+
+### `mockingbird-sex-discovery-not-omniscience`
+
+Source: Rulebook PDF 36.
+
+Undisclosed risk does not automatically inflict Punishment. Actual source participants may report a current known witness; that real witness attests and the original source Handler confirms discovery. Low conditional Tag is authored only then.
+
+Rationale: Procedural access to private state does not establish fictional discovery by a Handler.
+
+Alternatives: Treat procedural GM/database knowledge as in-fiction discovery or auto-inflict Punishment.
+
+Implementation: Undisclosed risk does not automatically inflict Punishment. Actual source participants may report a current known witness; that real witness attests and the original source Handler confirms discovery. Low conditional Tag is authored only then.
+
+Change impact: Private source material remains private; no generated intimate acts, false discovery or successor Handler authority.
+
+
+### `mockingbird-starry-original-body-lifetime`
+
+Source: Rulebook PDF 35, 36, 192.
+
+The extra capability lasts while the exact Starry-Eyed Tag remains on that actual counterpart. Proven same Handler body across a Director rules-context ending retains it; a successor body does not.
+
+Rationale: The printed capability depends on the Tag on its original recipient, rather than a temporary rules context.
+
+Alternatives: Expire at context ending or grant it to every later role under the same human account.
+
+Implementation: The extra capability lasts while the exact Starry-Eyed Tag remains on that actual counterpart. Proven same Handler body across a Director rules-context ending retains it; a successor body does not.
+
+Change impact: Immutable original gift/source remains; current capability derives from actual original Tag and same-body proof.
+
+
+### `call-guest-source-one-effect`
+
+Source: Rulebook PDF 24, 35.
+
+The original caster invites a real nearby source person; the actual original human accepts boarding. That guest owns exactly one applicable original Dive consequence, including actual table-owned answers/agreement. The original roll stays held through real consequences, without another roll or generic borrowed FramePlay access.
+
+Rationale: The named invitation grants a specific consequence without granting a second Frame or a general Play entitlement.
+
+Alternatives: Automatically board another player or grant guest a copied Frame/stat pool and independent Plays.
+
+Implementation: The original caster invites a real nearby source person; the actual original human accepts boarding. That guest owns exactly one applicable original Dive consequence, including actual table-owned answers/agreement. The original roll stays held through real consequences, without another roll or generic borrowed FramePlay access.
+
+Change impact: No manufactured consent, duplicated RNG/Heat, wrong-body resources or unrestricted guest entitlement.
+
+
+### `call-nearby-communication-source`
+
+Source: Rulebook PDF 35.
+
+Known same-cell or real source co-presence establishes nearby; relay transmits a player-authored message and the actual Gorgon human owns response or silence. Communication alone does not reveal hidden map entities, compel truth or expose the mental exchange to unrelated table humans.
+
+Rationale: The source gives communication without a numeric range, automatic discovery or compelled response.
+
+Alternatives: Invent grid radius, automatic hidden-Gorgon discovery, AI reply or compelled honesty.
+
+Implementation: Known same-cell or real source co-presence establishes nearby; relay transmits a player-authored message and the actual Gorgon human owns response or silence. Communication alone does not reveal hidden map entities, compel truth or expose the mental exchange to unrelated table humans.
+
+Change impact: Preserves existing source geography and private knowledge; no fictional joins or new permissions.
+
+
+### `call-guest-physical-help`
+
+Source: Rulebook PDF 24, 35.
+
+Voluntary boarding needs actual free capable bodies, exact current unlocked carrier cockpit and paired source contact acceptance. Subsumption affects the actual guest body/occupied Frame; real Frame consent and a physically present other role perform extraction. Inactive vital signs persist until actual medical help is reported and factually confirmed.
+
+Rationale: The existing boarding, Core consent and medical rules require actual bodily actions and separate human authority.
+
+Alternatives: Use Defeat rescue authority, automatic recovery/transport, copied own Frame occupancy or account-based Frame consent.
+
+Implementation: Voluntary boarding needs actual free capable bodies, exact current unlocked carrier cockpit and paired source contact acceptance. Subsumption affects the actual guest body/occupied Frame; real Frame consent and a physically present other role perform extraction. Inactive vital signs persist until actual medical help is reported and factually confirmed.
+
+Change impact: No fabricated movement, healing, capacity or successor body authority; current JANUS voice can be a different actual human from the Pilot and procedural Handler.
+
+
+### `leviathan-specific-tag-cost`
+
+Source: Rulebook PDF174/printed172 and PDF11/printed9.
+
+The Type trigger may mark the actual subject’s obsessed Tag even when its controller also controls another body. This cost grants no ordinary Tag modifier; ordinary modifiers retain their separate human/scene restrictions.
+
+Rationale: The specific compulsory trigger names a Tag cost, while the general modifier has different eligibility.
+
+Alternatives: Apply the ordinary other-human modifier restriction to the Type cost.
+
+Implementation: Source-owned Leviathan reducers, real shared action/receipt flow and private native choices; unsupported intersections remain gated.
+
+Change impact: Review pending original-source choices before changing this interpretation; preserve known dice, existing resources and original ownership.
+
+
+### `leviathan-protected-ordinary-identities`
+
+Source: Rulebook PDF174/printed172 and PDF58/printed56.
+
+The high result replaces actual eligible ordinary slots while preserving protected extras and another person’s Paired Identity. Missing or lost slots are not invented.
+
+Rationale: Explicit protection from another person changing a Paired Identity constrains the broader four-Identity result.
+
+Alternatives: Replace protected extras or create four slots regardless of actual resources.
+
+Implementation: Source-owned Leviathan reducers, real shared action/receipt flow and private native choices; unsupported intersections remain gated.
+
+Change impact: Review pending original-source choices before changing this interpretation; preserve known dice, existing resources and original ownership.
+
+
+### `leviathan-multiple-source-locks`
+
+Source: Rulebook PDF174/printed172.
+
+Reusing an existing obsessed Identity retains every real source lock. Only the corresponding source’s actual recorded death releases its restriction; leaving a map does not count as death.
+
+Rationale: A second source effect does not state that it cancels the first source’s until-death condition.
+
+Alternatives: Allow the newest source to replace all prior restrictions.
+
+Implementation: Source-owned Leviathan reducers, real shared action/receipt flow and private native choices; unsupported intersections remain gated.
+
+Change impact: Review pending original-source choices before changing this interpretation; preserve known dice, existing resources and original ownership.
+
+
+### `leviathan-heat-gain-scope`
+
+Source: Rulebook PDF174/printed172.
+
+An obsessed subject gains Heat only through a qualifying marked obsessed Identity. Other positive gains are recorded as blocked; legal spending and negative adjustments retain their normal rules. No Heat pool is created for a role without one.
+
+Rationale: The source restricts gains, without canceling unrelated valid effects or creating new resources.
+
+Alternatives: Cancel the entire action that otherwise grants Heat, or remove existing Heat.
+
+Implementation: Source-owned Leviathan reducers, real shared action/receipt flow and private native choices; unsupported intersections remain gated.
+
+Change impact: Review pending original-source choices before changing this interpretation; preserve known dice, existing resources and original ownership.
+
+
+### `leviathan-low-actual-arrival`
+
+Source: Rulebook PDF174/printed172.
+
+The low result completes through actual subject/mover and adjudicator confirmation of travel along the influence trail. Apply the existing body/controlled Frame position authority; preserve parked Frames and unknown endpoints. Physical blockers require their real source operation.
+
+Rationale: The endpoint is compulsory, but no extraction, control transfer or transport permission is granted.
+
+Alternatives: Teleport the subject and its assigned Frame without control or custody review.
+
+Implementation: Source-owned Leviathan reducers, real shared action/receipt flow and private native choices; unsupported intersections remain gated.
+
+Change impact: Review pending original-source choices before changing this interpretation; preserve known dice, existing resources and original ownership.
+
+
+### `leviathan-roll-resource-order`
+
+Source: Rulebook PDF174/printed172 and PDF11/printed9.
+
+Succumb uses two real dice plus the subject’s actual Tag count, without Heat spending or a proxy character. Pay the trigger Tag and resolve any required repeated-Tag response before counting Tags and rolling; preserve normal post-roll Tag choices.
+
+Rationale: The specified roll modifier comes from the affected person’s actual resources after the committed trigger cost.
+
+Alternatives: Count removed Tags or spend the controller’s unrelated Pilot Heat.
+
+Implementation: Source-owned Leviathan reducers, real shared action/receipt flow and private native choices; unsupported intersections remain gated.
+
+Change impact: Review pending original-source choices before changing this interpretation; preserve known dice, existing resources and original ownership.
+
+### `budget-ruin-map-condition`
+
+Source: rulebook PDF152/printed150. Two ruined locations use the existing destroyed condition, emit actual structure-loss triggers and preserve required last-base aftermath. This avoids a second map-condition authority; alternatives are narrative-only ruin or a distinct new condition. Implemented by RuinService and owned native selection. Changing it requires reviewing pending selections and preserving committed sources. Delegated recommendation; printed-rule clarity review pending.
+
+### `budget-photoshoot-public-setter`
+
+Source: rulebook PDF150/printed148. The appointed human records one public-perception Tag for each original Girl after the real photoshoot, using authenticated OOC setter provenance. No fictional Handler knowledge, extra public NPC or numeric funds are created. The printed event leaves the public setter representation unspecified; alternatives are an actual public NPC or the fictional Handler as giver. Existing typed Strain/native controls implement this, guarded by original period character IDs. Any adjustment must preserve committed Tag provenance and review pending effects. Delegated recommendation; printed-rule clarity review pending.
+
+### `budget-rich-patron-source-visits`
+
+Source: rulebook PDF150/printed148. The real rich patron gains a Personal Bond with the selected original Girl; preserve a deeper existing Bond. Its actual controller reports a real visit and evidence actually seen before authoring a Tag for the original Handler. Private database access is not fictional observation. Alternatives are automatic deepening or inferring evidence from private history. Source-proved patron records, canonical Actor Bonds and owner-only native visit controls implement this without invented movement or player conduct. Adjustments must preserve original bindings and Tag provenance. Delegated recommendation; printed-rule clarity review pending.
+
+## JANUS source clarifications — normal workflow checkpoint
+
+All remain delegated recommendations requiring printed-rule clarity review. Storage is a partial consumer and stays unavailable for purchase.
+
+### `janus_original_core_admission`
+
+Source: Official rulebook PDF68/printed66; normalHarpy PDF178.
+
+Admit a distinct original unnamed ex-Girl Core on the existing JANUS only after actual Pilot request, selected real human factual proposal and Foundation source review. No former PC/archive/new Frame/paid abilities. Unspecified existing body Heat, Identity names/marks, actual Girl Asset count/details/damage and appearance are actual controller-approved facts; no automatic2 Girl Assets.
+
+Rationale: Printed original Core exists and functions as a normal Harpy but has no complete source sheet; facts must not be fabricated as former history.
+
+Alternatives: Borrow an existing PC as the Core; Invent a former Pilot archive or resource package; Retain only four cosmetic strings
+
+Implementation: Admit a distinct original unnamed ex-Girl Core on the existing JANUS only after actual Pilot request, selected real human factual proposal and Foundation source review. No former PC/archive/new Frame/paid abilities. Unspecified existing body Heat, Identity names/marks, actual Girl Asset count/details/damage and appearance are actual controller-approved facts; no automatic2 Girl Assets.
+
+Change impact: One actual external_pilot identity and original body; source registry admission events and native response ownership; read old initialFrameIDs unchanged.
+
+### `janus_single_frame_resource_exception`
+
+Source: Official rulebook PDF68-69; normalHarpy PDF178.
+
+Core Girl Assets follow normalHarpy Void physiology. The actual existing JANUS Frame Assets remain at their single original current/parked Frame authority and keep their source-known Void states; the book last-Tag erasure is the actual new Frame-wide corruption event.
+
+Rationale: JANUS begins with a controlled Core and its ordinary2 chosen Frame Assets, while LivingBattery explicitly names later allFrame corruption. Copying/automatically corrupting that Frame at Core registration erases the printed distinction.
+
+Alternatives: Copy all Frame Assets into a second Core pool; Force all initialJANUS Frame Assets Void on admission
+
+Implementation: Core Girl Assets follow normalHarpy Void physiology. The actual existing JANUS Frame Assets remain at their single original current/parked Frame authority and keep their source-known Void states; the book last-Tag erasure is the actual new Frame-wide corruption event.
+
+Change impact: Damage/corruption/destruction through either pilot/Core view updates exact sole origin. Core registration changes no existing Frame Assets or position.
+
+### `janus_control_tags_live_semantics`
+
+Source: Official rulebook PDF68.
+
+The four original Tag IDs carry exact printed effects: Drugged means general sourceHelpless without invented opposing person, Restrained blocks actual Plays, Muzzled blocks physical speech, surgery is an actual pain Tag. Do not equate Muzzled with noPlays or erase independent Helpless sources when Drugged is removed.
+
+Rationale: Each printed parenthesis is narrower than a generic incapacitation flag. Actual live Tag identity, not arbitrary wording, governs original baseline treatment.
+
+Alternatives: Leave only label strings; Treat Drugged as death/inactive body; Treat Muzzled as unable to make anyPlay
+
+Implementation: The four original Tag IDs carry exact printed effects: Drugged means general sourceHelpless without invented opposing person, Restrained blocks actual Plays, Muzzled blocks physical speech, surgery is an actual pain Tag. Do not equate Muzzled with noPlays or erase independent Helpless sources when Drugged is removed.
+
+Change impact: Actual shared actor begin/preRoll/native restrictions; source Tag marker/private response and actual original Core remain separate from controller otherPC.
+
+### `janus_frame_voice_human_not_conversation`
+
+Source: Official rulebook PDF68-69; physical Frame consent source.
+
+Resolve OOC Frame voice to its exact bound living original Core controller; JANUS without actual sourceCore setup fails closed. Returning the human ID does not prove spoken/mental fictional communication or consent. Muzzled remains; explicit real LivingBattery link is the printed direct mental exception.
+
+Rationale: An unrelated current Handler or same-human otherPC cannot stand in for the actual original Core. Source authority and fictional communication/contact are separate proofs.
+
+Alternatives: Fallback to current Handler; Borrow controller otherPC persona; Treat every Frame voice prompt as free Core telepathy
+
+Implementation: Resolve OOC Frame voice to its exact bound living original Core controller; JANUS without actual sourceCore setup fails closed. Returning the human ID does not prove spoken/mental fictional communication or consent. Muzzled remains; explicit real LivingBattery link is the printed direct mental exception.
+
+Change impact: Actual extraction/consent consumers must verify any required fictional request via real source contact/link; no names or ordinary speech inferred.
+
+### `janus_distinct_actual_battery`
+
+Source: Official rulebook PDF69-70 / printed67-68.
+
+Use a distinct actual battery person. The same human may control both actual roles; no physical self-loop, self-Bond or invented private other-mind answer.
+
+Rationale: The printed other-person trigger and contact need actual separate endpoints. Physical self-jack reach and self-result ownership are not specified.
+
+Alternatives: Explicit future self-link module
+
+Implementation: Use a distinct actual battery person. The same human may control both actual roles; no physical self-loop, self-Bond or invented private other-mind answer.
+
+Change impact: Real ActorRefs and spinal contact; speaker ownership remains actual role-bound.
+
+### `janus_battery_known_roll_and_current_low_tag`
+
+Source: Official rulebook PDF69 / printed67.
+
+Roll once per performed/reviewed spinal contact. Freeze actual pre-roll Tag IDs for +Tag modifier; erase one actual current Tag on low, including a genuinely acquired intervening Tag. Only an actual final Tag erasure triggers takeover.
+
+Rationale: A known roll cannot repeat without new actual plugging, and a post-roll Tag change cannot rewrite the saved modifier.
+
+Alternatives: Recount at final effect; Require only original Tags to be erased
+
+Implementation: Roll once per performed/reviewed spinal contact. Freeze actual pre-roll Tag IDs for +Tag modifier; erase one actual current Tag on low, including a genuinely acquired intervening Tag. Only an actual final Tag erasure triggers takeover.
+
+Change impact: Original receipt remains immutable; erasure stores its own actual before-Tag IDs.
+
+### `janus_link_mental_assets_and_private_channel`
+
+Source: Official rulebook PDF69 / printed67.
+
+Harpy Cognition/Offset Emotional Load are exact additional mental Girl Assets bound to the actual selected benefit/link, without copying a Core-owned Asset or consuming ordinary four-Asset capacity. They expire on actual unlink/ending. The question option grants the actual two minds a private human-authored ongoing channel; it supplies no Handler knowledge or automatic answer.
+
+Rationale: The book names additional mental Assets rather than lending existing body hardware, and explicitly permits free brain communication.
+
+Alternatives: Borrow Core assets; Treat question as a single public answer
+
+Implementation: Harpy Cognition/Offset Emotional Load are exact additional mental Girl Assets bound to the actual selected benefit/link, without copying a Core-owned Asset or consuming ordinary four-Asset capacity. They expire on actual unlink/ending. The question option grants the actual two minds a private human-authored ongoing channel; it supplies no Handler knowledge or automatic answer.
+
+Change impact: One source pointer per additional Asset; no physical-item transfer, no duplicated base pool.
+
+### `janus_pet_qualifying_roll`
+
+Source: Official rulebook PDF70 / printed68.
+
+Pet uses final8+ Living Battery against the actual original Harpy, with entitlement present at that raw roll, creating one next actual Off-Duty carry opportunity.
+
+Rationale: Living Battery is the referenced JANUS roll; unrelated dice and retroactive purchases must not qualify.
+
+Alternatives: Use Go Off-Duty8+ instead
+
+Implementation: Pet uses final8+ Living Battery against the actual original Harpy, with entitlement present at that raw roll, creating one next actual Off-Duty carry opportunity.
+
+Change impact: Original link/receipt/period proof retained; real owner choice, physical unplug, same original body and return required.
+
+### `janus_pet_equipment_not_bonus_tag`
+
+Source: Official rulebook PDF70 / printed68.
+
+Pet grants actual Leash and Collar equipment/custody provenance, without inventing an extra Tag, mechanical Asset or +1 Battery modifier. Carrying changes no Frame assignment or known location by inference.
+
+Rationale: The text says she gains Leash and Collar, without labeling either a Tag or Asset.
+
+Alternatives: Count it as one extra Tag; Create a mechanical Girl Asset
+
+Implementation: Pet grants actual Leash and Collar equipment/custody provenance, without inventing an extra Tag, mechanical Asset or +1 Battery modifier. Carrying changes no Frame assignment or known location by inference.
+
+Change impact: Current typed outing records actual gear/body custody. Generic held-item transfer of this particular equipment remains a separate unsupported port.
+
+### `janus_foundation_tag_replacement_identity`
+
+Source: Official rulebook PDF68,70 / printed66,68.
+
+Ordinary actual Off-Duty Foundation care restores the four printed control conditions with fresh source Tag identities; preserve other real personal Tags and immutable original admission IDs. A qualifying Pet carry postpones that treatment until the actual original body returns.
+
+Rationale: New treatment must not inherit old Tag permissions/marks or rewrite creation history. Printed automatic replacement is an actual source effect, without fabricated player dialogue.
+
+Alternatives: Reuse old removed Tag IDs; Replace every personal Tag; Apply treatment while a carried Core is away
+
+Implementation: Ordinary actual Off-Duty Foundation care restores the four printed control conditions with fresh source Tag identities; preserve other real personal Tags and immutable original admission IDs. A qualifying Pet carry postpones that treatment until the actual original body returns.
+
+Change impact: Current semantic mapping remains separate from original baseline provenance; body position is never changed by routine treatment.
+
+### `janus_detached_body_resource_scope`
+
+Source: Official rulebook PDF68-70 / printed66-68.
+
+A detached unlinked original Core retains its real Girl Assets but cannot alter her former host Frame through a historical binding. Actual same-Frame Harpy rebirth, when source-proved, instead uses the resulting Harpy current Frame pool as sole shared hardware authority.
+
+Rationale: Neither a historical owner label nor shared controller can transfer physical resource ownership.
+
+Alternatives: Keep former host resources forever; Copy archived Frame resources into another pool
+
+Implementation: A detached unlinked original Core retains its real Girl Assets but cannot alter her former host Frame through a historical binding. Actual same-Frame Harpy rebirth, when source-proved, instead uses the resulting Harpy current Frame pool as sole shared hardware authority.
+
+Change impact: No old Frame damage through a detached Core; no Frame pool duplication or archive mutation.
+
+### `janus-void-storage-separate-points`
+
+Source: Rulebook PDF 70.
+
+Newly gained stored Void is a separate source-owned point bound to its original actor, existing Asset, original Harpy and actual gain event. Its alteration is active only while the same Harpy is genuinely plugged in. Permanent Asset.void remains unchanged.
+
+Rationale: The printed temporary-while-plugged wording must not allow unplugging to erase unrelated permanent corruption or actual prior conversion.
+
+Alternatives: Mutate permanent Asset.void then reverse it on every unplug, or treat stored changes as permanent.
+
+Implementation: Newly gained stored Void is a separate source-owned point bound to its original actor, existing Asset, original Harpy and actual gain event. Its alteration is active only while the same Harpy is genuinely plugged in. Permanent Asset.void remains unchanged.
+
+Change impact: One sole stored point survives genuine unplug/replug; original permanent resources and required work retain their authority. Active projection does not duplicate an Asset.
+
+### `janus-storage-actual-off-duty-surgery`
+
+Source: Rulebook PDF 70.
+
+The original patient requests one exact stored point after an actual Go Off-Duty receipt. The period's original Foundation human records performed surgery. At most one point per original patient is removed in that period, without damaging or repairing the original Asset.
+
+Rationale: A period label or purchase alone is not performed surgery, and one printed removal must not become repeatable free removal.
+
+Alternatives: Automatically delete a stored point on period activation, or permit repeated removals from the same period.
+
+Implementation: The original patient requests one exact stored point after an actual Go Off-Duty receipt. The period's original Foundation human records performed surgery. At most one point per original patient is removed in that period, without damaging or repairing the original Asset.
+
+Change impact: The optional request is resumable/private and does not invent personnel, transport, medical completion or an Asset repair.

@@ -28,6 +28,7 @@ def tags(state: GameState, actor: ActorRef) -> Sequence[TagState | HarpyTag]:
 def _put_harpy(state: GameState, actor: ActorRef, **values: object) -> None:
     changed = update_harpy(state, actor, **values)
     state.harpy_states, state.native_harpies = changed.harpy_states, changed.native_harpies
+    state.janus_cores = changed.janus_cores
 
 
 def context(state: GameState, actor: ActorRef) -> DirectorContext:
@@ -209,6 +210,9 @@ def mark(state: GameState, target: ActorRef, tag_id: str, scene: str) -> bool:
 
 
 def embrace(state: GameState, actor: ActorRef, tag_id: str, replaced: tuple[str, ...]) -> None:
+    from girlframe.engine.m3_leviathan_obsession import require_identity_change
+
+    require_identity_change(state, actor, replaced)
     if actor.kind == "external_pilot":
         body = harpy(state, actor)
         harpy_tag = next((x for x in body.tags if x.id == tag_id and x.marked), None)

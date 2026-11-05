@@ -31,6 +31,7 @@ class Use(Model):
     response: Response | None = None
     response_account: str = Field(default="", max_length=1200)
     response_event: str | None = None
+    persistent: bool = Field(default=False, exclude_if=lambda value: not value)
 
 
 def uses(state: GameState) -> tuple[Use, ...]:
@@ -124,6 +125,9 @@ def consume(
         raise ValueError("Choose a printed Handler Tag use and describe the actual request")
     if not identity or not event or not scene or any(x.id == identity for x in uses(state)):
         raise ValueError("Use a fresh actual source event and original scene")
+    from girlframe.engine.m3_budget_tags import persistent
+
+    retained = persistent(state, handler, tag)
     value = Use(
         id=identity,
         revision=1,
@@ -139,6 +143,7 @@ def consume(
         scene=scene,
         state="resolved" if kind == "attention" else "pending",
         response_event=event if kind == "attention" else None,
+        persistent=retained,
     )
     if npc is not None:
         assert state.world is not None
@@ -152,11 +157,12 @@ def consume(
                 )
             }
         )
-    else:
+    elif not retained:
         state.handler_tags = [x for x in state.handler_tags if x.id != tag]
     for obligation in state.obligations:
         if (
-            obligation.kind != "actor_reject_tag"
+            retained
+            or obligation.kind != "actor_reject_tag"
             or handler.kind != "handler"
             or obligation.state != "pending"
             or obligation.details.get("tag") != tag

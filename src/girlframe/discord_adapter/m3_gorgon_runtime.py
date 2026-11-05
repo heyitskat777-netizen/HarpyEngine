@@ -17,6 +17,14 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
     data = await asyncio.to_thread(game.decision, viewer_from_interaction(interaction), identity)
     detail = data["detail"]
     kind = detail["kind"]
+    if kind == "dormant_void":
+        from girlframe.discord_adapter.m3_gorgon_dormant import open_gorgon_dormant
+        from girlframe.services.m3_gorgon_dormant import GorgonDormantService
+
+        await open_gorgon_dormant(
+            interaction, GorgonDormantService(game.store, game), detail["work_id"]
+        )
+        return
     if kind == "response_play":
         from girlframe.discord_adapter.m2_ui import open_play
 

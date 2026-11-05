@@ -45,13 +45,32 @@ Future implementation should finish one named workflow with its source checklist
 and end-to-end evidence before opening another foundation task. Do not use registry
 entry counts, test totals or unequal unit counts as a completion percentage.
 
-The owner subsequently explicitly authorized four sub-agents to speed M3 work.
-Run separate bounded workflows in parallel with file ownership and explicit API
-handoffs; the root agent integrates shared state/routing and runs the final suite.
-This supersedes the earlier sequential-only workflow where dependencies can be
-completed independently. Keep all previous bot-off, source/privacy, release and
-truthful-acceptance boundaries. Continue M3 implementation until ready for the
-agreed human testing/review or a real blocker needs owner input.
+The owner previously authorized four sub-agents, then adopted the lower-usage
+workflow in `docs/DEVELOPMENT_WORKFLOW.md`. That workflow now takes precedence:
+use at most two implementation sub-agents by default, with root coordinating and
+integrating. Additional agents are temporary and only for clearly independent,
+bounded work that avoids duplicated investigation and shared-file contention.
+Complete or hand off current assignments before starting another system.
+Continue M3 until ready for the agreed human review or a real owner blocker;
+bot-off, privacy and release boundaries remain in force.
+
+Latest owner testing preference: reduce usage and test expected behaviors and
+base functionality rather than every possible case. Use small focused checks for
+the normal workflow of each deliverable; reuse existing tests. Stop speculative
+edge-case expansion, combinatorial role/tier matrices, repeated broad regressions
+and repeated audits. Keep targeted checks when changed code can lose saved state,
+duplicate rolls or charges, disclose private information or bypass consent. Run
+the full regression once for the final M3 review candidate, with further runs only
+when failures or subsequent changes justify them. Preserve existing tests and
+fail-closed behavior; document unsupported cases without expanding their scope.
+Keep verification reports concise and distinguish focused checks from a full run.
+Freeze each deliverable's normal workflow, files, dependencies and completion
+demonstration before coding. Reuse existing structures; avoid speculative
+frameworks and broad refactors. Keep one compact handoff per assignment and read
+only changed context when resuming. Consolidate documentation and checks at useful
+completion points. Do not repeat installation, source audits or successful checks
+without a relevant change or failure. Required missing M3 behavior remains visible
+in the backlog and prevents a rules-complete claim.
 
 - Run `bash tools/install.sh`, then the checks in `README.md`.
 - Use the existing checkout. Cloud tasks are isolated; create no worktree unless requested.

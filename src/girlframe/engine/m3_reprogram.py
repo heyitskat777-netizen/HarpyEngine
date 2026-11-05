@@ -14,6 +14,9 @@ def apply(
     if not source.strip():
         raise ValueError("Reprogramming needs its actual source outcome")
     updated = bind(sheet)
+    from girlframe.engine.m3_leviathan_obsession import require_unlocked
+
+    require_unlocked(updated.identities, (x.id for x in updated.identities if not x.protected))
     labels = reprogram_labels(updated, retain, slot, allow_duplicates=allow_duplicate_labels)
     defaults = CATALOG[sheet.girl]["identities"]
     extras = [x for x in updated.identities if x.protected and not x.paired]

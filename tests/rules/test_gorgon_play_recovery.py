@@ -165,9 +165,10 @@ def test_native_actual_gorgon_declaration_starts_only_after_owned_confirmation(l
         assert not await form.interaction_check(current(2))
         own = form.fields[0].options[0][0]
         next_interaction = current(1, 93002)
-        await next_interaction.response.defer(ephemeral=True)
-        await form.submit_action(next_interaction, dict(actor=(own,), play=("attack",)))
+        form.values.update(actor=(own,), play=("attack",))
+        await form.confirm.callback(next_interaction)
         details = next_interaction.edit_original_response.call_args.kwargs["view"]
+        assert isinstance(details, NativeForm) and form.completed and not details.completed
         data = GorgonPlayService(game).preview(ADMIN, 900)
         victim = next(
             x for x in data["actors"] if x["ref"]["kind"] == "pilot" and x["ref"]["entity"] == "2"
@@ -236,12 +237,15 @@ def test_legacy_world_harpy_without_factual_runtime_rejects_before_new_chat_lock
     assert state(game).model_dump_json() == before and game.dice.calls == 0
 
 
-def test_gorgon_cannot_silently_skip_actual_dormant_counter_cost_before_lock(ledger):
+def test_gorgon_dormant_counter_is_a_real_owned_cost_before_any_contest_effect(ledger):
     from girlframe.database import tables as t
 
-    with pytest.raises(WorkflowError, match="Dormant awakening cost"):
-        gorgon_source(ledger, target="opposing-gorgon", opposing=True, opposing_class="dormant")
+    game, _, _, root, _ = gorgon_source(
+        ledger, target="opposing-gorgon", opposing=True, opposing_class="dormant"
+    )
     with ledger.engine.connect() as c:
-        assert not list(c.execute(t.m2["m2_actions"].select()))
-        assert not list(c.execute(t.m2["m2_locks"].select()))
+        choices = game.pending(c, root)
+        assert [x["kind"] for x in choices] == ["gorgon_dormant_void"]
         assert not list(c.execute(t.m2["m2_receipts"].select()))
+    assert game.dice.calls == 0
+    assert not any(x.get("kind") == "actual_asset_destroyed" for x in state(game).facts)

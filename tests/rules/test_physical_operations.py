@@ -230,6 +230,9 @@ def test_handler_rescue_records_actual_custody_and_injury_without_invented_desti
 def test_subsumption_locks_actual_frame_and_dead_vitals_need_separate_real_extraction_and_help(
     canon,
 ):
+    # This fixture exercises an ordinary NPC Frame voice, not JANUS's separate
+    # source-admitted ex-Girl Core (covered by actual JANUS admission tests).
+    canon.sheets["2"].frame = "THE ENFORCER"
     state = place(canon)
     actor = ref(state, 2)
     locked = rules.lock_cockpit(
@@ -292,6 +295,7 @@ def test_subsumption_locks_actual_frame_and_dead_vitals_need_separate_real_extra
 
 
 def test_subsumed_passenger_cannot_bypass_actual_carrier_lock_or_pilot_someone_elses_frame(canon):
+    canon.sheets["2"].frame = canon.sheets["3"].frame = "THE ENFORCER"
     state = place(place(canon, 2), 3)
     actor, carrier = ref(state, 2), ref(state, 3)
     rescued = rules.rescue_to_cockpit(

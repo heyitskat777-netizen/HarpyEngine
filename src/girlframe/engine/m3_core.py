@@ -154,6 +154,9 @@ def recover_off_duty(sheet: PilotSheet, choice: Recovery) -> Result:
             raise ValueError("Choose a Tag that does not duplicate a current Identity label")
         marked = replaced is not None and replaced.id in locks
         if replaced is not None:
+            from girlframe.engine.m3_leviathan_obsession import require_unlocked
+
+            require_unlocked(updated.identities, (replaced.id,))
             updated.identities = [x for x in updated.identities if x.id != replaced.id]
             if marked:
                 locks = frozenset(x for x in locks if x != replaced.id) | {choice.replacement_id}

@@ -80,6 +80,13 @@ def _world_projection(state: GameState) -> dict[str, Any]:
             actor = ActorRef.model_validate(dict(kind=kind, entity=row["id"]))
             if offstage_travel(state, actor) is not None or _escaped_native_harpy(state, actor):
                 row["cell"] = None
+            elif any(x.actor == actor for x in state.external_poses) or any(
+                x.actor == actor for x in state.leviathan_arrivals
+            ):
+                from girlframe.engine.m3_actors import resolve
+
+                actual_cell = resolve(state, actor, (), require_alive=False).cell
+                row["cell"] = list(actual_cell) if actual_cell is not None else None
     return projected
 
 

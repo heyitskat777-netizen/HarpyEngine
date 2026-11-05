@@ -702,6 +702,22 @@ class LossService:
                 if state.world
                 else set()
             )
+            # Leaving an old map is not this original body's death. Its source ID
+            # must not be reused to impersonate a later quadrant's entity.
+            from girlframe.engine.m3_world_state import World
+
+            for archive in state.facts:
+                if archive.get("kind") == "quadrant_world_archive":
+                    old_world = World.model_validate_json(archive["world"])
+                    oldids.update(
+                        x.id
+                        for x in (
+                            *old_world.locations,
+                            *old_world.gorgons,
+                            *old_world.npcs,
+                            *old_world.pilots,
+                        )
+                    )
             if any(
                 x.id in oldids
                 for x in (*world.locations, *world.gorgons, *world.npcs, *world.pilots)

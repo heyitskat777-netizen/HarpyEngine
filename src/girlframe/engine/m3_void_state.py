@@ -6,6 +6,7 @@ from pydantic import Field, model_validator
 
 from girlframe.engine.identity import Snowflake
 from girlframe.engine.m3_actor_state import ActorRef, Model
+from girlframe.engine.m3_janus_link_state import BatteryAsset
 from girlframe.engine.m3_lobotomy_state import BlockedPlay
 from girlframe.engine.m3_world_state import Cell
 
@@ -23,6 +24,19 @@ class HarpyAsset(Model):
         default=None, min_length=1, exclude_if=lambda value: value is None
     )
 
+    battery_asset: BatteryAsset | None = Field(default=None, exclude_if=lambda value: value is None)
+
+    @model_validator(mode="after")
+    def exact_mental_source(self) -> "HarpyAsset":
+        if self.battery_asset is not None and (
+            self.family != "girl"
+            or self.id != self.battery_asset.asset_id
+            or self.name != self.battery_asset.name
+            or self.intrinsic is not None
+        ):
+            raise ValueError("Use the exact printed source-linked mental Girl Asset")
+        return self
+
 
 class HarpyIdentity(Model):
     id: str = Field(min_length=1, max_length=180)
@@ -31,6 +45,7 @@ class HarpyIdentity(Model):
     protected: bool = False
     paired: bool = False
     slot: int | None = Field(default=None, ge=0, le=3)
+    obsession_sources: tuple[str, ...] = Field(default=(), exclude_if=lambda value: not value)
 
 
 class HarpyTag(Model):

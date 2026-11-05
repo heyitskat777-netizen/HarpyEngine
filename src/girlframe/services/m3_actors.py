@@ -87,6 +87,12 @@ class ActorService:
             ) from None
         if actor.controller != viewer.user_id:
             raise WorkflowError("This actor is controlled by another human.")
+        from girlframe.engine.m3_janus import find
+
+        if find(state, ref) is not None:
+            from girlframe.services.m3_janus import prove_core
+
+            prove_core(c, self.game, state, ref)
         return actor
 
     def choices(self, viewer: GuildViewer) -> dict[str, Any]:

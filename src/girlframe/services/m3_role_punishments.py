@@ -29,7 +29,31 @@ from girlframe.services.read_only_bot import GuildViewer
 def available_for_case(
     state: GameState, case: RolePunishment, bindings: tuple[ProfileBinding, ...]
 ) -> tuple[str, ...]:
+    if case.subject == case.executor and case.source_kind == "compliance_virus":
+        if case.subject.kind == "pilot":
+            from girlframe.engine.m3_punishments import KINDS
+
+            # No invented self-Bond or self-opponent Helpless consequence. The source
+            # still has several real bodily/identity/social Punishments to choose.
+            return tuple(
+                k
+                for k, (_, severity) in KINDS.items()
+                if severity != "severe"
+                and k
+                not in ("quality_time", "passing_responsibility", "beating", "revoked_privileges")
+            )
+        return (
+            ("stimulant_injection", "reduced_socialization")
+            if any(case.subject in (x.first, x.second) and x.depth > 0 for x in state.actor_bonds)
+            else ("stimulant_injection",)
+        )
     kinds = rules.available(state, case.subject, case.executor, bindings)
+    if (
+        case.source_kind in ("compliance_virus", "janus_training")
+        and case.subject.kind == "external_pilot"
+        and rules.view(state, case.subject, bindings).girl == "harpy"
+    ):
+        kinds = (*kinds, "stimulant_injection")
     if (
         case.source_kind == "handler_play"
         and case.subject.kind == "pilot"
@@ -54,7 +78,13 @@ def open_case(
     actor: ActorRef,
     target: ActorRef,
     chooser: ActorRef | None,
-    source_kind: Literal["enforcement_initiative", "obedience_volunteer", "handler_play"],
+    source_kind: Literal[
+        "enforcement_initiative",
+        "obedience_volunteer",
+        "handler_play",
+        "compliance_virus",
+        "janus_training",
+    ],
     action: str | None,
     source_event: str,
     identity: str,
@@ -65,7 +95,7 @@ def open_case(
     changed = GameState.model_validate_json(state.model_dump_json())
     executor = rules.view(changed, actor, bindings)
     subject = rules.view(changed, target, bindings)
-    if source_kind == "handler_play":
+    if source_kind in ("handler_play", "compliance_virus", "janus_training"):
         if chooser_controller is None or source_work is None:
             raise WorkflowError("Use the actual scoped Handler Play grant and chooser controller.")
     elif chooser is None:
@@ -78,9 +108,11 @@ def open_case(
         chooser_controller = resolve(
             changed, chooser, bindings, require_current_profile=False
         ).controller
-    if not supported(changed, target, actor, bindings) or (
-        actor.kind == "pilot" and not executor.frame_instance
-    ):
+    if not (
+        supported(changed, target, actor, bindings)
+        or source_kind == "compliance_virus"
+        and actor == target
+    ) or (actor.kind == "pilot" and not executor.frame_instance):
         raise WorkflowError(
             "UNSUPPORTED_ROLE_PUNISHMENT: this source target has no actual effect port."
         )
@@ -99,7 +131,8 @@ def open_case(
         chooser_controller=chooser_controller,
         executor=actor,
         executor_controller=executor_controller
-        if source_kind == "handler_play" and executor_controller is not None
+        if source_kind in ("handler_play", "compliance_virus", "janus_training")
+        and executor_controller is not None
         else executor.controller,
         executor_frame=executor.frame_instance,
         subject=rules.bond_ref(changed, target),
@@ -274,7 +307,7 @@ def case_proof(c: Connection, game: GameService, identity: str) -> RolePunishmen
             or source_event["kind"]
             not in ("m3.role_punishment_instructed", "m3.role_punishment_consulted")
             or (
-                case.source_kind != "handler_play"
+                case.source_kind not in ("handler_play", "compliance_virus", "janus_training")
                 and not director_instruction
                 and approved_state.handler != int(source_event["actor_id"])
             )
@@ -286,11 +319,39 @@ def case_proof(c: Connection, game: GameService, identity: str) -> RolePunishmen
             raise WorkflowError(
                 "SOURCE_CONSULTATION_MISSING: recover the exact Handler instruction/approval."
             )
+    if case.source_kind == "janus_training":
+        from girlframe.services.m3_janus_requisitions import validate_role_case
+
+        validate_role_case(c, game, state, case)
     if case.source_kind == "handler_play":
         from girlframe.services.m3_handler_plays import validate_role_case
 
         validate_role_case(c, game, state, case)
+    if case.source_kind == "compliance_virus":
+        from girlframe.services.m3_compliance_virus import validate_role_case
+
+        validate_role_case(c, game, state, case)
+    if case.source_kind == "enforcement_initiative" and case.executor.kind == "external_pilot":
+        assert original is not None
+        _harpy_case(c, game, original, case)
     return case
+
+
+def _harpy_case(c: Connection, game: GameService, state: GameState, case: RolePunishment) -> None:
+    from girlframe.services.m3_enforcement_initiative import _prove_harpy, _refs
+
+    if case.action is None:
+        raise WorkflowError("Recover this actual Harpy's original Initiative action.")
+    actual = game.action(c, case.action)
+    meta = actual["data"].get("enforcement", {})
+    if (
+        (_refs(actual)[0], rules.bond_ref(state, _refs(actual)[1])) != (case.executor, case.subject)
+        or meta.get("punishment") != case.id
+        or rules.view(state, case.executor, profiles(c, game.store.campaign_id)).frame_instance
+        != case.executor_frame
+    ):
+        raise WorkflowError("SOURCE_HARPY_EXECUTION_MISSING: recover the original Frame and case.")
+    _prove_harpy(c, game, state, case.executor)
 
 
 def current(c: Connection, game: GameService, state: GameState, case: RolePunishment) -> None:
@@ -303,11 +364,23 @@ def current(c: Connection, game: GameService, state: GameState, case: RolePunish
         or target.controller != case.subject_controller
     ):
         raise WorkflowError("Recover the actual original executor, Frame and affected person.")
+    if case.source_kind == "janus_training":
+        from girlframe.services.m3_janus_requisitions import validate_role_case
+
+        validate_role_case(c, game, state, case)
+        return
     if case.source_kind == "handler_play":
         from girlframe.services.m3_handler_plays import validate_role_case
 
         validate_role_case(c, game, state, case)
         return
+    if case.source_kind == "compliance_virus":
+        from girlframe.services.m3_compliance_virus import validate_role_case
+
+        validate_role_case(c, game, state, case)
+        return
+    if case.executor.kind == "external_pilot":
+        _harpy_case(c, game, state, case)
     if case.chooser is None:
         raise WorkflowError("Recover the actual original instruction owner.")
     if case.chooser.kind == "handler":
@@ -343,6 +416,7 @@ def pc_execution(
         or viewer.user_id != case.executor_controller
         or case.instruction is None
         or case.effect_event is not None
+        or case.ended_event is not None
         or set(case.attendance) != {case.executor_controller, case.subject_controller}
     ):
         raise WorkflowError(
@@ -405,6 +479,8 @@ def synchronize(
     state = load_state(c, game.store.campaign_id)
     existing = _latest_work(c, game)
     for case in state.role_punishments:
+        if case.ended_event is not None:
+            continue
         if case.pc_work and case.pc_work in existing and case.source_kind == "obedience_volunteer":
             row = existing[case.pc_work]
             body = json.loads(row["body_json"])
@@ -447,6 +523,12 @@ def synchronize(
                 scope = role_scope(c, game, case).model_dump() | dict(
                     campaign_id=game.store.campaign_id
                 )
+            elif case.source_kind == "compliance_virus":
+                from girlframe.services.m3_compliance_virus import role_scope
+
+                scope = role_scope(c, game, case).model_dump() | dict(
+                    campaign_id=game.store.campaign_id
+                )
             else:
                 raise WorkflowError("Recover this original Punishment's actual source work.")
             related(
@@ -472,7 +554,7 @@ def synchronize(
     completed_cases: list[str] = []
     finished_actions: set[str] = set()
     for case in tuple(state.role_punishments):
-        if not case.effect_event or case.completion_event:
+        if not case.effect_event or case.completion_event or case.ended_event:
             continue
         pending = False
         if case.pc_work:
@@ -516,6 +598,12 @@ def synchronize(
                 from girlframe.services.m3_handler_plays import complete_role_case
 
                 complete_role_case(c, game, completed, completion_id)
+            elif completed.source_kind == "compliance_virus":
+                from girlframe.services.m3_compliance_virus import (
+                    complete_role_case as complete_virus,
+                )
+
+                complete_virus(c, game, completed, completion_id)
     # Initiative owns its source lock/choice continuation. The callback checks exact case
     # completion and never lets a generic acknowledgment resolve this consequence.
     if action is not None:
@@ -559,7 +647,7 @@ class RolePunishmentService:
                 case.subject_controller,
             } and not (needs_approval and viewer.user_id == state.handler):
                 continue
-            if case.effect_event or case.completion_event:
+            if case.effect_event or case.completion_event or case.ended_event:
                 actionable = False
             elif case.instruction is None:
                 actionable = viewer.user_id == case.chooser_controller
@@ -577,7 +665,7 @@ class RolePunishmentService:
             result.append(
                 dict(
                     id=case.id,
-                    state="resolved" if case.completion_event else "pending",
+                    state="resolved" if case.completion_event or case.ended_event else "pending",
                     chooser=viewer.user_id == case.chooser_controller,
                     executor=viewer.user_id == case.executor_controller,
                     actionable=actionable,
@@ -656,7 +744,12 @@ class RolePunishmentService:
                         update={"regulation": "Concealed behavioural rule"}
                     ).model_dump_json()
             pc_choices: dict[str, Any] | None = None
-            if case.pc_work and viewer.user_id == case.chooser_controller and not case.effect_event:
+            if (
+                case.pc_work
+                and viewer.user_id == case.chooser_controller
+                and not case.effect_event
+                and not case.ended_event
+            ):
                 from girlframe.services.m3_punishments import PunishmentService
 
                 pc_choices = PunishmentService(self.store).get(viewer, case.pc_work).get("choices")
@@ -726,7 +819,8 @@ class RolePunishmentService:
             original = case_proof(c, self.game, identity)
             source_instruction = bool(
                 instruction is not None
-                and original.source_kind in ("enforcement_initiative", "obedience_volunteer")
+                and original.source_kind
+                in ("enforcement_initiative", "obedience_volunteer", "compliance_virus")
                 and viewer.user_id == original.chooser_controller
             )
             Access(self.store).authorize(
@@ -742,6 +836,7 @@ class RolePunishmentService:
             if (
                 state.revision != revision
                 or case.effect_event
+                or case.ended_event
                 or sum((instruction is not None, scene is not None, attest, approve, execute)) != 1
             ):
                 raise WorkflowError(
@@ -770,11 +865,12 @@ class RolePunishmentService:
                         profiles(c, self.store.campaign_id),
                         event,
                         "preview-validation",
+                        source_kind=case.source_kind,
                     )
                 source_approval = bool(
                     viewer.user_id == case.chooser_controller
                     and (
-                        case.source_kind == "enforcement_initiative"
+                        case.source_kind in ("enforcement_initiative", "compliance_virus")
                         or case.source_kind == "handler_play"
                         and viewer.user_id == state.handler
                         or case.chooser is not None
@@ -843,6 +939,7 @@ class RolePunishmentService:
                     profiles(c, self.store.campaign_id),
                     event,
                     str(uuid4()),
+                    source_kind=case.source_kind,
                 )
                 case = case.model_copy(update=dict(effect_event=event, execution_account=account))
                 kind = "executed"

@@ -32,16 +32,6 @@ class ReplacementService:
     def __init__(self, missions: MissionService):
         self.missions, self.store, self.game = missions, missions.store, missions.game
 
-    @staticmethod
-    def _package_available(supplied: Package) -> None:
-        from girlframe.engine.m3_personal_firearm import RULE
-
-        if RULE in supplied.additional_rules:
-            raise WorkflowError(
-                "UNSUPPORTED_RULE: a free Personal Firearm package needs its actual owned "
-                "pistol and Girl Asset-cap issuance procedure"
-            )
-
     def _row(self, c: Connection, identity: str) -> dict[str, Any]:
         table = t.m3["m3_required_work"]
         row = (
@@ -243,6 +233,21 @@ class ReplacementService:
                 and not result["stale"]
                 and (not parent.get("court_id") or result["court_accepted"])
             )
+            from girlframe.engine.m3_assets import can_replace_at_limit, counts_toward_limit
+            from girlframe.engine.m3_personal_firearm import RULE
+
+            firearm = bool(result["package"] and RULE in result["package"]["additional_rules"])
+            girls = [x for x in sheet.assets if x.family == "girl"]
+            result["firearm"] = dict(
+                required=firearm,
+                needs_replacement=firearm
+                and sum(counts_toward_limit(sheet, x) for x in girls) >= 4,
+                replacements=[
+                    dict(id=x.id, label=x.name) for x in girls if can_replace_at_limit(sheet, x)
+                ]
+                if viewer.user_id == int(root["subject_id"])
+                else [],
+            )
             return result
 
     def propose(
@@ -358,7 +363,6 @@ class ReplacementService:
             registry = self.missions.access.registry
             if registry is None:
                 raise WorkflowError("A reviewed source registry is required.")
-            self._package_available(supplied)
             parent = self._body(root)
             rules.package(
                 load_state(c, self.store.campaign_id),
@@ -447,6 +451,8 @@ class ReplacementService:
         revision: int,
         game_revision: int,
         package_revision: int,
+        *,
+        firearm_replace: str | None = None,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             root = self._row(c, identity)
@@ -482,7 +488,6 @@ class ReplacementService:
                 raise WorkflowError("The Court recipient is unavailable; choose a new proposal.")
             frame_id = str(uuid4())
             supplied = Package.model_validate_json(json.dumps(body["package"]))
-            self._package_available(supplied)
             updated = rules.replace(
                 load_state(c, self.store.campaign_id),
                 viewer.user_id,
@@ -529,6 +534,25 @@ class ReplacementService:
                 replacement_event,
                 registry,
             )
+            from girlframe.engine import m3_personal_firearm as firearm
+            from girlframe.services.m3_actors import profiles
+
+            if firearm.RULE in supplied.additional_rules:
+                registry.require_available(firearm.RULE)
+                updated = firearm.grant(
+                    updated,
+                    ActorRef(
+                        kind="pilot", entity=str(viewer.user_id), incarnation=sheet.character_id
+                    ),
+                    profiles(c, self.store.campaign_id),
+                    frame_id,
+                    "package-firearm:" + identity,
+                    replacement_event,
+                    source_work=identity,
+                    replace=firearm_replace,
+                )
+            elif firearm_replace is not None:
+                raise WorkflowError("This exact package does not issue a Personal Firearm.")
             event = self.game.event(
                 c,
                 viewer.user_id,
@@ -584,6 +608,7 @@ class ReplacementService:
                 "revision": revision,
                 "game_revision": game_revision,
                 "package_revision": package_revision,
-            },
+            }
+            | ({"firearm_replace": firearm_replace} if firearm_replace is not None else {}),
             operation,
         )

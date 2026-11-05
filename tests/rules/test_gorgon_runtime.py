@@ -55,6 +55,8 @@ def gorgon_source(
     civilian=False,
     approve_capability=True,
     opposing_class="benevolent",
+    actor_void=False,
+    advance=True,
 ):
     game, worker, gateway, _, _, _ = prepared(store)
     approval = store.policy.m3_approval
@@ -74,6 +76,10 @@ def gorgon_source(
                         for i, x in enumerate(actual.assets)
                     )
                 }
+            )
+        if actor_void:
+            actual = actual.model_copy(
+                update={"assets": tuple(x.model_copy(update={"void": True}) for x in actual.assets)}
             )
         actual = actual.model_copy(update={"exposed": exposed, "core_strike_failed": failed})
         canon.world = update(
@@ -230,21 +236,24 @@ def gorgon_source(
         reach_confirmed=True,
     )
     action = svc.begin(ADMIN, str(uuid4()), 900, data["revision"], declaration)["action_id"]
-    tick(worker, gateway, 3)
-    with store.engine.connect() as c:
-        started = game.action(c, action)["data"]["gorgon_play"]["started"]
-    if not started:
-        game.roll(ADMIN, str(uuid4()), action)
-    with store.engine.connect() as c:
-        capability = any(x["kind"] == "gorgon_asset_capability" for x in game.pending(c, action))
-    if capability and approve_capability:
-        answer(
-            game,
-            ADMIN,
-            "gorgon_asset_capability",
-            flag=True,
-            text="Actual source judge confirms this original attack capability and reach",
-        )
+    if advance:
+        tick(worker, gateway, 3)
+        with store.engine.connect() as c:
+            started = game.action(c, action)["data"]["gorgon_play"]["started"]
+        if not started:
+            game.roll(ADMIN, str(uuid4()), action)
+        with store.engine.connect() as c:
+            capability = any(
+                x["kind"] == "gorgon_asset_capability" for x in game.pending(c, action)
+            )
+        if capability and approve_capability:
+            answer(
+                game,
+                ADMIN,
+                "gorgon_asset_capability",
+                flag=True,
+                text="Actual source judge confirms this original attack capability and reach",
+            )
     return game, worker, gateway, action, declaration
 
 

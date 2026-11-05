@@ -313,6 +313,8 @@ def damage_gorgon(world: World, identity: str, asset_id: str, *, indirect: bool)
 
 
 def expose_gorgon(world: World, identity: str, account: str) -> World:
+    from girlframe.engine.m3_leviathan import require_layers_clear
+
     target = next((x for x in world.gorgons if x.id == identity and x.alive), None)
     if target is None or target.exposed or not account.strip():
         raise ValueError("Review an actual living Gorgon's Core weakness")
@@ -321,6 +323,7 @@ def expose_gorgon(world: World, identity: str, account: str) -> World:
     }
     if not set(target.core_plan.assets) <= dealt_with:
         raise ValueError("Damage all designated Core-protecting Assets first")
+    require_layers_clear(target)
     return update(
         world,
         gorgons=tuple(

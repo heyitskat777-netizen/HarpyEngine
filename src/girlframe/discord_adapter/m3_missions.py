@@ -427,6 +427,42 @@ def register_missions(
             await reply(interaction, str(error))
 
     @group.command(
+        name="janus", description="Review your original JANUS Core and source-owned work"
+    )
+    async def janus(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_janus import open_janus
+        from girlframe.services.m3_janus import JanusService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_janus(interaction, JanusService(service.game))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @group.command(name="leviathan", description="Declare your Leviathan's actual influence")
+    async def leviathan(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_leviathan_obsession import open_influence
+        from girlframe.services.m3_leviathan_obsession import ObsessionService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_influence(interaction, ObsessionService(service.game))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @group.command(
+        name="virus", description="Use source-owned Compliance Virus and factual link review"
+    )
+    async def virus(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_compliance_virus import open_virus_hub
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_virus_hub(interaction, service.game)
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @group.command(
         name="enforcer", description="Review actual Enforcer accusations and source-owned case work"
     )
     async def enforcer(interaction: discord.Interaction) -> None:

@@ -64,7 +64,10 @@ def eligible(state: GameState, attacker: ActorRef, defender: ActorRef) -> None:
         if gorgon.gorgon_class == "dormant":
             raise ValueError("UNSUPPORTED_RULE: resolve the actual dormancy/awakening interaction")
     original = next(x for x in state.world.gorgons if x.id == attacker.entity)
-    if original.gorgon_class == "benevolent":
+    from girlframe.engine.m3_janus_pandora import require_can_harm, vicious
+
+    require_can_harm(state, attacker, defender)
+    if original.gorgon_class == "benevolent" and not vicious(state, attacker):
         raise ValueError("A Benevolent Gorgon will not initiate an Attack")
     if first.cell is None or second.cell is None or first.cell != second.cell:
         raise ValueError("UNSUPPORTED_RULE: this contest branch covers co-located Gorgons")

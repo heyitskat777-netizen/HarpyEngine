@@ -84,3 +84,88 @@ def test_actual_retained_initiative_mid_grasp_and_original_owned_release_use_no_
     )
     assert not state(game).enforcer_grasps[-1].held and is_helpless(state(game), target, actor)
     assert "2" not in state(game).sheets and game.dice.calls == original_calls + 1
+
+
+def test_actual_retained_harpy_high_instruction_and_actual_punishment_finishes_original_action(
+    ledger, tmp_path, monkeypatch
+):
+    from test_ledger import ADMIN
+
+    from girlframe.engine.m3_punishments import Details
+    from girlframe.engine.m3_role_punishment_state import Instruction
+    from girlframe.services.m3_role_punishments import RolePunishmentService
+
+    game, worker, gateway, actor, service = reborn(ledger, tmp_path, monkeypatch)
+    game.dice.faces = (6, 6)
+    calls = game.dice.calls
+    target = current_ref(state(game), 3)
+    action = begin(
+        service, actor, play="enforcement_initiative", target_actor=target, piloting=True
+    )
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    case = state(game).role_punishments[-1]
+    assert case.executor == actor and case.executor.kind == "external_pilot"
+    assert case.pc_work is None and case.executor_frame is not None
+    owned = RolePunishmentService(game)
+
+    def change(viewer, **kwargs):
+        data = owned.get(viewer, case.id)
+        return owned.change(viewer, str(uuid4()), case.id, data["revision"], **kwargs)
+
+    details = Details(kind="quality_time", tag="Actual original Harpy's instructed consequence")
+    change(
+        ADMIN, instruction=Instruction(kind=details.kind, details_json=details.model_dump_json())
+    )
+    change(PLAYER, scene="Actual retained Harpy carries out the instructed source scene")
+    change(OTHER, attest=True)
+    change(PLAYER, execute=True, account="Actual original Harpy performs instructed Quality Time")
+    actual = state(game)
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    assert actual.sheets["3"].tags[-1].giver_actor == actor
+    assert "2" not in actual.sheets and game.dice.calls == calls + 1
+    assert actual.role_punishments[-1].completion_event is not None
+
+
+def test_retained_harpy_high_rejects_rewritten_birth_and_cannot_execute_other_originals_case(
+    ledger, tmp_path, monkeypatch
+):
+    import pytest
+
+    from girlframe.services.m3_role_punishments import RolePunishmentService
+    from girlframe.services.onboarding import WorkflowError
+
+    game, worker, gateway, actor, service = reborn(ledger, tmp_path, monkeypatch)
+    game.dice.faces = (6, 6)
+    action = begin(
+        service,
+        actor,
+        play="enforcement_initiative",
+        target_actor=current_ref(state(game), 3),
+        piloting=True,
+    )
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    case = state(game).role_punishments[-1]
+    with game.store.transaction() as c:
+        altered = state(game)
+        altered.career_archives = [
+            row.model_copy(update={"links_json": "{}"})
+            if row.id == altered.career_archives[-1].id
+            else row
+            for row in altered.career_archives
+        ]
+        game.event(c, 1, str(uuid4()), "synthetic.invalid_rewritten_birth", altered)
+    owned = RolePunishmentService(game)
+    data = owned.get(PLAYER, case.id)
+    assert data["stale"]
+    with pytest.raises(WorkflowError):
+        owned.change(
+            PLAYER,
+            str(uuid4()),
+            case.id,
+            data["revision"],
+            scene="Cannot attest through a rewritten original birth",
+        )
+    assert game.inspect(PLAYER, action)["state"] != "complete"
+    assert not state(game).role_punishments[-1].effect_event

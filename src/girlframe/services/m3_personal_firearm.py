@@ -64,6 +64,7 @@ def proof(c: Connection, store: OnboardingStore, entitlement: PersonalFirearmGra
         or first.actor != entitlement.actor
         or first.source_event != entitlement.source_event
         or first.purchase != entitlement.purchase
+        or first.source_work != entitlement.source_work
         or first.issues[0] != entitlement.issues[0]
         or issued is None
         or issued.actor != entitlement.actor
@@ -87,6 +88,32 @@ def proof(c: Connection, store: OnboardingStore, entitlement: PersonalFirearmGra
         if receipt is None:
             raise WorkflowError("SOURCE_ACQUISITION_MISSING: recover the actual paid source.")
         purchase_proof(c, store, receipt)
+    else:
+        from girlframe.services.m3_enforcer_requisitions import prove_replacement_rule
+
+        if entitlement.source_work is None:
+            raise WorkflowError("SOURCE_PACKAGE_MISSING: recover the original free issue package.")
+        prove_replacement_rule(
+            c,
+            store,
+            entitlement.actor,
+            first.frame_instance,
+            rules.RULE,
+            entitlement.source_work,
+            entitlement.source_event,
+        )
+        original_sheet = first_state.sheets.get(entitlement.actor.entity) if first_state else None
+        issue = first.issues[0]
+        if (
+            original_sheet is None
+            or original_sheet.character_id != entitlement.actor.incarnation
+            or not any(x.id == issue.asset and x.family == "girl" for x in original_sheet.assets)
+            or issue.replaces_asset is not None
+            and any(x.id == issue.replaces_asset for x in original_sheet.assets)
+        ):
+            raise WorkflowError(
+                "Recover the actual original free pistol and owned cap replacement."
+            )
     if first.frame_instance != entitlement.frame_instance:
         transfer = next(
             (

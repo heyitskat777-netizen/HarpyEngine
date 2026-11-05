@@ -52,6 +52,8 @@ def actual_asset(state: GameState, item: HeldItem) -> AssetState | None:
             return None
         return next((x for x in sheet.assets if x.id == item.asset_id), None)
     saved = AssetState.model_validate_json(item.asset_json)
+    if saved.battery_asset is not None:
+        raise ValueError("A link-only mental Asset cannot become a physical carried object")
     if saved.id != item.asset_id:
         raise ValueError("Recover the actual mechanical Item's source-bound Asset identity")
     return saved
@@ -112,6 +114,8 @@ def take(
         )
         if source_asset is None:
             raise ValueError("Choose an actual accessible Girl Asset, not an invented held object")
+        if source_asset.battery_asset is not None:
+            raise ValueError("A temporary direct-link mental Asset is not a physical held object")
         identity = asset_item_id(source, source_asset.id)
         existing = next(
             (

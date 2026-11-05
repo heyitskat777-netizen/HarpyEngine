@@ -20,7 +20,7 @@ class Outcome(Model):
     followups: tuple[Followup, ...] = ()
 
 
-def nearby(state: GameState, actor: ActorRef, cast_npcs: tuple[str, ...]) -> tuple[str, ...]:
+def nearby_all(state: GameState, actor: ActorRef, cast_npcs: tuple[str, ...]) -> tuple[str, ...]:
     if state.world is None:
         return ()
     body = next((x for x in state.placements if x.actor == actor), None)
@@ -29,10 +29,43 @@ def nearby(state: GameState, actor: ActorRef, cast_npcs: tuple[str, ...]) -> tup
         from girlframe.engine.m3_harpy_defeat import harpy
 
         cell = harpy(state, actor).cell
+    if actor.kind == "npc":
+        cell = next((x.cell for x in state.world.npcs if x.id == actor.entity), None)
+    from girlframe.engine.m3_passengers import passenger_view
+
+    passenger = passenger_view(state, actor)
+    if passenger is not None:
+        from girlframe.engine.m3_actors import frame_position
+
+        cell = frame_position(state, passenger.carrier, passenger.frame, fallback=passenger.cell)
     return tuple(
         x.id
         for x in state.world.npcs
         if x.alive and (x.id in cast_npcs or cell is not None and x.cell == cell)
+    )
+
+
+def nearby(state: GameState, actor: ActorRef, cast_npcs: tuple[str, ...]) -> tuple[str, ...]:
+    all_ids = nearby_all(state, actor, cast_npcs)
+    return (
+        tuple(x.id for x in state.world.npcs if x.id in all_ids and "director" not in x.jobs)
+        if state.world
+        else ()
+    )
+
+
+def nearby_directors(
+    state: GameState, actor: ActorRef, cast_npcs: tuple[str, ...]
+) -> tuple[ActorRef, ...]:
+    all_ids = nearby_all(state, actor, cast_npcs)
+    return (
+        tuple(
+            ActorRef(kind="npc", entity=x.id)
+            for x in state.world.npcs
+            if x.id in all_ids and "director" in x.jobs
+        )
+        if state.world
+        else ()
     )
 
 
@@ -183,6 +216,9 @@ def apply(
         )
         if identity is None:
             raise ValueError("Choose one current ordinary unprotected Identity")
+        from girlframe.engine.m3_leviathan_obsession import require_identity_change
+
+        require_identity_change(state, actor, (identity.id,))
         if option == "erase_identity_and_table_question":
             if not effect.question.strip():
                 raise ValueError("Ask the actual question for the table")
@@ -226,7 +262,9 @@ def apply(
             sheet.revision += 1
     elif option == "nearby_npcs_gain_void":
         expected = nearby(state, actor, cast_npcs)
-        if not expected or {x.npc for x in effect.npcs} != set(expected):
+        if (not expected and not nearby_directors(state, actor, cast_npcs)) or {
+            x.npc for x in effect.npcs
+        } != set(expected):
             raise ValueError(
                 "Apply one Handler-owned manifestation to every actual nearby living NPC"
             )

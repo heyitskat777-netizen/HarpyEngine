@@ -90,7 +90,7 @@ class NativeForm(discord.ui.View):
         title: str,
         instructions: str,
         fields: list[Field],
-        submit: Callable[[discord.Interaction, dict[str, Any]], Awaitable[str]],
+        submit: Callable[[discord.Interaction, dict[str, Any]], Awaitable[str | None]],
         *,
         values: dict[str, Any] | None = None,
     ):
@@ -220,7 +220,10 @@ class NativeForm(discord.ui.View):
             return
         self.completed = True
         self.stop()
-        await reply(interaction, message)
+        # A multi-step callback returns None after presenting its next screen.
+        # Do not replace those controls with an empty/plain completion reply.
+        if message is not None:
+            await reply(interaction, message)
 
 
 async def threaded(operation: Callable[[], Any]) -> Any:

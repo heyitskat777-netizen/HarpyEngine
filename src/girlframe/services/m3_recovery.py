@@ -125,6 +125,7 @@ def capture(
         and (
             root["data"]["play"] in (*PLAY_IDS, *HEAT_IDS)
             or root["data"].get("gorgon_play", {}).get("started") is False
+            or root["data"].get("leviathan_obsession", {}).get("started") is False
         )
         and not root["data"]["choices"]
     )
@@ -204,6 +205,10 @@ class RecoveryService:
                 from girlframe.services.m3_gorgon_play import GorgonPlayService
 
                 GorgonPlayService(self.game).authorize(c, viewer, action)
+            elif action["data"].get("leviathan_obsession"):
+                from girlframe.services.m3_leviathan_obsession import ObsessionService
+
+                ObsessionService(self.game).authorize(c, viewer, action)
             else:
                 Access(self.store).authorize(c, viewer, "plays")
             if action["actor_id"] != str(viewer.user_id) or action["parent_id"] is not None:
@@ -213,7 +218,9 @@ class RecoveryService:
                 c,
                 viewer,
                 action,
-                director_response=bool(action["data"].get("gorgon_play")),
+                director_response=bool(
+                    action["data"].get("gorgon_play") or action["data"].get("leviathan_obsession")
+                ),
             )
 
         def operation(c: Connection) -> dict[str, Any]:
@@ -281,32 +288,46 @@ class RecoveryService:
                     or saved.cancellable != snapshot.cancellable
                     or fingerprint(data) != saved.body_sha256
                     or action["scene_id"] != root["scene_id"]
+                    or action["channel_id"] != root["channel_id"]
+                    or (
+                        "prepared" in data and data["prepared"].get("parent") != action["parent_id"]
+                    )
                 ):
                     raise WorkflowError(
                         "The saved interruption evidence changed; recover it explicitly."
                     )
                 if not cancel:
-                    gorgon_chain = bool(
-                        root["data"].get("gorgon_play")
-                        and (
-                            action["id"] == root["id"]
-                            or action["data"].get("gorgon_counter_source")
-                        )
-                    )
-                    if gorgon_chain:
+                    gorgon_chain = bool(root["data"].get("gorgon_play"))
+                    leviathan_chain = bool(root["data"].get("leviathan_obsession"))
+                    if leviathan_chain:
+                        from girlframe.services.m3_leviathan_obsession import ObsessionService
+
+                        ObsessionService(self.game).current(c, root)
+                    elif gorgon_chain:
                         from girlframe.services.m3_gorgon_play import (
                             allowed_archived,
                             recovery_cast,
                         )
 
                         recovery_cast(self.game, c, state, root)
+                        ancestor, seen = action, set()
+                        while ancestor["id"] != root["id"]:
+                            if (
+                                ancestor["id"] in seen
+                                or ancestor["parent_id"] not in snapshot.nodes
+                            ):
+                                raise WorkflowError("Recover the actual saved response ancestry")
+                            seen.add(ancestor["id"])
+                            ancestor = self.game.action(c, ancestor["parent_id"])
                         if action["data"].get("actor_basic"):
                             from girlframe.services.m3_actor_plays import ActorPlayService
 
                             actual = ActorPlayService(self.game).validate(c, state, action)
-                            if actual.ref.model_dump(mode="json") != action["data"][
-                                "gorgon_counter_source"
-                            ].get("actor") or actual.controller != int(action["actor_id"]):
+                            counter = action["data"].get("gorgon_counter_source")
+                            if actual.controller != int(action["actor_id"]) or (
+                                counter is not None
+                                and actual.ref.model_dump(mode="json") != counter.get("actor")
+                            ):
                                 raise WorkflowError("Recover the original response body's role")
                         else:
                             self.game.action_characters(
@@ -321,8 +342,10 @@ class RecoveryService:
                         "procedural_gm", action["data"]["handler"]
                     ) != state.handler:
                         raise WorkflowError("The original response Handler changed.")
-                    if not gorgon_chain and set(scene["participants"]) != set(
-                        action["data"]["participants"]
+                    if (
+                        not gorgon_chain
+                        and not leviathan_chain
+                        and set(scene["participants"]) != set(action["data"]["participants"])
                     ):
                         raise WorkflowError("Recover the original scene participants first.")
                     if any(

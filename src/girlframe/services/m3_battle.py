@@ -1404,6 +1404,9 @@ def _apply_fatal(
                         )
                     }
                 )
+    from girlframe.engine.m3_leviathan_obsession import release_dead_sources
+
+    state = release_dead_sources(state, event)
     meta["fatal_event"] = event
     meta["fatal_pending"] = False
     game.save_action(c, action)
@@ -1432,6 +1435,10 @@ def _apply_fatal(
         target=target.model_dump(mode="json"),
     )
     synchronize_casts(game, c, event)
+    if target.kind == "gorgon":
+        from girlframe.services.m3_gorgon_dormant import synchronize_endings as end_gorgon_costs
+
+        end_gorgon_costs(game, c, event, viewer, key)
     if target.kind == "external_pilot" and rules.category(state, target) == "harpy":
         from girlframe.services.m3_harpy_rest import synchronize_endings
 
@@ -2455,11 +2462,14 @@ class BattleService:
                     raise WorkflowError(
                         "The opposing Asset must actually be revealed in Conversation."
                     )
-            core = (
-                rules.core_available(state, declaration.target, declaration.actor, bound)
-                if declaration.play == "go_for_the_core"
-                else None
-            )
+            try:
+                core = (
+                    rules.core_available(state, declaration.target, declaration.actor, bound)
+                    if declaration.play == "go_for_the_core"
+                    else None
+                )
+            except ValueError as error:
+                raise WorkflowError(str(error)) from None
             handler, appointment = MedicalService(self.store)._handler(c)
             judge, judge_controller, judge_source = _scene_judge(self.game, c, state, cast)
             event = str(uuid4())
@@ -2665,6 +2675,18 @@ class BattleService:
                     "STALE_BATTLE: actual bodies or resources changed before review."
                 )
             event = str(uuid4())
+            prior_dormant_wake = None
+            if (
+                value.declaration.target.kind == "gorgon"
+                and state.world is not None
+                and any(
+                    x.id == value.declaration.target.entity and x.gorgon_class == "dormant"
+                    for x in state.world.gorgons
+                )
+            ):
+                from girlframe.services.m3_gorgon_dormant import awakened_source
+
+                prior_dormant_wake = awakened_source(self.game, c, state, value.declaration.target)
             if dormant_awakened or dormant_close:
                 if (
                     value.declaration.target.kind != "gorgon"
@@ -2677,11 +2699,7 @@ class BattleService:
                     raise WorkflowError(
                         "Only this actual Dormant Gorgon's genuine awakening has this cost."
                     )
-                if any(
-                    x.get("kind") == "dormant_awakening"
-                    and x.get("gorgon") == value.declaration.target.entity
-                    for x in state.facts
-                ):
+                if prior_dormant_wake is not None:
                     raise WorkflowError(
                         "This original Gorgon is already awake; use actual close-contact controls."
                     )
@@ -2822,6 +2840,7 @@ class BattleService:
         opponent: ActorRef | None = None,
         willing: bool = False,
         tag: str | None = None,
+        scene: str | None = None,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             state = load_state(c, self.store.campaign_id)
@@ -2830,6 +2849,25 @@ class BattleService:
             bound = profiles(c, self.store.campaign_id)
             actual = resolve(state, target, bound, require_current_profile=False)
             human, appointment = MedicalService(self.store)._handler(c)
+            if scene is not None:
+                scenes = t.m2["m2_scenes"]
+                channel = c.scalar(
+                    sa.select(scenes.c.channel_id).where(
+                        scenes.c.campaign_id == self.store.campaign_id,
+                        scenes.c.id == scene,
+                        scenes.c.open.is_(True),
+                    )
+                )
+                if channel is None:
+                    raise WorkflowError("STALE_CORE: reopen the actual original scene")
+                cast = _cast(self.game, c, state, int(channel))
+                if cast.id != scene:
+                    raise WorkflowError("STALE_CORE: reopen the actual original scene")
+                if not any(x.id == cast.id for x in state.scene_casts):
+                    # This port proves actual legacy joins from immutable events.
+                    # Persist that exact cast; no invented roles or controllers.
+                    state.scene_casts.append(cast)
+                _, human, _ = _scene_judge(self.game, c, state, cast)
             if willing:
                 if viewer.user_id != actual.controller:
                     raise WorkflowError(
@@ -2841,7 +2879,15 @@ class BattleService:
                 )
             event = str(uuid4())
             state = rules.expose_frame(
-                state, target, bound, event, account, opponent=opponent, willing=willing, tag=tag
+                state,
+                target,
+                bound,
+                event,
+                account,
+                opponent=opponent,
+                willing=willing,
+                tag=tag,
+                scene=scene,
             )
             self.game.event(
                 c,
@@ -2856,18 +2902,21 @@ class BattleService:
             )
             return dict(event=event, target=target.model_dump(mode="json"))
 
+        command = dict(
+            revision=revision,
+            target=target.model_dump(mode="json"),
+            opponent=opponent.model_dump(mode="json") if opponent else None,
+            account=account,
+            willing=willing,
+            tag=tag,
+        )
+        if scene is not None:
+            command["scene"] = scene
         return self.store._write(
             viewer,
             key,
             "m3.battle_frame_exposed",
-            dict(
-                revision=revision,
-                target=target.model_dump(mode="json"),
-                opponent=opponent.model_dump(mode="json") if opponent else None,
-                account=account,
-                willing=willing,
-                tag=tag,
-            ),
+            command,
             operation,
             auto_audit=False,
             authorize=lambda c: authorize(self.game, c, viewer),

@@ -1,5 +1,11 @@
 # M3 completion audit and bounded delivery plan
 
+Current execution policy: [Development workflow](DEVELOPMENT_WORKFLOW.md), adopted
+2026-11-05. Use two implementation agents by default, fixed workflow contracts,
+focused expected-behavior checks and one final integrated verification phase.
+Its current delivery order supersedes the older staffing and exhaustive test
+instructions below. The historical audit and full M3 backlog remain preserved.
+
 Audit date: 2026-11-04. Committed baseline: `2c689fb` on `codex/m3-rules`.
 Owner requested this audit after questioning the earlier 600-credit estimate.
 **M3 remains RULES_SUBSET. No defensible completion percentage or credit forecast

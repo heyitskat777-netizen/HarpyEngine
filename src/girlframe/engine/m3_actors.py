@@ -126,6 +126,9 @@ def frame_position(
         for x in state.harpy_travels
     ):
         return None
+    pose = next((x for x in state.external_poses if x.actor == owner and x.frame == instance), None)
+    if pose is not None:
+        return pose.frame_cell
     transformed = next(
         (
             x
@@ -204,6 +207,121 @@ def resolve(
         require_current_profile=require_current_profile,
         _physical_seen=_physical_seen,
     )
+    from girlframe.engine.m3_janus_storage import active as stored_void
+
+    stored = stored_void(state, ref)
+    if stored:
+        asset_ids = {x.asset for x in stored}
+        actual = actual.model_copy(update={
+            "assets": tuple(x.model_copy(update={"void": True}) if x.id in asset_ids else x
+                            for x in actual.assets),
+            "source_sha256": hashlib.sha256((actual.source_sha256 + "".join(
+                x.model_dump_json() for x in stored
+            )).encode()).hexdigest(),
+        })
+    if state.external_poses or state.leviathan_arrivals:
+        from girlframe.engine.m3_leviathan_arrival import body_pose, external_pose
+
+        pose = external_pose(state, ref)
+        arrival = body_pose(state, ref)
+        if pose is not None:
+            actual = actual.model_copy(
+                update={
+                    "cell": pose.girl_cell,
+                    "frame_cell": pose.frame_cell,
+                    "inside_frame": pose.mode != "outside_frame",
+                    "piloting": pose.mode == "piloting",
+                    "frame_instance": pose.frame,
+                    "occupied_frame_instance": pose.frame if pose.mode != "outside_frame" else None,
+                    "position_sha256": fingerprint(pose),
+                    "source_sha256": hashlib.sha256(
+                        (actual.source_sha256 + fingerprint(pose)).encode()
+                    ).hexdigest(),
+                }
+            )
+        elif arrival is not None and ref.kind == "npc" and arrival.custody == actual.custody:
+            actual = actual.model_copy(
+                update={
+                    "cell": arrival.cell,
+                    "position_sha256": fingerprint(arrival),
+                    "source_sha256": hashlib.sha256(
+                        (actual.source_sha256 + fingerprint(arrival)).encode()
+                    ).hexdigest(),
+                }
+            )
+    if state.leviathan_identity_authorities:
+        from girlframe.engine.m3_leviathan_obsession import authority, pool
+
+        imported = authority(state, ref)
+        if imported is not None:
+            imported_values = (
+                actual.identities
+                if imported.role == "harpy_review"
+                else tuple(
+                    IdentityView(
+                        id=x.id,
+                        name=x.name,
+                        marked=x.marked,
+                        protected=x.protected,
+                        paired=x.paired,
+                        slot=x.slot,
+                    )
+                    for x in pool(state, ref)
+                )
+            )
+            actual = actual.model_copy(
+                update={
+                    "identities": imported_values,
+                    "source_sha256": hashlib.sha256(
+                        (actual.source_sha256 + fingerprint(imported)).encode()
+                    ).hexdigest(),
+                }
+            )
+    if state.passengers:
+        from girlframe.engine.m3_passengers import passenger_view
+        from girlframe.engine.m3_passengers import same_body as same_passenger_body
+
+        passenger = passenger_view(state, ref)
+        if passenger is not None:
+            if passenger.controller != actual.controller:
+                raise ValueError("Recover the actual original passenger's controller")
+            cell = frame_position(
+                state, passenger.carrier, passenger.frame, fallback=passenger.cell
+            )
+            actual = actual.model_copy(
+                update=dict(
+                    cell=cell,
+                    inside_frame=True,
+                    piloting=False,
+                    occupied_frame_instance=passenger.frame,
+                    subsumed=passenger.subsumed,
+                    vitals_active=passenger.vitals_active,
+                    position_sha256=fingerprint(passenger),
+                    source_sha256=hashlib.sha256(
+                        (actual.source_sha256 + fingerprint(passenger) + str(cell)).encode()
+                    ).hexdigest(),
+                )
+            )
+        elif ref.kind not in ("pilot", "external_pilot"):
+            extracted = next(
+                (
+                    x
+                    for x in reversed(state.passengers)
+                    if same_passenger_body(state, x.actor, ref) and x.state == "left"
+                ),
+                None,
+            )
+            if extracted is not None and not extracted.vitals_active:
+                actual = actual.model_copy(
+                    update={
+                        "vitals_active": False,
+                        "cell": extracted.cell,
+                        "position_sha256": fingerprint(extracted),
+                        "source_sha256": hashlib.sha256(
+                            (actual.source_sha256 + fingerprint(extracted)).encode()
+                        ).hexdigest(),
+                    }
+                )
     travel = offstage_travel(state, ref)
     if travel is None:
         return actual
@@ -269,7 +387,12 @@ def _resolve(
         (
             x
             for x in reversed(state.facts)
-            if x.get("kind") in ("recorded_handler_recovery_position", "handler_transport_arrived")
+            if x.get("kind")
+            in (
+                "recorded_handler_recovery_position",
+                "handler_transport_arrived",
+                "leviathan_actual_arrival",
+            )
             and same_physical_role(ActorRef.model_validate_json(x["actor"]))
         ),
         None,
@@ -285,6 +408,48 @@ def _resolve(
             ):
                 raise ValueError("Recover the actual Handler's recorded physical source")
             handler_cell = (recorded[0], recorded[1])
+    from girlframe.engine.m3_janus import find as find_core
+    from girlframe.engine.m3_janus import has_tag
+    from girlframe.engine.m3_janus import position as core_position
+
+    janus = find_core(state, ref)
+    if janus is not None:
+        if require_alive and not janus.alive:
+            raise ValueError("Use the actual living original JANUS Core")
+        resource_view, resource_source = harpy_resource_view(state, ref)
+        located = core_position(state, janus)
+        return ActorView(
+            ref=ref,
+            controller=janus.controller,
+            label="Harpy Core",
+            alive=janus.alive,
+            rules="external_pilot",
+            girl="harpy",
+            frame="JANUS-B" if janus.attached or janus.linked else None,
+            frame_instance=janus.frame_instance if janus.attached or janus.linked else None,
+            heat=janus.heat,
+            assets=resource_view,
+            identities=identities(janus.identities),
+            cell=located,
+            vessel_id=janus.body_vessel,
+            frame_cell=located if janus.attached else janus.frame_cell if janus.linked else None,
+            inside_frame=janus.attached,
+            piloting=janus.linked
+            and janus.takeover_event is not None
+            and not has_tag(janus, "restrained")
+            and not janus.frame_shutdown,
+            subsumed=janus.subsumed,
+            vitals_active=janus.vitals_active,
+            occupied_frame_instance=janus.frame_instance if janus.attached else None,
+            core_exposed=janus.exposed,
+            custody=janus.custody,
+            position_sha256=hashlib.sha256(
+                (fingerprint(janus) + str(located)).encode()
+            ).hexdigest(),
+            source_sha256=hashlib.sha256(
+                (fingerprint(janus) + resource_source).encode()
+            ).hexdigest(),
+        )
     if ref.kind == "pilot":
         uid = int(ref.entity)
         sheet = state.sheets.get(ref.entity)
@@ -493,7 +658,7 @@ def _resolve(
             rules="handler",
             cell=handler_cell,
             custody="supervised_visit:" + journey.id if journey is not None else None,
-            heat=state.handler_heat,
+            heat=None,
             source_sha256=hashlib.sha256(
                 json.dumps(
                     {
@@ -637,9 +802,13 @@ def _resolve(
     gorgon = next((x for x in world.gorgons if x.id == ref.entity), None)
     if gorgon is None or state.handler is None or (require_alive and not gorgon.alive):
         raise ValueError("Choose a living actual Gorgon under the current facilitator")
+    from girlframe.engine.m3_janus_pandora import child_record, newborn_controller
+
+    birth = child_record(state, ref)
+    controller = newborn_controller(state, ref) or state.handler
     return ActorView(
         ref=ref,
-        controller=state.handler,
+        controller=controller,
         label=gorgon.name,
         alive=gorgon.alive,
         rules="gorgon",
@@ -647,7 +816,11 @@ def _resolve(
         cell=None if journey is not None else gorgon.cell,
         custody="supervised_visit:" + journey.id if journey is not None else None,
         core_exposed=gorgon.exposed,
-        source_sha256=fingerprint(gorgon),
+        source_sha256=hashlib.sha256(
+            (fingerprint(gorgon) + fingerprint(birth) + str(controller)).encode()
+        ).hexdigest()
+        if birth
+        else fingerprint(gorgon),
     )
 
 
@@ -655,6 +828,11 @@ def owned_refs(
     state: GameState, controller: int, profiles: tuple[ProfileBinding, ...]
 ) -> tuple[ActorRef, ...]:
     refs: list[ActorRef] = []
+    refs.extend(
+        ActorRef(kind="external_pilot", entity=x.id)
+        for x in state.janus_cores
+        if x.controller == controller and x.alive
+    )
     refs.extend(
         ActorRef(kind="external_pilot", entity=x.id)
         for x in state.harpy_states
@@ -695,10 +873,13 @@ def owned_refs(
             for x in state.world.pilots
             if x.controller == controller and x.alive
         )
-        if state.handler == controller:
-            refs.extend(
-                ActorRef(kind="gorgon", entity=x.id) for x in state.world.gorgons if x.alive
-            )
+        refs.extend(
+            ActorRef(kind="gorgon", entity=x.id)
+            for x in state.world.gorgons
+            if x.alive
+            and resolve(state, ActorRef(kind="gorgon", entity=x.id), profiles).controller
+            == controller
+        )
     return tuple(refs)
 
 

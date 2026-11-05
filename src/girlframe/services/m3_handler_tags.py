@@ -60,6 +60,7 @@ class HandlerTagService:
         girl: ActorRef,
         handler_ref: ActorRef | None = None,
     ) -> dict[str, Any]:
+        from girlframe.engine.m3_budget_tags import persistent
         from girlframe.services.m3_battle import _cast
 
         state = load_state(c, self.store.campaign_id)
@@ -116,7 +117,11 @@ class HandlerTagService:
             handler=handler.model_dump(mode="json"),
             targets=targets,
             scene=cast.id,
-            tags=[dict(id=tag.id, label=tag.label) for tag in tags],
+            tags=[
+                dict(id=tag.id, label=tag.label)
+                | ({"persistent": True} if persistent(state, handler, tag.id) else {})
+                for tag in tags
+            ],
             source_sha256=hashlib.sha256(
                 json.dumps(
                     dict(
@@ -181,6 +186,9 @@ class HandlerTagService:
             if view["source_sha256"] != expected:
                 raise WorkflowError("STALE_HANDLER_TAG: refresh the actual Tag and original roles")
             state = load_state(c, self.store.campaign_id)
+            from girlframe.services.m3_budget_tags import prove_persistent
+
+            prove_persistent(c, self.game, state, ActorRef.model_validate(view["handler"]), tag)
             identity, event = str(uuid4()), str(uuid4())
             changed, value = rules.consume(
                 state,
@@ -224,7 +232,9 @@ class HandlerTagService:
                     ),
                     event,
                 )
-            return dict(id=identity, state=value.state, revision=value.revision)
+            return dict(id=identity, state=value.state, revision=value.revision) | (
+                {"persistent": True} if value.persistent else {}
+            )
 
         try:
             return self.store._write(
@@ -259,7 +269,7 @@ class HandlerTagService:
         from girlframe.services.m3_actor_plays import ActorPlayService
 
         changed: list[str] = []
-        if value.handler.kind != "handler":
+        if value.handler.kind != "handler" or value.persistent:
             return changed
         actions, choices = t.m2["m2_actions"], t.m2["m2_choices"]
         for identity in c.scalars(

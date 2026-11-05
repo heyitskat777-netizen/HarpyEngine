@@ -137,7 +137,7 @@ async def open_handler_tags(
             values["account"],
             handler_ref=ActorRef.model_validate(data["handler"]),
         )
-        return "Actual Handler Tag consumed. " + (
+        return "Actual Handler Tag used. " + (
             "The original Handler's attention notice is in /character requests."
             if result["state"] == "resolved"
             else "The original Handler's private reply is in /character requests."
@@ -146,13 +146,17 @@ async def open_handler_tags(
     await NativeForm(
         interaction.user.id,
         "Use an observed Handler Tag",
-        "Remove one actual Tag for its printed effect. "
+        "Use one actual Tag for its printed effect. "
+        "Ordinary Tags are removed; persistent Tags remain. "
         "A favour may be declined; no Heat or dice are involved.",
         [
             Field(
                 "tag",
                 "Observed Handler Tag",
-                tuple((tag["id"], tag["label"]) for tag in data["tags"]),
+                tuple(
+                    (tag["id"], tag["label"] + (" (persistent)" if tag.get("persistent") else ""))
+                    for tag in data["tags"]
+                ),
             ),
             Field(
                 "kind",

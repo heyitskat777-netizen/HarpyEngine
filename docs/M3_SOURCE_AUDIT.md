@@ -3,6 +3,13 @@
 Status: IN_PROGRESS / RULES_SUBSET. This is not a complete branch audit or an
 independent rules certification. M3 is not complete.
 
+Latest focused development records 219 adjustable clarifications and 120 subset /
+353 unimplemented entries, including the 37 deferred Ancillary entries. No entry
+has independent verification. The combined normal-path checkpoint passes 15
+tests; the 2,200-test full regression below covers an earlier committed source.
+JANUS Storage remains a partial unavailable acquisition. See the latest
+[acceptance evidence](../reports/M3_ACCEPTANCE.md); older counts below are historical.
+
 The supplied rulebook has 205 PDF pages; its patch notes identify the 2.0 rewrite
 and list a latest update of 2026-09-01. The official sheets have 56 PDF pages.
 Verified anchors use actual PDF pages and printed pages separately. Source

@@ -1,5 +1,12 @@
 # M3 — published rules, missions and recovery
 
+Owner update, 2026-11-05: follow [DEVELOPMENT_WORKFLOW.md](../DEVELOPMENT_WORKFLOW.md)
+for execution and verification. Use two implementation agents by default, fixed
+deliverables and expected-behavior/base-functionality checks, with targeted changed
+integrity checks and final integrated validation. This supersedes the exhaustive
+per-change test requirements below; it does not reduce required M3 functionality
+or turn unsupported behavior into completed rules.
+
 Status: IN_PROGRESS / RULES_SUBSET; independent and human acceptance NOT_RUN.
 The owner explicitly instructed “Lets begin on M3” after approving the M2 migration
 and restart. This authorizes M3 development; it does not record an independent M2

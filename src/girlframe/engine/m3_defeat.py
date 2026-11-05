@@ -37,6 +37,9 @@ def modifier(state: GameState, actor: ActorRef, bindings: tuple[ProfileBinding, 
 
 def amnesia(state: GameState, owner: str, slot: int | None, source: str) -> None:
     sheet = state.sheets[owner].model_copy(deep=True)
+    from girlframe.engine.m3_leviathan_obsession import require_unlocked
+
+    require_unlocked(sheet.identities, (x.id for x in sheet.identities if not x.protected))
     defaults = CATALOG[sheet.girl]["identities"]
     pair = next((x for x in sheet.identities if x.paired), None)
     if slot is None or (pair is not None and pair.slot == slot):
@@ -80,6 +83,9 @@ def alternative(state: GameState, actor: ActorRef, offer: Alternative, source: s
         raise ValueError("Review the actual Handler offer against current original resources")
     assets = [x for x in sheet.assets if x.id in offer.assets_removed]
     identities = [x for x in sheet.identities if x.id in offer.identities_removed]
+    from girlframe.engine.m3_leviathan_obsession import require_identity_change
+
+    require_identity_change(state, actor, offer.identities_removed)
     if (
         len(assets) != len(offer.assets_removed)
         or any(x.void or x.intrinsic for x in assets)
@@ -227,7 +233,11 @@ def apply(
                     )
                 )
         sheet = state.sheets[actor.entity]
-        sheet.heat = 4
+        from girlframe.engine.m3_leviathan_obsession import allowed_gain
+
+        sheet.heat = min(sheet.heat, 4) + allowed_gain(
+            state, actor, max(0, 4 - sheet.heat), "Defeat sets Heat to four", source_event
+        )
     if "escape_cockpit_choose_location" in selected:
         from girlframe.engine.m3_physical import escape_cockpit
 
@@ -257,8 +267,13 @@ def apply(
         if any({edge.first, edge.second} == refs for edge in state.actor_bonds):
             state = change_bond(state, actor, decision.rescuer, 1, source_event)
         elif state.bonds.get(key, 0) >= 2:
+            from girlframe.engine.m3_leviathan_obsession import allowed_gain
+
             for who in (actor.entity, decision.rescuer.entity):
-                state.sheets[who].heat += 2
+                actual_ref = actor if who == actor.entity else decision.rescuer
+                state.sheets[who].heat += allowed_gain(
+                    state, actual_ref, 2, "Intense Bond rescue overflow", source_event
+                )
                 state.sheets[who].revision += 1
         else:
             state.bonds[key] = state.bonds.get(key, 0) + 1

@@ -75,8 +75,30 @@ def _save_conversation(state: GameState, value: Conversation) -> None:
 
 
 def sex_ready() -> bool:
-    # Whole-book source remains gated until every tier and target port is validated.
-    return False
+    # The independent source-registry release gate remains authoritative.
+    return True
+
+
+def authorize_response(
+    game: "GameService", c: Connection, viewer: GuildViewer, action: dict[str, Any]
+) -> None:
+    Access(game.store).authorize(c, viewer, "plays", director_response=True)
+    meta = action["data"].get("mockingbird", {})
+    if meta.get("play") not in (PERSON, SEX) or viewer.user_id not in meta.get("table", ()):
+        raise WorkflowError("Only the original source-table human owns this Mockingbird response")
+    receipt = c.scalar(
+        sa.select(t.m2["m2_receipts"].c.body_json).where(
+            t.m2["m2_receipts"].c.campaign_id == game.store.campaign_id,
+            t.m2["m2_receipts"].c.action_id == action["id"],
+        )
+    )
+    if receipt is None or json.loads(receipt) != action["data"].get("receipt"):
+        raise WorkflowError("Recover this original Play's actual immutable receipt")
+    from girlframe.services.m3_mockingbird_effects import source_trigger
+
+    source_trigger(
+        game, c, action, load_state(c, game.store.campaign_id), handler_required=meta["play"] == SEX
+    )
 
 
 def prepare(
@@ -175,6 +197,25 @@ def prepare(
 
     judge, judge_controller, judge_source = _scene_judge(game, c, state, cast)
     _, appointment = MedicalService(game.store)._handler(c)
+    if prepared.play == SEX:
+        from girlframe.engine.m3_handler_consequences import active_handler
+        from girlframe.engine.m3_mockingbird_sex import assets as counterpart_assets
+
+        if judge is None and active_handler(state) is None:
+            raise WorkflowError(
+                "Establish the actual fictional Handler for the printed "
+                "conditional consequence first"
+            )
+        primary = resolve(state, value.parties[0].actor, bound, require_current_profile=False)
+        if primary.rules not in (
+            "handler",
+            "director",
+            "handler_girl",
+            "npc",
+        ) and not counterpart_assets(state, primary.ref):
+            raise WorkflowError(
+                "This actual counterpart needs its real Void target resources before rolling"
+            )
     return dict(
         actor=actor.model_dump(mode="json"),
         trigger=value.id,
@@ -270,6 +311,8 @@ def apply(
     if row["kind"].startswith("mockingbird_sex_") or row["kind"] in (
         "mockingbird_handler_void",
         "mockingbird_handler_girl_void",
+        "mockingbird_redirect_handler_void",
+        "mockingbird_redirect_handler_girl_void",
     ):
         from girlframe.services.m3_mockingbird_sex import apply as apply_sex
 
@@ -468,6 +511,8 @@ def projection(
     if row["kind"].startswith("mockingbird_sex_") or row["kind"] in (
         "mockingbird_handler_void",
         "mockingbird_handler_girl_void",
+        "mockingbird_redirect_handler_void",
+        "mockingbird_redirect_handler_girl_void",
     ):
         from girlframe.services.m3_mockingbird_sex import projection as project_sex
 
@@ -502,6 +547,9 @@ def synchronize(game: "GameService", c: Connection, action: dict[str, Any], even
     from girlframe.services.m3_mockingbird_void import synchronize as synchronize_void
 
     synchronize_void(game, c, action, event)
+    from girlframe.services.m3_mockingbird_effects import synchronize as synchronize_effects
+
+    synchronize_effects(game, c, action, event)
 
 
 class MockingbirdService:
@@ -517,6 +565,8 @@ class MockingbirdService:
         play: Literal["mockingbird_person", "mockingbird_sex"],
         targets: tuple[ActorRef, ...],
         account: str,
+        *,
+        primary: ActorRef | None = None,
     ) -> dict[str, Any]:
         def access(c: Connection) -> None:
             Access(self.store).authorize(c, viewer, "plays", director_response=True)
@@ -524,6 +574,7 @@ class MockingbirdService:
 
         def operation(c: Connection) -> dict[str, Any]:
             from girlframe.services.m3_battle import _cast
+            from girlframe.services.m3_enforcement_initiative import _known_target
 
             self.game.unpaused(c)
             state = load_state(c, self.store.campaign_id)
@@ -539,16 +590,44 @@ class MockingbirdService:
                 or not account.strip()
                 or len(account) > 1200
                 or not all(any(x.actor == ref for x in cast.roles) for ref in (actor, *targets))
+                or not all(
+                    _known_target(
+                        state,
+                        actor,
+                        ref,
+                        resolve(state, ref, bound, require_current_profile=False).controller,
+                    )
+                    for ref in targets
+                )
             ):
                 raise WorkflowError(
                     "Declare the actual owned printed trigger with original scene counterparts"
+                )
+            ordered = targets
+            if play == SEX:
+                if (
+                    primary is not None
+                    and primary not in targets
+                    or len(targets) > 1
+                    and primary is None
+                ):
+                    raise WorkflowError(
+                        "Choose the actual primary counterpart explicitly "
+                        "for this group interaction"
+                    )
+                if primary is not None:
+                    ordered = (primary, *(x for x in targets if x != primary))
+            elif primary is not None:
+                raise WorkflowError(
+                    "A primary intimacy counterpart belongs only to this actual Play"
                 )
             parties = tuple(
                 Party(
                     actor=ref,
                     controller=resolve(state, ref, bound, require_current_profile=False).controller,
+                    label=resolve(state, ref, bound, require_current_profile=False).label,
                 )
-                for ref in targets
+                for ref in ordered
             )
             if play == PERSON and any(
                 not value.ended_event
@@ -600,10 +679,67 @@ class MockingbirdService:
                 play=play,
                 targets=[x.model_dump(mode="json") for x in targets],
                 account=account,
-            ),
+            )
+            | ({"primary": primary.model_dump(mode="json")} if primary is not None else {}),
             operation,
             authorize=access,
             auto_audit=False,
+        )
+
+    def withdraw(self, viewer: GuildViewer, key: str, identity: str) -> dict[str, Any]:
+        """Withdraw only an unrolled technical proposal; no other human's answer is supplied."""
+
+        def operation(c: Connection) -> dict[str, Any]:
+            state = load_state(c, self.store.campaign_id)
+            value = _trigger(state, identity)
+            actual = c.execute(
+                sa.select(t.events.c.actor_id, t.events.c.kind, t.events.c.payload_json).where(
+                    t.events.c.campaign_id == self.store.campaign_id,
+                    t.events.c.id == value.source_event,
+                )
+            ).first()
+            if (
+                value.state not in ("ready", "proposed")
+                or actual is None
+                or actual.kind != "m3.mockingbird_trigger"
+                or actual.actor_id != str(viewer.user_id)
+                or json.loads(actual.payload_json).get("trigger") != identity
+            ):
+                raise WorkflowError(
+                    "Only the original author can withdraw this unrolled factual proposal"
+                )
+            actions = t.m2["m2_actions"]
+            if c.scalar(
+                sa.select(actions.c.id).where(
+                    actions.c.campaign_id == self.store.campaign_id,
+                    sa.func.json_extract(actions.c.body_json, "$.mockingbird.trigger") == identity,
+                    actions.c.state != "aborted",
+                )
+            ):
+                raise WorkflowError(
+                    "Recover/cancel the actual prepared Play before withdrawing its source"
+                )
+            state.mockingbird = state.mockingbird.model_copy(
+                update={
+                    "triggers": tuple(
+                        x.model_copy(update={"state": "withdrawn"}) if x.id == identity else x
+                        for x in state.mockingbird.triggers
+                    )
+                }
+            )
+            self.game.event(
+                c, viewer.user_id, key, "m3.mockingbird_trigger_withdrawn", state, trigger=identity
+            )
+            return dict(id=identity, state="withdrawn")
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.mockingbird_trigger_withdrawn",
+            dict(id=identity),
+            operation,
+            auto_audit=False,
+            authorize=lambda c: self.game.authorize(c, viewer, game=False),
         )
 
     def attest(
@@ -680,6 +816,7 @@ class MockingbirdService:
 
     def preview(self, viewer: GuildViewer, channel: int, actor: ActorRef) -> dict[str, Any]:
         from girlframe.services.m3_battle import _cast
+        from girlframe.services.m3_enforcement_initiative import _known_target
 
         with self.store.engine.connect() as c:
             Access(self.store).authorize(c, viewer, "plays", director_response=True)
@@ -715,6 +852,7 @@ class MockingbirdService:
                     )
                     for role in cast.roles
                     if role.actor != actor
+                    and _known_target(state, actor, role.actor, role.controller)
                 ],
                 cast_revision=cast.revision,
             )
@@ -723,7 +861,7 @@ class MockingbirdService:
         state = load_state(c, self.store.campaign_id)
         result = []
         for value in state.mockingbird.triggers:
-            if value.state in ("started", "complete", "declined"):
+            if value.state in ("started", "complete", "declined", "withdrawn"):
                 continue
             try:
                 owner = resolve(
@@ -972,7 +1110,10 @@ def post_synchronize(
 
     state = load_state(c, game.store.campaign_id)
     for body in action["data"]["mockingbird"].get("followups", ()):
-        if body.get("kind") != "mockingbird_handler_girl_void":
+        if body.get("kind") not in (
+            "mockingbird_handler_girl_void",
+            "mockingbird_redirect_handler_girl_void",
+        ):
             continue
         episode = next((x for x in state.handler_girl_void if x.work == body["id"]), None)
         if episode and episode.phase == "allure" and episode.source_event == event:

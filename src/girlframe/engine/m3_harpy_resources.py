@@ -12,9 +12,12 @@ HarpyResource = AssetState | HarpyAsset | Asset
 _MUTABLE = {"damaged", "void", "description"}
 
 
-def _base(state: GameState, actor: ActorRef) -> tuple[HarpyAsset, ...] | tuple[Asset, ...]:
+def _base(state: GameState, actor: ActorRef) -> tuple[HarpyResource, ...]:
     from girlframe.engine.m3_harpy_defeat import harpy
+    from girlframe.engine.m3_janus import base_assets, find
 
+    if find(state, actor) is not None:
+        return base_assets(state, actor)
     body = harpy(state, actor)
     if isinstance(body, HarpyState):
         return body.assets
@@ -67,7 +70,18 @@ def set_assets(
     state = GameState.model_validate_json(original.model_dump_json())
     base = _base(state, actor)
     converted = next((x for x in state.harpy_states if x.id == actor.entity), None)
-    if converted is not None:
+    from girlframe.engine.m3_janus import find, set_base_assets
+
+    if find(state, actor) is not None:
+        core_assets = tuple(
+            selected
+            for x in base
+            if isinstance(selected := proposed[x.id], (HarpyAsset, AssetState))
+        )
+        if len(core_assets) != len(base):
+            raise ValueError("JANUS resources must retain their actual Core/Frame types")
+        state = set_base_assets(state, actor, core_assets, event=event)
+    elif converted is not None:
         changed = converted.model_copy(update={"assets": tuple(proposed[x.id] for x in base)})
         state.harpy_states = [
             type(x).model_validate_json(changed.model_dump_json()) if x.id == actor.entity else x
@@ -125,8 +139,12 @@ def destroy_asset(original: GameState, actor: ActorRef, asset_id: str, *, event:
     base = _base(state, actor)
     source_item = None
     if any(x.id == asset_id for x in base):
+        from girlframe.engine.m3_janus import find, remove_base_asset
+
         body = next((x for x in state.harpy_states if x.id == actor.entity), None)
-        if body is not None:
+        if find(state, actor) is not None:
+            state = remove_base_asset(state, actor, asset_id, event=event)
+        elif body is not None:
             state.harpy_states = [
                 x.model_copy(update=dict(assets=tuple(a for a in x.assets if a.id != asset_id)))
                 if x.id == actor.entity

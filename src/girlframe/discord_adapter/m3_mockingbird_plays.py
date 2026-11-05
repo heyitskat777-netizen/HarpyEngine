@@ -52,6 +52,13 @@ async def open_book(
             minimum=1,
             maximum=max(1, len(data["targets"])),
         ),
+        Field(
+            "primary",
+            "For group Sex Play: actual primary counterpart",
+            tuple((x["token"], x["label"]) for x in data["targets"]),
+            minimum=0,
+            required=False,
+        ),
         Field("account", "Describe the actual printed trigger", paragraph=True),
     ]
 
@@ -66,6 +73,9 @@ async def open_book(
             values["play"][0],
             tuple(ActorRef.model_validate(targets[x]["ref"]) for x in values["targets"]),
             values["account"],
+            primary=ActorRef.model_validate(targets[values["primary"][0]]["ref"])
+            if values.get("primary")
+            else None,
         )
         return (
             "Actual trigger saved: "
@@ -84,10 +94,46 @@ async def open_book(
 
 
 async def open_request(
-    interaction: discord.Interaction, service: MockingbirdService, identity: str
+    interaction: discord.Interaction,
+    service: MockingbirdService,
+    identity: str,
+    *,
+    continue_source: bool = False,
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.get, viewer, identity)
+    if (
+        data["kind"] == "mockingbird_trigger"
+        and data["owner"]
+        and not data["action"]
+        and data["body"]["state"] in ("ready", "proposed")
+        and not continue_source
+    ):
+        from girlframe.discord_adapter.m3_punishments import Picker
+
+        async def choose_source(current: discord.Interaction, token: str) -> None:
+            if token == "withdraw":
+                await asyncio.to_thread(
+                    service.withdraw, viewer_from_interaction(current), str(current.id), identity
+                )
+                await reply(
+                    current,
+                    "Your unrolled technical proposal was withdrawn; "
+                    "no fictional answer or consent was recorded.",
+                )
+            else:
+                await open_request(current, service, identity, continue_source=True)
+
+        await Picker(
+            viewer.user_id,
+            "Your actual source proposal",
+            (
+                ("continue", "Review source and actual owned choices"),
+                ("withdraw", "Withdraw unrolled proposal"),
+            ),
+            choose_source,
+        ).show(interaction)
+        return
     body = data["body"]
     if data["kind"] == "mockingbird_conversation":
         if body["ended_event"]:
@@ -226,7 +272,10 @@ async def open_request(
             Field(
                 "identity",
                 "Optional actual Identity to mark",
-                tuple((x["id"], x["label"]) for x in fresh["identities"]),
+                tuple(
+                    (x["id"], x.get("label", x.get("name", "Actual Identity")))
+                    for x in fresh["identities"]
+                ),
                 minimum=0,
                 required=False,
             ),
@@ -265,7 +314,9 @@ async def open_request(
                     channel,
                     actor,
                     view["actor"]["source_sha256"],
-                    None,
+                    ActorRef.model_validate(view["adjudicator"]["ref"])
+                    if view["adjudicator"]["ref"]
+                    else None,
                     view["cast_revision"],
                     prepared,
                 )
@@ -300,7 +351,8 @@ async def open_request(
             "party",
             "Your actual counterpart role",
             tuple(
-                (str(i), ActorRef.model_validate(x["actor"]).token) for i, x in enumerate(parties)
+                (str(i), x.get("label") or "Original counterpart role " + str(i + 1))
+                for i, x in enumerate(parties)
             ),
         ),
         Field(
@@ -332,6 +384,8 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
     if data["kind"].startswith("mockingbird_sex_") or data["kind"] in (
         "mockingbird_handler_void",
         "mockingbird_handler_girl_void",
+        "mockingbird_redirect_handler_void",
+        "mockingbird_redirect_handler_girl_void",
     ):
         from girlframe.discord_adapter.m3_mockingbird_sex import open_sex
 

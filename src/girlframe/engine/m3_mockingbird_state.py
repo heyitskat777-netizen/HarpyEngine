@@ -25,6 +25,7 @@ SEX = "mockingbird_sex"
 class Party(Model):
     actor: ActorRef
     controller: Snowflake
+    label: str = Field(default="", max_length=120, exclude_if=lambda value: not value)
     decision: Literal["pending", "accepted", "declined"] = "pending"
     event: str | None = None
 
@@ -39,7 +40,7 @@ class Trigger(Model):
     cast_sha256: str = Field(min_length=1)
     source_event: str = Field(min_length=1)
     account: str = Field(min_length=1, max_length=1200)
-    state: Literal["proposed", "ready", "declined", "started", "complete"]
+    state: Literal["proposed", "ready", "declined", "withdrawn", "started", "complete"]
     action: str | None = None
 
 
@@ -85,6 +86,55 @@ class Exposure(Model):
     witness: ActorRef | None = None
     tag_event: str | None = None
     account: str = Field(default="", max_length=1200)
+    handler: ActorRef | None = Field(default=None, exclude_if=lambda value: value is None)
+    handler_controller: Snowflake | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+
+
+class Discovery(Model):
+    id: str
+    exposure: str
+    source_event: str
+    recorder: Snowflake
+    witness: ActorRef
+    witness_controller: Snowflake
+    handler: ActorRef
+    handler_controller: Snowflake
+    scene: str
+    cast_sha256: str
+    account: str = Field(min_length=1, max_length=1200)
+    revision: int = 1
+    phase: Literal["witness", "handler", "resolved", "declined", "ended"] = "witness"
+    witness_event: str | None = None
+    handler_event: str | None = None
+    tag: str | None = None
+
+
+class CallSession(Model):
+    id: str
+    source_action: str
+    source_choice: str
+    source_event: str
+    step: int = Field(ge=0)
+    actor: ActorRef
+    controller: Snowflake
+    kind: Literal["guest", "relay"]
+    revision: int = Field(default=1, ge=1)
+    phase: Literal["select", "invite", "effect", "npc", "table", "threshold", "complete"] = "select"
+    guest: ActorRef | None = None
+    guest_controller: Snowflake | None = None
+    passenger: str | None = None
+    table: tuple[Snowflake, ...] = ()
+    option: str | None = None
+    effect_json: str | None = None
+    replies_json: str = "{}"
+    proposal_revision: int = 0
+    choice_event: str | None = None
+    message: str = Field(default="", max_length=1200)
+    answer: str = Field(default="", max_length=1200)
+    account: str = Field(default="", max_length=1200)
+    completed_event: str | None = None
 
 
 class MockingbirdState(Model):
@@ -92,3 +142,5 @@ class MockingbirdState(Model):
     conversations: tuple[Conversation, ...] = ()
     starry: tuple[Starry, ...] = ()
     exposures: tuple[Exposure, ...] = ()
+    discoveries: tuple[Discovery, ...] = Field(default=(), exclude_if=lambda value: not value)
+    calls: tuple[CallSession, ...] = Field(default=(), exclude_if=lambda value: not value)

@@ -126,6 +126,29 @@ def _source(state: GameState, event: str, account: str, actor: ActorRef) -> None
 
 def _save(state: GameState, placement: Placement) -> None:
     placement = Placement.model_validate_json(placement.model_dump_json())
+    state.passengers = [x.model_copy(update=dict(
+        subsumed=placement.subsumed,vitals_active=placement.vitals_active,revision=x.revision + 1,
+    )) if x.actor==placement.actor and x.state=="boarded"
+           and occupied_frame(placement)==(x.carrier,x.frame)
+           and (x.subsumed!=placement.subsumed or x.vitals_active!=placement.vitals_active)
+           else x for x in state.passengers]
+    state.passengers = [
+        x.model_copy(
+            update=dict(
+                state="left",
+                cell=placement.girl_cell,
+                subsumed=False,
+                left_event=placement.source_event,
+                vitals_active=placement.vitals_active,
+                revision=x.revision + 1,
+            )
+        )
+        if x.actor == placement.actor
+        and x.state == "boarded"
+        and occupied_frame(placement) != (x.carrier, x.frame)
+        else x
+        for x in state.passengers
+    ]
     state.placements = [placement if x.actor == placement.actor else x for x in state.placements]
 
 
@@ -219,6 +242,23 @@ def _leave(state: GameState, placement: Placement, source_event: str, account: s
     if occupied is not None:
         owner, instance = occupied
         cell = frame_position(state, owner, instance, fallback=placement.girl_cell)
+        state.passengers = [
+            x.model_copy(
+                update=dict(
+                    state="left",
+                    cell=cell,
+                    subsumed=False,
+                    left_event=source_event,
+                    vitals_active=placement.vitals_active,
+                    revision=x.revision + 1,
+                )
+            )
+            if x.actor == placement.actor
+            and x.state == "boarded"
+            and (x.carrier, x.frame) == occupied
+            else x
+            for x in state.passengers
+        ]
     return placement.model_copy(
         update=dict(
             mode="outside_frame",
@@ -349,6 +389,11 @@ def cockpit_enter(
     placement = next((x for x in state.placements if x.actor == actor), None)
     if placement is None or type(pilot) is not bool:
         raise ValueError("Record the actual original physical facts first")
+    if pilot:
+        from girlframe.engine.m3_frame_control import active_takeover
+
+        if active_takeover(state, actor, placement.frame_instance) is not None:
+            raise ValueError("Resolve this actual Frame's source takeover before ordinary piloting")
     if (
         not placement.vitals_active
         or placement.incapacitated
@@ -400,6 +445,10 @@ def cockpit_enter(
         state,
         placement.model_copy(update=dict(mode=mode, source_event=source_event, account=account)),
     )
+    if pilot:
+        from girlframe.engine.m3_frame_control import recover_control
+
+        state = recover_control(state, actor, placement.frame_instance, source_event)
     return _finish(state, actor, source_event, account, "cockpit_enter" if pilot else "cockpit_sit")
 
 
@@ -683,6 +732,13 @@ def handler_rescue(
 
 
 def frame_voice(state: GameState, owner: ActorRef, frame_instance: str) -> int:
+    from girlframe.engine.m3_janus import bound
+
+    original_core = bound(state, owner, frame_instance)
+    if original_core is not None:
+        if not original_core.alive or not original_core.attached:
+            raise ValueError("Recover this physical JANUS's actual attached living Core voice")
+        return original_core.controller
     sheet = state.sheets.get(owner.entity)
     lock = next(
         (
@@ -718,6 +774,13 @@ def frame_voice(state: GameState, owner: ActorRef, frame_instance: str) -> int:
         ):
             raise ValueError("Recover the actual captured Harpy Core's original Frame binding")
         return harpy_core.controller
+    if (
+        same_character
+        and frame == frame_instance
+        and sheet is not None
+        and sheet.frame in ("JANUS", "JANUS-B")
+    ):
+        raise ValueError("CORE_SETUP_REQUIRED: admit this original JANUS's actual Core first")
     if state.world is not None and core_id is not None:
         npc = next((x for x in state.world.npcs if x.id == core_id), None)
         if npc is not None:

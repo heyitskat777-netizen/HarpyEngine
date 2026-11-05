@@ -9,6 +9,7 @@ from girlframe.database import tables as t
 from girlframe.engine.m2 import GameState, TagState
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_harpy_defeat_state import NativeHarpyRuntime
+from girlframe.engine.m3_janus_state import JanusCore
 from girlframe.engine.m3_void_state import HarpyState, HarpyTag
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 
@@ -23,7 +24,11 @@ def _tags(state: GameState, subject: ActorRef) -> list[TagState]:
         if same_handler_body(state, subject):
             return state.handler_tags
     if subject.kind == "external_pilot":
-        bodies: list[HarpyState | NativeHarpyRuntime] = [*state.harpy_states, *state.native_harpies]
+        bodies: list[HarpyState | NativeHarpyRuntime | JanusCore] = [
+            *state.harpy_states,
+            *state.native_harpies,
+            *state.janus_cores,
+        ]
         body = next((x for x in bodies if x.id == subject.entity), None)
         if body is not None:
             return [
@@ -156,6 +161,44 @@ def ooc_setter(
                 or human != tag.giver
                 or grant.chooser_controller != human
                 or campaign_appointment != tag.gm_setter_appointment
+            ):
+                raise ValueError()
+        if event["kind"] == "m3.janus_foundation_core_treated":
+            from girlframe.engine.m3_off_duty import Period
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_janus import prove_core
+            from girlframe.services.m3_scene_requisitions import _activation
+
+            value = prove_core(c, GameService(store), original, subject)
+            payload = json.loads(event["payload_json"])
+            raw_period = c.scalar(
+                sa.select(t.m3["m3_off_duty"].c.body_json).where(
+                    t.m3["m3_off_duty"].c.campaign_id == store.campaign_id,
+                    t.m3["m3_off_duty"].c.id == payload.get("period_id"),
+                )
+            )
+            period = Period.model_validate_json(raw_period) if raw_period else None
+            if (
+                tag.id not in value.control_tags.values()
+                or payload.get("core") != subject.model_dump(mode="json")
+                or period is None
+                or _activation(c, store, period) is None
+            ):
+                raise ValueError()
+        if event["kind"] == "m3.janus_core_admitted":
+            from girlframe.engine.m3_janus import core
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_janus import prove_core
+
+            game = GameService(store)
+            value = prove_core(c, game, original, subject)
+            if (
+                tag.id not in value.baseline_tags.values()
+                or value.judge != tag.giver
+                or value.source_event != event["id"]
+                or value.appointment != tag.gm_setter_appointment
+                or core(original, subject).source_setup
+                != json.loads(event["payload_json"]).get("setup")
             ):
                 raise ValueError()
         setup = t.setup_revisions

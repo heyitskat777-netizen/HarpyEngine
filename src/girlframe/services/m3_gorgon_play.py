@@ -126,10 +126,18 @@ class GorgonPlayService:
             gorgon = next(
                 item for item in state.world.gorgons if item.id == declaration.actor.entity
             )
-            if gorgon.gorgon_class == "benevolent" and declaration.kind in ("attack", "collateral"):
+            from girlframe.engine.m3_janus_pandora import require_can_harm, vicious
+
+            if (
+                gorgon.gorgon_class == "benevolent"
+                and not vicious(state, declaration.actor)
+                and declaration.kind in ("attack", "collateral")
+            ):
                 raise WorkflowError(
                     "A Benevolent Gorgon will not Attack or cause Collateral Damage"
                 )
+            if declaration.target is not None:
+                require_can_harm(state, declaration.actor, declaration.target)
             if not any(
                 role.actor == actual.ref and role.controller == viewer.user_id
                 for role in cast.roles
@@ -171,9 +179,10 @@ class GorgonPlayService:
                     item.id == target.ref.entity and item.gorgon_class == "dormant"
                     for item in state.world.gorgons
                 ):
-                    raise WorkflowError(
-                        "The actual Dormant awakening cost needs its Gorgon attacker source port"
-                    )
+                    from girlframe.services.m3_gorgon_dormant import awakened_source
+
+                    # Prove any prior marker; a new attack stages the actual cost after lock.
+                    awakened_source(self.game, c, state, target.ref)
                 from girlframe.engine.m3_battle import assets
 
                 available = assets(state, target.ref, bound)
@@ -187,6 +196,9 @@ class GorgonPlayService:
                     raise WorkflowError(
                         "This exhausted original needs its actual source consequence first"
                     )
+            from girlframe.services.m3_gorgon_dormant import require_clear
+
+            require_clear(self.game, c, declaration.actor)
             if self.game.pending_actions(c):
                 raise WorkflowError("SCENE_BUSY: finish or recover the original held Play first")
             lock = self.game.lock(c, channel)
@@ -682,7 +694,14 @@ def allowed_archived(
 ) -> frozenset[tuple[str, str]]:
     from girlframe.services.m3_harpy_defeat import ended_actor_source
 
-    parent = action if action["data"].get("gorgon_play") else game.action(c, action["parent_id"])
+    parent, seen = action, set()
+    while not parent["data"].get("gorgon_play"):
+        if parent["id"] in seen or not parent["parent_id"]:
+            raise WorkflowError("Recover the actual original Gorgon response ancestry")
+        seen.add(parent["id"])
+        parent = game.action(c, parent["parent_id"])
+        if parent["scene_id"] != action["scene_id"] or parent["channel_id"] != action["channel_id"]:
+            raise WorkflowError("Recover the original Gorgon response scene")
     GorgonPlayService(game).source(c, parent)
     source = SceneCast.model_validate_json(json.dumps(parent["data"]["gorgon_play"]["cast"]))
     return frozenset(

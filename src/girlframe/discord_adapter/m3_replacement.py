@@ -291,6 +291,12 @@ class PackageReview(discord.ui.View):
             ),
             "**Handler's exact package**\n" + clean(package["explanation"]),
         ]
+        if data.get("firearm", {}).get("required"):
+            self.pages.append(
+                "**Personal Firearm**\nThis exact package issues one Girl pistol, "
+                "with no Permission charge. Your ordinary Girl Asset limit still applies. "
+                "If full, you choose one of your own non-Void Girl Assets at confirmation."
+            )
         if selected.frame_name or selected.frame_appearance:
             self.pages.append(
                 "**New Frame name and appearance**\n"
@@ -402,24 +408,58 @@ class PackageReview(discord.ui.View):
         self, interaction: discord.Interaction, button: discord.ui.Button[Any]
     ) -> None:
         await interaction.response.defer(ephemeral=True)
-        try:
-            await asyncio.to_thread(
-                self.service.apply,
-                viewer_from_interaction(interaction),
-                str(interaction.id),
-                self.data["id"],
-                self.data["revision"],
-                self.data["game_revision"],
-                self.data["package_revision"],
+        firearm = self.data.get("firearm") or {}
+        if firearm.get("needs_replacement"):
+            options = tuple((x["id"], x["label"]) for x in firearm["replacements"])
+            if not options:
+                await reply(
+                    interaction,
+                    "This pistol cannot fit your current Girl Assets. "
+                    "Void Assets cannot be replaced. "
+                    "Request a revised package; nothing was installed.",
+                )
+                return
+
+            async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+                replacement = one(values, "replace")
+                if replacement not in {x[0] for x in options}:
+                    raise WorkflowError("Reopen your current owned Girl Asset choices.")
+                return await self.apply_package(current, replacement)
+
+            form = NativeForm(
+                self.owner,
+                "Personal Firearm capacity",
+                "Choose one of your own ordinary non-Void Girl Assets. "
+                "The reviewed package and pistol are installed together once, for no Permissions.",
+                [Field("replace", "Replace your actual Girl Asset", options)],
+                submit,
             )
+            await reply(interaction, form.text(), form)
+            return
+        try:
+            message = await self.apply_package(interaction)
         except WorkflowError as error:
             await reply(interaction, str(error))
             return
+        await reply(interaction, message)
+
+    async def apply_package(
+        self, interaction: discord.Interaction, firearm_replace: str | None = None
+    ) -> str:
+        await asyncio.to_thread(
+            self.service.apply,
+            viewer_from_interaction(interaction),
+            str(interaction.id),
+            self.data["id"],
+            self.data["revision"],
+            self.data["game_revision"],
+            self.data["package_revision"],
+            firearm_replace=firearm_replace,
+        )
         self.stop()
-        await reply(
-            interaction,
+        return (
             "Frame installed once, with no Permission charge. Discord labels are queued; "
-            "/character sync can retry them. Reopen /mission inbox for remaining work.",
+            "/character sync can retry them. Reopen /mission inbox for remaining work."
         )
 
 

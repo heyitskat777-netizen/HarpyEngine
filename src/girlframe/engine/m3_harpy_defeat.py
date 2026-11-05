@@ -5,15 +5,21 @@ from typing import TYPE_CHECKING, Any
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, ProfileBinding, SceneCast
 from girlframe.engine.m3_harpy_defeat_state import NativeHarpyRuntime, Travel
+from girlframe.engine.m3_janus_state import JanusCore
 from girlframe.engine.m3_void_state import HarpyState
 
 if TYPE_CHECKING:
     from girlframe.engine.m3_harpy_resources import HarpyResource
 
 
-def harpy(state: GameState, actor: ActorRef) -> HarpyState | NativeHarpyRuntime:
+def harpy(state: GameState, actor: ActorRef) -> HarpyState | NativeHarpyRuntime | JanusCore:
     if actor.kind != "external_pilot":
         raise ValueError("Use the actual original Harpy's external actor identity")
+    from girlframe.engine.m3_janus import find
+
+    janus = find(state, actor)
+    if janus is not None:
+        return janus
     converted = next((x for x in state.harpy_states if x.id == actor.entity), None)
     if converted is not None:
         return converted
@@ -68,6 +74,11 @@ def assets(state: GameState, actor: ActorRef) -> "tuple[HarpyResource, ...]":
 
 
 def update(state: GameState, actor: ActorRef, **values: Any) -> GameState:
+    from girlframe.engine.m3_janus import find
+    from girlframe.engine.m3_janus import update as update_core
+
+    if find(state, actor) is not None:
+        return update_core(state, actor, **values)
     changed = GameState.model_validate_json(state.model_dump_json())
     body = harpy(changed, actor)
     revised = type(body).model_validate_json(body.model_copy(update=values).model_dump_json())
@@ -75,7 +86,7 @@ def update(state: GameState, actor: ActorRef, **values: Any) -> GameState:
         changed.harpy_states = [
             revised if x.id == actor.entity else x for x in changed.harpy_states
         ]
-    else:
+    elif isinstance(revised, NativeHarpyRuntime):
         changed.native_harpies = [
             revised if x.id == actor.entity else x for x in changed.native_harpies
         ]
@@ -98,6 +109,8 @@ def update(state: GameState, actor: ActorRef, **values: Any) -> GameState:
                         )
                     }
                 )
+    else:
+        raise ValueError("The actual bound JANUS Core uses its dedicated update source")
     return changed
 
 
@@ -122,6 +135,11 @@ def controller(state: GameState, actor: ActorRef) -> int:
     if actor.kind in ("pilot", "handler"):
         return int(actor.entity)
     if actor.kind == "external_pilot":
+        from girlframe.engine.m3_janus import find
+
+        janus = find(state, actor)
+        if janus is not None:
+            return janus.controller
         body = next((x for x in state.harpy_states if x.id == actor.entity), None)
         if body:
             return body.controller
@@ -175,6 +193,7 @@ def give_tag(
     elif target.kind == "external_pilot" and (
         any(x.id == target.entity for x in state.harpy_states)
         or any(x.id == target.entity for x in state.native_harpies)
+        or any(x.id == target.entity for x in state.janus_cores)
     ):
         body = harpy(state, target)
         state = update(

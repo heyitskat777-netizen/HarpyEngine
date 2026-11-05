@@ -132,6 +132,17 @@ def respond(
         else HarpyIdentity(id=str(uuid4()), name=name.strip())
         for name in names
     )
+    from girlframe.engine.m3_leviathan_obsession import require_identity_change
+
+    require_identity_change(
+        state,
+        actor,
+        (
+            x.id
+            for x in body.identities
+            if not any(y.id == x.id and y.name == x.name for y in identities)
+        ),
+    )
     actual = resolve(
         state, actor, profiles(c, game.store.campaign_id), require_current_profile=False
     )
@@ -230,6 +241,18 @@ def complete_route(
             rest.actor,
             tuple(x.model_copy(update={"damaged": False}) for x in assets(state, rest.actor)),
             event=event,
+        )
+        from girlframe.engine.m3_leviathan_obsession import require_identity_change
+
+        current = harpy(state, rest.actor)
+        require_identity_change(
+            state,
+            rest.actor,
+            (
+                x.id
+                for x in current.identities
+                if not any(y.id == x.id and y.name == x.name for y in rest.identities)
+            ),
         )
         changed = update(changed, rest.actor, identities=rest.identities)
         for key in GameState.model_fields:

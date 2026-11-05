@@ -29,3 +29,11 @@ class Passenger(Model):
     completed_event: str | None = None
     choice_event: str | None = None
     account: str = Field(default="", max_length=1200)
+    revision: int = Field(default=1, ge=1)
+    consent_event: str | None = None
+    left_event: str | None = None
+    medical_proposal_event: str | None = None
+    medical_account: str = Field(default="", max_length=1200)
+    medical_judge: Snowflake | None = None
+    medical_appointment: str | None = None
+    medical_recovery_event: str | None = None

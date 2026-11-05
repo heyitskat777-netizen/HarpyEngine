@@ -17,6 +17,7 @@ def suspended(state: GameState, purchase: str) -> bool:
 
 def available(state: GameState, subject: int, character: str) -> list[Requisition]:
     from girlframe.engine.m3_enforcer_requisitions import binding, grants, held
+    from girlframe.engine.m3_janus_requisitions import held as janus_held
 
     sheet = state.sheets[str(subject)]
     frame = sheet.frame_runtime.id if sheet.frame_runtime else "initial:" + character
@@ -53,6 +54,11 @@ def available(state: GameState, subject: int, character: str) -> list[Requisitio
                     and fact.get("purchase") == x.id
                     for fact in state.facts
                 )
+            )
+            or (
+                isinstance(x, FrameRuleReceipt)
+                and x.donor_frame == "JANUS"
+                and janus_held(state, x.actor, x.rule_id) == x
             )
             or (
                 isinstance(x, FrameRuleReceipt)
@@ -120,6 +126,15 @@ def revoke(
             asset=asset.model_dump_json(), frame=receipt.frame_instance, label=asset.name
         )
         sheet.assets.remove(asset)
+    elif isinstance(receipt, FrameRuleReceipt) and receipt.donor_frame == "JANUS":
+        from girlframe.engine.m3_janus_requisitions import TITLES as JANUS_TITLES
+
+        details.update(
+            janus_receipt=receipt.model_dump_json(),
+            frame=receipt.frame_instance,
+            label=JANUS_TITLES[receipt.rule_id],
+            rule_id=receipt.rule_id,
+        )
     elif isinstance(receipt, (FrameRuleReceipt, SwapReceipt)):
         from girlframe.engine.m3_enforcer_requisitions import TITLES, frame, grants, held
 
@@ -192,7 +207,13 @@ def restore(original: GameState, identity: str, character: str, replace: str | N
         frame = sheet.frame_runtime.id if sheet.frame_runtime else "initial:" + character
         if frame != gate.details["frame"] or sheet.frame_scrapped:
             raise ValueError("Recover the original Frame before restoring its suspended Asset")
-        if "enforcer_grant" in gate.details:
+        if "janus_receipt" in gate.details:
+            source_receipt = FrameRuleReceipt.model_validate_json(gate.details["janus_receipt"])
+            if source_receipt not in state.requisitions or source_receipt.frame_instance != frame:
+                raise ValueError("Recover the exact original suspended JANUS entitlement")
+            if replace is not None:
+                raise ValueError("Restoration creates no new purchase, Asset or acquisition effect")
+        elif "enforcer_grant" in gate.details:
             from girlframe.engine.m3_enforcer_requisitions import Grant, binding, grants
 
             original_grant = Grant.model_validate_json(gate.details["enforcer_grant"])

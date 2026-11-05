@@ -215,9 +215,13 @@ class CycleService:
             self.missions._handler(c, viewer)
             self.missions.access.authorize(c, viewer, "strain")
             self.missions.access.authorize(c, viewer, "world")
+            from girlframe.services.m3_gorgon_dormant import (
+                require_clear as require_gorgon_costs_clear,
+            )
             from girlframe.services.m3_quadrant_loss import require_aftermath_clear
 
             require_aftermath_clear(state)
+            require_gorgon_costs_clear(self.game, c)
             strain = state.strain
             if (
                 state.world is None
@@ -751,9 +755,13 @@ class CycleService:
             self.missions._handler(c, viewer)
             self.missions.access.authorize(c, viewer, "world")
             period, state = self._current(c, viewer, identity, game_revision)
+            from girlframe.services.m3_gorgon_dormant import (
+                require_clear as require_gorgon_costs_clear,
+            )
             from girlframe.services.m3_quadrant_loss import require_aftermath_clear
 
             require_aftermath_clear(state)
+            require_gorgon_costs_clear(self.game, c)
             if period.status_review_game_revision != state.revision:
                 raise WorkflowError(
                     "Review current performance again after the intervening state change."
