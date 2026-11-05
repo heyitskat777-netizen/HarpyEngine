@@ -4306,6 +4306,40 @@
       "revision": 1,
       "implementation_note": "Named supported source workflows only. Remaining role, source, mechanical-Order, graft/retention and independent-repair ports are implementation gaps, not waivers of required rules.",
       "change_impact": "The specific printed repair alternative works for both ordinary and permanent-Void damaged Frame Assets while retaining real repair opportunity/quota, conditional sources and exact original ownership. Requires printed-rule clarity review."
+    },
+    {
+      "id": "am-foundation-records-owned-knowledge",
+      "summary": "For the selected Just Code records option, the actual operator selects the introduced subject and owns the learned in-world Foundation information and its one question. The genuine GM supplies complete record-grounded information and answer. AM/subject receives no automatic transcript; no OOC/private-notebook copying or summary substituting for all records.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF56/printed54 Just Code",
+      "authority": "delegated_recommendation",
+      "rationale": "The option names the operator as choice owner and grants record knowledge with one question; it does not give every participant the same knowledge or authorize importing unrelated private notes.",
+      "alternatives": [
+        "Give the AM or subject an automatic transcript.",
+        "Allow an invented summary to stand for all recorded information."
+      ],
+      "policy_key": "am_foundation_records_owned_knowledge",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Named source/role scope only; unavailable dossiers, actors, physical contexts and other source ports remain implementation gaps. No independent or release approval.",
+      "change_impact": "Current implementation is bounded to genuinely complete <=1200 dossiers and original same-human GM/operator roles; larger/independent-role sources remain implementation gaps, not house rules restricting the printed scope."
+    },
+    {
+      "id": "budget-storage-owned-warning-then-firing",
+      "summary": "The actual higher-up controls the warning Tag and eventual firing. Firing requires a prior actual warning and a distinct actual continued or renewed post-warning breach of the original Frame storage order; no fixed number of fictional turns is invented. Original Handler is fired alive, preserving body and history.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF151/printed149 High Budget6.1",
+      "authority": "delegated_recommendation",
+      "rationale": "The printed escalation names Tags and eventual firing without a numeric deadline. Source-owned warning and real subsequent noncompliance establish an auditable escalation without fabricated player actions or automatic death.",
+      "alternatives": [
+        "Fire immediately with no prior warning.",
+        "Invent a fixed countdown independent of actual conduct."
+      ],
+      "policy_key": "budget_storage_owned_warning_then_firing",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Named source/role scope only; unavailable dossiers, actors, physical contexts and other source ports remain implementation gaps. No independent or release approval.",
+      "change_impact": "Warning/breach/physical or completed FramePlay proof and original departure remain separate events. Future campaign clarification can adjust escalation while retaining actual recorded history."
     }
   ],
   "entries": [
@@ -6771,7 +6805,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_am_code.py"
+        "tests/rules/test_am_code.py",
+        "tests/rules/test_am_records.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -10106,7 +10141,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_modular.py"
+        "tests/rules/test_modular.py",
+        "tests/rules/test_modular_repair_producers.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -13325,14 +13361,45 @@
         "heading": "Rebellion low: die 5, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Actual Low Rebellion5 column2 source",
+        "actor_type": "Original native Girl and actual known ordinary NPC/controller",
+        "pre_roll_sources": [
+          "Existing nearby city attested by source GM",
+          "Original Girl/CID and actual known NPC from that city",
+          "NPC controller confirms actual repeatable route"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "source": [
+            "Girl-owned route claim or revision/withdrawal",
+            "Actual NPC correction/confirmation and persistent private connection"
+          ]
+        },
+        "choice_ownership": "Original Girl supplies actual method; actual NPC controller supplies its response, not another player",
+        "target_policy": "Known NPC/city and original people; hidden NPCs not enumerated; no automatic Bond, Tag, dialogue or movement",
+        "post_roll_effects": [
+          "Private established contact reference saved for actual source roles",
+          "Actual source work resolves after confirmation"
+        ],
+        "mandatory_followups": [
+          "Owned actual route and NPC confirmation, never generic automatic acknowledgment"
+        ],
+        "handler_or_gm_intervention": "GM attests nearby without an invented universal range; other source/ended-role/controller-transfer ports remain gaps",
+        "test_fixture_ids": [
+          "tests/rules/test_rebel_contact.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_rebel_contact.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -14645,14 +14712,48 @@
         "heading": "Budget high: die 6, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Actual High Budget6 column1 source",
+        "actor_type": "Original Frame owner/Handler and claimed ordinary NPC higher-up",
+        "pre_roll_sources": [
+          "Exact original Frame/body/appointment and known real base",
+          "Original owner records actual empty/unpiloted storage only",
+          "Actual High to Low preparation or proved Martyr relief"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "source": [
+            "Source-proved storage, refusal and physical or completed FramePlay breach",
+            "Owned warning Tag, real subsequent breach and fired-alive Handler",
+            "Actual Budget reduction releases original order"
+          ]
+        },
+        "choice_ownership": "Frame owner owns real storage; Handler owns actual refusal; original NPC controller owns warning/firing",
+        "target_policy": "Same actual people/Frame/site/source; no teleport, fake cockpit lock, body/vitals change or forbidden disobedience",
+        "post_roll_effects": [
+          "Persistent campaign-scoped storage demand and genuine Tag",
+          "Original Handler departure through existing career/source synchronizers, body alive"
+        ],
+        "mandatory_followups": [
+          "Real storage/refusal, true reduction or actual fired outcome; no caller-claimed budget change"
+        ],
+        "handler_or_gm_intervention": "Owned real human choices and factual breaches. Unknown/custody/Core/neural/additional movement/role ports remain unavailable.",
+        "test_fixture_ids": [
+          "tests/rules/test_budget_storage.py",
+          "tests/rules/test_martyr.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_budget_storage.py",
+        "tests/rules/test_martyr.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

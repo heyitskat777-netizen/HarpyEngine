@@ -1,12 +1,14 @@
 """Actual native DoctorDoctor source choices; each patient owns their sheet details."""
 
 import asyncio
+import json
 from typing import Any
 
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
+from girlframe.discord_adapter.m3_modular import replacement_fields, replacements
 from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine import m3_doctor as rules
@@ -190,6 +192,8 @@ async def open_choice(
                     required=False,
                 )
             )
+        if detail["repair"]:
+            fields.extend(replacement_fields(detail["modular"], detail["repair"]))
         if not fields:
             fields = [
                 Field("none", "No eligible sheet details", (("none", "No eligible changes exist"),))
@@ -211,9 +215,15 @@ async def open_choice(
                 fields={"effect": values["effect"][0]} if values.get("effect") else {},
             )
         else:
+            chosen = replacements(values)
             answer = ChoiceAnswer(
                 options=tuple(values.get("assets", ())),
-                fields={"identity": values["identity"][0]} if values.get("identity") else {},
+                fields=({"identity": values["identity"][0]} if values.get("identity") else {})
+                | (
+                    {"modular": json.dumps([x.model_dump(mode="json") for x in chosen])}
+                    if chosen
+                    else {}
+                ),
             )
         await asyncio.to_thread(
             service.game.respond,

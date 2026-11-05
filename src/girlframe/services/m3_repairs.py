@@ -11,6 +11,7 @@ from girlframe.database import tables as t
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_economy import RepairQuote, quoted_repair
+from girlframe.engine.m3_modular import Replacement, replace_repaired
 from girlframe.engine.m3_repair_state import Quote
 from girlframe.engine.m3_repairs import active
 from girlframe.services.handler_setup import HandlerService
@@ -130,6 +131,8 @@ class RepairService:
                 self._current(c, state, quote)
             except WorkflowError:
                 available = False
+            from girlframe.services.m3_modular import repair_options
+
             return {
                 "id": quote.id,
                 "revision": quote.revision,
@@ -143,6 +146,13 @@ class RepairService:
                 "available": available,
                 "may_answer": str(viewer.user_id) == quote.owner.entity
                 and quote.state == "pending",
+                "modular": [
+                    x
+                    for x in repair_options(self.game, c, state, quote.owner)
+                    if x["id"] == quote.asset
+                ]
+                if available
+                else [],
                 "may_reprice": viewer.user_id == state.handler == quote.handler
                 and quote.state != "accepted",
             }
@@ -274,6 +284,7 @@ class RepairService:
         expected: int,
         quote_revision: int,
         accept: bool,
+        replacement: Replacement | None = None,
     ) -> dict[str, Any]:
         def authorize(c: Connection) -> None:
             self.missions.access.authorize(c, viewer, "economy")
@@ -293,9 +304,17 @@ class RepairService:
             ):
                 raise WorkflowError("STALE_QUOTE: reopen your actual pending repair offer.")
             event = str(uuid4())
+            if replacement is not None and (not accept or replacement.asset != quote.asset):
+                raise WorkflowError("Choose replacement only for this exact accepted quoted repair")
             if accept:
                 self._safe(c)
                 self._current(c, state, quote)
+                if replacement is not None:
+                    from girlframe.services.m3_modular import entitlement
+
+                    if entitlement(self.game, c, state, quote.owner) is None:
+                        raise WorkflowError("Restore your actual Modular repair entitlement")
+                before = state.sheets[quote.owner.entity].model_copy(deep=True)
                 result = quoted_repair(
                     state.sheets[quote.owner.entity],
                     RepairQuote(
@@ -311,6 +330,15 @@ class RepairService:
                     expected_quote_revision=quote_revision,
                 )
                 state.sheets[quote.owner.entity] = result.sheet
+                if replacement is not None:
+                    replace_repaired(
+                        state,
+                        quote.owner,
+                        before,
+                        (replacement,),
+                        None,
+                        source="repair_quote:" + quote.id,
+                    )
             updated = quote.model_copy(
                 update={
                     "revision": quote.revision + 1,
@@ -341,6 +369,11 @@ class RepairService:
                     "expected": expected,
                     "quote_revision": quote_revision,
                     "accept": accept,
+                    **(
+                        {"modular_replacement": replacement.model_dump(mode="json")}
+                        if replacement is not None
+                        else {}
+                    ),
                 },
                 operation,
                 auto_audit=False,

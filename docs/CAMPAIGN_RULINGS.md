@@ -3069,3 +3069,31 @@ Rationale: The repair alternative has no non-Void restriction. Applying the sepa
 Alternatives: Restrict all Modular repair replacements to non-Void Assets by extending the above-maximum gain rule to this separate printed trigger.
 
 Change impact: The specific printed repair alternative works for both ordinary and permanent-Void damaged Frame Assets while retaining real repair opportunity/quota, conditional sources and exact original ownership. Requires printed-rule clarity review.
+
+## Foundation records and storage escalation — 2026-11-05
+
+Adjustable delegated recommendations requiring printed-rule clarity review. Dossier limits and missing physical/role ports are implementation gaps, not restrictions replacing the printed rules.
+
+### `am-foundation-records-owned-knowledge`
+
+Source: Rulebook PDF56/printed54 Just Code.
+
+For the selected Just Code records option, the actual operator selects the introduced subject and owns the learned in-world Foundation information and its one question. The genuine GM supplies complete record-grounded information and answer. AM/subject receives no automatic transcript; no OOC/private-notebook copying or summary substituting for all records.
+
+Rationale: The option names the operator as choice owner and grants record knowledge with one question; it does not give every participant the same knowledge or authorize importing unrelated private notes.
+
+Alternatives: Give the AM or subject an automatic transcript.; Allow an invented summary to stand for all recorded information.
+
+Change impact: Current implementation is bounded to genuinely complete <=1200 dossiers and original same-human GM/operator roles; larger/independent-role sources remain implementation gaps, not house rules restricting the printed scope.
+
+### `budget-storage-owned-warning-then-firing`
+
+Source: Rulebook PDF151/printed149 High Budget6.1.
+
+The actual higher-up controls the warning Tag and eventual firing. Firing requires a prior actual warning and a distinct actual continued or renewed post-warning breach of the original Frame storage order; no fixed number of fictional turns is invented. Original Handler is fired alive, preserving body and history.
+
+Rationale: The printed escalation names Tags and eventual firing without a numeric deadline. Source-owned warning and real subsequent noncompliance establish an auditable escalation without fabricated player actions or automatic death.
+
+Alternatives: Fire immediately with no prior warning.; Invent a fixed countdown independent of actual conduct.
+
+Change impact: Warning/breach/physical or completed FramePlay proof and original departure remain separate events. Future campaign clarification can adjust escalation while retaining actual recorded history.

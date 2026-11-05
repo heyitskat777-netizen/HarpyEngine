@@ -32,6 +32,7 @@ SUPPORTED = frozenset(
         "strain.rebellion.low.1.1",
         "strain.rebellion.low.1.2",
         "strain.rebellion.low.2.2",
+        "strain.rebellion.low.5.2",
         "strain.rebellion.low.6.1",
         "strain.budget.low.5.2",
         "strain.budget.low.5.1",
@@ -51,6 +52,7 @@ SUPPORTED = frozenset(
         "strain.budget.high.4.1",
         "strain.budget.high.3.2",
         "strain.budget.high.5.1",
+        "strain.budget.high.6.1",
     }
 )
 
@@ -84,6 +86,7 @@ class Choice(Model):
     )
     planned_assets: tuple[Pin, ...] = Field(default=(), exclude_if=lambda value: not value)
     fighters: tuple[int, ...] = Field(default=(), exclude_if=lambda value: not value)
+    storage_owner: int | None = Field(default=None, ge=1, exclude_if=lambda value: value is None)
     fight_channel: int | None = Field(default=None, ge=1, exclude_if=lambda value: value is None)
 
 
@@ -131,6 +134,16 @@ def apply(
         ):
             raise ValueError("Record one actual private contraband draw and its source period")
         state.contraband_finds.append(contraband)
+    elif rule == "strain.rebellion.low.5.2":
+        from girlframe.engine.m3_rebel_contact import create as create_contact
+
+        fields(choice, {"target"})
+        if period_id is None or source_event is None or choice.target is None:
+            raise ValueError("Choose the actual nearby city for this original contact source")
+        state = create_contact(
+            state, source_work, period_id, source_event, choice.target, choice.account
+        )
+        world = state.world
     elif rule == "strain.rebellion.low.1.2":
         fields(choice, set())
         if (
@@ -139,6 +152,7 @@ def apply(
             or any(x.id == source_work for x in state.refusal_bonuses)
         ):
             raise ValueError("Record one actual new control-slip source and its Strain period")
+        assert state.handler is not None
         state.refusal_bonuses.append(
             RefusalBonus(
                 id=source_work, period=period_id, handler=state.handler, source_event=source_event
@@ -187,6 +201,31 @@ def apply(
             raise ValueError("Choose the actual NPC politician and source period")
         state = create_assignment(
             state, source_work, period_id, source_event, choice.target, choice.account
+        )
+        world = state.world
+    elif rule == "strain.budget.high.6.1":
+        from girlframe.engine.m3_budget_storage import create as create_storage
+
+        fields(choice, {"target", "victim", "storage_owner"})
+        if (
+            period_id is None
+            or source_event is None
+            or choice.target is None
+            or choice.victim is None
+            or choice.storage_owner is None
+            or tag_setter_appointment is None
+        ):
+            raise ValueError("Choose the actual original Frame, base and claimed higher-up")
+        state = create_storage(
+            state,
+            source_work,
+            period_id,
+            source_event,
+            choice.storage_owner,
+            choice.target,
+            choice.victim,
+            tag_setter_appointment,
+            choice.account,
         )
         world = state.world
     elif rule == "strain.budget.low.5.1":

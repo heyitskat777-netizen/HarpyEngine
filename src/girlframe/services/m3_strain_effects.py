@@ -110,6 +110,10 @@ class EffectService:
             public_appointment = None
             cleanup_index = None
             cleanup_rng = None
+            if choice.rule_id == "strain.budget.high.6.1":
+                from girlframe.services.m3_medical import MedicalService
+
+                _, public_appointment = MedicalService(self.store)._handler(c)
             if choice.rule_id in (
                 "strain.budget.low.1.1",
                 "strain.budget.low.1.2",
@@ -119,6 +123,8 @@ class EffectService:
                 "strain.budget.low.5.1",
                 "strain.budget.low.6.1",
                 "strain.budget.high.4.1",
+                "strain.budget.high.6.1",
+                "strain.rebellion.low.5.2",
             ):
                 period = self.strain.periods._get(c, row["off_duty_id"])
                 if set(period.pilots) != set(state.order) or any(
@@ -470,6 +476,26 @@ class EffectService:
                     ),
                     event,
                 )
+            if choice.rule_id == "strain.budget.high.6.1":
+                from girlframe.services.m3_work import related
+
+                assert choice.storage_owner is not None
+                related(
+                    c,
+                    self.store,
+                    dict(row)
+                    | dict(off_duty_id=None, scene_id=None, mission_id=None, campaign_context=True),
+                    identity + ":storage",
+                    viewer.user_id,
+                    choice.storage_owner,
+                    "budget_storage",
+                    dict(
+                        storage=identity + ":storage",
+                        source_work=identity,
+                        source_period=row["off_duty_id"],
+                    ),
+                    event,
+                )
             if choice.rule_id == "strain.budget.low.5.1":
                 from girlframe.services.m3_work import related
 
@@ -482,6 +508,20 @@ class EffectService:
                     viewer.user_id,
                     "budget_visitor",
                     dict(visit=identity + ":visit", source_work=identity),
+                    event,
+                )
+            if choice.rule_id == "strain.rebellion.low.5.2":
+                from girlframe.services.m3_work import related
+
+                related(
+                    c,
+                    self.store,
+                    row,
+                    identity + ":contact",
+                    viewer.user_id,
+                    viewer.user_id,
+                    "rebel_contact",
+                    dict(contact=identity + ":contact", source_work=identity),
                     event,
                 )
             if choice.rule_id == "strain.budget.low.2.1":

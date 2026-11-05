@@ -801,6 +801,54 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_budget_storage import StorageService as BudgetStorageService
+
+            for storage_order in BudgetStorageService(self.store).available(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "budget-storage:" + storage_order["id"],
+                        "budget_storage",
+                        storage_order["id"],
+                        canon.revision,
+                        "world",
+                        "Higher-up Frame storage order",
+                        "Original owner, Handler or higher-up role",
+                        "pending",
+                        True,
+                        False,
+                        "Record actual storage, refusal, warning or release.",
+                        "Original bodies, Frame and source authority stay bound.",
+                        "Review storage order",
+                        task="m3_budget_storage",
+                    )
+                )
+
+            from girlframe.services.m3_rebel_contact import ContactService
+
+            for contact in ContactService(self.store).available(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "contact:" + contact["id"],
+                        "rebel_contact",
+                        contact["id"],
+                        canon.revision,
+                        "off_duty",
+                        "Your private regular NPC contact",
+                        "Original Girl or actual NPC role",
+                        "resolved"
+                        if contact["phase"] == "complete"
+                        else "pending"
+                        if contact["actionable"]
+                        else "waiting",
+                        contact["actionable"],
+                        False,
+                        "Describe only your own actual repeatable contact or NPC response.",
+                        "The connection is private to these actual source roles.",
+                        "View contact" if contact["phase"] == "complete" else "Review contact",
+                        task="m3_rebel_contact",
+                    )
+                )
+
             from girlframe.services.m3_budget_fight import FightService
 
             for fight in FightService(self.store).available(connection, viewer):

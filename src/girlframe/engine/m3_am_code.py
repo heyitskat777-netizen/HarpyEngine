@@ -29,6 +29,10 @@ class Maintenance(Model):
     frame: str
     cell: tuple[int, int]
     order_scope: Literal["spoken_statement"] = "spoken_statement"
+    records_access: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    selected_options: tuple[Literal["identities", "records"], ...] = Field(
+        default=("identities",), exclude_if=lambda value: value == ("identities",)
+    )
     phase: Literal["proposed", "ready", "active", "complete"] = "proposed"
     confirmed_event: str | None = None
     confirmation: str = ""
@@ -112,6 +116,12 @@ def rewrite(original: GameState, identity: str, selected: dict[str, str], event:
         sheet.revision += 1
     put(
         state,
-        value.model_copy(update=dict(effect_event=event, replacements=changed, phase="complete")),
+        value.model_copy(
+            update=dict(
+                effect_event=event,
+                replacements=changed,
+                phase="active" if value.records_access else "complete",
+            )
+        ),
     )
     return GameState.model_validate_json(state.model_dump_json())

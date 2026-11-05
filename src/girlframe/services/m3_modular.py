@@ -37,6 +37,17 @@ def entitlement(
     return receipt
 
 
+def repair_options(
+    game: "GameService", c: Connection, state: GameState, actor: ActorRef
+) -> list[dict[str, str]]:
+    if entitlement(game, c, state, actor) is None:
+        return []
+    eligible = set(rules.replaceable(state, actor))
+    return [
+        dict(id=x.id, label=x.name) for x in state.sheets[actor.entity].assets if x.id in eligible
+    ]
+
+
 class ModularService:
     def __init__(self, game: "GameService"):
         self.game, self.store = game, game.store

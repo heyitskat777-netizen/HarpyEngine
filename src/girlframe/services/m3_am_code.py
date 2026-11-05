@@ -11,6 +11,7 @@ from girlframe.database import tables as t
 from girlframe.engine import m3_am as scrutiny
 from girlframe.engine import m3_am_code as rules
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput, shift_status
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_girl_runtime_state import has_rule
 from girlframe.services.m2_game import GameService
@@ -56,6 +57,7 @@ def source(game: GameService, c: Connection, state: GameState, identity: str) ->
         "frame",
         "cell",
         "order_scope",
+        "records_access",
     )
     if any(getattr(value, x) != getattr(old, x) for x in stable):
         raise WorkflowError("Recover the actual original maintenance participants/body source")
@@ -99,6 +101,12 @@ def source(game: GameService, c: Connection, state: GameState, identity: str) ->
             or issuer.actor_id != str(value.controller)
         ):
             raise WorkflowError("Recover the actual original NPC's immutable Order")
+    if value.records_access:
+        from girlframe.services.m3_am_records import prove as prove_records
+
+        record = prove_records(game, c, state, value.records_access)
+        if record.maintenance != value.id or record.learner != value.operator:
+            raise WorkflowError("Keep this original operator's actual record source")
     return value
 
 
@@ -176,6 +184,9 @@ def prepare(
         or not prepared.context.strip()
     ):
         raise WorkflowError("Use the actual owner-confirmed identity-maintenance source only")
+    from girlframe.services.m3_am_records import ready as records_ready
+
+    records_ready(game, c, state, value)
     return dict(
         maintenance=value.id,
         actor=value.actor.model_dump(mode="json"),
@@ -205,7 +216,44 @@ def results(game: GameService, c: Connection, state: GameState, action: dict[str
     tier = action["data"]["result"]["tier"]
     if tier == "high":
         shift_status(state, value.owner, -1)
-    game.request(c, action, value.controller, "am_code_order" if tier == "low" else "am_code_edit")
+    game.request(
+        c,
+        action,
+        value.controller,
+        "am_code_order"
+        if tier == "low"
+        else "am_code_options"
+        if value.records_access
+        else "am_code_edit",
+    )
+
+
+def finish(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any], event: str
+) -> None:
+    from girlframe.services.m2_choices import ChoiceEngine
+
+    if game.pending(c, action["id"]):
+        return
+    value = rules.session(state, action["data"]["am_code"]["maintenance"])
+    if value.records_access:
+        from girlframe.engine.m3_am_records import access as record_access
+        from girlframe.services.m3_am_records import unselected
+
+        if "records" in value.selected_options and action["data"]["result"]["tier"] != "low":
+            if record_access(state, value.records_access).phase != "answered":
+                raise WorkflowError(
+                    "The actual selected Foundation question still requires its answer"
+                )
+        else:
+            unselected(state, value, event)
+        rules.put(
+            state,
+            value.model_copy(
+                update=dict(phase="complete", effect_event=value.effect_event or event)
+            ),
+        )
+    ChoiceEngine(game).finish(c, state, action)
 
 
 def apply(
@@ -216,11 +264,16 @@ def apply(
     request: dict[str, Any],
     answer: ChoiceAnswer,
 ) -> None:
-    from girlframe.services.m2_choices import ChoiceEngine
     from girlframe.services.m3_am_scrutinized import _copy
 
     value = rules.session(state, action["data"]["am_code"]["maintenance"])
     event = action["data"]["response_event"]
+    if request["kind"].startswith("am_code_records_"):
+        from girlframe.services.m3_am_records import apply as apply_records
+
+        apply_records(game, c, state, action, request, answer)
+        finish(game, c, state, action, event)
+        return
     if (
         answer.denied
         or answer.flag is not None
@@ -228,6 +281,28 @@ def apply(
         or answer.member is not None
     ):
         raise WorkflowError("Use the actual original operator/recipient's concrete source response")
+    if request["kind"] == "am_code_options":
+        options = {"records"} | ({"identities"} if rules.choices(state, value.actor) else set())
+        if (
+            not value.records_access
+            or len(answer.options) > 2
+            or len(set(answer.options)) != len(answer.options)
+            or not set(answer.options) <= options
+            or answer.fields
+            or answer.text
+        ):
+            raise WorkflowError("The actual operator chooses up to two available printed options")
+        value = value.model_copy(update=dict(selected_options=answer.options))
+        rules.put(state, value)
+        if "identities" in answer.options:
+            game.request(c, action, value.controller, "am_code_edit")
+        if "records" in answer.options:
+            from girlframe.services.m3_am_records import grant
+
+            grant(state, value, event)
+            game.request(c, action, value.controller, "am_code_records_question")
+        finish(game, c, state, action, event)
+        return
     if request["kind"] == "am_code_edit":
         if answer.options != ("edit",) or not answer.text.strip():
             raise WorkflowError("Choose the actual rewrite (or zero replacements) and describe it")
@@ -333,7 +408,7 @@ def apply(
         )
     else:
         raise WorkflowError("Complete the exact actual circuit-maintenance source")
-    ChoiceEngine(game).finish(c, state, action)
+    finish(game, c, state, action, event)
 
 
 def projection(
@@ -344,7 +419,17 @@ def projection(
     request: dict[str, Any],
 ) -> dict[str, Any]:
     value = rules.session(state, action["data"]["am_code"]["maintenance"])
+    details: dict[str, Any] = {}
+    if request["kind"].startswith("am_code_records_"):
+        from girlframe.services.m3_am_records import projection as project_records
+
+        details["records"] = project_records(game, c, state, value, request["kind"])
+        details["records_id"] = value.records_access
     return dict(
+        **details,
+        available_options=("identities", "records")
+        if rules.choices(state, value.actor)
+        else ("records",),
         maintenance=value.id,
         identities=[x.model_dump(mode="json") for x in rules.choices(state, value.actor)],
         instruction=value.instruction,
@@ -359,7 +444,14 @@ class CodeService:
         self.game, self.store = game, game.store
 
     def propose(
-        self, viewer: GuildViewer, key: str, discovery: str, expected: int, account: str
+        self,
+        viewer: GuildViewer,
+        key: str,
+        discovery: str,
+        expected: int,
+        account: str,
+        *,
+        records_subject: ActorRef | None = None,
     ) -> dict[str, Any]:
         if not account.strip() or len(account) > 1200:
             raise WorkflowError("Describe actual identity-only circuit maintenance")
@@ -400,7 +492,7 @@ class CodeService:
                 or physical is None
                 or not physical.vitals_active
                 or physical.incapacitated
-                or not rules.choices(state, known.actor)
+                or (not rules.choices(state, known.actor) and records_subject is None)
                 or not has_rule(state.sheets[known.actor.entity], rules.RULE, "AM")
             ):
                 raise WorkflowError(
@@ -424,6 +516,11 @@ class CodeService:
                 frame=actor.frame_instance,
                 cell=actor.cell,
             )
+            if records_subject is not None:
+                from girlframe.services.m3_am_records import request as request_records
+
+                pointer = request_records(self.game, c, state, value, records_subject, event)
+                value = value.model_copy(update=dict(records_access=pointer, selected_options=()))
             rules.put(state, value)
             self.game.event(
                 c,
@@ -440,14 +537,28 @@ class CodeService:
             viewer,
             key,
             "m3.am_code_proposed",
-            dict(discovery=discovery, expected=expected, account=account),
+            dict(discovery=discovery, expected=expected, account=account)
+            | (
+                dict(records_subject=records_subject.model_dump(mode="json"))
+                if records_subject
+                else {}
+            ),
             operation,
             authorize=lambda c: access(self.game, c, viewer),
             auto_audit=False,
         )
 
     def confirm(
-        self, viewer: GuildViewer, key: str, identity: str, expected: int, account: str
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        expected: int,
+        account: str,
+        *,
+        records_document: str | None = None,
+        records_reference: str | None = None,
+        records_complete: bool = False,
     ) -> dict[str, Any]:
         if not account.strip() or len(account) > 1200:
             raise WorkflowError(
@@ -469,6 +580,21 @@ class CodeService:
                     "Only the original real operator confirms actual circuit access"
                 )
             event, identity_root = str(uuid4()), str(uuid4())
+            if value.records_access:
+                from girlframe.services.m3_am_records import prepare as prepare_records
+
+                prepare_records(
+                    self.game,
+                    c,
+                    state,
+                    value,
+                    event,
+                    records_document,
+                    records_reference,
+                    records_complete,
+                )
+            elif records_document is not None or records_reference is not None or records_complete:
+                raise WorkflowError("This actual maintenance has no records request")
             scene = self.game.scene(c, value.cast.channel)
             lock = self.game.lock(c, value.cast.channel)
             if lock and lock["state"] != "released":
@@ -561,7 +687,16 @@ class CodeService:
             viewer,
             key,
             "m3.am_code_confirmed",
-            dict(id=identity, expected=expected, account=account),
+            dict(id=identity, expected=expected, account=account)
+            | (
+                dict(
+                    records_document=records_document,
+                    records_reference=records_reference,
+                    records_complete=records_complete,
+                )
+                if records_document is not None or records_reference is not None or records_complete
+                else {}
+            ),
             operation,
             authorize=lambda c: access(self.game, c, viewer),
             auto_audit=False,
@@ -595,6 +730,8 @@ class CodeService:
             return value.cast.channel
 
     def menu(self, viewer: GuildViewer, channel: int) -> dict[str, Any]:
+        from girlframe.engine.m3_am_records import access as record_access
+
         with self.store.engine.connect() as c:
             access(self.game, c, viewer)
             state = load_state(c, self.store.campaign_id)
@@ -617,8 +754,32 @@ class CodeService:
                     controller=x.controller,
                     proposal=x.proposal,
                     root=x.root,
+                    records=x.records_access,
+                    records_subject=(
+                        record_access(state, x.records_access).label if x.records_access else None
+                    ),
                 )
                 for x in rules.sessions(state)
                 if viewer.user_id in (x.owner, x.controller) and x.cast.channel == channel
             ]
-            return dict(revision=state.revision, known=known, sessions=values)
+            from girlframe.engine.m3_am_records import records as saved_records
+            from girlframe.services.m3_am_records import subjects
+
+            documents = []
+            for record in saved_records(state):
+                if record.granted_event:
+                    learner = resolve(
+                        state,
+                        record.learner,
+                        profiles(c, self.store.campaign_id),
+                        require_alive=False,
+                    )
+                    if learner.controller == viewer.user_id:
+                        documents.append(dict(id=record.id, label=record.label))
+            return dict(
+                revision=state.revision,
+                known=known,
+                sessions=values,
+                subjects=subjects(self.game, c, state),
+                documents=documents,
+            )

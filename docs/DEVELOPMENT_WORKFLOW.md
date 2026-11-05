@@ -39,9 +39,9 @@ a required M3 rule complete; required gaps stay in the milestone backlog.
 
 | Order | Assignment | Completion boundary |
 |---|---|---|
-| 1, parallel | Economy handoff: AM Just Code, frozen | Mid/high/low maintenance is verified. Next assignment will close one dependency-ready remaining printed option using existing authority; broader uses stay explicit. |
-| 1, parallel | Handler handoff: Modular Build, frozen | Native acquisition/slot, suspension and Off-Duty replacement are verified. Next assignment: remaining independent repair producers, preserving actual quotes/credits/ownership. |
-| 1, root | Sanitized source/CI checkpoint | Workflow, Low Budget and supported televised fight are handed off; complete the source checkpoint. Next: inspect existing Vital Frame parking/control for a bounded High Budget storage contract. |
+| 1, parallel | Economy handoff: AM Foundation records, frozen | Required mid/high/low and source privacy are verified. Remaining dossier limits, memory/backup/branch/body options stay in the backlog; select one next bounded dependency-ready consumer. |
+| 1, parallel | Handler handoff: Frame storage, frozen | Modular independent repair producers and supported High Budget storage/warning/firing/reduction are verified. Preserve remaining physical/role/source limits. |
+| 1, root | Source/CI integration checkpoint | Integrate actual Records, repairs, storage and private-contact handoffs with complete changed static scope. Then select the next dependency-ready whole gameplay consumer. |
 | 2 | Remaining required gameplay systems | Select the next dependency-ready whole workflow from M3_REMAINING_WORK.md and M3_COMPLETION_AUDIT.md. Freeze its contract, reuse implemented dependencies and complete it before opening unrelated work. |
 | 3 | M3 review candidate | Account for required core scope, complete expected gameplay flows and final integrated checks; provide a concise player-test checklist and stop for owner review. |
 

@@ -3,8 +3,8 @@
 Status: IN_PROGRESS / RULES_SUBSET. This is not a complete branch audit or an
 independent rules certification. M3 is not complete.
 
-Latest focused development records 259 adjustable clarifications and 151 subset /
-322 unimplemented entries, including the 37 deferred Ancillary entries. No entry
+Latest focused development records 261 adjustable clarifications and 153 subset /
+320 unimplemented entries, including the 37 deferred Ancillary entries. No entry
 has independent verification. New evidence covers bounded Alpha/Guard/NPC Orders,
 normal JANUS Storage, bounded AM reset/maintenance, seven native Class consumers and selected Budget
 lifecycles; additional cleanup/sabotage source contracts

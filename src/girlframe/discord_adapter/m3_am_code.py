@@ -9,6 +9,7 @@ from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m2 import ChoiceAnswer
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_am_code import CodeService
 
@@ -34,6 +35,9 @@ async def open_code(
         for x in data["sessions"]
         if x["phase"] == "proposed" and x["controller"] == viewer.user_id
     ]
+    options += [
+        ("document:" + x["id"], "Read learned record: " + x["label"]) for x in data["documents"]
+    ]
     choices = await asyncio.to_thread(service.game.choices, viewer)
     options += [
         ("choice:" + x["id"], "Continue " + x["kind"].replace("_", " "))
@@ -46,9 +50,46 @@ async def open_code(
 
     async def choose(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         operation, identity = values["source"][0].split(":", 1)
+        if operation == "document":
+            from girlframe.discord_adapter.m3_am_records import open_document
+            from girlframe.services.m3_am_records import RecordsService
+
+            await open_document(current, RecordsService(service.game), identity)
+            return None
         if operation == "choice":
             await open_choice(current, service.game, identity)
             return None
+
+        session = next((x for x in data["sessions"] if x["id"] == identity), None)
+        source_fields = [
+            Field("account", "Your actual maintenance or factual circuit access", paragraph=True)
+        ]
+        if operation == "propose":
+            source_fields.insert(
+                0,
+                Field(
+                    "records_subject",
+                    "Optional complete Foundation record request",
+                    (("none", "Identity maintenance only"),)
+                    + tuple((x["token"], x["label"]) for x in data["subjects"]),
+                ),
+            )
+        elif session and session["records"]:
+            source_fields.extend(
+                [
+                    Field("reference", "Actual complete Foundation file/reference", paragraph=True),
+                    Field(
+                        "document",
+                        "COMPLETE unredacted record (not a summary; max1200)",
+                        paragraph=True,
+                    ),
+                    Field(
+                        "complete",
+                        "This is all genuinely recorded information",
+                        (("yes", "Yes, complete and unredacted"),),
+                    ),
+                ]
+            )
 
         async def submit(actual: discord.Interaction, answer: dict[str, Any]) -> str:
             human = viewer_from_interaction(actual)
@@ -60,6 +101,14 @@ async def open_code(
                     identity,
                     data["revision"],
                     answer["account"],
+                    records_subject=next(
+                        (
+                            ActorRef.model_validate(x["ref"])
+                            for x in data["subjects"]
+                            if x["token"] == answer["records_subject"][0]
+                        ),
+                        None,
+                    ),
                 )
                 return (
                     "Actual identity-only maintenance proposed; "
@@ -72,6 +121,9 @@ async def open_code(
                 identity,
                 data["revision"],
                 answer["account"],
+                records_document=answer.get("document"),
+                records_reference=answer.get("reference"),
+                records_complete=answer.get("complete") == ("yes",),
             )
             return (
                 "Actual circuit access confirmed; "
@@ -81,11 +133,20 @@ async def open_code(
         form = NativeForm(
             current.user.id,
             "AM circuit access",
-            "Confirm real physical access between these original bodies; "
+            (
+                f"Prepare ALL Foundation records about {session['records_subject']}. "
+                "Only the authenticated GM may attest completeness; "
+                "do not summarize, truncate, or import private notes. "
+                "If the complete file exceeds 1200 characters, this source is unavailable. "
+                if session and session["records"]
+                else ""
+            )
+            + "Confirm real physical access between these original bodies; "
             "identity-only maintenance. "
             "On low, only an actual spoken-statement Order is supported. "
-            "Memory/body/backup/record operations and other Order effects are unavailable.",
-            [Field("account", "Your actual maintenance or factual circuit access", paragraph=True)],
+            "A requested Foundation record must be genuine and complete before rolling. "
+            "Memory/body/backup operations and other Order effects remain unavailable.",
+            source_fields,
             submit,
         )
         await reply(current, form.text(), form)
@@ -95,7 +156,7 @@ async def open_code(
         viewer.user_id,
         "AM identity-only circuit maintenance",
         f"Original scene <#{channel}>. Only the actual already-knowing NPC can operate. "
-        "New knowledge/body/vessel/backup/memory/record ports remain unavailable.",
+        "New operator knowledge/body/vessel/backup/memory ports remain unavailable.",
         [Field("source", "Actual source or owned response", tuple(options))],
         choose,
     )
@@ -109,6 +170,52 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         from girlframe.discord_adapter.m2_ui import open_play
 
         await open_play(interaction, game, parent=data)
+        return
+    if data["kind"].startswith("am_code_records_"):
+        from girlframe.discord_adapter.m3_am_records import open_choice as open_records_choice
+
+        await open_records_choice(interaction, game, identity)
+        return
+    if data["kind"] == "am_code_options":
+
+        async def options(current: discord.Interaction, values: dict[str, Any]) -> str:
+            await asyncio.to_thread(
+                game.respond,
+                viewer_from_interaction(current),
+                str(current.id),
+                identity,
+                data["revision"],
+                ChoiceAnswer(options=tuple(values.get("options", ()))),
+            )
+            return "Actual printed selections saved; complete each selected source effect."
+
+        form = NativeForm(
+            interaction.user.id,
+            "Operator: choose up to two",
+            "Choose either, both or neither supported printed option. "
+            "Records are learned by the operator; "
+            "the AM receives no automatic transcript.",
+            [
+                Field(
+                    "options",
+                    "Actual printed options",
+                    tuple(
+                        (
+                            x,
+                            "Identity rewrite"
+                            if x == "identities"
+                            else "Complete Foundation records and one question",
+                        )
+                        for x in detail["available_options"]
+                    ),
+                    minimum=0,
+                    maximum=len(detail["available_options"]),
+                    required=False,
+                )
+            ],
+            options,
+        )
+        await reply(interaction, form.text(), form)
         return
     if data["kind"] == "am_code_edit":
 

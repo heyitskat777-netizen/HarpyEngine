@@ -87,7 +87,9 @@ def replace_repaired(
     actor: ActorRef,
     before: "PilotSheet",
     choices: tuple[Replacement, ...],
-    period: str,
+    period: str | None,
+    *,
+    source: str | None = None,
 ) -> None:
     from uuid import NAMESPACE_URL, uuid5
 
@@ -95,6 +97,8 @@ def replace_repaired(
 
     if not choices:
         return
+    if period is None and not source:
+        raise ValueError("Modular replacement needs its actual repair source")
     receipt = held(state, actor)
     allowed = set(
         replaceable(
@@ -119,7 +123,12 @@ def replace_repaired(
         identity = str(
             uuid5(
                 NAMESPACE_URL,
-                "girlframe:modular:" + period + ":" + actor.token + ":" + chosen.asset,
+                "girlframe:modular:"
+                + (source or str(period))
+                + ":"
+                + actor.token
+                + ":"
+                + chosen.asset,
             )
         )
         if any(x.id == identity for x in sheet.assets):
@@ -138,7 +147,8 @@ def replace_repaired(
         state.facts.append(
             dict(
                 kind="modular_repair",
-                period=period,
+                **({"period": period} if period is not None else {}),
+                **({"source": source} if source is not None else {}),
                 actor=actor.model_dump_json(),
                 purchase=receipt.id,
                 old=chosen.asset,

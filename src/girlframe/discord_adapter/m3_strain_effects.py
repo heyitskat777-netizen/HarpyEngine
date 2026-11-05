@@ -371,6 +371,42 @@ async def open_effect(
                     ),
                 )
             )
+        elif rule == "strain.budget.high.6.1":
+            fields.extend(
+                (
+                    Field(
+                        "storage_owner",
+                        "Original current ordinary Frame owner",
+                        tuple((str(uid), state.sheets[str(uid)].callsign) for uid in state.order),
+                    ),
+                    Field(
+                        "storage_base",
+                        "Surviving Foundation base",
+                        options(
+                            [
+                                x
+                                for x in world["locations"]
+                                if x["kind"] == "base"
+                                and x["allegiance"] == "foundation"
+                                and x["condition"] != "destroyed"
+                            ]
+                        ),
+                    ),
+                    Field(
+                        "storage_superior",
+                        "Actual claimed ordinary higher-up",
+                        options(
+                            [
+                                x
+                                for x in world["npcs"]
+                                if x["alive"]
+                                and x["controller"] is not None
+                                and "director" not in x["jobs"]
+                            ]
+                        ),
+                    ),
+                )
+            )
         elif rule == "strain.budget.high.4.1":
             fields.extend(
                 (
@@ -386,6 +422,14 @@ async def open_effect(
                         "Actual Play scene for the televised fight",
                         ((str(interaction.channel_id), "Use this Play scene"),),
                     ),
+                )
+            )
+        elif rule == "strain.rebellion.low.5.2":
+            fields.append(
+                Field(
+                    "contact_city",
+                    "Which actual city is nearby?",
+                    options([x for x in world["locations"] if x["kind"] == "city"]),
                 )
             )
         elif rule == "strain.budget.low.2.2":
@@ -651,6 +695,12 @@ async def open_effect(
             payload.update(target=values["target"][0], npc_jobs=tuple(values["jobs"]))
         elif rule in ("strain.budget.low.5.1", "strain.budget.low.6.1"):
             payload["target"] = values["visitor"][0]
+        elif rule == "strain.budget.high.6.1":
+            payload.update(
+                storage_owner=int(values["storage_owner"][0]),
+                target=values["storage_base"][0],
+                victim=values["storage_superior"][0],
+            )
         elif rule == "strain.budget.high.4.1":
             channel = int(values["fight_channel"][0])
             with service.store.engine.connect() as c:
@@ -660,6 +710,8 @@ async def open_effect(
                 fighters=tuple(int(x) for x in values["fighters"]),
                 fight_channel=channel,
             )
+        elif rule == "strain.rebellion.low.5.2":
+            payload["target"] = values["contact_city"][0]
         elif rule == "strain.budget.low.2.2":
             if any(x not in asset_pins for x in values["assets"]):
                 raise WorkflowError("Reopen the original actual Cadre Asset choices")

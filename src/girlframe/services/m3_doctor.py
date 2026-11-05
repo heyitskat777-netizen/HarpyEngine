@@ -237,6 +237,8 @@ def projection(
     target = ActorRef.model_validate(meta["target"])
     patient = state.sheets[target.entity]
     body = json.loads(row["body_json"])
+    from girlframe.services.m3_modular import repair_options
+
     return dict(
         kind=row["kind"],
         minimum=2 if action["data"]["result"]["tier"] == "high" else 1,
@@ -253,6 +255,7 @@ def projection(
             if x.marked and x.id not in patient.sedation_locked
         ],
         repair=body.get("repair", 0),
+        modular=repair_options(game, c, state, target) if body.get("repair") else [],
         identity=body.get("identity", False),
     )
 
@@ -384,15 +387,47 @@ def apply(
             or answer.text
         ):
             raise WorkflowError("Choose only your actual owned Nanobot repair/Identity details")
-        if set(answer.fields) - {"identity"}:
+        if set(answer.fields) - {"identity", "modular"}:
             raise WorkflowError("Choose only an actual Identity")
+        from girlframe.engine.m3_modular import Replacement
+
+        replacements: tuple[Replacement, ...] = ()
+        if "modular" in answer.fields:
+            from pydantic import TypeAdapter
+
+            from girlframe.services.m3_modular import entitlement
+
+            replacements = TypeAdapter(tuple[Replacement, ...]).validate_json(
+                answer.fields["modular"]
+            )
+            if (
+                not body["repair"]
+                or not replacements
+                or not {x.asset for x in replacements} <= set(answer.options)
+                or entitlement(game, c, state, target) is None
+            ):
+                raise WorkflowError(
+                    "Use only actual awarded repairs and your own Modular entitlement"
+                )
         if body["repair"]:
+            before = state.sheets[target.entity].model_copy(deep=True)
             rules.repair(state, target, answer.options, body["repair"])
+            if replacements:
+                from girlframe.engine.m3_modular import replace_repaired
+
+                replace_repaired(
+                    state,
+                    target,
+                    before,
+                    replacements,
+                    None,
+                    source="doctor:" + action["id"] + ":" + row["id"],
+                )
         elif answer.options:
             raise WorkflowError("This result did not select repair")
         if body["identity"]:
             rules.unmark(state, target, answer.fields.get("identity"))
-        elif answer.fields:
+        elif answer.fields.get("identity"):
             raise WorkflowError("This result did not select Identity unmarking")
         action["data"]["result"]["doctor_care"] = dict(
             patient=target.model_dump(mode="json"),

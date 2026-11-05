@@ -8,6 +8,7 @@ import discord
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
+from girlframe.discord_adapter.m3_modular import replacement_fields, replacements
 from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.services.m3_repairs import RepairService
@@ -42,6 +43,7 @@ async def open_quote(
         options += (("decline", "Decline this offer"),)
 
         async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+            chosen = replacements(values)
             result = await asyncio.to_thread(
                 service.respond,
                 viewer_from_interaction(current),
@@ -50,6 +52,7 @@ async def open_quote(
                 data["game_revision"],
                 data["revision"],
                 values["answer"][0] == "accept",
+                replacement=chosen[0] if chosen else None,
             )
             return "Repair offer " + str(result["state"]) + "."
 
@@ -57,7 +60,7 @@ async def open_quote(
             viewer.user_id,
             "Review repair price",
             text,
-            [Field("answer", "Your response", options)],
+            [Field("answer", "Your response", options)] + replacement_fields(data["modular"], 1),
             submit,
         )
         await reply(interaction, form.text(), form)

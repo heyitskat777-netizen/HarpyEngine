@@ -14,6 +14,7 @@ from test_strain import facts
 from girlframe.discord_adapter.m3_martyr import open_memorial, open_purchase
 from girlframe.engine import m3_martyr as rules
 from girlframe.engine.m3_actor_bonds import current_ref
+from girlframe.services.m3_budget_storage import StorageService
 from girlframe.services.m3_careers import end_in_transaction, synchronize_end
 from girlframe.services.m3_martyr import MartyrService
 from girlframe.services.m3_missions import MissionService
@@ -59,6 +60,11 @@ def test_martyr_native_death_memorial_and_next_budget_preparation(ledger, tmp_pa
     before = state(game)
     actor = current_ref(before, 2)
     assert before.sheets["2"].permissions == 0 and rules.held(before, actor)
+    receipt = rules.held(before, actor)
+    assert receipt is not None
+    storage = StorageService(ledger)
+    with ledger.engine.connect() as c:
+        assert storage._reduction(c, receipt.source_event) is None
     event = str(uuid4())
     with ledger.transaction() as c:
         ended = end_in_transaction(
@@ -78,6 +84,10 @@ def test_martyr_native_death_memorial_and_next_budget_preparation(ledger, tmp_pa
     assert after.strain.levels == {"void": "high", "rebellion": "low", "budget": "low"}
     assert actor.entity not in after.sheets and after.career_archives[-1].actor == actor
     assert rules.budget_death_excluded(after, event)
+    # The same proved immediate High→Low source can release an older storage order,
+    # even though the next Strain preparation will already start Low.
+    with ledger.engine.connect() as c:
+        assert storage._reduction(c, receipt.source_event) == event
     assert source.get(PLAYER, episode.id)["can_act"]
 
     async def memorial():

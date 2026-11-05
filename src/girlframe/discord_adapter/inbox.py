@@ -572,6 +572,20 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_budget_director import MeetingService
 
             await open_meeting(interaction, MeetingService(self.service.store), item.identity)
+        elif item.task == "m3_budget_storage":
+            from girlframe.discord_adapter.m3_budget_storage import (
+                open_storage as open_budget_storage,
+            )
+            from girlframe.services.m3_budget_storage import StorageService as BudgetStorageService
+
+            await open_budget_storage(
+                interaction, BudgetStorageService(self.service.store), item.identity
+            )
+        elif item.task == "m3_rebel_contact":
+            from girlframe.discord_adapter.m3_rebel_contact import open_contact
+            from girlframe.services.m3_rebel_contact import ContactService
+
+            await open_contact(interaction, ContactService(self.service.store), item.identity)
         elif item.task == "m3_budget_fight":
             from girlframe.discord_adapter.m3_budget_fight import open_fight
             from girlframe.services.m3_budget_fight import FightService
