@@ -712,8 +712,92 @@ class InboxService:
                         task="m3_comforts" if needs else None,
                     )
                 )
+            from girlframe.services.m3_budget_anarchy import AnarchyService
+            from girlframe.services.m3_budget_candidate import CandidateService
+            from girlframe.services.m3_budget_director import MeetingService
             from girlframe.services.m3_budget_patron import PatronService
             from girlframe.services.m3_collective_handler_tags import CollectiveTagService
+            from girlframe.services.m3_political_function import FunctionService
+
+            for anarchy in AnarchyService(self.store).available(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "anarchy:" + anarchy["id"],
+                        "budget_anarchy",
+                        anarchy["id"],
+                        canon.revision,
+                        "world",
+                        "Restore actual city order",
+                        "Original Handler",
+                        "available",
+                        True,
+                        False,
+                        "Record actual civic restoration after play.",
+                        "This optional restoration repairs no damage and erases no other cause.",
+                        "Review city",
+                        task="m3_budget_anarchy",
+                    )
+                )
+
+            for candidate in CandidateService(self.store).available(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "candidate:" + candidate["id"],
+                        "budget_candidate",
+                        candidate["id"],
+                        canon.revision,
+                        "off_duty",
+                        "Pilot Candidate assessment",
+                        "Original table and assigned Girl",
+                        "pending",
+                        True,
+                        False,
+                        "Define the process together, then report the actual assigned assessment.",
+                        "An edited process needs new agreements; no player character is generated.",
+                        "Review Candidate",
+                        task="m3_budget_candidate",
+                    )
+                )
+
+            for meeting in MeetingService(self.store).available(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "director-meeting:" + meeting["id"],
+                        "budget_director_meeting",
+                        meeting["id"],
+                        canon.revision,
+                        "off_duty",
+                        "Director performance meeting",
+                        "Original participants",
+                        "pending",
+                        True,
+                        False,
+                        "Each human reports their own presence and choices.",
+                        "The Handler uses actual Girl-rule resources in the Director's presence.",
+                        "Review meeting",
+                        task="m3_budget_director",
+                    )
+                )
+
+            for activity in FunctionService(self.store).available(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "function:" + activity["id"],
+                        "political_function",
+                        activity["id"],
+                        canon.revision,
+                        "off_duty",
+                        "Political function: " + activity["kind"],
+                        "Original function participants",
+                        "pending",
+                        True,
+                        False,
+                        "Read your Tag rights and confirm only actual attendance or actions.",
+                        "No player action or dialogue is generated.",
+                        "Review function",
+                        task="m3_political_function",
+                    )
+                )
 
             for patron in PatronService(self.store).available(connection, viewer):
                 items.append(
@@ -755,7 +839,28 @@ class InboxService:
                         task="m3_collective_tag",
                     )
                 )
+            from girlframe.services.m3_alpha_sex import SexService
             from girlframe.services.m3_janus_play import BatteryService
+
+            for invitation in SexService(GameService(self.store))._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "alpha-consent:" + invitation["id"],
+                        "alpha_sex_consent",
+                        invitation["id"],
+                        invitation["revision"],
+                        "plays",
+                        invitation["label"],
+                        "Original participants only",
+                        "pending",
+                        invitation["actionable"],
+                        False,
+                        "Read the actual proposal and give your own voluntary answer.",
+                        "No roll or Heat is spent before your confirmation.",
+                        "Review invitation",
+                        task="m3_alpha_consent",
+                    )
+                )
 
             for mind in BatteryService(GameService(self.store))._tasks(connection, viewer):
                 items.append(
@@ -776,32 +881,74 @@ class InboxService:
                         task="m3_janus_mind",
                     )
                 )
+            from girlframe.services.m3_doctor_care import CareService
+            from girlframe.services.m3_doctor_procedures import ProcedureService
             from girlframe.services.m3_janus import JanusService
             from girlframe.services.m3_janus_pet import PetService
             from girlframe.services.m3_janus_storage import StorageService
 
+            for doctor_source, doctor_task in (
+                (CareService(GameService(self.store)), "m3_doctor_care"),
+                (ProcedureService(GameService(self.store)), "m3_doctor_procedure"),
+            ):
+                for doctor_request in doctor_source._tasks(connection, viewer):
+                    items.append(
+                        InboxItem(
+                            doctor_task + ":" + doctor_request["id"],
+                            "doctor_request",
+                            doctor_request["id"],
+                            doctor_request["revision"],
+                            "plays",
+                            "Actual DoctorDoctor request",
+                            "Original provider and patient",
+                            "pending",
+                            doctor_request["actionable"],
+                            False,
+                            "Review your own actual source-bound care or procedure.",
+                            "No response, movement or repair is invented.",
+                            "Open actual request",
+                            task=doctor_task,
+                        )
+                    )
+
             storage_tasks = StorageService(GameService(self.store))._tasks(connection, viewer)
             for stored_surgery in storage_tasks:
-                items.append(InboxItem(
-                    "janus-storage:" + stored_surgery["id"], "janus_void_surgery",
-                    stored_surgery["id"],
-                    stored_surgery["revision"], "off_duty", "Actual stored Void surgical request",
-                    "Original patient and Foundation", "pending", stored_surgery["actionable"],
-                    False,
-                    "The Foundation records one actual surgical removal in this period.",
-                    "No permanent Void or Asset damage is undone.", "Review actual surgery",
-                    task="m3_janus_storage",
-                ))
+                items.append(
+                    InboxItem(
+                        "janus-storage:" + stored_surgery["id"],
+                        "janus_void_surgery",
+                        stored_surgery["id"],
+                        stored_surgery["revision"],
+                        "off_duty",
+                        "Actual stored Void surgical request",
+                        "Original patient and Foundation",
+                        "pending",
+                        stored_surgery["actionable"],
+                        False,
+                        "The Foundation records one actual surgical removal in this period.",
+                        "No permanent Void or Asset damage is undone.",
+                        "Review actual surgery",
+                        task="m3_janus_storage",
+                    )
+                )
 
             for outing in PetService(GameService(self.store))._tasks(connection, viewer):
                 items.append(
                     InboxItem(
-                        "janus-pet:" + outing["id"], "janus_pet_outing", outing["id"],
-                        outing["revision"], "off_duty", "Actual Core outing and return",
-                        "Original Pilot and Foundation", outing["phase"], outing["actionable"],
-                        False, "Choose actual Core care or return her to the original Frame.",
+                        "janus-pet:" + outing["id"],
+                        "janus_pet_outing",
+                        outing["id"],
+                        outing["revision"],
+                        "off_duty",
+                        "Actual Core outing and return",
+                        "Original Pilot and Foundation",
+                        outing["phase"],
+                        outing["actionable"],
+                        False,
+                        "Choose actual Core care or return her to the original Frame.",
                         "No automatic transport or invented Tag is supplied.",
-                        "Review actual Core care", task="m3_janus_pet",
+                        "Review actual Core care",
+                        task="m3_janus_pet",
                     )
                 )
 

@@ -3647,6 +3647,353 @@
       "revision": 1,
       "implementation_note": "The original patient requests one exact stored point after an actual Go Off-Duty receipt. The period's original Foundation human records performed surgery. At most one point per original patient is removed in that period, without damaging or repairing the original Asset.",
       "change_impact": "The optional request is resumable/private and does not invent personnel, transport, medical completion or an Asset repair."
+    },
+    {
+      "id": "political-function-disclosed-rights-lifetime",
+      "summary": "The actual source function informs each original Girl of its Tag right before she confirms real attendance. The function becomes active after the original cohort has attended; each Girl exclusively reports her own out-of-line action and authors any optional Tag for the original Handler. The actual Handler ends it, expiring that permission. No automatic conduct classification, attendance or Tag is generated.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "source": "Rulebook PDF150/printed148, Low Budget2.1",
+      "rationale": "The source requires disclosure and attendance but gives no timeout or automatic conduct judgment. Explicit human reports preserve player agency and bound the permission to the actual function.",
+      "alternatives": [
+        "Automatically attend the Cadre and generate Tags from chat.",
+        "Let the Handler choose player actions or keep Tag rights after the function."
+      ],
+      "policy_key": "political_function_disclosed_rights_lifetime",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "One source-bound function record, owned native notice/attendance/Tag/ending controls and mandatory work that resolves only on the actual ending. Source notice and original body references remain frozen.",
+      "change_impact": "Review pending attendance and condition notices before adjusting scope or ending semantics; preserve actual human confirmations and Tag provenance."
+    },
+    {
+      "id": "alpha-low-real-play-conditional-broken",
+      "summary": "The original target chooses whether their genuine counter Play will leave the attacker Broken before starting it; apply Broken only after that real Play and its required choices finish. No success requirement is added.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF52 / printed50 Brutalize",
+      "authority": "delegated_recommendation",
+      "rationale": "The text gives one opportunity and says if they can make a Play they can leave the attacker Broken; source-owned preselection prevents inventing a later human response.",
+      "alternatives": [
+        "Ask after completed Play through another owned choice",
+        "Require successful counter (unprinted restriction)"
+      ],
+      "policy_key": "alpha_low_real_play_conditional_broken",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only within the named source workflow and supported actors; original human choices, immutable receipts and release gates remain. Source limits are recorded in reports/M3_ACCEPTANCE.md.",
+      "change_impact": "Change conditional selection timing without reusing or rerolling the saved child receipt."
+    },
+    {
+      "id": "alpha-broken-original-relative-status",
+      "summary": "Broken is an original-person relation to its actual inflictor; it overrides relative PC Status while both originals remain current, without changing the global Status order.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF52 / printed50 Brutalize",
+      "authority": "delegated_recommendation",
+      "rationale": "Printed text says lower Status relative to the inflictor, not a global rank loss.",
+      "alternatives": [
+        "Global rank reduction (does not preserve printed relativity)"
+      ],
+      "policy_key": "alpha_broken_original_relative_status",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only within the named source workflow and supported actors; original human choices, immutable receipts and release gates remain. Source limits are recorded in reports/M3_ACCEPTANCE.md.",
+      "change_impact": "Original ActorRefs/source events retained. Reciprocal Broken remains unresolved/fail-closed rather than inventing precedence."
+    },
+    {
+      "id": "alpha-guard-unarmed-proof",
+      "summary": "The admitted Guard controller reviews actual weapon facts before the roll. A low result gives the real owned counter opportunity first; afterward the original Alpha may explicitly spare or kill the reviewed unarmed NPC. Empty inventory alone never proves unarmed.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF52 / printed50 Brutalize and PDF190 Guard moves",
+      "authority": "delegated_recommendation",
+      "rationale": "Preserves both printed opportunity and optional unarmed killing without manufacturing NPC actions or weapons.",
+      "alternatives": [
+        "Kill before allowing counter",
+        "Infer unarmed from missing records"
+      ],
+      "policy_key": "alpha_guard_unarmed_proof",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only within the named source workflow and supported actors; original human choices, immutable receipts and release gates remain. Source limits are recorded in reports/M3_ACCEPTANCE.md.",
+      "change_impact": "Frozen factual assessment ID, actual source counter event and selected final response are retained."
+    },
+    {
+      "id": "alpha-npc-injury-canonical",
+      "summary": "The actual Alpha authors the injury; persist it as a bounded actual injury Tag plus immutable source fact, with no invented NPC HP or Asset slots.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF52 / printed50 injury and existing NPC injury representation",
+      "authority": "delegated_recommendation",
+      "rationale": "Reuses the current canonical NPC injury representation and gives the actual physical consequence a saved consumer.",
+      "alternatives": [
+        "Narrative fact only, without Tag consumers"
+      ],
+      "policy_key": "alpha_npc_injury_canonical",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only within the named source workflow and supported actors; original human choices, immutable receipts and release gates remain. Source limits are recorded in reports/M3_ACCEPTANCE.md.",
+      "change_impact": "Original NPC ID and actual injury label/event retained. No additional generic damage menu options granted."
+    },
+    {
+      "id": "alpha-original-npc-broken-orders",
+      "summary": "An actual original NPC inflictor is superior to this original Broken Pilot for their own direct Orders. Store the actual NPC ActorRef and human controller separately; real mid Disobey may replace its ordinary option by removing only this exact condition.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF52 / printed50 and existing ReceiveOrders/Disobey",
+      "authority": "delegated_recommendation",
+      "rationale": "Applies printed relative Status and removal without borrowing the NPC controller's Handler/PC identity or inventing NPC Heat/dice.",
+      "alternatives": [
+        "Store controller as issuer (would grant another role false authority)",
+        "Ignore actual NPC source Status/removal (would omit printed condition consumer)"
+      ],
+      "policy_key": "alpha_original_npc_broken_orders",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only within the named source workflow and supported actors; original human choices, immutable receipts and release gates remain. Source limits are recorded in reports/M3_ACCEPTANCE.md.",
+      "change_impact": "Immutable instruction, original condition/event, actual cast and issuer/controller retained in the existing Orders protocol. General NPC Orders remain gated."
+    },
+    {
+      "id": "alpha-sex-finite-sleep-opportunity",
+      "summary": "Persist source sleep independently of injury and Helplessness. Keep the original counterpart opportunity pending until explicitly declined or actually performed, then require the original Alpha to record waking. Safety pause remains available.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF53 / printed51 low Alpha Sex",
+      "authority": "delegated_recommendation",
+      "rationale": "The text gives an actual opportunity while Alpha sleeps but no duration; this prevents a free wake bypass while avoiding automatic invented recovery.",
+      "alternatives": [
+        "Automatically wake on result (would erase opportunity)",
+        "Permanent unconscious injury (unprinted harm)"
+      ],
+      "policy_key": "alpha_sex_finite_sleep_opportunity",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only within the named source workflow and supported actors; original human choices, immutable receipts and release gates remain. Source limits are recorded in reports/M3_ACCEPTANCE.md.",
+      "change_impact": "Original sleep/effect/wake events and source controllers retained; changing duration must preserve performed outcomes."
+    },
+    {
+      "id": "alpha-sex-no-reprisal-scope",
+      "summary": "The source opponent may exercise one real supported opportunity without a reprisal Play from the sleeping Alpha. This creates no permanent immunity, self-Helpless relation or waived safety/other printed consultation.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF53 / printed51 low Alpha Sex",
+      "authority": "delegated_recommendation",
+      "rationale": "Consumes the printed one opportunity while retaining actual source effects, existing required followups and ordinary rules afterward.",
+      "alternatives": [
+        "Automatic harm immunity",
+        "Treat mere opportunity selection as actual performance"
+      ],
+      "policy_key": "alpha_sex_no_reprisal_scope",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only within the named source workflow and supported actors; original human choices, immutable receipts and release gates remain. Source limits are recorded in reports/M3_ACCEPTANCE.md.",
+      "change_impact": "Actual child/transfer/RoleCase receipts and completion source remain authoritative."
+    },
+    {
+      "id": "alpha-sex-distinct-broken-tracking",
+      "summary": "Keep this Play's own Broken source even if the same inflictor already has another active Broken source. The relation lowers Status once; exact scent entitlement lasts only while this Play's condition remains active. A real eligible Disobey removes Broken against that inflictor, including its active occurrences.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF53 / printed51 mid Alpha Sex",
+      "authority": "delegated_recommendation",
+      "rationale": "Avoids fabricating scent authority from a different earlier Play or erasing historical provenance.",
+      "alternatives": [
+        "Overwrite the prior source",
+        "Grant scent from any old Broken condition"
+      ],
+      "policy_key": "alpha_sex_distinct_broken_tracking",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only within the named source workflow and supported actors; original human choices, immutable receipts and release gates remain. Source limits are recorded in reports/M3_ACCEPTANCE.md.",
+      "change_impact": "Each source condition has a stable ID/action/event. Original source remains history after removal."
+    },
+    {
+      "id": "alpha-sex-scent-actual-location",
+      "summary": "The owner may privately discover the actual current original body location by scent while the exact source condition is active. It performs no movement and invents no coordinates when factual position is unknown/offstage.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF53 / printed51 scent tracking",
+      "authority": "delegated_recommendation",
+      "rationale": "Provides a real discovery consumer without teleporting either person or substituting the target controller's other character.",
+      "alternatives": [
+        "Automatic movement",
+        "Invent narrative position"
+      ],
+      "policy_key": "alpha_sex_scent_actual_location",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only within the named source workflow and supported actors; original human choices, immutable receipts and release gates remain. Source limits are recorded in reports/M3_ACCEPTANCE.md.",
+      "change_impact": "A future physical tracking/travel consumer can reuse the exact source condition and actual body provenance."
+    },
+    {
+      "id": "janus-storage-effective-threshold-lifetime",
+      "summary": "Active stored alterations count toward actual effective all-Void conditions while genuinely plugged in. Actual unplug/removal can end an uncompleted consequence whose sole full-family cause ceased, while any remaining full cause continues. Completed transformation and permanent Void are never reversed.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 19, 70",
+      "authority": "delegated_recommendation",
+      "rationale": "The temporary-while-plugged wording changes whether the printed all-Assets condition currently exists; it does not rewrite completed physical history.",
+      "alternatives": [
+        "Ignore stored points in all-Void counts, or make every started consequence permanent even after its only conditional cause disappears."
+      ],
+      "policy_key": "janus_storage_effective_threshold_lifetime",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only within the named source workflow and supported actors; original human choices, immutable receipts and release gates remain. Source limits are recorded in reports/M3_ACCEPTANCE.md.",
+      "change_impact": "Reuse existing Void/Keep/consent mechanics with exact stored-point pointers; no second birth lifecycle or reversible completed transformation."
+    },
+    {
+      "id": "janus-storage-reconnect-producer",
+      "summary": "A genuine new spinal plugging uses its actual Living Battery source producer. Prior stored changes activate only after that completed connection effect, including any required owned private answer. No additional Storage RNG or fabricated new gain is created.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 69, 70",
+      "authority": "delegated_recommendation",
+      "rationale": "The actual connection and its known receipt remain authority; a manually flipped link flag or unrelated relink does not reactivate stored effects.",
+      "alternatives": [
+        "Activate from an unproved flag, or require a separate Storage-specific roll on each reconnect."
+      ],
+      "policy_key": "janus_storage_reconnect_producer",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only within the named source workflow and supported actors; original human choices, immutable receipts and release gates remain. Source limits are recorded in reports/M3_ACCEPTANCE.md.",
+      "change_impact": "Reconnect has one genuine source episode and can reopen the normal conditional Void consequence without duplicated dice."
+    },
+    {
+      "id": "janus-storage-explicit-void-creation-boundary",
+      "summary": "Explicit Defeat growth of two new Void-corrupted Assets and forced all-Frame Core takeover remain permanent printed creations/effects. Generic Void rewrite gains offer optional Storage. Their threshold readers still count already active stored alterations.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 19, 29, 69, 70",
+      "authority": "delegated_recommendation",
+      "rationale": "These clauses explicitly create or corrupt specified hardware rather than invoking the generic choice to rewrite one uncorrupted Asset; diverting them would alter their stated effects.",
+      "alternatives": [
+        "Treat every Void-labelled creation or forced whole-Frame corruption as one divertible generic gain."
+      ],
+      "policy_key": "janus_storage_explicit_void_creation_boundary",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only within the named source workflow and supported actors; original human choices, immutable receipts and release gates remain. Source limits are recorded in reports/M3_ACCEPTANCE.md.",
+      "change_impact": "No new Defeat diversion UI, no optional waiver of actual takeover, and no stored point can undo a permanent result."
+    },
+    {
+      "id": "budget-director-performance-source",
+      "summary": "A separately played Director owns the actual appearance and departure; the original Handler owns its two fresh context Identities or reuses the already active context. The event adds four Heat once to the actual Handler context after it is established, subject to existing source Heat restrictions.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF151/printed149 and PDF192/printed190",
+      "authority": "delegated_recommendation",
+      "rationale": "The Budget event grants Heat while the Director rules require the Handler to use a distinct Girl-rule pool. Applying the event to another PC or before the context reset would lose its source effect.",
+      "alternatives": [
+        "Give the Heat to a different PC.",
+        "Apply four Heat before resetting the context to zero."
+      ],
+      "policy_key": "budget_director_performance_source",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only within the named source workflow and supported actors; original human choices, immutable receipts and release gates remain. Source limits are recorded in reports/M3_ACCEPTANCE.md.",
+      "change_impact": "Preserve original meeting/context/Heat events. Existing non-context Identity carry remains unavailable pending its actual source port."
+    },
+    {
+      "id": "budget-candidate-table-process",
+      "summary": "Keep the existing NPC body, controller and other jobs when assigning Pilot Candidate. The original table, including its controller and assigned Girl, authors and agrees to one exact process; edits clear prior agreements. Only the assigned original Girl reports its actual assessment. The assessment never automatically activates a player character or grants resources.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF151/printed149 and PDF191/printed189",
+      "authority": "delegated_recommendation",
+      "rationale": "The source assigns the assessment and requires the table to define candidacy, without a numeric check or success package. Exact proposals preserve each human contribution and avoid invented conversion mechanics.",
+      "alternatives": [
+        "Let one human silently define everyone else's process.",
+        "Auto-create a PC or reward package when the process is agreed."
+      ],
+      "policy_key": "budget_candidate_table_process",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only within the named source workflow and supported actors; original human choices, immutable receipts and release gates remain. Source limits are recorded in reports/M3_ACCEPTANCE.md.",
+      "change_impact": "Review original participant/process agreements before adjusting table composition. Preserve assignment, authored process, actual report and source history."
+    },
+    {
+      "id": "budget-anarchy-conditional-city-order",
+      "summary": "Anarchy is an exact source blockage that makes the city nonoperational while retaining its physical condition. Supported city-use and world-advancement consumers use that condition. The original Handler records an actual method and established civic outcome to remove only this source cause. It repairs no physical destruction and grants no Gorgon territory.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF151/printed149",
+      "authority": "delegated_recommendation",
+      "rationale": "The printed city counts as destroyed only until order is restored. A permanent physical destruction or map-only flag would omit either its temporary lifetime or actual mechanical consumers; no special pacification die is printed.",
+      "alternatives": [
+        "Permanently destroy the physical city.",
+        "Keep the condition in the map display only or clear it from a planned action."
+      ],
+      "policy_key": "budget_anarchy_conditional_city_order",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented only within the named source workflow and supported actors; original human choices, immutable receipts and release gates remain. Source limits are recorded in reports/M3_ACCEPTANCE.md.",
+      "change_impact": "Preserve previous physical damage and every unrelated blocked source. Future city consumers must use the same operational condition; narrative plans do not constitute restored order."
+    },
+    {
+      "id": "doctor-owned-details",
+      "summary": "Caster chooses printed Nano benefits and supported ongoing effect; patient chooses their existing repair Assets and may decline Identity unmark. Factual patient confirmation for standalone care is OOC ownership, not invented fictional consent/dialogue.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 72",
+      "authority": "delegated_recommendation",
+      "rationale": "The benefit is chosen by the caster, while the printed patient unmark is optional and existing sheet details belong to its original owner. This separates factual confirmation from invented in-fiction agreement.",
+      "alternatives": [
+        "Caster chooses every sheet detail."
+      ],
+      "policy_key": "doctor_owned_details",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented for original native Pilot/Doctor workflows through actual acquisition, resources and owned native controls. Unsupported class, graft, retention and lifetime endpoints remain guarded as listed in the acceptance report.",
+      "change_impact": "Preserves source benefit ownership with private existing patient resources and optional wording."
+    },
+    {
+      "id": "doctor-clinical-recovery",
+      "summary": "Metal Angel recovery restores actual biological medical/incapacity/vital/Helpless state after next-period real care. It does not grant an unprinted blanket Asset, permanent Void, Identity or source-work reset.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 73",
+      "authority": "delegated_recommendation",
+      "rationale": "The recovery clause follows actual biological care. It does not explicitly erase permanent corruption, every mechanical Asset condition or separate original-source waking work.",
+      "alternatives": [
+        "Treat recover as full sheet reset."
+      ],
+      "policy_key": "doctor_clinical_recovery",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented for original native Pilot/Doctor workflows through actual acquisition, resources and owned native controls. Unsupported class, graft, retention and lifetime endpoints remain guarded as listed in the acceptance report.",
+      "change_impact": "Ordinary printed Off-Duty Asset recovery remains separate; exact Defeat waking/swap obligations retain real controls."
+    },
+    {
+      "id": "doctor-source-lifetime",
+      "summary": "Native ongoing Care/protection belongs to exact original Doctor Frame/person. End it if source Frame scrapped/replaced or either actual person ends; prevent death before actual career fallout, never undo archives.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 71, 73",
+      "authority": "delegated_recommendation",
+      "rationale": "An ongoing Frame ability needs its actual current source. Prevention must happen before the irreversible death endpoint so archived history and lost scene roles are never fabricated backward.",
+      "alternatives": [
+        "Persistent ability remains after losing all Frame Plays."
+      ],
+      "policy_key": "doctor_source_lifetime",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented for original native Pilot/Doctor workflows through actual acquisition, resources and owned native controls. Unsupported class, graft, retention and lifetime endpoints remain guarded as listed in the acceptance report.",
+      "change_impact": "No successor/old-source authority. Eighth Adrenal survives but scraps Frame using existing replacement."
+    },
+    {
+      "id": "doctor-borrowed-cap-return",
+      "summary": "The printed ordinary maximum is five Frame Assets (four Girl Assets), with existing counts_toward_limit/intrinsic semantics. Wings does not override that cap. Temporary hardware returns to the same original actual donor Frame at next real Off-Duty, retaining its current actual damage/Void/description without a duplicate.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 15, 72",
+      "authority": "delegated_recommendation",
+      "rationale": "The source gives temporary actual hardware and later returns it, without a separate cap or a pristine replacement. Printed ordinary Frame capacity and original object identity continue to apply.",
+      "alternatives": [
+        "Permit an unprinted unlimited Wings cap, or recreate returned hardware pristine."
+      ],
+      "policy_key": "doctor_borrowed_cap_return",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented for original native Pilot/Doctor workflows through actual acquisition, resources and owned native controls. Unsupported class, graft, retention and lifetime endpoints remain guarded as listed in the acceptance report.",
+      "change_impact": "Corrected initial erroneous four-Frame check. Four-to-five-to-four normal flow now tested; replacement at five remains an explicit unavailable UI/port, not a cap ruling."
+    },
+    {
+      "id": "doctor-arrival-body",
+      "summary": "Running Ragged moves actual free Doctor body; own currently occupied Frame accompanies it, parked hardware does not teleport independently. Unknown destination remains unknown with actual arrival source. Either actual participant marks only their own Tag.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 72",
+      "authority": "delegated_recommendation",
+      "rationale": "The arrival wording moves the called Doctor, while existing physical placement distinguishes that body and its occupied Frame from separately parked hardware.",
+      "alternatives": [
+        "Always move both independent Girl and parked Frame."
+      ],
+      "policy_key": "doctor_arrival_body",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Implemented for original native Pilot/Doctor workflows through actual acquisition, resources and owned native controls. Unsupported class, graft, retention and lifetime endpoints remain guarded as listed in the acceptance report.",
+      "change_impact": "Preserves actual body/custody/subsumption/journey and original source identity."
     }
   ],
   "entries": [
@@ -5899,14 +6246,18 @@
         "heading": "ALPHA"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_alpha_brutalize.py",
+        "tests/rules/test_alpha_sex.py",
+        "tests/rules/test_alpha_hound_status_review.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -5922,14 +6273,17 @@
         "heading": "Brutalize"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_alpha_brutalize.py",
+        "tests/rules/test_npc_broken_orders.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -5978,7 +6332,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_standards.py"
+        "tests/rules/test_standards.py",
+        "tests/rules/test_alpha_hound_status_review.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -5995,14 +6350,16 @@
         "heading": "Sex Play"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_alpha_sex.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -7063,14 +7420,16 @@
         "heading": "DoctorDoctor Mk. II"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_doctor_runtime.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "DOCTORDOCTOR MK. II",
@@ -7099,7 +7458,8 @@
       "test_evidence": [
         "tests/rules/test_frame_reward_service.py",
         "tests/rules/test_frame_reward_ui.py",
-        "tests/rules/test_frame_rewards.py"
+        "tests/rules/test_frame_rewards.py",
+        "tests/rules/test_doctor_runtime.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -7134,7 +7494,8 @@
         "tests/rules/test_replacement_service.py",
         "tests/rules/test_replacement_ui.py",
         "tests/rules/test_off_duty_service.py",
-        "tests/rules/test_strain_service.py"
+        "tests/rules/test_strain_service.py",
+        "tests/rules/test_doctor_runtime.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -7154,14 +7515,16 @@
         "heading": "Borrowed Wings"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_doctor_runtime.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "DOCTORDOCTOR MK. II",
@@ -7180,14 +7543,16 @@
         "heading": "Nanobot Injection"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_doctor_runtime.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "DOCTORDOCTOR MK. II",
@@ -7206,14 +7571,16 @@
         "heading": "Running Ragged"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_doctor_runtime.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "DOCTORDOCTOR MK. II",
@@ -7232,14 +7599,16 @@
         "heading": "The Cute Nurse"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_doctor_runtime.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "DOCTORDOCTOR MK. II",
@@ -7258,14 +7627,16 @@
         "heading": "Adrenal Injectors"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_doctor_runtime.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "DOCTORDOCTOR MK. II",
@@ -7284,14 +7655,16 @@
         "heading": "Here for Support"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_doctor_runtime.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "DOCTORDOCTOR MK. II",
@@ -7310,14 +7683,16 @@
         "heading": "Metal Angel"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_doctor_runtime.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "DOCTORDOCTOR MK. II",
@@ -13193,14 +13568,16 @@
         "heading": "Budget low: die 2, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_political_function.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -13440,14 +13817,46 @@
         "heading": "Budget high: die 1, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Actual selected High Budget die1 column1 consequence",
+        "actor_type": "Original Handler and separately played original Director NPC",
+        "pre_roll_sources": [
+          "Original Strain selection and current living people",
+          "Actual source appearance"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "source": [
+            "Actual Director appearance",
+            "Owned Handler Girl-rule context",
+            "Four source Heat",
+            "Actual Director departure"
+          ]
+        },
+        "choice_ownership": "Director human owns appearance/departure; Handler owns ordinary Identity names and actual presence",
+        "target_policy": "Existing living Director played by a different current member; retain original Handler body",
+        "post_roll_effects": [
+          "Use real Handler context resources; gain four Heat once subject to source locks",
+          "End actual Director cast and restore original Handler cast after final departure"
+        ],
+        "mandatory_followups": [
+          "Required meeting remains pending through actual departure"
+        ],
+        "handler_or_gm_intervention": "Source-owned actual meeting facts; preexisting outside-context Identity carry remains gated",
+        "test_fixture_ids": [
+          "tests/rules/test_budget_director.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_budget_director.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -13609,14 +14018,45 @@
         "heading": "Budget high: die 4, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Actual selected High Budget die4 column2 consequence",
+        "actor_type": "Existing NPC Candidate, assigned original Girl and original table",
+        "pre_roll_sources": [
+          "Actual selected Strain consequence",
+          "Existing living NPC and current original Girl"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "source": [
+            "Add Candidate job preserving body/controller",
+            "Assign original Girl",
+            "Table authors and agrees exact process",
+            "Original Girl reports assessment"
+          ]
+        },
+        "choice_ownership": "Handler assigns Candidate and Girl; each table human proposes or agrees; assigned Girl owns assessment",
+        "target_policy": "Current original NPC/body/controller and original Girl/Cadre retained; no automatic character conversion",
+        "post_roll_effects": [
+          "Persist Candidate job, source assignment, exact agreed process and real assessment report"
+        ],
+        "mandatory_followups": [
+          "Required assessment work remains pending until original Girl records actual assessment"
+        ],
+        "handler_or_gm_intervention": "No unprinted assessment dice or reward package; NPC-to-PC move is separate",
+        "test_fixture_ids": [
+          "tests/rules/test_budget_candidate.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_budget_candidate.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -13637,12 +14077,41 @@
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Actual selected High Budget die5 column1 consequence",
+        "actor_type": "Original Handler and existing city",
+        "pre_roll_sources": [
+          "Actual selected Strain consequence",
+          "Existing physically surviving city"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "source": [
+            "City becomes nonoperational",
+            "Original Handler records actual restored order"
+          ]
+        },
+        "choice_ownership": "Handler selects existing city and later authors established civic outcome after play",
+        "target_policy": "Exact original city/source; no erasure of physical destruction or unrelated blockage",
+        "post_roll_effects": [
+          "Canonical temporary source blockage consumed by city use and world advancement",
+          "Actual restoration removes exact source blocker only"
+        ],
+        "mandatory_followups": [
+          "Conditional city blockage persists without automatic time expiry"
+        ],
+        "handler_or_gm_intervention": "Actual method/result are human-established fiction; no special unprinted pacification roll",
+        "test_fixture_ids": [
+          "tests/rules/test_budget_anarchy.py"
+        ]
+      },
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_strain_effects.py",
         "tests/rules/test_strain_effect_service.py",
-        "tests/rules/test_strain_effect_ui.py"
+        "tests/rules/test_strain_effect_ui.py",
+        "tests/rules/test_budget_anarchy.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -16170,14 +16639,16 @@
         "heading": "Guard"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_alpha_brutalize.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

@@ -33,6 +33,10 @@ def purchase(
     source_event: str,
 ) -> GameState:
     choice = Installation.model_validate_json(choice.model_dump_json())
+    from girlframe.engine.m3_janus_storage import ids as stored_ids
+
+    if choice.replace in stored_ids(original, actor):
+        raise ValueError("An actual active stored-Void Asset cannot be replaced at the cap")
     state = GameState.model_validate_json(original.model_dump_json())
     view = resolve(state, actor, bindings)
     if (
@@ -53,7 +57,7 @@ def purchase(
         name=asset_name(choice),
         description=choice.description.strip(),
     )
-    result = install(sheet, asset, replace=choice.replace)
+    result = install(sheet, asset, replace=choice.replace, effective_void=stored_ids(state, actor))
     result.sheet.permissions -= 1
     state.sheets[actor.entity] = result.sheet
     assert view.frame_instance is not None

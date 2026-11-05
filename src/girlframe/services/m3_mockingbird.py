@@ -98,7 +98,10 @@ def projection(
         raise WorkflowError("Recover the original owned Mockingbird decision")
     ref = ActorRef.model_validate(meta["actor"])
     actual, _ = resources(state, ref)
+    from girlframe.services.m3_janus_storage import available as storage_available
+
     return dict(
+        storage_available=storage_available(game, c, state, ref),
         total=meta["before"],
         assets=[
             dict(id=x.id, label=getattr(x, "label", getattr(x, "name", x.id)), family=x.family)
@@ -136,9 +139,15 @@ def apply(
             raise WorkflowError("Decline without selecting a cost or replacement total")
         meta["state"] = "declined"
     else:
-        if set(answer.fields) != {"asset"} or answer.fields["asset"] not in meta["eligible"]:
+        if (
+            set(answer.fields) not in ({"asset"}, {"asset", "storage"})
+            or answer.fields["asset"] not in meta["eligible"]
+            or answer.fields.get("storage", "yes") != "yes"
+        ):
             raise WorkflowError("Choose one original eligible uncorrupted owned Asset")
         event = action["data"]["response_event"]
+        from girlframe.services.m3_janus_storage import gain_source
+
         changed, followups, payment = rules.risk(
             state,
             profiles(c, game.store.campaign_id),
@@ -150,6 +159,9 @@ def apply(
             meta["before"],
             answer.number,
             piloting=bool(action["data"].get("prepared", {}).get("piloting")),
+            storage=gain_source(
+                game, c, state, ref, request["id"], "mockingbird_risk", "storage" in answer.fields
+            ),
         )
         _copy(state, changed)
         meta.update(state="paid", payment=payment.model_dump(mode="json"), choice=request["id"])
@@ -315,7 +327,12 @@ def prove_void_source(
 
 
 def complete_void_continuation(
-    game: "GameService", c: Connection, work_id: str, event: str, viewer: GuildViewer, key: str
+    game: "GameService",
+    c: Connection,
+    work_id: str,
+    event: str,
+    viewer: GuildViewer | None,
+    key: str,
 ) -> None:
     row = (
         c.execute(

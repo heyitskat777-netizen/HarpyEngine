@@ -253,8 +253,12 @@ class PhysicalService:
             void_works = []
             if command.operation != "exit" and occupied != (command.actor, actual.frame_instance):
                 sheet = updated.sheets[command.actor.entity]
+                from girlframe.engine.m3_janus_storage import effective_assets
+
                 for family in ("girl", "frame"):
-                    assets = [x for x in sheet.assets if x.family == family]
+                    assets = [
+                        x for x in effective_assets(updated, command.actor) if x.family == family
+                    ]
                     if (
                         not assets
                         or not all(x.void for x in assets)

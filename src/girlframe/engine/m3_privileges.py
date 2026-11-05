@@ -1,6 +1,7 @@
 """Temporary removal keeps the original purchased resource and character attached."""
 
 from girlframe.engine.m2 import AssetState, GameState, Obligation
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_core import install
 from girlframe.engine.m3_frame_swap_state import SwapReceipt
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt, Requisition, SceneReceipt
@@ -237,7 +238,16 @@ def restore(original: GameState, identity: str, character: str, replace: str | N
                 )
         if "asset" in gate.details:
             asset = AssetState.model_validate_json(gate.details["asset"])
-            state.sheets[str(gate.target)] = install(sheet, asset, replace=replace).sheet
+            from girlframe.engine.m3_janus_storage import ids as stored_ids
+
+            state.sheets[str(gate.target)] = install(
+                sheet,
+                asset,
+                replace=replace,
+                effective_void=stored_ids(
+                    state, ActorRef(kind="pilot", entity=str(gate.target), incarnation=character)
+                ),
+            ).sheet
         elif replace is not None:
             raise ValueError(
                 "Restoring a lost-pistol entitlement does not issue or remove an Asset"

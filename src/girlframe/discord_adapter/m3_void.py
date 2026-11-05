@@ -69,9 +69,54 @@ async def open_void(
     *,
     operation: str | None = None,
     asset_id: str | None = None,
+    storage_controls: bool = True,
 ) -> None:
     data = await asyncio.to_thread(service.get, viewer_from_interaction(interaction), identity)
     stage = data["stage"]
+    if storage_controls and operation is None and data.get("storage_unplug") and stage not in FINAL:
+        from girlframe.discord_adapter.m3_punishments import Picker
+
+        async def select(current: discord.Interaction, value: str) -> None:
+            await open_void(
+                current,
+                service,
+                identity,
+                operation="storage_unplug" if value == "unplug" else None,
+                storage_controls=False,
+            )
+
+        await Picker(
+            interaction.user.id,
+            "Actual stored-Void consequence",
+            (
+                ("continue", "Continue the actual Void consequence"),
+                ("unplug", "Physically unplug the actual Harpy"),
+            ),
+            select,
+        ).show(interaction)
+        return
+    if operation == "storage_unplug" and data.get("storage_unplug") and stage not in FINAL:
+        from girlframe.services.m3_frame_control import FrameControlService
+
+        async def unplug(current: discord.Interaction, values: dict[str, Any]) -> str:
+            await asyncio.to_thread(
+                FrameControlService(service.game).unplug,
+                viewer_from_interaction(current),
+                str(current.id),
+                data["storage_unplug"],
+                data["game_revision"],
+                values["account"],
+            )
+            return "Actual neural unplug saved; only a ceased uncompleted Void cause can end."
+
+        await NativeForm(
+            interaction.user.id,
+            "Unplug the actual stored Void source",
+            "This does not remove permanent Void or undo any completed transformation.",
+            [Field("account", "Describe the actual physical unplug", paragraph=True)],
+            unplug,
+        ).present(interaction)
+        return
     if stage in FINAL and data["protection_active"]:
         if not data["guardian_owned"]:
             await reply(

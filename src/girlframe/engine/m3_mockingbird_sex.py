@@ -7,8 +7,9 @@ from girlframe.engine.m2 import AssetState, GameState
 from girlframe.engine.m3_actor_bonds import change, make_helpless
 from girlframe.engine.m3_actor_state import ActorRef, ProfileBinding
 from girlframe.engine.m3_actors import resolve
-from girlframe.engine.m3_core import Followup, corrupt
+from girlframe.engine.m3_core import Followup
 from girlframe.engine.m3_harpy_resources import HarpyResource
+from girlframe.engine.m3_janus_storage import GainSource
 from girlframe.engine.m3_mockingbird import SEX, give_tag, owns
 from girlframe.engine.m3_mockingbird_state import Capability, Exposure, Starry
 from girlframe.engine.m3_world_state import AdversaryPilot, Gorgon
@@ -19,7 +20,9 @@ def assets(state: GameState, actor: ActorRef) -> tuple[HarpyResource, ...]:
         sheet = state.sheets.get(actor.entity)
         if sheet is None or sheet.character_id != actor.incarnation:
             raise ValueError("Recover the actual original counterpart's resources")
-        return tuple(sheet.assets)
+        from girlframe.engine.m3_janus_storage import effective_assets
+
+        return effective_assets(state, actor)
     if actor.kind == "external_pilot":
         from girlframe.engine.m3_harpy_defeat import harpy
 
@@ -70,9 +73,23 @@ def update_assets(
         type(value).model_validate_json(value.model_dump_json())
     state = GameState.model_validate_json(original.model_dump_json())
     if actor.kind == "pilot":
-        state.sheets[actor.entity].assets = [
-            AssetState.model_validate_json(proposed[x.id].model_dump_json()) for x in old
-        ]
+        from girlframe.engine.m3_janus_storage import active, put
+
+        stored = {x.asset: x for x in active(original, actor)}
+        original_assets = state.sheets[actor.entity].assets
+        output = []
+        for raw in original_assets:
+            value = AssetState.model_validate_json(proposed[raw.id].model_dump_json())
+            if raw.id in stored:
+                effective = next(x for x in old if x.id == raw.id)
+                if value.void == effective.void and value.description == effective.description:
+                    value.void, value.description = raw.void, raw.description
+                elif not value.void:
+                    put(state, stored[raw.id].model_copy(update={"removed_event": event}))
+                else:
+                    raise ValueError("Do not silently make a stored alteration permanent")
+            output.append(value)
+        state.sheets[actor.entity].assets = output
         state.sheets[actor.entity].revision += 1
         return state
     if actor.kind == "external_pilot":
@@ -153,21 +170,26 @@ def infect(
     description: str,
     action: str,
     event: str,
+    *,
+    storage: GainSource | None = None,
 ) -> tuple[GameState, tuple[Followup, ...]]:
     if not owns(original, actor, SEX):
         raise ValueError("Use this actual original person's owned Sex Play")
     view = resolve(original, target, bindings, require_current_profile=False)
     if target.kind == "pilot":
-        paid = corrupt(
-            original.sheets[target.entity],
+        from girlframe.engine.m3_janus_storage import alter
+
+        return alter(
+            original,
+            target,
             asset,
             description,
+            action,
+            event,
             piloting=view.inside_frame is True
             and view.occupied_frame_instance == view.frame_instance,
+            source=storage,
         )
-        state = GameState.model_validate_json(original.model_dump_json())
-        state.sheets[target.entity] = paid.sheet
-        return state, paid.followups
     actual = assets(original, target)
     chosen = next((x for x in actual if x.id == asset and not x.void), None)
     if chosen is None or not description.strip() or len(description) > 1200:
@@ -272,6 +294,7 @@ def write_self_asset(
     event: str,
     *,
     replace: str | None = None,
+    storage: GainSource | None = None,
 ) -> GameState:
     """The explicit self option writes one new Girl Asset, with actual acquisition caps."""
     from girlframe.engine.m3_core import install
@@ -284,12 +307,34 @@ def write_self_asset(
     if any(x.id == identity for x in assets(original, actor)):
         raise ValueError("This original self-written Asset already exists")
     state = GameState.model_validate_json(original.model_dump_json())
-    value = AssetState(id=identity, family="girl", name=name, description=description, void=True)
+    value = AssetState(
+        id=identity, family="girl", name=name, description=description, void=storage is None
+    )
     if actor.kind == "pilot":
         sheet = state.sheets.get(actor.entity)
         if sheet is None or sheet.character_id != actor.incarnation:
             raise ValueError("Use the original caster's actual resources")
-        state.sheets[actor.entity] = install(sheet, value, replace=replace).sheet
+        from girlframe.engine.m3_janus_storage import ids as stored_ids
+        from girlframe.engine.m3_janus_storage import store
+
+        if replace in stored_ids(original, actor):
+            raise ValueError("Do not replace an actual active stored-Void Asset at the cap")
+        state.sheets[actor.entity] = install(
+            sheet, value, replace=replace, effective_void=stored_ids(state, actor)
+        ).sheet
+        if storage:
+            store(
+                state,
+                actor,
+                asset=identity,
+                description=description,
+                purchase=storage.purchase,
+                action=action,
+                step=0,
+                choice=storage.choice,
+                event=event,
+                source_kind=storage.kind,
+            )
     elif actor.kind == "external_pilot":
         from girlframe.engine.m3_harpy_defeat import harpy, update
         from girlframe.engine.m3_void_state import HarpyAsset, HarpyState
@@ -394,8 +439,8 @@ def void_criteria(before: GameState, after: GameState, actor: ActorRef) -> tuple
     immune_girl = has_rule(new, "girl.mockingbird.risk-factor", "MOCKINGBIRD")
     result = []
     for family in ("girl", "frame"):
-        prior = [x for x in old.assets if x.family == family]
-        current = [x for x in new.assets if x.family == family]
+        prior = [x for x in assets(before, actor) if x.family == family]
+        current = [x for x in assets(after, actor) if x.family == family]
         if (
             current
             and all(x.void for x in current)

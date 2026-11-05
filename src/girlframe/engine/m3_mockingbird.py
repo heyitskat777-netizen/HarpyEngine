@@ -7,8 +7,9 @@ from pydantic import Field
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model, ProfileBinding
 from girlframe.engine.m3_actors import resolve
-from girlframe.engine.m3_core import Followup, corrupt
+from girlframe.engine.m3_core import Followup
 from girlframe.engine.m3_girl_runtime_state import has_rule
+from girlframe.engine.m3_janus_storage import GainSource
 
 if TYPE_CHECKING:
     from girlframe.engine.m2 import TagState
@@ -62,6 +63,7 @@ def risk(
     after: int,
     *,
     piloting: bool,
+    storage: GainSource | None = None,
 ) -> tuple[GameState, tuple[Followup, ...], RiskPayment]:
     """The player pays real Void to choose an actual 8, 9 or 10 after modifiers."""
     from girlframe.engine.m3_dive import _harpy_assets, resources
@@ -89,10 +91,11 @@ def risk(
             view.inside_frame is True and view.occupied_frame_instance == view.frame_instance
         )
         context = own_frame if view.inside_frame is not None else piloting
-        paid = corrupt(original.sheets[actor.entity], asset, description, piloting=context)
-        changed = GameState.model_validate_json(original.model_dump_json())
-        changed.sheets[actor.entity] = paid.sheet
-        followups = paid.followups
+        from girlframe.engine.m3_janus_storage import alter
+
+        changed, followups = alter(
+            original, actor, asset, description, action, event, piloting=context, source=storage
+        )
     else:
         from girlframe.engine.m3_harpy_defeat import assets
 

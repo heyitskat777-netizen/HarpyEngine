@@ -6,8 +6,9 @@ from uuid import NAMESPACE_URL, uuid5
 from girlframe.engine.m2 import AssetState, GameState, IdentityState, PilotSheet, shift_status
 from girlframe.engine.m3_actor_state import ActorRef, Model, ProfileBinding
 from girlframe.engine.m3_actors import resolve
-from girlframe.engine.m3_core import Followup, corrupt
+from girlframe.engine.m3_core import Followup
 from girlframe.engine.m3_dive_state import Effect
+from girlframe.engine.m3_janus_storage import GainSource
 from girlframe.engine.m3_physical import lock_cockpit
 from girlframe.engine.m3_void_state import HarpyAsset, HarpyIdentity
 from girlframe.engine.m3_world_state import Asset, WorldTag
@@ -76,7 +77,9 @@ def resources(
         sheet = state.sheets.get(actor.entity)
         if sheet is None or sheet.character_id != actor.incarnation:
             raise ValueError("Recover the actual original Girl's resources")
-        return sheet.assets, sheet.identities
+        from girlframe.engine.m3_janus_storage import effective_assets
+
+        return effective_assets(state, actor), sheet.identities
     from girlframe.engine.m3_harpy_defeat import harpy
     from girlframe.engine.m3_harpy_resources import assets
 
@@ -131,6 +134,7 @@ def apply(
     handler: ActorRef | None,
     cast_npcs: tuple[str, ...],
     handler_controller: int | None = None,
+    storage: GainSource | None = None,
 ) -> Outcome:
     state = GameState.model_validate_json(original.model_dump_json())
     view = resolve(state, actor, bindings, require_current_profile=False)
@@ -177,13 +181,24 @@ def apply(
                 view.inside_frame is True and view.occupied_frame_instance == view.frame_instance
             )
             context = own_frame if view.inside_frame is not None else piloting
-            result = corrupt(sheet, effect.asset, effect.description, piloting=context)
-            sheet = result.sheet
+            from girlframe.engine.m3_janus_storage import alter
+
+            state, required = alter(
+                state,
+                actor,
+                effect.asset,
+                effect.description,
+                action,
+                event,
+                piloting=context,
+                source=storage,
+                step=step,
+            )
+            sheet = state.sheets[actor.entity]
             for entry in sheet.identities:
                 if entry.id not in locks:
                     entry.marked = False
             state.sheets[actor.entity] = sheet
-            required = result.followups
         else:
             from girlframe.engine.m3_harpy_defeat import update
             from girlframe.engine.m3_harpy_resources import assets

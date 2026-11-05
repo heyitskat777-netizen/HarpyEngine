@@ -144,12 +144,19 @@ class GameService:
                     if str(actor) == str(human):
                         principal = (human, appointment)
             previous_state = load_state(c, self.store.campaign_id)
+            if any(x.frame == "DOCTORDOCTOR MK. II" for x in previous_state.sheets.values()):
+                from girlframe.services.m3_doctor_lifecycle import prepare as doctor_lifecycle
+
+                doctor_lifecycle(self, c, previous_state, state, event)
             if state.neural_connections:
                 from girlframe.engine.m3_frame_control import prepare_endings as end_neural_sources
 
                 neural_state = end_neural_sources(previous_state, state, event)
                 for field in GameState.model_fields:
                     setattr(state, field, getattr(neural_state, field))
+            from girlframe.engine.m3_janus_storage import end_inactive_causes
+
+            end_inactive_causes(state, event)
             for fact in state.facts:
                 if fact.get("kind") == "blocked_by_obsession" and not fact.get("event"):
                     fact["event"] = event
@@ -214,6 +221,12 @@ class GameService:
             from girlframe.services.m3_debts import synchronize
 
             synchronize(c, self.store, state, event)
+            if any(x.get("kind") == "doctor_track_mark" for x in state.facts):
+                from girlframe.services.m3_doctor_lifecycle import (
+                    synchronize as sync_doctor_lifecycle,
+                )
+
+                sync_doctor_lifecycle(self, c, state, event)
         if state is not None and any(
             fact.get("kind") == "compliance_virus_purge" for fact in state.facts
         ):
@@ -236,6 +249,28 @@ class GameService:
             controlled_birth = synchronize_birth_controls(self, c, event)
             for field in GameState.model_fields:
                 setattr(state, field, getattr(controlled_birth, field))
+        if self.store.policy.m3_approval is not None:
+            from girlframe.services.m3_alpha import synchronize_counters as alpha_counters
+
+            alpha_state = alpha_counters(self, c, event)
+            if state is not None and alpha_state is not None:
+                for field in GameState.model_fields:
+                    setattr(state, field, getattr(alpha_state, field))
+        if state is not None and any(
+            x.get("kind") == "janus_storage_cause_ended" and x.get("event") == event
+            for x in state.facts
+        ):
+            from girlframe.services.m3_janus_storage import complete_stopped
+
+            complete_stopped(self, c, state, event, None, str(uuid4()))
+        if state is not None and any(x.get("kind") == "alpha_sex_session" for x in state.facts):
+            from girlframe.services.m3_alpha_sex import synchronize_counters as sex_counters
+
+            sex_state = sex_counters(self, c, event)
+            if sex_state is not None:
+                for field in GameState.model_fields:
+                    setattr(state, field, getattr(sex_state, field))
+
         return event
 
     def sheet(self, viewer: GuildViewer, owner: int | None = None) -> dict[str, Any]:
@@ -249,20 +284,35 @@ class GameService:
             from girlframe.engine.m3_janus_storage import active as stored_void
 
             if sheet.character_id:
-                points = stored_void(state, ActorRef(
-                    kind="pilot", entity=str(sheet.owner), incarnation=sheet.character_id
-                ))
+                points = stored_void(
+                    state,
+                    ActorRef(kind="pilot", entity=str(sheet.owner), incarnation=sheet.character_id),
+                )
                 if points:
                     sheet = sheet.model_copy(deep=True)
                     for asset in sheet.assets:
                         point = next((x for x in points if x.asset == asset.id), None)
                         if point is not None:
                             asset.void, asset.description = True, point.description
-            return (
+            data = (
                 sheet.model_dump(mode="json")
                 if sheet.owner == viewer.user_id
                 else public_sheet(sheet, state)
             )
+            if sheet.owner == viewer.user_id and sheet.character_id:
+                from girlframe.engine.m3_actor_state import ActorRef
+
+                subject = ActorRef(
+                    kind="pilot", entity=str(sheet.owner), incarnation=sheet.character_id
+                )
+                broken = [
+                    x
+                    for x in state.alpha_broken
+                    if x.subject == subject and x.removed_event is None
+                ]
+                if broken:
+                    data["broken_against"] = [x.inflictor.model_dump(mode="json") for x in broken]
+            return data
 
     def helpless_status(self, viewer: GuildViewer) -> bool:
         """Read the current person's condition, including actor-bound NPC opponents."""
@@ -910,6 +960,12 @@ class GameService:
             mockingbird = None
             snoop = None
             janus = None
+            doctor = None
+            alpha = None
+            alpha_sex = None
+            alpha_sex_counter_scope = None
+            alpha_counter_scope = None
+            npc_order_scope = None
             void_keep = None
             dormant_dive_source = None
             from girlframe.services.m3_gorgon_play import (
@@ -936,7 +992,7 @@ class GameService:
                 from girlframe.services.m3_mockingbird_plays import prepare as prepare_mockingbird
 
                 mockingbird = prepare_mockingbird(self, c, viewer, prepared, state, channel=channel)
-            elif prepared.source_work is not None:
+            elif prepared.source_work is not None and prepared.play != "alpha_sex":
                 raise WorkflowError("A source work reference belongs to its actual mandatory Play.")
             if prepared.play in ("all_out_assault", "go_for_the_core"):
                 from girlframe.engine.m3_actor_state import ActorRef
@@ -968,10 +1024,22 @@ class GameService:
                 from girlframe.services.m3_janus_play import prepare as prepare_janus
 
                 janus = prepare_janus(self, c, viewer, prepared, state, channel=channel)
+            if prepared.play == "alpha_sex":
+                from girlframe.services.m3_alpha_sex import prepare as prepare_alpha_sex
+
+                alpha_sex = prepare_alpha_sex(self, c, viewer, state, prepared, channel)
+            if prepared.play == "brutalize":
+                from girlframe.services.m3_alpha import prepare as prepare_alpha
+
+                alpha = prepare_alpha(self, c, viewer, prepared, state, channel=channel)
             if prepared.play == "snoop":
                 from girlframe.services.m3_enforcer_snoop import prepare as prepare_snoop
 
                 snoop = prepare_snoop(self, c, viewer, prepared, state, channel=channel)
+            if prepared.play in ("nanobot_injection", "doctor_support"):
+                from girlframe.services.m3_doctor import prepare as prepare_doctor
+
+                doctor = prepare_doctor(self, c, viewer, prepared, state, channel=channel)
             if prepared.play == "enforcement_initiative":
                 from girlframe.services.m3_enforcement_initiative import (
                     prepare as prepare_enforcement,
@@ -1003,9 +1071,45 @@ class GameService:
                 source=defeat or m3 or dormant_dive_source,
                 channel=channel,
             )
+            if prepared.parent is not None:
+                alpha_source = self.action(c, prepared.parent)
+                if alpha_source["data"].get("alpha", {}).get("phase") == "counter":
+                    from girlframe.engine.m3_actor_bonds import current_ref as alpha_response_ref
+                    from girlframe.services.m3_alpha import authorize as authorize_alpha
+                    from girlframe.services.m3_alpha import (
+                        validate_counter_child as validate_alpha_response,
+                    )
+
+                    authorize_alpha(self, c, viewer, alpha_source)
+                    validate_alpha_response(
+                        self, c, alpha_source, alpha_response_ref(state, viewer.user_id), prepared
+                    )
+                    alpha_counter_scope = alpha_source["data"]["alpha"]
+            if prepared.parent is not None:
+                sex_parent = self.action(c, prepared.parent)
+                if sex_parent["data"].get("alpha_sex", {}).get("phase") == "counter":
+                    from girlframe.engine.m3_actor_bonds import current_ref as sex_response_ref
+                    from girlframe.services.m3_alpha_sex import authorize as authorize_sex
+                    from girlframe.services.m3_alpha_sex import (
+                        validate_counter_child as validate_sex_counter,
+                    )
+
+                    authorize_sex(self, c, viewer, sex_parent)
+                    validate_sex_counter(
+                        self, c, sex_parent, sex_response_ref(state, viewer.user_id), prepared
+                    )
+                    alpha_sex_counter_scope = sex_parent["data"]["alpha_sex"]
+            from girlframe.services.m3_npc_orders import prepare as prepare_npc_order
+
+            npc_order_scope = prepare_npc_order(self, c, state, viewer, channel, prepared)
             sheet = state.sheets.get(str(viewer.user_id))
             if sheet is None or sheet.revision != sheet_revision:
                 raise WorkflowError("STALE_SHEET: refresh the Play wizard.")
+            if any(x.get("kind") == "alpha_sex_session" for x in state.facts):
+                from girlframe.engine.m3_actor_bonds import current_ref as sleeping_original
+                from girlframe.engine.m3_alpha_sex import require_awake
+
+                require_awake(state, sleeping_original(state, viewer.user_id))
             if sheet.frame_scrapped and prepared.piloting and defeat is None:
                 raise WorkflowError(
                     "REQUIRED_FOLLOWUP: replace the scrapped Frame before new Plays."
@@ -1098,6 +1202,12 @@ class GameService:
                         mockingbird,
                         snoop,
                         janus,
+                        doctor,
+                        alpha,
+                        alpha_sex,
+                        alpha_sex_counter_scope,
+                        alpha_counter_scope,
+                        npc_order_scope,
                         gorgon_response,
                     )
                 )
@@ -1125,8 +1235,24 @@ class GameService:
                     source_cast, _ = CastService(ActorService(MissionService(self.store)))._current(
                         c, state, channel
                     )
+                elif npc_order_scope is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(npc_order_scope["cast"]))
+                elif alpha_sex is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(alpha_sex["cast"]))
+                elif alpha_sex_counter_scope is not None:
+                    source_cast = SceneCast.model_validate_json(
+                        json.dumps(alpha_sex_counter_scope["cast"])
+                    )
+                elif alpha_counter_scope is not None:
+                    source_cast = SceneCast.model_validate_json(
+                        json.dumps(alpha_counter_scope["cast"])
+                    )
+                elif alpha is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(alpha["cast"]))
                 elif janus is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(janus["cast"]))
+                elif doctor is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(doctor["cast"]))
                 elif snoop is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(snoop["cast"]))
                 elif mockingbird is not None:
@@ -1216,6 +1342,8 @@ class GameService:
                             "battle_item_void_threshold",
                             "battle_defeat",
                             "battle_counter_play",
+                            "alpha_counter_play",
+                            "alpha_sex_counter_play",
                             "battle_dormant_dive",
                             "battle_dormant_threshold",
                             "mockingbird_void_threshold",
@@ -1249,6 +1377,27 @@ class GameService:
                     raise WorkflowError("Use the actual source-owned Void resistance controls.")
                 if required["kind"] == "battle_dormant_dive" and dormant_dive_source is None:
                     raise WorkflowError("Use the actual source-owned required Dive controls.")
+                if required["kind"] == "alpha_sex_counter_play":
+                    from girlframe.services.m3_alpha_sex import (
+                        validate_counter_child as validate_sex_child,
+                    )
+
+                    sex_counter = validate_sex_child(self, c, parent, acting_ref, prepared)
+                if required["kind"] == "alpha_counter_play":
+                    from girlframe.services.m3_alpha import (
+                        validate_counter_child as validate_alpha_counter,
+                    )
+
+                    alpha_counter_actor = ActorRef(
+                        kind="pilot",
+                        entity=str(viewer.user_id),
+                        incarnation=self.character_binding(
+                            c, state, viewer.user_id, require_current_profile=False
+                        ),
+                    )
+                    alpha_counter = validate_alpha_counter(
+                        self, c, parent, alpha_counter_actor, prepared
+                    )
                 if required["kind"] == "battle_counter_play":
                     from girlframe.engine.m3_actor_state import ActorRef
                     from girlframe.services.m3_battle import validate_counter_child
@@ -1300,7 +1449,18 @@ class GameService:
             elif root_lock and root_lock["state"] != "released":
                 raise WorkflowError("SCENE_BUSY: resolve the pending Play first.")
             if prepared.target_actor is not None and all(
-                x is None for x in (enforcement, battle, engage, mockingbird, snoop, janus)
+                x is None
+                for x in (
+                    enforcement,
+                    battle,
+                    engage,
+                    mockingbird,
+                    snoop,
+                    janus,
+                    alpha,
+                    alpha_sex,
+                    doctor,
+                )
             ):
                 raise WorkflowError("This implemented Play does not take a fictional actor target.")
             if prepared.play in ("flirt", "put_someone_beneath_you"):
@@ -1399,6 +1559,13 @@ class GameService:
                     cast=gorgon_response["cast"],
                     cast_sha256=gorgon_response["cast_sha256"],
                 )
+            if (
+                parent is not None
+                and parent["data"].get("alpha")
+                and required is not None
+                and required["kind"] == "alpha_counter_play"
+            ):
+                data["alpha_counter_source"] = alpha_counter
             if counter_source is not None:
                 data["battle_counter_source"] = counter_source
             if battle is not None:
@@ -1431,6 +1598,72 @@ class GameService:
                     cast=engage["cast"],
                     cast_sha256=engage["cast_sha256"],
                 )
+            if npc_order_scope is not None:
+                from girlframe.engine.m3_actors import fingerprint
+                from girlframe.engine.m3_handler_consequences import active_handler
+
+                data["npc_order"] = npc_order_scope
+                data["character_ids"] = {
+                    str(x.controller): x.actor.incarnation
+                    for x in source_cast.roles
+                    if x.actor.kind == "pilot"
+                }
+                npc_source_table = sorted(
+                    {x.controller for x in source_cast.roles}
+                    | ({source_cast.facilitator} if source_cast.facilitator is not None else set())
+                )
+                data["participants"] = npc_source_table
+                body = active_handler(state)
+                data["tag_context"] = dict(
+                    actor=acting_ref.model_dump(mode="json"),
+                    handler=body.model_dump(mode="json") if body else None,
+                    gm_controller=state.handler,
+                    table=npc_source_table,
+                    cast=source_cast.model_dump(mode="json"),
+                    cast_sha256=fingerprint(source_cast),
+                )
+            if alpha_sex is not None:
+                from girlframe.engine.m3_handler_consequences import active_handler
+
+                data["alpha_sex"] = alpha_sex
+                data["participants"] = list(alpha_sex["table"])
+                sex_handler = active_handler(state)
+                data["tag_context"] = dict(
+                    actor=alpha_sex["actor"],
+                    handler=sex_handler.model_dump(mode="json") if sex_handler else None,
+                    gm_controller=state.handler,
+                    table=list(alpha_sex["table"]),
+                    cast=alpha_sex["cast"],
+                    cast_sha256=alpha_sex["cast_sha256"],
+                )
+            if alpha_sex_counter_scope is not None:
+                data["alpha_sex_counter_source"] = sex_counter
+                data["participants"] = list(alpha_sex_counter_scope["table"])
+                from girlframe.engine.m3_handler_consequences import active_handler
+
+                sex_handler = active_handler(state)
+                data["tag_context"] = dict(
+                    actor=acting_ref.model_dump(mode="json"),
+                    handler=sex_handler.model_dump(mode="json") if sex_handler else None,
+                    gm_controller=state.handler,
+                    table=list(alpha_sex_counter_scope["table"]),
+                    cast=alpha_sex_counter_scope["cast"],
+                    cast_sha256=alpha_sex_counter_scope["cast_sha256"],
+                )
+            if alpha is not None:
+                from girlframe.engine.m3_handler_consequences import active_handler
+
+                data["alpha"] = alpha
+                data["participants"] = list(alpha["table"])
+                body = active_handler(state)
+                data["tag_context"] = dict(
+                    actor=alpha["actor"],
+                    handler=body.model_dump(mode="json") if body else None,
+                    gm_controller=state.handler,
+                    table=list(alpha["table"]),
+                    cast=alpha["cast"],
+                    cast_sha256=alpha["cast_sha256"],
+                )
             if janus is not None:
                 from girlframe.engine.m3_handler_consequences import active_handler
 
@@ -1444,6 +1677,20 @@ class GameService:
                     table=list(janus["table"]),
                     cast=janus["cast"],
                     cast_sha256=janus["cast_sha256"],
+                )
+            if doctor is not None:
+                from girlframe.engine.m3_handler_consequences import active_handler
+
+                data["doctor"] = doctor
+                data["participants"] = list(doctor["table"])
+                handler_body = active_handler(state)
+                data["tag_context"] = dict(
+                    actor=doctor["actor"],
+                    handler=handler_body.model_dump(mode="json") if handler_body else None,
+                    gm_controller=doctor["procedural_gm"],
+                    table=list(doctor["table"]),
+                    cast=doctor["cast"],
+                    cast_sha256=doctor["cast_sha256"],
                 )
             if snoop is not None:
                 from girlframe.engine.m3_handler_consequences import active_handler
@@ -1533,6 +1780,10 @@ class GameService:
                             campaign_id=self.store.campaign_id, channel_id=str(channel), **values
                         )
                     )
+            if alpha_sex is not None:
+                from girlframe.services.m3_alpha_sex import bind as bind_alpha_sex
+
+                bind_alpha_sex(state, self.action(c, identity))
             event = self.event(
                 c,
                 viewer.user_id,
@@ -1547,10 +1798,14 @@ class GameService:
                 or mockingbird is not None
                 or snoop is not None
                 or janus is not None
+                or doctor is not None
+                or alpha is not None
+                or alpha_sex is not None
+                or npc_order_scope is not None
                 or engage is not None
                 or void_keep is not None
                 else "m2.play_confirmed",
-                state if void_keep is not None else None,
+                state if void_keep is not None or alpha_sex is not None else None,
                 action_id=identity,
                 play=prepared.play,
             )
@@ -1616,6 +1871,11 @@ class GameService:
 
             if valid_virus_order(self, c, state, owner, channel, dict(row)):
                 return dict(row)
+        if row is not None and json.loads(row["body_json"]).get("npc_order"):
+            from girlframe.services.m3_npc_orders import valid_order as valid_npc_order
+
+            if valid_npc_order(self, c, state, owner, channel, dict(row)):
+                return dict(row)
         if row is None or not higher(state, int(row["issuer_id"]), owner):
             raise WorkflowError("A recorded direct order from a current superior is required.")
         if any(
@@ -1674,12 +1934,28 @@ class GameService:
                 from girlframe.services.m3_dive import authorize as authorize_dive
 
                 authorize_dive(self, c, viewer, action)
+            if action["data"].get("doctor"):
+                from girlframe.services.m3_doctor import authorize as authorize_doctor
+
+                authorize_doctor(self, c, viewer, action)
             if action["data"].get("enforcement"):
                 from girlframe.services.m3_enforcement_initiative import (
                     authorize as authorize_enforcement,
                 )
 
                 authorize_enforcement(self, c, viewer, action)
+            if action["data"].get("alpha_sex"):
+                from girlframe.services.m3_alpha_sex import authorize as authorize_alpha_sex
+
+                authorize_alpha_sex(self, c, viewer, action)
+            if action["data"].get("alpha"):
+                from girlframe.services.m3_alpha import authorize as authorize_alpha
+
+                authorize_alpha(self, c, viewer, action)
+            if action["data"].get("npc_order"):
+                from girlframe.services.m3_npc_orders import authorize as authorize_npc_order
+
+                authorize_npc_order(self, c, viewer, action)
             if action["data"].get("janus"):
                 from girlframe.services.m3_janus_play import authorize as authorize_janus
 
@@ -1769,6 +2045,18 @@ class GameService:
                 from girlframe.services.m3_mockingbird_plays import pre_roll as mockingbird_pre_roll
 
                 mockingbird_pre_roll(self, c, state, action)
+            if action["data"].get("npc_order"):
+                self.valid_order(
+                    c, state, viewer.user_id, int(action["channel_id"]), prepared.order_id
+                )
+            if action["data"].get("alpha_sex"):
+                from girlframe.services.m3_alpha_sex import pre_roll as pre_roll_alpha_sex
+
+                pre_roll_alpha_sex(self, c, viewer, state, action)
+            if action["data"].get("alpha"):
+                from girlframe.services.m3_alpha import pre_roll as alpha_pre_roll
+
+                alpha_pre_roll(self, c, viewer, state, action)
             if action["data"].get("janus"):
                 from girlframe.services.m3_janus_play import pre_roll as janus_pre_roll
 
@@ -1777,6 +2065,12 @@ class GameService:
                 from girlframe.services.m3_enforcer_snoop import pre_roll as snoop_pre_roll
 
                 snoop_pre_roll(self, c, viewer, state, action)
+            if action["data"].get("doctor"):
+                from girlframe.services.m3_doctor import pre_roll as doctor_pre_roll
+
+                action["data"]["doctor"]["roll_event"] = str(uuid4())
+                doctor_pre_roll(self, c, viewer, state, action)
+                sheet = state.sheets[str(viewer.user_id)]
             m3 = action["data"].get("m3")
             defeat = action["data"].get("defeat")
             if defeat is not None:
@@ -1854,6 +2148,7 @@ class GameService:
                 if m3 is not None
                 or refusal_modifiers
                 or action["data"].get("beneath")
+                or action["data"].get("doctor")
                 or action["data"].get("dive")
                 or action["data"].get("void_keep")
                 or action["data"].get("enforcement")
@@ -1862,6 +2157,9 @@ class GameService:
                 or action["data"].get("mockingbird")
                 or action["data"].get("snoop")
                 or action["data"].get("janus")
+                or action["data"].get("alpha")
+                or action["data"].get("alpha_sex")
+                or action["data"].get("npc_order")
                 or defeat is not None
                 else RULESET,
             }
@@ -1922,17 +2220,23 @@ class GameService:
                 if m3 is not None
                 or refusal_modifiers
                 or action["data"].get("beneath")
+                or action["data"].get("doctor")
                 or action["data"].get("enforcement")
                 or action["data"].get("battle")
                 or action["data"].get("engage")
                 or action["data"].get("mockingbird")
                 or action["data"].get("snoop")
                 or action["data"].get("janus")
+                or action["data"].get("alpha")
+                or action["data"].get("alpha_sex")
+                or action["data"].get("npc_order")
                 or defeat is not None
                 else "m2.rolled",
                 state,
                 event_id=defeat["roll_event"]
                 if defeat is not None
+                else action["data"]["doctor"]["roll_event"]
+                if action["data"].get("doctor")
                 else action["data"]["dive"]["roll_event"]
                 if action["data"].get("dive")
                 else action["data"]["enforcement"]["roll_event"]
@@ -1949,6 +2253,10 @@ class GameService:
                 from girlframe.services.m3_play_support import save_raw_roll
 
                 save_raw_roll(self, c, action, state, event)
+            if action["data"].get("doctor"):
+                from girlframe.services.m3_doctor import synchronize as synchronize_doctor
+
+                synchronize_doctor(self, c, action, event)
             return {"action_id": identity, "receipt": receipt}
 
         try:
@@ -2058,7 +2366,29 @@ class GameService:
                 GorgonPlayService(self).authorize(c, viewer, action)
                 return dict(row)
             director_tag_response = False
-            if action["data"].get("janus"):
+            if action["data"].get("doctor"):
+                from girlframe.services.m3_doctor import authorize as authorize_doctor
+
+                authorize_doctor(self, c, viewer, action)
+                director_tag_response = True
+            if action["data"].get("alpha_sex"):
+                from girlframe.services.m3_alpha_sex import authorize as authorize_alpha_sex
+
+                authorize_alpha_sex(self, c, viewer, action)
+                director_tag_response = True
+            elif action["data"].get("npc_order"):
+                from girlframe.services.m3_npc_orders import authorize as authorize_npc_order
+
+                authorize_npc_order(self, c, viewer, action)
+                director_tag_response = True
+            elif action["data"].get("alpha"):
+                from girlframe.services.m3_alpha import authorize as authorize_alpha
+
+                authorize_alpha(self, c, viewer, action)
+                if viewer.user_id not in action["data"]["alpha"]["table"]:
+                    raise WorkflowError("Only the original Alpha source table owns this response")
+                director_tag_response = True
+            elif action["data"].get("janus"):
                 from girlframe.services.m3_janus_play import authorize as authorize_janus
 
                 authorize_janus(self, c, viewer, action)
@@ -2220,6 +2550,7 @@ class GameService:
                 if action["data"].get("m3")
                 or action["data"].get("actor_basic")
                 or action["data"].get("beneath")
+                or action["data"].get("doctor")
                 or action["data"].get("defeat")
                 or action["data"].get("dive")
                 or action["data"].get("void_keep")
@@ -2230,6 +2561,9 @@ class GameService:
                 or action["data"].get("mockingbird")
                 or action["data"].get("snoop")
                 or action["data"].get("janus")
+                or action["data"].get("alpha")
+                or action["data"].get("alpha_sex")
+                or action["data"].get("npc_order")
                 or action["data"].get("gorgon_play")
                 else "m2.choice_resolved",
                 state,
@@ -2285,6 +2619,10 @@ class GameService:
                 from girlframe.services.m3_engage import synchronize as synchronize_engage
 
                 synchronize_engage(self, c, action, event, viewer, key)
+            if action["data"].get("doctor"):
+                from girlframe.services.m3_doctor import synchronize as synchronize_doctor
+
+                synchronize_doctor(self, c, action, event)
             if action["data"].get("void_keep"):
                 from girlframe.services.m3_void_keep import synchronize_keep
 
@@ -2334,6 +2672,14 @@ class GameService:
                 )
 
                 post_mockingbird(self, c, action, event, viewer, key)
+            if action["data"].get("alpha_sex"):
+                from girlframe.services.m3_alpha_sex import synchronize as synchronize_alpha_sex
+
+                synchronize_alpha_sex(self, c, action, event)
+            if action["data"].get("alpha"):
+                from girlframe.services.m3_alpha import synchronize as synchronize_alpha
+
+                synchronize_alpha(self, c, action, event)
             if action["data"].get("janus"):
                 from girlframe.services.m3_janus_play import synchronize as synchronize_janus
 
@@ -3020,6 +3366,80 @@ class GameService:
                 from girlframe.services.m3_gorgon_play import GorgonPlayService
 
                 return GorgonPlayService(self).decision(c, viewer, action, dict(row))
+            if action["data"].get("alpha_sex") and (
+                row["kind"].startswith("alpha_sex_") or row["kind"].startswith("battle_")
+            ):
+                from girlframe.services.m3_alpha_sex import authorize as authorize_alpha_sex
+                from girlframe.services.m3_alpha_sex import projection as alpha_sex_projection
+
+                authorize_alpha_sex(self, c, viewer, action)
+                state = load_state(c, self.store.campaign_id)
+                extra = {}
+                if row["kind"].startswith("battle_"):
+                    from girlframe.services.m3_battle import damage_projection
+
+                    extra["battle"] = damage_projection(self, c, state, action, dict(row))
+                return (
+                    dict(row)
+                    | dict(
+                        body=json.loads(row["body_json"]),
+                        play="alpha_sex",
+                        result={
+                            k: v
+                            for k, v in action["data"]["result"].items()
+                            if k in ("tier", "total")
+                        },
+                        actor=int(action["actor_id"]),
+                        parent=action["id"],
+                        channel=int(action["channel_id"]),
+                        alpha_sex=alpha_sex_projection(self, c, state, action, dict(row)),
+                    )
+                    | extra
+                )
+            if action["data"].get("alpha") and (
+                row["kind"].startswith("alpha_") or row["kind"].startswith("battle_")
+            ):
+                from girlframe.services.m3_alpha import authorize as authorize_alpha
+                from girlframe.services.m3_alpha import projection as alpha_projection
+
+                authorize_alpha(self, c, viewer, action)
+                state = load_state(c, self.store.campaign_id)
+                extra = {}
+                if row["kind"].startswith("battle_"):
+                    from girlframe.services.m3_battle import damage_projection
+
+                    extra["battle"] = damage_projection(self, c, state, action, dict(row))
+                return (
+                    dict(row)
+                    | dict(
+                        body=json.loads(row["body_json"]),
+                        play=action["data"]["play"],
+                        result={
+                            k: v
+                            for k, v in action["data"]["result"].items()
+                            if k in ("tier", "total")
+                        },
+                        actor=int(action["actor_id"]),
+                        parent=action["id"],
+                        channel=int(action["channel_id"]),
+                        alpha=alpha_projection(self, c, state, action, dict(row)),
+                    )
+                    | extra
+                )
+            if action["data"].get("doctor") and row["kind"].startswith("doctor_"):
+                from girlframe.services.m3_doctor import authorize as authorize_doctor
+                from girlframe.services.m3_doctor import projection as doctor_projection
+
+                authorize_doctor(self, c, viewer, action)
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    play=action["data"]["play"],
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    doctor=doctor_projection(
+                        self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                    ),
+                )
             if action["data"].get("janus") and row["kind"].startswith("janus_"):
                 from girlframe.services.m3_janus_play import authorize as authorize_janus
                 from girlframe.services.m3_janus_play import projection as janus_projection
@@ -3062,6 +3482,10 @@ class GameService:
                 from girlframe.services.m3_actor_plays import ActorPlayService
 
                 return ActorPlayService(self).decision(c, viewer, action, dict(row))
+            if action["data"].get("npc_order"):
+                from girlframe.services.m3_npc_orders import authorize as authorize_npc_order
+
+                authorize_npc_order(self, c, viewer, action)
             state = load_state(c, self.store.campaign_id)
             from girlframe.services.m3_battle_dormant import proved_converted_originals
 
@@ -3114,6 +3538,12 @@ class GameService:
                     if k in ("order_id", "target")
                 },
             }
+            if action["data"].get("npc_order"):
+                from girlframe.engine.m3_actors import resolve as resolve_npc_issuer
+                from girlframe.services.m3_npc_orders import order as original_npc_order
+
+                issuer = original_npc_order(self, c, action).issuer
+                result["npc_order_issuer"] = resolve_npc_issuer(state, issuer, ()).label
             if action["data"].get("beneath") and row["kind"].startswith("beneath_"):
                 from girlframe.services.m3_beneath import projection
 
@@ -3174,6 +3604,10 @@ class GameService:
                 )
             if action["data"].get("enforcer_keep"):
                 result["enforcer_keep"] = action["data"]["enforcer_keep"]
+            if row["kind"] == "actor_disobey":
+                from girlframe.services.m3_alpha import removable as removable_broken
+
+                result["alpha_remove_broken"] = removable_broken(self, c, state, action) is not None
             if row["kind"] == "tag_window":
                 from girlframe.services.m3_tag_markers import projection as marker_projection
 

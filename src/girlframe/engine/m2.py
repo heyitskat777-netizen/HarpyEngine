@@ -9,6 +9,7 @@ from girlframe.engine.identity import Snowflake
 from girlframe.engine.m3_acquisition_state import PersonalFirearmGrant
 from girlframe.engine.m3_actor_bond_state import BondEdge, HelplessCondition
 from girlframe.engine.m3_actor_state import ActorRef, SceneCast
+from girlframe.engine.m3_alpha_state import Broken
 from girlframe.engine.m3_career_state import (
     CareerArchive,
     CareerReturn,
@@ -276,11 +277,20 @@ class GameState(Model):
     item_transfers: list[ItemTransfer] = Field(default_factory=list)
     bonds: dict[str, int] = Field(default_factory=dict)
     actor_bonds: list[BondEdge] = Field(default_factory=list)
+    alpha_broken: list[Broken] = Field(default_factory=list, exclude_if=lambda value: not value)
     helpless_conditions: list[HelplessCondition] = Field(default_factory=list)
-    leviathan_obsessions: list[Obsession] = Field(default_factory=list, exclude_if=lambda value: not value)
-    leviathan_identity_authorities: list[IdentityAuthority] = Field(default_factory=list, exclude_if=lambda value: not value)
-    external_poses: list[ExternalPose] = Field(default_factory=list, exclude_if=lambda value: not value)
-    leviathan_arrivals: list[LeviathanArrival] = Field(default_factory=list, exclude_if=lambda value: not value)
+    leviathan_obsessions: list[Obsession] = Field(
+        default_factory=list, exclude_if=lambda value: not value
+    )
+    leviathan_identity_authorities: list[IdentityAuthority] = Field(
+        default_factory=list, exclude_if=lambda value: not value
+    )
+    external_poses: list[ExternalPose] = Field(
+        default_factory=list, exclude_if=lambda value: not value
+    )
+    leviathan_arrivals: list[LeviathanArrival] = Field(
+        default_factory=list, exclude_if=lambda value: not value
+    )
     obligations: list[Obligation] = Field(default_factory=list)
     facts: list[dict[str, str]] = Field(default_factory=list)
     intense_tag_bonus: int | None = None
@@ -430,6 +440,12 @@ def shift_status(state: GameState, owner: int, delta: int) -> None:
 def higher(state: GameState, first: int, second: int) -> bool:
     if first == second:
         return False
+    if state.alpha_broken:
+        from girlframe.engine.m3_alpha import legacy_status
+
+        override = legacy_status(state, first, second)
+        if override is not None:
+            return override
     if first == state.handler:
         return True
     if second == state.handler:

@@ -236,7 +236,14 @@ def take(
         )
         asset_json, received, binding_owner = actual.model_dump_json(), actual.id, recipient
         if recipient.kind == "pilot":
-            result = install(state.sheets[recipient.entity], actual, replace=replace)
+            from girlframe.engine.m3_janus_storage import ids as stored_ids
+
+            result = install(
+                state.sheets[recipient.entity],
+                actual,
+                replace=replace,
+                effective_void=stored_ids(state, recipient),
+            )
             state.sheets[recipient.entity] = result.sheet
         elif replace is not None:
             raise ValueError(

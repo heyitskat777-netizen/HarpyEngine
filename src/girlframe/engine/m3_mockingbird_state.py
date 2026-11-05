@@ -131,6 +131,7 @@ class CallSession(Model):
     replies_json: str = "{}"
     proposal_revision: int = 0
     choice_event: str | None = None
+    store_void: bool = Field(default=False, exclude_if=lambda value: not value)
     message: str = Field(default="", max_length=1200)
     answer: str = Field(default="", max_length=1200)
     account: str = Field(default="", max_length=1200)

@@ -83,7 +83,9 @@ def modifier(state: GameState, subject: int) -> int:
     sheet = state.sheets.get(str(subject))
     if sheet is None or subject not in state.order or sheet.frame_scrapped:
         raise ValueError("Observation requires its actual current Girl and Frame")
-    return sum(x.void for x in sheet.assets)
+    from girlframe.engine.m3_janus_storage import effective_for_owner
+
+    return sum(x.void for x in effective_for_owner(state, subject))
 
 
 def review_hiding(
@@ -277,8 +279,14 @@ def apply(
     sheet = canon.sheets[str(subject)]
     if kind in ("remove_girl_void_asset", "remove_frame_void_asset"):
         family = "girl" if kind == "remove_girl_void_asset" else "frame"
+        from girlframe.engine.m3_janus_storage import effective_for_owner
+
         asset = next(
-            (x for x in sheet.assets if x.id == details.asset and x.family == family and x.void),
+            (
+                x
+                for x in effective_for_owner(canon, subject)
+                if x.id == details.asset and x.family == family and x.void
+            ),
             None,
         )
         if asset is None:

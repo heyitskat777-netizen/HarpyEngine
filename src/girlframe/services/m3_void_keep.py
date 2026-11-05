@@ -300,7 +300,7 @@ def complete_keep_continuations(
     c: Connection,
     value: VoidThreshold,
     event: str,
-    viewer: GuildViewer,
+    viewer: GuildViewer | None,
     key: str,
 ) -> None:
     if value.stage not in rules.FINAL:

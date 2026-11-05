@@ -1,6 +1,85 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## New focused source workflows — 2026-11-05
+
+M3 remains **IN_PROGRESS / RULES_SUBSET**. The bot is intentionally off. These
+changes extend sanitized commit `12a08c2`; the 2,200-test full regression below
+belongs to an earlier source. No new full regression, independent approval,
+player acceptance, live migration, restart or deployment is claimed.
+
+| Delivered workflow | Focused evidence and limit |
+|---|---|
+| Alpha Brutalize | Original-PC damage/Broken/Helpless and real counter completion; ordinary Guard review/counter/injury/death. PC normal checks: 3/4.70s; Guard low: 1/2.65s; NPC mid/high: 2/3.02s. Other actors/counter Plays and protected NPC endpoints remain gated. |
+| NPC-source Orders | Original NPC Broken inflictor issues its own typed Order; real Receive Orders/refusal/mid Disobey can remove its exact condition. New normal trace plus three ordinary compatibility checks: 4/5.32s. General NPC authority remains partial. |
+| Alpha voluntary interaction | Owned confirmation before Heat/RNG; actual Bond/Broken/scent, damage, or sleep with real item/Keep/Punishment opportunity and waking. Six normal checks: 6/10.10s. Updated native invitation uses the private requests inbox: 1/2.48s, including unrelated-viewer exclusion. Non-PC endpoints and other counters remain unavailable. |
+| Hound Status mark | Actual end-Off-Duty Status review now clears the former Dog's mark when they cease being Dog. One real Keep→Off-Duty→review trace: 1/3.79s. |
+| JANUS Storage closure | Source-owned temporary Void, effective threshold lifetime, actual reconnect and surgery; ordinary native paid acquisition is available. Four consumer checks: 4/9.81s; final gain/threshold checks: 2/8.12s. Grafted/retained entitlements remain unsupported. Explicit Defeat creation/Core takeover stay permanent printed effects. |
+| Budget Director meeting | Actual separately played appearance, Handler-owned Girl context/four Heat, real departure and original cast restoration. Initial native flow: 1/2.30s; finalized Candidate/meeting plus existing Director-overlap selection: 3/3.73s. Existing outside-context Identity carry remains guarded. |
+| Budget Pilot Candidate | Existing NPC retains body/controller/jobs; original Girl assignment, exact table-authored process with fresh agreement on edits, then actual owned assessment. Included in the 3/3.73s selection above. Player-character conversion is a separate source move. |
+| Budget Anarchy | Temporary city blockage is consumed by public map, world advancement and Creature Comforts location eligibility. Actual established civic restoration removes only its source cause, preserving physical condition and other blockers. Source/native/compatibility: 2/2.16s; three existing affected consumers: 3/1.59s. Additional world consumers still require the overall source audit. |
+
+Artifacts: `var/m3-alpha-brutalize-normal.xml`, `var/m3-alpha-guard-normal.xml`,
+`var/m3-alpha-npc-outcomes-normal.xml`, `var/m3-npc-orders-and-ordinary-normal.xml`,
+`var/m3-alpha-sex-normal.xml`, `var/m3-alpha-inbox-normal.xml`,
+`var/m3-alpha-hound-status-review.xml`, `var/m3-janus-storage-closed-functional.xml`,
+`var/m3-janus-storage-final-normal.xml`,
+`var/m3-budget-candidate-director-integration.xml`,
+`var/m3-budget-anarchy-normal.xml`, `var/m3-anarchy-consumers-normal.xml`.
+These selections overlap and are not summed into a completion score.
+
+Expected-flow verification corrected a typed Candidate audit fact and local
+import aliases. Focused source checks pass the named new Budget modules and city
+consumers. DoctorDoctor's Nano and six named acquired abilities are frozen for their supported
+native Pilot workflows: nine normal source checks passed at 8.97s
+(`var/m3-doctor-source-normal.xml`); the changed optional Identity unmark/locked-Tag
+and actual native acquisition consumers passed two final checks at 3.28s
+(`var/m3-doctor-final-corrections.xml`). Integration caught an incorrect four-Frame
+Wings cap; the printed maximum is five (PDF15). The corrected four→five→four
+borrow/real-return check passed at 1.92s
+(`var/m3-doctor-wings-five-frame-normal.xml`). Scoped agent mypy14 and changed
+procedures checks pass. No unrelated workflow selection was repeated.
+
+Doctor's actual care/Bond, call/arrival, Support/protector and required low-result
+Handler Play, pre-fallout death protection, next-period medical care, Adrenal and
+real eighth-box compulsory replacement paths have normal evidence. Concrete Nano
+effect removal is an allowlist; class/graft/retained sources, Wings cap replacement,
+full-Void transfers and lost hardware returns remain guarded/unresolved. A protected
+unsupported death producer rolls back before irreversible fallout. None of this
+claims every Doctor interaction or source branch is complete.
+
+The registry validates at **240 adjustable clarifications**, 135 subsets and
+338 unimplemented entries (473 total, including 37 deferred Ancillary; 436 core).
+Independent verification remains zero. Three Budget source contracts and named
+Alpha/Guard/Storage/Doctor test evidence were added. One coherent changed-source
+check passed Ruff for 113 completed Python files; two formatting findings were
+fixed, with the remaining 111 already formatted. Mypy passed the nine changed
+shared interfaces. The publishable working-tree check found zero issues in 924
+files and preserved all 40 original handoff manifest entries; that count includes
+uncommitted AM/cleanup-only drafts excluded from the completed source checkpoint.
+A read-only process probe reports zero bot processes. Unsupported branches stay visible;
+no registry entry was marked independently approved or released.
+
+Current bounded assignments: AM Scrutinized; the next dependency-ready Class
+Requisition consumer; root integration and Budget cleanup duty. Cleanup-only drafts
+are not part of this frozen source checkpoint. Use two implementation agents,
+small expected-path checks and one final M3 regression. Older snapshots below are
+historical, including their now-superseded Storage acquisition limitation.
+
 ## Focused workflow development — 2026-11-05
+
+The focused source checkpoint is committed/pushed as `12a08c2cfa9307d739731dec5a308f146bf24875`
+on `codex/m3-rules`; the exact remote branch SHA was verified. It contains sanitized
+source/evidence only. Subsequent Alpha, Storage and political-function edits are
+not covered by that checkpoint's 15-test combined result.
+
+Low Budget2.1 political functions now disclose frozen conditional Tag rights to
+the original Girls, collect each person's actual attendance, allow their own
+reported out-of-line actions to author Tags, and expire that right on the real
+ending. Required work persists until the function ends. The normal actual-source/
+native/attendance/Tag/ending/expiry trace passed **1 test / 1.93s**
+(`var/m3-political-function-normal.xml`); focused mypy passed six modules and
+scoped Ruff passes. Changed/ended original actors remain guarded; no conduct,
+dialogue or transport is generated. This is scoped evidence, not a new full run.
 
 Final focused integration selection: **15 passed / 27.15s**, zero failures,
 errors or skips (`var/m3-normal-workflows-checkpoint.xml`). Command:

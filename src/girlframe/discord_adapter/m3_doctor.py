@@ -1,0 +1,420 @@
+"""Actual native DoctorDoctor source choices; each patient owns their sheet details."""
+
+import asyncio
+from typing import Any
+
+import discord
+
+from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.m2_forms import Field, NativeForm
+from girlframe.discord_adapter.m3_punishments import Picker
+from girlframe.discord_adapter.onboarding import reply
+from girlframe.engine import m3_doctor as rules
+from girlframe.engine.m2 import ChoiceAnswer, PlayInput
+from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.services.m3_doctor import DoctorService
+from girlframe.services.onboarding import WorkflowError
+
+
+async def open_doctor(interaction: discord.Interaction, service: DoctorService) -> None:
+    if interaction.channel_id is None:
+        raise WorkflowError("Use the original joined scene channel")
+    data = await asyncio.to_thread(
+        service.menu, viewer_from_interaction(interaction), interaction.channel_id
+    )
+    options = [("roll", "Nanobot Injection / Here for Support")]
+    if data["acquisitions"]:
+        options.append(("buy", "Acquire a native Requisition (2 Permissions; unmark one box)"))
+    for rule, kind in (
+        (rules.NURSE, "nurse"),
+        (rules.ANGEL, "angel"),
+        (rules.WINGS, "wings"),
+        (rules.RAGGED, "ragged"),
+        (rules.ADRENAL, "adrenal"),
+    ):
+        if rule in data["held"]:
+            options.append((kind, rules.TITLES[rule]))
+
+    async def choose(current: discord.Interaction, kind: str) -> None:
+        if kind == "roll":
+            await open_roll(current, service)
+        else:
+            await open_procedure(current, service, data, kind)
+
+    await Picker(
+        interaction.user.id,
+        "DoctorDoctor — Obsolescence " + str(data["track"]) + "/8",
+        tuple(options),
+        choose,
+    ).show(interaction)
+
+
+async def open_roll(interaction: discord.Interaction, service: DoctorService) -> None:
+    if interaction.channel_id is None:
+        raise WorkflowError("Use the original joined scene channel")
+    data = await asyncio.to_thread(
+        service.menu, viewer_from_interaction(interaction), interaction.channel_id
+    )
+    if not data["choices"]:
+        await reply(
+            interaction,
+            "No reviewed native Doctor ability is available. Track: " + str(data["track"]) + "/8.",
+        )
+        return
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        target = next(x for x in data["targets"] if x["token"] == values["target"][0])
+        assert interaction.channel_id is not None
+        result = await asyncio.to_thread(
+            service.game.begin,
+            viewer_from_interaction(current),
+            str(current.id),
+            interaction.channel_id,
+            data["sheet_revision"],
+            PlayInput(
+                play=values["play"][0],
+                target_actor=ActorRef.model_validate(target["ref"]),
+                heat=int(values["heat"][0]),
+                context=values["account"],
+                trigger_confirmed=True,
+            ),
+        )
+        return (
+            "Actual Doctor action prepared: "
+            + str(result["action_id"])
+            + ". Resume Pending choices."
+        )
+
+    await NativeForm(
+        interaction.user.id,
+        "DoctorDoctor Mk. II",
+        "Planned Obsolescence: "
+        + str(data["track"])
+        + "/8. Actual Nanobot use marks one box; it does not move either body.",
+        [
+            Field("play", "Actual ability", tuple((x["id"], x["label"]) for x in data["choices"])),
+            Field(
+                "target", "Actual patient", tuple((x["token"], x["label"]) for x in data["targets"])
+            ),
+            Field("heat", "Heat", tuple((str(x), str(x)) for x in range(data["heat"] + 1))),
+            Field("account", "Describe the actual medical trigger", paragraph=True),
+        ],
+        submit,
+    ).present(interaction)
+
+
+async def open_choice(
+    interaction: discord.Interaction, service: DoctorService, identity: str
+) -> None:
+    data = await asyncio.to_thread(
+        service.game.decision, viewer_from_interaction(interaction), identity
+    )
+    detail = data["doctor"]
+    if data["kind"] == "doctor_handler":
+        from girlframe.discord_adapter.m3_handler_plays import open_play
+        from girlframe.services.m3_handler_plays import HandlerPlayService
+
+        grant = data["body"].get("handler_grant")
+        if not grant:
+            raise WorkflowError("Recover the actual required Handler grant first")
+        await open_play(interaction, HandlerPlayService(service.store), grant)
+        return
+    if data["kind"] == "doctor_support_response":
+        options: tuple[tuple[str, str], ...] = (("protect", "Protect the actual Doctor"),)
+        if data["body"].get("may_refuse"):
+            options += (("refuse", "Decline to protect"),)
+        fields = [
+            Field("decision", "Actual protection", options),
+            Field("bond", "If protecting: deepen Bond?", (("no", "No"), ("yes", "Yes"))),
+        ]
+    elif data["kind"] == "doctor_support_refused":
+        fields = [
+            Field("decision", "Consequence", (("tag", "Give a Tag"), ("status", "Lower Status"))),
+            Field("tag", "Only for Tag: actual new Tag", required=False),
+        ]
+    elif data["kind"] == "doctor_nanobot_benefits":
+        choices: tuple[tuple[str, str], ...] = (
+            ("repair", "Repair two actual damaged Assets"),
+            ("identity", "Patient may unmark an actual Identity"),
+        )
+        if detail["effects"]:
+            choices += (("remove", "Remove a supported actual ongoing effect"),)
+        fields = [
+            Field(
+                "choices",
+                "Printed benefits",
+                choices,
+                minimum=detail["minimum"],
+                maximum=detail["maximum"],
+            )
+        ]
+        if detail["effects"]:
+            fields.append(
+                Field(
+                    "effect",
+                    "Only for removal: actual ongoing effect",
+                    tuple((x["id"], x["label"]) for x in detail["effects"]),
+                    minimum=0,
+                    required=False,
+                )
+            )
+    else:
+        fields = []
+        if detail["repair"] and detail["assets"]:
+            count = min(detail["repair"], len(detail["assets"]))
+            fields.append(
+                Field(
+                    "assets",
+                    "Your actual damaged Assets",
+                    tuple((x["id"], x["label"]) for x in detail["assets"]),
+                    minimum=count,
+                    maximum=count,
+                )
+            )
+        if detail["identity"] and detail["identities"]:
+            fields.append(
+                Field(
+                    "identity",
+                    "Your actual marked Identity",
+                    tuple((x["id"], x["label"]) for x in detail["identities"]),
+                    minimum=0,
+                    required=False,
+                )
+            )
+        if not fields:
+            fields = [
+                Field("none", "No eligible sheet details", (("none", "No eligible changes exist"),))
+            ]
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        if data["kind"] == "doctor_support_response":
+            answer = ChoiceAnswer(
+                options=tuple(values["decision"]), fields={"bond": values["bond"][0]}
+            )
+        elif data["kind"] == "doctor_support_refused":
+            answer = ChoiceAnswer(
+                options=tuple(values["decision"]),
+                text=values.get("tag", "") if values["decision"] == ("tag",) else "",
+            )
+        elif data["kind"] == "doctor_nanobot_benefits":
+            answer = ChoiceAnswer(
+                options=tuple(values["choices"]),
+                fields={"effect": values["effect"][0]} if values.get("effect") else {},
+            )
+        else:
+            answer = ChoiceAnswer(
+                options=tuple(values.get("assets", ())),
+                fields={"identity": values["identity"][0]} if values.get("identity") else {},
+            )
+        await asyncio.to_thread(
+            service.game.respond,
+            viewer_from_interaction(current),
+            str(current.id),
+            identity,
+            data["revision"],
+            answer,
+        )
+        return "Actual Doctor response saved. Continue the original pending choices."
+
+    await NativeForm(
+        interaction.user.id,
+        "DoctorDoctor — your owned response",
+        "Select actual existing resources; no locked Identity is unmarked.",
+        fields,
+        submit,
+    ).present(interaction)
+
+
+async def open_procedure(
+    interaction: discord.Interaction, service: DoctorService, data: dict[str, Any], kind: str
+) -> None:
+    from girlframe.services.m3_doctor_care import CareService
+    from girlframe.services.m3_doctor_procedures import ProcedureService
+    from girlframe.services.m3_doctor_requisitions import DoctorRequisitionService
+
+    fields = [Field("account", "Describe the actual source action", paragraph=True)]
+    if kind == "buy":
+        fields.insert(
+            0,
+            Field(
+                "rule",
+                "Native Requisition",
+                tuple((x["id"], x["label"]) for x in data["acquisitions"]),
+            ),
+        )
+    elif kind in ("nurse", "angel", "ragged"):
+        targets = [x for x in data["targets"] if x["ref"] != data["actor"]]
+        if not targets:
+            raise WorkflowError("Join the actual other person to the source scene first")
+        fields.insert(
+            0,
+            Field(
+                "target", "Actual other person", tuple((x["token"], x["label"]) for x in targets)
+            ),
+        )
+    elif kind == "wings":
+        if not data["wings_assets"] or data["heat"] < 2:
+            raise WorkflowError(
+                "An actual damaged donor Frame Asset and at least two Heat are required"
+            )
+        fields[:0] = [
+            Field(
+                "asset",
+                "Damaged donor Frame Asset",
+                tuple((x["token"], x["label"]) for x in data["wings_assets"]),
+            ),
+            Field(
+                "heat",
+                "Heat (at least 2)",
+                tuple((str(x), str(x)) for x in range(2, data["heat"] + 1)),
+            ),
+        ]
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        viewer = viewer_from_interaction(current)
+        if kind == "buy":
+            await asyncio.to_thread(
+                DoctorRequisitionService(service.game).buy,
+                viewer,
+                str(current.id),
+                data["revision"],
+                values["rule"][0],
+                values["account"],
+            )
+            return "Actual native Requisition acquired; one Obsolescence box unmarked."
+        if kind == "adrenal":
+            await asyncio.to_thread(
+                ProcedureService(service.game).adrenal,
+                viewer,
+                str(current.id),
+                data["revision"],
+                values["account"],
+            )
+            return "Actual Helplessness ended; Obsolescence marked. Asset damage remains."
+        assert interaction.channel_id is not None
+        if kind in ("nurse", "angel"):
+            target = next(x for x in data["targets"] if x["token"] == values["target"][0])
+            result = await asyncio.to_thread(
+                CareService(service.game).propose,
+                viewer,
+                str(current.id),
+                data["revision"],
+                interaction.channel_id,
+                ActorRef.model_validate(target["ref"]),
+                values["account"],
+                angel=kind == "angel",
+            )
+        else:
+            item = (
+                next(x for x in data["wings_assets"] if x["token"] == values["asset"][0])
+                if kind == "wings"
+                else next(x for x in data["targets"] if x["token"] == values["target"][0])
+            )
+            result = await asyncio.to_thread(
+                ProcedureService(service.game).propose,
+                viewer,
+                str(current.id),
+                data["revision"],
+                interaction.channel_id,
+                ActorRef.model_validate(item["ref"]),
+                kind,
+                values["account"],
+                asset=item["id"] if kind == "wings" else None,
+                heat=int(values["heat"][0]) if kind == "wings" else 0,
+            )
+        return (
+            "Actual owned request saved. The original participants can reopen it in the Inbox: "
+            + str(result["id"])
+        )
+
+    await NativeForm(
+        interaction.user.id,
+        "DoctorDoctor — " + kind,
+        "Declare only the performed source action. Other people's owned responses remain theirs.",
+        fields,
+        submit,
+    ).present(interaction)
+
+
+async def open_care(
+    interaction: discord.Interaction, service: DoctorService, identity: str
+) -> None:
+    from girlframe.services.m3_doctor_care import CareService
+
+    care = CareService(service.game)
+    data = await asyncio.to_thread(care.get, viewer_from_interaction(interaction), identity)
+    if not data["can_confirm"] and data["care"]["phase"] != "recovery":
+        await reply(interaction, "Actual care state: " + data["care"]["phase"])
+        return
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        operation = care.recover if data["care"]["phase"] == "recovery" else care.confirm
+        await asyncio.to_thread(
+            operation,
+            viewer_from_interaction(current),
+            str(current.id),
+            identity,
+            data["revision"],
+            values["account"],
+        )
+        return "Your actual source-owned care confirmation is saved."
+
+    await NativeForm(
+        interaction.user.id,
+        "Actual Doctor care",
+        data["care"]["account"],
+        [Field("account", "Confirm the actual care you received/provided", paragraph=True)],
+        submit,
+    ).present(interaction)
+
+
+async def open_request(
+    interaction: discord.Interaction, service: DoctorService, identity: str
+) -> None:
+    from girlframe.services.m3_doctor_procedures import ProcedureService
+
+    source = ProcedureService(service.game)
+    data = await asyncio.to_thread(source.get, viewer_from_interaction(interaction), identity)
+    if not data["can_confirm"]:
+        await reply(interaction, "Waiting for the original source-owned response.")
+        return
+    fields = [Field("account", "Confirm the actual tearing / call and arrival", paragraph=True)]
+    if data["procedure"]["kind"] == "ragged":
+        if not data["tags"]:
+            raise WorkflowError("An actual participant must mark their own unmarked Tag")
+        fields.insert(
+            0,
+            Field(
+                "tag", "Your actual Tag to mark", tuple((x["id"], x["label"]) for x in data["tags"])
+            ),
+        )
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        if data["procedure"]["kind"] == "protection":
+            await asyncio.to_thread(
+                source.stop_protecting,
+                viewer_from_interaction(current),
+                str(current.id),
+                identity,
+                data["revision"],
+                values["account"],
+            )
+            return "Actual protection has ended."
+        await asyncio.to_thread(
+            source.confirm,
+            viewer_from_interaction(current),
+            str(current.id),
+            identity,
+            data["revision"],
+            values["account"],
+            values["tag"][0] if values.get("tag") else None,
+        )
+        return "Actual source action completed."
+
+    await NativeForm(
+        interaction.user.id,
+        "DoctorDoctor — actual " + data["procedure"]["kind"],
+        data["procedure"]["account"],
+        fields,
+        submit,
+    ).present(interaction)

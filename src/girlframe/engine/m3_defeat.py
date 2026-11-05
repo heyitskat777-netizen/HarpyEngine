@@ -206,6 +206,8 @@ def apply(
     if "new_girl_and_frame_void_assets_heat4" in selected:
         for family, chosen in (("girl", decision.girl_asset), ("frame", decision.frame_asset)):
             assert chosen is not None
+            from girlframe.engine.m3_janus_storage import ids as stored_ids
+
             result = install(
                 state.sheets[actor.entity],
                 AssetState(
@@ -216,11 +218,13 @@ def apply(
                     void=True,
                 ),
                 replace=chosen.replace,
+                effective_void=stored_ids(state, actor),
             )
             state.sheets[actor.entity] = result.sheet
             from girlframe.engine.m3_girl_runtime_state import has_rule
+            from girlframe.engine.m3_janus_storage import full_family
 
-            if all(x.void for x in result.sheet.assets if x.family == family) and not (
+            if full_family(state, actor, family) and not (
                 family == "girl"
                 and has_rule(result.sheet, "girl.mockingbird.risk-factor", "MOCKINGBIRD")
             ):

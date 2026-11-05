@@ -99,6 +99,26 @@ def leave(state: GameState, actor: int, identity: str, npc_id: str, source: str)
     updated.facts.append(
         {"kind": "director_departed", "context": identity, "npc": npc_id, "source_event": source}
     )
+    from girlframe.engine.m3_actor_state import ActorRef
+    from girlframe.engine.m3_battle import end_actor_casts
+
+    updated = end_actor_casts(updated, ActorRef(kind="npc", entity=npc_id), source)
+    if not directors and context.body_actor is not None:
+        previous = ActorRef(kind="handler", entity=str(context.handler), incarnation=context.id)
+        for index, cast in enumerate(updated.scene_casts):
+            if any(role.actor == previous for role in cast.roles):
+                roles = tuple(
+                    role.model_copy(update={"actor": context.body_actor})
+                    if role.actor == previous
+                    else role
+                    for role in cast.roles
+                )
+                updated.scene_casts[index] = cast.model_copy(
+                    update={
+                        "roles": tuple({role.actor: role for role in roles}.values()),
+                        "revision": cast.revision + 1,
+                    }
+                )
     return updated
 
 

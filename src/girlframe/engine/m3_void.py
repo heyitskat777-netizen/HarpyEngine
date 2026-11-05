@@ -73,7 +73,10 @@ def start_threshold(
         or not source_work.strip()
     ):
         raise ValueError("A real Void threshold needs its original Girl and actual consequence")
-    assets = [x for x in sheet.assets if x.family == family]
+    from girlframe.engine.m3_janus_storage import effective_assets, for_family
+
+    actual_assets = effective_assets(state, actor)
+    assets = [x for x in actual_assets if x.family == family]
     if not assets or not all(x.void for x in assets):
         raise ValueError("The actual family must have all of its Assets Void-altered")
     existing = next(
@@ -83,7 +86,17 @@ def start_threshold(
         if existing.frame_instance != view.frame_instance:
             raise ValueError("Recover the original affected Frame before adding another threshold")
         value = existing.model_copy(
-            update={"source_works": tuple(dict.fromkeys((*existing.source_works, source_work)))}
+            update={
+                "source_works": tuple(dict.fromkeys((*existing.source_works, source_work))),
+                "storage_points": tuple(
+                    dict.fromkeys(
+                        (
+                            *existing.storage_points,
+                            *(x.id for x in for_family(state, actor, family)),
+                        )
+                    )
+                ),
+            }
         )
         if family == "frame" and existing.family == "girl":
             value = value.model_copy(
@@ -104,7 +117,7 @@ def start_threshold(
         return _save(state, value), value
     own = view.inside_frame is True and view.occupied_frame_instance == view.frame_instance
     mockingbird = has_rule(sheet, "girl.mockingbird.risk-factor", "MOCKINGBIRD")
-    frame_assets = [x for x in sheet.assets if x.family == "frame"]
+    frame_assets = [x for x in actual_assets if x.family == "frame"]
     stage: Literal[
         "prevented",
         "resist_pending",
@@ -134,12 +147,13 @@ def start_threshold(
         source_event=event,
         source_action=source_action,
         source_works=(source_work,),
+        storage_points=tuple(x.id for x in for_family(state, actor, family)),
         sheet_json=sheet.model_dump_json(),
         stage=stage,
         enclosed=family == "frame" and own,
         allure_persists=not mockingbird
-        and bool([x for x in sheet.assets if x.family == "girl"])
-        and all(x.void for x in sheet.assets if x.family == "girl"),
+        and bool([x for x in actual_assets if x.family == "girl"])
+        and all(x.void for x in actual_assets if x.family == "girl"),
     )
     state.void_thresholds.append(value)
     return state, value
@@ -276,7 +290,9 @@ def confirm_occupancy(
     sheet = state.sheets[value.actor.entity]
     own = view.inside_frame is True and view.occupied_frame_instance == value.frame_instance
     mockingbird = has_rule(sheet, "girl.mockingbird.risk-factor", "MOCKINGBIRD")
-    frames = [x for x in sheet.assets if x.family == "frame"]
+    from girlframe.engine.m3_janus_storage import effective_assets
+
+    frames = [x for x in effective_assets(state, value.actor) if x.family == "frame"]
     if value.family == "frame" and not own:
         stage = "abandoned"
     elif mockingbird:
@@ -617,7 +633,9 @@ def rebirth(
     )
     from girlframe.engine.m3_leviathan_obsession import require_unlocked
 
-    require_unlocked(sheet.identities, (x.id for x in sheet.identities if x.id not in retained_identities))
+    require_unlocked(
+        sheet.identities, (x.id for x in sheet.identities if x.id not in retained_identities)
+    )
     identities = tuple(
         HarpyIdentity.model_validate(x.model_dump())
         for x in sheet.identities

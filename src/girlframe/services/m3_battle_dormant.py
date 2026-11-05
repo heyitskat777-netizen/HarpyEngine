@@ -270,6 +270,9 @@ class DormantService:
                 heat=view.heat if view is not None and own else 0,
                 piloting=action["data"]["prepared"]["piloting"] if action else False,
             )
+            from girlframe.services.m3_janus_storage import available as storage_available
+
+            detail["storage_available"] = own and storage_available(self.game, c, state, current)
             detail["requires_source_role_resume"] = (
                 actual
                 and current.kind == "external_pilot"
@@ -397,6 +400,7 @@ class DormantService:
         description: str,
         *,
         piloting: bool,
+        store_void: bool = False,
     ) -> dict[str, Any]:
         def authorize(c: Connection) -> None:
             self._owned(c, viewer, identity)
@@ -421,6 +425,13 @@ class DormantService:
             assert required.opponent is not None
             actor = actual_actor(self.game, c, state, actor)
             event = str(uuid4())
+            from girlframe.services.m3_janus_storage import gain_source
+
+            storage = gain_source(self.game, c, state, actor, identity, "dormant_void", store_void)
+            if storage:
+                storage = storage.model_copy(
+                    update={"action": body.get("source_action") or identity}
+                )
             changed, followups = rules.inflict(
                 state,
                 profiles(c, self.store.campaign_id),
@@ -431,6 +442,7 @@ class DormantService:
                 description,
                 event,
                 piloting=piloting,
+                storage=storage,
             )
             self.game.event(
                 c,
@@ -503,6 +515,7 @@ class DormantService:
                     asset=asset,
                     description=description,
                     piloting=piloting,
+                    store_void=store_void,
                 ),
                 operation,
                 auto_audit=False,

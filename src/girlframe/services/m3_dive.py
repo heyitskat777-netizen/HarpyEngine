@@ -514,8 +514,8 @@ def _apply_effect(
         if selected.get("store_void"):
             from girlframe.services.m3_janus_storage import gain as store_gain
 
-            store_gain(game, c, state, action, step, request["id"], actor, effect)
-            result = rules.Outcome(state=state)
+            followups = store_gain(game, c, state, action, step, request["id"], actor, effect)
+            result = rules.Outcome(state=state, followups=followups)
         else:
             result = rules.apply(
                 state,
@@ -689,20 +689,6 @@ def apply(
                 if answer.fields["storage"] != "yes":
                     raise WorkflowError("Choose only the actual offered Void Storage destination")
                 selected["store_void"] = True
-            from girlframe.engine.m3_janus_storage import active as stored_void
-
-            actor, _, _ = _context(action)
-            stored = stored_void(state, actor)
-            if stored:
-                assets, _ = rules.resources(state, actor)
-                gaining = next((x for x in assets if x.id == answer.fields["asset"]), None)
-                if gaining is None or gaining.id in {x.asset for x in stored}:
-                    raise WorkflowError("Choose an Asset without actual active stored Void")
-                effective = {x.asset for x in stored} | {gaining.id}
-                if all(x.void or x.id in effective for x in assets if x.family == gaining.family):
-                    raise WorkflowError(
-                        "This stored-Void threshold continuation is not implemented; unplug first"
-                    )
             effect = Effect(
                 account=selected["account"], asset=answer.fields["asset"], description=answer.text
             )
@@ -831,7 +817,12 @@ def synchronize(game: "GameService", c: Connection, action: dict[str, Any], even
 
 
 def complete_void_continuation(
-    game: "GameService", c: Connection, work_id: str, event: str, viewer: GuildViewer, key: str
+    game: "GameService",
+    c: Connection,
+    work_id: str,
+    event: str,
+    viewer: GuildViewer | None,
+    key: str,
 ) -> None:
     """Only actual completed threshold work releases its original held Dive continuation."""
     from girlframe.engine.m3_void import FINAL
@@ -899,9 +890,11 @@ def complete_void_continuation(
             t.events.c.command_key == key,
         )
     )
+    from girlframe.services.m3_janus_storage import continuation_actor
+
     completed_event = game.event(
         c,
-        viewer.user_id,
+        continuation_actor(game, c, event, viewer),
         key,
         "m3.dive_void_completed",
         state,
@@ -1038,8 +1031,11 @@ def prove_void_source(
             raise ValueError()
         sheet = original.sheets[actor.entity] if original else None
         family = body["details"]["family"]
-        family_assets = [x for x in sheet.assets if x.family == family] if sheet else []
-        asset = next((x for x in sheet.assets if x.id == effect.asset), None) if sheet else None
+        from girlframe.engine.m3_janus_storage import effective_assets
+
+        actual_assets = effective_assets(original, actor) if original and sheet else ()
+        family_assets = [x for x in actual_assets if x.family == family]
+        asset = next((x for x in actual_assets if x.id == effect.asset), None)
         if (
             sheet is None
             or sheet.character_id != actor.incarnation

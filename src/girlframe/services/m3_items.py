@@ -210,6 +210,23 @@ def take_in_transaction(
     snoop: bool = False,
 ) -> GameState:
     scene = None
+    alpha_sex = False
+    if source_work is None and not snoop:
+        raw_action = c.scalar(
+            sa.select(t.m2["m2_actions"].c.body_json).where(
+                t.m2["m2_actions"].c.campaign_id == game.store.campaign_id,
+                t.m2["m2_actions"].c.id == action,
+            )
+        )
+        alpha_sex = bool(raw_action and json.loads(raw_action).get("alpha_sex"))
+        actual_action = game.action(c, action) if alpha_sex else None
+        if alpha_sex:
+            assert actual_action is not None
+            from girlframe.services.m3_alpha_sex import (
+                validate_transfer_source as validate_alpha_transfer,
+            )
+
+            validate_alpha_transfer(c, game, state, actual_action, source, recipient)
     if snoop:
         from girlframe.services.m3_enforcer_snoop import validate_transfer_source
 
@@ -273,7 +290,9 @@ def take_in_transaction(
     transfer = changed.item_transfers[-1].model_copy(
         update=dict(
             source_work=source_work,
-            source_kind="enforcer_snoop"
+            source_kind="alpha_sex"
+            if alpha_sex
+            else "enforcer_snoop"
             if snoop
             else "npc_damage"
             if source_work
@@ -670,8 +689,13 @@ def new_void_families(before: GameState, after: GameState) -> list[ActorRef]:
     result = []
     for key, sheet in after.sheets.items():
         old = before.sheets.get(key)
-        current = [x for x in sheet.assets if x.family == "girl"]
-        prior = [x for x in old.assets if x.family == "girl"] if old else []
+        if sheet.character_id is None:
+            continue
+        from girlframe.engine.m3_janus_storage import effective_assets
+
+        actor = ActorRef(kind="pilot", entity=key, incarnation=sheet.character_id)
+        current = [x for x in effective_assets(after, actor) if x.family == "girl"]
+        prior = [x for x in effective_assets(before, actor) if x.family == "girl"] if old else []
         if (
             old
             and old.character_id == sheet.character_id

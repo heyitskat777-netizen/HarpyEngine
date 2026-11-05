@@ -70,6 +70,16 @@ async def open_dormant(
                 (("yes", "Inside my own Frame"), ("no", "Outside my own Frame")),
             ),
         ]
+        if data.get("storage_available"):
+            fields.append(
+                Field(
+                    "storage",
+                    "Optional gained Void destination",
+                    (("yes", "Store in my actual connected Harpy"),),
+                    minimum=0,
+                    required=False,
+                )
+            )
 
         async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
             await asyncio.to_thread(
@@ -82,6 +92,7 @@ async def open_dormant(
                 None if already_void else values["asset"][0],
                 values["description"],
                 piloting=values["piloting"][0] == "yes",
+                store_void=bool(values.get("storage")),
             )
             return (
                 "Actual Void recorded. Reopen this source consequence for any "

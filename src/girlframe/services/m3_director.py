@@ -283,6 +283,9 @@ class DirectorService:
                 context_id=identity,
                 npc_id=npc,
             )
+            from girlframe.services.m3_battle import synchronize_casts
+
+            synchronize_casts(self.game, c, event)
             return {
                 "id": identity,
                 "active": next(x.active for x in state.director_contexts if x.id == identity),

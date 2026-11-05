@@ -96,7 +96,9 @@ def source(
         )
         proof = GameState.model_validate_json(raw) if raw else None
         sheet = proof.sheets.get(actor.entity) if proof else None
-        assets = [x for x in sheet.assets if x.family == family] if sheet else []
+        from girlframe.engine.m3_janus_storage import effective_assets, for_family
+
+        assets = [x for x in effective_assets(proof, actor) if x.family == family] if proof else []
         if (
             sheet is None
             or sheet.character_id != actor.incarnation
@@ -104,6 +106,16 @@ def source(
             or not all(x.void for x in assets)
         ):
             raise ValueError()
+        if proof and for_family(proof, actor, family):
+            from girlframe.services.m3_janus_storage import prove as prove_stored_point
+
+            for point in for_family(proof, actor, family):
+                prove_stored_point(game, c, proof, point)
+        if body.get("reason") == "janus_storage_replug":
+            from girlframe.services.m3_janus_storage import prove_replug
+
+            prove_replug(game, c, first, body, actor)
+            return current, body, actor
         if body.get("reason") == "janus_core_freed":
             from girlframe.services.m3_janus_requisitions import prove_freed_core_void
 
@@ -337,7 +349,7 @@ def complete(
     game: GameService,
     value: VoidThreshold,
     event: str,
-    viewer: GuildViewer,
+    viewer: GuildViewer | None,
     key: str,
 ) -> None:
     if value.stage not in rules.FINAL:
@@ -422,6 +434,10 @@ def complete(
             )
 
             complete_battery(game, c, identity, event, viewer, key)
+        elif body.get("reason") == "janus_storage_replug":
+            from girlframe.services.m3_janus_storage import complete_replug
+
+            complete_replug(game, c, identity, event, viewer, key)
         elif body.get("reason") == "call_guest":
             from girlframe.services.m3_mockingbird_communion import complete_call_guest_void
 
@@ -508,6 +524,8 @@ class VoidService:
         return list({x["id"]: x for x in result}.values())
 
     def _view(self, c: Connection, viewer: GuildViewer, identity: str) -> dict[str, Any]:
+        from girlframe.engine.m3_janus_storage import effective_assets
+
         self.game.authorize(c, viewer, game=False)
         row, body, actor = source(self.game, c, identity)
         state, value = prepare_threshold(c, self.game, identity)
@@ -553,6 +571,17 @@ class VoidService:
             source_action=body["source_action"],
             threshold=value.model_dump(mode="json", exclude={"sheet_json"}),
             source_work=row["kind"],
+            storage_unplug=next(
+                (
+                    x.id
+                    for x in state.neural_connections
+                    if owner
+                    and value.storage_points
+                    and x.caster == actor
+                    and x.phase == "connected"
+                ),
+                None,
+            ),
             protection_active=value.guardian is not None
             and value.protection_release_event is None
             and any(x.actor == actor and x.custody == value.guardian for x in state.placements),
@@ -572,7 +601,7 @@ class VoidService:
                 result.update(
                     identities=[x.model_dump(mode="json") for x in sheet.identities],
                     tags=[x.model_dump(mode="json") for x in sheet.tags],
-                    assets=[x.model_dump(mode="json") for x in sheet.assets],
+                    assets=[x.model_dump(mode="json") for x in effective_assets(state, actor)],
                     plays=owned_plays,
                     bonds=[
                         dict(

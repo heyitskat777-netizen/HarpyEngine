@@ -625,8 +625,6 @@ class FrameControlService:
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             self.game.unpaused(c)
-            if self.game.pending_actions(c):
-                raise WorkflowError("Resolve the actual immediate Play before ordinary unplugging")
             state = load_state(c, self.store.campaign_id)
             value = prove(self.game, c, state, identity)
             actor = (
@@ -640,6 +638,12 @@ class FrameControlService:
                 raise WorkflowError(
                     "Only an actual original participant performs this current unplug"
                 )
+            from girlframe.services.m3_janus_storage import allow_pending_unplug, complete_stopped
+
+            if self.game.pending_actions(c) and not allow_pending_unplug(
+                self.game, c, state, identity, actor
+            ):
+                raise WorkflowError("Resolve the actual immediate Play before ordinary unplugging")
             _bodies(self.game, c, state, value)
             if value.access == "core_port" and actor == value.battery:
                 from girlframe.engine.m3_janus import has_tag
@@ -651,6 +655,9 @@ class FrameControlService:
                     )
             event = str(uuid4())
             state = rules.unplug(state, identity, actor, event, account)
+            from girlframe.engine.m3_janus_storage import end_inactive_causes
+
+            end_inactive_causes(state, event)
             self.game.event(
                 c,
                 viewer.user_id,
@@ -661,6 +668,7 @@ class FrameControlService:
                 connection_id=identity,
                 original_actor=actor.model_dump(mode="json"),
             )
+            complete_stopped(self.game, c, state, event, viewer, key)
             return dict(id=identity, phase="unplugged")
 
         return self._write(

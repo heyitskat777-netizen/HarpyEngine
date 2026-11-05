@@ -76,7 +76,9 @@ class ItemTransfer(Model):
     account: str = Field(min_length=1, max_length=1200)
     prior_event: str | None = None
     source_work: str | None = None
-    source_kind: Literal["enforcement_initiative", "npc_damage", "enforcer_snoop"] | None = None
+    source_kind: (
+        Literal["enforcement_initiative", "npc_damage", "enforcer_snoop", "alpha_sex"] | None
+    ) = None
     removed_asset: str | None = None
     received_asset: str | None = None
     last_girl_asset: bool = False

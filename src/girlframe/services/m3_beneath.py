@@ -232,6 +232,10 @@ def orders(
         if source is None:
             continue
         data = json.loads(source["body_json"])
+        if data.get("npc_order"):
+            # This selector grants only implemented PC-superior delegated authority.
+            # An NPC's controller is never substituted for its typed source actor.
+            continue
         responses, choices = t.m2["m2_responses"], t.m2["m2_choices"]
         reply = c.scalar(
             sa.select(responses.c.answer_json)
@@ -648,7 +652,13 @@ def discipline_action(
 
 
 def discipline_finished(
-    game: "GameService", c: Connection, viewer: GuildViewer, key: str, row: dict[str, Any]
+    game: "GameService",
+    c: Connection,
+    viewer: GuildViewer | None,
+    key: str,
+    row: dict[str, Any],
+    *,
+    source_event: str | None = None,
 ) -> None:
     from girlframe.services.m2_choices import ChoiceEngine
 
@@ -690,9 +700,11 @@ def discipline_finished(
     if not game.pending(c, action_id):
         ChoiceEngine(game).finish(c, state, action)
     game.save_action(c, action)
+    from girlframe.services.m3_janus_storage import continuation_actor
+
     game.event(
         c,
-        viewer.user_id,
+        continuation_actor(game, c, source_event or row["event_id"], viewer),
         key,
         "m3.beneath_discipline_completed",
         action_id=action_id,

@@ -301,6 +301,9 @@ class CallService:
                 assets=[dict(id=x.id, label=x.name) for x in assets if not x.void],
                 identities=[dict(id=x.id, label=x.name) for x in identities if not x.protected],
             )
+            from girlframe.services.m3_janus_storage import available as storage_available
+
+            result["storage_available"] = storage_available(self.game, c, state, value.guest)
         if value.phase == "npc" and value.guest is not None:
             result["npcs"] = (
                 [
@@ -554,6 +557,7 @@ class CallService:
                 "option": option,
                 "effect_json": effect.model_dump_json(),
                 "choice_event": event,
+                "store_void": data.get("storage") is True,
             }
         )
         if option == "table_replaces_identity":
@@ -589,6 +593,11 @@ class CallService:
     ) -> GameState:
         assert value.guest is not None and value.option is not None and value.effect_json
         effect = Effect.model_validate_json(value.effect_json)
+        from girlframe.services.m3_janus_storage import gain_source
+
+        storage = gain_source(
+            self.game, c, state, value.guest, value.id, "call_guest", value.store_void
+        )
         if value.option == "locked_cockpit_extraction_requires_frame_consent":
             return physical.subsume(state, value.passenger or "", event, effect.account)
         if value.guest.kind not in ("pilot", "external_pilot"):
@@ -721,6 +730,7 @@ class CallService:
             handler_controller=action["data"]["dive"].get(
                 "judge_controller", action["data"]["dive"].get("handler_controller")
             ),
+            storage=storage,
         )
         if value.option == "nearby_npcs_gain_void":
             self._stage_directors(c, outcome.state, action, value, event)
@@ -1247,7 +1257,12 @@ def prove_call_guest_void(
 
 
 def complete_call_guest_void(
-    game: "GameService", c: Connection, identity: str, event: str, viewer: GuildViewer, key: str
+    game: "GameService",
+    c: Connection,
+    identity: str,
+    event: str,
+    viewer: GuildViewer | None,
+    key: str,
 ) -> None:
     from girlframe.engine.m3_void import FINAL
 
@@ -1309,9 +1324,11 @@ def complete_call_guest_void(
             t.events.c.campaign_id == game.store.campaign_id, t.events.c.command_key == key
         )
     )
+    from girlframe.services.m3_janus_storage import continuation_actor
+
     saved = game.event(
         c,
-        viewer.user_id,
+        continuation_actor(game, c, event, viewer),
         key,
         "m3.call_void_completed",
         state,

@@ -120,11 +120,31 @@ async def open_sex(interaction: discord.Interaction, game: GameService, identity
                 paragraph=True,
             )
         ]
+        if kind == "mockingbird_sex_rewrite" and detail.get("storage_available"):
+            fields.append(
+                Field(
+                    "storage",
+                    "Optional gained Void destination",
+                    (("yes", "Store in my actual connected Harpy"),),
+                    minimum=0,
+                    required=False,
+                )
+            )
     elif kind == "mockingbird_sex_self":
         fields = [
             Field("name", "Name the actual new Void Asset"),
             Field("description", "Describe the Void taken into yourself", paragraph=True),
         ]
+        if detail.get("storage_available"):
+            fields.append(
+                Field(
+                    "storage",
+                    "Optional gained Void destination",
+                    (("yes", "Store in my actual connected Harpy"),),
+                    minimum=0,
+                    required=False,
+                )
+            )
         if detail["replacement_required"]:
             if not detail["replace"]:
                 raise WorkflowError(
@@ -177,13 +197,17 @@ async def open_sex(interaction: discord.Interaction, game: GameService, identity
         elif kind == "mockingbird_sex_hide":
             answer = ChoiceAnswer(options=tuple(values["corruption"]), text=values["account"])
         elif kind in ("mockingbird_sex_restore", "mockingbird_sex_rewrite"):
-            answer = ChoiceAnswer(text=values["description"])
+            answer = ChoiceAnswer(
+                text=values["description"],
+                fields={"storage": "yes"} if values.get("storage") else {},
+            )
         elif kind == "mockingbird_sex_self":
             answer = ChoiceAnswer(
                 fields={
                     "name": values["name"],
                     "replace": values["replace"][0] if values.get("replace") else "",
-                },
+                }
+                | ({"storage": "yes"} if values.get("storage") else {}),
                 text=values["description"],
             )
         elif kind in ("mockingbird_sex_npc_void", "mockingbird_sex_redirect_npc"):

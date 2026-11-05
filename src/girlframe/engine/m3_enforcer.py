@@ -128,6 +128,15 @@ def conditioning(state: GameState, actor: ActorRef) -> bool:
     sheet = state.sheets.get(actor.entity)
     from girlframe.engine.m3_enforcer_requisitions import held
 
+    if sheet is not None and any(
+        x.get("kind") == "doctor_removed_conditioning"
+        and x.get("actor") == actor.model_dump_json()
+        and x.get("frame")
+        == (sheet.frame_runtime.id if sheet.frame_runtime else "initial:" + str(actor.incarnation))
+        for x in state.facts
+    ):
+        return False
+
     return bool(
         actor.kind == "pilot"
         and sheet

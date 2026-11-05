@@ -42,6 +42,13 @@ def classify(
     ):
         raise ValueError("Use the actual original owned Call option and its new source step")
     actual, _ = resources(original, actor)
+    from girlframe.engine.m3_janus_storage import effective_assets
+    from girlframe.engine.m3_janus_storage import ids as stored_ids
+
+    effective = actual
+    stored = stored_ids(original, actor)
+    if actor.kind == "pilot":
+        actual = tuple(original.sheets[actor.entity].assets)
     current = {x.id: x for x in actual}
     if (
         not set(selection) <= set(current)
@@ -100,7 +107,7 @@ def classify(
     for family in ("girl", "frame"):
         removals = [current[x] for x in replaced if proposed[x].family == family]
         if len(removals) != overflow[family] or any(
-            x.void or not count(proposed[x.id]) for x in removals
+            x.void or x.id in stored or not count(proposed[x.id]) for x in removals
         ):
             raise ValueError(
                 "At each printed cap, replace exactly the excess non-Void ordinary Assets"
@@ -185,8 +192,8 @@ def classify(
         sheet = state.sheets[actor.entity]
         bird = has_rule(sheet, "girl.mockingbird.risk-factor", "MOCKINGBIRD")
         for family in ("girl", "frame"):
-            before = [x for x in actual if x.family == family]
-            after = [x for x in sheet.assets if x.family == family]
+            before = [x for x in effective if x.family == family]
+            after = [x for x in effective_assets(state, actor) if x.family == family]
             became = bool(
                 after
                 and all(x.void for x in after)

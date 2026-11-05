@@ -5,7 +5,9 @@ from typing import Literal
 from girlframe.engine.m2 import GameState, Model, PilotSheet, shift_status
 from girlframe.engine.m3_girl_runtime_state import has_rule
 
-DoctorTrigger = Literal["nanobot_injection", "mission_failure", "cadre_death", "high_budget"]
+DoctorTrigger = Literal[
+    "nanobot_injection", "mission_failure", "cadre_death", "high_budget", "adrenal"
+]
 AceCheck = Literal["after_promotion", "before_promotion"]
 
 
@@ -15,7 +17,13 @@ class DoctorResult(Model):
 
 
 def mark_obsolescence(sheet: PilotSheet, trigger: DoctorTrigger) -> DoctorResult:
-    if trigger not in ("nanobot_injection", "mission_failure", "cadre_death", "high_budget"):
+    if trigger not in (
+        "nanobot_injection",
+        "mission_failure",
+        "cadre_death",
+        "high_budget",
+        "adrenal",
+    ):
         raise ValueError("Use a printed Planned Obsolescence trigger")
     if (
         sheet.frame != "DOCTORDOCTOR MK. II"

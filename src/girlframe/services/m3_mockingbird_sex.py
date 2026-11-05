@@ -350,11 +350,19 @@ def apply(
             )
             game.request(c, action, actual.controller, "mockingbird_sex_rewrite")
     elif kind == "mockingbird_sex_self":
-        _strict(answer, {"name", "replace"}, text=True)
+        _strict(
+            answer,
+            {"name", "replace", "storage"} if "storage" in answer.fields else {"name", "replace"},
+            text=True,
+        )
+        if answer.fields.get("storage", "yes") != "yes":
+            raise WorkflowError("Choose only the actual offered Void Storage destination")
         if int(row["actor_id"]) != int(action["actor_id"]):
             raise WorkflowError("The actual caster writes their own new Void Asset")
         before = GameState.model_validate_json(state.model_dump_json())
         changed, source = _transfer_source(game, c, state, action)
+        from girlframe.services.m3_janus_storage import gain_source
+
         changed = rules.write_self_asset(
             changed,
             actor,
@@ -363,6 +371,9 @@ def apply(
             action["id"],
             event,
             replace=answer.fields["replace"] or None,
+            storage=gain_source(
+                game, c, changed, actor, row["id"], "mockingbird_sex", "storage" in answer.fields
+            ),
         )
         _copy(state, changed)
         _bond_risk(state, action, risk=False)
@@ -379,7 +390,9 @@ def apply(
         )
         _finish(game, c, state, action)
     elif kind == "mockingbird_sex_rewrite":
-        _strict(answer, set(), text=True)
+        _strict(answer, {"storage"} if "storage" in answer.fields else set(), text=True)
+        if answer.fields.get("storage", "yes") != "yes":
+            raise WorkflowError("Choose only the actual offered Storage destination")
         infection = meta["sex_infection"]
         recipient = ActorRef.model_validate(infection["target"])
         actual = _actual(game, c, state, recipient)
@@ -400,6 +413,8 @@ def apply(
         if meta.get("sex_transfer"):
             changed, source = _transfer_source(game, c, state, action)
             affected = (source, recipient)
+        from girlframe.services.m3_janus_storage import gain_source
+
         changed, _ = rules.infect(
             changed,
             profiles(c, game.store.campaign_id),
@@ -409,6 +424,15 @@ def apply(
             answer.text,
             action["id"],
             event,
+            storage=gain_source(
+                game,
+                c,
+                changed,
+                recipient,
+                row["id"],
+                "mockingbird_sex",
+                "storage" in answer.fields,
+            ),
         )
         _copy(state, changed)
         _bond_risk(state, action, risk=action["data"]["result"]["tier"] == "high")
@@ -501,6 +525,8 @@ def projection(
     ):
         return dict(work_id=json.loads(row["body_json"])["work_id"])
     actual = _actual(game, c, state, target)
+    from girlframe.services.m3_janus_storage import available as storage_available
+
     values = rules.assets(state, target)
     choices = ["starry"]
     if any(x.void for x in values):
@@ -508,6 +534,18 @@ def projection(
     if rules.corruption_options(state, target):
         choices.insert(0, "hide")
     result: dict[str, Any] = dict(
+        storage_available=storage_available(
+            game,
+            c,
+            state,
+            ActorRef.model_validate(
+                action["data"]["mockingbird"].get("sex_infection", {}).get("target")
+            )
+            if kind == "mockingbird_sex_rewrite"
+            else actor
+            if kind == "mockingbird_sex_self"
+            else target,
+        ),
         target=actual.label,
         options=choices,
         capabilities=list(CAPABILITIES),

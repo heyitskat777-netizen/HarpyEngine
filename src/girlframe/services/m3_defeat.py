@@ -496,7 +496,7 @@ def synchronize(
     c: Connection,
     action: dict[str, Any],
     event: str,
-    viewer: GuildViewer,
+    viewer: GuildViewer | None,
     key: str,
 ) -> None:
     from girlframe.services.m3_work import related
@@ -574,7 +574,7 @@ def synchronize(
         else:
             from girlframe.services.m3_beneath import discipline_finished
 
-            discipline_finished(game, c, viewer, key, row)
+            discipline_finished(game, c, viewer, key, row, source_event=event)
 
 
 def complete_void_continuation(
@@ -582,7 +582,7 @@ def complete_void_continuation(
     c: Connection,
     identity: str,
     event: str,
-    viewer: GuildViewer,
+    viewer: GuildViewer | None,
     key: str,
 ) -> None:
     """Release only a source-proved continuation after its actual Void work resolves."""
@@ -648,9 +648,11 @@ def complete_void_continuation(
         )
         + 1
     )
+    from girlframe.services.m3_janus_storage import continuation_actor
+
     game.event(
         c,
-        viewer.user_id,
+        continuation_actor(game, c, event, viewer),
         key,
         "m3.defeat_void_completed",
         action_id=action["id"],

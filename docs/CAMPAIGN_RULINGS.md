@@ -2573,3 +2573,255 @@ Alternatives: Automatically delete a stored point on period activation, or permi
 Implementation: The original patient requests one exact stored point after an actual Go Off-Duty receipt. The period's original Foundation human records performed surgery. At most one point per original patient is removed in that period, without damaging or repairing the original Asset.
 
 Change impact: The optional request is resumable/private and does not invent personnel, transport, medical completion or an Asset repair.
+
+### `political-function-disclosed-rights-lifetime`
+
+Source: rulebook PDF150/printed148, Low Budget2.1. Original Girls receive the Tag-right notice, confirm their own real attendance and optionally author a Tag for their own actual out-of-line action while the function is active. The original Handler records its real ending, expiring that permission. This supplies the missing coordination/lifetime without generated dialogue, automatic attendance or conduct classification. Alternatives are automatic actions/Tags or unlimited post-function rights. Source-bound function/native controls and required work implement this; later adjustments must preserve original notices, confirmations and Tag sources. Delegated recommendation; printed-rule clarity review pending.
+
+## Alpha, JANUS Storage and Budget workflow clarifications — 2026-11-05
+
+Delegated recommendations below remain adjustable and flagged for printed-rule clarity review. Unsupported source branches remain implementation gaps.
+
+### `alpha-low-real-play-conditional-broken`
+
+Source: Rulebook PDF52 / printed50 Brutalize.
+
+The original target chooses whether their genuine counter Play will leave the attacker Broken before starting it; apply Broken only after that real Play and its required choices finish. No success requirement is added.
+
+Rationale: The text gives one opportunity and says if they can make a Play they can leave the attacker Broken; source-owned preselection prevents inventing a later human response.
+
+Alternatives: Ask after completed Play through another owned choice; Require successful counter (unprinted restriction)
+
+Change impact: Change conditional selection timing without reusing or rerolling the saved child receipt.
+
+### `alpha-broken-original-relative-status`
+
+Source: Rulebook PDF52 / printed50 Brutalize.
+
+Broken is an original-person relation to its actual inflictor; it overrides relative PC Status while both originals remain current, without changing the global Status order.
+
+Rationale: Printed text says lower Status relative to the inflictor, not a global rank loss.
+
+Alternatives: Global rank reduction (does not preserve printed relativity)
+
+Change impact: Original ActorRefs/source events retained. Reciprocal Broken remains unresolved/fail-closed rather than inventing precedence.
+
+### `alpha-guard-unarmed-proof`
+
+Source: Rulebook PDF52 / printed50 Brutalize and PDF190 Guard moves.
+
+The admitted Guard controller reviews actual weapon facts before the roll. A low result gives the real owned counter opportunity first; afterward the original Alpha may explicitly spare or kill the reviewed unarmed NPC. Empty inventory alone never proves unarmed.
+
+Rationale: Preserves both printed opportunity and optional unarmed killing without manufacturing NPC actions or weapons.
+
+Alternatives: Kill before allowing counter; Infer unarmed from missing records
+
+Change impact: Frozen factual assessment ID, actual source counter event and selected final response are retained.
+
+### `alpha-npc-injury-canonical`
+
+Source: Rulebook PDF52 / printed50 injury and existing NPC injury representation.
+
+The actual Alpha authors the injury; persist it as a bounded actual injury Tag plus immutable source fact, with no invented NPC HP or Asset slots.
+
+Rationale: Reuses the current canonical NPC injury representation and gives the actual physical consequence a saved consumer.
+
+Alternatives: Narrative fact only, without Tag consumers
+
+Change impact: Original NPC ID and actual injury label/event retained. No additional generic damage menu options granted.
+
+### `alpha-original-npc-broken-orders`
+
+Source: Rulebook PDF52 / printed50 and existing ReceiveOrders/Disobey.
+
+An actual original NPC inflictor is superior to this original Broken Pilot for their own direct Orders. Store the actual NPC ActorRef and human controller separately; real mid Disobey may replace its ordinary option by removing only this exact condition.
+
+Rationale: Applies printed relative Status and removal without borrowing the NPC controller's Handler/PC identity or inventing NPC Heat/dice.
+
+Alternatives: Store controller as issuer (would grant another role false authority); Ignore actual NPC source Status/removal (would omit printed condition consumer)
+
+Change impact: Immutable instruction, original condition/event, actual cast and issuer/controller retained in the existing Orders protocol. General NPC Orders remain gated.
+
+### `alpha-sex-finite-sleep-opportunity`
+
+Source: Rulebook PDF53 / printed51 low Alpha Sex.
+
+Persist source sleep independently of injury and Helplessness. Keep the original counterpart opportunity pending until explicitly declined or actually performed, then require the original Alpha to record waking. Safety pause remains available.
+
+Rationale: The text gives an actual opportunity while Alpha sleeps but no duration; this prevents a free wake bypass while avoiding automatic invented recovery.
+
+Alternatives: Automatically wake on result (would erase opportunity); Permanent unconscious injury (unprinted harm)
+
+Change impact: Original sleep/effect/wake events and source controllers retained; changing duration must preserve performed outcomes.
+
+### `alpha-sex-no-reprisal-scope`
+
+Source: Rulebook PDF53 / printed51 low Alpha Sex.
+
+The source opponent may exercise one real supported opportunity without a reprisal Play from the sleeping Alpha. This creates no permanent immunity, self-Helpless relation or waived safety/other printed consultation.
+
+Rationale: Consumes the printed one opportunity while retaining actual source effects, existing required followups and ordinary rules afterward.
+
+Alternatives: Automatic harm immunity; Treat mere opportunity selection as actual performance
+
+Change impact: Actual child/transfer/RoleCase receipts and completion source remain authoritative.
+
+### `alpha-sex-distinct-broken-tracking`
+
+Source: Rulebook PDF53 / printed51 mid Alpha Sex.
+
+Keep this Play's own Broken source even if the same inflictor already has another active Broken source. The relation lowers Status once; exact scent entitlement lasts only while this Play's condition remains active. A real eligible Disobey removes Broken against that inflictor, including its active occurrences.
+
+Rationale: Avoids fabricating scent authority from a different earlier Play or erasing historical provenance.
+
+Alternatives: Overwrite the prior source; Grant scent from any old Broken condition
+
+Change impact: Each source condition has a stable ID/action/event. Original source remains history after removal.
+
+### `alpha-sex-scent-actual-location`
+
+Source: Rulebook PDF53 / printed51 scent tracking.
+
+The owner may privately discover the actual current original body location by scent while the exact source condition is active. It performs no movement and invents no coordinates when factual position is unknown/offstage.
+
+Rationale: Provides a real discovery consumer without teleporting either person or substituting the target controller's other character.
+
+Alternatives: Automatic movement; Invent narrative position
+
+Change impact: A future physical tracking/travel consumer can reuse the exact source condition and actual body provenance.
+
+### `janus-storage-effective-threshold-lifetime`
+
+Source: Rulebook PDF 19, 70.
+
+Active stored alterations count toward actual effective all-Void conditions while genuinely plugged in. Actual unplug/removal can end an uncompleted consequence whose sole full-family cause ceased, while any remaining full cause continues. Completed transformation and permanent Void are never reversed.
+
+Rationale: The temporary-while-plugged wording changes whether the printed all-Assets condition currently exists; it does not rewrite completed physical history.
+
+Alternatives: Ignore stored points in all-Void counts, or make every started consequence permanent even after its only conditional cause disappears.
+
+Change impact: Reuse existing Void/Keep/consent mechanics with exact stored-point pointers; no second birth lifecycle or reversible completed transformation.
+
+### `janus-storage-reconnect-producer`
+
+Source: Rulebook PDF 69, 70.
+
+A genuine new spinal plugging uses its actual Living Battery source producer. Prior stored changes activate only after that completed connection effect, including any required owned private answer. No additional Storage RNG or fabricated new gain is created.
+
+Rationale: The actual connection and its known receipt remain authority; a manually flipped link flag or unrelated relink does not reactivate stored effects.
+
+Alternatives: Activate from an unproved flag, or require a separate Storage-specific roll on each reconnect.
+
+Change impact: Reconnect has one genuine source episode and can reopen the normal conditional Void consequence without duplicated dice.
+
+### `janus-storage-explicit-void-creation-boundary`
+
+Source: Rulebook PDF 19, 29, 69, 70.
+
+Explicit Defeat growth of two new Void-corrupted Assets and forced all-Frame Core takeover remain permanent printed creations/effects. Generic Void rewrite gains offer optional Storage. Their threshold readers still count already active stored alterations.
+
+Rationale: These clauses explicitly create or corrupt specified hardware rather than invoking the generic choice to rewrite one uncorrupted Asset; diverting them would alter their stated effects.
+
+Alternatives: Treat every Void-labelled creation or forced whole-Frame corruption as one divertible generic gain.
+
+Change impact: No new Defeat diversion UI, no optional waiver of actual takeover, and no stored point can undo a permanent result.
+
+### `budget-director-performance-source`
+
+Source: Rulebook PDF151/printed149 and PDF192/printed190.
+
+A separately played Director owns the actual appearance and departure; the original Handler owns its two fresh context Identities or reuses the already active context. The event adds four Heat once to the actual Handler context after it is established, subject to existing source Heat restrictions.
+
+Rationale: The Budget event grants Heat while the Director rules require the Handler to use a distinct Girl-rule pool. Applying the event to another PC or before the context reset would lose its source effect.
+
+Alternatives: Give the Heat to a different PC.; Apply four Heat before resetting the context to zero.
+
+Change impact: Preserve original meeting/context/Heat events. Existing non-context Identity carry remains unavailable pending its actual source port.
+
+### `budget-candidate-table-process`
+
+Source: Rulebook PDF151/printed149 and PDF191/printed189.
+
+Keep the existing NPC body, controller and other jobs when assigning Pilot Candidate. The original table, including its controller and assigned Girl, authors and agrees to one exact process; edits clear prior agreements. Only the assigned original Girl reports its actual assessment. The assessment never automatically activates a player character or grants resources.
+
+Rationale: The source assigns the assessment and requires the table to define candidacy, without a numeric check or success package. Exact proposals preserve each human contribution and avoid invented conversion mechanics.
+
+Alternatives: Let one human silently define everyone else's process.; Auto-create a PC or reward package when the process is agreed.
+
+Change impact: Review original participant/process agreements before adjusting table composition. Preserve assignment, authored process, actual report and source history.
+
+### `budget-anarchy-conditional-city-order`
+
+Source: Rulebook PDF151/printed149.
+
+Anarchy is an exact source blockage that makes the city nonoperational while retaining its physical condition. Supported city-use and world-advancement consumers use that condition. The original Handler records an actual method and established civic outcome to remove only this source cause. It repairs no physical destruction and grants no Gorgon territory.
+
+Rationale: The printed city counts as destroyed only until order is restored. A permanent physical destruction or map-only flag would omit either its temporary lifetime or actual mechanical consumers; no special pacification die is printed.
+
+Alternatives: Permanently destroy the physical city.; Keep the condition in the map display only or clear it from a planned action.
+
+Change impact: Preserve previous physical damage and every unrelated blocked source. Future city consumers must use the same operational condition; narrative plans do not constitute restored order.
+
+## DoctorDoctor normal workflow interpretations — 2026-11-05
+
+Delegated recommendations; printed-rule clarity review remains pending.
+
+### `doctor-owned-details`
+
+Source: Rulebook PDF 72.
+
+Caster chooses printed Nano benefits and supported ongoing effect; patient chooses their existing repair Assets and may decline Identity unmark. Factual patient confirmation for standalone care is OOC ownership, not invented fictional consent/dialogue.
+
+Rationale: The benefit is chosen by the caster, while the printed patient unmark is optional and existing sheet details belong to its original owner. This separates factual confirmation from invented in-fiction agreement.
+
+Alternative: Caster chooses every sheet detail.
+
+Change impact: Preserves source benefit ownership with private existing patient resources and optional wording.
+
+### `doctor-clinical-recovery`
+
+Source: Rulebook PDF 73.
+
+Metal Angel recovery restores actual biological medical/incapacity/vital/Helpless state after next-period real care. It does not grant an unprinted blanket Asset, permanent Void, Identity or source-work reset.
+
+Rationale: The recovery clause follows actual biological care. It does not explicitly erase permanent corruption, every mechanical Asset condition or separate original-source waking work.
+
+Alternative: Treat recover as full sheet reset.
+
+Change impact: Ordinary printed Off-Duty Asset recovery remains separate; exact Defeat waking/swap obligations retain real controls.
+
+### `doctor-source-lifetime`
+
+Source: Rulebook PDF 71, 73.
+
+Native ongoing Care/protection belongs to exact original Doctor Frame/person. End it if source Frame scrapped/replaced or either actual person ends; prevent death before actual career fallout, never undo archives.
+
+Rationale: An ongoing Frame ability needs its actual current source. Prevention must happen before the irreversible death endpoint so archived history and lost scene roles are never fabricated backward.
+
+Alternative: Persistent ability remains after losing all Frame Plays.
+
+Change impact: No successor/old-source authority. Eighth Adrenal survives but scraps Frame using existing replacement.
+
+### `doctor-borrowed-cap-return`
+
+Source: Rulebook PDF 15, 72.
+
+The printed ordinary maximum is five Frame Assets (four Girl Assets), with existing counts_toward_limit/intrinsic semantics. Wings does not override that cap. Temporary hardware returns to the same original actual donor Frame at next real Off-Duty, retaining its current actual damage/Void/description without a duplicate.
+
+Rationale: The source gives temporary actual hardware and later returns it, without a separate cap or a pristine replacement. Printed ordinary Frame capacity and original object identity continue to apply.
+
+Alternative: Permit an unprinted unlimited Wings cap, or recreate returned hardware pristine.
+
+Change impact: Corrected initial erroneous four-Frame check. Four-to-five-to-four normal flow now tested; replacement at five remains an explicit unavailable UI/port, not a cap ruling.
+
+### `doctor-arrival-body`
+
+Source: Rulebook PDF 72.
+
+Running Ragged moves actual free Doctor body; own currently occupied Frame accompanies it, parked hardware does not teleport independently. Unknown destination remains unknown with actual arrival source. Either actual participant marks only their own Tag.
+
+Rationale: The arrival wording moves the called Doctor, while existing physical placement distinguishes that body and its occupied Frame from separately parked hardware.
+
+Alternative: Always move both independent Girl and parked Frame.
+
+Change impact: Preserves actual body/custody/subsumption/journey and original source identity.

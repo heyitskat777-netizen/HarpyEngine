@@ -11,6 +11,8 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_observation as rules
 from girlframe.engine.m2 import GameState
+from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_janus_storage import effective_assets
 from girlframe.engine.m3_observation_state import Details, Kind
 from girlframe.engine.m3_off_duty import Period, clone
 from girlframe.services.m2_state import load_state
@@ -284,7 +286,15 @@ class ObservationService:
                 if value in ("remove_girl_void_asset", "remove_frame_void_asset"):
                     family = "girl" if value == "remove_girl_void_asset" else "frame"
                     if not any(
-                        x.void and x.family == family for x in state.sheets[str(subject)].assets
+                        x.void and x.family == family
+                        for x in effective_assets(
+                            state,
+                            ActorRef(
+                                kind="pilot",
+                                entity=str(subject),
+                                incarnation=state.sheets[str(subject)].character_id,
+                            ),
+                        )
                     ):
                         raise WorkflowError(
                             "Choose a consequence with an actual current Void Asset."
@@ -478,7 +488,12 @@ class ObservationService:
                     or any(
                         a.void
                         and a.family == ("girl" if x == "remove_girl_void_asset" else "frame")
-                        for a in sheet.assets
+                        for a in effective_assets(
+                            state,
+                            ActorRef(
+                                kind="pilot", entity=str(subject), incarnation=sheet.character_id
+                            ),
+                        )
                     )
                 )
                 result.update(options=options, count=count)
@@ -502,7 +517,14 @@ class ObservationService:
                 if selected.kind in ("remove_girl_void_asset", "remove_frame_void_asset"):
                     family = "girl" if selected.kind == "remove_girl_void_asset" else "frame"
                     result["assets"] = tuple(
-                        (x.id, x.name) for x in sheet.assets if x.void and x.family == family
+                        (x.id, x.name)
+                        for x in effective_assets(
+                            state,
+                            ActorRef(
+                                kind="pilot", entity=str(subject), incarnation=sheet.character_id
+                            ),
+                        )
+                        if x.void and x.family == family
                     )
                 if selected.kind == "reprogram":
                     result["identities"] = tuple(

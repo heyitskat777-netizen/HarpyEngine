@@ -160,6 +160,7 @@ class VoidThreshold(Model):
     source_event: str = Field(min_length=1)
     source_action: str | None = None
     source_works: tuple[str, ...] = ()
+    storage_points: tuple[str, ...] = Field(default=(), exclude_if=lambda value: not value)
     sheet_json: str = Field(min_length=1)
     stage: Literal[
         "allured",

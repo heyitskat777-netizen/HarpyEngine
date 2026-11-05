@@ -162,6 +162,8 @@ def apply(
     sheet = state.sheets.get(str(subject))
     if sheet is None:
         raise ValueError("Punishment requires a current canonical Pilot")
+    from girlframe.engine.m3_janus_storage import effective_for_owner
+
     if off_duty_period is not None and (not off_duty or not off_duty_period.strip()):
         raise ValueError("A Sedation period requires an actual current Off-Duty context")
     required: list[Followup] = []
@@ -254,9 +256,9 @@ def apply(
                 )
             )
         if (
-            any(x.family == "frame" and not x.void for x in original.sheets[str(subject)].assets)
-            and any(x.family == "frame" for x in sheet.assets)
-            and all(x.void for x in sheet.assets if x.family == "frame")
+            any(x.family == "frame" and not x.void for x in effective_for_owner(original, subject))
+            and any(x.family == "frame" for x in effective_for_owner(state, subject))
+            and all(x.void for x in effective_for_owner(state, subject) if x.family == "frame")
         ):
             required.append(Followup(kind="void_threshold_check", owner=subject, source_pdf=19))
     elif kind == "strict_regulations":
@@ -344,8 +346,8 @@ def apply(
                         description=details.replacement_description.strip(),
                     )
                 )
-            if any(x.family == family for x in sheet.assets) and all(
-                x.void for x in sheet.assets if x.family == family
+            if any(x.family == family for x in effective_for_owner(state, subject)) and all(
+                x.void for x in effective_for_owner(state, subject) if x.family == family
             ):
                 required.append(Followup(kind="void_threshold_check", owner=subject, source_pdf=19))
     elif kind == "reduced_socialization":

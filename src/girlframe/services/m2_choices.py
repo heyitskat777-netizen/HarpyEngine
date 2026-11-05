@@ -140,6 +140,21 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         sheet = state.sheets.get(str(owner))
         body = json.loads(request["body_json"])
+        if kind.startswith("alpha_sex_") and action["data"].get("alpha_sex"):
+            from girlframe.services.m3_alpha_sex import apply as apply_alpha_sex
+
+            apply_alpha_sex(self.game, c, state, action, request, answer)
+            return
+        if kind.startswith("alpha_") and action["data"].get("alpha"):
+            from girlframe.services.m3_alpha import apply as apply_alpha
+
+            apply_alpha(self.game, c, state, action, request, answer)
+            return
+        if kind == "actor_disobey" and answer.options == ("remove_broken",):
+            from girlframe.services.m3_alpha import remove_choice
+
+            if remove_choice(self.game, c, state, action, request, answer):
+                return
         if kind.startswith("janus_") and action["data"].get("janus"):
             from girlframe.services.m3_janus_play import apply as apply_janus
 
@@ -158,6 +173,11 @@ class ChoiceEngine:
             from girlframe.services.m3_enforcer_firepower import apply as apply_firepower
 
             apply_firepower(self.game, c, state, action, request, answer)
+            return
+        if kind.startswith("doctor_") and action["data"].get("doctor"):
+            from girlframe.services.m3_doctor import apply as apply_doctor
+
+            apply_doctor(self.game, c, state, action, request, answer)
             return
         if (
             kind.startswith("mockingbird_")
@@ -858,10 +878,25 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         play = action["data"]["play"]
         level = action["data"]["result"]["tier"]
+        if action["data"].get("alpha_sex"):
+            from girlframe.services.m3_alpha_sex import results as results_alpha_sex
+
+            results_alpha_sex(self.game, c, state, action)
+            return
+        if action["data"].get("alpha"):
+            from girlframe.services.m3_alpha import results as alpha_results
+
+            alpha_results(self.game, c, state, action)
+            return
         if action["data"].get("janus"):
             from girlframe.services.m3_janus_play import results as janus_results
 
             janus_results(self.game, c, state, action)
+            return
+        if action["data"].get("doctor"):
+            from girlframe.services.m3_doctor import results as doctor_results
+
+            doctor_results(self.game, c, state, action)
             return
         if action["data"].get("snoop"):
             from girlframe.services.m3_enforcer_snoop import results as snoop_results
@@ -959,7 +994,13 @@ class ChoiceEngine:
         )
         if any(
             action["data"].get(key)
-            for key in ("battle_counter_source", "dormant_dive_source", "gorgon_counter_source")
+            for key in (
+                "battle_counter_source",
+                "dormant_dive_source",
+                "gorgon_counter_source",
+                "alpha_counter_source",
+                "alpha_sex_counter_source",
+            )
         ):
             # Settle this exact counter only after its real saved completion event.
             return

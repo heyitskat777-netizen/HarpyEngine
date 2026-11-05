@@ -219,6 +219,12 @@ def end(
         raise ValueError("STALE_CAREER: the profile belongs to another incarnation")
     if owner not in state.order or any(x.id == archive_id for x in state.career_archives):
         raise ValueError("The actual active Status slot and a new career archive are required")
+    if reason in ("death", "execution"):
+        from girlframe.engine.m3_doctor import prevent_death
+
+        state, prevented = prevent_death(state, actor, source_event)
+        if prevented:
+            return state
     from girlframe.engine.m3_actor_bonds import migrate_actor, migrate_helpless
     from girlframe.engine.m3_enforcer import end_grasps
     from girlframe.engine.m3_physical import interrupt_journeys

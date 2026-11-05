@@ -234,7 +234,12 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
     elif kind == "actor_disobey":
         if level == "mid":
             fields = [
-                menu("options", "Choose the refusal branch", ("tag_heat", "reject_tag", "follow")),
+                menu(
+                    "options",
+                    "Choose the refusal branch",
+                    ("tag_heat", "reject_tag", "follow")
+                    + (("remove_broken",) if decision.get("alpha_remove_broken") else ()),
+                ),
                 text("text", "New Tag (Tag + Heat branch)", False),
                 menu("number", "Heat gained (Tag branch)", ("1", "2"), required=False),
                 entities("denied", "Tag to reject", decision["tags"], 0, 1, False),
@@ -441,6 +446,18 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
 
         await open_gorgon_choice(interaction, game, identity)
         return
+    if decision.get("alpha_sex") is not None:
+        from girlframe.discord_adapter.m3_alpha_sex import (
+            open_alpha_choice as open_alpha_sex_choice,
+        )
+
+        await open_alpha_sex_choice(interaction, game, identity)
+        return
+    if decision.get("alpha") is not None:
+        from girlframe.discord_adapter.m3_alpha import open_alpha_choice
+
+        await open_alpha_choice(interaction, game, identity)
+        return
     if decision.get("janus") is not None:
         from girlframe.discord_adapter.m3_janus_play import open_battery_choice
 
@@ -544,6 +561,12 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         from girlframe.discord_adapter.m3_enforcement_initiative import open_enforcer_choice
 
         await open_enforcer_choice(interaction, game, identity)
+        return
+    if decision.get("doctor") is not None:
+        from girlframe.discord_adapter.m3_doctor import open_choice as open_doctor_choice
+        from girlframe.services.m3_doctor import DoctorService
+
+        await open_doctor_choice(interaction, DoctorService(game), identity)
         return
     if decision["kind"] in ("tag_marker_selection", "tag_marker_agreement"):
         from girlframe.discord_adapter.m3_tag_markers import open_discussion
@@ -659,6 +682,8 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         instructions += "\nQuestion: " + str(
             decision["result"].get("question", "Why did you withdraw?")
         )
+    if decision.get("npc_order_issuer"):
+        instructions += "\nActual NPC issuer: " + clean(decision["npc_order_issuer"])
     if decision.get("order_text"):
         instructions += "\nDirect order: " + clean(decision["order_text"])
     if decision.get("context") and decision["kind"] != "harpy_sensor_answers":
@@ -765,11 +790,13 @@ async def open_play(
         if x
         not in (
             "enforcement_initiative",
+            "nanobot_injection",
             "all_out_assault",
             "go_for_the_core",
             "mockingbird_person",
             "mockingbird_sex",
             "snoop",
+            "alpha_sex",
         )
     )
     if (
@@ -798,6 +825,22 @@ async def open_play(
         if snooping["available"]:
             plays = (*plays, "snoop")
             snoop_targets = {x["token"]: x for x in snooping["targets"]}
+    alpha_targets = {}
+    if approval is not None and "plays" in approval.subsystems:
+        from girlframe.services.m3_alpha import preview as alpha_preview
+
+        alpha = await threaded(lambda: alpha_preview(game, viewer, channel))
+        if alpha["available"]:
+            plays = (*plays, "brutalize")
+            alpha_targets = {x["token"]: x for x in alpha["targets"]}
+    alpha_sex_sources = {}
+    if not parent and approval is not None and "plays" in approval.subsystems:
+        from girlframe.services.m3_alpha_sex import preview as alpha_sex_preview
+
+        accepted_sex = await threaded(lambda: alpha_sex_preview(game, viewer, channel))
+        if accepted_sex["available"]:
+            plays = (*plays, "alpha_sex")
+            alpha_sex_sources = {x["id"]: x for x in accepted_sex["sessions"]}
     identities = [x for x in sheet["identities"] if not x["marked"]]
     fields = [
         menu("play", "Choose a Play", plays),
@@ -878,7 +921,31 @@ async def open_play(
             ),
         )
 
+    if alpha_targets:
+        fields.insert(
+            2,
+            Field(
+                "alpha_target",
+                "Actual Brutalize target",
+                tuple((token, x["label"]) for token, x in alpha_targets.items()),
+                minimum=0,
+                required=False,
+            ),
+        )
+
     # Target IDs are stable authenticated IDs, not editable claims of ownership.
+    if alpha_sex_sources:
+        fields.insert(
+            2,
+            Field(
+                "alpha_sex_source",
+                "Accepted original Alpha interaction",
+                tuple((identity, x["label"]) for identity, x in alpha_sex_sources.items()),
+                minimum=0,
+                required=False,
+            ),
+        )
+
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         play = one(values, "play")
         identity = one(values, "identity")
@@ -897,6 +964,13 @@ async def open_play(
             if selected is None or selected not in engage_targets:
                 raise WorkflowError("Choose the actual opposing battlefield actor for Engage.")
             target_actor = ActorRef.model_validate(engage_targets[selected]["ref"])
+        if play == "brutalize":
+            from girlframe.engine.m3_actor_state import ActorRef
+
+            selected = one(values, "alpha_target")
+            if selected not in alpha_targets:
+                raise WorkflowError("Choose an actual original Brutalize target")
+            target_actor = ActorRef.model_validate(alpha_targets[selected]["ref"])
         if play == "snoop":
             from girlframe.engine.m3_actor_state import ActorRef
 
@@ -904,6 +978,15 @@ async def open_play(
             if selected is None or selected not in snoop_targets:
                 raise WorkflowError("Choose the actual known original Snoop target")
             target_actor = ActorRef.model_validate(snoop_targets[selected]["ref"])
+        sex_source = None
+        if play == "alpha_sex":
+            selected = one(values, "alpha_sex_source")
+            if selected not in alpha_sex_sources:
+                raise WorkflowError("Confirm an actual voluntary source in /campaign alpha first")
+            from girlframe.engine.m3_actor_state import ActorRef
+
+            target_actor = ActorRef.model_validate(alpha_sex_sources[selected]["ref"])
+            sex_source = selected
         prepared = PlayInput(
             play=play,
             context=values["context"],
@@ -922,6 +1005,7 @@ async def open_play(
             witnessed=one(values, "witnessed") == "yes",
             parent=parent["parent"] if parent else None,
             order_id=parent["body"].get("order_id") if parent else None,
+            source_work=sex_source,
         )
         result = await threaded(
             lambda: game.begin(
@@ -1056,6 +1140,7 @@ class SceneControls(discord.ui.View):
         if not approval or "plays" not in approval.subsystems:
             self.remove_item(self.handler_tag)
             self.remove_item(self.mockingbird)
+            self.remove_item(self.doctor)
         if not approval or not {"plays", "world"} <= set(approval.subsystems):
             self.remove_item(self.gorgon)
         if not (
@@ -1076,6 +1161,19 @@ class SceneControls(discord.ui.View):
 
             await open_gorgon_play(interaction, self.game)
         except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @discord.ui.button(label="DoctorDoctor", custom_id="m3:scene:doctor", row=1)
+    async def doctor(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Any]
+    ) -> None:
+        await interaction.response.defer(ephemeral=True)
+        try:
+            from girlframe.discord_adapter.m3_doctor import open_doctor
+            from girlframe.services.m3_doctor import DoctorService
+
+            await open_doctor(interaction, DoctorService(self.game))
+        except (WorkflowError, ValueError) as error:
             await reply(interaction, str(error))
 
     @discord.ui.button(label="Mockingbird Plays", custom_id="m3:scene:mockingbird", row=1)
@@ -1491,11 +1589,37 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         )
 
     @campaign.command(
+        name="alpha", description="Owned Alpha source interactions and scent tracking"
+    )
+    async def alpha_controls(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_alpha_sex import open_alpha
+        from girlframe.services.m3_alpha_sex import SexService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_alpha(interaction, SexService(game))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @campaign.command(
         name="order", description="Record a direct order for a lower-status Pilot in this scene"
     )
     async def order(
-        interaction: discord.Interaction, member: discord.Member, instruction: str
+        interaction: discord.Interaction,
+        member: discord.Member,
+        instruction: str,
+        as_npc: bool = False,
     ) -> None:
+        if as_npc:
+            from girlframe.discord_adapter.m3_npc_orders import open_order
+            from girlframe.services.m3_npc_orders import NpcOrderService
+
+            await interaction.response.defer(ephemeral=True)
+            try:
+                await open_order(interaction, NpcOrderService(game), member.id, instruction)
+            except WorkflowError as error:
+                await reply(interaction, str(error))
+            return
         await private_operation(
             interaction,
             lambda: (

@@ -30,7 +30,9 @@ def test_actual_storage_changes_only_while_same_core_plugged_and_surgery_preserv
 
     game, worker, gateway, core, connection = connected(ledger, tmp_path, monkeypatch)
     approved(ledger, game, tmp_path, monkeypatch, extra=(CORE, BATTERY, STORAGE))
-    monkeypatch.setattr(acquisitions, "IMPLEMENTED", (*acquisitions.IMPLEMENTED, STORAGE))
+    monkeypatch.setattr(
+        acquisitions, "IMPLEMENTED", tuple(dict.fromkeys((*acquisitions.IMPLEMENTED, STORAGE)))
+    )
     with ledger.transaction() as c:
         actual = state(game)
         actual.sheets["2"].permissions = 2
@@ -111,8 +113,9 @@ def test_actual_storage_changes_only_while_same_core_plugged_and_surgery_preserv
 
     cast = CastService(ActorService(MissionService(ledger)))
     source = cast.view(OTHER, 900)
-    cast.change(OTHER, str(uuid4()), 900, source["game_revision"], source["cast_revision"],
-                "withdraw", core)
+    cast.change(
+        OTHER, str(uuid4()), 900, source["game_revision"], source["cast_revision"], "withdraw", core
+    )
 
     periods = OffDutyService(MissionService(ledger))
     period = periods.begin(ADMIN, str(uuid4()))["id"]
@@ -149,3 +152,118 @@ def test_actual_storage_changes_only_while_same_core_plugged_and_surgery_preserv
     assert not service.view(PLAYER)["points"]
     assert next(x for x in state(game).sheets["2"].assets if x.id == asset.id) == original
     assert rules.points(state(game))[0].removed_period == period
+
+
+def test_actual_full_family_storage_native_unplug_and_real_reconnect_threshold(
+    ledger, tmp_path, monkeypatch
+):
+    import asyncio
+
+    from test_mission_ui import current
+
+    import girlframe.services.m3_janus_requisitions as acquisitions
+    from girlframe.discord_adapter.m2_forms import NativeForm
+    from girlframe.discord_adapter.m3_punishments import PickerSelect
+    from girlframe.discord_adapter.m3_void import open_void
+    from girlframe.services.m3_void import VoidService
+
+    game, worker, gateway, core, connection = connected(ledger, tmp_path, monkeypatch)
+    approved(ledger, game, tmp_path, monkeypatch, extra=(CORE, BATTERY, STORAGE))
+    monkeypatch.setattr(
+        acquisitions, "IMPLEMENTED", tuple(dict.fromkeys((*acquisitions.IMPLEMENTED, STORAGE)))
+    )
+    with ledger.transaction() as c:
+        actual = state(game)
+        actual.sheets["2"].permissions = 2
+        frames = [x for x in actual.sheets["2"].assets if x.family == "frame"]
+        for asset in frames[:-1]:
+            asset.void = True
+            asset.description = "Actual preexisting permanent Void"
+        last = frames[-1].id
+        game.event(c, 1, str(uuid4()), "synthetic.actual_prior_storage_state", actual)
+    purchases = JanusRequisitionService(game)
+    menu = purchases.menu(PLAYER)
+    purchases.buy_rule(
+        PLAYER, str(uuid4()), menu["source_sha256"], STORAGE, "Actual Void Storage acquisition"
+    )
+
+    def battery():
+        identity = start_battery(game, core)
+        tick(worker, gateway, 3)
+        if game.inspect(PLAYER, identity)["state"] != "tag_window":
+            game.roll(PLAYER, str(uuid4()), identity)
+        pass_tags(game)
+        answer(game, PLAYER, "janus_select", options=("cognition", "offset"))
+        return identity
+
+    battery()
+    tick(worker, gateway, 4)
+    game.dice.faces = (4, 5)
+    dive = start(game, play="dive_deep")
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    if any(x["kind"] == "mockingbird_risk" for x in game.choices(PLAYER)):
+        answer(game, PLAYER, "mockingbird_risk")
+    answer(game, PLAYER, "dive_select", options=("void_and_unmark_all",), text="Actual communion")
+    answer(
+        game,
+        PLAYER,
+        "dive_effect",
+        fields={"asset": last, "storage": "yes"},
+        text="The last actual Frame alteration is stored in the connected Harpy",
+    )
+    request = next(x for x in game.choices(PLAYER) if x["kind"] == "dive_void_threshold")
+    work = game.decision(PLAYER, request["id"])["body"]["work_id"]
+    assert not next(x for x in state(game).sheets["2"].assets if x.id == last).void
+    assert game.inspect(PLAYER, dive)["state"] != "complete" and game.dice.calls == 2
+
+    async def unplug():
+        interaction = current(2, 996201)
+        await interaction.response.defer(ephemeral=True)
+        await open_void(interaction, VoidService(ledger), work)
+        menu = interaction.edit_original_response.call_args.kwargs["view"]
+        select = next(x for x in menu.children if isinstance(x, PickerSelect))
+        select._values = ["unplug"]
+        changed = current(2, 996202)
+        await select.callback(changed)
+        form = changed.edit_original_response.call_args.kwargs["view"]
+        assert isinstance(form, NativeForm)
+        form.values.update(account="I physically remove my original spinal jack")
+        await form.confirm.callback(current(2, 996203))
+        assert form.completed
+
+    asyncio.run(unplug())
+    assert game.inspect(PLAYER, dive)["state"] == "complete" and game.dice.calls == 2
+    assert state(game).void_thresholds[-1].stage == "prevented"
+    assert not rules.active(state(game), current_ref(state(game), 2))
+    tick(worker, gateway, 4)
+    contact = FrameControlService(game)
+    actor = current_ref(state(game), 2)
+    connection = contact.propose(
+        PLAYER, str(uuid4()), 900, actor, core, "Actual original jack reconnects to the same Core"
+    )["id"]
+    contact.decide(
+        ADMIN,
+        str(uuid4()),
+        connection,
+        state(game).revision,
+        True,
+        "The actual source contact is performed again",
+    )
+    assert game.dice.calls == 2
+    game.dice.faces = (2, 2)
+    replug = battery()
+    request = next(x for x in game.choices(PLAYER) if x["kind"] == "janus_void_threshold")
+    new_work = game.decision(PLAYER, request["id"])["body"]["work_id"]
+    assert new_work != work and game.dice.calls == 3
+    data = VoidService(ledger).get(PLAYER, new_work)
+    assert data["threshold"]["storage_points"] and data["source_action"] == replug
+    contact.unplug(
+        PLAYER,
+        str(uuid4()),
+        connection,
+        state(game).revision,
+        "I actually unplug the same Core after the genuine reconnect consequence",
+    )
+    assert game.inspect(PLAYER, replug)["state"] == "complete" and game.dice.calls == 3
+    assert not next(x for x in state(game).sheets["2"].assets if x.id == last).void

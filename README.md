@@ -21,11 +21,12 @@ Enforcer acquisition/Snoop/retention workflows, Mockingbird subsets, original-pe
 Harpy recovery and Handler Void, and source-bound Gorgon combat/collateral/world
 consequences. The last committed full regression passed **2,200 tests**, with source scope and remaining gates
 in [M3 evidence](reports/M3_ACCEPTANCE.md).
-Newer development adds tested supported Virus/Sex/Call, JANUS base and selected
-Requisitions, Leviathan Obsession and further Budget workflows. Its small combined
-normal-path selection passes 15 tests; it has not had a new full regression.
-Storage, remaining playbooks, Strain and world consumers still prevent whole-M3
-acceptance.
+Newer development adds supported Virus/Sex/Call, JANUS Core and selected paid
+Requisitions including Storage, Leviathan Obsession, source-owned Alpha outcomes
+and NPC Orders, plus further Budget meeting/Candidate/Anarchy lifecycles. Focused
+normal-workflow evidence is listed in the report; it has not had a new full
+regression. Remaining playbooks, Strain branches and world consumers still prevent
+whole-M3 acceptance.
 
 Its offline mission flow now
 persists private invitations, explicit player responses, dispatch and mission-end

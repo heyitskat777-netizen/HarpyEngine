@@ -221,6 +221,13 @@ class CycleService:
             from girlframe.services.m3_quadrant_loss import require_aftermath_clear
 
             require_aftermath_clear(state)
+            from girlframe.engine import m3_doctor as doctor_rules
+
+            if any(
+                x.period == identity and x.phase == "recovery"
+                for x in doctor_rules.values(state, "doctor_care", doctor_rules.Care)
+            ):
+                raise WorkflowError("Complete the actual next-period Metal Angel care first")
             require_gorgon_costs_clear(self.game, c)
             strain = state.strain
             if (
@@ -651,7 +658,11 @@ class CycleService:
             updated.status_review = order
             updated.status_review_game_revision = state.revision + 1
             updated.revision += 1
+            former_dog = state.order[-1] if state.order else None
             state.order = order
+            if former_dog is not None and former_dog != order[-1]:
+                # Hound's actual mark ends when this Girl is no longer The Dog.
+                state.sheets[str(former_dog)].status_marked = False
             return (
                 updated,
                 state,

@@ -245,6 +245,9 @@ class OffDutyService:
         from girlframe.services.m3_janus_pet import synchronize as janus_pet
 
         janus_pet(c, self.store, period, event)
+        from girlframe.services.m3_doctor_rest import synchronize as doctor_rest
+
+        doctor_rest(c, self.game, period, event)
 
     def _work(
         self,

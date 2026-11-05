@@ -32,13 +32,11 @@ a required M3 rule complete; required gaps stay in the milestone backlog.
 
 | Order | Assignment | Completion boundary |
 |---|---|---|
-| 1, parallel | Economy agent: JANUS battery/control and the five named JANUS Requisitions | Normal owned use applies actual resources/control; incorporates Lifecycle's handoff; focused functional evidence and remaining limits. |
-| 1, parallel | Handler agent: supported Mockingbird Call workflow | Actual guest acceptance, one owned effect and normal completion through native controls; compact evidence/limits, then stop. |
-| 1, root | Leviathan Obsession integration | Existing Physical Identity/Heat/arrival effects connected to the real roll and owned Discord choices; expected-path proof. |
-| Next root unit | Budget Endgame3 location ruin | Leviathan's three expected flows are checked. Reuse map destruction and last-base aftermath for two owned location selections; focused functional proof, then integrate current JANUS source hooks. |
-| 2 | Consolidate those delivered workflows | Integrate shared changes; update source contracts, rulings and acceptance evidence once. Close only supported workflows; keep missing branches visible. |
-| 3 | Remaining required gameplay systems | Select the next dependency-ready whole workflow from M3_REMAINING_WORK.md and M3_COMPLETION_AUDIT.md. Freeze its contract, reuse implemented dependencies and complete it before opening unrelated work. |
-| 4 | M3 review candidate | Account for required core scope, complete expected gameplay flows and final integrated checks; provide a concise player-test checklist and stop for owner review. |
+| 1, parallel | Economy agent: bounded AM Scrutinized after completed Alpha/Orders/Hound delivery | Actual source discoverer, owned results and live AM restrictions; mind/vessel and fourth-Limiter dependencies remain explicit. |
+| 1, parallel | Handler agent: next dependency-ready Class Requisition after frozen Doctor delivery | One actual acquisition/use/lifecycle consumer using existing source receipts; no blanket class/graft framework. |
+| 1, root | Shared integration and selected Strain workflows | Finished Budget function, meeting, Candidate and Anarchy normal paths; consolidate source contracts/rulings/evidence, then finish Budget cleanup scene/exposure with existing Void/Storage. |
+| 2 | Remaining required gameplay systems | Select the next dependency-ready whole workflow from M3_REMAINING_WORK.md and M3_COMPLETION_AUDIT.md. Freeze its contract, reuse implemented dependencies and complete it before opening unrelated work. |
+| 3 | M3 review candidate | Account for required core scope, complete expected gameplay flows and final integrated checks; provide a concise player-test checklist and stop for owner review. |
 
 Physical and Lifecycle agents hand off existing work and stop; their completed
 code and evidence remain available. No work is discarded to reduce concurrency.

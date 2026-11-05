@@ -28,7 +28,13 @@ from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
 # Listed only after the named consumer exists. Registry review remains independent.
-IMPLEMENTED: tuple[str, ...] = (rules.TRAINING, rules.UNIVERSAL, rules.PANDORA, rules.PET)
+IMPLEMENTED: tuple[str, ...] = (
+    rules.TRAINING,
+    rules.UNIVERSAL,
+    rules.PANDORA,
+    rules.PET,
+    rules.STORAGE,
+)
 
 
 def available(c: Connection, game: GameService, rule: str) -> bool:

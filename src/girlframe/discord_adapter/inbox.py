@@ -512,6 +512,34 @@ class InboxView(discord.ui.View):
             await open_collective(
                 interaction, CollectiveTagService(self.service.store), item.identity
             )
+        elif item.task == "m3_alpha_consent":
+            from girlframe.discord_adapter.m3_alpha_sex import open_consent
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_alpha_sex import SexService
+
+            await open_consent(
+                interaction, SexService(GameService(self.service.store)), item.identity
+            )
+        elif item.task == "m3_budget_anarchy":
+            from girlframe.discord_adapter.m3_budget_anarchy import open_anarchy
+            from girlframe.services.m3_budget_anarchy import AnarchyService
+
+            await open_anarchy(interaction, AnarchyService(self.service.store), item.identity)
+        elif item.task == "m3_budget_candidate":
+            from girlframe.discord_adapter.m3_budget_candidate import open_candidate
+            from girlframe.services.m3_budget_candidate import CandidateService
+
+            await open_candidate(interaction, CandidateService(self.service.store), item.identity)
+        elif item.task == "m3_budget_director":
+            from girlframe.discord_adapter.m3_budget_director import open_meeting
+            from girlframe.services.m3_budget_director import MeetingService
+
+            await open_meeting(interaction, MeetingService(self.service.store), item.identity)
+        elif item.task == "m3_political_function":
+            from girlframe.discord_adapter.m3_political_function import open_function
+            from girlframe.services.m3_political_function import FunctionService
+
+            await open_function(interaction, FunctionService(self.service.store), item.identity)
         elif item.task == "m3_budget_patron":
             from girlframe.discord_adapter.m3_budget_patron import open_patron
             from girlframe.services.m3_budget_patron import PatronService
@@ -584,6 +612,16 @@ class InboxView(discord.ui.View):
             from girlframe.services.m2_game import GameService
 
             await open_pet(interaction, GameService(self.service.store), item.identity)
+        elif item.task in ("m3_doctor_care", "m3_doctor_procedure"):
+            from girlframe.discord_adapter.m3_doctor import open_care
+            from girlframe.discord_adapter.m3_doctor import open_request as open_doctor_request
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_doctor import DoctorService
+
+            operation = open_care if item.task == "m3_doctor_care" else open_doctor_request
+            await operation(
+                interaction, DoctorService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_janus_storage":
             from girlframe.discord_adapter.m3_janus_storage import open_surgery
             from girlframe.services.m2_game import GameService

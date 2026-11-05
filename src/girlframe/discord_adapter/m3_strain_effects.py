@@ -104,12 +104,12 @@ async def open_effect(
         raise WorkflowError("STALE_STATE: reopen this changed event.")
     handler = state.handler
     rule = data["rule_id"]
-    if rule == "strain.budget.low.1.2" and not any(
+    if rule in ("strain.budget.low.1.2", "strain.budget.low.2.1") and not any(
         x["alive"] and "patron" in x["jobs"] for x in world["npcs"]
     ):
         await reply(
             interaction,
-            "Add the actual rich patron with /mission npc, then reopen this result.",
+            "Introduce the patron through /mission world, then reopen this result.",
         )
         return
     spawned = rule in {
@@ -377,6 +377,46 @@ async def open_effect(
                     len(NPC_JOBS),
                 ),
             ]
+        elif rule == "strain.budget.high.4.2":
+            fields += [
+                Field(
+                    "candidate",
+                    "Actual NPC to assess",
+                    options([x for x in world["npcs"] if x["alive"]]),
+                ),
+                Field(
+                    "assessor",
+                    "Girl assigned to assess",
+                    tuple((str(uid), state.sheets[str(uid)].callsign) for uid in state.order),
+                ),
+            ]
+        elif rule == "strain.budget.high.1.1":
+            fields.append(
+                Field(
+                    "director",
+                    "Director played by a different human",
+                    options(
+                        [
+                            x
+                            for x in world["npcs"]
+                            if x["alive"] and "director" in x["jobs"] and x["controller"] != handler
+                        ]
+                    ),
+                )
+            )
+        elif rule == "strain.budget.low.2.1":
+            fields += [
+                Field(
+                    "patron",
+                    "Existing political patron",
+                    options([x for x in world["npcs"] if x["alive"] and "patron" in x["jobs"]]),
+                ),
+                Field(
+                    "function",
+                    "The actual function",
+                    tuple((x, x.title()) for x in ("auction", "fundraiser", "ball", "orgy")),
+                ),
+            ]
         elif rule == "strain.budget.low.1.2":
             fields += [
                 Field(
@@ -540,6 +580,12 @@ async def open_effect(
             )
         elif rule == "strain.budget.low.3.2":
             payload["missing_resource"] = values["missing_resource"]
+        elif rule == "strain.budget.high.4.2":
+            payload.update(target=values["candidate"][0], victim=values["assessor"][0])
+        elif rule == "strain.budget.high.1.1":
+            payload["target"] = values["director"][0]
+        elif rule == "strain.budget.low.2.1":
+            payload.update(target=values["patron"][0], function_kind=values["function"][0])
         elif rule == "strain.budget.low.1.2":
             payload.update(target=values["girl"][0], victim=values["patron"][0])
         elif rule in ("strain.budget.high.2.2", "strain.budget.low.1.1"):

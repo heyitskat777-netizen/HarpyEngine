@@ -1939,6 +1939,14 @@ def complete_damage_work(
             from girlframe.services.m3_enforcement_initiative import complete_director_consequence
 
             complete_director_consequence(game, c, action, dict(latest), event, viewer, key)
+        elif action["data"].get("alpha_sex"):
+            from girlframe.services.m3_alpha_sex import synchronize as synchronize_alpha_sex
+
+            synchronize_alpha_sex(game, c, action, event)
+        elif action["data"].get("alpha"):
+            from girlframe.services.m3_alpha import synchronize as synchronize_alpha
+
+            synchronize_alpha(game, c, action, event)
         elif action["data"].get("engage"):
             from girlframe.services.m3_engage import complete_damage_work as complete_engage_damage
 

@@ -43,11 +43,25 @@ async def open_mockingbird(
             required=False,
         ),
     ]
+    if detail.get("storage_available"):
+        fields.append(
+            Field(
+                "storage",
+                "Optional new Void destination",
+                (("yes", "Store in the actual connected Harpy"),),
+                minimum=0,
+                required=False,
+            )
+        )
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         choice = values["total"][0]
         if choice == "pass":
-            if values.get("asset") or values.get("description", "").strip():
+            if (
+                values.get("asset")
+                or values.get("description", "").strip()
+                or values.get("storage")
+            ):
                 raise WorkflowError("Decline with no Asset or Void alteration selected")
             answer = ChoiceAnswer()
         else:
@@ -55,7 +69,8 @@ async def open_mockingbird(
                 raise WorkflowError("Choose the actual Asset that pays for this shift")
             answer = ChoiceAnswer(
                 number=int(choice),
-                fields=dict(asset=values["asset"][0]),
+                fields=dict(asset=values["asset"][0])
+                | ({"storage": "yes"} if values.get("storage") else {}),
                 text=values.get("description", ""),
             )
         await asyncio.to_thread(

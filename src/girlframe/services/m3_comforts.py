@@ -494,7 +494,7 @@ class ComfortService(RequisitionService):
                         locations=[
                             dict(id=x.id, name=x.name)
                             for x in state.world.locations
-                            if x.condition != "destroyed"
+                            if x.operational
                         ]
                         if state.world
                         else [],

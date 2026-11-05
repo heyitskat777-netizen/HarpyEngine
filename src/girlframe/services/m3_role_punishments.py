@@ -84,6 +84,7 @@ def open_case(
         "handler_play",
         "compliance_virus",
         "janus_training",
+        "alpha_sex",
     ],
     action: str | None,
     source_event: str,
@@ -319,6 +320,10 @@ def case_proof(c: Connection, game: GameService, identity: str) -> RolePunishmen
             raise WorkflowError(
                 "SOURCE_CONSULTATION_MISSING: recover the exact Handler instruction/approval."
             )
+    if case.source_kind == "alpha_sex":
+        from girlframe.services.m3_alpha_sex import validate_role_case
+
+        validate_role_case(c, game, state, case)
     if case.source_kind == "janus_training":
         from girlframe.services.m3_janus_requisitions import validate_role_case
 
@@ -364,6 +369,11 @@ def current(c: Connection, game: GameService, state: GameState, case: RolePunish
         or target.controller != case.subject_controller
     ):
         raise WorkflowError("Recover the actual original executor, Frame and affected person.")
+    if case.source_kind == "alpha_sex":
+        from girlframe.services.m3_alpha_sex import validate_role_case
+
+        validate_role_case(c, game, state, case)
+        return
     if case.source_kind == "janus_training":
         from girlframe.services.m3_janus_requisitions import validate_role_case
 
@@ -596,6 +606,10 @@ def synchronize(
             completed = next(x for x in state.role_punishments if x.id == identity)
             if completed.source_kind == "handler_play":
                 from girlframe.services.m3_handler_plays import complete_role_case
+
+                complete_role_case(c, game, completed, completion_id)
+            elif completed.source_kind == "alpha_sex":
+                from girlframe.services.m3_alpha_sex import complete_role_case
 
                 complete_role_case(c, game, completed, completion_id)
             elif completed.source_kind == "compliance_virus":

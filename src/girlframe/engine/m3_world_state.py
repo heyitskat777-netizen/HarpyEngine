@@ -77,6 +77,10 @@ class Location(PlacedEntity):
     condition: Literal["intact", "damaged", "destroyed"] = "intact"
     blocked_by: tuple[str, ...] = ()
 
+    @property
+    def operational(self) -> bool:
+        return self.condition != "destroyed" and not self.blocked_by
+
 
 class Asset(Model):
     id: str = Field(min_length=1, max_length=100)

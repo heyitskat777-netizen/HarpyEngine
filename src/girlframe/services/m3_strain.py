@@ -13,6 +13,7 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_strain as rules
 from girlframe.engine.m2 import GameState
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_missions import Mission
 from girlframe.engine.m3_off_duty import clone as clone_period
 from girlframe.engine.m3_reactions import mark_obsolescence
@@ -181,8 +182,21 @@ class StrainService:
                 raise WorkflowError(
                     "DoctorDoctor owners record credit before the Budget start trigger."
                 )
+            from girlframe.engine.m3_janus_storage import effective_assets
+
             with_void = sum(
-                any(a.void for a in state.sheets[str(uid)].assets) for uid in state.order
+                any(
+                    a.void
+                    for a in effective_assets(
+                        state,
+                        ActorRef(
+                            kind="pilot",
+                            entity=str(uid),
+                            incarnation=state.sheets[str(uid)].character_id,
+                        ),
+                    )
+                )
+                for uid in state.order
             )
             if facts.at_least_half_have_void != (
                 2 * with_void >= len(state.order)
@@ -450,7 +464,22 @@ class StrainService:
                 raise WorkflowError("This Strain review belongs to another Handler.")
             state = load_state(c, self.store.campaign_id)
             period = self.periods._get(c, row["off_duty_id"])
-            count = sum(any(a.void for a in state.sheets[str(uid)].assets) for uid in state.order)
+            from girlframe.engine.m3_janus_storage import effective_assets
+
+            count = sum(
+                any(
+                    a.void
+                    for a in effective_assets(
+                        state,
+                        ActorRef(
+                            kind="pilot",
+                            entity=str(uid),
+                            incarnation=state.sheets[str(uid)].character_id,
+                        ),
+                    )
+                )
+                for uid in state.order
+            )
             return {
                 **{k: row[k] for k in ("id", "revision", "kind", "state", "off_duty_id")},
                 "body": json.loads(row["body_json"]),

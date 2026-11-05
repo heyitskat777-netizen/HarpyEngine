@@ -232,7 +232,7 @@ def end_off_duty(
         if x.alive
         and x.id in present
         and x.gorgon_class == "aggressive"
-        and not any(loc.cell == x.cell and loc.condition != "destroyed" for loc in world.locations)
+        and not any(loc.cell == x.cell and loc.operational for loc in world.locations)
     }
     if len(changes) != len(unplaced) or {x.gorgon for x in changes} != set(unplaced):
         raise ValueError(
@@ -276,9 +276,7 @@ def end_off_duty(
             and gorgon.gorgon_class == "aggressive"
             and gorgon.id not in unplaced
         ):
-            target = next(
-                x for x in world.locations if x.cell == gorgon.cell and x.condition != "destroyed"
-            )
+            target = next(x for x in world.locations if x.cell == gorgon.cell and x.operational)
             if target.id not in destroyed:
                 outcome = destroy(updated, target.id, gorgon_cause=True)
                 updated = outcome.world

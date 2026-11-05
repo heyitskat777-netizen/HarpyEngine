@@ -178,7 +178,7 @@ class WorldService:
                     "board": world.board.model_dump(mode="json"),
                     "locations": [
                         x.model_dump(mode="json", exclude={"blocked_by"})
-                        | {"operational": x.condition != "destroyed" and not x.blocked_by}
+                        | {"operational": x.operational}
                         for x in world.locations
                     ],
                     "gorgons": [

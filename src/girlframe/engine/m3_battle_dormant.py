@@ -5,7 +5,8 @@ from pydantic import Field
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model, ProfileBinding
 from girlframe.engine.m3_actors import resolve
-from girlframe.engine.m3_core import Followup, corrupt
+from girlframe.engine.m3_core import Followup
+from girlframe.engine.m3_janus_storage import GainSource
 
 
 class Corruption(Model):
@@ -29,6 +30,7 @@ def inflict(
     event: str,
     *,
     piloting: bool,
+    storage: GainSource | None = None,
 ) -> tuple[GameState, tuple[Followup, ...]]:
     """No resources are invented, repaired or transferred by taking actual Void."""
     if (
@@ -86,11 +88,13 @@ def inflict(
         sheet = original.sheets.get(actor.entity)
         if sheet is None or sheet.character_id != actor.incarnation or asset is None:
             raise ValueError("Choose the original Girl's actual uncorrupted Asset")
-        result = corrupt(sheet, asset, description, piloting=piloting)
-        changed = GameState.model_validate_json(original.model_dump_json())
-        changed.sheets[actor.entity] = result.sheet
-        selected_pilot = next(x for x in result.sheet.assets if x.id == asset)
-        family, followups = selected_pilot.family, result.followups
+        from girlframe.engine.m3_janus_storage import alter
+
+        changed, followups = alter(
+            original, actor, asset, description, work, event, piloting=piloting, source=storage
+        )
+        selected_pilot = next(x for x in changed.sheets[actor.entity].assets if x.id == asset)
+        family = selected_pilot.family
     proof = Corruption(
         work=work,
         actor=actor,

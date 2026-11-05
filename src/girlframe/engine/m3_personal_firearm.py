@@ -7,6 +7,7 @@ from girlframe.engine.m3_acquisition_state import FirearmIssue, PersonalFirearmG
 from girlframe.engine.m3_actor_state import ActorRef, ProfileBinding
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_core import install
+from girlframe.engine.m3_janus_storage import ids as stored_ids
 from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 from girlframe.engine.playbooks import canonical_frame
@@ -64,7 +65,9 @@ def grant(
         name="Personal Firearm",
         description="A pistol and access to ammunition.",
     )
-    state.sheets[actor.entity] = install(state.sheets[actor.entity], asset, replace=replace).sheet
+    state.sheets[actor.entity] = install(
+        state.sheets[actor.entity], asset, replace=replace, effective_void=stored_ids(state, actor)
+    ).sheet
     state.personal_firearms.append(
         PersonalFirearmGrant(
             id=identity,
@@ -193,7 +196,9 @@ def reissue(
         name="Personal Firearm",
         description="A Foundation-issued replacement service pistol and access to ammunition.",
     )
-    state.sheets[actor.entity] = install(state.sheets[actor.entity], asset, replace=replace).sheet
+    state.sheets[actor.entity] = install(
+        state.sheets[actor.entity], asset, replace=replace, effective_void=stored_ids(state, actor)
+    ).sheet
     updated = entitlement.model_copy(
         update={
             "issues": (

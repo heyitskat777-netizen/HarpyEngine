@@ -67,7 +67,15 @@ def damage(sheet: PilotSheet, asset_id: str, *, piloting: bool) -> Result:
     return Result(sheet=updated, followups=tuple(required))
 
 
-def install(sheet: PilotSheet, asset: AssetState, *, replace: str | None = None) -> Result:
+def install(
+    sheet: PilotSheet,
+    asset: AssetState,
+    *,
+    replace: str | None = None,
+    effective_void: frozenset[str] = frozenset(),
+) -> Result:
+    if replace in effective_void:
+        raise ValueError("An active stored-Void Asset cannot be replaced at the cap")
     updated = clone(sheet)
     if any(x.id == asset.id for x in updated.assets):
         raise ValueError("Asset IDs must be distinct")
@@ -91,20 +99,18 @@ def install(sheet: PilotSheet, asset: AssetState, *, replace: str | None = None)
     return Result(sheet=updated)
 
 
-def corrupt(sheet: PilotSheet, asset_id: str, description: str, *, piloting: bool) -> Result:
-    if not description.strip() or len(description) > 1200:
-        raise ValueError("Describe the chosen Asset's Void alteration")
-    updated = clone(sheet)
-    asset = owned_asset(updated, asset_id)
-    if asset.void:
-        raise ValueError("Void must alter an uncorrupted Asset")
-    asset.void = True
-    asset.description = description
+def void_followups(
+    sheet: PilotSheet, *, piloting: bool, effective_void: frozenset[str] = frozenset()
+) -> tuple[Followup, ...]:
     required: list[Followup] = []
-    girls = [x for x in updated.assets if x.family == "girl"]
-    frames = [x for x in updated.assets if x.family == "frame"]
-    if has_rule(updated, "girl.mockingbird.risk-factor", "MOCKINGBIRD"):
-        if frames and all(x.void for x in frames):
+    girls = [x for x in sheet.assets if x.family == "girl"]
+    frames = [x for x in sheet.assets if x.family == "frame"]
+
+    def full(values: list[AssetState]) -> bool:
+        return bool(values) and all(x.void or x.id in effective_void for x in values)
+
+    if has_rule(sheet, "girl.mockingbird.risk-factor", "MOCKINGBIRD"):
+        if full(frames):
             required.append(
                 Followup(
                     kind="mockingbird_resist" if piloting else "frame_void_threshold",
@@ -113,12 +119,32 @@ def corrupt(sheet: PilotSheet, asset_id: str, description: str, *, piloting: boo
                 )
             )
     else:
-        if girls and all(x.void for x in girls):
+        if full(girls):
             required.append(Followup(kind="girl_void_threshold", owner=sheet.owner, source_pdf=19))
-        if frames and all(x.void for x in frames):
+        if full(frames):
             required.append(Followup(kind="frame_void_threshold", owner=sheet.owner, source_pdf=19))
+    return tuple(required)
+
+
+def corrupt(
+    sheet: PilotSheet,
+    asset_id: str,
+    description: str,
+    *,
+    piloting: bool,
+    effective_void: frozenset[str] = frozenset(),
+) -> Result:
+    if not description.strip() or len(description) > 1200:
+        raise ValueError("Describe the chosen Asset's Void alteration")
+    updated = clone(sheet)
+    asset = owned_asset(updated, asset_id)
+    if asset.void or asset.id in effective_void:
+        raise ValueError("Void must alter an uncorrupted Asset")
+    asset.void = True
+    asset.description = description
+    required = void_followups(updated, piloting=piloting, effective_void=effective_void)
     updated.revision += 1
-    return Result(sheet=updated, followups=tuple(required))
+    return Result(sheet=updated, followups=required)
 
 
 def recover_off_duty(sheet: PilotSheet, choice: Recovery) -> Result:

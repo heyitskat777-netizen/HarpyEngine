@@ -36,6 +36,8 @@ def claim(
         ):
             raise ValueError("Confirm the actual find and name/describe your chosen Girl Asset")
         assert asset_id is not None
+        from girlframe.engine.m3_janus_storage import ids as stored_ids
+
         result = install(
             state.sheets[find.actor.entity],
             AssetState(
@@ -46,6 +48,7 @@ def claim(
                 concealed=True,
             ),
             replace=choice.replace,
+            effective_void=stored_ids(state, find.actor),
         )
         state.sheets[find.actor.entity] = result.sheet
     elif choice is not None:

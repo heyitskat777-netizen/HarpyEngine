@@ -124,6 +124,16 @@ async def open_call(interaction: discord.Interaction, service: CallService, iden
                 ),
                 Field("description", "Describe its actual Void alteration", paragraph=True),
             ]
+            if value.get("storage_available"):
+                detail.append(
+                    Field(
+                        "storage",
+                        "Optional gained Void destination",
+                        (("yes", "Store in my actual connected Harpy"),),
+                        minimum=0,
+                        required=False,
+                    )
+                )
         elif option in ("erase_identity_and_table_question", "table_replaces_identity"):
             detail = [
                 Field(
@@ -145,6 +155,7 @@ async def open_call(interaction: discord.Interaction, service: CallService, iden
         async def complete(final: discord.Interaction, details: dict[str, Any]) -> str:
             if option == "void_and_unmark_all":
                 data.update(asset=details["asset"][0], description=details["description"])
+                data["storage"] = bool(details.get("storage"))
             else:
                 data.update(identity=details["identity"][0])
                 data["question" if option.startswith("erase") else "replacement"] = details[

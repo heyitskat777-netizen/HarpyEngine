@@ -21,6 +21,7 @@ class RolePunishment(Model):
         "handler_play",
         "compliance_virus",
         "janus_training",
+        "alpha_sex",
     ]
     action: str | None = None
     source_work: str | None = None

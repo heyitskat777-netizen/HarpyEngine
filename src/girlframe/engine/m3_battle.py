@@ -288,6 +288,18 @@ def damage(
     The service commits returned obligations with the original source event afterward.
     """
     state = GameState.model_validate_json(original.model_dump_json())
+    from girlframe.engine.m3_doctor import require_harm_allowed
+
+    protection = require_harm_allowed(state, target, opponent)
+    if protection is not None:
+        state.facts.append(
+            dict(
+                kind="doctor_protector_harm",
+                patient=target.model_dump_json(),
+                protector=protection.protector.model_dump_json(),
+                event=event,
+            )
+        )
     actual = resolve(state, target, bindings)
     kind = category(state, target)
     if not event.strip():

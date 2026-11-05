@@ -1,5 +1,6 @@
 """Typed application of supported Strain consequences, with no acknowledge fallback."""
 
+from typing import Literal
 from uuid import NAMESPACE_URL, uuid5
 
 from pydantic import Field
@@ -34,11 +35,14 @@ SUPPORTED = frozenset(
         "strain.budget.low.5.2",
         "strain.budget.low.1.1",
         "strain.budget.low.1.2",
+        "strain.budget.low.2.1",
         "strain.budget.low.4.2",
         "strain.budget.low.3.2",
         "strain.budget.low.3.1",
         "strain.budget.low.6.2",
         "strain.budget.high.2.2",
+        "strain.budget.high.1.1",
+        "strain.budget.high.4.2",
         "strain.budget.high.3.2",
         "strain.budget.high.5.1",
     }
@@ -66,6 +70,9 @@ class Choice(Model):
     tags: tuple[TagChoice, ...] = ()
     missing_resource: str | None = Field(default=None, max_length=120)
     scientific_demand: Demand | None = None
+    function_kind: Literal["auction", "fundraiser", "ball", "orgy"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
 
 def fields(choice: Choice, allowed: set[str]) -> None:
@@ -123,6 +130,27 @@ def apply(
                 id=source_work, period=period_id, handler=state.handler, source_event=source_event
             )
         )
+    elif rule == "strain.budget.high.4.2":
+        from girlframe.engine.m3_budget_candidate import create as create_candidate
+
+        fields(choice, {"target", "victim"})
+        if (
+            period_id is None
+            or source_event is None
+            or choice.target is None
+            or choice.victim is None
+        ):
+            raise ValueError("Choose the actual Candidate and assigned Girl for this period")
+        state = create_candidate(
+            state,
+            source_work,
+            period_id,
+            source_event,
+            choice.target,
+            int(choice.victim),
+            choice.account,
+        )
+        world = state.world
     elif rule == "strain.budget.low.3.1":
         fields(choice, {"scientific_demand"})
         if choice.scientific_demand is None:
@@ -416,6 +444,34 @@ def apply(
                 for x in world.npcs
             ),
         )
+    elif rule == "strain.budget.high.1.1":
+        fields(choice, {"target"})
+        if not choice.target or not period_id or not source_event:
+            raise ValueError("Choose a separately played Director for the actual meeting")
+        from girlframe.engine.m3_budget_director import create as create_meeting
+
+        state = create_meeting(
+            state, source_work, period_id, source_event, choice.target, choice.account
+        )
+        world = state.world
+        assert world is not None
+    elif rule == "strain.budget.low.2.1":
+        fields(choice, {"target", "function_kind"})
+        if not choice.target or not choice.function_kind or not period_id or not source_event:
+            raise ValueError("Choose the actual political patron and function")
+        from girlframe.engine.m3_political_function import create as create_function
+
+        state = create_function(
+            state,
+            source_work,
+            period_id,
+            source_event,
+            choice.target,
+            choice.function_kind,
+            choice.account,
+        )
+        world = state.world
+        assert world is not None
     elif rule == "strain.budget.low.1.2":
         fields(choice, {"target", "victim"})
         if not choice.target or not choice.victim or not source_event or not period_id:
@@ -469,6 +525,8 @@ def apply(
             + (faction.model_copy(update={"description": choice.account.strip()}),),
         )
     elif rule == "strain.budget.high.5.1":
+        from girlframe.engine.m3_budget_anarchy import create as create_anarchy
+
         fields(choice, {"target"})
         city = next(
             (
@@ -480,6 +538,9 @@ def apply(
         )
         if city is None:
             raise ValueError("Choose an actual surviving city to fall into anarchy")
+        if source_event is None:
+            raise ValueError("Record the actual anarchy source event")
+        create_anarchy(state, source_work, source_event, city.id, choice.account)
         world = world_rules.update(
             world,
             locations=tuple(

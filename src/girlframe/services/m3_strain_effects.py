@@ -110,7 +110,11 @@ class EffectService:
             supply = None
             contraband = None
             public_appointment = None
-            if choice.rule_id in ("strain.budget.low.1.1", "strain.budget.low.1.2"):
+            if choice.rule_id in (
+                "strain.budget.low.1.1",
+                "strain.budget.low.1.2",
+                "strain.budget.low.2.1",
+            ):
                 period = self.strain.periods._get(c, row["off_duty_id"])
                 if set(period.pilots) != set(state.order) or any(
                     period.character_ids.get(str(uid)) != state.sheets[str(uid)].character_id
@@ -302,6 +306,48 @@ class EffectService:
                 )
             if scientific_period is not None:
                 self.strain.periods._save(c, scientific_period, event)
+            if choice.rule_id == "strain.budget.high.4.2":
+                from girlframe.services.m3_work import related
+
+                related(
+                    c,
+                    self.store,
+                    row,
+                    identity + ":candidate",
+                    viewer.user_id,
+                    int(choice.victim or "0"),
+                    "budget_candidate",
+                    dict(candidate=identity + ":candidate", source_work=identity),
+                    event,
+                )
+            if choice.rule_id == "strain.budget.high.1.1":
+                from girlframe.services.m3_work import related
+
+                related(
+                    c,
+                    self.store,
+                    row,
+                    identity + ":meeting",
+                    viewer.user_id,
+                    viewer.user_id,
+                    "budget_director_meeting",
+                    dict(meeting=identity + ":meeting", source_work=identity),
+                    event,
+                )
+            if choice.rule_id == "strain.budget.low.2.1":
+                from girlframe.services.m3_work import related
+
+                related(
+                    c,
+                    self.store,
+                    row,
+                    identity + ":function",
+                    viewer.user_id,
+                    viewer.user_id,
+                    "political_function",
+                    dict(function=identity + ":function", source_work=identity),
+                    event,
+                )
             self.strain._save(
                 c,
                 row,

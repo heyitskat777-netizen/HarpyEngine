@@ -8,6 +8,10 @@ HEAT_IDS = (
     "mockingbird_person",
     "mockingbird_sex",
     "snoop",
+    "brutalize",
+    "alpha_sex",
+    "nanobot_injection",
+    "doctor_support",
 )
 ASSET_IDS = ("defeat",)
 

@@ -301,6 +301,10 @@ def _finish(game: GameService, c: Connection, state: GameState, action: dict[str
     from girlframe.services.m2_choices import ChoiceEngine
 
     if not game.pending(c, action["id"]):
+        from girlframe.services.m3_janus_storage import intercept_replug
+
+        if intercept_replug(game, c, state, action):
+            return
         action["data"]["janus"]["phase"] = "complete"
         ChoiceEngine(game).finish(c, state, action)
 
@@ -389,6 +393,9 @@ def _history(game: GameService, c: Connection, event: str) -> GameState:
 def synchronize(game: GameService, c: Connection, action: dict[str, Any], event: str) -> None:
     if action["data"]["janus"].get("mode") == "pandora":
         return
+    from girlframe.services.m3_janus_storage import synchronize_replug
+
+    synchronize_replug(game, c, action, event)
     from girlframe.services.m3_void import prepare_threshold
     from girlframe.services.m3_work import related
 

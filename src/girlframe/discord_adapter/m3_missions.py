@@ -404,6 +404,17 @@ def register_missions(
         except WorkflowError as error:
             await reply(interaction, str(error))
 
+    @group.command(name="guard", description="Review your Guard's actual weapon facts")
+    async def guard(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_npc_guard import open_guard
+        from girlframe.services.m3_npc_guard import GuardService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_guard(interaction, GuardService(service.game))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
     @group.command(name="npc_bond", description="Link your own saved starting NPC Bond")
     async def npc_bond(interaction: discord.Interaction) -> None:
         from girlframe.discord_adapter.m3_world import open_npc_role

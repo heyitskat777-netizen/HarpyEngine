@@ -1,10 +1,16 @@
 # M3 remaining work — verified development snapshot
 
-Current bounded checkpoint: 15 expected-path checks pass in 27.15s. JANUS Core,
-Battery, Training, Universal Plug, PANDORA and Pet have normal source/native
-evidence. Storage's normal consumer is tested, but acquisition remains hidden
-pending additional gain/threshold ports. Next units are Alpha Brutalize and Storage
-closure, with root continuing the remaining dependency-ready Strain systems.
+Current development has source-owned Alpha/Guard/NPC Orders paths, normal paid
+JANUS Storage with threshold/reconnect/surgery consumers, and further Budget
+meeting, Candidate and Anarchy lifecycles. Focused evidence and exact remaining
+limits are at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md). Current
+registry: 135 subsets, 338 unimplemented entries, 240 adjustable clarifications;
+no independent approvals. These inventory units are not a progress percentage.
+AM Scrutinized and a dependency-ready Class Requisition consumer are the next
+implementation assignments; DoctorDoctor normal native flows are frozen with
+explicit remaining source limits. Root integrates their APIs and completes dependency-ready Strain
+workflows. No new full regression or whole-M3 completion is claimed. Historical
+snapshots below retain their original counts and limitations.
 
 Execution now follows the [lower-usage development path](DEVELOPMENT_WORKFLOW.md):
 finish current JANUS, Call and Leviathan workflows, consolidate once, then select

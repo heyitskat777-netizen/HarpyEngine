@@ -85,7 +85,7 @@ def record_scene(
         raise ValueError("Choose actual cast roles including your original purchasing Girl")
     place = (
         next(
-            (x for x in state.world.locations if x.id == location and x.condition != "destroyed"),
+            (x for x in state.world.locations if x.id == location and x.operational),
             None,
         )
         if state.world
@@ -188,7 +188,14 @@ def grant(
     asset = AssetState(
         id=identity, family="girl", name=chosen.name.strip(), description=chosen.description.strip()
     )
-    result = install(state.sheets[benefit.actor.entity], asset, replace=chosen.replace)
+    from girlframe.engine.m3_janus_storage import ids as stored_ids
+
+    result = install(
+        state.sheets[benefit.actor.entity],
+        asset,
+        replace=chosen.replace,
+        effective_void=stored_ids(state, benefit.actor),
+    )
     state.sheets[benefit.actor.entity] = result.sheet
     state.facts.append(
         {

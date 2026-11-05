@@ -198,7 +198,22 @@ def request_from_play(
 
         adjudicator_ref, chooser, appointment = proved_judge(game, c, action)
         adjudicator_source = action["data"]["battle"].get("judge_source")
-    if source_play == "flirt":
+    if source_play == "doctor_support":
+        meta = action["data"].get("doctor", {})
+        chooser = meta.get("judge")
+        adjudicator_ref = (
+            ActorRef.model_validate(meta["judge_actor"]) if meta.get("judge_actor") else None
+        )
+        adjudicator_source = meta.get("judge_source")
+        valid = (
+            clause == "doctor_support.low"
+            and row is not None
+            and row["kind"] == "doctor_handler"
+            and row["actor_id"] == str(chooser)
+            and action["data"].get("result", {}).get("tier") == "low"
+            and targets == (ActorRef.model_validate(meta["actor"]),)
+        )
+    elif source_play == "flirt":
         valid = (
             clause == "flirt.high.handler"
             and row is not None
@@ -239,7 +254,9 @@ def request_from_play(
                 "A Flirt Handler Play is scoped to the actual two original participants."
             )
     source_human = (
-        action["data"].get("battle", {}).get("handler")
+        action["data"].get("doctor", {}).get("judge")
+        if source_play == "doctor_support"
+        else action["data"].get("battle", {}).get("handler")
         if source_play == "all_out_assault"
         else action["data"].get("handler")
     )
@@ -477,6 +494,26 @@ def _authority(c: Connection, game: "GameService", state: GameState, grant: Hand
     if not HandlerService(game.store)._member(c, grant.chooser_controller):
         raise WorkflowError("The original decision owner must remain a campaign member.")
     if grant.source in ("ordinary", "required"):
+        if grant.source == "required" and grant.clause == "doctor_support.low":
+            from girlframe.services.m3_battle import _scene_judge
+            from girlframe.services.m3_enforcement_initiative import _cast
+
+            if grant.source_action is None:
+                raise WorkflowError("Recover the original Support source action")
+            source_action = game.action(c, grant.source_action)
+            meta = source_action["data"].get("doctor", {})
+            judge, human, source = _scene_judge(
+                game, c, state, _cast(game, c, state, int(source_action["channel_id"]))
+            )
+            if (
+                (judge, human, source)
+                != (grant.adjudicator_ref, grant.chooser_controller, grant.adjudicator_source)
+                or source_action["data"].get("play") != "doctor_support"
+                or source_action["data"].get("result", {}).get("tier") != "low"
+                or meta.get("appointment") != grant.appointment
+            ):
+                raise WorkflowError("Recover the actual original Support source judge")
+            return
         if grant.source == "required" and grant.clause.startswith("all_out_assault."):
             from girlframe.services.m3_battle import proved_judge
 
@@ -800,7 +837,7 @@ def finish_callback(
     if grant.source == "required":
         assert grant.source_action is not None and grant.source_choice is not None
         action = game.action(c, grant.source_action)
-        if action["data"].get("play") != "flirt":
+        if action["data"].get("play") not in ("flirt", "doctor_support"):
             from girlframe.services.m3_battle import complete_handler_play
 
             complete_handler_play(game, c, grant, event, viewer, key)
@@ -819,7 +856,8 @@ def finish_callback(
         )
         if (
             row is None
-            or row["kind"] != "handler_brief"
+            or row["kind"]
+            != ("doctor_handler" if action["data"].get("doctor") else "handler_brief")
             or row["actor_id"] != str(grant.chooser_controller)
             or json.loads(row["body_json"]).get("handler_grant") != grant.id
         ):
