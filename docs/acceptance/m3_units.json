@@ -456,7 +456,7 @@
         "remote_baseline": "5323f3b1f9f14cbb4fe700847bc428e41413ddbd",
         "portable_checkpoint": "var/m3-social-checkpoint.bundle",
         "remote_ci": "NOT_RUN",
-        "pushed_checkpoint": "1964eb1",
+        "pushed_checkpoint": "57392d0bfd6cfc2d93df480e524f16b86c38675e",
         "historical_error": "Git push: fatal error in commit_refs; Git API ref update: HTTP 500.",
         "note": "The earlier ref-write failure was followed by a successful normal push. Unit implementation remains IN_PROGRESS; this does not deploy or certify gameplay."
       }
@@ -645,6 +645,7 @@
     "artifact": "var/m3-combat-harpy-full-fixed.xml",
     "independent_review": "NOT_RUN",
     "human_acceptance": "NOT_RUN",
-    "milestone_complete": false
+    "milestone_complete": false,
+    "source_commit": "57392d0bfd6cfc2d93df480e524f16b86c38675e"
   }
 }

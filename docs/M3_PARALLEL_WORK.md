@@ -63,6 +63,10 @@ them as independent certification. Bot remains off. See the acceptance report fo
 exact scope, artifacts and remaining gates. The earlier `1964eb1` push succeeded;
 the older GitHub ref-write failure is historical.
 
+This candidate's verified source is `57392d0bfd6cfc2d93df480e524f16b86c38675e`,
+successfully pushed to `codex/m3-rules`. Further work continues in bounded units;
+the passing snapshot does not cover subsequent edits.
+
 After these paths, agreed M3 still includes All-Out Assault/Go for the Core,
 remaining Girl/Frame/Handler runtime abilities, all outstanding Strain consequences
 and Endgames, remaining world/Harpy/NPC mechanics, and independent/player review.

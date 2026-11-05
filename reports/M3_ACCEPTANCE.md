@@ -2,6 +2,11 @@
 
 ## Combat, Harpy and original-person checkpoint — automated verification passed
 
+Verified source: **`57392d0bfd6cfc2d93df480e524f16b86c38675e`**, successfully
+pushed normally to `codex/m3-rules` from `1964eb1`. Only sanitized source and
+evidence were included; private references, engine archives and real state remain
+excluded. This is a source checkpoint, not an M3 release or milestone sign-off.
+
 The new integrated candidate passed **1,983 tests in 815.95s**, zero failures,
 errors or skips: `.venv/bin/pytest -q --tb=short
 --junitxml=var/m3-combat-harpy-full-fixed.xml`. JUnit counts were independently
