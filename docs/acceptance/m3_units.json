@@ -449,7 +449,15 @@
           "tests/rules/test_frame_loss_discipline.py"
         ]
       },
-      "code_commit": "402a6f8eab5840d5dc8f8f5705cf680a62acbef3"
+      "code_commit": "402a6f8eab5840d5dc8f8f5705cf680a62acbef3",
+      "publication": {
+        "status": "BLOCKED_UPSTREAM",
+        "remote_branch": "codex/m3-rules",
+        "remote_baseline": "5323f3b1f9f14cbb4fe700847bc428e41413ddbd",
+        "error": "Git push: fatal error in commit_refs; Git API ref update: HTTP 500.",
+        "portable_checkpoint": "var/m3-social-checkpoint.bundle",
+        "remote_ci": "NOT_RUN"
+      }
     }
   ]
 }

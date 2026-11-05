@@ -81,6 +81,19 @@ policy, schema, private engine or environment publication changed. This candidat
 is a tested development checkpoint, not a completed social unit, completed M3,
 a deployed release or an invitation to begin player testing.
 
+GitHub publication is **BLOCKED_UPSTREAM**, not completed. Normal non-force pushes
+to `codex/m3-rules` failed twice with `remote: fatal error in commit_refs`. The
+matching uploaded commit objects are readable, but the Git API ref update returns
+HTTP 500 with an empty JSON body. A non-force push to the new
+`codex/m3-social-consequences` branch failed identically; that branch does not exist.
+The existing remote branch remains at `5323f3b1f9f14cbb4fe700847bc428e41413ddbd`;
+its old successful CI run is not evidence for this new candidate. Source code is
+committed locally at `402a6f8eab5840d5dc8f8f5705cf680a62acbef3`, with evidence in
+subsequent local commits. A private ignored incremental Git bundle preserves the
+checkpoint over the known remote baseline at `var/m3-social-checkpoint.bundle`.
+No force push, credential replacement, deployment or environment publication was
+attempted. Local automated checks above passed; new remote CI has not run.
+
 ## Bounded unit 1b — Creature Comforts closeout
 
 Code `620e87987daca80b87409cbd46000e52732b867e`. The complete scoped flow is paid
