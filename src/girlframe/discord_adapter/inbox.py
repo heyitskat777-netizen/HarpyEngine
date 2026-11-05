@@ -582,6 +582,16 @@ class InboxView(discord.ui.View):
             await open_physical_review(
                 interaction, PhysicalService(self.service.store), item.identity
             )
+        elif item.task == "m3_privilege":
+            from girlframe.discord_adapter.m3_privileges import open_privilege
+            from girlframe.services.m3_privileges import PrivilegeService
+
+            await open_privilege(interaction, PrivilegeService(self.service.store), item.identity)
+        elif item.task == "m3_tag_permission":
+            from girlframe.discord_adapter.m3_tag_permissions import open_permission
+            from girlframe.services.m3_tag_permissions import PermissionService
+
+            await open_permission(interaction, PermissionService(self.service.store), item.identity)
         elif item.task == "m3_contraband":
             from girlframe.discord_adapter.m3_contraband import open_find
             from girlframe.services.m2_game import GameService

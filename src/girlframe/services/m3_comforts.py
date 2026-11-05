@@ -77,6 +77,10 @@ def synchronize(c: Connection, store: OnboardingStore, period: Period, event: st
         for purchase in facts.requisitions:
             if purchase.kind != "creature_comforts":
                 continue
+            from girlframe.engine.m3_privileges import suspended
+
+            if suspended(facts, purchase.id) or suspended(state, purchase.id):
+                continue
             identity = str(uuid5(NAMESPACE_URL, "girlframe:creature-comforts:" + purchase.id))
             if c.scalar(
                 sa.select(work.c.id)
@@ -191,6 +195,10 @@ class ComfortService(RequisitionService):
         resolve(
             state, benefit.actor, profiles(c, self.store.campaign_id), require_current_profile=False
         )
+        from girlframe.engine.m3_privileges import suspended
+
+        if suspended(state, benefit.purchase):
+            raise WorkflowError("REVOKED_PRIVILEGE: restore the original Requisition first.")
         return state
 
     def _idle(self, c: Connection, state: GameState, owner: int) -> None:

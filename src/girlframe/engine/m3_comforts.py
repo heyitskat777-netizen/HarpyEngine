@@ -159,6 +159,10 @@ def grant(
     chosen: GirlAsset,
     identity: str,
 ) -> tuple[GameState, ComfortBenefit]:
+    from girlframe.engine.m3_privileges import suspended
+
+    if suspended(original, benefit.purchase):
+        raise ValueError("Restore the temporarily revoked Requisition before using it")
     chosen = GirlAsset.model_validate_json(chosen.model_dump_json())
     state = GameState.model_validate_json(original.model_dump_json())
     actor = resolve(state, benefit.actor, bindings)

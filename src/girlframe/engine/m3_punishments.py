@@ -35,7 +35,6 @@ KINDS = {
     "link_surgery_reversal": ("Link Surgery Reversal", "severe"),
 }
 SUPPORTED = frozenset(KINDS) - {
-    "revoked_privileges",
     "execution",
     "lobotomization",
     "indefinite_imprisonment",
@@ -54,11 +53,15 @@ class Details(Model):
     embrace_tag: str | None = Field(default=None, max_length=100)
     delegate: int | None = Field(default=None, gt=0)
     regulation: str = Field(default="", max_length=1200)
+    requisition: str | None = Field(default=None, max_length=100)
+    restoration: str = Field(default="", max_length=1200)
     disclosed: bool = True
 
 
 class Followup(Model):
-    kind: Literal["helpless", "ankou_feedback", "paired_identity_heat", "void_threshold_check"]
+    kind: Literal[
+        "helpless", "ankou_feedback", "paired_identity_heat", "void_threshold_check", "frame_loss"
+    ]
     owner: int
     source_pdf: int
     details: dict[str, str] = Field(default_factory=dict)
@@ -99,6 +102,7 @@ def validate(details: Details) -> str:
         raise ValueError("UNSUPPORTED_RULE: this Punishment needs its remaining runtime mechanics")
     allowed = {
         "sedation": {"identities"},
+        "revoked_privileges": {"requisition", "restoration"},
         "beating": {"asset", "tag"},
         "reduced_socialization": {"bond_with"},
         "quality_time": {"tag"},
@@ -150,7 +154,27 @@ def apply(
     kind = details.kind
     if kind == "passing_responsibility":
         raise ValueError("Delegation transfers pending work; it does not apply a Punishment")
-    if kind == "strict_regulations":
+    if kind == "revoked_privileges":
+        from girlframe.engine.m3_privileges import revoke
+
+        state = revoke(
+            state,
+            subject,
+            inflictor,
+            details.requisition,
+            details.restoration,
+            entity_id,
+            source_event or "",
+            character_ids or {},
+        )
+        sheet = state.sheets[str(subject)]
+        if (
+            any(x.family == "frame" and not x.void for x in original.sheets[str(subject)].assets)
+            and any(x.family == "frame" for x in sheet.assets)
+            and all(x.void for x in sheet.assets if x.family == "frame")
+        ):
+            required.append(Followup(kind="void_threshold_check", owner=subject, source_pdf=19))
+    elif kind == "strict_regulations":
         from girlframe.engine.m3_regulations import impose
 
         state.regulations.append(
@@ -308,6 +332,33 @@ def apply(
         if not details.tag.strip():
             raise ValueError("Write the inflicted Tag")
         sheet.tags.append(TagState(id=entity_id, label=details.tag.strip(), giver=inflictor))
+    removed_frame = {x.id for x in original.sheets[str(subject)].assets if x.family == "frame"} - {
+        x.id for x in sheet.assets if x.family == "frame"
+    }
+    if removed_frame and not any(x.family == "frame" and not x.damaged for x in sheet.assets):
+        character = (character_ids or {}).get(subject, sheet.character_id)
+        details_at_loss = {
+            "character": character or "",
+            "frame": sheet.frame_runtime.id
+            if sheet.frame_runtime
+            else "initial:" + (character or ""),
+        }
+        placement = next(
+            (
+                x
+                for x in original.placements
+                if x.actor.kind == "pilot"
+                and x.actor.entity == str(subject)
+                and x.actor.incarnation == character
+                and x.frame_instance == details_at_loss["frame"]
+            ),
+            None,
+        )
+        if placement is not None:
+            details_at_loss["piloting"] = str(placement.mode == "piloting")
+        required.append(
+            Followup(kind="frame_loss", owner=subject, source_pdf=29, details=details_at_loss)
+        )
     sheet.revision += 1
     return Applied(
         state=GameState.model_validate_json(state.model_dump_json()), followups=tuple(required)

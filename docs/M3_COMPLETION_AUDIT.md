@@ -12,6 +12,14 @@ Final full suite: **1,399 passed**. Independent review and human acceptance rema
 pending. See [unit evidence](acceptance/m3_units.json).
 The audit counts below are the original snapshot, not a recalculated percentage.
 
+Current unit **2a is IN_PROGRESS**: human-Pilot effects, consent, native responses
+and linked discipline are implemented; complete Defeat and broader actor/lifecycle
+interactions still block closure. Temporary revocation/restoration now works for
+implemented paid Requisitions. Last usable Frame removal has source-owned context
+review and cannot waive actual Defeat. Registry now has 63 core subsets and 373
+unimplemented core entries. Automated evidence is in the report; this changes no
+independent or player acceptance.
+
 ## Complete features within their stated scope
 
 “Implemented” below describes software behavior, not independent rules approval.
@@ -27,7 +35,7 @@ The audit counts below are the original snapshot, not a recalculated percentage.
 
 | System | Implemented behavior | What prevents completion |
 |---|---|---|
-| Missions and discipline | Offers, individual answers, dispatch, rewards, absent Ace/Dog handling, consultation, selected reactions and replacement. Twelve of seventeen Punishment routes are supported; one is delegation, leaving eleven direct effects. | Revoked Privileges, Execution, Lobotomization, Indefinite Imprisonment, Link Surgery Reversal; full lifecycle and playbook consequences. |
+| Missions and discipline | Offers, individual answers, dispatch, rewards, absent Ace/Dog handling, consultation, selected reactions and replacement. Thirteen of seventeen Punishment routes have implementations for supported resources; one is delegation, leaving twelve direct effects with remaining interactions. | Further Requisition suspension effects, Execution, Lobotomization, Indefinite Imprisonment, Link Surgery Reversal; full lifecycle and playbook consequences. |
 | Shared rules | Eight of thirteen basic entries have subsets, including ordinary Off-Duty and Observation. Mixed-role resources and saved response-chain recovery exist. | Put Someone Beneath You, Dive Deep, All Out Assault, Go For the Core, Defeat; complete targets, modifiers and consequences for existing Plays. |
 | Off-Duty and economy | Ordinary/Observation flows, scenes, selected Frame rewards, repairs, Asset Installment and Creature Comforts have tested workflows. | Complete Void/medical/lifecycle consequences and every relevant playbook interaction. Privacy, Visiting Home, Retirement, Ability Unlock, Frame Grafting and Frame Swap are unfinished. |
 | Playbooks and advancement | Starting choices, selected passives/tracks and reactions; corrected Frame/Class eligibility. | Complete runtimes for ten Girl, nine Frame and seven Handler playbooks, Frame/Class acquisitions, Handler advancement and extra Handler responses. A saved starting sheet is not a complete playbook implementation. |
@@ -36,7 +44,7 @@ The audit counts below are the original snapshot, not a recalculated percentage.
 | Lifecycle/situational rules | Selected Helpless recovery, identity reset and DoctorDoctor replacement. | Defeat/destruction, death/retirement/imprisonment, safe new-character archives, Harpy conversion, and the seven core situational entries. |
 | Handler creation work in progress | Three modules plus routing edits preserved under ignored `var/parked-handler-creation-before-unit-1a/`, with file hashes and routing patch; prior lint/type checks passed. | No feature tests, canonical persona activation or starting Bond/rank application. Excluded from completed work and active unit changes. |
 
-The current registry has **436 required core entries: 62 subset, 374 unimplemented,
+The original audit registry had **436 required core entries: 62 subset, 374 unimplemented,
 zero declared fully implemented**, with independent review pending. There are also
 37 deferred Ancillary entries. These inventory units mix headings, entire systems,
 Plays and table cells; some broad entries still say unimplemented despite tested
@@ -44,7 +52,7 @@ subflows. They are not equal-size tasks and cannot produce a reliable percentage
 Only eight core entries currently carry full contract objects; seven are marked
 source-audited. The acceptance tracker has **44 cases: 27 IN_PROGRESS, 17 NOT_RUN**.
 
-The last completed full-suite artifact records **1,374 tests, zero failures/errors/
+The original audit full-suite artifact records **1,374 tests, zero failures/errors/
 skips**, in 414.360 seconds (`var/m3-frame-classification-pytest.xml`). This is prior
 committed-candidate evidence, not a fresh run against the untested Handler edits,
 a coverage percentage, or proof that an entire M3 acceptance case passed.

@@ -48,6 +48,7 @@ class PunishmentService:
             "punishment_consult",
             "punishment_paired_identity_heat",
             "punishment_helpless",
+            "punishment_frame_loss",
         ):
             raise WorkflowError("This discipline task is unavailable.")
         return dict(row)
@@ -88,8 +89,23 @@ class PunishmentService:
             self._actor(c, viewer, self._row(c, identity))
 
         try:
+
+            def apply_with_continuation(c: Connection) -> dict[str, Any]:
+                row = self._row(c, identity)
+                result = operation(c)
+                from girlframe.services.m3_beneath import discipline_finished
+
+                discipline_finished(self.game, c, viewer, key, row)
+                return result
+
             return self.store._write(
-                viewer, key, kind, payload, operation, auto_audit=False, authorize=authorize
+                viewer,
+                key,
+                kind,
+                payload,
+                apply_with_continuation,
+                auto_audit=False,
+                authorize=authorize,
             )
         except ValidationError:
             raise WorkflowError("Invalid discipline choices; reopen the current task.") from None
@@ -102,11 +118,16 @@ class PunishmentService:
         if load_state(c, self.store.campaign_id).revision != game_revision:
             raise WorkflowError("STALE_STATE: sheets or Status changed; review the task again.")
         actions = t.m2["m2_actions"]
+        from girlframe.services.m3_beneath import discipline_action, lineage
+
+        source_action = discipline_action(self.game, c, row)
+        allowed = lineage(self.game, c, source_action) if source_action is not None else []
         if c.scalar(
             sa.select(actions.c.id)
             .where(
                 actions.c.campaign_id == self.store.campaign_id,
                 actions.c.state.not_in(("complete", "aborted")),
+                actions.c.id.not_in(allowed),
             )
             .limit(1)
         ):
@@ -127,7 +148,7 @@ class PunishmentService:
         )
 
     def _bundle(self, c: Connection, row: dict[str, Any]) -> list[dict[str, Any]]:
-        if self._body(row).get("reason") == "strict_regulations":
+        if self._body(row).get("reason") in ("strict_regulations", "put_someone_beneath_you"):
             return [row]
         if row["off_duty_id"] is not None:
             if self._body(row).get("reason") not in (
@@ -296,11 +317,20 @@ class PunishmentService:
                             if HandlerService(self.store)._member(c, int(uid))
                         ],
                         "handler": state.handler,
+                        "requisitions": [],
                         "identity_cap_reached": sum(
                             not x.protected or x.paired for x in sheet.identities
                         )
                         >= 4,
                     }
+                    ruling = self.store.policy.owner_m3_rulings
+                    if (
+                        ruling
+                        and ruling.privilege_restoration == "inflictor_condition_owner_restores"
+                    ):
+                        from girlframe.services.m3_privileges import choices
+
+                        result["choices"]["requisitions"] = choices(c, self.game, state, subject)
                     if state.handler is not None and state.bonds.get(
                         ":".join(str(x) for x in sorted((subject, state.handler))), 0
                     ):
@@ -353,6 +383,21 @@ class PunishmentService:
                 )
             bundle = self._bundle(c, row)
             state = load_state(c, self.store.campaign_id)
+            if details.kind == "revoked_privileges":
+                from girlframe.services.m3_privileges import choices
+
+                ruling = self.store.policy.owner_m3_rulings
+                if (
+                    ruling is None
+                    or ruling.privilege_restoration != "inflictor_condition_owner_restores"
+                ):
+                    raise WorkflowError(
+                        "UNRESOLVED_RULING: record temporary restoration ownership."
+                    )
+                if details.requisition not in {
+                    x["id"] for x in choices(c, self.game, state, int(row["subject_id"]))
+                }:
+                    raise WorkflowError("Choose an actual held Requisition from the current menu.")
             if details.kind == "passing_responsibility":
                 target = details.delegate
                 if (
@@ -386,6 +431,10 @@ class PunishmentService:
                                 body=self._body(consultation)
                                 | {"approved": False, "superseded": True},
                             )
+                    if body.get("reason") == "put_someone_beneath_you":
+                        body["discipline_owner_character"] = self.game.character_binding(
+                            c, state, target, require_current_profile=False
+                        )
                     self._save(c, item, event, owner_id=str(target), body=body)
                 return {"id": identity, "state": "delegated", "cause_count": len(bundle)}
             consulted = self._approved(c, row, bundle, details)
@@ -479,7 +528,7 @@ class PunishmentService:
                     row,
                     str(uuid4()),
                     int(state.handler)
-                    if followup.kind == "helpless" and state.handler
+                    if followup.kind in ("helpless", "frame_loss") and state.handler
                     else followup.owner,
                     followup.owner,
                     "punishment_" + followup.kind,
@@ -585,6 +634,122 @@ class PunishmentService:
                 "piloting": piloting,
                 "evidence": evidence,
             },
+            operation,
+        )
+
+    def resolve_frame_loss(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        revision: int,
+        game_revision: int,
+        *,
+        piloting: bool,
+        in_battle: bool,
+        evidence: str,
+    ) -> dict[str, Any]:
+        if (
+            type(piloting) is not bool
+            or type(in_battle) is not bool
+            or not evidence.strip()
+            or len(evidence) > 1200
+        ):
+            raise WorkflowError("Record the actual battle and Frame context with factual evidence.")
+
+        def operation(c: Connection) -> dict[str, Any]:
+            row = self._row(c, identity)
+            HandlerService(self.store).authorize(c, viewer)
+            self._check(c, row, revision, game_revision)
+            if row["kind"] != "punishment_frame_loss":
+                raise WorkflowError("This task is not a last-Frame-Asset review.")
+            body = self._body(row)
+            facts = body["details"]
+            subject = int(row["subject_id"])
+            state = load_state(c, self.store.campaign_id)
+            character = self.game.character_binding(
+                c, state, subject, require_current_profile=False
+            )
+            sheet = state.sheets[str(subject)]
+            frame = sheet.frame_runtime.id if sheet.frame_runtime else "initial:" + character
+            if (
+                character != facts["character"]
+                or frame != facts["frame"]
+                or any(x.family == "frame" and not x.damaged for x in sheet.assets)
+            ):
+                raise WorkflowError("STALE_FRAME_LOSS: recover the original Frame and resources.")
+            if "piloting" in facts and facts["piloting"] != str(piloting):
+                raise WorkflowError(
+                    "The source placement already records the actual Frame context."
+                )
+            needs_defeat = piloting and in_battle
+            state.facts.append(
+                dict(
+                    kind="punishment_frame_loss_context",
+                    work=identity,
+                    character=character,
+                    frame=frame,
+                    piloting=str(piloting),
+                    in_battle=str(in_battle),
+                    evidence=evidence.strip(),
+                )
+            )
+            event = self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.frame_loss_context_resolved",
+                state,
+                work_id=identity,
+                defeat_required=needs_defeat,
+            )
+            self._save(
+                c,
+                row,
+                event,
+                state="resolved",
+                body=body
+                | dict(
+                    piloting=piloting,
+                    in_battle=in_battle,
+                    evidence=evidence.strip(),
+                    defeat_required=needs_defeat,
+                ),
+            )
+            if needs_defeat:
+                related(
+                    c,
+                    self.store,
+                    row,
+                    str(uuid4()),
+                    subject,
+                    subject,
+                    "defeat",
+                    dict(
+                        source_work=identity,
+                        source_pdf=29,
+                        immediate=True,
+                        character=character,
+                        frame=frame,
+                        trigger="last_frame_asset_removed",
+                    ),
+                    event,
+                )
+            return dict(id=identity, state="resolved", defeat_required=needs_defeat)
+
+        return self._write(
+            viewer,
+            key,
+            identity,
+            "m3.frame_loss_context_resolved",
+            dict(
+                id=identity,
+                revision=revision,
+                game_revision=game_revision,
+                piloting=piloting,
+                in_battle=in_battle,
+                evidence=evidence,
+            ),
             operation,
         )
 

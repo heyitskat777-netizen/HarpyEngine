@@ -19,12 +19,12 @@ M3 is in development and remains **RULES_SUBSET**. Its offline mission flow now
 persists private invitations, explicit player responses, dispatch and mission-end
 rewards, with required consequences blocking completion. The discipline flow adds
 inflictor-owned selectors, delegation, exact-proposal Handler consultation and
-atomic effects for eleven printed Punishment types. DoctorDoctor mission-failure
+atomic effects for twelve Punishment types within supported resources and contexts. DoctorDoctor mission-failure
 Obsolescence and Princess mission-end standards now have private review controls
 before rewards. Last-Girl-Asset Beating reviews apply Helplessness from confirmed
 Frame context. DoctorDoctor scrapping now supports free replacement through player
 proposal, an exact Handler package and player confirmation, including required
-Court consent and safe Discord-label updates. Five further Punishment types,
+Court consent and safe Discord-label updates. Four Severe Punishment types,
 Defeat/recovery integration and some other follow-ups remain unfinished. These changes
 require a separate, scoped M3 release approval and are not enabled in the running
 bot. See [M3 evidence](reports/M3_ACCEPTANCE.md) and
@@ -50,6 +50,12 @@ Asset Installment and Creature Comforts now have closed automated workflow
 checklists, including original owned receipts. Creature Comforts scenes support
 actual city locations as well as bases. See [unit evidence](docs/acceptance/m3_units.json);
 independent and human acceptance remain pending.
+
+The development social flow now offers exact result dropdowns for Put Someone
+Beneath You, original-setter Tag consent, real pin-response Plays and on-scene
+Punishment. Temporary removal/restoration preserves actual purchased resources.
+Final Frame loss cannot bypass required Defeat. Unit 2a remains in progress until
+that recovery dependency and remaining cross-rule cases are implemented.
 
 Read `AGENTS.md` and [the roadmap](docs/PROJECT_ROADMAP.md) before development. The
 original planning package remains unchanged in `GIRLFRAME_Discord_Codex_Handoff_v0.2/`;

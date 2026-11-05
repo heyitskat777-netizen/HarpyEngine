@@ -27,6 +27,7 @@ from girlframe.engine.m2 import (
     spend_heat,
 )
 from girlframe.engine.m2_registry import registry_digest
+from girlframe.engine.m3_plays import HEAT_IDS as M3_HEAT_IDS
 from girlframe.engine.m3_plays import ROLL_IDS as M3_ROLL_IDS
 from girlframe.engine.m3_policy import RULESET as M3_RULESET
 from girlframe.engine.rolls import DiceSource, OsDice
@@ -713,13 +714,21 @@ class GameService:
         self, viewer: GuildViewer, key: str, channel: int, sheet_revision: int, prepared: PlayInput
     ) -> dict[str, Any]:
         prepared = PlayInput.model_validate_json(prepared.model_dump_json())
-        if prepared.play not in (*PLAY_IDS, *M3_ROLL_IDS):
+        if prepared.play not in (*PLAY_IDS, *M3_ROLL_IDS, *M3_HEAT_IDS):
             raise WorkflowError("UNSUPPORTED_RULE: this Play is not implemented in M2.")
 
         def operation(c: Connection) -> dict[str, Any]:
             self.unpaused(c)
             state = load_state(c, self.store.campaign_id)
             m3 = None
+            beneath = None
+            from girlframe.services.m3_beneath import no_conflict
+
+            no_conflict(self, c, viewer, prepared)
+            if prepared.play in M3_HEAT_IDS:
+                from girlframe.services.m3_beneath import prepare as prepare_beneath
+
+                beneath = prepare_beneath(self, c, viewer, prepared, state)
             if prepared.play in M3_ROLL_IDS:
                 from girlframe.services.m3_play_support import prepare
 
@@ -770,7 +779,7 @@ class GameService:
                     (
                         x
                         for x in choices
-                        if x["kind"] in ("escape_play", "order_disobey")
+                        if x["kind"] in ("escape_play", "order_disobey", "beneath_response_play")
                         and x["actor_id"] == str(viewer.user_id)
                     ),
                     None,
@@ -801,7 +810,7 @@ class GameService:
                     )
             elif root_lock and root_lock["state"] != "released":
                 raise WorkflowError("SCENE_BUSY: resolve the pending Play first.")
-            if prepared.play == "flirt":
+            if prepared.play in ("flirt", *M3_HEAT_IDS):
                 if (
                     prepared.target == viewer.user_id
                     or str(prepared.target) not in state.sheets
@@ -845,6 +854,8 @@ class GameService:
             }
             if m3 is not None:
                 data["m3"] = m3
+            if beneath is not None:
+                data["beneath"] = beneath
             from girlframe.services.m3_recovery import enable as enable_recovery
 
             enable_recovery(self, c, viewer, data)
@@ -898,7 +909,9 @@ class GameService:
                 c,
                 viewer.user_id,
                 key,
-                "m3.play_confirmed" if m3 is not None else "m2.play_confirmed",
+                "m3.play_confirmed"
+                if m3 is not None or beneath is not None
+                else "m2.play_confirmed",
                 action_id=identity,
                 play=prepared.play,
             )
@@ -984,6 +997,10 @@ class GameService:
             from girlframe.services.m3_recovery import authorize as authorize_shared
 
             authorize_shared(self, c, viewer, action)
+            if action["data"].get("beneath"):
+                from girlframe.services.m3_beneath import authorize as authorize_beneath
+
+                authorize_beneath(self, c, viewer, action)
 
         def operation(c: Connection) -> dict[str, Any]:
             action = self.action(c, identity)
@@ -1003,7 +1020,7 @@ class GameService:
                 from girlframe.services.m3_actor_plays import ActorPlayService
 
                 return ActorPlayService(self).roll(c, viewer, key, action)
-            if action["data"]["play"] not in (*PLAY_IDS, *M3_ROLL_IDS):
+            if action["data"]["play"] not in (*PLAY_IDS, *M3_ROLL_IDS, *M3_HEAT_IDS):
                 raise WorkflowError("This action is diceless.")
             state = load_state(c, self.store.campaign_id)
             self.action_characters(c, action, state)
@@ -1013,6 +1030,10 @@ class GameService:
             if sheet.revision != action["data"]["sheet_revision"]:
                 raise WorkflowError("STALE_SHEET: recover the unrolled action; no dice consumed.")
             prepared = PlayInput.model_validate_json(json.dumps(action["data"]["prepared"]))
+            if action["data"].get("beneath"):
+                from girlframe.services.m3_beneath import pre_roll as beneath_pre_roll
+
+                beneath_pre_roll(self, c, viewer, state, action)
             m3 = action["data"].get("m3")
             if m3 is not None:
                 from girlframe.services.m3_play_support import pre_roll
@@ -1052,7 +1073,9 @@ class GameService:
                 + sum(x["amount"] for x in pre_modifiers),
                 "rng_source": self.rng_source,
                 "rolled_utc": datetime.now(UTC).isoformat(),
-                "ruleset": M3_RULESET if m3 is not None or refusal_modifiers else RULESET,
+                "ruleset": M3_RULESET
+                if m3 is not None or refusal_modifiers or action["data"].get("beneath")
+                else RULESET,
             }
             if m3 is not None:
                 receipt.update(
@@ -1091,7 +1114,9 @@ class GameService:
                 c,
                 viewer.user_id,
                 key,
-                "m3.rolled" if m3 is not None or refusal_modifiers else "m2.rolled",
+                "m3.rolled"
+                if m3 is not None or refusal_modifiers or action["data"].get("beneath")
+                else "m2.rolled",
                 state,
                 action_id=identity,
                 receipt_id=receipt["id"],
@@ -1176,6 +1201,10 @@ class GameService:
                 and HandlerService(self.store).current(c)[1].handler_id != viewer.user_id
             ):
                 raise WorkflowError("The Handler appointment changed; staff recovery is required.")
+            if action["data"].get("beneath"):
+                from girlframe.services.m3_beneath import authorize as authorize_beneath
+
+                authorize_beneath(self, c, viewer, action)
             return dict(row)
 
         def authorize(c: Connection) -> None:
@@ -1216,7 +1245,9 @@ class GameService:
                 viewer.user_id,
                 key,
                 "m3.choice_resolved"
-                if action["data"].get("m3") or action["data"].get("actor_basic")
+                if action["data"].get("m3")
+                or action["data"].get("actor_basic")
+                or action["data"].get("beneath")
                 else "m2.choice_resolved",
                 state,
                 action_id=action["id"],
@@ -1226,6 +1257,10 @@ class GameService:
                 from girlframe.services.m3_play_support import sync_finished_roll
 
                 sync_finished_roll(self, c, action, event)
+            if action["data"].get("beneath"):
+                from girlframe.services.m3_beneath import synchronize as synchronize_beneath
+
+                synchronize_beneath(self, c, action, event)
             c.execute(
                 t.m2["m2_responses"]
                 .insert()
@@ -1869,7 +1904,7 @@ class GameService:
                 for x in actor.tags
                 if viewer.user_id in x.observers or viewer.user_id == actor.owner
             ]
-            return dict(row) | {
+            result = dict(row) | {
                 "body": body,
                 "play": action["data"]["play"],
                 "result": action["data"]["result"],
@@ -1895,6 +1930,17 @@ class GameService:
                     if k in ("order_id", "target")
                 },
             }
+            if action["data"].get("beneath") and row["kind"].startswith("beneath_"):
+                from girlframe.services.m3_beneath import projection
+
+                result["beneath"] = projection(self, c, viewer, state, action, dict(row))
+            from girlframe.engine.m3_beneath import rejection_blocked
+
+            result["rejection_blocked"] = bool(
+                row["kind"] == "tag_resolution"
+                and rejection_blocked(state, int(action["actor_id"]), body["tag"])
+            )
+            return result
 
     def recover_helpless(
         self, viewer: GuildViewer, key: str, revision: int, context: str, asset: str | None

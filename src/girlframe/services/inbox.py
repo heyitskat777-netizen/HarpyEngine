@@ -578,6 +578,60 @@ class InboxService:
                     )
                 )
             for item in canon.obligations:
+                if item.kind == "revoked_requisition" and viewer.user_id in (
+                    item.owner,
+                    item.target,
+                ):
+                    from girlframe.services.m3_privileges import PrivilegeService
+
+                    privilege = PrivilegeService(self.store).view(connection, viewer, item.id)
+                    items.append(
+                        InboxItem(
+                            "privilege:" + item.id,
+                            "privilege",
+                            item.id,
+                            canon.revision,
+                            "discipline",
+                            "Temporarily revoked Requisition",
+                            "Original participants",
+                            "pending" if privilege["pending"] else "resolved",
+                            privilege["can_allow"] or privilege["can_restore"],
+                            privilege["stale"],
+                            "Review the recorded restoration condition and your own decision.",
+                            "Restoring an Asset preserves its original damage and Frame.",
+                            "Review restoration",
+                            task="m3_privilege",
+                        )
+                    )
+                if item.kind == "tag_rejection_permission" and viewer.user_id in (
+                    item.owner,
+                    item.target,
+                ):
+                    from girlframe.services.m3_tag_permissions import PermissionService
+
+                    permission = PermissionService(self.store)._get(connection, viewer, item.id)
+                    active = permission["active"]
+                    items.append(
+                        InboxItem(
+                            "tag-permission:" + item.id,
+                            "tag_permission",
+                            item.id,
+                            1 if active else 2,
+                            "plays",
+                            "Tag rejection permission",
+                            label(
+                                (item.target or item.owner) if permission["owner"] else item.owner
+                            ),
+                            "pending" if active else "resolved",
+                            active and permission["owner"],
+                            permission["stale"],
+                            "The original setter may allow rejection of this Tag.",
+                            "Permission does not erase the Tag or supply "
+                            "the affected player's action.",
+                            "Review permission",
+                            task="m3_tag_permission",
+                        )
+                    )
                 if (
                     item.owner == viewer.user_id
                     and item.kind == "actor_reject_tag"
@@ -891,6 +945,7 @@ class InboxService:
                     "punishment_consult",
                     "punishment_paired_identity_heat",
                     "punishment_helpless",
+                    "punishment_frame_loss",
                 ):
                     primary, task_name = "Review discipline", "m3_discipline"
                 elif kind in (

@@ -20,6 +20,7 @@ from girlframe.engine.m2 import (
     ChoiceAnswer,
     PlayInput,
 )
+from girlframe.engine.m3_plays import HEAT_IDS
 from girlframe.services.creation_review import CreationReviewService
 from girlframe.services.m2_game import PUBLIC_FIELDS, GameService
 from girlframe.services.onboarding import WorkflowError
@@ -279,6 +280,89 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
                 required=False,
             )
         )
+    if kind == "beneath_select":
+        from girlframe.engine.m3_beneath import BASE, EXTRA
+
+        extra = decision["beneath"]
+        labels = {
+            "tag": "Give her a Tag",
+            "status": "Lower her Status",
+            "bond": "Weaken one of her Bonds",
+            "lock_tag": "Require your consent to reject a Tag",
+            "pin": "Pin her; ask for her response",
+            "punish": "Inflict a legal Punishment",
+            "damage": "Damage one of her Assets",
+        }
+        choices = (
+            BASE if level == "mid" else (*BASE, *EXTRA, *(() if level == "high" else ("damage",)))
+        )
+        fields = [
+            Field(
+                "options",
+                "Choose printed effects",
+                tuple((key, labels[key]) for key in (BASE if level == "high" else choices)),
+                2 if level == "mid" else 1,
+                2 if level == "mid" else 1,
+            ),
+            text("text", "Describe the actual confrontation"),
+            text("fields.tag", "New Tag label (Tag effect only)", False),
+        ]
+        if level == "high":
+            fields.insert(
+                1,
+                Field(
+                    "beneath_extra",
+                    "Choose one extra effect",
+                    tuple((key, labels[key]) for key in EXTRA),
+                ),
+            )
+        tags = tuple((x["id"], x["label"]) for x in extra["tags"])
+        if level == "high":
+            tags += (("new", "The Tag I give with this result"),)
+        if tags and level != "mid":
+            fields.append(
+                Field(
+                    "fields.locked_tag",
+                    "Tag to lock (lock effect only)",
+                    tags,
+                    minimum=0,
+                    required=False,
+                )
+            )
+        if extra["orders"] and level != "mid":
+            fields.append(
+                Field(
+                    "fields.order",
+                    "Actual followed order (Punishment only)",
+                    tuple((x["id"], x["label"]) for x in extra["orders"]),
+                    minimum=0,
+                    required=False,
+                )
+            )
+    elif kind == "beneath_details":
+        extra = decision["beneath"]
+        if "bond" in extra["options"]:
+            fields = [
+                Field(
+                    "fields.bond",
+                    "Your actual Bond to weaken",
+                    tuple((x["token"], x["label"]) for x in extra["bonds"]),
+                )
+            ]
+        else:
+            fields = [entities("denied", "Your actual Asset damaged by the counterattack", assets)]
+    elif kind == "beneath_pin_response":
+        fields = [
+            menu("options", "Your own response", ("narrative", "play")),
+            text("text", "Describe your response (or continue to a real Play)", False),
+        ]
+    if kind == "tag_resolution" and decision.get("rejection_blocked"):
+        fields = [
+            f
+            if f.key != "options"
+            else menu("options", "Tag rejection needs its setter's consent", ("embrace",))
+            for f in fields
+        ]
     return [f for f in fields if not (f.options == () and f.key in ("denied", "member"))]
 
 
@@ -289,6 +373,7 @@ def answer_values(values: dict[str, Any]) -> ChoiceAnswer:
         if key.startswith("fields.") and value
     }
     options = tuple(values.get("options", ()))
+    options += tuple(values.get("beneath_extra", ()))
     if options and options[0] in MANEUVERS:
         fields = {k: v for k, v in fields.items() if k in options}
     return ChoiceAnswer(
@@ -304,7 +389,15 @@ def answer_values(values: dict[str, Any]) -> ChoiceAnswer:
 
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
     decision = await threaded(lambda: game.decision(viewer_from_interaction(interaction), identity))
-    if decision["kind"] in ("escape_play", "order_disobey"):
+    if decision["kind"] == "beneath_punishment":
+        from girlframe.discord_adapter.m3_punishments import open_discipline
+        from girlframe.services.m3_punishments import PunishmentService
+
+        await open_discipline(
+            interaction, PunishmentService(game.store), decision["body"]["work_id"]
+        )
+        return
+    if decision["kind"] in ("escape_play", "order_disobey", "beneath_response_play"):
         await open_play(interaction, game, parent=decision)
         return
     fields = choice_fields(decision)
@@ -331,6 +424,17 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         "Choose only your own response. Nothing is submitted until Confirm. "
         "Safety pause remains available."
     )
+    if decision.get("beneath") and decision["kind"] == "beneath_select":
+        instructions += (
+            "\nEffects apply to "
+            + clean(decision["beneath"]["affected_label"])
+            + ". "
+            + (
+                "You choose the counterattack."
+                if decision["beneath"]["level"] == "low"
+                else "Choose your result's printed effects."
+            )
+        )
     if decision.get("actor_basic"):
         instructions += (
             "\nTag proposals and their relevance are shared with all scene participants. "
@@ -401,12 +505,22 @@ async def open_play(
     if not scene["joined"]:
         raise WorkflowError("Join this scene with /campaign scene_join first.")
     plays = ("disobey_orders",) if parent and parent["kind"] == "order_disobey" else PLAY_IDS
+    approval = game.store.policy.m3_approval
+    rulings = game.store.policy.owner_m3_rulings
+    if (
+        not parent
+        and approval is not None
+        and "plays" in approval.subsystems
+        and rulings is not None
+        and rulings.beneath_private_choices == "affected_owner"
+    ):
+        plays = (*plays, *HEAT_IDS)
     identities = [x for x in sheet["identities"] if not x["marked"]]
     fields = [
         menu("play", "Choose a Play", plays),
         Field(
             "target",
-            "Flirt target (Flirt only)",
+            "Target for Flirt or Put Someone Beneath You",
             tuple(
                 (str(x), scene["labels"][str(x)]) for x in scene["pilots"] if x != viewer.user_id
             ),
@@ -441,7 +555,7 @@ async def open_play(
             gain=int(one(values, "gain")),
             pair_share=int(one(values, "pair_share")),
             target=int(one(values, "target"))
-            if play == "flirt" and one(values, "target")
+            if play in ("flirt", *HEAT_IDS) and one(values, "target")
             else None,
             piloting=one(values, "piloting") == "yes",
             witnessed=one(values, "witnessed") == "yes",

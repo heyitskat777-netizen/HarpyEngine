@@ -695,6 +695,40 @@
       ],
       "implementation_note": "Keep distinct source works/events and consume every waiting bonus atomically with the actual receipt. Heat and later Tag adjustments remain separate.",
       "change_impact": "Review unrolled reservations and waiting occurrences before changing the interpretation. Preserve known dice, original receipts and consumed sources; do not silently refund, reuse or postpone a recorded bonus."
+    },
+    {
+      "id": "beneath-private-detail-ownership",
+      "summary": "For Put Someone Beneath You, the effect chooser selects the printed effect, while the affected Girl owns selection of their private Bond endpoint or counter-damaged Asset. Explicit Tag selection stays with the printed chooser; Punishment details retain the inflictor-owned ruling.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Book PDF 22 / printed p.20; owner delegated future recommendations in this conversation",
+      "authority": "delegated_recommendation",
+      "policy_key": "beneath_private_choices",
+      "clarity_review": true,
+      "revision": 1,
+      "rationale": "The source assigns effect choices but does not explicitly assign private Bond/Asset details. Keep the actual affected human responsible for those details without disclosing their private sheet or NPC relationships to another player.",
+      "alternatives": [
+        "Let the effect chooser select every resource, exposing the required target details.",
+        "Use an explicit table-negotiated resource choice for every instance."
+      ],
+      "change_impact": "Review unfinished private-detail requests explicitly; preserve known dice, effect choices and already applied outcomes. Do not change Punishment choice ownership or fabricate player consent.",
+      "implementation_note": "Freeze the chooser-owned printed effect, then request the affected original character owner to supply its actual private Bond or undamaged Asset. Retain the same receipt and apply the effects atomically only after the owned detail response."
+    },
+    {
+      "id": "temporary-requisition-restoration",
+      "summary": "The inflictor states a restoration condition for a temporarily removed actual Requisition, then confirms when it is met. The affected original owner restores the resource, selecting any required legal Asset replacement.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Book PDF 16\u201317 / printed pp.14\u201315; owner delegated future recommendations",
+      "authority": "delegated_recommendation",
+      "policy_key": "privilege_restoration",
+      "clarity_review": true,
+      "revision": 1,
+      "rationale": "The printed temporary removal has no duration or restoration owner. Preserve the original resource and receipt, with an explicit reversible condition rather than inventing a fixed number of scenes.",
+      "alternatives": [
+        "Automatic restoration at the next Off-Duty period.",
+        "Handler chooses duration and restoration even when another Girl inflicted it."
+      ],
+      "implementation_note": "Supported paid Asset Installment temporarily removes its actual Asset, preserving ID, damage, Void state and original Frame. A pending Creature Comforts benefit cannot qualify or grant while suspended. Consumed benefits cannot be revoked. Restoration gives no refund, repair, duplicate reward or replacement Frame; future Requisition types need their own actual suspension effects.",
+      "change_impact": "Change only unresolved conditions prospectively with an explicit superseding ruling; preserve paid receipts, suspended originals and recorded restoration decisions."
     }
   ],
   "entries": [
@@ -1166,7 +1200,9 @@
         "tests/rules/test_off_duty_cycle.py",
         "tests/rules/test_off_duty_cycle_ui.py",
         "tests/rules/test_off_duty_discipline.py",
-        "tests/rules/test_off_duty_handler_scenes.py"
+        "tests/rules/test_off_duty_handler_scenes.py",
+        "tests/rules/test_privileges.py",
+        "tests/rules/test_frame_loss_discipline.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -1200,7 +1236,8 @@
         "tests/rules/test_off_duty_discipline.py",
         "tests/rules/test_off_duty_handler_scenes.py",
         "tests/rules/test_regulations.py",
-        "tests/rules/test_regulation_service.py"
+        "tests/rules/test_regulation_service.py",
+        "tests/rules/test_frame_loss_discipline.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -1232,7 +1269,9 @@
         "tests/rules/test_off_duty_cycle.py",
         "tests/rules/test_off_duty_cycle_ui.py",
         "tests/rules/test_off_duty_discipline.py",
-        "tests/rules/test_off_duty_handler_scenes.py"
+        "tests/rules/test_off_duty_handler_scenes.py",
+        "tests/rules/test_privileges.py",
+        "tests/rules/test_frame_loss_discipline.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -1391,14 +1430,20 @@
         "heading": "Put Someone Beneath You"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_beneath.py",
+        "tests/rules/test_beneath_service.py",
+        "tests/rules/test_beneath_permissions.py",
+        "tests/rules/test_beneath_discipline.py",
+        "tests/rules/test_beneath_ui.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

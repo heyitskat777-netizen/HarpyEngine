@@ -253,3 +253,25 @@ single +2. Keep distinct actual source works/events and consumption in the same
 transaction as the roll, separately from Heat and post-roll Tags. A later policy
 change must review unrolled reservations and waiting sources, preserving known
 dice, receipts and consumed sources without refunds, reuse or silent postponement.
+
+
+`beneath_private_choices`: for Put Someone Beneath You, the printed chooser selects
+the effect; the affected Girl supplies the actual private Bond endpoint or
+counter-damaged Asset. Explicit Tag selection remains with its printed chooser.
+Punishment details retain the owner-approved inflictor-owned rule. Source: book
+PDF 22 / printed p.20; delegated recommendation, printed-rule clarity review required.
+The text specifies effects but omits ownership of those private subchoices. This
+keeps the selected mechanical effect while preserving private inventories and NPC
+relationships. Alternatives: expose/select every resource to the effect chooser,
+or negotiate each resource at the table. Trusted policy must explicitly set
+`beneath_private_choices: affected_owner` before this new Play is enabled. A change
+requires reviewing unfinished detail requests, preserving known rolls, original
+characters, selected effects and completed outcomes; never infer a player's reply.
+
+## Temporary Requisition removal and restoration
+
+`temporary-requisition-restoration` / policy `privilege_restoration`: delegated recommendation, printed-rule clarity review required. Book PDF 16–17 / printed pp.14–15 calls Revoked Privileges temporary but gives no duration or restoration owner. The inflictor states the restoration condition and explicitly confirms when it is met; the original affected owner then restores the actual resource and chooses any required legal Asset replacement. Neither response is inferred from chat.
+
+Alternatives are automatic expiry at the next Off-Duty period, or Handler ownership of every restoration. The selected interpretation preserves the actual inflictor's decision and makes the temporary removal reversible without inventing elapsed time. Future adjustment must preserve existing paid receipts and original resources and explicitly review outstanding conditions.
+
+For implemented purchases, an Asset Installment retains its original Asset ID, damage, Void state and Frame while unavailable. Pending Creature Comforts cannot qualify or grant during suspension; already consumed benefits are ineligible. No refund, repair, duplicate reward, transfer to a replacement character or replacement Frame is granted. Other Requisition types need their own implemented suspension effects before this route can handle them.

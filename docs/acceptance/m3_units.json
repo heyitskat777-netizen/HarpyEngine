@@ -301,6 +301,153 @@
       ],
       "code_commit": "620e87987daca80b87409cbd46000e52732b867e",
       "source_correction": "Removed an unprinted Foundation-base-only scene restriction. An actual surviving city/location is legal; existing position and human-attendance checks still apply."
+    },
+    {
+      "id": "M3-UNIT-2A",
+      "name": "Put Someone Beneath You and required actual consequences",
+      "status": "IN_PROGRESS",
+      "source": [
+        {
+          "document": "rulebook",
+          "pdf": 22,
+          "printed": 20,
+          "topic": "Put Someone Beneath You"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 11,
+          "printed": 9,
+          "topic": "Tag rejection"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 13,
+          "printed": 11,
+          "topic": "Bonds"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 17,
+          "printed": 15,
+          "topic": "Minor Punishments"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 29,
+          "printed": 27,
+          "topic": "Defeat"
+        }
+      ],
+      "campaign_rulings": [
+        "beneath-private-detail-ownership",
+        "temporary-requisition-restoration"
+      ],
+      "registry_entries": [
+        "play.basic.put_someone_beneath_you",
+        "core.core.minor-punishments"
+      ],
+      "implemented": [
+        "Actual Heat roll and shared scene lock; original actor/target and fresh policy/membership checks.",
+        "Exact mid/high/low choices, reversed low-result owner, actual Tag/Status/PC/Handler/NPC Bond changes.",
+        "Original-setter consent gates for locked Tags; private owned decisions and inbox.",
+        "Affected owner selects private Bond/Asset; actual damage and outside-Frame Helplessness.",
+        "Pin response is human-authored or an actual child Play with its own receipt; no automatic escape.",
+        "Real on-scene Punishment, source-proved followed-order authority, Handler consultation and downstream discipline integration.",
+        "Temporary removal/restoration for actual implemented Requisitions, preserving source, damage, character and Frame.",
+        "Last usable Frame removal has source-locked Handler context review; actual piloting battle loss creates required Defeat work and keeps the root held."
+      ],
+      "blocking_dependencies": [
+        "Last Frame Asset counter-damage requires a complete actual Defeat workflow.",
+        "Full supported target roles and cross-playbook/lifecycle effects remain part of agreed M3.",
+        "Four Severe Punishments, other Requisition types and remaining Void/discipline dependencies are unfinished."
+      ],
+      "independent_review": "NOT_RUN",
+      "human_acceptance": "NOT_RUN",
+      "evidence": [
+        {
+          "command": "pytest -q tests/rules/test_beneath_discipline.py",
+          "result": "4 passed in 3.28s",
+          "artifact": "var/m3-unit-2a-order.xml"
+        },
+        {
+          "command": "pytest -q tests/rules/test_privileges.py tests/rules/test_punishments.py tests/rules/test_punishment_service.py tests/rules/test_comforts.py tests/rules/test_comfort_service.py",
+          "result": "70 passed in 41.09s",
+          "artifact": "var/m3-privileges-regression-fixed.xml"
+        },
+        {
+          "command": "pytest -q --junitxml=var/m3-social-and-privileges-full.xml",
+          "result": "1442 passed in 396.12s; before the later Frame-loss fix and final UI refinements",
+          "artifact": "var/m3-social-and-privileges-full.xml"
+        },
+        {
+          "command": "pytest -q current social, discipline, privilege and Off-Duty discipline tests",
+          "result": "87 passed in 41.09s",
+          "artifact": "var/m3-social-final-focused.xml"
+        },
+        {
+          "command": "pytest -q native social, service and privilege tests",
+          "result": "18 passed in 14.69s",
+          "artifact": "var/m3-social-native-final.xml"
+        },
+        {
+          "command": ".venv/bin/pytest -q --tb=short --junitxml=var/m3-social-final-full.xml",
+          "result": "1450 passed in 399.12s; zero failures/errors/skips",
+          "artifact": "var/m3-social-final-full.xml"
+        }
+      ],
+      "contract": {
+        "trigger": "An actual Girl tries to put another Girl beneath her; the human confirms the trigger and chooses Heat before the roll.",
+        "actor_type": "Current human-controlled Pilot and another actual scene Girl. Other printed actor ports remain outstanding.",
+        "pre_roll_sources": [
+          "Original actor/target incarnations, actual scene participation and current release approval.",
+          "Current sheet, legal Heat/Identity sources and original target snapshot.",
+          "Any counter-Punishment order needs its original addressed recipient and immutable completed owned Receive Orders response."
+        ],
+        "roll_kind": "2d6",
+        "allowed_modifiers": [
+          "Human-owned Heat spending and applicable source-legal pre-roll effects.",
+          "Existing owned Tag windows and actual Bond adjustments. Locked rejection requires original-setter permission."
+        ],
+        "tier_options": {
+          "mid": [
+            "Exactly two distinct base effects: Tag, lower Status, weaken a Bond."
+          ],
+          "high": [
+            "One base effect, then one extra: lock Tag rejection to consent, pin and ask for a response, or inflict a legally authorized Punishment."
+          ],
+          "low": [
+            "The actual target chooses one base/extra effect against the original actor, or damages one actual Asset."
+          ]
+        },
+        "choice_ownership": "The printed chooser owns effect/Tag selection. The affected original human selects private Bond/Asset details under the recorded ruling. The pinned human owns their response. Unspecified Punishment details stay inflictor-owned; printed exceptions override defaults.",
+        "target_policy": "A different original Girl in the joined scene. Fresh membership, original character bindings, held scene and scoped release checks apply. A controller/account alias cannot grant another actor resources.",
+        "post_roll_effects": [
+          "Actual Heat roll and shared scene lock; original actor/target and fresh policy/membership checks.",
+          "Exact mid/high/low choices, reversed low-result owner, actual Tag/Status/PC/Handler/NPC Bond changes.",
+          "Original-setter consent gates for locked Tags; private owned decisions and inbox.",
+          "Affected owner selects private Bond/Asset; actual damage and outside-Frame Helplessness.",
+          "Pin response is human-authored or an actual child Play with its own receipt; no automatic escape.",
+          "Real on-scene Punishment, source-proved followed-order authority, Handler consultation and downstream discipline integration.",
+          "Temporary removal/restoration for actual implemented Requisitions, preserving source, damage, character and Frame.",
+          "Last usable Frame removal has source-locked Handler context review; actual piloting battle loss creates required Defeat work and keeps the root held."
+        ],
+        "mandatory_followups": [
+          "Last Frame Asset counter-damage requires a complete actual Defeat workflow.",
+          "Full supported target roles and cross-playbook/lifecycle effects remain part of agreed M3.",
+          "Four Severe Punishments, other Requisition types and remaining Void/discipline dependencies are unfinished.",
+          "Actual Helplessness, Void thresholds, Paired Heat and other immediate linked consequences must finish through supported source-backed consumers."
+        ],
+        "handler_or_gm_intervention": "Current Handler supplies actual consultation and factual context where required. Human decisions remain owned; generic acknowledgement or unsupported pending work does not complete the Play.",
+        "test_fixture_ids": [
+          "tests/rules/test_beneath.py",
+          "tests/rules/test_beneath_service.py",
+          "tests/rules/test_beneath_permissions.py",
+          "tests/rules/test_beneath_discipline.py",
+          "tests/rules/test_beneath_ui.py",
+          "tests/rules/test_privileges.py",
+          "tests/rules/test_frame_loss_discipline.py"
+        ]
+      }
     }
   ]
 }

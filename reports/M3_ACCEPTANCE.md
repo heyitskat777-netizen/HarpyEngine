@@ -1,5 +1,84 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Unit 2a in progress — social consequences and temporary Requisition removal
+
+The native Put Someone Beneath You flow now uses the existing real roll/Tag/scene-lock protocol.
+Mid/high/low result counts and choice ownership are enforced. Actual Tags, Status and Bonds
+change atomically; the affected original human selects private Bond/Asset details. High-result
+Tag locking has source-proved original-setter consent controls in requests. A pin permits an
+owned narrative response or an actual child Play; completing that child does not falsely assert
+escape. Low-result counter-Punishment can use a real superior order only after its immutable
+owned Receive Orders response.
+
+On-scene Punishment uses actual required work, existing fixed-proposal Handler consultation and
+downstream consequence controls. The root social Play stays pending until those actual linked
+consequences resolve. Revoked Privileges now temporarily removes a real purchased Asset
+Installment or suspends a pending Creature Comforts benefit. Original receipt, ID, damage, Void
+state, character and Frame are retained; already spent benefits are ineligible. Restoration
+requires the original inflictor's source-proved condition confirmation, then the affected
+owner's actual restoration and any legal cap replacement. No refund, repair, free duplicate or
+equipment transfer is granted. The two delegated rulings are recorded in CAMPAIGN_RULINGS.md and
+the source registry; future Requisition types still need their actual suspension effects.
+
+Executed checks before the broader regression: pure social reducer 20 passed (3.76s);
+reducer/service 25 (6.11s); consent flow 29 (9.15s); existing/native UI and shared recovery 84
+(11.97s); discipline/native/M2 regression 75 (23.31s); followed-order discipline 4 (3.28s).
+Final temporary-privilege/Punishment/Comforts regression: **70 passed in 41.09s**,
+`var/m3-privileges-regression-fixed.xml`. Ruff passes and mypy checks 204 source files at this
+checkpoint.
+
+Failures found and corrected: initial delegated-ruling metadata used invalid
+provenance/authority and lacked its implementation note; one discipline test incorrectly
+expected Frame Disassembly to damage rather than remove an Asset; two long strings and one
+lambda style issue failed lint. Initial privilege checks found a wrong test inbox API (1
+failed/8 passed), then a missing fixture campaign context plus the now-outdated
+unsupported-Punishment expectation (2 failed/69 passed). These failed runs are retained
+privately and are not pass evidence.
+
+**Unit 2a and M3 remain incomplete.** Last-Frame-Asset counter-damage still needs complete
+Defeat resolution; other target roles, careers, playbook interactions and remaining
+discipline/Void dependencies are outstanding. Four Severe Punishments remain unsupported.
+Previous 1,399-test full-suite evidence belongs to the committed unit-1b baseline, not this
+current candidate. Independent review and human acceptance are NOT_RUN. Bot remains
+intentionally off; no live state, schema, policy, deployment or environment publication changed.
+
+The first full regression passed **1,442 tests in 396.12s**, zero failures/errors/skips,
+`var/m3-social-and-privileges-full.xml`. Subsequent review fixed a genuine missed cross-rule
+consequence: removing the last usable Frame Asset now queues source-owned context review.
+Confirmed piloting battle loss creates actual required Defeat work and keeps the original social
+Play/chat lock pending; out-of-battle or outside-Frame context can finish after real Handler
+review. Known source occupancy cannot be contradicted. Existing all-Void thresholds are not
+repeated merely by suspending Creature Comforts.
+
+After that correction, focused social/discipline/Off-Duty checks: **87 passed in 41.09s**,
+`var/m3-social-final-focused.xml`; native social/privilege checks: **18 passed in 14.69s**,
+`var/m3-social-native-final.xml`. Earlier Frame-loss/discipline boundary run: 49 passed in
+22.35s. Native tests now cover purchase → actual social roll → Revoked Privileges dropdown →
+condition confirmation → owner restoration. Concurrent retry and injected post-history failure
+preserve exactly one restored original Asset. Ruff passes (397 files formatted); mypy passes
+(204 source files); registry remains RULES_SUBSET (63 core subsets / 373 core unimplemented,
+plus 37 deferred Ancillary); public scan passes 480 publishable files / 40 manifest entries /
+zero findings. One added test line failed lint before formatting and was corrected; gameplay
+checks above passed. Final full-candidate regression is recorded below.
+
+Final candidate command: `.venv/bin/pytest -q --tb=short
+--junitxml=var/m3-social-final-full.xml`: **1,450 passed in 399.12s**, with zero
+failures/errors/skips. JUnit totals were independently read back from the artifact.
+Static checks remain clean: 397 formatted files, 204 typed source files.
+A fresh isolated SQLite database under `/tmp` passed upgrade to head, Alembic
+consistency check, CLI health, downgrade to base, repeat upgrade/check and health.
+The CLI correctly reported local foundation health with Discord disconnected;
+this is not M3 rules certification. Planning verification remains 34 files /
+86 planned cases / four schemas / four synthetic fixtures, planning only. All
+three unit contracts validate and referenced fixture paths exist. An initial
+contract-check attempt used the system Python without the installed package and
+failed import; rerunning with `.venv/bin/python` passed.
+
+The process probe confirms zero running Discord bots. No live database, release
+policy, schema, private engine or environment publication changed. This candidate
+is a tested development checkpoint, not a completed social unit, completed M3,
+a deployed release or an invitation to begin player testing.
+
 ## Bounded unit 1b — Creature Comforts closeout
 
 Code `620e87987daca80b87409cbd46000e52732b867e`. The complete scoped flow is paid

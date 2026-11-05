@@ -9,6 +9,7 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine.m2 import PLAY_IDS
+from girlframe.engine.m3_plays import HEAT_IDS
 from girlframe.engine.m3_recovery_state import Interruption, SavedChoice, fingerprint
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
@@ -116,7 +117,7 @@ def capture(
     cancellable = (
         not known
         and len(actual) == 1
-        and root["data"]["play"] in PLAY_IDS
+        and root["data"]["play"] in (*PLAY_IDS, *HEAT_IDS)
         and not root["data"]["choices"]
     )
     choices = t.m2["m2_choices"]

@@ -116,7 +116,6 @@ def test_disassembly_surgery_and_inhibitor_are_canonical_and_immutable_inputs(ca
 @pytest.mark.parametrize(
     "kind",
     [
-        "revoked_privileges",
         "execution",
         "lobotomization",
         "indefinite_imprisonment",

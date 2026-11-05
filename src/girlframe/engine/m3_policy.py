@@ -35,6 +35,8 @@ class Rulings(BaseModel):
     comforts_qualification: Literal["ordinary_go_off_duty_only"]
     comforts_stacking: Literal["one_opportunity_per_paid_purchase"]
     comforts_decline: Literal["consume_without_refund"]
+    beneath_private_choices: Literal["affected_owner"] | None = None
+    privilege_restoration: Literal["inflictor_condition_owner_restores"] | None = None
     punishment_details: Literal["inflictor_selects"]
     regulation_breach_review: Literal["informed_handler"]
     failure_dog_overlap: Literal["one_punishment_both_causes"]

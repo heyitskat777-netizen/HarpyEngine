@@ -16,23 +16,34 @@ implemented for their purchase/benefit/receipt flows. Final automated checkpoint
 See [unit contracts/evidence](acceptance/m3_units.json). Broader Requisitions,
 independent review and human acceptance remain unfinished.
 
+Unit **2a remains IN_PROGRESS**. Current human-Pilot social choices, consent-locked
+Tags, owned pin/child-Play responses and actual on-scene discipline have focused
+evidence. Implemented paid Requisitions now have temporary suspension/restoration.
+Last usable Frame removal requires actual context review; piloting battle loss
+keeps real Defeat work pending. Complete Defeat, broader actor targets and cross-rule
+consequences before closing this unit. See the current acceptance report for the
+latest candidate's checks; the 1,399-test result below is the unit-1b baseline.
+
+Current development checkpoint: **1,450 automated tests passed**. Unit 2a remains
+IN_PROGRESS and does not change independent/player acceptance.
+
 The registry contains 473 source/table entries: **436 required core entries** and
-37 deferred Ancillary entries. Of the required core, **62 are partial and 374 are
+37 deferred Ancillary entries. Of the required core, **63 are partial and 373 are
 unimplemented**. None is independently approved. Entries are inventory units,
 not equal-size coding tasks or a completion percentage. The acceptance tracker
 currently has 44 cases: 27 in progress and 17 not run, with no completed milestone
 acceptance. Existing automated tests do not imply those full cases passed.
 
-Latest completed full test artifact: **1399 tests, zero failures/errors/skips**,
+Unit-1b baseline full test artifact: **1399 tests, zero failures/errors/skips**,
 `var/m3-unit-1b-full-final.xml`. See `reports/M3_ACCEPTANCE.md` for commands,
 earlier failures/corrections, checks and the difference from human acceptance.
 
 | Package | Remaining completion work |
 |---|---|
 | M3A — source audit | Finish nested branches, book/sheet comparisons, dependency contracts and the M2 cross-rule audit. Frame categories/aliases are corrected; the overall branch audit remains pending. |
-| M3B — shared rules | Implement Put Someone Beneath You, Dive Deep, All-Out Assault, Go for the Core and Defeat. Complete actual actor/target/resource ports and immediate effects for existing shared Plays. |
+| M3B — shared rules | Finish Put Someone Beneath You, whose native human-Pilot flow is now implemented but still depends on full Defeat and cross-rule work. Implement Dive Deep, All-Out Assault, Go for the Core and Defeat. Complete actual actor/target/resource ports and immediate effects for existing shared Plays. |
 | M3C — playbooks | Complete all ten Girl, nine Frame and seven Handler runtimes: passives, Plays, counters, special resources, control/Core/AM interactions, temporary effects and acquisition consequences. Handler playbook/persona creation is missing. |
-| M3D — economy/discipline | Complete Privacy, Visiting Home, Retirement, Ability Unlock, Frame Grafting and Frame Swap; temporary Requisition revocation/restoration; Execution, Lobotomization, Indefinite Imprisonment and Link Surgery Reversal. Preserve original character/persona ownership through missions and consequences. |
+| M3D — economy/discipline | Complete Privacy, Visiting Home, Retirement, Ability Unlock, Frame Grafting and Frame Swap; suspension effects for future Requisition types (implemented purchases now have temporary removal/restoration); Execution, Lobotomization, Indefinite Imprisonment and Link Surgery Reversal. Preserve original character/persona ownership through missions and consequences. |
 | M3E — recovery/lifecycle | Complete Defeat/rescue/destruction outcomes, Helplessness for all actor types, medical help, Void thresholds/conversion and all playbook follow-ups. Provide actual death/retirement/imprisonment/new-character archives and safe replacement workflows. |
 | M3F — Strain | Implement every remaining consequence across all 72 cells and 22 Endgames, including actual recursive effects, prisoner escape escalation, mission obligations, deadlines and mandatory work completion. Scheduling a result is not applying it. |
 | M3G — world/physical state | Implement actual movement/time, Frame occupancy/link/control, transport/custody, Harpy/Core consent, full NPC/Gorgon/Harpy/Director rules and prices/breach consequences. Original placement and some Gorgon operations exist; they do not supply these missing mechanics. |

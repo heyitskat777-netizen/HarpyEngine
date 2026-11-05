@@ -142,6 +142,13 @@ async def open_details(
                     Field("replacement_description", "Describe the replacement", paragraph=True),
                 ]
             )
+    elif kind == "revoked_privileges":
+        fields.extend(
+            [
+                entities("requisition", "Temporarily remove this Requisition", own["requisitions"]),
+                Field("restoration", "Condition for restoring it", paragraph=True),
+            ]
+        )
     elif kind == "reduced_socialization":
         if not own["bonds"]:
             raise WorkflowError("No eligible canonical Bond is available for this Punishment.")
@@ -361,6 +368,43 @@ async def open_discipline(
         instructions = (
             "The last Girl Asset was damaged. Confirm the actual Frame context at that moment. "
             "Outside a Frame, the Pilot becomes Helpless."
+        )
+    elif data["kind"] == "punishment_frame_loss":
+        fields = [
+            Field(
+                "piloting",
+                "Was she piloting the Frame when the Asset was removed?",
+                (("yes", "Piloting that Frame"), ("no", "Not piloting that Frame")),
+            ),
+            Field(
+                "in_battle",
+                "Was this loss in an actual battle?",
+                (("yes", "In an actual battle"), ("no", "Outside battle")),
+            ),
+            Field("evidence", "Brief actual context", paragraph=True),
+        ]
+
+        async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+            result = await asyncio.to_thread(
+                service.resolve_frame_loss,
+                viewer_from_interaction(current),
+                str(current.id),
+                identity,
+                data["revision"],
+                data["game_revision"],
+                piloting=values["piloting"][0] == "yes",
+                in_battle=values["in_battle"][0] == "yes",
+                evidence=values["evidence"],
+            )
+            return (
+                "Actual Defeat is required; its consequence remains pending."
+                if result["defeat_required"]
+                else "Actual context recorded; this loss does not require Defeat."
+            )
+
+        instructions = (
+            "The last usable Frame Asset was removed. Confirm the actual source context. "
+            "Losing it while piloting in battle requires Defeat."
         )
     elif data["kind"] == "punishment_paired_identity_heat":
         fields = [

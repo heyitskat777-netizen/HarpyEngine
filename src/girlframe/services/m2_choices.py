@@ -118,6 +118,11 @@ class ChoiceEngine:
         sheet = state.sheets.get(str(owner))
         acting = state.sheets[str(actor)]
         body = json.loads(request["body_json"])
+        if kind.startswith("beneath_") and action["data"].get("beneath"):
+            from girlframe.services.m3_beneath import apply as apply_beneath
+
+            apply_beneath(self.game, c, state, action, request, answer)
+            return
         if kind == "tag_window":
             self.tag_proposal(c, state, action, owner, answer)
             if not any(
@@ -132,6 +137,12 @@ class ChoiceEngine:
             assert tag is not None
             picks(answer.options, {"reject", "embrace"}, 1)
             if answer.options == ("reject",):
+                from girlframe.engine.m3_beneath import rejection_blocked
+
+                require(
+                    not rejection_blocked(state, actor, tag.id),
+                    "TAG_CONSENT_REQUIRED: its setter must consent to rejecting this Tag.",
+                )
                 require(
                     not (acting.girl == "NEWGIRL" and tag.giver == acting.mentor),
                     "A Newgirl cannot reject a Tag given by its Mentor.",
@@ -344,6 +355,12 @@ class ChoiceEngine:
                 elif option == "reject_tag":
                     picks(answer.denied, {x.id for x in acting.tags}, 1)
                     rejected = next(x for x in acting.tags if x.id == answer.denied[0])
+                    from girlframe.engine.m3_beneath import rejection_blocked
+
+                    require(
+                        not rejection_blocked(state, actor, rejected.id),
+                        "TAG_CONSENT_REQUIRED: its setter must consent to rejecting this Tag.",
+                    )
                     require(
                         not (acting.girl == "NEWGIRL" and rejected.giver == acting.mentor),
                         "A Newgirl cannot reject a Mentor Tag.",
@@ -523,7 +540,7 @@ class ChoiceEngine:
             else:
                 self.finish(c, state, action)
             return
-        if kind in ("escape_play", "order_disobey"):
+        if kind in ("escape_play", "order_disobey", "beneath_response_play"):
             raise WorkflowError(
                 "Start the required response Play from its wizard; a text answer cannot replace it."
             )
@@ -645,6 +662,11 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         play = action["data"]["play"]
         level = action["data"]["result"]["tier"]
+        if play == "put_someone_beneath_you" and action["data"].get("beneath"):
+            from girlframe.services.m3_beneath import results as beneath_results
+
+            beneath_results(self.game, c, action)
+            return
         if play in ("go_off_duty", "void_observation") and action["data"].get("m3"):
             action["data"]["m3_finished"] = True
             self.finish(c, state, action)
@@ -691,7 +713,7 @@ class ChoiceEngine:
                 x
                 for x in self.game.pending(c, parent["id"])
                 if x["actor_id"] == action["actor_id"]
-                and x["kind"] in ("escape_play", "order_disobey")
+                and x["kind"] in ("escape_play", "order_disobey", "beneath_response_play")
             ]
             require(len(requests) == 1, "The parent response linkage changed.")
             table = t.m2["m2_choices"]
