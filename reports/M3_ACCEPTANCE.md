@@ -1,5 +1,9 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Pushed checkpoint and focused CI — 2026-11-05
+
+Sanitized source/workflow commit **`9d4223cf4dd95a90c132f981f2512346adfaf234`** was pushed to `codex/m3-rules`; its exact remote SHA was verified. [GitHub Actions run 42119251926](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42119251926) passed on that exact source: changed-file lint/format/types, the explicit focused gameplay selection, CLI smoke, runtime-registry contract, original planning verification and publishable/manifest checks. The **full regression step was skipped by design**, not counted as passing. Scope/JUnit artifacts were uploaded. This resolves the reported remote lint failure for this source while preserving final-candidate full verification and separate rules/player review. Bot remains off; no runtime or environment changes occurred.
+
 ## Integrated source handoff — 2026-11-05
 
 Current completed source is retained in reproducible ignored snapshot `var/m3-integrated-freeze/manifest.json` over base `9f2dcf96e970899760e5f64c81b67edc89e5ad89`. It includes actual changed-file bytes and hashes. Source-only checkpointing does not deploy gameplay. M3 remains **IN_PROGRESS / RULES_SUBSET**.
