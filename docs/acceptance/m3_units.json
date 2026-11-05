@@ -392,7 +392,8 @@
         {
           "command": ".venv/bin/pytest -q --tb=short --junitxml=var/m3-social-final-full.xml",
           "result": "1450 passed in 399.12s; zero failures/errors/skips",
-          "artifact": "var/m3-social-final-full.xml"
+          "artifact": "var/m3-social-final-full.xml",
+          "git_commit": "402a6f8eab5840d5dc8f8f5705cf680a62acbef3"
         }
       ],
       "contract": {
@@ -447,7 +448,8 @@
           "tests/rules/test_privileges.py",
           "tests/rules/test_frame_loss_discipline.py"
         ]
-      }
+      },
+      "code_commit": "402a6f8eab5840d5dc8f8f5705cf680a62acbef3"
     }
   ]
 }

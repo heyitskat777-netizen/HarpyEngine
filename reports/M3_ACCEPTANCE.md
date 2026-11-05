@@ -2,6 +2,8 @@
 
 ## Unit 2a in progress — social consequences and temporary Requisition removal
 
+Code checkpoint: `402a6f8eab5840d5dc8f8f5705cf680a62acbef3`.
+
 The native Put Someone Beneath You flow now uses the existing real roll/Tag/scene-lock protocol.
 Mid/high/low result counts and choice ownership are enforced. Actual Tags, Status and Bonds
 change atomically; the affected original human selects private Bond/Asset details. High-result
