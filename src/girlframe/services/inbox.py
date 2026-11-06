@@ -842,6 +842,28 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_location_build import LocationBuildService
+
+            for build_control in LocationBuildService(self.store)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "location-build:" + build_control["id"],
+                        "location_build",
+                        build_control["id"],
+                        build_control["revision"],
+                        "playbook",
+                        build_control["label"],
+                        "Actual original Handler",
+                        "established",
+                        False,
+                        False,
+                        "Review the new Location and consumed advancement.",
+                        "Building preserves old sites, bodies, territory and source history.",
+                        "Review construction",
+                        task="m3_location_build",
+                    )
+                )
+
             from girlframe.services.m3_location_rebuild import LocationRebuildService
 
             for rebuild_control in LocationRebuildService(self.store)._tasks(connection, viewer):

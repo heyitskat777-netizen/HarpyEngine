@@ -3266,3 +3266,12 @@ Ordinary source approvals and missing construction/actor adapters remain separat
 
 - **location-rebuild-clarity-1**: Restore one actual existing damaged/destroyed Location condition to intact; do not rename, move, replace or clear living blockers. Treat actual source spend as direct printed physical-world rebuild effect, not an optional proposal or generic progress acknowledgment. Adjustment impact: Finite genuine physical resource effect using existing typed Location. New construction, base alteration and transport remain separate. Printed-rule clarity review.
 - **location-rebuild-clarity-2**: Rebuilding does not undo a prior genuine destruction event, its already scheduled Budget source, dead NPCs, or any actual mandatory loss consequences. Preserve their source records. Adjustment impact: No source loss or invented additional benefits; exact printed rebuild scope. Printed-rule clarity review.
+
+## Building a new Location — 2026-11-06 UTC
+
+Delegated interpretations remain adjustable and require printed-rule clarity review.
+Rationale, alternatives and change impact are recorded in `rules/registry.json`.
+Missing source/territory/transport mechanics remain required implementation.
+
+- **location-build-clarity-1**: One existing-model major site (Base/City/Important) with one stable fresh identity/cell and intact physical condition, normally Foundation-funded. Actual new NPCs, population, political control of old territory and special source Tags are not bundled. Preserve real external blockers and territory. Adjustment impact: One genuine concrete world resource per award. Actual disputed/inaccessible sites need their real source eligibility; no fabricated clearance. Printed-rule clarity review.
+- **location-build-clarity-2**: Respect existing World identity/cell/board invariants. Existing ruined Location keeps its square until its real source is handled; rebuild remains distinct. Creating a new site does not erase past destruction/Budget triggers or move existing bodies. Adjustment impact: Preserves saved world/source history and permits real existing operational consumer use. Printed-rule clarity review.

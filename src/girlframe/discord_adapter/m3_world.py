@@ -219,6 +219,12 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
         world = fresh["world"]
         if world is None:
             raise WorkflowError("Initialize the world first.")
+        if action == "location_build":
+            from girlframe.discord_adapter.m3_location_build import open_build
+            from girlframe.services.m3_location_build import LocationBuildService
+
+            await open_build(current, LocationBuildService(service.store))
+            return
         if action == "location_rebuild":
             from girlframe.discord_adapter.m3_location_rebuild import open_rebuild
             from girlframe.services.m3_location_rebuild import LocationRebuildService
@@ -405,6 +411,7 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
             ("cute_uniforms", "Cute Uniforms — actual dressing"),
             ("girl_insurance", "Girl Insurance — acquired source and effect"),
             ("location_rebuild", "Rebuild an actual damaged or destroyed location"),
+            ("location_build", "Build a new location"),
             ("gorgon_position", "Record an actually unknown Gorgon position"),
             ("npc", "Introduce an NPC"),
             ("npc_invite", "Invite someone to play an NPC / Director"),

@@ -5033,6 +5033,40 @@
       "revision": 1,
       "implementation_note": "Adjustable interpretation requiring printed-rule clarity review. Missing source/actor/construction adapters remain required implementation work.",
       "change_impact": "No source loss or invented additional benefits; exact printed rebuild scope. Printed-rule clarity review."
+    },
+    {
+      "id": "location-build-clarity-1",
+      "summary": "One existing-model major site (Base/City/Important) with one stable fresh identity/cell and intact physical condition, normally Foundation-funded. Actual new NPCs, population, political control of old territory and special source Tags are not bundled. Preserve real external blockers and territory.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF153 / printed151 direct Handler advancement spends",
+      "authority": "delegated_recommendation",
+      "rationale": "What one new Location means: apply one specific site effect while preserving independent world/source facts.",
+      "alternatives": [
+        "Unlimited arbitrary world edits or automatic population/control.",
+        "Permanent construction ability rather than one direct spend."
+      ],
+      "policy_key": "location_build_clarity_1",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable interpretation requiring printed-rule clarity review. Missing actor/territory/transport adapters remain required implementation work.",
+      "change_impact": "One genuine concrete world resource per award. Actual disputed/inaccessible sites need their real source eligibility; no fabricated clearance. Printed-rule clarity review."
+    },
+    {
+      "id": "location-build-clarity-2",
+      "summary": "Respect existing World identity/cell/board invariants. Existing ruined Location keeps its square until its real source is handled; rebuild remains distinct. Creating a new site does not erase past destruction/Budget triggers or move existing bodies.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF153 / printed151 direct Handler advancement spends",
+      "authority": "delegated_recommendation",
+      "rationale": "Placement and old loss: apply one specific site effect while preserving independent world/source facts.",
+      "alternatives": [
+        "Overwrite an old or ruined site.",
+        "Treat new Base as free transport/resurrection."
+      ],
+      "policy_key": "location_build_clarity_2",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable interpretation requiring printed-rule clarity review. Missing actor/territory/transport adapters remain required implementation work.",
+      "change_impact": "Preserves saved world/source history and permits real existing operational consumer use. Printed-rule clarity review."
     }
   ],
   "entries": [
@@ -5456,7 +5490,8 @@
         "tests/rules/test_retained_kicked_puppy.py",
         "tests/rules/test_retained_untouchable.py",
         "tests/rules/test_retained_martyr.py",
-        "tests/rules/test_retained_succubus.py"
+        "tests/rules/test_retained_succubus.py",
+        "tests/rules/test_retained_sup.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -10766,7 +10801,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_sup.py"
+        "tests/rules/test_sup.py",
+        "tests/rules/test_retained_sup.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -19055,6 +19091,62 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_location_rebuild.py"
+      ],
+      "m2_play_id": null,
+      "module": "core"
+    },
+    {
+      "id": "handler-advancement.direct-spend.build-location",
+      "title": "Build a new location (direct Handler advancement spend)",
+      "scope": "handler-advancement",
+      "kind": "mechanic",
+      "source": {
+        "document": "rulebook",
+        "pdf_page": 153,
+        "printed_page": 151,
+        "heading": "You can also use Handler advancements to: Build a new location"
+      },
+      "required": true,
+      "implementation": "subset",
+      "source_audit": "inventoried",
+      "independent_review": "pending",
+      "reviewer": null,
+      "review_reference": null,
+      "contract": {
+        "trigger": "Original Handler spends one held advancement to build one new Location",
+        "actor_type": "Original current Handler/persona/appointment",
+        "pre_roll_sources": [
+          "Genuine held award and original source owner",
+          "Canonical world, free in-board square and exact quoted revision",
+          "Actual new Location and immutable spend event"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "normal": [
+            "Create one intact canonical Location with fresh server ID",
+            "Consume one award atomically with typed before/after effect"
+          ]
+        },
+        "choice_ownership": "Original Handler selects source and site; existing downstream owners retain storage/physical choices",
+        "target_policy": "One free canonical square within existing board; preserve all prior sites, territory, positions, blockers and sources; no invented hostile-site clearance",
+        "post_roll_effects": [
+          "New site becomes usable by existing operational consumers within their actual constraints",
+          "Source-owned History preserves new-site effect; semantic replay creates one site and spends once",
+          "Old sites, bodies, territory and destruction sources remain unchanged"
+        ],
+        "mandatory_followups": [
+          "Real operational use retains actual body/Frame placement requirements",
+          "Ordinary award producers, Base alteration, territory resolution and transport remain separate required mechanics"
+        ],
+        "handler_or_gm_intervention": "Original current Handler owns one specific construction spend; no general world-edit authority",
+        "test_fixture_ids": [
+          "tests/rules/test_location_build.py"
+        ]
+      },
+      "dependencies": [],
+      "test_evidence": [
+        "tests/rules/test_location_build.py"
       ],
       "m2_play_id": null,
       "module": "core"

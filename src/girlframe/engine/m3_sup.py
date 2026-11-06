@@ -78,6 +78,7 @@ def grow(
     piloting: bool,
     step: int = 0,
 ) -> tuple[GameState, tuple[Followup, ...], Grown]:
+    from girlframe.engine.m3_class_retention import binding
     from girlframe.engine.m3_core import install, void_followups
     from girlframe.engine.m3_janus_storage import ids
 
@@ -114,7 +115,7 @@ def grow(
     state.sheets[actor.entity] = result.sheet
     fact = Grown(
         actor=actor,
-        frame=receipt.frame_instance,
+        frame=binding(original, receipt)[0],
         purchase=receipt.id,
         action=action,
         step=step,

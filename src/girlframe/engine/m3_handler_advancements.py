@@ -8,6 +8,7 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_handler_consequences import same_handler_body
+from girlframe.engine.m3_location_build import Effect as LocationBuildEffect
 from girlframe.engine.m3_location_rebuild import Effect as LocationRebuildEffect
 
 RULES = ("strain.void.endgame.6", "strain.void.endgame.7")
@@ -61,6 +62,9 @@ class Award(Model):
     location_rebuild: LocationRebuildEffect | None = Field(
         default=None, exclude_if=lambda value: value is None
     )
+    location_build: LocationBuildEffect | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     spend_event: str | None = None
     spend_account: str | None = Field(default=None, min_length=1, max_length=1200)
 
@@ -72,6 +76,7 @@ class Award(Model):
             int(bool(self.effects))
             + int(self.acquired_rule is not None)
             + int(self.location_rebuild is not None)
+            + int(self.location_build is not None)
         )
         if self.phase == "held":
             if variants or self.spend_event or self.spend_account or self.acquisition:
@@ -92,6 +97,13 @@ class Award(Model):
             or self.location_rebuild.event != self.spend_event
         ):
             raise ValueError("Keep this exact original Handler's actual location rebuild spend")
+        if self.location_build is not None and (
+            self.location_build.award != self.id
+            or self.location_build.handler != self.handler
+            or self.location_build.appointment != self.appointment
+            or self.location_build.event != self.spend_event
+        ):
+            raise ValueError("Keep this exact original Handler's actual new-location spend")
         if len({x.actor for x in self.effects}) != len(self.effects):
             raise ValueError("One advancement grants each selected original Girl Permissions once")
         return self

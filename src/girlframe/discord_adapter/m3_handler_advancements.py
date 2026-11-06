@@ -18,6 +18,12 @@ async def open_advancement(
     interaction: discord.Interaction, service: HandlerAdvancementService, identity: str
 ) -> None:
     data = await asyncio.to_thread(service.view, viewer_from_interaction(interaction), identity)
+    if data.get("location_build"):
+        from girlframe.discord_adapter.m3_location_build import open_build
+        from girlframe.services.m3_location_build import LocationBuildService
+
+        await open_build(interaction, LocationBuildService(service.store), identity)
+        return
     if data.get("location_rebuild"):
         from girlframe.discord_adapter.m3_location_rebuild import open_rebuild
         from girlframe.services.m3_location_rebuild import LocationRebuildService
@@ -130,6 +136,7 @@ async def open_advancement(
     form.add_item(AcquireCuteUniforms(form, service))
     form.add_item(AcquireGirlInsurance(form, service))
     form.add_item(RebuildLocation(form, service))
+    form.add_item(BuildLocation(form, service))
     await form.present(interaction)
 
 
@@ -236,3 +243,17 @@ class RebuildLocation(discord.ui.Button[NativeForm]):
         from girlframe.services.m3_location_rebuild import LocationRebuildService
 
         await open_rebuild(interaction, LocationRebuildService(self.service.store))
+
+
+class BuildLocation(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService):
+        super().__init__(label="Build a new location instead", row=4)
+        self.form, self.service = form, service
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_location_build import open_build
+        from girlframe.services.m3_location_build import LocationBuildService
+
+        await open_build(interaction, LocationBuildService(self.service.store))

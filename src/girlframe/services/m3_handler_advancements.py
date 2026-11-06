@@ -172,6 +172,10 @@ class HandlerAdvancementService:
                     from girlframe.services.m3_location_rebuild import prove_effect
 
                     prove_effect(self.game, c, value.location_rebuild)
+                if value.location_build is not None:
+                    from girlframe.services.m3_location_build import prove_effect as prove_build
+
+                    prove_build(self.game, c, value.location_build)
                 if value.acquired_rule is not None:
                     receipts: tuple[Any, ...]
                     if (
@@ -257,6 +261,9 @@ class HandlerAdvancementService:
                 acquisition=value.acquisition if value else None,
                 location_rebuild=value.location_rebuild.model_dump(mode="json")
                 if value and value.location_rebuild
+                else None,
+                location_build=value.location_build.model_dump(mode="json")
+                if value and value.location_build
                 else None,
                 effects=[
                     dict(

@@ -1,5 +1,38 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## New Location construction and retained Sup — 2026-11-06 UTC
+
+Source extends `e71b962e2a8b5bf4a94cd39f6cc0eb837970506c`. Exact public bytes
+are retained in ignored `var/m3-build-sup-freeze/manifest.json`.
+M3 remains **RULES_SUBSET**; final regression and independent/player review are pending.
+
+| Workflow | Focused evidence and supported boundary |
+|---|---|
+| Build a new location | A held award creates one intact Base at the original Girl/empty Frame's already-confirmed square. Previous World fields, sites, bodies, territory, sources and blockers persist. The original owner performs first Store at the new Base; private cross-channel History and semantic replay preserve one site/spend. The new normal passed in the initial mixed run (**1 passed / 1 failed / 5.72s**); the failure was an earlier held-award form exceeding Discord's button-row capacity. Moving only the new Build alternative to a free row fixed it; affected existing advancement checks then passed **3 / 7.08s**. New construction mechanics were unchanged and were not rerun solely for XML. Exact commands/console are in ignored `var/m3-location-build-handoff.json`. Hostile/disputed-site resolution, population and movement are separate. |
+| Retained Sup | Native2P purchase -> paid4P different-Frame Swap -> actual mid-Dive grows a new already-Void Asset at the replacement Frame's5-Asset cap. Effective Void rises4→5; the real outside-Frame/Gorgon consequence and parent action finish, restoring chat. Original receipt/history persist; actual Dive unmarking is preserved. **1 passed / 4.171s**, `var/m3-retained-sup.xml`; existing native Risk, grafted Dive and exact source/hardware assertion **3 passed / 4.730s**, `var/m3-retained-sup-compat.xml`. No existing five-producer matrix was repeated. |
+
+All **15 changed Python files**, including shared interfaces and three tests,
+pass Ruff/format; all **12 changed source modules** pass mypy after the UI fix.
+The typed advancement model preserves Permission, acquired-rule and Rebuild
+histories while admitting exactly one new construction effect. Inbox registration
+followed real service readiness, avoiding the earlier partial-import failure.
+
+Publishable check: **1,091 files / 40 original manifest entries / zero findings**.
+
+The inventory adds the previously omitted printed Build direct-spend branch on
+PDF153/printed151: **475 total / 438 required core / 37 deferred Ancillary**.
+Current metadata: **173 subsets / 302 unimplemented / 304 adjustable clarifications**,
+zero independent approvals. Counts are not percentages. Ordinary advancement
+producers and remaining playbook/Strain/world/shared/lifecycle/retained hardware
+still block M3. Next work prioritizes a bounded ordinary session/accomplishment
+award workflow; missing implementations remain required work, not house rules.
+
+Preceding checkpoint `e71b962e2a8b5bf4a94cd39f6cc0eb837970506c` was pushed and
+its exact remote SHA verified. [Focused CI 42195206550](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42195206550)
+passed. Newer source does not inherit that result or the historical 2,200-test full
+regression. No new full regression, restart/deployment, live migration, environment
+publication, private-engine write, AI/M4 or Ancillary activation; bot remains off.
+
 ## Actual Location rebuilding and retained Succubus — 2026-11-06 UTC
 
 Source extends `62fa1ebdd5622d5ee18c569d057e416ddfc0fa55`. Exact public bytes

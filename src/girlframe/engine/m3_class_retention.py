@@ -18,6 +18,7 @@ RULES = frozenset(
         "frame.class.autocrat.untouchable-frame",
         "frame.class.autocrat.martyr",
         "frame.class.autocrat.succubus-protocol",
+        "frame.class.priestess.sup-of-primordial-flesh",
     )
 )
 
