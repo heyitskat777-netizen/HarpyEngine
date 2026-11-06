@@ -621,6 +621,13 @@ class InboxView(discord.ui.View):
             await open_token(
                 interaction, SpecialGirlService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_handler_ordinary":
+            from girlframe.discord_adapter.m3_handler_ordinary import open_ordinary
+            from girlframe.services.m3_handler_ordinary import HandlerOrdinaryService
+
+            await open_ordinary(
+                interaction, HandlerOrdinaryService(self.service.store), item.identity
+            )
         elif item.task == "m3_location_build":
             from girlframe.discord_adapter.m3_location_build import open_build
             from girlframe.services.m3_location_build import LocationBuildService

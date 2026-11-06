@@ -1,6 +1,7 @@
-# Retained original Handler gift -> real Beneath/counter -> compulsory Punishment,
-# native/graft source compatibility and exact retained hardware boundaries.
+# Actual sessions + four legal starting-Identity replacements + ordinary award/spend,
+# earlier award sources and retained Modular recovery/source boundaries.
 # Final whole-M3 regression remains a separate candidate check.
-tests/rules/test_retained_special_girl.py
-tests/rules/test_special_girl.py
+tests/rules/test_handler_ordinary.py
+tests/rules/test_handler_advancements.py
+tests/rules/test_retained_modular.py
 tests/rules/test_class_retention.py::test_retained_class_requires_true_original_swap_chain_and_keeps_hardware_out

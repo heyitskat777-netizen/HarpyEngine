@@ -1,5 +1,38 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Ordinary Identity advancement and retained Modular — 2026-11-06 UTC
+
+Source extends `3f6834bf1cb4dd028a443639e39ca8406d5dcdfb`; exact bytes are retained
+in ignored `var/m3-ordinary-modular-freeze/manifest.json`. M3 remains
+**RULES_SUBSET**; final regression and independent/player review are pending.
+
+| Workflow | Focused evidence and supported boundary |
+|---|---|
+| Ordinary Handler advancement | An authorized human facilitator records actual session boundaries without participant acknowledgment gates. Four legal owner Tag-embrace chains replace the original activation Identities across two sessions; scene closure does not reset the active session. Incomplete criteria grant nothing. Scoped owner disclosure and the original Handler's usefulness judgment create a real ordinary held award, then the native existing form grants +2 actual Permissions once. Award replay and a later session cannot reset the permanent criterion mark-off. **1 passed / 9.79s**; prior award/source/Permission compatibility **3 passed / 6.21s**. Exact commands/console are in ignored `var/m3-handler-ordinary-handoff.json`. Saved history proves the activation/replacement source at award birth; no generic state-difference eligibility, fake required-work row or global Game observer. PR, capture/conversion and other replacement producers remain unavailable. |
+| Retained Modular | Native2P acquisition writes one physical Asset; paid4P Swap selects a different old Asset, leaving the written hardware parked. The replacement Frame receives the ongoing sixth slot and repair rule, not a free copy. Source suspension/restore changes capacity5↔6 without deleting inventory. Actual Go-Off-Duty/native owner recovery repairs and replaces a damaged new-Frame Asset with a new one. Owner recovery completes; other actors and period duties remain pending. **1 passed / 3.735s**, `var/m3-retained-modular.xml`; specified native/graft/source-hardware checks **3 passed / 7.905s**, `var/m3-retained-modular-compat.xml`. |
+
+All **14 changed Python files**, including every shared interface and three tests,
+pass Ruff/format; all **11 changed source modules** pass mypy. Ordinary source proof
+and rare Endgame work proof are distinct; the existing spend proof is shared.
+Native entry is the existing `/mission handler` menu, with no new slash command
+or World initialization prerequisite. Only actual disclosure/usefulness decisions
+are pending Inbox responses; session/source records stay in History.
+
+Five adjustable interpretations are recorded centrally: session boundaries,
+ordinary session cap/permanent criterion mark-off, real starting-Identity chains,
+scoped usefulness disclosure and ongoing Modular rule versus original hardware.
+Metadata: **174 subsets / 301 unimplemented / 309 clarifications**,475 total,
+438 required core,37 deferred Ancillary, zero independent approvals. Counts are
+not percentages. Remaining ordinary producers, advancements, playbook/Strain/world/
+shared/lifecycle/retained hardware and source reconciliation still block M3.
+Missing implementations are required work, not house rules.
+
+Preceding checkpoint `3f6834bf1cb4dd028a443639e39ca8406d5dcdfb` was pushed,
+with exact remote verified. [Focused CI 42197973809](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42197973809)
+passed. Newer source does not inherit that result or the historical full regression.
+No new full suite, restart/deployment, live migration, environment publication,
+private-engine write, AI/M4 or Ancillary activation; bot stays off.
+
 ## Retained Handler’s Special Girl — 2026-11-06 UTC
 
 Source extends `b4ca152e5960b8e65e0b09a7132df8bcbabcda20`; exact bytes are retained

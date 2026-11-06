@@ -8,6 +8,7 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_handler_consequences import same_handler_body
+from girlframe.engine.m3_handler_ordinary import AwardSource as OrdinarySource
 from girlframe.engine.m3_location_build import Effect as LocationBuildEffect
 from girlframe.engine.m3_location_rebuild import Effect as LocationRebuildEffect
 
@@ -39,10 +40,17 @@ class PermissionEffect(PermissionGrant):
 
 class Award(Model):
     id: str = Field(min_length=1)
-    rule: Literal["strain.void.endgame.6", "strain.void.endgame.7"]
+    rule: Literal[
+        "strain.void.endgame.6", "strain.void.endgame.7", "source.handler-advancement-triggers"
+    ]
     handler: ActorRef
     appointment: str = Field(min_length=1)
-    source_work: str = Field(min_length=1)
+    source_work: str | None = Field(
+        default=None, min_length=1, exclude_if=lambda value: value is None
+    )
+    ordinary_source: OrdinarySource | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     source_event: str = Field(min_length=1)
     award_event: str = Field(min_length=1)
     account: str = Field(min_length=1, max_length=1200)
@@ -70,8 +78,17 @@ class Award(Model):
 
     @model_validator(mode="after")
     def exact_original_award(self) -> "Award":
-        if self.handler.kind != "handler" or self.id != self.source_work:
+        if self.handler.kind != "handler":
             raise ValueError("Keep this exact actual original Handler source award")
+        if self.rule == "source.handler-advancement-triggers":
+            if (
+                self.source_work is not None
+                or self.ordinary_source is None
+                or self.id != "ordinary:" + self.ordinary_source.review
+            ):
+                raise ValueError("Keep the genuine ordinary source without a fabricated work row")
+        elif self.id != self.source_work or self.ordinary_source is not None:
+            raise ValueError("Keep this exact actual original Void award work")
         variants = (
             int(bool(self.effects))
             + int(self.acquired_rule is not None)

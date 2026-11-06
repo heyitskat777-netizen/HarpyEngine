@@ -67,14 +67,97 @@ class HandlerAdvancementService:
 
     def _access(self, c: Connection, viewer: GuildViewer, rule: str) -> None:
         gate = Access(self.store)
-        gate.authorize(c, viewer, "strain", director_response=True)
+        gate.authorize(
+            c, viewer, "strain" if rule in rules.RULES else "playbooks", director_response=True
+        )
         gate.authorize(c, viewer, "economy", director_response=True)
         assert gate.registry is not None
         gate.registry.require_available(rule)
 
+    def _spent(self, c: Connection, value: rules.Award, handler: ActorRef) -> None:
+        identity = value.id
+        if value.phase == "spent":
+            assert value.spend_event is not None
+            spent = _history(c, self.game, value.spend_event)
+            recorded = next((x for x in rules.awards(spent) if x.id == identity), None)
+            audit = c.execute(
+                sa.select(t.events.c.kind, t.events.c.actor_id).where(
+                    t.events.c.campaign_id == self.store.campaign_id,
+                    t.events.c.id == value.spend_event,
+                )
+            ).first()
+            if (
+                recorded != value
+                or audit is None
+                or audit.kind != "m3.handler_advancement_spent"
+                or audit.actor_id != handler.entity
+                or value.acquired_rule is None
+                and any(
+                    effect.actor.entity not in spent.sheets
+                    or spent.sheets[effect.actor.entity].character_id != effect.actor.incarnation
+                    or spent.sheets[effect.actor.entity].permissions != effect.after
+                    for effect in value.effects
+                )
+            ):
+                raise WorkflowError("Recover this actual consumed advancement and group effects")
+            if value.location_rebuild is not None:
+                from girlframe.services.m3_location_rebuild import prove_effect
+
+                prove_effect(self.game, c, value.location_rebuild)
+            if value.location_build is not None:
+                from girlframe.services.m3_location_build import prove_effect as prove_build
+
+                prove_build(self.game, c, value.location_build)
+            if value.acquired_rule is not None:
+                receipts: tuple[Any, ...]
+                if value.acquired_rule == "handler-advancement.handler-advancement.cute-uniforms":
+                    from girlframe.engine.m3_cute_uniforms import (
+                        acquisitions as uniform_acquisitions,
+                    )
+
+                    receipts = uniform_acquisitions(spent)
+                elif (
+                    value.acquired_rule == "handler-advancement.handler-advancement.girl-insurance"
+                ):
+                    from girlframe.engine.m3_girl_insurance import (
+                        acquisitions as insurance_acquisitions,
+                    )
+
+                    receipts = insurance_acquisitions(spent)
+                else:
+                    from girlframe.engine.m3_supply_drop import (
+                        acquisitions as drop_acquisitions,
+                    )
+
+                    receipts = drop_acquisitions(spent)
+                receipt = next((x for x in receipts if x.id == value.acquisition), None)
+                if (
+                    receipt is None
+                    or receipt.award != identity
+                    or receipt.event != value.spend_event
+                ):
+                    raise WorkflowError(
+                        "Recover the actual acquired advancement rule source receipt"
+                    )
+
     def _proof(
         self, c: Connection, identity: str
-    ) -> tuple[dict[str, Any], GameState, ActorRef, str, rules.Award | None]:
+    ) -> tuple[dict[str, Any] | None, GameState, ActorRef, str, rules.Award | None]:
+        current = load_state(c, self.store.campaign_id)
+        ordinary = next(
+            (
+                x
+                for x in rules.awards(current)
+                if x.id == identity and x.ordinary_source is not None
+            ),
+            None,
+        )
+        if ordinary is not None:
+            from girlframe.services.m3_handler_ordinary import prove_award
+
+            prove_award(self.game, c, current, ordinary)
+            self._spent(c, ordinary, ordinary.handler)
+            return None, current, ordinary.handler, ordinary.appointment, ordinary
         row = _work(c, self.store, identity)
         rule = json.loads(row["body_json"]).get("rule_id")
         if rule not in rules.RULES:
@@ -141,85 +224,25 @@ class HandlerAdvancementService:
                 or row["event_id"] != value.award_event
             ):
                 raise WorkflowError("Recover the actual original finite advancement award")
-            if value.phase == "spent":
-                assert value.spend_event is not None
-                spent = _history(c, self.game, value.spend_event)
-                recorded = next((x for x in rules.awards(spent) if x.id == identity), None)
-                audit = c.execute(
-                    sa.select(t.events.c.kind, t.events.c.actor_id).where(
-                        t.events.c.campaign_id == self.store.campaign_id,
-                        t.events.c.id == value.spend_event,
-                    )
-                ).first()
-                if (
-                    recorded != value
-                    or audit is None
-                    or audit.kind != "m3.handler_advancement_spent"
-                    or audit.actor_id != handler.entity
-                    or value.acquired_rule is None
-                    and any(
-                        effect.actor.entity not in spent.sheets
-                        or spent.sheets[effect.actor.entity].character_id
-                        != effect.actor.incarnation
-                        or spent.sheets[effect.actor.entity].permissions != effect.after
-                        for effect in value.effects
-                    )
-                ):
-                    raise WorkflowError(
-                        "Recover this actual consumed advancement and group effects"
-                    )
-                if value.location_rebuild is not None:
-                    from girlframe.services.m3_location_rebuild import prove_effect
-
-                    prove_effect(self.game, c, value.location_rebuild)
-                if value.location_build is not None:
-                    from girlframe.services.m3_location_build import prove_effect as prove_build
-
-                    prove_build(self.game, c, value.location_build)
-                if value.acquired_rule is not None:
-                    receipts: tuple[Any, ...]
-                    if (
-                        value.acquired_rule
-                        == "handler-advancement.handler-advancement.cute-uniforms"
-                    ):
-                        from girlframe.engine.m3_cute_uniforms import (
-                            acquisitions as uniform_acquisitions,
-                        )
-
-                        receipts = uniform_acquisitions(spent)
-                    elif (
-                        value.acquired_rule
-                        == "handler-advancement.handler-advancement.girl-insurance"
-                    ):
-                        from girlframe.engine.m3_girl_insurance import (
-                            acquisitions as insurance_acquisitions,
-                        )
-
-                        receipts = insurance_acquisitions(spent)
-                    else:
-                        from girlframe.engine.m3_supply_drop import (
-                            acquisitions as drop_acquisitions,
-                        )
-
-                        receipts = drop_acquisitions(spent)
-                    receipt = next((x for x in receipts if x.id == value.acquisition), None)
-                    if (
-                        receipt is None
-                        or receipt.award != identity
-                        or receipt.event != value.spend_event
-                    ):
-                        raise WorkflowError(
-                            "Recover the actual acquired advancement rule source receipt"
-                        )
+            self._spent(c, value, handler)
         elif row["state"] != "pending":
             raise WorkflowError("A resolved advancement source needs its actual saved award")
         return row, state, handler, appointment, value
 
     def _source(
         self, c: Connection, viewer: GuildViewer, identity: str
-    ) -> tuple[dict[str, Any], GameState, ActorRef, str, rules.Award | None]:
+    ) -> tuple[dict[str, Any] | None, GameState, ActorRef, str, rules.Award | None]:
         result = self._proof(c, identity)
-        self._access(c, viewer, json.loads(result[0]["body_json"])["rule_id"])
+        source_rule = (
+            result[4].rule
+            if result[4] is not None
+            else json.loads(result[0]["body_json"])["rule_id"]
+            if result[0] is not None
+            else None
+        )
+        if source_rule is None:
+            raise WorkflowError("Recover this genuine advancement source")
+        self._access(c, viewer, source_rule)
         if viewer.user_id != int(result[2].entity):
             raise WorkflowError("Only this actual original Handler owns the advancement source")
         return result
@@ -250,10 +273,17 @@ class HandlerAdvancementService:
             return dict(
                 id=identity,
                 revision=state.revision,
-                work_revision=row["revision"],
+                work_revision=row["revision"] if row is not None else None,
                 phase=value.phase if value else "claim",
                 current=current,
-                rule=value.rule if value else json.loads(row["body_json"])["rule_id"],
+                rule=value.rule
+                if value
+                else json.loads(row["body_json"])["rule_id"]
+                if row
+                else None,
+                ordinary_source=value.ordinary_source.model_dump(mode="json")
+                if value and value.ordinary_source
+                else None,
                 handler=handler.model_dump(mode="json"),
                 account=value.account if value else None,
                 spend_account=value.spend_account if value else None,
@@ -319,7 +349,8 @@ class HandlerAdvancementService:
             row, state, handler, appointment, value = self._source(c, viewer, identity)
             self._current(c, state, handler, appointment)
             if (
-                state.revision != expected_game
+                row is None
+                or state.revision != expected_game
                 or row["revision"] != work_revision
                 or row["state"] != "pending"
                 or value is not None
@@ -327,6 +358,7 @@ class HandlerAdvancementService:
                 or len(account) > 1200
             ):
                 raise WorkflowError("Reopen this actual unclaimed Handler advancement source")
+            assert row is not None
             event = str(uuid4())
             value = rules.Award(
                 id=identity,

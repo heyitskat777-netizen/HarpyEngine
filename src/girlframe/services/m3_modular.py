@@ -14,12 +14,25 @@ from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
-from girlframe.services.m3_privileges import purchase_proof
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
 if TYPE_CHECKING:
     from girlframe.services.m2_game import GameService
+
+
+def _paid_source(
+    game: "GameService", c: Connection, state: GameState, receipt: FrameRuleReceipt
+) -> tuple[str, tuple[str, ...]]:
+    from girlframe.services.m3_class_retention import proof
+
+    frame, chain = proof(game, c, state, receipt)
+    if len(chain) > 1:
+        registry = Access(game.store).registry
+        if registry is None:
+            raise WorkflowError("Recover the actual paid retained Modular source")
+        registry.require_available("core.core.frame-requisitions")
+    return frame, chain
 
 
 def entitlement(
@@ -35,7 +48,7 @@ def entitlement(
         gate.registry.require_available(rules.RULE)
     except ValueError:
         return None
-    purchase_proof(c, game.store, receipt)
+    _paid_source(game, c, state, receipt)
     return receipt
 
 
@@ -71,6 +84,18 @@ class ModularService:
                 return dict(available=False)
             self.game.character_binding(c, state, viewer.user_id)
             receipt = entitlement(self.game, c, state, actor)
+            paid = next(
+                (
+                    x
+                    for x in state.requisitions
+                    if isinstance(x, FrameRuleReceipt)
+                    and x.actor == actor
+                    and x.rule_id == rules.RULE
+                    and grafts.eligible(state, x)
+                ),
+                None,
+            )
+            chain = _paid_source(self.game, c, state, paid)[1] if paid else ()
             return dict(
                 available=True,
                 revision=state.revision,
@@ -80,14 +105,7 @@ class ModularService:
                 kind=kind,
                 price=price,
                 donors=list(grafts.donors(rules.RULE)) if kind == "frame_grafting" else [],
-                suspended=any(
-                    isinstance(x, FrameRuleReceipt)
-                    and x.actor == actor
-                    and x.rule_id == rules.RULE
-                    and grafts.eligible(state, x)
-                    and suspended(state, x.id)
-                    for x in state.requisitions
-                ),
+                suspended=any(suspended(state, identity) for identity in chain),
                 owned=receipt is not None,
             )
 
@@ -135,8 +153,8 @@ class ModularService:
             if any(
                 isinstance(x, FrameRuleReceipt)
                 and x.actor == actor
-                and x.frame_instance == frame
                 and x.rule_id == rules.RULE
+                and grafts.eligible(state, x)
                 for x in state.requisitions
             ):
                 raise WorkflowError("Restore the original entitlement instead of buying twice")

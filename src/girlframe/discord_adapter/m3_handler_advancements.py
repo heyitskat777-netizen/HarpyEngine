@@ -56,7 +56,11 @@ async def open_advancement(
                 title="Original advancement spend", description=clean(data["spend_account"])
             ),
         ]
-        content = "**Handler advancement spent**\nVoid Endgame " + data["rule"].rsplit(".", 1)[1]
+        content = "**Handler advancement spent**\n" + (
+            "Ordinary starting-Identity accomplishment"
+            if data.get("ordinary_source")
+            else "Void Endgame " + data["rule"].rsplit(".", 1)[1]
+        )
         if interaction.response.is_done():
             await interaction.edit_original_response(
                 content=content,

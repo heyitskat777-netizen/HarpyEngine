@@ -1,9 +1,21 @@
 # M3 remaining work — verified development snapshot
 
-Newest bounded addition: **retained Handler’s Special Girl**, preserving the original
-gift through Swap and completing real counter-damage/Punishment. Evidence is at
-the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md). Ordinary session/
-accomplishment awards remain the next priority.
+Newest bounded additions: **ordinary Handler advancement through actual sessions,
+proved replacement of all starting Identities, scoped usefulness judgment and
+actual token spending; retained Modular capacity/repair without hardware regrant**.
+Evidence is at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md).
+Registry: **174 subsets / 301 unimplemented / 309 adjustable clarifications**;
+475 total,438 required core,37 deferred Ancillary. Counts are not percentages.
+M3 remains **IN_PROGRESS / RULES_SUBSET**, bot off.
+
+Still required: ordinary PR and capture/conversion award sources, other legal
+Identity producers, remaining direct spends/Handler advancements, retained Class/
+hardware and temporary/clothing-container transitions. Remaining playbooks,
+shared rules, Strain/Endgames, world/actor/lifecycle consumers, source reconciliation
+and final integrated checks still block M3. Production source review remains
+enforced; synthetic fixtures do not certify it.
+
+Previous bounded addition: retained Handler’s Special Girl gift/Beneath/Punishment.
 
 Previous bounded additions: **new Location construction through a held advancement
 and actual storage use; retained Sup growth/capacity/full-Void consequence**.

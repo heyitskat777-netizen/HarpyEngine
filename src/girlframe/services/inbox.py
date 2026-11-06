@@ -842,6 +842,29 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_handler_ordinary import HandlerOrdinaryService
+
+            for ordinary_control in HandlerOrdinaryService(self.store)._tasks(connection, viewer):
+                ordinary_pending = bool(ordinary_control["pending"])
+                items.append(
+                    InboxItem(
+                        "handler-ordinary:" + ordinary_control["id"],
+                        "handler_ordinary",
+                        ordinary_control["id"],
+                        ordinary_control["revision"],
+                        "playbook",
+                        ordinary_control["label"],
+                        "Original session or review participant",
+                        "pending" if ordinary_pending else "established",
+                        ordinary_pending,
+                        False,
+                        "Review your session or source-proved advancement choice.",
+                        "Disclosure is scoped; a session record alone grants no award.",
+                        "Review ordinary advancement",
+                        task="m3_handler_ordinary",
+                    )
+                )
+
             from girlframe.services.m3_location_build import LocationBuildService
 
             for build_control in LocationBuildService(self.store)._tasks(connection, viewer):

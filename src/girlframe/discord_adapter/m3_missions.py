@@ -580,6 +580,11 @@ def register_missions(
                     await open_handler(current, HandlerCreationService(service.store))
                 elif token == "plays":
                     await open_handler_plays(current, HandlerPlayService(service.store))
+                elif token == "ordinary":
+                    from girlframe.discord_adapter.m3_handler_ordinary import open_ordinary
+                    from girlframe.services.m3_handler_ordinary import HandlerOrdinaryService
+
+                    await open_ordinary(current, HandlerOrdinaryService(service.store))
                 else:
                     raise WorkflowError("Choose a current Handler control.")
 
@@ -589,6 +594,7 @@ def register_missions(
                 (
                     ("persona", "Create or review your fictional Handler persona"),
                     ("plays", "Basic Handler Plays — actual human GM procedures"),
+                    ("ordinary", "Campaign sessions and ordinary advancement"),
                 ),
                 choose,
             ).show(interaction)

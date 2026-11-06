@@ -20,6 +20,7 @@ RULES = frozenset(
         "frame.class.autocrat.succubus-protocol",
         "frame.class.priestess.sup-of-primordial-flesh",
         "frame.class.autocrat.handlers-special-girl",
+        "frame.class.legion.modular-build",
     )
 )
 

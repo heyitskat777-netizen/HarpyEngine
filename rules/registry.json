@@ -5067,6 +5067,91 @@
       "revision": 1,
       "implementation_note": "Adjustable interpretation requiring printed-rule clarity review. Missing actor/territory/transport adapters remain required implementation work.",
       "change_impact": "Preserves saved world/source history and permits real existing operational consumer use. Printed-rule clarity review."
+    },
+    {
+      "id": "handler-ordinary-clarity-1",
+      "summary": "Authorized human facilitator records actual OOC session start/end with canonical provenance. Existing owned game actions establish participation; no mandatory participant boundary acknowledgment or extra end veto. Scene/OffDuty transitions never reset session cap; no invented duration or roll quota.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF153 / printed151 ordinary Handler advancement triggers",
+      "authority": "delegated_recommendation",
+      "rationale": "Session authenticity: apply the printed source while preserving existing ownership/history.",
+      "alternatives": [
+        "Treat scene close as session end.",
+        "Permit a single unowned reset/ack to generate credit.",
+        "Require arbitrary real-time days/roll count not printed."
+      ],
+      "policy_key": "handler_ordinary_clarity_1",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review. Missing producers/actor/body adapters remain required implementation work.",
+      "change_impact": "One actual ordinary loop with genuine human session source plus real mechanical accomplishment; no session-only reward facade. Source clarity review."
+    },
+    {
+      "id": "handler-ordinary-clarity-2",
+      "summary": "One ordinary base-trigger award per actual Session per original Handler body, shared cap for the three listed ordinary criteria. Mark off the completed criterion once for that original Handler; do not reset it by new Girl, reopened review, new scene or account alias. Explicit rare Endgame awards retain their printed independent source.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF153 / printed151 ordinary Handler advancement triggers",
+      "authority": "delegated_recommendation",
+      "rationale": "Printed 1/session and mark-off: apply the printed source while preserving existing ownership/history.",
+      "alternatives": [
+        "Each criterion grants once every session after first completion.",
+        "Remove criterion mark-off or share rare Endgame sources into the ordinary cap."
+      ],
+      "policy_key": "handler_ordinary_clarity_2",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review. Missing producers/actor/body adapters remain required implementation work.",
+      "change_impact": "Conservative reading of printed checkbox mark-off plus session limit; ordinary PR/capture future ports must use same cap and mark-off. Requires printed-rule clarity review, root may steer before release."
+    },
+    {
+      "id": "handler-ordinary-clarity-3",
+      "summary": "Use actual activation Identity instances and legal actual replacement provenance, not matching/different names or current draft. Ordinary Tag-embrace chains are the first supported producer; all actual starting identities must be replaced, and each proven current endpoint judged useful. Preserve protected/Paired/Sedation/obsession locks and original person. Legal replacement chains may accumulate across earlier sessions; no all-replacements-in-one-session requirement. Current actual usefulness judgment is the award trigger.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF153 / printed151 ordinary Handler advancement triggers",
+      "authority": "delegated_recommendation",
+      "rationale": "What starting replacement means: apply the printed source while preserving existing ownership/history.",
+      "alternatives": [
+        "Count renaming, unmarking, missing resources or factory-reset replacement body as achievement.",
+        "Require only one useful new Identity."
+      ],
+      "policy_key": "handler_ordinary_clarity_3",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review. Missing producers/actor/body adapters remain required implementation work.",
+      "change_impact": "Actual mechanical accomplishment; additional/reset/other identity producers need their real explicit source adapter rather than fabricated evidence. Protected/additional starting-Identity meaning remains clarity review."
+    },
+    {
+      "id": "handler-ordinary-clarity-4",
+      "summary": "Usefulness is the actual original fictional Handler’s subjective judgment with reasons for concrete proved replacements. Girl’s disclosure is scoped privacy consent only; it does not change Identities or replace objective history proof.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF153 / printed151 ordinary Handler advancement triggers",
+      "authority": "delegated_recommendation",
+      "rationale": "Usefulness and private identity disclosure: apply the printed source while preserving existing ownership/history.",
+      "alternatives": [
+        "Narrative yes/no grants token without replacement.",
+        "Expose all private sheets automatically to any human facilitator."
+      ],
+      "policy_key": "handler_ordinary_clarity_4",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review. Missing producers/actor/body adapters remain required implementation work.",
+      "change_impact": "Keeps printed subjective criterion real while preserving human/fictional-role and private data boundaries. No punishment for declined/nonresponse/OOC consent."
+    },
+    {
+      "id": "retained-modular-ongoing-rule-and-hardware",
+      "summary": "Retaining the whole printed rule carries ongoing extra maximum slot and future actual repair substitution to current newFrame. Original acquisition written Asset is a physical item; move it only if it is the one actual selected old Asset, never re-write/copy it for free at Swap/restore. Normal selects another Asset to demonstrate no silent hardware migration.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF94 / printed92 Modular Build; PDF16 / printed14 Frame Swap",
+      "authority": "delegated_recommendation",
+      "rationale": "Ongoing slot/rule vs one-time written hardware: apply the printed source while preserving existing ownership/history.",
+      "alternatives": [
+        "Carry only repair clause and drop real sixth-slot entitlement; copy old written hardware/new gift; mutate original receipt to new Frame; charge another acquisition."
+      ],
+      "policy_key": "retained_modular_ongoing_rule_and_hardware",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review. Missing producers/actor/body adapters remain required implementation work.",
+      "change_impact": "Uses existing source-driven capacity and genuine repair consumer, preserves printed1Asset Swap constraint and original acquisition lifetime. Adjustable printed-rule clarity review remains pending."
     }
   ],
   "entries": [
@@ -5492,7 +5577,8 @@
         "tests/rules/test_retained_martyr.py",
         "tests/rules/test_retained_succubus.py",
         "tests/rules/test_retained_sup.py",
-        "tests/rules/test_retained_special_girl.py"
+        "tests/rules/test_retained_special_girl.py",
+        "tests/rules/test_retained_modular.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -10968,7 +11054,8 @@
       "test_evidence": [
         "tests/rules/test_modular.py",
         "tests/rules/test_modular_repair_producers.py",
-        "tests/rules/test_class_grafts.py"
+        "tests/rules/test_class_grafts.py",
+        "tests/rules/test_retained_modular.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -16073,14 +16160,48 @@
         "heading": "Handler advancement triggers"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "During an actual recorded campaign session, original Handler judges all proved replacement starting Identities useful",
+        "actor_type": "Authorized human facilitator, original Girl and original Handler/body/appointment",
+        "pre_roll_sources": [
+          "Actual canonical session and original human facilitator boundary record",
+          "Original activation Identity instances and genuine owner-owned Tag-embrace replacement chains",
+          "Scoped Girl disclosure and exact current endpoint usefulness judgment",
+          "One ordinary award per session and permanent original-Handler criterion mark-off"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "normal": [
+            "One source-proved ordinary held award",
+            "Existing actual selected-group1or2Permission spend consumes it once"
+          ]
+        },
+        "choice_ownership": "Facilitator records OOC session boundaries; original Girl owns scoped disclosure and actual replacement choices; original Handler owns usefulness judgment and award spending",
+        "target_policy": "Exact original people/current endpoints; replacements may span prior sessions, no scene reset, renaming, draft editing or generic state-difference accomplishment",
+        "post_roll_effects": [
+          "Real source-proved token without fake required-work row",
+          "Shared ordinary session cap and criterion mark-off persist through scene changes/replay",
+          "Actual Permission effect and private source history preserve independent rare Endgame awards"
+        ],
+        "mandatory_followups": [
+          "All actual starting Identity instances must have genuine supported replacement chains and useful current endpoints",
+          "PR/capture/conversion and other replacement producers remain required exact source ports"
+        ],
+        "handler_or_gm_intervention": "Actual original Handler subjective usefulness reasons complement objective source proof; attendance/disclosure alone grants nothing",
+        "test_fixture_ids": [
+          "tests/rules/test_handler_ordinary.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_handler_ordinary.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
