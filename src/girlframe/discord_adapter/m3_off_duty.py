@@ -206,7 +206,12 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
             saved = await asyncio.to_thread(
                 StrainService(service).work, viewer_from_interaction(current), identity
             )
-            if saved["body"]["rule_id"] == "strain.budget.endgame.7":
+            if saved["body"]["rule_id"] == "strain.budget.endgame.4":
+                from girlframe.discord_adapter.m3_budget_removal import open_removal
+                from girlframe.services.m3_budget_removal import RemovalService
+
+                await open_removal(current, RemovalService(service.store), identity)
+            elif saved["body"]["rule_id"] == "strain.budget.endgame.7":
                 from girlframe.discord_adapter.m3_budget_departures import open_departures
                 from girlframe.services.m3_budget_departures import DepartureService
 

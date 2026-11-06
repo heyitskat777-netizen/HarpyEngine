@@ -383,6 +383,9 @@ class FrameSwapService(PersonalFirearmService):
 
                 self.game.unpaused(c)
                 self._safe(c, state, viewer.user_id)
+                from girlframe.engine.m3_supply_drop import require_temporary_clear
+
+                require_temporary_clear(state, actor)
                 if not delivered or current.cell is None:
                     raise WorkflowError(
                         "Confirm actual delivery at your known unchanged body location."

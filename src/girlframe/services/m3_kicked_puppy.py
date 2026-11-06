@@ -16,7 +16,6 @@ from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
-from girlframe.services.m3_privileges import purchase_proof
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -37,7 +36,14 @@ def entitlement(
         gate.registry.require_available(rules.RULE)
     except ValueError:
         return None
-    purchase_proof(c, game.store, receipt)
+    from girlframe.services.m3_class_retention import proof
+
+    _, source_chain = proof(game, c, state, receipt)
+    if len(source_chain) > 1:
+        try:
+            gate.registry.require_available("core.core.frame-requisitions")
+        except ValueError:
+            return None
     return receipt
 
 
@@ -66,10 +72,13 @@ def prepare(
     )
     actual = resolve(state, actor, profiles(c, game.store.campaign_id))
     assert game.store.policy.m3_approval is not None
+    from girlframe.engine.m3_class_retention import binding
+
+    actual_frame, _ = binding(state, receipt)
     return dict(
         actor=actor.model_dump(mode="json"),
         target=target.model_dump(mode="json"),
-        frame=receipt.frame_instance,
+        frame=actual_frame,
         purchase=receipt.id,
         use_basis=prepared.kicked_puppy_basis,
         modifier=sum(x.family == "girl" and x.damaged for x in actual.assets),
@@ -97,7 +106,11 @@ def current(
         return None
     actor = ActorRef.model_validate(meta["actor"])
     receipt = entitlement(game, c, state, actor)
-    if receipt is None or receipt.id != meta["purchase"] or receipt.frame_instance != meta["frame"]:
+    if receipt is None or receipt.id != meta["purchase"]:
+        return None
+    from girlframe.engine.m3_class_retention import binding
+
+    if binding(state, receipt)[0] != meta["frame"]:
         return None
     return dict(meta)
 
@@ -205,7 +218,7 @@ class KickedPuppyService:
             if any(
                 isinstance(x, FrameRuleReceipt)
                 and x.actor == actor
-                and x.frame_instance == frame
+                and (x.frame_instance == frame or grafts.eligible(state, x))
                 and x.rule_id == rules.RULE
                 for x in state.requisitions
             ):

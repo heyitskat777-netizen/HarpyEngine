@@ -328,7 +328,7 @@ def test_retained_class_requires_true_original_swap_chain_and_keeps_hardware_out
     game, swap, _, paid, asset, production = prepared(ledger, tmp_path, monkeypatch)
     _, _ = exchange(game, swap, asset)
     canon = state(game)
-    assert rules.RULES == {dampener.RULE}
+    assert rules.RULES == {dampener.RULE, "frame.class.legion.kicked-puppy"}
     with ledger.engine.connect() as c:
         assert "frame.class.autocrat.clone-am" not in swap_rules.retained_rules(
             canon, current_ref(canon, 2), profiles(c, ledger.campaign_id), swap._registry()

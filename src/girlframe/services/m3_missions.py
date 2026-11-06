@@ -618,6 +618,10 @@ class MissionService:
             from girlframe.services.m3_budget_assassination import before_rewards
 
             before_rewards(c, self.store, state, mission, success)
+            from girlframe.services.m3_supply_drop import expire_mission
+
+            expiry_work = expire_mission(self.game, c, mission, viewer, key)
+            state = load_state(c, self.store.campaign_id)
             # These reactions must occur before taking the final reward/Status snapshot.
             reactions = []
             for uid, sheet in state.sheets.items():
@@ -629,7 +633,7 @@ class MissionService:
                     and not success
                 ):
                     reactions.append((int(uid), "doctor_obsolescence", 71))
-            if reactions:
+            if reactions or expiry_work:
                 updated = rules.changed(mission, phase="ending", success=success)
                 event = self.game.event(
                     c,
@@ -672,6 +676,9 @@ class MissionService:
         self, c: Connection, viewer: GuildViewer, key: str, mission: rules.Mission, success: bool
     ) -> dict[str, Any]:
         state = load_state(c, self.store.campaign_id)
+        from girlframe.services.m3_supply_drop import require_expired
+
+        require_expired(state, mission.id)
         from girlframe.services.m3_budget_assassination import before_rewards
 
         before_rewards(c, self.store, state, mission, success)

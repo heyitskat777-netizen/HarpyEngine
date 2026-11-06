@@ -4726,6 +4726,108 @@
       "revision": 1,
       "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review; supported actual-source normal scope only. Missing actors/producers/hardware adapters remain required implementation work, not house rules.",
       "change_impact": "Real employment/job or life/cast/journey changes; surviving people/resources and immutable originals persist. Current Directors, insufficient three NPCs and unsupported bodies remain explicit gaps; no substitute completion or personal kill-credit invention."
+    },
+    {
+      "id": "supply-drop-finite-advancement-and-mission-quota",
+      "summary": "One genuine held advancement permanently acquires this exact rule for its original Handler. A Mission use costs no further Permissions/awards. One shared once-per-Mission quota across repair and drop, charged only on actual repair or delivered installation; cancelled/declined proposals do not spend it.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 153,160",
+      "authority": "delegated_recommendation",
+      "rationale": "Printed advancement category and once-per-mission wording gives no extra price and only one alternative effect.",
+      "alternatives": [
+        "Charge an advancement or Permission on every use.",
+        "Charge a use when an undelivered proposal is created."
+      ],
+      "policy_key": "supply_drop_finite_advancement_and_mission_quota",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review. Only finite actual-source normal workflows are implemented; missing actor/hardware/container/provenance ports remain required work, not house rules.",
+      "change_impact": "Finite actual acquisition and one successful Mission effect, no phantom charges/refunds. Requires printed-rule clarity review."
+    },
+    {
+      "id": "supply-drop-temporary-duration-and-capacity",
+      "summary": "Temporary equipment expires at the end of its source Mission and counts toward ordinary Frame capacity; actual owner chooses legal capacity replacement. Expiry removes exact source hardware, following genuine Modular old->new repair lineage, and does not restore erased old hardware.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 160",
+      "authority": "delegated_recommendation",
+      "rationale": "Mission is the nearest explicit time boundary; no extra-slot exemption or restoration is printed.",
+      "alternatives": [
+        "Extra capacity outside printed cap.",
+        "Indefinite or one-action duration."
+      ],
+      "policy_key": "supply_drop_temporary_duration_and_capacity",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review. Only finite actual-source normal workflows are implemented; missing actor/hardware/container/provenance ports remain required work, not house rules.",
+      "change_impact": "Real expiry and mandatory removal consequences, no permanent equipment or fake BatteryAsset exemption. Duration and cap interpretation require printed-rule clarity review."
+    },
+    {
+      "id": "supply-drop-real-remote-delivery",
+      "summary": "Printed rule authorizes remote custom equipment delivery without an invented courier/cost. Require actual current original Girl and assigned current Frame at known source-proved cell; actual receiver confirms mechanical installation and owner capacity choice.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 160",
+      "authority": "delegated_recommendation",
+      "rationale": "Drop provides equipment but neither moves a body/Frame nor creates physical facts from a checkbox.",
+      "alternatives": [
+        "A note/acknowledgment with no Asset effect.",
+        "A new generic courier/transport simulation."
+      ],
+      "policy_key": "supply_drop_real_remote_delivery",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review. Only finite actual-source normal workflows are implemented; missing actor/hardware/container/provenance ports remain required work, not house rules.",
+      "change_impact": "Actual delivery/Asset source and current person/Frame/cell checks. Unsupported physical containers remain blocked. Requires printed-rule clarity review."
+    },
+    {
+      "id": "supply-drop-repair-owned-asset-family",
+      "summary": "Girl possessive permits repairing one actual owned Girl or Frame Asset; preserve flags and scrapped-Frame restrictions. Any independent optional Modular replacement belongs to the affected owner and keeps its own genuine source.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 160",
+      "authority": "delegated_recommendation",
+      "rationale": "Printed possessive does not restrict family to Girl Assets; actual existing repair source supports both.",
+      "alternatives": [
+        "Restrict to Girl-family only.",
+        "Erase Void or let Handler choose another owner’s hardware."
+      ],
+      "policy_key": "supply_drop_repair_owned_asset_family",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review. Only finite actual-source normal workflows are implemented; missing actor/hardware/container/provenance ports remain required work, not house rules.",
+      "change_impact": "Real one-resource repair and existing owned Modular behavior. Requires printed-rule clarity review."
+    },
+    {
+      "id": "source-owned-last-frame-loss-review",
+      "summary": "Last usable Frame removal requires Defeat only with actual source-proved piloting and in-battle facts, matching existing Frame-loss review. Mission activity alone is not battle. Unknown expiry battle context requires actual Handler factual review; no automatic Frame scrap.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 15,29,160",
+      "authority": "delegated_recommendation",
+      "rationale": "Physical condition and actual battlefield context must remain truthful; finite loss helper delegates authority to each genuine producer.",
+      "alternatives": [
+        "Infer battle from active Mission.",
+        "Waive required Defeat via acknowledgment or automatic scrap."
+      ],
+      "policy_key": "source_owned_last_frame_loss_review",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review. Only finite actual-source normal workflows are implemented; missing actor/hardware/container/provenance ports remain required work, not house rules.",
+      "change_impact": "Actual owned review and genuine Defeat/threshold completion before reward continuation. Review timing requires printed-rule clarity review."
+    },
+    {
+      "id": "asset-loss-only-actual-opponent",
+      "summary": "Record actual physical context and either a real opposing person or explicitly known opponent-none. Last Girl protection lost outside a Frame creates ordinary Helplessness only against a real typed foe; never invent Handler/budget/universal opponent or treat unknown as none.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF15/printed13 Assets/Helplessness; Budget Endgame4 PDF152/printed150",
+      "authority": "delegated_recommendation",
+      "rationale": "The printed condition says against your opponent. A maintenance source supplies no automatic fictional attacker, while known absence and unknown facts are distinct.",
+      "alternatives": [
+        "Use original Handler or budget as an invented foe",
+        "Treat unknown opponent as no opponent or redesign generalized Helplessness"
+      ],
+      "policy_key": "asset_loss_only_actual_opponent",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review. Only finite actual-source normal workflows are implemented; missing actor/hardware/container/provenance ports remain required work, not house rules.",
+      "change_impact": "Real foe-specific mechanical condition and actual source facts; no unrelated role authority. Unknown positions/context still require recovery and unsupported adapters remain explicit."
     }
   ],
   "entries": [
@@ -5145,7 +5247,8 @@
         "tests/rules/test_requisitions.py",
         "tests/rules/test_requisition_service.py",
         "tests/rules/test_installation_history.py",
-        "tests/rules/test_class_retention.py"
+        "tests/rules/test_class_retention.py",
+        "tests/rules/test_retained_kicked_puppy.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -10580,7 +10683,8 @@
       "test_evidence": [
         "tests/rules/test_kicked_puppy.py",
         "tests/rules/test_class_privileges.py",
-        "tests/rules/test_class_grafts.py"
+        "tests/rules/test_class_grafts.py",
+        "tests/rules/test_retained_kicked_puppy.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -15554,14 +15658,52 @@
         "heading": "Budget endgame slot 4"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Authentic recursive Budget Endgame4 and original source-roster Girls",
+        "actor_type": "Original Handler factual reviewer and each actual affected native original Girl",
+        "pre_roll_sources": [
+          "Immutable selected Endgame and original roster",
+          "Canonical physical facts, actual opponent or explicitly known none",
+          "Each original owner chooses exactly one actual Girl and one actual Frame Asset"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "normal": [
+            "Only selected actual pair is removed; unselected resources/marks/history persist",
+            "Real outside-Frame actual-foe Helpless, battle/piloting Defeat and full effective-Void consequences use genuine source receipts",
+            "Post-removal original ending/conversion preserves completed removal; no successor re-removal",
+            "Parent closes only after all original losses and bound actual consequences, including Defeat chat restoration",
+            "Original owner privately reopens saved pair/account and completed history"
+          ]
+        },
+        "choice_ownership": "Each affected player chooses their own Assets without extra GM approval; original Handler reviews truthful physical/opponent/battle context and closes completed parent",
+        "target_policy": "Exact original person/current supported body, actual Frame/source and real mechanical resources; no controller alias or unproved physical facts",
+        "post_roll_effects": [
+          "Only selected actual pair is removed; unselected resources/marks/history persist",
+          "Real outside-Frame actual-foe Helpless, battle/piloting Defeat and full effective-Void consequences use genuine source receipts",
+          "Post-removal original ending/conversion preserves completed removal; no successor re-removal",
+          "Parent closes only after all original losses and bound actual consequences, including Defeat chat restoration",
+          "Original owner privately reopens saved pair/account and completed history"
+        ],
+        "mandatory_followups": [
+          "Actual known Placement and source-derived child work, never unknown=>false or fake Punishment",
+          "Unsupported intrinsic/battery/stored/temp/held resource aliases and pre-choice changed actor/Frame/roster need genuine adapters"
+        ],
+        "handler_or_gm_intervention": "Actual printed owners and original Handler; physical/battle context is factual review, not an approval veto over another player choice",
+        "test_fixture_ids": [
+          "tests/rules/test_budget_removal.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_budget_removal.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -16094,14 +16236,52 @@
         "heading": "Supply Drop"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Actual held Handler advancement acquires the finite rule, then one real effect per actual Mission",
+        "actor_type": "Original Handler and actual affected original Girl/assigned Frame",
+        "pre_roll_sources": [
+          "Genuine award/acquisition proof",
+          "Actual Mission, original source and live person/Frame",
+          "Actual damaged Asset or known source-proved Frame delivery cell and owner capacity choice"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "normal": [
+            "One award acquisition; no per-use Permission or extra award cost",
+            "Repair one real owned Girl/Frame Asset, preserving flags and original-owner Modular choice",
+            "OR actually deliver/install one custom temporary Frame Asset after original receiver confirmation/capacity choice",
+            "Shared once-per-Mission quota spent only on real effect; declined/cancelled proposals do not spend",
+            "Exact source hardware expires at source Mission ending; required actual loss consequences block rewards until complete"
+          ]
+        },
+        "choice_ownership": "Original Handler acquires and chooses effect/target; affected owner confirms delivery and any actual capacity/Modular replacement",
+        "target_policy": "Exact original person/current supported body, actual Frame/source and real mechanical resources; no controller alias or unproved physical facts",
+        "post_roll_effects": [
+          "One award acquisition; no per-use Permission or extra award cost",
+          "Repair one real owned Girl/Frame Asset, preserving flags and original-owner Modular choice",
+          "OR actually deliver/install one custom temporary Frame Asset after original receiver confirmation/capacity choice",
+          "Shared once-per-Mission quota spent only on real effect; declined/cancelled proposals do not spend",
+          "Exact source hardware expires at source Mission ending; required actual loss consequences block rewards until complete"
+        ],
+        "mandatory_followups": [
+          "Actual expiry Defeat/Void work must reach real supported endpoint before Mission rewards",
+          "Unsupported live-temporary container/career transitions remain gated; no invented early expiry or lifecycle-complete claim"
+        ],
+        "handler_or_gm_intervention": "Actual printed owners and original Handler; physical/battle context is factual review, not an approval veto over another player choice",
+        "test_fixture_ids": [
+          "tests/rules/test_supply_drop.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_supply_drop.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

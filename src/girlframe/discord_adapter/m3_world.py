@@ -219,6 +219,12 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
         world = fresh["world"]
         if world is None:
             raise WorkflowError("Initialize the world first.")
+        if action == "supply_drop":
+            from girlframe.discord_adapter.m3_supply_drop import open_supply_drop
+            from girlframe.services.m3_supply_drop import SupplyDropService
+
+            await open_supply_drop(current, SupplyDropService(service.store))
+            return
         if action == "matrix_context":
             from girlframe.discord_adapter.m3_appearance_matrix import open_matrix
             from girlframe.services.m3_appearance_matrix import MatrixService
@@ -377,6 +383,7 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
         (
             ("map", "View the player map"),
             ("matrix_context", "Set Matrix scene location"),
+            ("supply_drop", "Supply Drop — repair or temporary Frame equipment"),
             ("gorgon_position", "Record an actually unknown Gorgon position"),
             ("npc", "Introduce an NPC"),
             ("npc_invite", "Invite someone to play an NPC / Director"),

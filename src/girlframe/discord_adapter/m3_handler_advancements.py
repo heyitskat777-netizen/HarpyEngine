@@ -18,6 +18,13 @@ async def open_advancement(
     interaction: discord.Interaction, service: HandlerAdvancementService, identity: str
 ) -> None:
     data = await asyncio.to_thread(service.view, viewer_from_interaction(interaction), identity)
+    if data.get("acquired_rule"):
+        await reply(
+            interaction,
+            "This advancement acquired Supply Drop. "
+            "The original acquisition source is saved; open Supply Drop to use it.",
+        )
+        return
     if data["phase"] == "spent":
         grants = "\n".join(
             f"{clean(x['label'])}: +{x['amount']} Permissions ({x['before']} → {x['after']})"
@@ -90,7 +97,7 @@ async def open_advancement(
         selected = [x for x in data["candidates"] if x["token"] in values["girls"]]
         await open_grant(current, service, data, selected)
 
-    await NativeForm(
+    form = NativeForm(
         interaction.user.id,
         "Spend Handler advancement — Permissions",
         "Choose any number of your actual Girls. One advancement covers the whole selected group, "
@@ -105,7 +112,9 @@ async def open_advancement(
             )
         ],
         select,
-    ).present(interaction)
+    )
+    form.add_item(AcquireSupplyDrop(form, service))
+    await form.present(interaction)
 
 
 async def open_grant(
@@ -155,3 +164,17 @@ async def open_grant(
         fields,
         spend,
     ).present(interaction)
+
+
+class AcquireSupplyDrop(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService):
+        super().__init__(label="Acquire Supply Drop instead", row=3)
+        self.form, self.service = form, service
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_supply_drop import open_supply_drop
+        from girlframe.services.m3_supply_drop import SupplyDropService
+
+        await open_supply_drop(interaction, SupplyDropService(self.service.store))

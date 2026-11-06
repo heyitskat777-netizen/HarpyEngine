@@ -46,6 +46,10 @@ class Award(Model):
     account: str = Field(min_length=1, max_length=1200)
     phase: Literal["held", "spent"] = "held"
     effects: tuple[PermissionEffect, ...] = ()
+    acquired_rule: Literal["handler-advancement.handler-advancement.supply-drop"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    acquisition: str | None = Field(default=None, exclude_if=lambda value: value is None)
     spend_event: str | None = None
     spend_account: str | None = Field(default=None, min_length=1, max_length=1200)
 
@@ -54,10 +58,25 @@ class Award(Model):
         if self.handler.kind != "handler" or self.id != self.source_work:
             raise ValueError("Keep this exact actual original Handler source award")
         if self.phase == "held":
-            if self.effects or self.spend_event or self.spend_account:
+            if (
+                self.effects
+                or self.spend_event
+                or self.spend_account
+                or self.acquired_rule
+                or self.acquisition
+            ):
                 raise ValueError("An unspent advancement has no fabricated effects")
-        elif not self.effects or not self.spend_event or not self.spend_account:
-            raise ValueError("A spent advancement preserves its actual group grant and source")
+        elif (
+            not self.spend_event
+            or not self.spend_account
+            or self.acquired_rule is None
+            and (not self.effects or self.acquisition is not None)
+            or self.acquired_rule is not None
+            and (self.effects or not self.acquisition)
+        ):
+            raise ValueError(
+                "A spent advancement preserves its exact implemented effect and source"
+            )
         if len({x.actor for x in self.effects}) != len(self.effects):
             raise ValueError("One advancement grants each selected original Girl Permissions once")
         return self

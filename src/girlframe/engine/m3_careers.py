@@ -228,7 +228,9 @@ def end(
     from girlframe.engine.m3_actor_bonds import migrate_actor, migrate_helpless
     from girlframe.engine.m3_enforcer import end_grasps
     from girlframe.engine.m3_physical import interrupt_journeys
+    from girlframe.engine.m3_supply_drop import require_temporary_clear
 
+    require_temporary_clear(state, actor)
     original_sheet_json = sheet.model_dump_json()
     state = interrupt_journeys(state, actor, source_event, account)
     state = end_grasps(state, actor, source_event)

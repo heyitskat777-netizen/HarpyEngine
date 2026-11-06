@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from girlframe.engine.m2 import GameState
 
 # Each consumer needs its own original-source/current-Frame adapter. Hardware is not implied.
-RULES = frozenset(("frame.class.legion.dampener-link",))
+RULES = frozenset(("frame.class.legion.dampener-link", "frame.class.legion.kicked-puppy"))
 
 
 class Retention(Model):

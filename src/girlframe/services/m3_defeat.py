@@ -90,6 +90,10 @@ def prepare(
         body = json.loads(source_work["body_json"])
         if source_work["owner_id"] != actor.entity or body.get("character") != actor.incarnation:
             raise WorkflowError("This Defeat belongs to a different original character.")
+        if body.get("reason") in ("supply_drop_expiry", "budget_removal"):
+            from girlframe.services.m3_asset_loss import prove_loss_work
+
+            prove_loss_work(game, c, source_work, body, actor)
         battle_damage = isinstance(body.get("requirement"), dict)
         if battle_damage:
             from girlframe.services.m3_battle import source_parent_for_defeat

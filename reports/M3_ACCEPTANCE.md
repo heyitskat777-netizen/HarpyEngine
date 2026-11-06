@@ -1,5 +1,44 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Supply Drop, Budget Asset removals and retained Kicked Puppy — 2026-11-06 UTC
+
+Source extends `79fd40a70a5ea6aa1572fa56c4fe2b859e691e3e`. Exact public bytes
+are retained in ignored `var/m3-supply-removal-kicked-freeze/manifest.json`.
+M3 remains **RULES_SUBSET**, with final regression and independent/player review pending.
+
+| Workflow | Actual focused evidence and supported limit |
+|---|---|
+| Supply Drop | Genuine one-award acquisition; shared once-per-Mission actual repair or owner-confirmed custom temporary Frame equipment. Real capacity replacement/Modular source, ordinary use of delivered equipment and exact expiry are implemented. Expiry’s real Defeat and Void consequences close through actual Plays/Handler decisions before Mission rewards. New workflows plus affected advancement/Swap/career/Mission checks **9/27.36s**, `var/m3-supply-drop-final.xml`. Cancelled/declined/stale deliveries spend no quota. Live-temporary container/career transitions without an actual adapter remain explicitly gated, preserving known outcomes; no early expiry house rule or lifecycle-complete claim. |
+| Budget Endgame Asset removals | Authentic original roster and physical/opponent/battle facts; each affected owner chooses exactly one actual Girl and Frame Asset. Unselected resources/history persist. Real foe-specific Helplessness, required Defeat/chat restoration and full-Void abandoned-Frame Gorgon endpoint finish before source closure. Same traces privately reopen the original owner’s pair/account, reject other viewers and preserve completed history. Two new normal traces plus existing Budget Tag/NPC departure compatibility **4/9.68s**, `var/m3-budget-removal-final.xml`. Intrinsic/battery/stored/temp/held aliases, unknown placement and pre-choice changed body/Frame/roster remain unsupported source adapters. |
+| Retained Kicked Puppy | Actual2P acquisition -> genuine4P Swap -> replacement-Frame Flirt uses damaged Girl basis, spends0 and preserves stored5 Heat. Real original-target gifted self-Tag, care answer, target-confirmed follow-through/Bond and source suspension/restore complete. **1/4.60s**, `var/m3-retained-kicked-normal.xml`; affected native/graft/retention compatibility **3/4.18s**, `var/m3-retained-kicked-compat.xml`. Source-enabled fixtures approve only five needed entries; production destination review remains denied. Other Class/hardware retention is not enabled. |
+
+All **25 changed Python files**, including every shared interface and four tests,
+pass Ruff/format; all **21 changed production modules** pass mypy. Finite shared
+Asset-loss processing admits only actual Supply expiry and Budget removal; each
+producer separately proves its immutable source and before/after resources.
+Neither an active Mission nor an unknown physical state implies battle. An actual
+opponent is required for opponent-specific Helplessness.
+
+Focused integration exposed a real collision between nested expiry and parent
+Mission event indices. The fix preserves the original command and assigns unique
+nested event ordinals; the final source/ending checks pass without weakened rules.
+
+Publishable check: **1,071 files / 40 original manifest entries / zero findings**.
+Six adjustable interpretations are recorded centrally: **290 clarifications,
+169 subsets, 304 unimplemented entries**, zero independent approvals. Counts are
+not a completion percentage. Ordinary advancement triggers, other advancements,
+remaining playbook/Strain/world/shared/lifecycle and retained hardware adapters
+still block M3. Next source contracts cover genuine Cute Uniforms and retained
+Untouchable consumers. Missing implementations remain required work, not rulings.
+
+No new full regression, production certification, restart/deployment, live
+migration, environment publication, private-engine write, AI/M4 or Ancillary
+activation occurred; bot off. Preceding checkpoint
+**79fd40a70a5ea6aa1572fa56c4fe2b859e691e3e** was pushed and its exact remote SHA
+verified. [Focused CI 42177193768](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42177193768)
+passed. Newer source does not inherit that result or the historical 2,200-test full
+regression. Focused selections overlap and are not summed.
+
 ## Retained Dampener, advancement awards and NPC departures — 2026-11-05
 
 Source extends `89455964af6ca8d1dc8b63a1d2d2492075ec8143`. Exact public bytes

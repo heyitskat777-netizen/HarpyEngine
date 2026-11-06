@@ -1,21 +1,23 @@
 # M3 remaining work — verified development snapshot
 
-Newest bounded additions: **genuine retained Dampener through paid Frame Swap;
-Void Endgame6/7 advancement awards and actual group Permission spending; Budget
-Endgame3–5 NPC Bond quit/death consequences**. Focused evidence and source limits
-are at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md).
-Registry: **167 subsets / 306 unimplemented / 284 adjustable clarifications**;
+Newest bounded additions: **full normal Supply Drop repair/delivery/expiry;
+actual per-player Budget Girl/Frame Asset removal and real mandatory outcomes;
+retained Kicked Puppy through paid Frame Swap**. Actual source/endpoint evidence
+is at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md).
+Registry: **169 subsets / 304 unimplemented / 290 adjustable clarifications**;
 M3 remains **IN_PROGRESS / RULES_SUBSET**, bot off.
 
-Next finite contracts: retained Kicked Puppy consumer, and full Supply Drop with
-both actual repair and temporary Frame Asset delivery/mission-end expiry. Other
-retained Class/hardware, ordinary Handler advancement session/accomplishment
-producers and other advancement choices remain required. All thirteen named Class
-abilities have bounded native/graft consumers, not whole-Class certification.
-Production source/destination review stays pending and enforced; synthetic reviewed
-fixtures never certify live availability. Remaining playbooks, shared/physical/
-lifecycle, Strain/Endgames, world consumers, source reconciliation and final checks
-still block M3. Counts are not completion percentages.
+Next finite source contracts: Cute Uniforms advancement and retained Untouchable
+consumer. Other advancements, ordinary session/accomplishment award producers,
+other retained Class/hardware, temporary-container transitions and unported Asset/
+actor/lifecycle sources remain required. Remaining playbooks, shared rules, Strain/
+Endgames, world consumers, source reconciliation and final integrated checks still
+block M3. Production source/destination review stays pending and enforced; synthetic
+reviewed fixtures do not certify it. Counts are not completion percentages.
+
+Previous bounded additions: retained Dampener, genuine Void advancement awards/
+Permission spending and actual NPC departures. Earlier snapshots retain their
+original evidence scope and counts.
 
 Previous bounded additions: Clone AM, scoped Succubus Orders and owned stipend
 retirement. Earlier snapshots below retain their original scope and counts.

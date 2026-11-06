@@ -842,6 +842,55 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_budget_removal import RemovalService
+
+            for removal in RemovalService(self.store)._tasks(connection, viewer):
+                if removal.get("actor") is None and removal.get("phase") != "complete":
+                    continue  # Original Handler already has the actual parent source below.
+                pending_removal = removal.get("pending", removal.get("phase") != "complete")
+                items.append(
+                    InboxItem(
+                        "budget-removal:" + removal["id"],
+                        "budget_removal",
+                        removal["id"],
+                        removal["revision"],
+                        "playbook",
+                        removal["label"],
+                        "Original affected player",
+                        "pending" if pending_removal else "resolved",
+                        bool(pending_removal),
+                        False,
+                        "Choose your own actual Girl and Frame Assets or review your saved pair.",
+                        "Any required loss consequences must finish before this source closes.",
+                        "Review your Asset removal",
+                        task="m3_budget_removal",
+                    )
+                )
+
+            from girlframe.services.m3_supply_drop import SupplyDropService
+
+            for delivery in SupplyDropService(self.store)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "supply-drop:" + delivery["id"],
+                        "supply_drop",
+                        delivery["id"],
+                        delivery["revision"],
+                        "missions",
+                        "Supply Drop expiry"
+                        if delivery["phase"] == "expired"
+                        else delivery["label"],
+                        "Actual recipient and Handler",
+                        "pending",
+                        True,
+                        False,
+                        "Review your delivery or remaining expiry response.",
+                        "Your delivery and any required response remain saved.",
+                        "Review Supply Drop",
+                        task="m3_supply_drop",
+                    )
+                )
+
             from girlframe.services.m3_handler_advancements import HandlerAdvancementService
 
             for award in HandlerAdvancementService(self.store)._tasks(connection, viewer):
@@ -2524,6 +2573,11 @@ class InboxService:
                     and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.7"
                 ):
                     primary, task_name = "Resolve actual NPC departures", "m3_budget_departures"
+                elif (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.4"
+                ):
+                    primary, task_name = "Review actual player Asset removals", "m3_budget_removal"
                 elif kind == "budget_handler_tag" or (
                     kind == "strain_endgame_effect"
                     and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.5"

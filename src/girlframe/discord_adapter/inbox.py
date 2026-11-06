@@ -621,6 +621,16 @@ class InboxView(discord.ui.View):
             await open_token(
                 interaction, SpecialGirlService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_budget_removal":
+            from girlframe.discord_adapter.m3_budget_removal import open_removal
+            from girlframe.services.m3_budget_removal import RemovalService
+
+            await open_removal(interaction, RemovalService(self.service.store), item.identity)
+        elif item.task == "m3_supply_drop":
+            from girlframe.discord_adapter.m3_supply_drop import open_delivery
+            from girlframe.services.m3_supply_drop import SupplyDropService
+
+            await open_delivery(interaction, SupplyDropService(self.service.store), item.identity)
         elif item.task == "m3_budget_departures":
             from girlframe.discord_adapter.m3_budget_departures import open_departures
             from girlframe.services.m3_budget_departures import DepartureService
