@@ -88,7 +88,11 @@ def available(state: GameState, subject: int, character: str) -> list[Requisitio
                 )
             )
             or (isinstance(x, FrameRuleReceipt) and native_class_receipt(state, x))
-            or (isinstance(x, FrameRuleReceipt) and nightmare_receipt(state, x))
+            or (
+                isinstance(x, FrameRuleReceipt)
+                and nightmare_receipt(state, x)
+                and class_held(state, x.actor, x.rule_id) is not None
+            )
             or (isinstance(x, FrameRuleReceipt) and physiotherapist_receipt(state, x))
             or (
                 isinstance(x, FrameRuleReceipt)
@@ -177,12 +181,17 @@ def revoke(
 
         if not receipt_eligible(state, receipt):
             raise ValueError("Recover the actual original Nightmare Core source and Frame")
+        from girlframe.engine.m3_class_retention import binding as retained_binding
+
         details.update(
             nightmare_receipt=receipt.model_dump_json(),
-            frame=receipt.frame_instance,
+            frame=retained_binding(state, receipt)[0],
             rule_id=receipt.rule_id,
             label="Nightmare Core",
         )
+        if len(retained_binding(state, receipt)[1]) > 1:
+            # Existing service restoration proof consumes this exact source snapshot.
+            details["implemented_class_receipt"] = receipt.model_dump_json()
     elif (
         isinstance(receipt, FrameRuleReceipt)
         and receipt.rule_id == "frame.class.priestess.void-physiotherapist"

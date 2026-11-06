@@ -4,7 +4,6 @@ from girlframe.engine.frame_classes import FRAME_CLASSES, frame_class, official_
 from girlframe.engine.m2 import GameState, PilotSheet
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_careers import can_pilot
-from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 
 RULE = "frame.class.priestess.nightmare-core"
@@ -36,35 +35,12 @@ def native(state: GameState, actor: ActorRef) -> tuple[PilotSheet, str]:
 
 def receipt_eligible(state: GameState, receipt: FrameRuleReceipt) -> bool:
     """Check only this implemented rule, including while its exact receipt is suspended."""
-    try:
-        sheet, frame = current(state, receipt.actor)
-        own = frame_class(sheet.frame) == "priestess"
-        return (
-            receipt.rule_id == RULE
-            and receipt.frame_instance == frame
-            and receipt.frame == sheet.frame
-            and frame_class(receipt.donor_frame) == "priestess"
-            and (
-                receipt.kind == "ability_unlock"
-                and own
-                and receipt.donor_frame == sheet.frame
-                or receipt.kind == "frame_grafting"
-                and not own
-            )
-        )
-    except (ValueError, KeyError):
-        return False
+    from girlframe.engine.m3_class_grafts import eligible
+
+    return receipt.rule_id == RULE and eligible(state, receipt)
 
 
 def held(state: GameState, actor: ActorRef) -> FrameRuleReceipt | None:
-    values = [
-        x
-        for x in state.requisitions
-        if isinstance(x, FrameRuleReceipt)
-        and x.actor == actor
-        and receipt_eligible(state, x)
-        and not suspended(state, x.id)
-    ]
-    if len(values) > 1:
-        raise ValueError("Recover one actual original Nightmare Core acquisition receipt")
-    return values[0] if values else None
+    from girlframe.engine.m3_class_grafts import held as source_held
+
+    return source_held(state, actor, RULE)

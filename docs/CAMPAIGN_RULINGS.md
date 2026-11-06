@@ -3291,3 +3291,11 @@ Missing producer/actor/body adapters remain required implementation work.
 ## Retained Appearance Matrix — 2026-11-06 UTC
 
 - **retained-matrix-source-ability-and-mark** (PDF93/91 and16/14): Root release explicitly directs use of existing modelled ability: paidSwap unlocks selected active rule on actual new Frame, retaining original purchase/mark. No separate device is invented/moved/copied and no hypothetical hardware prerequisite blocks this implemented model. Adjustment impact: Existing direct ability/physical endpoints are dependency-ready and verified. Printed-rule clarity review may adjust interpretation later, but no extra hardware blocker is introduced. Full rationale and alternatives are in `rules/registry.json`; printed-rule clarity review remains pending.
+
+## Ordinary PR events and deferred awards — 2026-11-06 UTC
+
+Delegated interpretations require printed-rule clarity review; rationale, alternatives
+and adjustment impact are recorded in `rules/registry.json`.
+
+- **ordinary-pr-performed-event-and-result**: Use a performed Foundation fundraiser/photoshoot with original host, source-owned Cadre activities, concrete public material/outcome and authorized human GM factual success/failure judgment. No invented dice, audience/funds quota, audience approval veto or extra resource rewards. Photoshoot Tags do not imply success. Adjustment impact: A finite real event/result source feeds ordinary awards. Fictional public activity authorizes no external posting or private sheet export.
+- **ordinary-pr-deferred-award-and-session**: Preserve actual successful/failed PR results even when session slot or permanent criterion mark prevents a token. Activity may span Sessions. An original host may claim a saved successful source in a later real free Session only while that criterion remains unmarked; cap is consumed at actual award, not planning. Adjustment impact: Saved facts remain truthful, cap/mark stay strict, and later claim cannot duplicate a criterion or resource effect.

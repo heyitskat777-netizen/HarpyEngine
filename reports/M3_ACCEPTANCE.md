@@ -1,5 +1,31 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Ordinary PR events and retained Nightmare — 2026-11-06 UTC
+
+Source extends `9973d2e1f250937d723deb629f5cec310544b747`; exact bytes are retained
+in ignored `var/m3-pr-nightmare-freeze/manifest.json`. M3 remains **RULES_SUBSET**;
+final regression and independent/player review remain pending.
+
+| Workflow | Focused evidence and supported boundary |
+|---|---|
+| Ordinary PR | A performed fundraiser/photoshoot records original hosting, source-owned Cadre activity and a concrete public result. The authorized human GM's factual judgment uses no invented dice, numerical quota or audience veto. Failure consumes no award/cap/mark. Success remains recorded when the shared slot is used; the original host claims it in a later free Session, receives one real ordinary token and spends it for +2 Permissions. Another true successful event remains successful after permanent PR mark, without another award. The normal spans Sessions and verifies private History/replay: **1 passed / 10.35s**; earlier Identity/award compatibility **4 passed / 15.22s**. Exact commands/console in ignored `var/m3-handler-pr-handoff.json`. Fictional public activity grants no external publication or private-sheet disclosure. Other PR formats/NPC moves and capture/conversion remain separate. |
+| Retained Nightmare Core | Actual2P purchase -> paid4P Swap -> native Keep uses actual current effective Void, zero Heat and one RNG receipt -> player/Handler choices and chat complete. Real mission Punishment revokes the original source on the new Frame; trusted restoration checks the full paid chain. Snapshot preserves original Nightmare receipt plus the generic reference required by existing restore proof; forged paid history is rejected. Final changed normal **1 passed / 3.193s**; planned native/graft/source checks **3 passed / 5.636s**. Artifacts: `var/m3-retained-nightmare.xml`, `var/m3-retained-nightmare-compat.xml`. No copied resources or separate Core body. |
+
+All **17 changed Python files**, including shared interfaces and three tests,
+pass Ruff/format; all **14 changed source modules** pass mypy. PR spent cards now
+show the correct accomplishment. No Game observer or new world framework was
+needed. Two adjustable PR interpretations record performed-event judgment and
+saved outcomes/deferred awards. Metadata: **174 subsets / 301 unimplemented /
+312 clarifications**,475 total,438 required core,37 deferred,zero independent
+approvals. Counts are not percentages. Remaining source/playbook/Strain/world/
+shared/lifecycle and retained-body work still blocks M3.
+
+Preceding checkpoint `9973d2e1f250937d723deb629f5cec310544b747` was pushed,
+with exact remote verified. [Focused CI 42203125908](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42203125908)
+passed. Newer source inherits neither that result nor the historical full regression.
+No new full suite, restart/deployment, live migration, environment publication,
+private-engine write, AI/M4 or Ancillary activation; bot stays off.
+
 ## Retained Appearance Matrix — 2026-11-06 UTC
 
 Source extends `79fe0b113762e332c00b22331969f26974b1d062`; exact bytes are retained

@@ -240,6 +240,11 @@ def prove_award(
     source = award.ordinary_source
     if source is None or award.rule != rules.RULE or award.source_work is not None:
         raise WorkflowError("Recover the exact real ordinary advancement source")
+    if source.trigger == "public_relations":
+        from girlframe.services.m3_handler_pr import prove_award as prove_pr
+
+        prove_pr(game, c, state, award)
+        return
     birth = _history(c, game, award.award_event)
     born = next((x for x in advancement.awards(birth) if x.id == award.id), None)
     review = _review(game, c, birth, source.review)
@@ -459,7 +464,10 @@ class HandlerOrdinaryService:
             ):
                 raise WorkflowError("Use this actual active Session and original Handler")
             HandlerAdvancementService(self.store)._current(c, state, handler, session.appointment)
-            if any(same_handler_body(state, x.handler) for x in rules.marks(state)) or any(
+            if any(
+                same_handler_body(state, x.handler) and x.trigger == "identities_useful"
+                for x in rules.marks(state)
+            ) or any(
                 x.handler == handler and x.phase in ("disclosure", "usefulness")
                 for x in rules.reviews(state)
             ):

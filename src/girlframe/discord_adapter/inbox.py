@@ -621,6 +621,11 @@ class InboxView(discord.ui.View):
             await open_token(
                 interaction, SpecialGirlService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_handler_pr":
+            from girlframe.discord_adapter.m3_handler_pr import open_pr
+            from girlframe.services.m3_handler_pr import HandlerPRService
+
+            await open_pr(interaction, HandlerPRService(self.service.store), item.identity)
         elif item.task == "m3_handler_ordinary":
             from girlframe.discord_adapter.m3_handler_ordinary import open_ordinary
             from girlframe.services.m3_handler_ordinary import HandlerOrdinaryService

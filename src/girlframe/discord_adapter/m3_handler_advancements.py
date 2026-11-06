@@ -56,9 +56,14 @@ async def open_advancement(
                 title="Original advancement spend", description=clean(data["spend_account"])
             ),
         ]
+        ordinary_source = data.get("ordinary_source")
         content = "**Handler advancement spent**\n" + (
-            "Ordinary starting-Identity accomplishment"
-            if data.get("ordinary_source")
+            (
+                "Ordinary public-relations accomplishment"
+                if ordinary_source["trigger"] == "public_relations"
+                else "Ordinary starting-Identity accomplishment"
+            )
+            if ordinary_source
             else "Void Endgame " + data["rule"].rsplit(".", 1)[1]
         )
         if interaction.response.is_done():

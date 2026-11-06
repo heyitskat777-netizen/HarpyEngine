@@ -102,7 +102,13 @@ async def open_ordinary(
         return
     if selected:
 
-        async def operate(current: discord.Interaction, values: dict[str, Any]) -> str:
+        async def operate(current: discord.Interaction, values: dict[str, Any]) -> str | None:
+            if values["operation"][0] == "pr":
+                from girlframe.discord_adapter.m3_handler_pr import open_pr
+                from girlframe.services.m3_handler_pr import HandlerPRService
+
+                await open_pr(current, HandlerPRService(service.store))
+                return None
             if values["operation"][0] == "end":
                 await asyncio.to_thread(
                     service.end_session,
@@ -138,6 +144,7 @@ async def open_ordinary(
                     "Actual Session operation",
                     (
                         ("review", "Request useful starting-Identity review"),
+                        ("pr", "Plan actual Foundation fundraiser/photoshoot"),
                         ("end", "Record actual Session end"),
                     ),
                 ),

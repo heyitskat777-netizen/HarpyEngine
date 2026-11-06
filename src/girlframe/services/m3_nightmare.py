@@ -16,7 +16,6 @@ from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
-from girlframe.services.m3_privileges import purchase_proof
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -37,7 +36,14 @@ def entitlement(
         gate.registry.require_available(rules.RULE)
     except ValueError:
         return None
-    purchase_proof(c, game.store, receipt)
+    from girlframe.services.m3_class_retention import proof
+
+    _, chain = proof(game, c, state, receipt)
+    if len(chain) > 1:
+        try:
+            gate.registry.require_available("core.core.frame-requisitions")
+        except ValueError:
+            return None
     return receipt
 
 
@@ -54,10 +60,13 @@ def prepare(
     if prepared.heat or prepared.dampener_modifier is not None or prepared.kicked_puppy_basis:
         raise WorkflowError("Nightmare Core Keep uses actual Void Assets instead of spending Heat")
     actual = resolve(state, actor, profiles(c, game.store.campaign_id))
+    from girlframe.engine.m3_class_retention import binding
+
+    frame, _ = binding(state, receipt)
     assert game.store.policy.m3_approval is not None
     return dict(
         actor=actor.model_dump(mode="json"),
-        frame=receipt.frame_instance,
+        frame=frame,
         purchase=receipt.id,
         modifier=sum(x.void for x in actual.assets),
         registry=game.store.policy.m3_approval.registry_sha256,
@@ -122,6 +131,9 @@ class NightmareService:
                 None,
             )
             native = frame_class(sheet.frame) == "priestess"
+            from girlframe.engine.m3_class_retention import binding
+
+            chain = binding(state, acquired)[1] if acquired is not None else ()
             return dict(
                 available=True,
                 revision=state.revision,
@@ -129,7 +141,7 @@ class NightmareService:
                 frame=frame,
                 permissions=sheet.permissions,
                 owned=receipt is not None,
-                suspended=acquired is not None and suspended(state, acquired.id),
+                suspended=any(suspended(state, identity) for identity in chain),
                 kind="ability_unlock" if native else "frame_grafting",
                 price=2 if native else 3,
                 donors=list(rules.DONORS) if not native else [],
@@ -188,8 +200,7 @@ class NightmareService:
             if any(
                 isinstance(x, FrameRuleReceipt)
                 and x.actor == actor
-                and x.frame_instance == frame
-                and x.rule_id == rules.RULE
+                and rules.receipt_eligible(state, x)
                 for x in state.requisitions
             ):
                 raise WorkflowError("Restore the original entitlement instead of buying twice")

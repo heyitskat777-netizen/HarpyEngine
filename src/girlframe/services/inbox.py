@@ -842,6 +842,29 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_handler_pr import HandlerPRService
+
+            for pr_control in HandlerPRService(self.store)._tasks(connection, viewer):
+                pr_pending = bool(pr_control["pending"])
+                items.append(
+                    InboxItem(
+                        "handler-pr:" + pr_control["id"],
+                        "handler_pr",
+                        pr_control["id"],
+                        pr_control["revision"],
+                        "playbook",
+                        pr_control["label"],
+                        "Actual host, contributor or human GM",
+                        "pending" if pr_pending else "established",
+                        pr_pending,
+                        False,
+                        "Review the performed public event and its actual result.",
+                        "Award availability does not change the saved event outcome.",
+                        "Review public relations",
+                        task="m3_handler_pr",
+                    )
+                )
+
             from girlframe.services.m3_handler_ordinary import HandlerOrdinaryService
 
             for ordinary_control in HandlerOrdinaryService(self.store)._tasks(connection, viewer):

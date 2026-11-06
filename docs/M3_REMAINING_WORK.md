@@ -1,10 +1,18 @@
 # M3 remaining work — verified development snapshot
 
-Newest bounded addition: **retained Appearance Matrix**, preserving spent mark through
+Newest bounded additions: **ordinary performed PR success/failure, shared session cap,
+saved/deferred award and real spending; retained Nightmare Keep/restoration**.
+Evidence is at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md). Metadata:
+**312 clarifications / 174 subsets / 301 unimplemented**,475 total,438 required
+core,37 deferred; no percentage or M3-ready claim. Capture/conversion, other PR
+formats/NPC moves and remaining source/body/playbook/world/Strain/shared/lifecycle
+work still block M3. Bot off.
+
+Previous bounded addition: **retained Appearance Matrix**, preserving spent mark through
 Swap and finishing genuine reset/new-Frame undamage/disappearance/factual return.
 Evidence is at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md). Registry now
 has **310 clarifications / 174 subsets / 301 unimplemented**, with release gates
-unchanged; counts are not percentages. PR is next.
+unchanged; counts are not percentages. PR is implemented within the newer boundary above.
 
 Previous bounded additions: **ordinary Handler advancement through actual sessions,
 proved replacement of all starting Identities, scoped usefulness judgment and

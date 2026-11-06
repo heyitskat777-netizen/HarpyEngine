@@ -5168,6 +5168,42 @@
       "revision": 1,
       "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review. No standalone device/body transfer is claimed.",
       "change_impact": "Existing direct ability/physical endpoints are dependency-ready and verified. Printed-rule clarity review may adjust interpretation later, but no extra hardware blocker is introduced."
+    },
+    {
+      "id": "ordinary-pr-performed-event-and-result",
+      "summary": "Use a performed Foundation fundraiser/photoshoot with original host, source-owned Cadre activities, concrete public material/outcome and authorized human GM factual success/failure judgment. No invented dice, audience/funds quota, audience approval veto or extra resource rewards. Photoshoot Tags do not imply success.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF153/printed151 PR criterion; PDF150/148 photoshoot; PDF191/189 PR NPC guidelines",
+      "authority": "delegated_recommendation",
+      "rationale": "The criterion states success without a numeric procedure; the related photoshoot and PR-NPC passages do not supply a general event roll.",
+      "alternatives": [
+        "Award for a plan or generic acknowledgment",
+        "Invent a PR roll/quota or mandatory NPC",
+        "Treat photoshoot Tags as automatic success"
+      ],
+      "policy_key": "ordinary_pr_performed_event_and_result",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review. Missing PR formats/NPC moves/capture sources remain required separate ports.",
+      "change_impact": "A finite real event/result source feeds ordinary awards. Fictional public activity authorizes no external posting or private sheet export."
+    },
+    {
+      "id": "ordinary-pr-deferred-award-and-session",
+      "summary": "Preserve actual successful/failed PR results even when session slot or permanent criterion mark prevents a token. Activity may span Sessions. An original host may claim a saved successful source in a later real free Session only while that criterion remains unmarked; cap is consumed at actual award, not planning.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF153/printed151 PR criterion; PDF150/148 photoshoot; PDF191/189 PR NPC guidelines",
+      "authority": "delegated_recommendation",
+      "rationale": "Printed1/session limits ordinary rewards; it does not undo a completed event or impose a one-session event duration. Deferred claim is an adjustable interpretation.",
+      "alternatives": [
+        "Discard successful event when cap used",
+        "Roll back true outcome to avoid grant",
+        "Require every PR stage in one Session"
+      ],
+      "policy_key": "ordinary_pr_deferred_award_and_session",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review. Missing PR formats/NPC moves/capture sources remain required separate ports.",
+      "change_impact": "Saved facts remain truthful, cap/mark stay strict, and later claim cannot duplicate a criterion or resource effect."
     }
   ],
   "entries": [
@@ -5595,7 +5631,8 @@
         "tests/rules/test_retained_sup.py",
         "tests/rules/test_retained_special_girl.py",
         "tests/rules/test_retained_modular.py",
-        "tests/rules/test_retained_appearance_matrix.py"
+        "tests/rules/test_retained_appearance_matrix.py",
+        "tests/rules/test_retained_nightmare.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -10876,7 +10913,8 @@
       "test_evidence": [
         "tests/rules/test_nightmare.py",
         "tests/rules/test_class_privileges.py",
-        "tests/rules/test_nightmare_graft.py"
+        "tests/rules/test_nightmare_graft.py",
+        "tests/rules/test_retained_nightmare.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -16184,13 +16222,14 @@
       "reviewer": null,
       "review_reference": null,
       "contract": {
-        "trigger": "During an actual recorded campaign session, original Handler judges all proved replacement starting Identities useful",
+        "trigger": "Within recorded ordinary Sessions, complete proved useful starting-Identity replacement or a performed successful Cadre PR event; consume the shared ordinary award slot when granting",
         "actor_type": "Authorized human facilitator, original Girl and original Handler/body/appointment",
         "pre_roll_sources": [
           "Actual canonical session and original human facilitator boundary record",
           "Original activation Identity instances and genuine owner-owned Tag-embrace replacement chains",
           "Scoped Girl disclosure and exact current endpoint usefulness judgment",
-          "One ordinary award per session and permanent original-Handler criterion mark-off"
+          "One ordinary award per session and permanent original-Handler criterion mark-off",
+          "For PR, actual original host and source-owned Girl activities plus performed public material/outcome and authorized human GM factual result"
         ],
         "roll_kind": "diceless",
         "allowed_modifiers": [],
@@ -16198,6 +16237,11 @@
           "normal": [
             "One source-proved ordinary held award",
             "Existing actual selected-group1or2Permission spend consumes it once"
+          ],
+          "public_relations": [
+            "Actual unsuccessful event: no award/cap/mark",
+            "Actual successful event remains recorded independently of award eligibility",
+            "Eligible free-slot success autoawards; original host may claim deferred source in later free Session if criterion remains unmarked"
           ]
         },
         "choice_ownership": "Facilitator records OOC session boundaries; original Girl owns scoped disclosure and actual replacement choices; original Handler owns usefulness judgment and award spending",
@@ -16205,20 +16249,24 @@
         "post_roll_effects": [
           "Real source-proved token without fake required-work row",
           "Shared ordinary session cap and criterion mark-off persist through scene changes/replay",
-          "Actual Permission effect and private source history preserve independent rare Endgame awards"
+          "Actual Permission effect and private source history preserve independent rare Endgame awards",
+          "Actual PR result is immutable and cannot be rolled back or relabeled to enforce award cap",
+          "Both criteria share one ordinary Session slot but have separate permanent marks; genuine PR token uses existing spend/history proof"
         ],
         "mandatory_followups": [
           "All actual starting Identity instances must have genuine supported replacement chains and useful current endpoints",
-          "PR/capture/conversion and other replacement producers remain required exact source ports"
+          "Capture/conversion and other replacement producers remain required exact source ports"
         ],
         "handler_or_gm_intervention": "Actual original Handler subjective usefulness reasons complement objective source proof; attendance/disclosure alone grants nothing",
         "test_fixture_ids": [
-          "tests/rules/test_handler_ordinary.py"
+          "tests/rules/test_handler_ordinary.py",
+          "tests/rules/test_handler_pr.py"
         ]
       },
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_handler_ordinary.py"
+        "tests/rules/test_handler_ordinary.py",
+        "tests/rules/test_handler_pr.py"
       ],
       "m2_play_id": null,
       "module": "core"
