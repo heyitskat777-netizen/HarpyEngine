@@ -1,5 +1,38 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## AM actual body transfer and hooked return — 2026-11-06 UTC
+
+Source extends `a9e61b8f49acb4c06f972dc6cb62049c504686c3`; sanitized bytes are
+frozen in ignored `var/m3-am-body-freeze/manifest.json`. M3 remains **RULES_SUBSET**;
+final regression and independent/player review remain pending.
+
+A genuine Just Code now supports the operator's printed body option. Actual local
+empty hardware has source, processing, Asset classification and explicit medical
+condition. The same AM occupies it through the real canonical sheet/placement;
+physical Girl Assets stay with their hardware and mind-linked resources persist.
+No replacement person, duplicated ActorRef/profile, Frame regrant or whole-sheet
+rollback is created. Actual damage to the new body remains after returning; the
+original body's damage/Void/condition also remain actual. Return is AM-owned,
+diceless and free while both bodies are genuinely connected. Disconnection blocks
+it; reconnection must record the real fact. Optional return creates no response debt.
+
+Native preparation and choice, actual new-body counter-damage, disconnect/reconnect,
+owned hooked return and real Inbox reopening of both saved hardware records pass
+**1 normal / 5.493s**. Planned Code mid/low, combined high memory/records and backup
+source compatibility pass **4 / 12.629s**. All **9 changed Python files** pass
+Ruff/format; all **8 source modules** pass mypy, including root native Code/Inbox
+integration. Exact commands, evidence and hashes are in ignored
+`var/m3-am-body-swap-handoff.json`. No shared actor/physical refactor, broad matrix,
+repeated full regression or installation.
+
+Metadata: **176 subsets / 300 unimplemented / 317 adjustable clarifications**,
+476 total,439 required core,37 deferred Ancillary,zero independent approvals.
+Counts are inventory, not a completion percentage. Branching, broader Jailbroken
+occupancy/operator paths, occupied/conditional/full-Void body adapters and other
+required source/playbook/Strain/world/shared/lifecycle work still prevent M3
+completion. Bot stays off; no deployment, migration, environment publication,
+recovered-engine write, AI/M4 or Ancillary activation.
+
 ## Deep-Brain-Spikes memory scenes — 2026-11-06 UTC
 
 Source extends `3b82763b9571e2e55133b9e92e2e49ab6c3c17c1`; sanitized bytes are

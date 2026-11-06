@@ -115,6 +115,10 @@ def source(game: GameService, c: Connection, state: GameState, identity: str) ->
         from girlframe.services.m3_am_backup import prove as prove_backup
 
         prove_backup(game, c, state, value.backup)
+    if value.body_swap:
+        from girlframe.services.m3_am_body import prove as prove_body
+
+        prove_body(game, c, state, value.body_swap)
     return value
 
 
@@ -124,6 +128,16 @@ def actual(game: GameService, c: Connection, state: GameState, value: rules.Main
     sheet = state.sheets[value.actor.entity]
     physical = next((x for x in state.placements if x.actor == value.actor), None)
     cast = _cast(game, c, state, value.cast.channel)
+    body_contact = actor.vessel_id == value.vessel and actor.position_sha256 == value.position
+    if value.body_swap:
+        from girlframe.engine.m3_am_body import connection, swap
+
+        changed = swap(state, value.body_swap)
+        body_contact = (
+            not changed.returned_event
+            and physical == changed.active_pose
+            and connection(state, changed.id).connected
+        )
     if (
         actor.girl != "AM"
         or value.actor.kind != "pilot"
@@ -142,9 +156,8 @@ def actual(game: GameService, c: Connection, state: GameState, value: rules.Main
         or actor.piloting
         or actor.custody
         or operator.custody
-        or actor.vessel_id != value.vessel
+        or not body_contact
         or actor.frame_instance != value.frame
-        or actor.position_sha256 != value.position
         or physical is None
         or not physical.vitals_active
         or physical.incapacitated
@@ -253,6 +266,8 @@ def finish(
             unselected(state, value, event)
     if "backup" in value.selected_options and not value.backup:
         raise WorkflowError("The actual selected backup must contain its genuine original snapshot")
+    if "body" in value.selected_options and not value.body_swap:
+        raise WorkflowError("The selected body option requires its actual physical effect")
     rules.put(
         state,
         value.model_copy(update=dict(phase="complete", effect_event=value.effect_event or event)),
@@ -272,6 +287,12 @@ def apply(
 
     value = rules.session(state, action["data"]["am_code"]["maintenance"])
     event = action["data"]["response_event"]
+    if request["kind"] == "am_code_body":
+        from girlframe.services.m3_am_body import apply as apply_body
+
+        apply_body(game, c, state, action, answer)
+        finish(game, c, state, action, event)
+        return
     if request["kind"].startswith("am_code_records_"):
         from girlframe.services.m3_am_records import apply as apply_records
 
@@ -286,7 +307,9 @@ def apply(
     ):
         raise WorkflowError("Use the actual original operator/recipient's concrete source response")
     if request["kind"] == "am_code_options":
-        options = {"identities", "backup"} | ({"records"} if value.records_access else set())
+        options = {"identities", "backup", "body"} | (
+            {"records"} if value.records_access else set()
+        )
         if (
             len(answer.options) > 2
             or len(set(answer.options)) != len(answer.options)
@@ -304,6 +327,8 @@ def apply(
         rules.put(state, value)
         if "identities" in answer.options:
             game.request(c, action, value.controller, "am_code_edit")
+        if "body" in answer.options:
+            game.request(c, action, value.controller, "am_code_body")
         if "records" in answer.options:
             from girlframe.services.m3_am_records import grant
 
@@ -445,6 +470,10 @@ def projection(
 ) -> dict[str, Any]:
     value = rules.session(state, action["data"]["am_code"]["maintenance"])
     details: dict[str, Any] = {}
+    if request["kind"] == "am_code_body":
+        from girlframe.services.m3_am_body import projection as project_body
+
+        details["body"] = project_body(game, c, state, value)
     if request["kind"].startswith("am_code_records_"):
         from girlframe.services.m3_am_records import projection as project_records
 
@@ -452,9 +481,9 @@ def projection(
         details["records_id"] = value.records_access
     return dict(
         **details,
-        available_options=("identities", "backup", "records")
+        available_options=("identities", "backup", "body", "records")
         if value.records_access
-        else ("identities", "backup"),
+        else ("identities", "backup", "body"),
         maintenance=value.id,
         identities=[x.model_dump(mode="json") for x in rules.choices(state, value.actor)],
         instruction=value.instruction,

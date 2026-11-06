@@ -1357,6 +1357,29 @@ class InboxService:
                         task="m3_am_source",
                     )
                 )
+            from girlframe.services.m3_am_body import BodyService
+
+            for body_swap in BodyService(GameService(self.store))._tasks(connection, viewer):
+                pending_body = bool(body_swap["pending"])
+                items.append(
+                    InboxItem(
+                        "am-body:" + body_swap["id"],
+                        "am_body",
+                        body_swap["id"],
+                        body_swap["revision"],
+                        "playbook",
+                        body_swap["label"],
+                        "Original AM or actual circuit operator",
+                        "pending" if pending_body else "established",
+                        pending_body,
+                        False,
+                        "Review actual body hardware or return while genuinely connected.",
+                        "Same mind and current resources; both bodies retain actual conditions.",
+                        "Review AM bodies",
+                        task="m3_am_body",
+                    )
+                )
+
             from girlframe.services.m3_am_code import CodeService
 
             for maintenance in CodeService(GameService(self.store))._tasks(connection, viewer):

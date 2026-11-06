@@ -3332,3 +3332,13 @@ and adjustment impact are recorded in `rules/registry.json`.
   veto, minimum roll count or extra charge. Static-note and historic-world-cloning
   alternatives are rejected. Delegated clarity review remains pending; changes
   affect future scene handling without erasing actual events or saved history.
+
+
+- `am_body_hardware_and_mind_continuity` (PDF55/53,56/54): classify actual Girl
+  Assets by explicit physical or mind-linked source. Physical Assets stay with
+  each body; the same AM mind, Identities, Limiters, memories, Bonds and current
+  resources continue. Hooked return needs no new circuits roll, charge or operator
+  reapproval and preserves both bodies’ latest damage. Whole-sheet rollback,
+  duplicate Assets and name-based classification are rejected. This delegated
+  interpretation needs printed clarity review; changes affect future hardware
+  handling without rewriting source contacts or saved physical/mind history.

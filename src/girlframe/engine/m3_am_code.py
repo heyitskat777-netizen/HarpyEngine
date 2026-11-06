@@ -30,7 +30,7 @@ class Maintenance(Model):
     cell: tuple[int, int]
     order_scope: Literal["spoken_statement"] = "spoken_statement"
     records_access: str | None = Field(default=None, exclude_if=lambda value: value is None)
-    selected_options: tuple[Literal["identities", "records", "backup"], ...] = Field(
+    selected_options: tuple[Literal["identities", "records", "backup", "body"], ...] = Field(
         default=("identities",), exclude_if=lambda value: value == ("identities",)
     )
     phase: Literal["proposed", "ready", "active", "complete"] = "proposed"
@@ -42,6 +42,7 @@ class Maintenance(Model):
     replacements: dict[str, str] = Field(default_factory=dict)
     memory_erasure: str | None = Field(default=None, exclude_if=lambda value: value is None)
     backup: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    body_swap: str | None = Field(default=None, exclude_if=lambda value: value is None)
     order: str | None = None
     order_event: str | None = None
     instruction: str = ""

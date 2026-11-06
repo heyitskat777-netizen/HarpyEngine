@@ -5273,6 +5273,24 @@
       "revision": 1,
       "implementation_note": "Use the actual channel and current scene cast; preserve the present reference/cast and its used-Tag quota. Only genuinely applicable current-actor Plays affect real resources. Original Handler records either printed return cause; no extra charge, quota or acknowledgment veto.",
       "change_impact": "Changes future memory-scene context and return bookkeeping; keeps actual intervening resource events and immutable acquisition/memory history. Printed-rule clarity and independent/player review remain pending."
+    },
+    {
+      "id": "am-body-hardware-and-mind-continuity",
+      "summary": "Just Code body transfer changes actual physical hardware and body-bound Assets while preserving the same AM mind; hooked return preserves both bodies’ latest conditions.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF55/printed53 Jailbroken; PDF56/printed54 Just Code body swap",
+      "authority": "delegated_recommendation",
+      "rationale": "The book permits suitable-body occupancy, adjusts Assets to the new form and allows return while hooked, without saying to copy the mind, rewind resources or heal either body.",
+      "alternatives": [
+        "Restore the whole old sheet on return, erasing intervening mind/resource events",
+        "Copy all Girl Assets to both bodies or infer physical/mind ownership from names",
+        "Charge for a fresh circuits Play or require operator reapproval to use printed hooked return"
+      ],
+      "policy_key": "am_body_hardware_and_mind_continuity",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Explicit source classification parks physical Girl Assets with hardware and preserves mind-linked Assets. Genuine local empty hardware, processing/Asset preparation and actual hookup are recorded. Same ActorRef, Identities, Limiters, memories, Bonds and current resources continue; Frame hardware is not a body snapshot.",
+      "change_impact": "Affects future body preparation, transfer and return. Never rewrites original circuitry contacts, prepared body source, actual damage or saved mind history. Occupied/conditional/full-Void vessel adapters and branching remain required gaps."
     }
   ],
   "entries": [
@@ -7753,7 +7771,8 @@
         "tests/rules/test_am_code.py",
         "tests/rules/test_am_records.py",
         "tests/rules/test_am_memory.py",
-        "tests/rules/test_am_backup.py"
+        "tests/rules/test_am_backup.py",
+        "tests/rules/test_am_body.py"
       ],
       "m2_play_id": null,
       "module": "core"

@@ -1,5 +1,12 @@
 # M3 remaining work — verified development snapshot
 
+Newest bounded addition: **Just Code actual AM body transfer and hooked return**,
+with real new-body damage, preserved mind/resources and private Inbox hardware
+history. Evidence is at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md).
+Secretary is being scoped; AM branching and broader required source/body/playbook/
+Strain/world/shared/lifecycle work and final integrated verification still block
+M3. M3 remains RULES_SUBSET; bot off.
+
 Newest bounded addition: **Deep-Brain-Spikes acquisition, actual memory scene and
 both printed return causes**, retaining real current-resource effects and private
 History. Evidence is at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md).

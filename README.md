@@ -23,7 +23,7 @@ consequences. The last committed full regression passed **2,200 tests**, with so
 in [M3 evidence](reports/M3_ACCEPTANCE.md).
 Newer development adds supported Virus/Sex/Call, JANUS Core and selected paid
 Requisitions including Storage, Leviathan Obsession, source-owned Alpha outcomes
-and NPC Orders, bounded AM discovery/Limiters/reset/identity-memory maintenance and backup/revert,
+and NPC Orders, bounded AM discovery/Limiters/reset/identity-memory maintenance and backup/revert/body transfer with hooked return,
 native/grafted Class consumers including Home, five-source Sup growth, Appearance
 Matrix, Handler’s Special Girl, Clone AM and source-specific Succubus Orders,
 High Rebellion Ritual/backstory effects, actual Rebel group merger/leader opportunity, player-owned stipend retirement,

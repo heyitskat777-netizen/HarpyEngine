@@ -528,6 +528,14 @@ class InboxView(discord.ui.View):
             await open_source(
                 interaction, ScrutinyService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_am_body":
+            from girlframe.discord_adapter.m3_am_body import open_body
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_am_body import BodyService
+
+            await open_body(
+                interaction, BodyService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_am_code_source":
             from girlframe.discord_adapter.m3_am_code import open_source as open_am_code
             from girlframe.services.m2_game import GameService

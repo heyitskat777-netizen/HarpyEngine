@@ -47,6 +47,11 @@ async def open_code(
         ("backup:" + x["id"], "Saved AM backup, revision " + str(x["captured_revision"]))
         for x in data["backups"]
     ]
+    from girlframe.services.m3_am_body import BodyService
+
+    hardware = await asyncio.to_thread(BodyService(service.game).menu, viewer)
+    if hardware["preparations"] or hardware["swaps"]:
+        options.append(("body:menu", "Actual AM bodies and hooked return"))
     choices = await asyncio.to_thread(service.game.choices, viewer)
     options += [
         ("choice:" + x["id"], "Continue " + x["kind"].replace("_", " "))
@@ -59,6 +64,11 @@ async def open_code(
 
     async def choose(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         operation, identity = values["source"][0].split(":", 1)
+        if operation == "body":
+            from girlframe.discord_adapter.m3_am_body import open_body
+
+            await open_body(current, BodyService(service.game))
+            return None
         if operation == "backup":
             from girlframe.discord_adapter.m3_am_backup import open_backup
             from girlframe.services.m3_am_backup import BackupService
@@ -166,7 +176,8 @@ async def open_code(
             "Identity/memory maintenance. "
             "On low, only an actual spoken-statement Order is supported. "
             "A requested Foundation record must be genuine and complete before rolling. "
-            "Body/branch operations and other Order effects remain unavailable.",
+            "Actual prepared-body transfer is available; branching and other Order effects "
+            "remain unavailable.",
             source_fields,
             submit,
         )
@@ -177,7 +188,8 @@ async def open_code(
         viewer.user_id,
         "AM Identity/memory circuit maintenance",
         f"Original scene <#{channel}>. Only the actual already-knowing NPC can operate. "
-        "New operator knowledge/body/vessel/branch ports remain unavailable.",
+        "Actual prepared bodies and hooked return are available. New operator knowledge "
+        "and branching remain unavailable.",
         [Field("source", "Actual source or owned response", tuple(options))],
         choose,
     )
@@ -191,6 +203,11 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         from girlframe.discord_adapter.m2_ui import open_play
 
         await open_play(interaction, game, parent=data)
+        return
+    if data["kind"] == "am_code_body":
+        from girlframe.discord_adapter.m3_am_body import open_choice as open_body_choice
+
+        await open_body_choice(interaction, game, identity)
         return
     if data["kind"].startswith("am_code_records_"):
         from girlframe.discord_adapter.m3_am_records import open_choice as open_records_choice
@@ -228,6 +245,8 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
                             if x == "identities"
                             else "Genuine backup of all Identities and memories"
                             if x == "backup"
+                            else "Actual prepared-body swap and hooked return"
+                            if x == "body"
                             else "Complete Foundation records and one question",
                         )
                         for x in detail["available_options"]

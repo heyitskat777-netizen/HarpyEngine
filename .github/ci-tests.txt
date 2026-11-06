@@ -1,4 +1,7 @@
-# Genuine memory acquisition -> real scene/Keep -> relevance and discrepancy returns.
-# Planned previous-award compatibility; final M3 regression remains separate.
-tests/rules/test_deep_brain_spikes.py
-tests/rules/test_handler_advancements.py
+# Genuine circuits -> actual body -> real damage -> hooked return -> Inbox hardware.
+# Planned existing AM branches; final whole-M3 regression remains separate.
+tests/rules/test_am_body.py
+tests/rules/test_am_code.py::test_mid_actual_operator_native_rewrite_retains_mark_slot_body_hardware_and_finishes
+tests/rules/test_am_code.py::test_low_real_npc_order_has_no_disobey_and_waits_original_owned_actual_fulfillment
+tests/rules/test_am_memory.py::test_high_all_memories_and_identity_rewrite_are_one_option_alongside_records
+tests/rules/test_am_backup.py::test_mid_native_genuine_snapshot_restore_keeps_limiter_marks_work_privacy_and_replay
