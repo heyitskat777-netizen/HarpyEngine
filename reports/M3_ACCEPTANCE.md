@@ -1,5 +1,38 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Harpy repossession and ordinary capture award — 2026-11-06 UTC
+
+Source extends `bfa2b636e998dcccebdc01815698a9dfdaba90b8`; exact sanitized bytes
+are frozen in ignored `var/m3-harpy-repossession-freeze/manifest.json`.
+M3 remains **RULES_SUBSET**; this closes the finite original-PC workflow only.
+
+An actual Harpy battle/Defeat Foundation capture now leads through source-bound
+body extraction, verified transport, performed purge/study-or-excision and
+reprogramming, owner-selected Mockingbird resources, factual review and native
+activation. The transaction installs the real current sheet/profile/roster and
+snapshot, rebinds personal Bonds, preserves the actual body and surviving Frame,
+and removes the live Harpy representation. No restored old Girl, free Frame,
+repair, automatic piloting or silently cleared shutdown is granted. Actual medical
+waking is recorded separately. Private original history remains readable.
+
+The normal then completes an actual outside-Frame Mockingbird Keep, genuine
+ordinary capture/conversion award, native +2 Permission spend and Inbox History
+reopen, including identical activation retry. **1 passed / 7.64s**, command
+`.venv/bin/pytest -q tests/rules/test_handler_conversion.py -x`.
+Affected ordinary/award/Harpy-physical compatibility **6 passed / 19.70s** is reused;
+no repeat full regression. All **17 changed Python files** pass Ruff/format and
+**16 source modules** pass mypy; coherent evidence is in ignored
+`var/m3-handler-conversion-static.json` and exact hashes in its handoff.
+
+The newly inventoried printed repossession branch brings inventory to **476 total /
+439 required core / 37 deferred Ancillary**. Metadata is **175 subsets /
+301 unimplemented / 314 adjustable clarifications**, zero independent approvals.
+Inventory counts are not a completion percentage. Rebel/external-Harpy conversion,
+contested or unknown transport, occupied successor slots and broader physical,
+playbook, Strain, world/shared/lifecycle work still prevent M3 completion.
+Bot stays off; no deployment, live migration, environment publication, recovered
+engine write, Ancillary, AI or M4 activation.
+
 ## Retained Clone AM residency — 2026-11-06 UTC
 
 Source extends `6e9be50f441eb702032c8ebbd82b42d2d56fb53c`; exact bytes are retained

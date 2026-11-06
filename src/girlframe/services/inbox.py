@@ -865,6 +865,29 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_handler_conversion import HandlerConversionService
+
+            for conversion in HandlerConversionService(self.store)._tasks(connection, viewer):
+                pending_conversion = bool(conversion["pending"])
+                items.append(
+                    InboxItem(
+                        "handler-conversion:" + conversion["id"],
+                        "handler_conversion",
+                        conversion["id"],
+                        conversion["revision"],
+                        "playbook",
+                        conversion["label"],
+                        "Original participant in this repossession",
+                        "pending" if pending_conversion else "established",
+                        pending_conversion,
+                        False,
+                        "Review actual capture, treatment and Mockingbird activation.",
+                        "Private choices remain scoped to the original participants.",
+                        "Review repossession",
+                        task="m3_handler_conversion",
+                    )
+                )
+
             from girlframe.services.m3_handler_ordinary import HandlerOrdinaryService
 
             for ordinary_control in HandlerOrdinaryService(self.store)._tasks(connection, viewer):

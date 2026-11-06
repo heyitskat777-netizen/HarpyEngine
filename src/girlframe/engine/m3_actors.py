@@ -105,6 +105,11 @@ def frame_position(
     fallback: tuple[int, int] | None = None,
 ) -> tuple[int, int] | None:
     """Follow one actual Frame body through parking or transformation, never its controller."""
+    from girlframe.engine.m3_handler_conversion import converted_frame_owner
+
+    converted = converted_frame_owner(state, owner, instance)
+    if converted is not None and converted != owner:
+        return frame_position(state, converted, instance, fallback=fallback)
     if owner.kind == "gorgon" and any(
         x.state == "offstage" and x.actor == owner for x in state.harpy_travels
     ):
@@ -535,6 +540,9 @@ def _resolve(
         )
         placement = next((x for x in state.placements if x.actor == ref), None)
         same_frame = placement is not None and placement.frame_instance == frame_instance
+        from girlframe.engine.m3_handler_conversion import frame_shutdown
+
+        shutdown = frame_shutdown(state, ref, frame_instance)
         cell = placement.girl_cell if placement else None
         occupied_instance = None
         if placement and placement.mode != "outside_frame":
@@ -591,6 +599,7 @@ def _resolve(
             frame=sheet.frame,
             frame_instance=frame_instance,
             frame_scrapped=sheet.frame_scrapped,
+            frame_shutdown=shutdown,
             heat=sheet.heat,
             assets=assets(sheet.assets, sheet=sheet),
             identities=identities(sheet.identities),
@@ -605,6 +614,7 @@ def _resolve(
                 and placement.occupied_frame_owner is None
                 and not placement.incapacitated
                 and not sheet.frame_scrapped
+                and not shutdown
             )
             if placement and same_frame
             else None,
@@ -615,7 +625,11 @@ def _resolve(
             if placement and placement.custody
             else None,
             position_sha256=fingerprint(placement) if placement else None,
-            source_sha256=fingerprint(sheet),
+            source_sha256=hashlib.sha256(
+                (fingerprint(sheet) + ":frame_shutdown").encode()
+            ).hexdigest()
+            if shutdown
+            else fingerprint(sheet),
         )
     if ref.kind == "handler":
         if state.handler != int(ref.entity):

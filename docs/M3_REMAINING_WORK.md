@@ -1,5 +1,12 @@
 # M3 remaining work — verified development snapshot
 
+Newest bounded addition: **actual original-PC Harpy repossession into a current
+Mockingbird and ordinary capture/conversion award**, with native activation,
+actual Play, Permission spend and private History. Evidence is at the top of
+[M3 acceptance](../reports/M3_ACCEPTANCE.md). Required external-Harpy/Rebel and
+broader source/body/playbook/Strain/world/shared/lifecycle paths remain open.
+Retained Home is in progress. M3 remains RULES_SUBSET; bot off.
+
 Newest bounded addition: **retained Clone AM same-copy residency**, completing actual
 paid delivery, native additional-Identity use and Clone Flirt/Bond/chat. Source
 evidence is at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md). Metadata:

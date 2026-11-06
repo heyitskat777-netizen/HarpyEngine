@@ -5220,6 +5220,23 @@
       "revision": 1,
       "implementation_note": "Adjustable interpretation requiring printed-rule clarity review. Applies only to exact source-proved paid delivery, not generic person/carrier movement.",
       "change_impact": "Printed contains requires genuine carrier, while paid rule retention provides continuing same ability. Explicit same-person transfer preserves identity/history/resources without copying a person or inventing a lifetime reset; adjustable printed clarity review."
+    },
+    {
+      "id": "harpy-repossession-actual-new-incarnation",
+      "summary": "Performed repossession creates a new Mockingbird incarnation of the same altered person; preserve actual body, surviving Frame and personal Bonds rather than restoring the former Girl.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF177/printed175 repossession; PDF179/printed177 rebirth; PDF34/printed32 Mockingbird; PDF153/printed151 advancement",
+      "authority": "delegated_recommendation",
+      "rationale": "The book specifies actual capture/treatment and a Mockingbird outcome but no automatic Frame repair, resource reset, transport or restoration of the old Girl.",
+      "alternatives": [
+        "Restore the old Girl sheet or invent free repaired Frame/resources",
+        "Treat a narrative conversion claim alone as a completed Girl and award"
+      ],
+      "policy_key": "harpy_repossession_actual_new_incarnation",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Finite original PC path only. Actual medical waking is separately recorded; preserve shutdown until a genuine restart. Actual owner package and Status are required. Conversion survives unavailable award slots.",
+      "change_impact": "Changes future conversions and resource reconciliation; never rewrites original Harpy/archive/capture or saved treatment history. Independent source and player review remain pending."
     }
   ],
   "entries": [
@@ -16244,14 +16261,15 @@
       "reviewer": null,
       "review_reference": null,
       "contract": {
-        "trigger": "Within recorded ordinary Sessions, complete proved useful starting-Identity replacement or a performed successful Cadre PR event; consume the shared ordinary award slot when granting",
+        "trigger": "Within recorded ordinary Sessions, complete proved useful starting-Identity replacement, successful performed Cadre PR or actual Harpy repossession; consume the shared ordinary award slot when granting",
         "actor_type": "Authorized human facilitator, original Girl and original Handler/body/appointment",
         "pre_roll_sources": [
           "Actual canonical session and original human facilitator boundary record",
           "Original activation Identity instances and genuine owner-owned Tag-embrace replacement chains",
           "Scoped Girl disclosure and exact current endpoint usefulness judgment",
           "One ordinary award per session and permanent original-Handler criterion mark-off",
-          "For PR, actual original host and source-owned Girl activities plus performed public material/outcome and authorized human GM factual result"
+          "For PR, actual original host and source-owned Girl activities plus performed public material/outcome and authorized human GM factual result",
+          "For capture_convert, completed exact Harpy repossession into a real current Mockingbird, proved against its source events and saved result"
         ],
         "roll_kind": "diceless",
         "allowed_modifiers": [],
@@ -16264,6 +16282,10 @@
             "Actual unsuccessful event: no award/cap/mark",
             "Actual successful event remains recorded independently of award eligibility",
             "Eligible free-slot success autoawards; original host may claim deferred source in later free Session if criterion remains unmarked"
+          ],
+          "capture_convert": [
+            "Actual conversion truth remains saved independently of award eligibility",
+            "Eligible completion autoawards; original Handler may claim saved source in a later free Session if criterion remains unmarked"
           ]
         },
         "choice_ownership": "Facilitator records OOC session boundaries; original Girl owns scoped disclosure and actual replacement choices; original Handler owns usefulness judgment and award spending",
@@ -16277,18 +16299,20 @@
         ],
         "mandatory_followups": [
           "All actual starting Identity instances must have genuine supported replacement chains and useful current endpoints",
-          "Capture/conversion and other replacement producers remain required exact source ports"
+          "Rebel conversion, external Harpy and other replacement producers remain required exact source ports"
         ],
         "handler_or_gm_intervention": "Actual original Handler subjective usefulness reasons complement objective source proof; attendance/disclosure alone grants nothing",
         "test_fixture_ids": [
           "tests/rules/test_handler_ordinary.py",
-          "tests/rules/test_handler_pr.py"
+          "tests/rules/test_handler_pr.py",
+          "tests/rules/test_handler_conversion.py"
         ]
       },
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_handler_ordinary.py",
-        "tests/rules/test_handler_pr.py"
+        "tests/rules/test_handler_pr.py",
+        "tests/rules/test_handler_conversion.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -19358,6 +19382,65 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_location_build.py"
+      ],
+      "m2_play_id": null,
+      "module": "core"
+    },
+    {
+      "id": "harpy.harpy.repossession",
+      "title": "Harpy repossession into Mockingbird",
+      "scope": "harpy",
+      "kind": "mechanic",
+      "source": {
+        "document": "rulebook",
+        "pdf_page": 177,
+        "printed_page": 175,
+        "heading": "HARPIES — repossession"
+      },
+      "required": true,
+      "implementation": "subset",
+      "source_audit": "inventoried",
+      "independent_review": "pending",
+      "reviewer": null,
+      "review_reference": null,
+      "contract": {
+        "trigger": "An actual alive Foundation-captured original PC Harpy undergoes performed extraction, transport, treatment and owned Mockingbird activation",
+        "actor_type": "Original reborn Harpy/controller, actual custodian, original Handler and authorized human GM",
+        "pre_roll_sources": [
+          "Actual Harpy rebirth/archive, battle and Foundation Defeat capture",
+          "Actual separated body, verified transport and performed purge/study or excision plus drugs/reprogramming",
+          "Owner-authored two Girl Assets with one Void-altered, printed Identities, real Girl/NPC Bonds and exact resulting Status"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "normal": [
+            "Source-bound captured, extracted, transported, treated, package, ready and complete states",
+            "Actual same-person new Mockingbird incarnation and optional source-proved ordinary award"
+          ]
+        },
+        "choice_ownership": "Original human owns resulting Girl choices and activation; authorized GM verifies performed physical/treatment facts; original Handler owns award spending",
+        "target_policy": "Exact canonical original reborn PC Harpy with free successor slot; no generic Rebel allegiance flip, external Harpy creation or old Girl restoration",
+        "post_roll_effects": [
+          "Actual current sheet/profile/roster/snapshot and same body/Frame continuity in one audited transaction",
+          "Existing personal Bonds rebound; surviving Frame resources, Void, location and shutdown retained; no duplicate live Harpy",
+          "Genuine ordinary capture_convert source shares Session cap and separate permanent criterion mark; actual Permission spend and private History"
+        ],
+        "mandatory_followups": [
+          "Actual extraction, transport and treatment must finish before activation",
+          "Unperformed medical waking leaves actual incapacitation; Frame shutdown does not silently clear",
+          "Unported external Harpy, Rebel conversion, contested transport and broader lifecycle paths remain required M3 work"
+        ],
+        "handler_or_gm_intervention": "Factual source verification and Status placement; no invented treatment dice or automatic free Frame repair",
+        "test_fixture_ids": [
+          "tests/rules/test_handler_conversion.py"
+        ]
+      },
+      "dependencies": [
+        "source.handler-advancement-triggers"
+      ],
+      "test_evidence": [
+        "tests/rules/test_handler_conversion.py"
       ],
       "m2_play_id": null,
       "module": "core"

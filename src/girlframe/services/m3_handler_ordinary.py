@@ -240,6 +240,11 @@ def prove_award(
     source = award.ordinary_source
     if source is None or award.rule != rules.RULE or award.source_work is not None:
         raise WorkflowError("Recover the exact real ordinary advancement source")
+    if source.trigger == "capture_convert":
+        from girlframe.services.m3_handler_conversion import prove_award as prove_conversion
+
+        prove_conversion(game, c, state, award)
+        return
     if source.trigger == "public_relations":
         from girlframe.services.m3_handler_pr import prove_award as prove_pr
 

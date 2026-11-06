@@ -18,7 +18,7 @@ or certify rules automatically. M1 raw dice remain a separate test primitive.
 M3 is in development and remains **RULES_SUBSET**. The current bounded candidate adds
 actual Engage/Harpy extra maneuvers, owned Handler Tag requests and attention notices,
 Enforcer acquisition/Snoop/retention workflows, Mockingbird subsets, original-person
-Harpy recovery and Handler Void, and source-bound Gorgon combat/collateral/world
+Harpy recovery/repossession into an actual Mockingbird and Handler Void, and source-bound Gorgon combat/collateral/world
 consequences. The last committed full regression passed **2,200 tests**, with source scope and remaining gates
 in [M3 evidence](reports/M3_ACCEPTANCE.md).
 Newer development adds supported Virus/Sex/Call, JANUS Core and selected paid

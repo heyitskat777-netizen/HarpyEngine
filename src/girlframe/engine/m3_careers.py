@@ -1,6 +1,7 @@
 """End one original career and start a distinct incarnation without account inheritance."""
 
 import json
+from typing import TYPE_CHECKING
 
 from girlframe.engine.m2 import GameState, PilotSheet, TagState
 from girlframe.engine.m3_actor_state import ActorRef
@@ -11,6 +12,9 @@ from girlframe.engine.m3_career_state import (
     IncarnationBinding,
     UnlinkedCareer,
 )
+
+if TYPE_CHECKING:
+    from girlframe.engine.m3_handler_conversion import Repossession
 
 
 def binding(state: GameState, owner: int) -> IncarnationBinding | None:
@@ -444,6 +448,102 @@ def replacement_status(
         )
     )
     return state
+
+
+def activate_repossessed(
+    original: GameState,
+    *,
+    harpy: ActorRef,
+    conversion: "Repossession",
+    event: str,
+    profile_id: str,
+    profile_revision: int,
+    sheet: PilotSheet,
+    position: int,
+) -> GameState:
+    """Install the performed repossession's new Girl, never the former archived sheet."""
+    from girlframe.engine.m3_actor_bonds import depth, rebind, set_depth
+    from girlframe.engine.m3_handler_conversion import build_sheet, get
+    from girlframe.engine.m3_physical_state import Placement
+
+    value = get(original, conversion.id)
+    body = next((x for x in original.harpy_states if x.id == harpy.entity), None)
+    archive = next((x for x in original.career_archives if x.id == value.archive_id), None)
+    result = value.resulting_actor
+    if (
+        value != conversion
+        or value.phase != "ready"
+        or value.actor != harpy
+        or harpy.kind != "external_pilot"
+        or body is None
+        or not body.alive
+        or body.linked
+        or body.subsumed
+        or body.custody != "transported"
+        or body.cell is None
+        or body.cell != value.destination
+        or body.model_dump_json() != value.final_harpy_json
+        or archive is None
+        or archive.actor != body.origin
+        or archive.ending != "harpy"
+        or archive.id != body.original_archive
+        or value.original_frame_owner != body.origin
+        or value.frame_instance != body.frame_instance
+        or result is None
+        or result.kind != "pilot"
+        or result.entity != str(body.controller)
+        or result.incarnation is None
+        or sheet.owner != body.controller
+        or sheet.character_id != result.incarnation
+        or sheet.girl != "MOCKINGBIRD"
+        or value.package is None
+        or not value.review_event
+        or not value.transport_event
+        or not event.strip()
+        or int(result.entity) in original.order
+        or sheet.model_dump_json()
+        != build_sheet(original, value, profile_revision).model_dump_json()
+    ):
+        raise ValueError("Activate only this source-proved, treated original Harpy as Mockingbird")
+    owner = int(result.entity)
+    state = replacement(
+        original,
+        archive.id,
+        owner=owner,
+        new_character=result.incarnation,
+        profile_id=profile_id,
+        profile_revision=profile_revision,
+        source_event=event,
+    )
+    state = replacement_status(state, owner, result.incarnation, position, event)
+    state.sheets[result.entity] = PilotSheet.model_validate_json(sheet.model_dump_json())
+    state.order = state.order[:position] + (owner,) + state.order[position:]
+    # The former live Harpy is still present while the same person's relationships move.
+    state = rebind(state, harpy, result, event)
+    for target in (value.package.girl_bond, *(ref for _, ref in value.package.npc_bonds)):
+        if depth(state, result, target) < 1:
+            state = set_depth(state, result, target, 1, event)
+    # Ready provenance already freezes this entire Harpy; the producer commits its
+    # completed result with the same event before any canonical state is published.
+    state.harpy_states = [x for x in state.harpy_states if x.id != body.id]
+    state.placements = [x for x in state.placements if x.actor not in (body.origin, result)]
+    state.placements.append(
+        Placement(
+            actor=result,
+            vessel_id=body.body_vessel,
+            frame_instance=body.frame_instance,
+            girl_cell=body.cell,
+            frame_cell=body.frame_cell,
+            mode="outside_frame",
+            vitals_active=body.vitals_active,
+            incapacitated=body.body_incapacitated,
+            subsumed=False,
+            proposed_event=value.review_event,
+            source_event=event,
+            account="Completed Foundation repossession and Cadre activation",
+        )
+    )
+    return GameState.model_validate_json(state.model_dump_json())
 
 
 def offer_return(

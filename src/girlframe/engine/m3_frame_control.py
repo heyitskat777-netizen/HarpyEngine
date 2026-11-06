@@ -17,6 +17,11 @@ def connection(state: GameState, identity: str) -> NeuralConnection:
 
 def frame_address(state: GameState, owner: ActorRef, instance: str) -> tuple[ActorRef, str]:
     """An actual rebirth may keep a physical Frame, never its human's replacement."""
+    from girlframe.engine.m3_handler_conversion import converted_frame_owner
+
+    converted = converted_frame_owner(state, owner, instance)
+    if converted is not None and converted != owner:
+        return converted, instance
     if owner.kind != "external_pilot":
         return owner, instance
     body = next(

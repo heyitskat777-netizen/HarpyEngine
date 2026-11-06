@@ -626,6 +626,13 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_handler_pr import HandlerPRService
 
             await open_pr(interaction, HandlerPRService(self.service.store), item.identity)
+        elif item.task == "m3_handler_conversion":
+            from girlframe.discord_adapter.m3_handler_conversion import open_conversion
+            from girlframe.services.m3_handler_conversion import HandlerConversionService
+
+            await open_conversion(
+                interaction, HandlerConversionService(self.service.store), item.identity
+            )
         elif item.task == "m3_handler_ordinary":
             from girlframe.discord_adapter.m3_handler_ordinary import open_ordinary
             from girlframe.services.m3_handler_ordinary import HandlerOrdinaryService

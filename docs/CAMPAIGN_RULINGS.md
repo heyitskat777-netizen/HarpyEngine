@@ -3303,3 +3303,12 @@ and adjustment impact are recorded in `rules/registry.json`.
 ## Retained Clone residency — 2026-11-06 UTC
 
 - **retained-clone-same-copy-residency**: Paid retained Clone rule transfers the existing artificial person into actually delivered replacement Frame, using a real source-attributed residency fact; immutable birth Frame remains history. Adjustment impact: Printed contains requires genuine carrier, while paid rule retention provides continuing same ability. Explicit same-person transfer preserves identity/history/resources without copying a person or inventing a lifetime reset; adjustable printed clarity review. Rationale and alternatives are recorded in `rules/registry.json`; printed-rule clarity review remains pending.
+
+
+- `harpy_repossession_actual_new_incarnation` (PDF177/175,179/177,34/32,153/151):
+  actual treatment and owned Mockingbird choices create a new incarnation of the
+  same altered person. Preserve the surviving Frame, body facts and personal
+  Bonds; medical waking and Frame restart are separate actual operations.
+  Restore-old-sheet/free-repair and narrative-only award alternatives are rejected.
+  This delegated interpretation needs printed clarity review; changing it affects
+  future resource reconciliation, never silently rewrites saved history.

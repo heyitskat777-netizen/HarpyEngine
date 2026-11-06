@@ -165,7 +165,7 @@ def extract(
 def recover(state: GameState, actor: ActorRef, event: str, account: str) -> GameState:
     from girlframe.engine.m3_passengers import passenger_view
 
-    if passenger_view(state,actor) is not None:
+    if passenger_view(state, actor) is not None:
         raise ValueError("Use the actual guest body's source medical controls after extraction")
     _source(state, actor, event, account)
     body = harpy(state, actor)
@@ -183,3 +183,114 @@ def recover(state: GameState, actor: ActorRef, event: str, account: str) -> Game
         state, actor, vitals_active=True, body_incapacitated=False, physical_source_event=event
     )
     return _fact(changed, actor, event, account, "actual_medical_recovery")
+
+
+def extract_captured(
+    state: GameState,
+    bindings: tuple[ProfileBinding, ...],
+    actor: ActorRef,
+    extractor: ActorRef,
+    event: str,
+    account: str,
+    *,
+    repossession: str,
+) -> GameState:
+    """Printed repossession only; ordinary extraction's free-custody rule is unchanged."""
+    from girlframe.engine.m3_handler_conversion import get
+    from girlframe.engine.m3_void_state import HarpyState
+
+    _source(state, actor, event, account)
+    value, body = get(state, repossession), harpy(state, actor)
+    helper = resolve(state, extractor, bindings, require_current_profile=False)
+    if (
+        not isinstance(body, HarpyState)
+        or value.actor != actor
+        or value.phase != "captured"
+        or body.custody != "captured"
+        or body.custodian != extractor
+        or body.custody_event != value.capture_event
+        or not body.linked
+        or not (body.frame_shutdown or body.body_incapacitated)
+        or helper.alive is False
+        or helper.cell is None
+        or body.frame_cell != helper.cell
+        or helper.custody not in (None, "free")
+    ):
+        raise ValueError("Use the exact captured original and its actual present able custodian")
+    gate = locked(state, actor)
+    if gate is not None:
+        consent = gate.consents[-1] if gate.consents else None
+        if consent is None or not consent.allowed or consent.used_event:
+            raise ValueError("The actual locked Frame's extraction consent remains required")
+    changed = update(
+        state,
+        actor,
+        linked=False,
+        cell=body.frame_cell,
+        subsumed=False,
+        physical_source_event=event,
+    )
+    if gate is not None:
+        changed.frame_locks = [
+            x.model_copy(
+                update={
+                    "consents": gate.consents[:-1]
+                    + (gate.consents[-1].model_copy(update={"used_event": event}),)
+                }
+            )
+            if x.id == gate.id
+            else x
+            for x in changed.frame_locks
+        ]
+    return _fact(changed, actor, event, account, "captured_repossession_extraction")
+
+
+def transport_captured(
+    state: GameState,
+    bindings: tuple[ProfileBinding, ...],
+    actor: ActorRef,
+    destination: tuple[int, int],
+    event: str,
+    account: str,
+    *,
+    repossession: str,
+) -> GameState:
+    """Completed actual transport moves only the separated original body."""
+    from girlframe.engine.m3_handler_conversion import get
+    from girlframe.engine.m3_void_state import HarpyState
+
+    _source(state, actor, event, account)
+    value, body = get(state, repossession), harpy(state, actor)
+    custodian = (
+        resolve(state, body.custodian, bindings, require_current_profile=False)
+        if body.custodian is not None
+        else None
+    )
+    if (
+        not isinstance(body, HarpyState)
+        or value.actor != actor
+        or value.phase != "extracted"
+        or body.linked
+        or body.cell is None
+        or body.custody != "captured"
+        or custodian is None
+        or custodian.cell != destination
+        or state.world is None
+        or not any(
+            x.kind == "base"
+            and x.allegiance == "foundation"
+            and x.condition == "intact"
+            and x.cell == destination
+            for x in state.world.locations
+        )
+    ):
+        raise ValueError("Complete actual body-only transport into an intact Foundation Base")
+    changed = update(
+        state,
+        actor,
+        cell=destination,
+        custody="transported",
+        custody_event=event,
+        physical_source_event=event,
+    )
+    return _fact(changed, actor, event, account, "captured_repossession_transport")

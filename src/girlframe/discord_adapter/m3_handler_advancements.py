@@ -61,6 +61,8 @@ async def open_advancement(
             (
                 "Ordinary public-relations accomplishment"
                 if ordinary_source["trigger"] == "public_relations"
+                else "Ordinary capture and conversion accomplishment"
+                if ordinary_source["trigger"] == "capture_convert"
                 else "Ordinary starting-Identity accomplishment"
             )
             if ordinary_source

@@ -103,6 +103,12 @@ async def open_ordinary(
     if selected:
 
         async def operate(current: discord.Interaction, values: dict[str, Any]) -> str | None:
+            if values["operation"][0] == "conversion":
+                from girlframe.discord_adapter.m3_handler_conversion import open_conversion
+                from girlframe.services.m3_handler_conversion import HandlerConversionService
+
+                await open_conversion(current, HandlerConversionService(service.store))
+                return None
             if values["operation"][0] == "pr":
                 from girlframe.discord_adapter.m3_handler_pr import open_pr
                 from girlframe.services.m3_handler_pr import HandlerPRService
@@ -145,6 +151,7 @@ async def open_ordinary(
                     (
                         ("review", "Request useful starting-Identity review"),
                         ("pr", "Plan actual Foundation fundraiser/photoshoot"),
+                        ("conversion", "Repossess an actually captured Harpy"),
                         ("end", "Record actual Session end"),
                     ),
                 ),

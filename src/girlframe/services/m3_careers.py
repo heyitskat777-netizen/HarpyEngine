@@ -59,6 +59,74 @@ def end_in_transaction(
     )
 
 
+def activate_repossessed_in_transaction(
+    c: Connection,
+    game: GameService,
+    state: GameState,
+    *,
+    conversion: Any,
+    harpy: ActorRef,
+    sheet: PilotSheet,
+    position: int,
+    event: str,
+    public: dict[str, Any],
+    private: dict[str, Any],
+) -> GameState:
+    """Update the exact source-owned profile; caller records event then snapshot/sync."""
+    from girlframe.services.m3_handler_conversion import prove_repossession
+
+    value = prove_repossession(game, c, state, conversion.id, ready=True)
+    if value != conversion or value.resulting_actor is None:
+        raise WorkflowError("Recover the actual confirmed repossession package")
+    owner = int(value.resulting_actor.entity)
+    profile = (
+        c.execute(
+            sa.select(t.characters).where(
+                t.characters.c.campaign_id == game.store.campaign_id,
+                t.characters.c.user_id == str(owner),
+            )
+        )
+        .mappings()
+        .one_or_none()
+    )
+    if profile is None:
+        raise WorkflowError("Recover the original human's actual stable profile")
+    draft = DraftInput.model_validate(dict(public, notes=private.get("notes", "")))
+    if (
+        draft.callsign != sheet.callsign
+        or draft.girl_playbook != "MOCKINGBIRD"
+        or draft.frame_playbook != sheet.frame
+        or sheet.source_profile_revision != profile["revision"] + 1
+    ):
+        raise WorkflowError("Keep the actual resulting Mockingbird profile and surviving Frame")
+    changed = rules.activate_repossessed(
+        state,
+        harpy=harpy,
+        conversion=value,
+        event=event,
+        profile_id=profile["id"],
+        profile_revision=profile["revision"] + 1,
+        sheet=sheet,
+        position=position,
+    )
+    updated = c.execute(
+        t.characters.update()
+        .where(
+            t.characters.c.campaign_id == game.store.campaign_id,
+            t.characters.c.user_id == str(owner),
+            t.characters.c.revision == profile["revision"],
+        )
+        .values(
+            revision=profile["revision"] + 1,
+            public_json=json.dumps(public),
+            private_json=json.dumps(private),
+        )
+    )
+    if updated.rowcount != 1:
+        raise WorkflowError("STALE_REPOSSESSION: recover the original current profile revision")
+    return changed
+
+
 def synchronize_end(
     c: Connection,
     game: GameService,

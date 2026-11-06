@@ -1,7 +1,6 @@
-# Actual same-copy paid delivery -> native extra Identity -> Clone Flirt/Bond/chat,
-# native/graft compatibility and exact retained source/hardware boundary.
-# Final whole-M3 regression remains a separate candidate check.
-tests/rules/test_retained_clone_am.py
-tests/rules/test_clone_am.py::test_native_copy_identity_is_actual_additional_source_in_native_game_and_private_sheet
-tests/rules/test_clone_am.py::test_grafted_copy_real_keep_tag_repeated_in_next_scene_replaces_only_copy_identity
-tests/rules/test_class_retention.py::test_retained_class_requires_true_original_swap_chain_and_keeps_hardware_out
+# Actual Harpy capture -> performed repossession -> current Mockingbird Play -> award/spend/History.
+# Focused compatibility only; final whole-M3 regression remains separate.
+tests/rules/test_handler_conversion.py
+tests/rules/test_handler_ordinary.py
+tests/rules/test_handler_advancements.py
+tests/rules/test_harpy_physical.py

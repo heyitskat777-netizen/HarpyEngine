@@ -65,7 +65,9 @@ class Review(Model):
 class AwardSource(Model):
     session: str
     review: str
-    trigger: Literal["identities_useful", "public_relations"] = "identities_useful"
+    trigger: Literal["identities_useful", "public_relations", "capture_convert"] = (
+        "identities_useful"
+    )
 
 
 class Mark(Model):
@@ -75,7 +77,9 @@ class Mark(Model):
     review: str
     award: str
     event: str
-    trigger: Literal["identities_useful", "public_relations"] = "identities_useful"
+    trigger: Literal["identities_useful", "public_relations", "capture_convert"] = (
+        "identities_useful"
+    )
 
 
 def sessions(state: GameState) -> tuple[Session, ...]:

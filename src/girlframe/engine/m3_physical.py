@@ -126,12 +126,21 @@ def _source(state: GameState, event: str, account: str, actor: ActorRef) -> None
 
 def _save(state: GameState, placement: Placement) -> None:
     placement = Placement.model_validate_json(placement.model_dump_json())
-    state.passengers = [x.model_copy(update=dict(
-        subsumed=placement.subsumed,vitals_active=placement.vitals_active,revision=x.revision + 1,
-    )) if x.actor==placement.actor and x.state=="boarded"
-           and occupied_frame(placement)==(x.carrier,x.frame)
-           and (x.subsumed!=placement.subsumed or x.vitals_active!=placement.vitals_active)
-           else x for x in state.passengers]
+    state.passengers = [
+        x.model_copy(
+            update=dict(
+                subsumed=placement.subsumed,
+                vitals_active=placement.vitals_active,
+                revision=x.revision + 1,
+            )
+        )
+        if x.actor == placement.actor
+        and x.state == "boarded"
+        and occupied_frame(placement) == (x.carrier, x.frame)
+        and (x.subsumed != placement.subsumed or x.vitals_active != placement.vitals_active)
+        else x
+        for x in state.passengers
+    ]
     state.passengers = [
         x.model_copy(
             update=dict(
@@ -392,6 +401,10 @@ def cockpit_enter(
     if pilot:
         from girlframe.engine.m3_frame_control import active_takeover
 
+        if view.frame_shutdown:
+            raise ValueError(
+                "The captured Frame is still shut down; record its actual restart first"
+            )
         if active_takeover(state, actor, placement.frame_instance) is not None:
             raise ValueError("Resolve this actual Frame's source takeover before ordinary piloting")
     if (

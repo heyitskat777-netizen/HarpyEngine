@@ -123,6 +123,7 @@ class ActorView(Model):
     frame: str | None = None
     frame_instance: str | None = None
     frame_scrapped: bool | None = None
+    frame_shutdown: bool | None = None
     heat: int | None = Field(default=None, ge=0)
     assets: tuple[AssetView, ...] = ()
     identities: tuple[IdentityView, ...] = ()
