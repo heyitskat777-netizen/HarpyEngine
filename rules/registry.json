@@ -5237,6 +5237,24 @@
       "revision": 1,
       "implementation_note": "Finite original PC path only. Actual medical waking is separately recorded; preserve shutdown until a genuine restart. Actual owner package and Status are required. Conversion survives unavailable award slots.",
       "change_impact": "Changes future conversions and resource reconciliation; never rewrites original Harpy/archive/capture or saved treatment history. Independent source and player review remain pending."
+    },
+    {
+      "id": "retained-home-same-possessions-prepared-fixtures",
+      "summary": "Paid retention moves the original Home portable possessions and records genuinely prepared replacement-Frame structural comforts; preserve original installation and choices.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF94/printed92 Home, of a Sort; PDF16/printed14 Frame Swap",
+      "authority": "delegated_recommendation",
+      "rationale": "Continuing the exact selected rule needs actual items and usable replacement comforts. A new corner or vent is a new physical realization, not movement of the old geometric space.",
+      "alternatives": [
+        "Copy three fresh choices or duplicate old possessions",
+        "Treat all Home contents as additional kept mechanical Assets",
+        "Bar all structural retention or assume remote contents arrived"
+      ],
+      "policy_key": "retained_home_same_possessions_prepared_fixtures",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Exact original paid source, known accessible colocated delivery, original-owner factual confirmation and same possession IDs are mandatory; new fixtures link prior realization history. No new Asset slots, charge, approval or automatic remote recovery.",
+      "change_impact": "Affects future paid Home delivery and physical source proof; preserve immutable original choices, installation and prior use/transfer history. Independent printed clarity review remains pending."
     }
   ],
   "entries": [
@@ -11082,7 +11100,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_home.py"
+        "tests/rules/test_home.py",
+        "tests/rules/test_retained_home.py"
       ],
       "m2_play_id": null,
       "module": "core",

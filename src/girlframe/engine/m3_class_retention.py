@@ -25,6 +25,7 @@ RULES = frozenset(
         "frame.class.priestess.nightmare-core",
         "frame.class.priestess.void-physiotherapist",
         "frame.class.autocrat.clone-am",
+        "frame.class.legion.home-of-a-sort",
     )
 )
 

@@ -3312,3 +3312,13 @@ and adjustment impact are recorded in `rules/registry.json`.
   Restore-old-sheet/free-repair and narrative-only award alternatives are rejected.
   This delegated interpretation needs printed clarity review; changing it affects
   future resource reconciliation, never silently rewrites saved history.
+
+
+- `retained_home_same_possessions_prepared_fixtures` (PDF94/92,16/14): move the
+  original portable Home possessions at actual colocated delivery and prepare
+  replacement corner/vent comforts. New fixture identities link the old physical
+  realization; they do not claim a geometric corner moved. Preserve original
+  three choices and book/bottle IDs without new mechanical Asset slots. Copying
+  fresh objects, remote arrival and barring all structural retention are rejected.
+  Delegated clarity review remains pending; adjust future delivery policy without
+  rewriting original installation or earlier transfer/use history.

@@ -1,5 +1,6 @@
 """Owned private Home installation and source-proved real cockpit effects."""
 
+import json
 from typing import TYPE_CHECKING, Any, Literal
 from uuid import uuid4
 
@@ -9,6 +10,7 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_class_grafts as grafts
 from girlframe.engine import m3_home as rules
+from girlframe.engine import m3_home_objects as hardware
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref, depth
 from girlframe.engine.m3_actor_state import ActorRef
@@ -26,6 +28,76 @@ from girlframe.services.read_only_bot import GuildViewer
 
 if TYPE_CHECKING:
     from girlframe.services.m2_game import GameService
+
+
+def prove_prepared(
+    game: "GameService", c: Connection, state: GameState, paid: FrameRuleReceipt
+) -> hardware.PreparedHome:
+    from girlframe.services.m3_class_retention import proof
+
+    HomeService(game)._source(c, state, paid)
+    _, chain = proof(game, c, state, paid)
+    gate = Access(game.store)
+    assert gate.registry is not None
+    gate.registry.require_available(rules.RULE)
+    if len(chain) > 1:
+        gate.registry.require_available("core.core.frame-requisitions")
+    result = hardware.prepared(state, paid)
+    history = t.m2["m2_state_history"]
+    for change in hardware.transfers(state, paid):
+        source = c.execute(
+            sa.select(t.events.c.seq, t.events.c.kind, t.events.c.actor_id, history.c.body_json)
+            .join(history, history.c.event_id == t.events.c.id)
+            .where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                history.c.campaign_id == game.store.campaign_id,
+                t.events.c.id == change.event,
+            )
+        ).first()
+        if source is None or (source.kind, source.actor_id) != (
+            "m3.frame_swap_purchased",
+            paid.actor.entity,
+        ):
+            raise WorkflowError("Recover the actual paid Home preparation source")
+        saved = GameState.model_validate_json(source.body_json)
+        if change not in hardware.transfers(saved, paid):
+            raise WorkflowError("Recover the original same-object Home preparation snapshot")
+        previous = c.scalar(
+            sa.select(history.c.body_json)
+            .join(t.events, t.events.c.id == history.c.event_id)
+            .where(history.c.campaign_id == game.store.campaign_id, t.events.c.seq < source.seq)
+            .order_by(t.events.c.seq.desc())
+            .limit(1)
+        )
+        if previous is None:
+            raise WorkflowError("Recover the actual Home before reinstallation")
+        from girlframe.engine.m3_frame_swap_state import SwapReceipt
+
+        swap = next(x for x in saved.requisitions if x.id == change.swap)
+        if not isinstance(swap, SwapReceipt):
+            raise WorkflowError("Recover this actual Home's paid exchange receipt")
+        replay = saved.model_copy(deep=True)
+        replay.facts = [
+            x
+            for x in replay.facts
+            if not (x.get("kind") == hardware.KIND and x.get("body") == change.model_dump_json())
+        ]
+        hardware.transfer(
+            GameState.model_validate_json(previous), replay, paid, swap, confirmed=change.confirmed
+        )
+        if replay != saved:
+            raise WorkflowError("Recover the same possessions and prepared replacement comforts")
+    return result
+
+
+def prepare_transfer(
+    game: "GameService", c: Connection, state: GameState, paid: FrameRuleReceipt
+) -> GameState:
+    if paid.rule_id != rules.RULE or rules.held(state, paid.actor) != paid:
+        raise WorkflowError("Transfer only the actual original held Home source")
+    prove_prepared(game, c, state, paid)
+    hardware.accessible(state, paid)
+    return state.model_copy(deep=True)
 
 
 class HomeService:
@@ -86,7 +158,11 @@ class HomeService:
                 None,
             )
             installation = self._source(c, state, receipt) if receipt else None
-            active = receipt is not None and not suspended(state, receipt.id)
+            from girlframe.engine.m3_class_retention import binding
+
+            chain = binding(state, receipt)[1] if receipt is not None else ()
+            active = receipt is not None and rules.held(state, actor) == receipt
+            prepared = hardware.prepared(state, receipt) if receipt is not None else None
             others = []
             if active:
                 bindings = profiles(c, self.store.campaign_id)
@@ -116,8 +192,9 @@ class HomeService:
                 donors=list(grafts.donors(rules.RULE)) if kind == "frame_grafting" else [],
                 permissions=sheet.permissions,
                 owned=receipt is not None,
-                suspended=bool(receipt and not active),
+                suspended=any(suspended(state, identity) for identity in chain),
                 items=list(installation.items) if installation else [],
+                prepared=prepared.model_dump(mode="json") if prepared else None,
                 others=others,
                 tags=[
                     dict(id=x.id, label=x.label)
@@ -159,8 +236,8 @@ class HomeService:
             if any(
                 isinstance(x, FrameRuleReceipt)
                 and x.actor == actor
-                and x.frame_instance == frame
                 and x.rule_id == rules.RULE
+                and grafts.eligible(state, x)
                 for x in state.requisitions
             ):
                 raise WorkflowError(
@@ -248,6 +325,7 @@ class HomeService:
             if receipt is None:
                 raise WorkflowError("Restore your original paid Home source before using it")
             self._source(c, state, receipt)
+            current_home = prove_prepared(self.game, c, state, receipt)
             if (
                 state.revision != revision
                 or not account.strip()
@@ -282,6 +360,12 @@ class HomeService:
                     physical=physical,
                     operation=operation,
                     item=item or "",
+                    object_ids=json.dumps(
+                        tuple(x.id for x in current_home.objects if x.choice == item)
+                    ),
+                    realization_ids=json.dumps(
+                        tuple(x.id for x in current_home.realizations if x.choice == item)
+                    ),
                     tag=tag or "",
                     account=account,
                     event=event,

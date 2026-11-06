@@ -325,6 +325,7 @@ class FrameSwapService(PersonalFirearmService):
         purchase: bool = False,
         expected: str | None = None,
         delivered: bool = False,
+        home_reinstalled: bool = False,
     ) -> dict[str, Any]:
         def access(c: Connection) -> None:
             Access(self.store, self._registry()).authorize(
@@ -431,6 +432,23 @@ class FrameSwapService(PersonalFirearmService):
                     if clone_paid is None:
                         raise WorkflowError("Recover the exact original retained Clone source.")
                     clone_before = prepare_transfer(self.game, c, state, clone_paid)
+                from girlframe.engine.m3_home import RULE as HOME_RULE
+
+                home_before: GameState | None = None
+                home_paid = None
+                if chosen.retained_rule == HOME_RULE:
+                    from girlframe.engine.m3_class_grafts import held as class_held
+                    from girlframe.services.m3_home import prepare_transfer as prepare_home_transfer
+
+                    home_paid = class_held(state, actor, HOME_RULE)
+                    if home_paid is None:
+                        raise WorkflowError("Recover the exact original retained Home source.")
+                    if not home_reinstalled:
+                        raise WorkflowError(
+                            "Confirm the original Home possessions were moved and replacement "
+                            "comforts actually prepared at this delivery."
+                        )
+                    home_before = prepare_home_transfer(self.game, c, state, home_paid)
                 original = PilotSheet.model_validate_json(
                     state.sheets[actor.entity].model_dump_json()
                 )
@@ -460,6 +478,18 @@ class FrameSwapService(PersonalFirearmService):
                         if isinstance(item, SwapReceipt) and item.id == purchase_id
                     )
                     transfer(clone_before, state, clone_paid, swap)
+                if home_before is not None:
+                    from girlframe.engine.m3_home_objects import transfer as transfer_home
+
+                    assert home_paid is not None
+                    home_swap = next(
+                        item
+                        for item in state.requisitions
+                        if isinstance(item, SwapReceipt) and item.id == purchase_id
+                    )
+                    transfer_home(
+                        home_before, state, home_paid, home_swap, confirmed=home_reinstalled
+                    )
                 body.update(requisition=purchase_id, resolution="actual_paid_exchange_completed")
                 kind = "purchased"
             metadata: dict[str, Any] = dict(plan_id=row["id"])
@@ -491,6 +521,7 @@ class FrameSwapService(PersonalFirearmService):
                     purchase=purchase,
                     expected=expected,
                     delivered=delivered,
+                    **({"home_reinstalled": True} if home_reinstalled else {}),
                 ),
                 operation,
                 authorize=access,

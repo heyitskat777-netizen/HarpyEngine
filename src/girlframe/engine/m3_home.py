@@ -84,8 +84,11 @@ def together(
     receipt = held(state, actor)
     if receipt is None or other.kind != "pilot" or actor == other:
         raise ValueError("Use your actual acquired Home with another original Pilot")
+    from girlframe.engine.m3_home_objects import prepared
+
+    home = prepared(state, receipt)
     poses = [next((x for x in state.placements if x.actor == ref), None) for ref in (actor, other)]
-    if any(x is None or occupied_frame(x) != (actor, receipt.frame_instance) for x in poses):
+    if any(x is None or occupied_frame(x) != (actor, home.frame) for x in poses):
         raise ValueError("Both actual people must already occupy this exact owned Frame")
     first, second = (
         resolve(state, ref, bindings, require_current_profile=False) for ref in (actor, other)
@@ -103,7 +106,7 @@ def together(
         )
     return fingerprint(
         Presence(
-            frame=receipt.frame_instance,
+            frame=home.frame,
             purchase=receipt.id,
             actor=first.position_sha256,
             other=second.position_sha256,

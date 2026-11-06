@@ -265,6 +265,7 @@ async def open_plan(
             purchase=action == "pay",
             expected=data["expected"],
             delivered=values["delivered"] == ("yes",),
+            home_reinstalled=values.get("home_reinstalled") == ("yes",),
         )
         return (
             "Four Permissions paid; your actual new Frame is assigned."
@@ -294,6 +295,19 @@ async def open_plan(
         ],
         act,
     )
+    from girlframe.engine.m3_home import RULE as HOME_RULE
+
+    if data["selection"]["retained_rule"] == HOME_RULE:
+        form.fields.append(
+            Field(
+                "home_reinstalled",
+                "Original Home possessions moved and new corner/vent prepared",
+                (
+                    ("yes", "Yes, original possessions moved and comforts prepared"),
+                    ("no", "Home reinstallation not yet performed"),
+                ),
+            )
+        )
     form.add_item(EditPlan(form, service, identity))
     await reply(interaction, form.text(), form)
 

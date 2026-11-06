@@ -1,5 +1,12 @@
 # M3 remaining work — verified development snapshot
 
+Newest bounded addition: **retained Home with same portable possessions and
+actually prepared replacement fixtures**, followed by actual Bond/Tag consumers.
+Evidence is at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md). Next bounded
+assignments are Deep-Brain-Spikes memory scenes and AM body transfer. Remaining
+source/body/playbook/Strain/world/shared/lifecycle paths and final integrated
+verification still block M3. Bot off; no percentage or ready claim.
+
 Newest bounded addition: **actual original-PC Harpy repossession into a current
 Mockingbird and ordinary capture/conversion award**, with native activation,
 actual Play, Permission spend and private History. Evidence is at the top of

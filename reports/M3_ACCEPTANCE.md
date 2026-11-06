@@ -1,5 +1,36 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Retained Home — 2026-11-06 UTC
+
+Source extends `401efd01185c089735c2fe07e5adb7aa16667eb3`; exact bytes are frozen
+in ignored `var/m3-retained-home-freeze/manifest.json`. M3 remains **RULES_SUBSET**;
+final regression and independent/player review remain pending.
+
+A real paid Swap now carries the original Home possessions and records genuinely
+prepared replacement fixtures after native owner confirmation. The mixed normal
+uses a book, napping corner and vent/hidden bottle: book/bottle IDs stay the same,
+new corner/vent realizations link the previous ones, and the new vent contains the
+same bottle. Original three choices, birth/source/history and the single ordinary
+retained mechanical Asset remain intact. A false confirmation cannot charge.
+Default-false omission preserves older ordinary Swap request bytes for retries.
+
+The trace completes actual guest loss/Defeat/rescue into the replacement Frame,
+native corner Bond deepening, actual book overflow Heat and owned Tag rejection
+with required-work cleanup. **1 passed / 4.372s**, `var/m3-retained-home.xml`;
+planned native/graft/source compatibility **3 passed / 8.114s**,
+`var/m3-retained-home-compat.xml`. All **8 changed Python files** pass Ruff/format;
+all **6 source modules** pass mypy, including shared service/native/test glue.
+Coherent passing hashes are reused from `var/m3-retained-home-handoff.json`.
+No repeated full regression or installation.
+
+Metadata: **175 subsets / 301 unimplemented / 315 adjustable clarifications**,
+476 total,439 required core,37 deferred Ancillary,zero independent approvals.
+These are inventory counts, not a completion percentage. Remote/missing contents
+require actual recovery; no new objects, Assets, geometry framework or hardware
+regrant. Broader required source/body/playbook/Strain/world/shared/lifecycle work
+and final integrated verification still block M3. Bot stays off; no deployment,
+live migration, environment publication, recovered-engine write, AI/M4 or Ancillary.
+
 ## Harpy repossession and ordinary capture award — 2026-11-06 UTC
 
 Source extends `bfa2b636e998dcccebdc01815698a9dfdaba90b8`; exact sanitized bytes
