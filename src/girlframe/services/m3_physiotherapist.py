@@ -9,12 +9,14 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_physiotherapist as rules
+from girlframe.engine.frame_classes import frame_class
 from girlframe.engine.m2 import GameState, TagState
 from girlframe.engine.m3_actor_bonds import current_ref, depth, set_depth
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_janus_storage import active as stored_points
-from girlframe.engine.m3_nightmare import native
+from girlframe.engine.m3_nightmare import DONORS, current
 from girlframe.engine.m3_off_duty import Period
+from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -92,8 +94,11 @@ class PhysiotherapistService:
 
     def _current(self, c: Connection, state: GameState, value: rules.Therapy) -> None:
         self.game.character_binding(c, state, int(value.actor.entity))
-        if rules.held(state, value.actor) is None:
-            raise WorkflowError("Restore this original native Class entitlement before treatment")
+        receipt = rules.held(state, value.actor)
+        if receipt is None or receipt.id != value.purchase:
+            raise WorkflowError(
+                "Restore this original paid Physiotherapist source before treatment"
+            )
         npc = (
             next((x for x in state.world.npcs if x.id == value.npc.entity), None)
             if state.world
@@ -137,7 +142,7 @@ class PhysiotherapistService:
             state = load_state(c, self.store.campaign_id)
             try:
                 actor = current_ref(state, viewer.user_id)
-                _, frame = native(state, actor)
+                sheet, frame = current(state, actor)
                 gate = Access(self.store)
                 if gate.registry is None:
                     return dict(available=False)
@@ -145,12 +150,27 @@ class PhysiotherapistService:
             except (ValueError, WorkflowError):
                 return dict(available=False)
             self.game.character_binding(c, state, viewer.user_id)
+            native = frame_class(sheet.frame) == "priestess"
+            acquired = next(
+                (
+                    x
+                    for x in state.requisitions
+                    if isinstance(x, FrameRuleReceipt)
+                    and x.actor == actor
+                    and rules.receipt_eligible(state, x)
+                ),
+                None,
+            )
             return dict(
                 available=True,
                 revision=state.revision,
                 actor=actor.model_dump(mode="json"),
                 frame=frame,
                 owned=rules.held(state, actor) is not None,
+                suspended=acquired is not None and suspended(state, acquired.id),
+                kind="ability_unlock" if native else "frame_grafting",
+                price=2 if native else 3,
+                donors=[] if native else list(DONORS),
                 npcs=[
                     dict(id=x.id, label=x.name)
                     for x in state.world.npcs
@@ -208,13 +228,30 @@ class PhysiotherapistService:
         return result
 
     def buy(
-        self, viewer: GuildViewer, key: str, revision: int, npc: str, account: str
+        self,
+        viewer: GuildViewer,
+        key: str,
+        revision: int,
+        npc: str,
+        account: str,
+        donor_frame: str | None = None,
     ) -> dict[str, Any]:
         def change(c: Connection) -> dict[str, Any]:
             state = load_state(c, self.store.campaign_id)
             RequisitionService(self.game)._safe(c, state, viewer.user_id)
             actor = current_ref(state, viewer.user_id)
-            sheet, frame = native(state, actor)
+            sheet, frame = current(state, actor)
+            native = frame_class(sheet.frame) == "priestess"
+            price = 2 if native else 3
+            donor = sheet.frame if native else donor_frame
+            if (
+                native
+                and donor_frame not in (None, sheet.frame)
+                or not native
+                and donor not in DONORS
+            ):
+                raise WorkflowError("Select an actual Priestess donor for this non-Priestess graft")
+            assert donor is not None
             self.game.character_binding(c, state, viewer.user_id)
             target = (
                 next(
@@ -231,10 +268,11 @@ class PhysiotherapistService:
             if (
                 state.revision != revision
                 or target is None
-                or sheet.permissions < 2
+                or sheet.permissions < price
                 or not account.strip()
+                or len(account) > 1200
             ):
-                raise WorkflowError("Refresh the actual native purchase, NPC and two Permissions")
+                raise WorkflowError("Refresh the actual purchase, NPC and available Permissions")
             if any(
                 isinstance(x, FrameRuleReceipt)
                 and x.actor == actor
@@ -262,19 +300,19 @@ class PhysiotherapistService:
                 event=event,
                 relationship=account,
             )
-            sheet.permissions -= 2
+            sheet.permissions -= price
             sheet.revision += 1
             state.requisitions.append(
                 FrameRuleReceipt(
                     id=identity,
-                    kind="ability_unlock",
+                    kind="ability_unlock" if native else "frame_grafting",
                     actor=actor,
                     frame_instance=frame,
                     frame=sheet.frame,
-                    donor_frame=sheet.frame,
+                    donor_frame=donor,
                     rule_id=rules.RULE,
                     grant="physiotherapist:" + identity,
-                    price=2,
+                    price=2 if native else 3,
                     account=account,
                     source_event=event,
                 )
@@ -284,12 +322,12 @@ class PhysiotherapistService:
                 c,
                 viewer.user_id,
                 key,
-                "m3.ability_unlock_purchased",
+                "m3.ability_unlock_purchased" if native else "m3.frame_grafting_purchased",
                 state,
                 event_id=event,
                 requisition_id=identity,
                 rule_id=rules.RULE,
-                cost=2,
+                cost=price,
             )
             related(
                 c,
@@ -302,10 +340,15 @@ class PhysiotherapistService:
                 dict(therapy=value.model_dump(mode="json")),
                 event,
             )
-            return dict(id=identity, cost=2)
+            return dict(id=identity, cost=price)
 
         return self._write(
-            viewer, key, "purchase", dict(revision=revision, npc=npc, account=account), change
+            viewer,
+            key,
+            "purchase",
+            dict(revision=revision, npc=npc, account=account)
+            | (dict(donor_frame=donor_frame) if donor_frame is not None else {}),
+            change,
         )
 
     def _write(
@@ -315,7 +358,13 @@ class PhysiotherapistService:
             gate = Access(self.store)
             gate.authorize(c, viewer, "economy", director_response=True)
             assert gate.registry is not None
-            gate.registry.require_available(rules.RULE)
+            entry = gate.registry.require_available(rules.RULE)
+            if (entry.scope, entry.frame_class, entry.frame_rule) != (
+                "frame",
+                "priestess",
+                "class_requisition",
+            ):
+                raise WorkflowError("Recover the actual Priestess Class Physiotherapist source")
             self.game.unpaused(c)
 
         return self.store._write(

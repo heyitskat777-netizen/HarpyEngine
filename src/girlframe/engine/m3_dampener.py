@@ -4,7 +4,6 @@ from girlframe.engine.frame_classes import frame_class
 from girlframe.engine.m2 import GameState, PilotSheet
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_careers import can_pilot
-from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 
 RULE = "frame.class.legion.dampener-link"
@@ -26,22 +25,6 @@ def native(state: GameState, actor: ActorRef) -> tuple[PilotSheet, str]:
 
 
 def held(state: GameState, actor: ActorRef) -> FrameRuleReceipt | None:
-    try:
-        sheet, frame = native(state, actor)
-    except (ValueError, KeyError):
-        return None
-    return next(
-        (
-            x
-            for x in state.requisitions
-            if isinstance(x, FrameRuleReceipt)
-            and x.actor == actor
-            and x.frame_instance == frame
-            and x.frame == sheet.frame
-            and x.donor_frame == sheet.frame
-            and x.rule_id == RULE
-            and x.kind == "ability_unlock"
-            and not suspended(state, x.id)
-        ),
-        None,
-    )
+    from girlframe.engine.m3_class_grafts import held as acquired
+
+    return acquired(state, actor, RULE)

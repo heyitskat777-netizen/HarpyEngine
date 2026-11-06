@@ -2,8 +2,6 @@
 
 from girlframe.engine.m2 import GameState, TagState
 from girlframe.engine.m3_actor_state import ActorRef
-from girlframe.engine.m3_dampener import native
-from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 
 RULE = "frame.class.legion.kicked-puppy"
@@ -12,25 +10,9 @@ QUESTION_TEXT = "How do you want to care for me?"
 
 
 def held(state: GameState, actor: ActorRef) -> FrameRuleReceipt | None:
-    try:
-        sheet, frame = native(state, actor)
-    except (ValueError, KeyError):
-        return None
-    return next(
-        (
-            x
-            for x in state.requisitions
-            if isinstance(x, FrameRuleReceipt)
-            and x.actor == actor
-            and x.frame_instance == frame
-            and x.frame == sheet.frame
-            and x.donor_frame == sheet.frame
-            and x.rule_id == RULE
-            and x.kind == "ability_unlock"
-            and not suspended(state, x.id)
-        ),
-        None,
-    )
+    from girlframe.engine.m3_class_grafts import held as acquired
+
+    return acquired(state, actor, RULE)
 
 
 def target_gave(tag: TagState, target: ActorRef) -> bool:

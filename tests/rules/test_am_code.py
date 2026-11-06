@@ -23,7 +23,16 @@ from girlframe.services.m3_am_code import CodeService
 from girlframe.services.onboarding import WorkflowError
 
 
-def rolled(store, tmp_path, monkeypatch, faces, *, marked=False, source_inbox=False):
+def rolled(
+    store,
+    tmp_path,
+    monkeypatch,
+    faces,
+    *,
+    marked=False,
+    source_inbox=False,
+    choose_identity=True,
+):
     game, _, npc, discovery, _, _, worker, gateway = scrutiny_rolled(
         store, tmp_path, monkeypatch, (4, 5)
     )
@@ -104,6 +113,8 @@ def rolled(store, tmp_path, monkeypatch, faces, *, marked=False, source_inbox=Fa
     )["action_id"]
     tick(worker, gateway, 3)
     pass_tags(game)
+    if choose_identity and any(x["kind"] == "am_code_options" for x in game.choices(ADMIN)):
+        answer(game, ADMIN, "am_code_options", options=("identities",))
     return game, identity, source["action_id"], action, worker, gateway, selected
 
 

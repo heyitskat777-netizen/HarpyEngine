@@ -38,28 +38,9 @@ def native(state: "GameState", actor: ActorRef) -> tuple["PilotSheet", str]:
 
 
 def held(state: "GameState", actor: ActorRef) -> "FrameRuleReceipt | None":
-    from girlframe.engine.m3_privileges import suspended
-    from girlframe.engine.m3_requisition_state import FrameRuleReceipt
+    from girlframe.engine.m3_class_grafts import held as acquired
 
-    try:
-        sheet, frame = native(state, actor)
-    except (ValueError, KeyError):
-        return None
-    return next(
-        (
-            x
-            for x in state.requisitions
-            if isinstance(x, FrameRuleReceipt)
-            and x.actor == actor
-            and x.frame_instance == frame
-            and x.frame == sheet.frame
-            and x.donor_frame == sheet.frame
-            and x.rule_id == RULE
-            and x.kind == "ability_unlock"
-            and not suspended(state, x.id)
-        ),
-        None,
-    )
+    return acquired(state, actor, RULE)
 
 
 def replaceable(state: "GameState", actor: ActorRef) -> tuple[str, ...]:

@@ -312,7 +312,13 @@ class GameWorker:
                             self.game.save_action(c, current, state="awaiting_choices")
                         else:
                             sheet = state.sheets[str(item.owner)]
-                            tag = next(x for x in sheet.tags if x.id == item.details["tag"])
+                            from girlframe.engine.m3_control_ritual import tags as ritual_tags
+
+                            tag = next(
+                                x
+                                for x in sheet.tags + ritual_tags(state, item.owner)
+                                if x.id == item.details["tag"]
+                            )
                             if sheet.girl == "NEWGIRL" and tag.giver == sheet.mentor:
                                 raise WorkflowError("A Newgirl cannot reject its Mentor's Tag.")
                             sheet.tags = [x for x in sheet.tags if x.id != tag.id]

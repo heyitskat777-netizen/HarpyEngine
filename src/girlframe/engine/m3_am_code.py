@@ -1,4 +1,4 @@
-"""Bounded Just Code identity maintenance; the original mind/body is never copied."""
+"""Just Code Identity/memory maintenance; the original mind/body is never copied."""
 
 from typing import Literal
 from uuid import uuid4
@@ -30,7 +30,7 @@ class Maintenance(Model):
     cell: tuple[int, int]
     order_scope: Literal["spoken_statement"] = "spoken_statement"
     records_access: str | None = Field(default=None, exclude_if=lambda value: value is None)
-    selected_options: tuple[Literal["identities", "records"], ...] = Field(
+    selected_options: tuple[Literal["identities", "records", "backup"], ...] = Field(
         default=("identities",), exclude_if=lambda value: value == ("identities",)
     )
     phase: Literal["proposed", "ready", "active", "complete"] = "proposed"
@@ -40,6 +40,8 @@ class Maintenance(Model):
     action: str | None = None
     effect_event: str | None = None
     replacements: dict[str, str] = Field(default_factory=dict)
+    memory_erasure: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    backup: str | None = Field(default=None, exclude_if=lambda value: value is None)
     order: str | None = None
     order_event: str | None = None
     instruction: str = ""
@@ -87,7 +89,17 @@ def choices(state: GameState, actor: ActorRef) -> tuple[IdentityState, ...]:
     return tuple(result)
 
 
-def rewrite(original: GameState, identity: str, selected: dict[str, str], event: str) -> GameState:
+def rewrite(
+    original: GameState,
+    identity: str,
+    selected: dict[str, str],
+    event: str,
+    *,
+    memory_scope: Literal["none", "selected", "all"] = "none",
+    memories: str = "",
+) -> GameState:
+    from girlframe.engine.m3_am_memory import erase
+
     state = GameState.model_validate_json(original.model_dump_json())
     value = session(state, identity)
     eligible = {x.id: x for x in choices(state, value.actor)}
@@ -114,12 +126,23 @@ def rewrite(original: GameState, identity: str, selected: dict[str, str], event:
         changed[old_id] = new_id
     if changed:
         sheet.revision += 1
+    erased = erase(
+        state,
+        value.id,
+        value.actor,
+        value.operator,
+        value.action or "",
+        event,
+        memory_scope,
+        memories,
+    )
     put(
         state,
         value.model_copy(
             update=dict(
                 effect_event=event,
                 replacements=changed,
+                memory_erasure=erased,
                 phase="active" if value.records_access else "complete",
             )
         ),

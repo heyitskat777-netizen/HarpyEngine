@@ -1,4 +1,4 @@
-"""Native Priestess purchase and clear Keep cost/basis presentation."""
+"""Actual native or grafted acquisition and clear Keep cost/basis presentation."""
 
 import asyncio
 from typing import Any
@@ -29,7 +29,10 @@ def keep_heat(info: dict[str, Any] | None, available: int) -> tuple[int, ...]:
 async def open_purchase(interaction: discord.Interaction, service: NightmareService) -> None:
     data = await asyncio.to_thread(service.menu, viewer_from_interaction(interaction))
     if not data["available"]:
-        raise WorkflowError("No reviewed native Priestess Nightmare Core acquisition is available")
+        raise WorkflowError("No reviewed Nightmare Core acquisition is available")
+    if data["suspended"]:
+        await reply(interaction, "Nightmare Core is suspended. Restore its original paid source.")
+        return
     if data["owned"]:
         await reply(
             interaction,
@@ -47,15 +50,29 @@ async def open_purchase(interaction: discord.Interaction, service: NightmareServ
             ActorRef.model_validate(data["actor"]),
             data["frame"],
             values["account"],
+            values["donor"][0] if data["donors"] else None,
         )
         return (
-            "Nightmare Core acquired for two Permissions. Keep uses Void Assets and spends no Heat."
+            f"Nightmare Core acquired for {data['price']} Permissions. "
+            "Keep uses Void Assets and spends no Heat."
         )
 
     await NativeForm(
         interaction.user.id,
-        "Nightmare Core — native Priestess, 2 Permissions",
+        f"Nightmare Core — {'native Priestess' if data['price'] == 2 else 'Frame Grafting'}, "
+        f"{data['price']} Permissions",
         "Keep Your Head uses owned Void Assets instead of Heat. You are always terrifying enough.",
-        [Field("account", "Record your actual acquisition", paragraph=True)],
+        (
+            [
+                Field(
+                    "donor",
+                    "Choose the Priestess donor Frame",
+                    tuple((x, x) for x in data["donors"]),
+                )
+            ]
+            if data["donors"]
+            else []
+        )
+        + [Field("account", "Record your actual acquisition", paragraph=True)],
         submit,
     ).present(interaction)

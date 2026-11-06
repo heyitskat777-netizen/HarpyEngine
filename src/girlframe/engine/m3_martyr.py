@@ -5,14 +5,11 @@ from uuid import NAMESPACE_URL, uuid5
 
 from pydantic import Field
 
-from girlframe.engine.frame_classes import frame_class
 from girlframe.engine.m2 import GameState, PilotSheet
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_career_state import CareerArchive
-from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 from girlframe.engine.m3_strain import copy as strain_copy
-from girlframe.engine.m3_untouchable import native
 
 RULE = "frame.class.autocrat.martyr"
 KIND = "martyr_memorial"
@@ -56,25 +53,9 @@ def save(state: GameState, value: Martyr) -> None:
 
 
 def held(state: GameState, actor: ActorRef) -> FrameRuleReceipt | None:
-    try:
-        sheet, frame = native(state, actor)
-    except (ValueError, KeyError):
-        return None
-    return next(
-        (
-            x
-            for x in state.requisitions
-            if isinstance(x, FrameRuleReceipt)
-            and x.actor == actor
-            and x.rule_id == RULE
-            and x.frame_instance == frame
-            and x.frame == sheet.frame
-            and x.donor_frame == sheet.frame
-            and x.kind == "ability_unlock"
-            and not suspended(state, x.id)
-        ),
-        None,
-    )
+    from girlframe.engine.m3_class_grafts import held as acquired
+
+    return acquired(state, actor, RULE)
 
 
 def trigger(state: GameState, archive: CareerArchive, purchase: FrameRuleReceipt) -> Martyr:
@@ -136,7 +117,6 @@ def budget_death_excluded(state: GameState, source_event: str) -> bool:
             or receipt is None
             or receipt.actor != value.actor
             or receipt.rule_id != RULE
-            or receipt.kind != "ability_unlock"
             or receipt.frame_instance != value.frame
         ):
             continue
@@ -146,11 +126,8 @@ def budget_death_excluded(state: GameState, source_event: str) -> bool:
             if original.frame_runtime
             else "initial:" + str(value.actor.incarnation)
         )
-        if (
-            frame == value.frame
-            and receipt.frame == original.frame
-            and receipt.donor_frame == original.frame
-            and frame_class(original.frame) == "autocrat"
-        ):
+        from girlframe.engine.m3_class_grafts import sheet_eligible
+
+        if frame == value.frame and sheet_eligible(original, receipt):
             return True
     return False

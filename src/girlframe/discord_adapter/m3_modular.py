@@ -60,7 +60,12 @@ def replacements(values: dict[str, Any]) -> tuple[Replacement, ...]:
 async def open_purchase(interaction: discord.Interaction, service: ModularService) -> None:
     data = await asyncio.to_thread(service.menu, viewer_from_interaction(interaction))
     if not data["available"]:
-        raise WorkflowError("No reviewed native LEGION Modular Build source is available")
+        raise WorkflowError("No reviewed Modular Build source is available")
+    if data["suspended"]:
+        await reply(
+            interaction, "This Class Requisition is suspended. Restore its original paid source."
+        )
+        return
     if data["owned"]:
         await reply(
             interaction,
@@ -80,15 +85,24 @@ async def open_purchase(interaction: discord.Interaction, service: ModularServic
             values["account"],
             values["name"],
             values["description"],
+            values["donor"][0] if data["donors"] else None,
         )
-        return "Modular Build acquired for two Permissions; your additional Frame Asset is saved."
+        return (
+            f"Modular Build acquired for {data['price']} Permissions; "
+            "your additional Frame Asset is saved."
+        )
 
     await NativeForm(
         interaction.user.id,
-        "Modular Build — native LEGION, 2 Permissions",
+        f"Modular Build — {data['kind'].replace('_', ' ').title()}, {data['price']} Permissions",
         "Gain one additional maximum Frame Asset slot and write one actual new Frame Asset. "
         "Free intrinsic Assets remain outside the counted limit.",
-        [
+        (
+            [Field("donor", "Choose the actual donor Frame", tuple((x, x) for x in data["donors"]))]
+            if data["donors"]
+            else []
+        )
+        + [
             Field("name", "New Frame Asset name"),
             Field("description", "Describe your new Frame Asset", paragraph=True),
             Field("account", "Record your actual acquisition", paragraph=True),

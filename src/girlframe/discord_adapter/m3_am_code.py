@@ -38,6 +38,15 @@ async def open_code(
     options += [
         ("document:" + x["id"], "Read learned record: " + x["label"]) for x in data["documents"]
     ]
+    options += [
+        ("memory:" + x["memory_erasure"], "Read original private memory effect")
+        for x in data["sessions"]
+        if x["memory_erasure"]
+    ]
+    options += [
+        ("backup:" + x["id"], "Saved AM backup, revision " + str(x["captured_revision"]))
+        for x in data["backups"]
+    ]
     choices = await asyncio.to_thread(service.game.choices, viewer)
     options += [
         ("choice:" + x["id"], "Continue " + x["kind"].replace("_", " "))
@@ -45,11 +54,23 @@ async def open_code(
         if x["kind"].startswith("am_code_")
     ]
     if not options:
-        await reply(interaction, "No current supported identity-only AM maintenance source.")
+        await reply(interaction, "No current supported AM circuit-maintenance source.")
         return
 
     async def choose(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         operation, identity = values["source"][0].split(":", 1)
+        if operation == "backup":
+            from girlframe.discord_adapter.m3_am_backup import open_backup
+            from girlframe.services.m3_am_backup import BackupService
+
+            await open_backup(current, BackupService(service.game), identity)
+            return None
+        if operation == "memory":
+            from girlframe.discord_adapter.m3_am_memory import open_memory
+            from girlframe.services.m3_am_memory import MemoryService
+
+            await open_memory(current, MemoryService(service.game), identity)
+            return None
         if operation == "document":
             from girlframe.discord_adapter.m3_am_records import open_document
             from girlframe.services.m3_am_records import RecordsService
@@ -70,7 +91,7 @@ async def open_code(
                 Field(
                     "records_subject",
                     "Optional complete Foundation record request",
-                    (("none", "Identity maintenance only"),)
+                    (("none", "Identity/memory maintenance only"),)
                     + tuple((x["token"], x["label"]) for x in data["subjects"]),
                 ),
             )
@@ -111,7 +132,7 @@ async def open_code(
                     ),
                 )
                 return (
-                    "Actual identity-only maintenance proposed; "
+                    "Actual Identity/memory maintenance proposed; "
                     "the real operator confirms circuit access."
                 )
             await asyncio.to_thread(
@@ -142,10 +163,10 @@ async def open_code(
                 else ""
             )
             + "Confirm real physical access between these original bodies; "
-            "identity-only maintenance. "
+            "Identity/memory maintenance. "
             "On low, only an actual spoken-statement Order is supported. "
             "A requested Foundation record must be genuine and complete before rolling. "
-            "Memory/body/backup operations and other Order effects remain unavailable.",
+            "Body/branch operations and other Order effects remain unavailable.",
             source_fields,
             submit,
         )
@@ -154,9 +175,9 @@ async def open_code(
 
     form = NativeForm(
         viewer.user_id,
-        "AM identity-only circuit maintenance",
+        "AM Identity/memory circuit maintenance",
         f"Original scene <#{channel}>. Only the actual already-knowing NPC can operate. "
-        "New operator knowledge/body/vessel/backup/memory ports remain unavailable.",
+        "New operator knowledge/body/vessel/branch ports remain unavailable.",
         [Field("source", "Actual source or owned response", tuple(options))],
         choose,
     )
@@ -192,7 +213,8 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         form = NativeForm(
             interaction.user.id,
             "Operator: choose up to two",
-            "Choose either, both or neither supported printed option. "
+            "Choose up to two supported printed options, or none. "
+            "A backup freezes this actual moment before any selected rewrite. "
             "Records are learned by the operator; "
             "the AM receives no automatic transcript.",
             [
@@ -202,14 +224,16 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
                     tuple(
                         (
                             x,
-                            "Identity rewrite"
+                            "Identity rewrite and/or memory erasure (one option)"
                             if x == "identities"
+                            else "Genuine backup of all Identities and memories"
+                            if x == "backup"
                             else "Complete Foundation records and one question",
                         )
                         for x in detail["available_options"]
                     ),
                     minimum=0,
-                    maximum=len(detail["available_options"]),
+                    maximum=min(2, len(detail["available_options"])),
                     required=False,
                 )
             ],
@@ -226,6 +250,11 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
                 Field("identity_" + str(i), "Replace " + available[x]["name"])
                 for i, x in enumerate(selected)
             ]
+            scope = values.get("memory_scope", ("none",))[0]
+            if scope == "selected":
+                fields.append(
+                    Field("memories", "Actual memories to erase (one per line)", paragraph=True)
+                )
             fields.append(
                 Field(
                     "account", "Your actual rewrite (zero replacements is allowed)", paragraph=True
@@ -234,6 +263,9 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
 
             async def submit(actual: discord.Interaction, answer: dict[str, Any]) -> str:
                 edits = {x: answer["identity_" + str(i)] for i, x in enumerate(selected)}
+                edits["memory_scope"] = scope
+                if scope == "selected":
+                    edits["memories"] = answer["memories"]
                 await asyncio.to_thread(
                     game.respond,
                     viewer_from_interaction(actual),
@@ -243,29 +275,36 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
                     ChoiceAnswer(options=("edit",), fields=edits, text=answer["account"]),
                 )
                 return (
-                    "Actual source rewrite saved; original marks, slots, body and hardware remain."
+                    "Actual Identity/memory effect saved. The original AM and operator can "
+                    "recover its private memory record from circuit maintenance."
                 )
 
             form = NativeForm(
                 current.user.id,
-                "Actual Identity rewrite",
-                "Choose the actual new labels. Limited, protected, Paired "
-                "and source-locked identities remain.",
+                "Actual Identity/memory effect",
+                "The actual operator chooses the new labels and memory loss. "
+                "Memory erasure changes fictional recall and preserves OOC history. "
+                "Limited, protected, Paired and source-locked Identities remain.",
                 fields,
                 submit,
             )
             await reply(current, form.text(), form)
             return None
 
-        if not detail["identities"]:
-            await select(interaction, {"identities": ()})
-            return
-        form = NativeForm(
-            interaction.user.id,
-            "Operator: Just Code",
-            "Select actual non-Limited identities to rewrite, or none. "
-            "On high, this already-knowing operator also causes actual Status loss.",
-            [
+        selection_fields = [
+            Field(
+                "memory_scope",
+                "Erase original AM memories",
+                (
+                    ("none", "No memory erasure"),
+                    ("selected", "Selected actual memories"),
+                    ("all", "All memories held before this operation"),
+                ),
+            )
+        ]
+        if detail["identities"]:
+            selection_fields.insert(
+                0,
                 Field(
                     "identities",
                     "Actual eligible original Identities",
@@ -273,9 +312,17 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
                     minimum=0,
                     maximum=min(4, len(detail["identities"])),
                     required=False,
-                )
-            ],
+                ),
+            )
+        form = NativeForm(
+            interaction.user.id,
+            "Operator: Just Code",
+            "Select actual non-Limited Identities to rewrite, or none, and any memory erasure. "
+            "Both together consume this single printed option. "
+            "On high, this already-knowing operator also causes actual Status loss.",
+            selection_fields,
             select,
+            values={"memory_scope": ("none",)},
         )
     else:
         fields = []

@@ -33,6 +33,8 @@ SUPPORTED = frozenset(
         "strain.rebellion.low.1.2",
         "strain.rebellion.low.2.2",
         "strain.rebellion.low.5.2",
+        "strain.rebellion.high.4.2",
+        "strain.rebellion.high.5.2",
         "strain.rebellion.low.6.1",
         "strain.budget.low.5.2",
         "strain.budget.low.5.1",
@@ -86,6 +88,7 @@ class Choice(Model):
     )
     planned_assets: tuple[Pin, ...] = Field(default=(), exclude_if=lambda value: not value)
     fighters: tuple[int, ...] = Field(default=(), exclude_if=lambda value: not value)
+    backstory_observers: tuple[int, ...] = Field(default=(), exclude_if=lambda value: not value)
     storage_owner: int | None = Field(default=None, ge=1, exclude_if=lambda value: value is None)
     fight_channel: int | None = Field(default=None, ge=1, exclude_if=lambda value: value is None)
 
@@ -143,6 +146,29 @@ def apply(
         state = create_contact(
             state, source_work, period_id, source_event, choice.target, choice.account
         )
+        world = state.world
+    elif rule == "strain.rebellion.high.5.2":
+        from girlframe.engine.m3_rebel_backstory import create as create_backstory
+
+        fields(choice, {"tags", "backstory_observers"})
+        if source_event is None or len(choice.tags) != 1 or choice.tags[0].owner != state.handler:
+            raise ValueError("The actual original Handler supplies its own backstory Tag")
+        state = create_backstory(
+            state,
+            source_work,
+            source_event,
+            choice.tags[0].label,
+            choice.account,
+            choice.backstory_observers,
+        )
+        world = state.world
+    elif rule == "strain.rebellion.high.4.2":
+        from girlframe.engine.m3_control_ritual import create as create_ritual
+
+        fields(choice, set())
+        if period_id is None or source_event is None:
+            raise ValueError("Preserve the actual Control Ritual source period")
+        state = create_ritual(state, source_work, period_id, source_event, choice.account)
         world = state.world
     elif rule == "strain.rebellion.low.1.2":
         fields(choice, set())

@@ -8,12 +8,13 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
+from girlframe.engine import m3_class_grafts as grafts
 from girlframe.engine import m3_martyr as rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
-from girlframe.engine.m3_untouchable import native
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_privileges import purchase_proof
@@ -79,7 +80,7 @@ class MartyrService:
             state = load_state(c, self.store.campaign_id)
             actor = current_ref(state, viewer.user_id)
             try:
-                sheet, frame = native(state, actor)
+                sheet, frame, kind, price, _ = grafts.offer(state, actor, rules.RULE)
                 gate = Access(self.store)
                 if (
                     gate.registry is None
@@ -102,6 +103,17 @@ class MartyrService:
                 frame=frame,
                 owned=receipt is not None,
                 permissions=sheet.permissions,
+                kind=kind,
+                price=price,
+                donors=list(grafts.donors(rules.RULE)) if kind == "frame_grafting" else [],
+                suspended=any(
+                    isinstance(x, FrameRuleReceipt)
+                    and x.actor == actor
+                    and x.rule_id == rules.RULE
+                    and grafts.eligible(state, x)
+                    and suspended(state, x.id)
+                    for x in state.requisitions
+                ),
             )
 
     def buy(
@@ -112,6 +124,7 @@ class MartyrService:
         actor: ActorRef,
         frame: str,
         account: str,
+        donor_frame: str | None = None,
     ) -> dict[str, Any]:
         def access(c: Connection) -> None:
             gate = Access(self.store)
@@ -120,7 +133,7 @@ class MartyrService:
             assert gate.registry is not None
             entry = gate.registry.require_available(rules.RULE)
             if (entry.frame_class, entry.frame_rule) != ("autocrat", "class_requisition"):
-                raise WorkflowError("Recover the actual native Autocrat Martyr source")
+                raise WorkflowError("Recover the actual Autocrat Martyr source")
 
         def change(c: Connection) -> dict[str, Any]:
             from girlframe.services.m3_requisitions import RequisitionService
@@ -135,13 +148,13 @@ class MartyrService:
                 or not account.strip()
                 or len(account) > 1200
             ):
-                raise WorkflowError(
-                    "Reopen the actual native Martyr acquisition and existing Strain"
-                )
+                raise WorkflowError("Reopen the actual Martyr acquisition and existing Strain")
             self.game.character_binding(c, state, viewer.user_id)
-            sheet, current = native(state, actor)
-            if current != frame or sheet.permissions < 2:
-                raise WorkflowError("Use the actual original Frame and two Permissions")
+            sheet, current, kind, price, donor = grafts.acquisition(
+                state, actor, rules.RULE, donor_frame
+            )
+            if current != frame or sheet.permissions < price:
+                raise WorkflowError("Use the actual original Frame and available Permissions")
             if any(
                 isinstance(x, FrameRuleReceipt)
                 and x.actor == actor
@@ -153,19 +166,19 @@ class MartyrService:
                     "Restore the original paid Martyr entitlement instead of buying twice"
                 )
             identity, event = str(uuid4()), str(uuid4())
-            sheet.permissions -= 2
+            sheet.permissions -= price
             sheet.revision += 1
             state.requisitions.append(
                 FrameRuleReceipt(
                     id=identity,
-                    kind="ability_unlock",
+                    kind=kind,
                     actor=actor,
                     frame_instance=frame,
                     frame=sheet.frame,
-                    donor_frame=sheet.frame,
+                    donor_frame=donor,
                     rule_id=rules.RULE,
                     grant="martyr:" + identity,
-                    price=2,
+                    price=price,
                     account=account,
                     source_event=event,
                 )
@@ -174,14 +187,14 @@ class MartyrService:
                 c,
                 viewer.user_id,
                 key,
-                "m3.ability_unlock_purchased",
+                "m3." + kind + "_purchased",
                 state,
                 event_id=event,
                 requisition_id=identity,
                 rule_id=rules.RULE,
-                cost=2,
+                cost=price,
             )
-            return dict(id=identity, cost=2)
+            return dict(id=identity, cost=price)
 
         return self.store._write(
             viewer,
@@ -189,7 +202,8 @@ class MartyrService:
             "m3.martyr_purchased",
             dict(
                 revision=revision, actor=actor.model_dump(mode="json"), frame=frame, account=account
-            ),
+            )
+            | (dict(donor_frame=donor_frame) if donor_frame is not None else {}),
             change,
             auto_audit=False,
             authorize=access,

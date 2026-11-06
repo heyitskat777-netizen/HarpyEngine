@@ -44,7 +44,12 @@ def modifier(values: dict[str, Any]) -> Literal[2, 3] | None:
 async def open_purchase(interaction: discord.Interaction, service: DampenerService) -> None:
     data = await asyncio.to_thread(service.menu, viewer_from_interaction(interaction))
     if not data["available"]:
-        raise WorkflowError("No reviewed native LEGION Dampener acquisition is available")
+        raise WorkflowError("No reviewed Dampener acquisition is available")
+    if data["suspended"]:
+        await reply(
+            interaction, "This Class Requisition is suspended. Restore its original paid source."
+        )
+        return
     if data["owned"]:
         await reply(
             interaction,
@@ -62,13 +67,22 @@ async def open_purchase(interaction: discord.Interaction, service: DampenerServi
             ActorRef.model_validate(data["actor"]),
             data["frame"],
             values["account"],
+            values["donor"][0] if data["donors"] else None,
         )
-        return "Dampener Link acquired for two Permissions. Choose its basis in Heat preparation."
+        return (
+            f"Dampener Link acquired for {data['price']} Permissions."
+            " Choose its basis in Heat preparation."
+        )
 
     await NativeForm(
         interaction.user.id,
-        "Dampener Link — native LEGION, 2 Permissions",
+        f"Dampener Link — {data['kind'].replace('_', ' ').title()}, {data['price']} Permissions",
         "Control your facial expressions. Spend at least five Heat to choose a +2 or +3 basis.",
-        [Field("account", "Record your actual acquisition", paragraph=True)],
+        (
+            [Field("donor", "Choose the actual donor Frame", tuple((x, x) for x in data["donors"]))]
+            if data["donors"]
+            else []
+        )
+        + [Field("account", "Record your actual acquisition", paragraph=True)],
         submit,
     ).present(interaction)

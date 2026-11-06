@@ -128,9 +128,7 @@ def apply(
     if selected_tag is not None:
         receipt = entitlement(game, c, state, ref)
         if receipt is None:
-            raise WorkflowError(
-                "Acquire the actual current native Autocrat Untouchable Frame first"
-            )
+            raise WorkflowError("Acquire the actual current source-owned Untouchable Frame first")
     maneuver_answer = answer.model_copy(
         update={"fields": {k: v for k, v in answer.fields.items() if k != "untouchable_tag"}}
     )

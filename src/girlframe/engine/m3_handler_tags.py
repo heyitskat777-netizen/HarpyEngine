@@ -10,7 +10,7 @@ from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_handler_consequences import active_handler, same_handler_body
 from girlframe.engine.m3_world_state import Npc
 
-Kind = Literal["favour", "attention", "compel"]
+Kind = Literal["favour", "attention", "compel", "helpless"]
 Response = Literal["agree", "decline", "pause", "give_in", "original_handler_ended"]
 
 
@@ -121,7 +121,12 @@ def consume(
     )
     if selected is None or not visible:
         raise ValueError("Choose an actual Handler Tag this Girl's human has observed")
-    if kind not in ("favour", "attention", "compel") or not account.strip():
+    if kind == "helpless":
+        from girlframe.engine.m3_rebel_backstory import eligible
+
+        if eligible(state, handler, tag) is None:
+            raise ValueError("Only the source-granted backstory Tag can cause this alternative")
+    if kind not in ("favour", "attention", "compel", "helpless") or not account.strip():
         raise ValueError("Choose a printed Handler Tag use and describe the actual request")
     if not identity or not event or not scene or any(x.id == identity for x in uses(state)):
         raise ValueError("Use a fresh actual source event and original scene")
@@ -141,8 +146,8 @@ def consume(
         account=account.strip(),
         source_event=event,
         scene=scene,
-        state="resolved" if kind == "attention" else "pending",
-        response_event=event if kind == "attention" else None,
+        state="resolved" if kind in ("attention", "helpless") else "pending",
+        response_event=event if kind in ("attention", "helpless") else None,
         persistent=retained,
     )
     if npc is not None:

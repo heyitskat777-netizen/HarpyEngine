@@ -1,6 +1,23 @@
 # M3 remaining work — verified development snapshot
 
-The latest completed workflows include bounded AM fourth-Limiter reset, Nightmare Core, Void Physiotherapist, actual native Class privilege restoration and the remaining Low Budget visitor/assassination source paths. All twelve Low Budget entries now have bounded implementation paths; their broader actor/source gaps still prevent whole-table completion. Evidence and physical/actor limits are at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md). Current registry: **153 subsets, 320 unimplemented entries, 261 adjustable clarifications**, zero independent approvals. These inventory counts are not a progress percentage.
+Newest completed bounded workflows: **AM memory erasure and genuine backup/revert;
+three-Permission grafts for all seven currently implemented Class consumers;
+High Rebellion Control Ritual and backstory Tag consequences; completed private
+contact route/confirmation display**. Actual focused evidence and source limits
+are at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md).
+Current registry: **155 subsets, 318 unimplemented entries and 263 adjustable
+clarifications**. Counts are inventory, not a completion percentage.
+
+Still required: AM branching/vessel/body and broader operator/source paths; the
+other Class abilities and remaining Girl/Frame/Handler runtimes; retained/Frame
+Swap acquisition; shared Play, physical/lifecycle and cross-rule consequences;
+remaining Strain results/Endgames; source reconciliation and final integrated
+verification. No whole-system acceptance is inferred from these additions. Bot off.
+
+The following paragraphs preserve the earlier snapshot; their counts and
+next-action statements are historical where superseded above.
+
+The latest completed workflows include bounded AM fourth-Limiter reset, Nightmare Core, Void Physiotherapist, actual native Class privilege restoration and the remaining Low Budget visitor/assassination source paths. All twelve Low Budget entries now have bounded implementation paths; their broader actor/source gaps still prevent whole-table completion. Evidence and physical/actor limits are at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md). At that checkpoint the registry had **153 subsets, 320 unimplemented entries, 261 adjustable clarifications**, zero independent approvals. These inventory counts are not a progress percentage.
 
 AM Foundation records, Modular Doctor/quoted repair producers, High Budget storage/escalation and Low Rebellion private contact now have focused handoffs. Records remain bounded to complete short dossiers/current role proof; backups, branches, memory erasure, body transfer and broader Orders remain required AM work. Storage/contacts retain physical/lifetime/other-actor limits; Class graft/retained and remaining playbook/world/Strain ports remain required. Root is consolidating this source/CI handoff. No full regression or whole-M3 completion is claimed; historical snapshots below retain their original counts and limits.
 

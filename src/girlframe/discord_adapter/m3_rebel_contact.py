@@ -46,13 +46,28 @@ async def open_contact(
 ) -> None:
     data = await asyncio.to_thread(service.view, viewer_from_interaction(interaction), identity)
     if data["phase"] == "complete":
-        await reply(
-            interaction,
-            "**Your established NPC contact — "
-            + clean(data["npc"])
-            + "**\n"
-            + clean(data["method"]),
-        )
+        content = "**Your established NPC contact — " + clean(data["npc"]) + "**"
+        embeds = [
+            discord.Embed(title=title, description=clean(data[key]))
+            for key, title in (
+                ("method", "Established private route"),
+                ("response", "NPC confirmation"),
+            )
+        ]
+        if interaction.response.is_done():
+            await interaction.edit_original_response(
+                content=content,
+                embeds=embeds,
+                view=None,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+        else:
+            await interaction.response.send_message(
+                content,
+                embeds=embeds,
+                ephemeral=True,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
         return
     actions: list[tuple[str, str]] = []
     if data["girl"]:

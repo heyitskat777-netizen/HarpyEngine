@@ -135,6 +135,11 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
         source_marker = marker_field(decision)
         if source_marker is not None:
             fields.append(source_marker)
+    elif kind == "control_ritual_create":
+        fields = [
+            flags("Develop my Control Ritual?"),
+            text("text", "Describe my Control Ritual (up to 120 characters)", False),
+        ]
     elif kind == "tag_resolution":
         fields = [
             menu("options", "Resolve the repeated marked Tag", ("embrace", "reject")),

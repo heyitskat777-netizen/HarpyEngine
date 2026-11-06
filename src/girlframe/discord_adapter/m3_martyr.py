@@ -18,10 +18,15 @@ async def open_purchase(interaction: discord.Interaction, service: MartyrService
     data = await asyncio.to_thread(service.menu, viewer_from_interaction(interaction))
     if not data["available"]:
         raise WorkflowError(
-            "This native Martyr acquisition needs reviewed Class rules and existing Strain"
+            "This Martyr acquisition needs reviewed Class rules and existing Strain"
         )
+    if data["suspended"]:
+        await reply(
+            interaction, "This Class Requisition is suspended. Restore its original paid source."
+        )
+        return
     if data["owned"]:
-        await reply(interaction, "Martyr is acquired for your current actual Autocrat Frame.")
+        await reply(interaction, "Martyr is acquired for your current actual Frame.")
         return
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
@@ -33,17 +38,24 @@ async def open_purchase(interaction: discord.Interaction, service: MartyrService
             ActorRef.model_validate(data["actor"]),
             data["frame"],
             values["account"],
+            values["donor"][0] if data["donors"] else None,
         )
         return (
-            "Martyr acquired for two Permissions. Your memorial choice appears after actual death."
+            f"Martyr acquired for {data['price']} Permissions."
+            " Your memorial choice appears after actual death."
         )
 
     await NativeForm(
         interaction.user.id,
-        "Martyr — native Autocrat, 2 Permissions",
+        f"Martyr — {data['kind'].replace('_', ' ').title()}, {data['price']} Permissions",
         "An actual unprevented original death lowers Budget and Rebellion to Low. "
         "Then you choose its memorial.",
-        [Field("account", "Record your actual acquisition", paragraph=True)],
+        (
+            [Field("donor", "Choose the actual donor Frame", tuple((x, x) for x in data["donors"]))]
+            if data["donors"]
+            else []
+        )
+        + [Field("account", "Record your actual acquisition", paragraph=True)],
         submit,
     ).present(interaction)
 

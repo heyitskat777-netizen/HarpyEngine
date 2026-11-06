@@ -19,6 +19,11 @@ from girlframe.services.m3_requisitions import RequisitionService
 from girlframe.services.onboarding import WorkflowError
 
 
+def class_label(label: str, option: dict[str, Any]) -> str:
+    kind = option["kind"].replace("_", " ").title()
+    return f"{label} — {kind} ({option['price']} Permissions)"
+
+
 class InstallationPages(discord.ui.View):
     def __init__(self, service: RequisitionService, owner: int, identity: str):
         super().__init__(timeout=600)
@@ -123,43 +128,78 @@ async def open_requisitions(interaction: discord.Interaction, service: Requisiti
     untouchable = UntouchableService(service.game)
     class_option = await asyncio.to_thread(untouchable.menu, viewer)
     if class_option["available"]:
-        options += (("untouchable", "Untouchable Frame — native Autocrat (2 Permissions)"),)
+        options += (
+            (
+                "untouchable",
+                class_label("Untouchable Frame", class_option),
+            ),
+        )
     from girlframe.services.m3_martyr import MartyrService
 
     martyr = MartyrService(service.game)
     martyr_option = await asyncio.to_thread(martyr.menu, viewer)
     if martyr_option["available"]:
-        options += (("martyr", "Martyr — native Autocrat (2 Permissions)"),)
+        options += (
+            (
+                "martyr",
+                class_label("Martyr", martyr_option),
+            ),
+        )
     from girlframe.services.m3_dampener import DampenerService
 
     dampener = DampenerService(service.game)
     dampener_option = await asyncio.to_thread(dampener.menu, viewer)
     if dampener_option["available"]:
-        options += (("dampener", "Dampener Link — native LEGION (2 Permissions)"),)
+        options += (
+            (
+                "dampener",
+                class_label("Dampener Link", dampener_option),
+            ),
+        )
     from girlframe.services.m3_kicked_puppy import KickedPuppyService
 
     kicked_puppy = KickedPuppyService(service.game)
     kicked_option = await asyncio.to_thread(kicked_puppy.menu, viewer)
     if kicked_option["available"]:
-        options += (("kicked-puppy", "Kicked Puppy — native LEGION (2 Permissions)"),)
+        options += (
+            (
+                "kicked-puppy",
+                class_label("Kicked Puppy", kicked_option),
+            ),
+        )
     from girlframe.services.m3_nightmare import NightmareService
 
     nightmare = NightmareService(service.game)
     nightmare_option = await asyncio.to_thread(nightmare.menu, viewer)
     if nightmare_option["available"]:
-        options += (("nightmare-core", "Nightmare Core — native Priestess (2 Permissions)"),)
+        options += (
+            (
+                "nightmare-core",
+                class_label("Nightmare Core", nightmare_option),
+            ),
+        )
     from girlframe.services.m3_physiotherapist import PhysiotherapistService
 
     physiotherapist = PhysiotherapistService(service.game)
     therapy_option = await asyncio.to_thread(physiotherapist.menu, viewer)
     if therapy_option["available"]:
-        options += (("physiotherapist", "Void Physiotherapist — native Priestess (2 Permissions)"),)
+        options += (
+            (
+                "physiotherapist",
+                class_label("Void Physiotherapist", therapy_option),
+            ),
+        )
     from girlframe.services.m3_modular import ModularService
 
     modular = ModularService(service.game)
     modular_option = await asyncio.to_thread(modular.menu, viewer)
     if modular_option["available"]:
-        options += (("modular", "Modular Build — native LEGION (2 Permissions)"),)
+        options += (
+            (
+                "modular",
+                class_label("Modular Build", modular_option),
+            ),
+        )
     from girlframe.services.m3_frame_swap import FrameSwapService
     from girlframe.services.m3_personal_firearm import PersonalFirearmService
 

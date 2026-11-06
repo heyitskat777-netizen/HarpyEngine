@@ -1,4 +1,4 @@
-"""One paid native Keep basis: actual owned Void Assets, no Heat spend or extra roll."""
+"""Paid native or grafted Keep basis with actual owned Void and no Heat spend."""
 
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
@@ -6,10 +6,12 @@ from uuid import uuid4
 from sqlalchemy import Connection
 
 from girlframe.engine import m3_nightmare as rules
+from girlframe.engine.frame_classes import frame_class
 from girlframe.engine.m2 import GameState, PlayInput
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -98,7 +100,7 @@ class NightmareService:
             state = load_state(c, self.store.campaign_id)
             actor = actor or current_ref(state, viewer.user_id)
             try:
-                sheet, frame = rules.native(state, actor)
+                sheet, frame = rules.current(state, actor)
                 if actor.entity != str(viewer.user_id):
                     raise ValueError("Use only your actual own original role")
                 gate = Access(self.store)
@@ -109,6 +111,17 @@ class NightmareService:
                 return dict(available=False)
             self.game.character_binding(c, state, viewer.user_id)
             receipt = entitlement(self.game, c, state, actor)
+            acquired = next(
+                (
+                    x
+                    for x in state.requisitions
+                    if isinstance(x, FrameRuleReceipt)
+                    and x.actor == actor
+                    and rules.receipt_eligible(state, x)
+                ),
+                None,
+            )
+            native = frame_class(sheet.frame) == "priestess"
             return dict(
                 available=True,
                 revision=state.revision,
@@ -116,6 +129,10 @@ class NightmareService:
                 frame=frame,
                 permissions=sheet.permissions,
                 owned=receipt is not None,
+                suspended=acquired is not None and suspended(state, acquired.id),
+                kind="ability_unlock" if native else "frame_grafting",
+                price=2 if native else 3,
+                donors=list(rules.DONORS) if not native else [],
                 modifier=sum(
                     x.void
                     for x in resolve(state, actor, profiles(c, self.store.campaign_id)).assets
@@ -130,6 +147,7 @@ class NightmareService:
         actor: ActorRef,
         frame: str,
         account: str,
+        donor_frame: str | None = None,
     ) -> dict[str, Any]:
         def access(c: Connection) -> None:
             gate = Access(self.store)
@@ -137,7 +155,7 @@ class NightmareService:
             assert gate.registry is not None
             entry = gate.registry.require_available(rules.RULE)
             if (entry.frame_class, entry.frame_rule) != ("priestess", "class_requisition"):
-                raise WorkflowError("Recover the actual native Priestess Class source")
+                raise WorkflowError("Recover the actual Priestess Class Nightmare Core source")
 
         def change(c: Connection) -> dict[str, Any]:
             from girlframe.services.m3_requisitions import RequisitionService
@@ -151,11 +169,22 @@ class NightmareService:
                 or not account.strip()
                 or len(account) > 1200
             ):
-                raise WorkflowError("Reopen the actual native Nightmare Core acquisition")
+                raise WorkflowError("Reopen the actual Nightmare Core acquisition")
             self.game.character_binding(c, state, viewer.user_id)
-            sheet, current = rules.native(state, actor)
-            if current != frame or sheet.permissions < 2:
-                raise WorkflowError("Use the actual original Frame and two Permissions")
+            sheet, current = rules.current(state, actor)
+            native = frame_class(sheet.frame) == "priestess"
+            price = 2 if native else 3
+            donor = sheet.frame if native else donor_frame
+            if (
+                native
+                and donor_frame not in (None, sheet.frame)
+                or not native
+                and donor not in rules.DONORS
+            ):
+                raise WorkflowError("Select an actual Priestess donor for this non-Priestess graft")
+            assert donor is not None
+            if current != frame or sheet.permissions < price:
+                raise WorkflowError("Use the actual original Frame and available Permissions")
             if any(
                 isinstance(x, FrameRuleReceipt)
                 and x.actor == actor
@@ -165,19 +194,19 @@ class NightmareService:
             ):
                 raise WorkflowError("Restore the original entitlement instead of buying twice")
             identity, event = str(uuid4()), str(uuid4())
-            sheet.permissions -= 2
+            sheet.permissions -= price
             sheet.revision += 1
             state.requisitions.append(
                 FrameRuleReceipt(
                     id=identity,
-                    kind="ability_unlock",
+                    kind="ability_unlock" if native else "frame_grafting",
                     actor=actor,
                     frame_instance=frame,
                     frame=sheet.frame,
-                    donor_frame=sheet.frame,
+                    donor_frame=donor,
                     rule_id=rules.RULE,
                     grant="nightmare:" + identity,
-                    price=2,
+                    price=2 if native else 3,
                     account=account,
                     source_event=event,
                 )
@@ -186,22 +215,26 @@ class NightmareService:
                 c,
                 viewer.user_id,
                 key,
-                "m3.ability_unlock_purchased",
+                "m3.ability_unlock_purchased" if native else "m3.frame_grafting_purchased",
                 state,
                 event_id=event,
                 requisition_id=identity,
                 rule_id=rules.RULE,
-                cost=2,
+                cost=price,
             )
-            return dict(id=identity, cost=2)
+            return dict(id=identity, cost=price)
 
         return self.store._write(
             viewer,
             key,
             "m3.nightmare_purchased",
             dict(
-                revision=revision, actor=actor.model_dump(mode="json"), frame=frame, account=account
-            ),
+                revision=revision,
+                actor=actor.model_dump(mode="json"),
+                frame=frame,
+                account=account,
+            )
+            | (dict(donor_frame=donor_frame) if donor_frame is not None else {}),
             change,
             auto_audit=False,
             authorize=access,

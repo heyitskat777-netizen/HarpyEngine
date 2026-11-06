@@ -323,6 +323,18 @@ class GameService:
                 ]
                 if broken:
                     data["broken_against"] = [x.inflictor.model_dump(mode="json") for x in broken]
+                from girlframe.engine.m3_control_ritual import owned as own_rituals
+
+                data["control_rituals"] = [
+                    dict(
+                        id=x.id,
+                        label=x.tag.label,
+                        marked=x.tag.marked,
+                        rejection_pending=x.tag.rejection_pending,
+                    )
+                    for x in own_rituals(state, sheet.owner)
+                    if x.tag
+                ]
             if sheet.owner == viewer.user_id and sheet.character_id:
                 from girlframe.engine import m3_am as am_rules
 
@@ -330,7 +342,27 @@ class GameService:
                     kind="pilot", entity=str(sheet.owner), incarnation=sheet.character_id
                 )
                 if sheet.girl == "AM" or am_rules.limiters(state, am_actor):
+                    from girlframe.engine.m3_am_backup import backups
+                    from girlframe.engine.m3_am_backup import latest as latest_backup_reversion
+                    from girlframe.engine.m3_am_memory import losses as memory_losses
+
+                    reversion = latest_backup_reversion(state, am_actor)
+
                     data["am_runtime"] = dict(
+                        backups=[
+                            dict(id=x.id, captured_revision=x.captured_revision)
+                            for x in backups(state, am_actor)
+                        ],
+                        memory_reversion=reversion.model_dump(mode="json") if reversion else None,
+                        memory_erasures=[
+                            dict(
+                                scope=x.scope,
+                                memories=list(x.memories),
+                                through_revision=x.through_revision,
+                                event=x.event,
+                            )
+                            for x in memory_losses(state, am_actor)
+                        ],
                         presentation=am_rules.presentation(state, am_actor),
                         limited=[
                             dict(identity=x.identity, slot=x.slot, freedom=x.freedom)
@@ -2757,6 +2789,12 @@ class GameService:
                     state,
                     allowed_archived=proved_converted_originals(self, c, state, action),
                 )
+            if action["data"]["play"] == "disobey_orders":
+                from girlframe.engine.m3_control_ritual import rituals
+                from girlframe.services.m3_access import Access
+
+                if rituals(state):
+                    Access(self.store).authorize(c, viewer, "strain")
             table = t.m2["m2_choices"]
             c.execute(
                 table.update()
@@ -3844,6 +3882,12 @@ class GameService:
                     if kicked_self_tag(self, c, state, action, viewer.user_id, x)
                     or kicked_mentor_tag(actor, x, state)
                     or kicked_has_rule(actor, "girl.princess.objectively-beautiful", "PRINCESS")
+                ]
+            if viewer.user_id == actor.owner and row["kind"] == "tag_window":
+                from girlframe.services.m3_control_ritual import candidates as ritual_candidates
+
+                tags += [
+                    x.model_dump(mode="json") for x in ritual_candidates(state, action, actor.owner)
                 ]
             result = dict(row) | {
                 "body": body,

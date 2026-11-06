@@ -107,6 +107,14 @@ def source(game: GameService, c: Connection, state: GameState, identity: str) ->
         record = prove_records(game, c, state, value.records_access)
         if record.maintenance != value.id or record.learner != value.operator:
             raise WorkflowError("Keep this original operator's actual record source")
+    if value.memory_erasure:
+        from girlframe.services.m3_am_memory import prove as prove_memory
+
+        prove_memory(game, c, state, value.memory_erasure)
+    if value.backup:
+        from girlframe.services.m3_am_backup import prove as prove_backup
+
+        prove_backup(game, c, state, value.backup)
     return value
 
 
@@ -220,11 +228,7 @@ def results(game: GameService, c: Connection, state: GameState, action: dict[str
         c,
         action,
         value.controller,
-        "am_code_order"
-        if tier == "low"
-        else "am_code_options"
-        if value.records_access
-        else "am_code_edit",
+        "am_code_order" if tier == "low" else "am_code_options",
     )
 
 
@@ -247,12 +251,12 @@ def finish(
                 )
         else:
             unselected(state, value, event)
-        rules.put(
-            state,
-            value.model_copy(
-                update=dict(phase="complete", effect_event=value.effect_event or event)
-            ),
-        )
+    if "backup" in value.selected_options and not value.backup:
+        raise WorkflowError("The actual selected backup must contain its genuine original snapshot")
+    rules.put(
+        state,
+        value.model_copy(update=dict(phase="complete", effect_event=value.effect_event or event)),
+    )
     ChoiceEngine(game).finish(c, state, action)
 
 
@@ -282,10 +286,9 @@ def apply(
     ):
         raise WorkflowError("Use the actual original operator/recipient's concrete source response")
     if request["kind"] == "am_code_options":
-        options = {"records"} | ({"identities"} if rules.choices(state, value.actor) else set())
+        options = {"identities", "backup"} | ({"records"} if value.records_access else set())
         if (
-            not value.records_access
-            or len(answer.options) > 2
+            len(answer.options) > 2
             or len(set(answer.options)) != len(answer.options)
             or not set(answer.options) <= options
             or answer.fields
@@ -293,6 +296,11 @@ def apply(
         ):
             raise WorkflowError("The actual operator chooses up to two available printed options")
         value = value.model_copy(update=dict(selected_options=answer.options))
+        if "backup" in answer.options:
+            from girlframe.engine.m3_am_backup import capture
+
+            saved = capture(state, value.id, value.actor, value.operator, action["id"], event)
+            value = value.model_copy(update=dict(backup=saved))
         rules.put(state, value)
         if "identities" in answer.options:
             game.request(c, action, value.controller, "am_code_edit")
@@ -306,7 +314,24 @@ def apply(
     if request["kind"] == "am_code_edit":
         if answer.options != ("edit",) or not answer.text.strip():
             raise WorkflowError("Choose the actual rewrite (or zero replacements) and describe it")
-        _copy(state, rules.rewrite(state, value.id, answer.fields, event))
+        scope = answer.fields.get("memory_scope", "none")
+        if scope not in ("none", "selected", "all"):
+            raise WorkflowError("Choose no erasure, selected memories, or all prior memories")
+        from typing import cast
+
+        from girlframe.engine.m3_am_memory import Scope
+
+        _copy(
+            state,
+            rules.rewrite(
+                state,
+                value.id,
+                {k: v for k, v in answer.fields.items() if k not in ("memory_scope", "memories")},
+                event,
+                memory_scope=cast(Scope, scope),
+                memories=answer.fields.get("memories", ""),
+            ),
+        )
     elif request["kind"] == "am_code_order":
         if answer.options or answer.fields or not answer.text.strip() or len(answer.text) > 1180:
             raise WorkflowError("The actual operator chooses the real words to be spoken")
@@ -427,9 +452,9 @@ def projection(
         details["records_id"] = value.records_access
     return dict(
         **details,
-        available_options=("identities", "records")
-        if rules.choices(state, value.actor)
-        else ("records",),
+        available_options=("identities", "backup", "records")
+        if value.records_access
+        else ("identities", "backup"),
         maintenance=value.id,
         identities=[x.model_dump(mode="json") for x in rules.choices(state, value.actor)],
         instruction=value.instruction,
@@ -454,7 +479,7 @@ class CodeService:
         records_subject: ActorRef | None = None,
     ) -> dict[str, Any]:
         if not account.strip() or len(account) > 1200:
-            raise WorkflowError("Describe actual identity-only circuit maintenance")
+            raise WorkflowError("Describe actual Identity/memory circuit maintenance")
 
         def operation(c: Connection) -> dict[str, Any]:
             from girlframe.services.m3_am_scrutinized import _prove_effect
@@ -492,7 +517,6 @@ class CodeService:
                 or physical is None
                 or not physical.vitals_active
                 or physical.incapacitated
-                or (not rules.choices(state, known.actor) and records_subject is None)
                 or not has_rule(state.sheets[known.actor.entity], rules.RULE, "AM")
             ):
                 raise WorkflowError(
@@ -711,7 +735,7 @@ class CodeService:
                 id=x.id,
                 revision=state.revision,
                 kind="am_code_source",
-                label="Confirm actual identity-only circuit maintenance",
+                label="Confirm actual Identity/memory circuit maintenance",
                 actionable=True,
             )
             for x in rules.sessions(state)
@@ -758,6 +782,7 @@ class CodeService:
                     records_subject=(
                         record_access(state, x.records_access).label if x.records_access else None
                     ),
+                    memory_erasure=x.memory_erasure,
                 )
                 for x in rules.sessions(state)
                 if viewer.user_id in (x.owner, x.controller) and x.cast.channel == channel
@@ -776,10 +801,22 @@ class CodeService:
                     )
                     if learner.controller == viewer.user_id:
                         documents.append(dict(id=record.id, label=record.label))
+            from girlframe.engine.m3_am_backup import backups
+
+            saved_backups = [
+                dict(id=x.id, captured_revision=x.captured_revision, owner=int(x.actor.entity))
+                for x in backups(state)
+                if viewer.user_id
+                in (
+                    rules.session(state, x.maintenance).owner,
+                    rules.session(state, x.maintenance).controller,
+                )
+            ]
             return dict(
                 revision=state.revision,
                 known=known,
                 sessions=values,
                 subjects=subjects(self.game, c, state),
                 documents=documents,
+                backups=saved_backups,
             )

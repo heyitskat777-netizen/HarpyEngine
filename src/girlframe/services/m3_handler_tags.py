@@ -112,6 +112,8 @@ class HandlerTagService:
             if npc
             else [tag for tag in state.handler_tags if viewer.user_id in tag.observers]
         )
+        from girlframe.engine.m3_rebel_backstory import eligible as backstory_eligible
+
         return dict(
             actor=girl.model_dump(mode="json"),
             handler=handler.model_dump(mode="json"),
@@ -120,6 +122,11 @@ class HandlerTagService:
             tags=[
                 dict(id=tag.id, label=tag.label)
                 | ({"persistent": True} if persistent(state, handler, tag.id) else {})
+                | (
+                    {"backstory_helpless": True}
+                    if backstory_eligible(state, handler, tag.id)
+                    else {}
+                )
                 for tag in tags
             ],
             source_sha256=hashlib.sha256(
@@ -189,6 +196,10 @@ class HandlerTagService:
             from girlframe.services.m3_budget_tags import prove_persistent
 
             prove_persistent(c, self.game, state, ActorRef.model_validate(view["handler"]), tag)
+            if kind == "helpless":
+                from girlframe.services.m3_rebel_backstory import prove
+
+                prove(self.game, c, state, ActorRef.model_validate(view["handler"]), tag)
             identity, event = str(uuid4()), str(uuid4())
             changed, value = rules.consume(
                 state,
@@ -202,6 +213,20 @@ class HandlerTagService:
                 view["scene"],
                 handler_ref=ActorRef.model_validate(view["handler"]),
             )
+            consequence = None
+            if kind == "helpless":
+                from girlframe.services.m3_handler_consequences import require
+
+                changed, consequence = require(
+                    self.game,
+                    c,
+                    changed,
+                    value.handler,
+                    trigger="helpless",
+                    source_action=None,
+                    source_event=event,
+                    opponent=girl,
+                )
             changed_actions = self._invalidate_uncommitted(c, changed, value)
             self.game.event(
                 c,
@@ -232,8 +257,10 @@ class HandlerTagService:
                     ),
                     event,
                 )
-            return dict(id=identity, state=value.state, revision=value.revision) | (
-                {"persistent": True} if value.persistent else {}
+            return (
+                dict(id=identity, state=value.state, revision=value.revision)
+                | ({"consequence": consequence} if consequence else {})
+                | ({"persistent": True} if value.persistent else {})
             )
 
         try:

@@ -23,7 +23,8 @@ consequences. The last committed full regression passed **2,200 tests**, with so
 in [M3 evidence](reports/M3_ACCEPTANCE.md).
 Newer development adds supported Virus/Sex/Call, JANUS Core and selected paid
 Requisitions including Storage, Leviathan Obsession, source-owned Alpha outcomes
-and NPC Orders, bounded AM discovery/Limiters/reset/identity maintenance, seven native Class consumers, and
+and NPC Orders, bounded AM discovery/Limiters/reset/identity-memory maintenance and backup/revert,
+seven native and grafted implemented Class consumers, High Rebellion Ritual/backstory effects, and
 further Budget meeting/Candidate/Anarchy/cleanup/sabotage/visitor/assassination/fight lifecycles. Focused
 normal-workflow evidence is listed in the report; it has not had a new full
 regression. Remaining playbooks, Strain branches and world consumers still prevent

@@ -125,6 +125,7 @@ class EffectService:
                 "strain.budget.high.4.1",
                 "strain.budget.high.6.1",
                 "strain.rebellion.low.5.2",
+                "strain.rebellion.high.4.2",
             ):
                 period = self.strain.periods._get(c, row["off_duty_id"])
                 if set(period.pilots) != set(state.order) or any(

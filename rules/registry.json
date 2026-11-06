@@ -4340,6 +4340,40 @@
       "revision": 1,
       "implementation_note": "Named source/role scope only; unavailable dossiers, actors, physical contexts and other source ports remain implementation gaps. No independent or release approval.",
       "change_impact": "Warning/breach/physical or completed FramePlay proof and original departure remain separate events. Future campaign clarification can adjust escalation while retaining actual recorded history."
+    },
+    {
+      "id": "control-ritual-tag-lifetime",
+      "summary": "The next actual successful original Girl refusal reserves the opportunity, including a choice to decline. Its owner can mark the described Ritual only for Disobey Orders using the ordinary one-per-scene direction, proposal priority and repeated-mark rejection/embrace rules. A Ritual is a separate typed fact, not an unrestricted Girl Tag.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF148/printed146 High Rebellion4.2; ordinary Tag protocol",
+      "authority": "delegated_recommendation",
+      "rationale": "The source explicitly makes creation optional and marking Tag-like for one named Play. Reusing actual Tag lifetime avoids an unlimited modifier or an invented second universal Tag while preserving the ordinary scene response protocol.",
+      "alternatives": [
+        "Treat the Ritual as an unrestricted ordinary Tag usable on any Play.",
+        "Allow unlimited repeated marks without the ordinary Tag consequences."
+      ],
+      "policy_key": "control_ritual_tag_lifetime",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Delegated recommendation, not independent printed-rule certification. Preserve current fail-closed source/role limits and explicit earlier owner decisions.",
+      "change_impact": "Future clarity can revise the repeated-mark interpretation without rewriting source/roll history. Technical native label length and missing nonnative/source adapters remain implementation gaps, not campaign restrictions."
+    },
+    {
+      "id": "am-backup-content-not-mechanical-rewind",
+      "summary": "Capture all original AM Identities and memory state immediately when the operator selects backup. Original AM may restore content without operator reapproval, charge or RNG. Preserve current mechanical marks/sedation and current protected, Paired, Limited or source-locked slots; explicitly show retained protected-content differences. Restore actual fictional memory horizon, preserving OOC evidence and current resources, person/body, Status, obligations and receipts.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF55-56/printed53-54 Limited Identity and Just Code",
+      "authority": "delegated_recommendation",
+      "rationale": "The backup option does not price a fresh action or specify resource rollback, while Limited Identities cannot be replaced or erased. A content restore with explicit protected differences preserves the granted ordinary restoration and mandatory current constraints.",
+      "alternatives": [
+        "Rewind marks/resources and remove later protected Identities with the entire mechanical snapshot.",
+        "Require operator approval each time the AM restores its own genuine backup."
+      ],
+      "policy_key": "am_backup_content_not_mechanical_rewind",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Delegated recommendation, not independent printed-rule certification. Preserve current fail-closed source/role limits and explicit earlier owner decisions.",
+      "change_impact": "The source interpretation is adjustable: changing it affects ordinary/protected restore slots and memory lineage, not immutable historical backups. Missing changed-topology, vessel or other actor adapters remain required implementation gaps."
     }
   ],
   "entries": [
@@ -6806,7 +6840,9 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_am_code.py",
-        "tests/rules/test_am_records.py"
+        "tests/rules/test_am_records.py",
+        "tests/rules/test_am_memory.py",
+        "tests/rules/test_am_backup.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -9835,7 +9871,8 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_martyr.py",
-        "tests/rules/test_class_privileges.py"
+        "tests/rules/test_class_privileges.py",
+        "tests/rules/test_class_grafts.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -9896,7 +9933,8 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_untouchable.py",
-        "tests/rules/test_class_privileges.py"
+        "tests/rules/test_class_privileges.py",
+        "tests/rules/test_class_grafts.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -9957,7 +9995,8 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_nightmare.py",
-        "tests/rules/test_class_privileges.py"
+        "tests/rules/test_class_privileges.py",
+        "tests/rules/test_nightmare_graft.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -10017,7 +10056,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_physiotherapist.py"
+        "tests/rules/test_physiotherapist.py",
+        "tests/rules/test_physiotherapist_graft.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -10049,7 +10089,8 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_dampener.py",
-        "tests/rules/test_class_privileges.py"
+        "tests/rules/test_class_privileges.py",
+        "tests/rules/test_class_grafts.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -10110,7 +10151,8 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_kicked_puppy.py",
-        "tests/rules/test_class_privileges.py"
+        "tests/rules/test_class_privileges.py",
+        "tests/rules/test_class_grafts.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -10142,7 +10184,8 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_modular.py",
-        "tests/rules/test_modular_repair_producers.py"
+        "tests/rules/test_modular_repair_producers.py",
+        "tests/rules/test_class_grafts.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -13626,14 +13669,47 @@
         "heading": "Rebellion high: die 4, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Actual High Rebellion4 column2; then next successful native original-Girl Disobey",
+        "actor_type": "Original Cadre Girl",
+        "pre_roll_sources": [
+          "Real source draw and original source snapshot",
+          "Actual successful known Disobey receipt and owned result"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [
+          "Source Ritual self mark on later actual Disobey only"
+        ],
+        "tier_options": {
+          "source": [
+            "Optional actual authored Ritual or decline",
+            "Later owned mark and real changed result",
+            "Repeated mark: genuine embrace or rejection and actual followthrough"
+          ]
+        },
+        "choice_ownership": "Original successful Girl chooses creation, description, mark, direction and resolution; ordinary Tag proposal priority retained",
+        "target_policy": "Exact original actor/CID and its actual source; separate Ritual fact cannot become a universal Tag",
+        "post_roll_effects": [
+          "Durable source-bound Ritual/marks and exact real roll modifier",
+          "Actual repeated-mark Identity or pending rejection, removed by real followthrough"
+        ],
+        "mandatory_followups": [
+          "Owned optional creation decision and true ordinary response chain"
+        ],
+        "handler_or_gm_intervention": "Ordinary real Handler response; nonnative, transferred and other dedicated source ports remain explicit gaps",
+        "test_fixture_ids": [
+          "tests/rules/test_control_ritual.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_control_ritual.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -13672,14 +13748,45 @@
         "heading": "Rebellion high: die 5, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Actual High Rebellion5 column2; later observed Handler Tag use",
+        "actor_type": "Original Handler and actual Girl",
+        "pre_roll_sources": [
+          "Actual original source Handler authors backstory Tag",
+          "Handler records actual Girl witnesses; no automatic broadcast",
+          "Girl uses exact actual observed source Tag"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "source": [
+            "Girl chooses ordinary Tag use or source-only Helpless alternative",
+            "Actual original Handler chooses its printed replacement consequence"
+          ]
+        },
+        "choice_ownership": "Handler authors its own Tag and original-body consequence; Girl chooses actual use, no invented player dialogue",
+        "target_policy": "Exact source Tag and current original Handler; ordinary Tags and unrelated humans cannot use special alternative",
+        "post_roll_effects": [
+          "One source Tag spent with replay protection",
+          "Genuine pending source-owned Handler consequence, then actual chosen injury/opportunity/death through existing service"
+        ],
+        "mandatory_followups": [
+          "Actual original Handler-owned consequence rather than a fake complete Helpless flag"
+        ],
+        "handler_or_gm_intervention": "Printed Handler Assets replacement reused; separate rolled Handler-as-Girl Tag-mark and broader role/ending ports remain gaps",
+        "test_fixture_ids": [
+          "tests/rules/test_rebel_backstory.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_rebel_backstory.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

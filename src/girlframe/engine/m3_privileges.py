@@ -43,8 +43,11 @@ def suspended(state: GameState, purchase: str) -> bool:
 
 
 def available(state: GameState, subject: int, character: str) -> list[Requisition]:
+    from girlframe.engine.m3_class_grafts import eligible as implemented_class_receipt
     from girlframe.engine.m3_enforcer_requisitions import binding, grants, held
     from girlframe.engine.m3_janus_requisitions import held as janus_held
+    from girlframe.engine.m3_nightmare import receipt_eligible as nightmare_receipt
+    from girlframe.engine.m3_physiotherapist import receipt_eligible as physiotherapist_receipt
 
     sheet = state.sheets[str(subject)]
     frame = sheet.frame_runtime.id if sheet.frame_runtime else "initial:" + character
@@ -83,6 +86,9 @@ def available(state: GameState, subject: int, character: str) -> list[Requisitio
                 )
             )
             or (isinstance(x, FrameRuleReceipt) and native_class_receipt(state, x))
+            or (isinstance(x, FrameRuleReceipt) and nightmare_receipt(state, x))
+            or (isinstance(x, FrameRuleReceipt) and physiotherapist_receipt(state, x))
+            or (isinstance(x, FrameRuleReceipt) and implemented_class_receipt(state, x))
             or (
                 isinstance(x, FrameRuleReceipt)
                 and x.donor_frame == "JANUS"
@@ -154,6 +160,51 @@ def revoke(
             asset=asset.model_dump_json(), frame=receipt.frame_instance, label=asset.name
         )
         sheet.assets.remove(asset)
+    elif (
+        isinstance(receipt, FrameRuleReceipt)
+        and receipt.rule_id == "frame.class.priestess.nightmare-core"
+    ):
+        from girlframe.engine.m3_nightmare import receipt_eligible
+
+        if not receipt_eligible(state, receipt):
+            raise ValueError("Recover the actual original Nightmare Core source and Frame")
+        details.update(
+            nightmare_receipt=receipt.model_dump_json(),
+            frame=receipt.frame_instance,
+            rule_id=receipt.rule_id,
+            label="Nightmare Core",
+        )
+    elif (
+        isinstance(receipt, FrameRuleReceipt)
+        and receipt.rule_id == "frame.class.priestess.void-physiotherapist"
+    ):
+        from girlframe.engine.m3_physiotherapist import receipt_eligible
+
+        if not receipt_eligible(state, receipt):
+            raise ValueError("Recover the actual original Physiotherapist source and Frame")
+        details.update(
+            physiotherapist_receipt=receipt.model_dump_json(),
+            frame=receipt.frame_instance,
+            rule_id=receipt.rule_id,
+            label="Void Physiotherapist",
+        )
+    elif isinstance(receipt, FrameRuleReceipt) and receipt.rule_id in (
+        "frame.class.autocrat.untouchable-frame",
+        "frame.class.autocrat.martyr",
+        "frame.class.legion.dampener-link",
+        "frame.class.legion.kicked-puppy",
+        "frame.class.legion.modular-build",
+    ):
+        from girlframe.engine.m3_class_grafts import eligible
+
+        if not eligible(state, receipt):
+            raise ValueError("Recover the actual original implemented Class source and Frame")
+        details.update(
+            implemented_class_receipt=receipt.model_dump_json(),
+            frame=receipt.frame_instance,
+            rule_id=receipt.rule_id,
+            label=receipt.rule_id.rsplit(".", 1)[1].replace("-", " ").title(),
+        )
     elif isinstance(receipt, FrameRuleReceipt) and native_class_receipt(state, receipt):
         details.update(
             native_class_receipt=receipt.model_dump_json(),
@@ -242,7 +293,41 @@ def restore(original: GameState, identity: str, character: str, replace: str | N
         frame = sheet.frame_runtime.id if sheet.frame_runtime else "initial:" + character
         if frame != gate.details["frame"] or sheet.frame_scrapped:
             raise ValueError("Recover the original Frame before restoring its suspended Asset")
-        if "native_class_receipt" in gate.details:
+        if "nightmare_receipt" in gate.details:
+            from girlframe.engine.m3_nightmare import receipt_eligible
+
+            source_receipt = FrameRuleReceipt.model_validate_json(gate.details["nightmare_receipt"])
+            if source_receipt not in state.requisitions or not receipt_eligible(
+                state, source_receipt
+            ):
+                raise ValueError("Recover the original Nightmare Core receipt and actual Frame")
+            if replace is not None:
+                raise ValueError(
+                    "Nightmare restoration adds no purchase, Asset or acquisition effect"
+                )
+        elif "physiotherapist_receipt" in gate.details:
+            from girlframe.engine.m3_physiotherapist import receipt_eligible
+
+            source_receipt = FrameRuleReceipt.model_validate_json(
+                gate.details["physiotherapist_receipt"]
+            )
+            if source_receipt not in state.requisitions or not receipt_eligible(
+                state, source_receipt
+            ):
+                raise ValueError("Recover the original Physiotherapist receipt and actual Frame")
+            if replace is not None:
+                raise ValueError("Physiotherapist restoration adds no purchase, Bond or scene")
+        elif "implemented_class_receipt" in gate.details:
+            from girlframe.engine.m3_class_grafts import eligible
+
+            source_receipt = FrameRuleReceipt.model_validate_json(
+                gate.details["implemented_class_receipt"]
+            )
+            if source_receipt not in state.requisitions or not eligible(state, source_receipt):
+                raise ValueError("Recover the original implemented Class receipt and actual Frame")
+            if replace is not None:
+                raise ValueError("Restoration adds no purchase, Asset or acquisition effect")
+        elif "native_class_receipt" in gate.details:
             source_receipt = FrameRuleReceipt.model_validate_json(
                 gate.details["native_class_receipt"]
             )

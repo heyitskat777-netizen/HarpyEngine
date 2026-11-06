@@ -83,6 +83,9 @@ class ChoiceEngine:
             ooc_setter(c, self.game.store, current_ref(state, owner), tag)
 
     def tag_resolved(self, state: GameState, owner: int, tag: str) -> None:
+        from girlframe.engine.m3_control_ritual import remove
+
+        remove(state, owner, tag)
         for item in state.obligations:
             if (
                 item.owner == owner
@@ -253,6 +256,13 @@ class ChoiceEngine:
 
             apply_beneath(self.game, c, state, action, request, answer)
             return
+        if kind == "control_ritual_create":
+            from girlframe.services.m3_control_ritual import choose
+
+            choose(self.game, c, state, action, body, answer)
+            if not self.game.pending(c, action["id"]):
+                self.finish(c, state, action)
+            return
         if kind == "tag_window":
             self.tag_proposal(c, state, action, owner, answer)
             if not any(
@@ -263,7 +273,12 @@ class ChoiceEngine:
             return
         acting = state.sheets[str(actor)]
         if kind == "tag_resolution":
-            tag = next((x for x in acting.tags if x.id == body["tag"]), None)
+            from girlframe.engine.m3_control_ritual import save_tag
+            from girlframe.engine.m3_control_ritual import tags as ritual_tags
+
+            tag = next(
+                (x for x in acting.tags + ritual_tags(state, actor) if x.id == body["tag"]), None
+            )
             require(tag is not None, "The marked Tag is no longer available.")
             assert tag is not None
             self.prove_tag_setter(c, state, actor, tag)
@@ -280,6 +295,7 @@ class ChoiceEngine:
                     "A Newgirl cannot reject a Tag given by its Mentor.",
                 )
                 tag.rejection_pending = True
+                save_tag(state, actor, tag)
                 self.game.obligation(state, action, "reject_tag", actor, tag=tag.id)
             else:
                 picks(answer.denied, {x.id for x in acting.identities if not x.protected}, 1)
@@ -519,6 +535,9 @@ class ChoiceEngine:
                 raise WorkflowError("Low Disobey results have no successful refusal choice.")
             acting.revision += 1
             result["can_disobey"] = True
+            from girlframe.services.m3_control_ritual import offer as offer_ritual
+
+            offer_ritual(self.game, c, state, action)
             self.game.request(c, action, state.handler, "handler_disobey")
             return
         if kind == "follow_disobey":
@@ -732,6 +751,10 @@ class ChoiceEngine:
 
         actor = int(action["actor_id"])
         sheet = state.sheets[str(actor)]
+        from girlframe.services.m3_control_ritual import candidates
+        from girlframe.services.m3_control_ritual import self_tag as ritual_self_tag
+
+        available_tags = sheet.tags + candidates(state, action, owner)
         picks(answer.options, {"pass", "tag"}, 1)
         require(
             set(answer.fields) <= {"status", "marker"}, "Choose only supported source-role fields."
@@ -751,13 +774,13 @@ class ChoiceEngine:
                 answer.denied,
                 {
                     x.id
-                    for x in sheet.tags
+                    for x in available_tags
                     if (owner in x.observers or owner == actor)
                     and x.scene_used != action["scene_id"]
                 },
                 1,
             )
-            tag = next(x for x in sheet.tags if x.id == answer.denied[0])
+            tag = next(x for x in available_tags if x.id == answer.denied[0])
             self.prove_tag_setter(c, state, actor, tag)
             require(
                 owner != actor
@@ -766,7 +789,8 @@ class ChoiceEngine:
                     has_rule(sheet, "girl.princess.objectively-beautiful", "PRINCESS")
                     and action["data"]["play"] == "flirt"
                 )
-                or kicked_self_tag(self.game, c, state, action, owner, tag),
+                or kicked_self_tag(self.game, c, state, action, owner, tag)
+                or ritual_self_tag(self.game, c, state, action, owner, tag),
                 "Only another player or a printed self-mark exception can mark this Girl Tag.",
             )
             require(
@@ -843,7 +867,18 @@ class ChoiceEngine:
                     selected = entry
         if selected:
             person, answer, marker = selected
-            tag = next(x for x in sheet.tags if x.id == answer.denied[0])
+            from girlframe.engine.m3_control_ritual import save_tag
+            from girlframe.services.m3_control_ritual import candidates
+            from girlframe.services.m3_control_ritual import self_tag as ritual_self_tag
+
+            tag = next(
+                x for x in sheet.tags + candidates(state, action, actor) if x.id == answer.denied[0]
+            )
+            ritual = ritual_self_tag(self.game, c, state, action, person, tag)
+            require(
+                not ritual or person == actor,
+                "Only the original Girl marks her own Control Ritual",
+            )
             require(
                 tag.scene_used != action["scene_id"], "This Tag was already used in this scene."
             )
@@ -851,6 +886,7 @@ class ChoiceEngine:
             tag.marked = True
             tag.scene_used = action["scene_id"]
             sheet.revision += 1
+            save_tag(state, actor, tag)
             amount = modifier(
                 state, markers.roller(state, action), marker, 1 if answer.number == 1 else -1
             )
@@ -863,7 +899,7 @@ class ChoiceEngine:
             )
             action["data"]["modifiers"].append(
                 {
-                    "source": "girl_tag",
+                    "source": "control_ritual" if ritual else "girl_tag",
                     "tag": tag.id,
                     "actor": person,
                     "amount": amount,
@@ -1006,6 +1042,14 @@ class ChoiceEngine:
             from girlframe.services.m3_virus_orders import finish_order
 
             finish_order(self.game, c, state, action)
+            return
+        if action["data"]["play"] == "disobey_orders" and action["data"]["result"].get(
+            "can_disobey"
+        ):
+            from girlframe.services.m3_control_ritual import offer as offer_ritual
+
+            offer_ritual(self.game, c, state, action)
+        if any(x["kind"] == "control_ritual_create" for x in self.game.pending(c, action["id"])):
             return
         require(not self.game.pending(c, action["id"]), "Mandatory decisions remain pending.")
         if action["data"].get("void_keep"):

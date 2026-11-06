@@ -137,6 +137,11 @@ async def open_handler_tags(
             values["account"],
             handler_ref=ActorRef.model_validate(data["handler"]),
         )
+        if result.get("consequence"):
+            return (
+                "Backstory Tag spent. The original Handler chooses its actual "
+                "consequence in /character requests."
+            )
         return "Actual Handler Tag used. " + (
             "The original Handler's attention notice is in /character requests."
             if result["state"] == "resolved"
@@ -165,6 +170,11 @@ async def open_handler_tags(
                     ("favour", "Ask a favour — no obligation to agree"),
                     ("attention", "Attract full and undivided attention"),
                     ("compel", "Compel action on this Tag"),
+                )
+                + (
+                    (("helpless", "Backstory Tag: cause Handler Helplessness instead"),)
+                    if any(x.get("backstory_helpless") for x in data["tags"])
+                    else ()
                 ),
             ),
             Field("account", "Describe your actual request or action", paragraph=True),

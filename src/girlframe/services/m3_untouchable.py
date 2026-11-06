@@ -5,10 +5,12 @@ from uuid import uuid4
 
 from sqlalchemy import Connection
 
+from girlframe.engine import m3_class_grafts as grafts
 from girlframe.engine import m3_untouchable as rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -55,7 +57,7 @@ class UntouchableService:
             state = load_state(c, self.store.campaign_id)
             actor = current_ref(state, viewer.user_id)
             try:
-                sheet, frame = rules.native(state, actor)
+                sheet, frame, kind, price, _ = grafts.offer(state, actor, rules.RULE)
                 access = Access(self.store)
                 if access.registry is None:
                     raise ValueError("No reviewed rule source")
@@ -70,6 +72,17 @@ class UntouchableService:
                 actor=actor.model_dump(mode="json"),
                 frame=frame,
                 permissions=sheet.permissions,
+                kind=kind,
+                price=price,
+                donors=list(grafts.donors(rules.RULE)) if kind == "frame_grafting" else [],
+                suspended=any(
+                    isinstance(x, FrameRuleReceipt)
+                    and x.actor == actor
+                    and x.rule_id == rules.RULE
+                    and grafts.eligible(state, x)
+                    and suspended(state, x.id)
+                    for x in state.requisitions
+                ),
                 owned=receipt is not None,
                 receipt=receipt.id if receipt else None,
             )
@@ -82,6 +95,7 @@ class UntouchableService:
         actor: ActorRef,
         frame: str,
         account: str,
+        donor_frame: str | None = None,
     ) -> dict[str, Any]:
         def access(c: Connection) -> None:
             gate = Access(self.store)
@@ -103,11 +117,13 @@ class UntouchableService:
                 or not account.strip()
                 or len(account) > 1200
             ):
-                raise WorkflowError("Reopen the actual original native Class acquisition")
+                raise WorkflowError("Reopen the actual original Class acquisition")
             self.game.character_binding(c, state, viewer.user_id)
-            sheet, current = rules.native(state, actor)
-            if current != frame or sheet.permissions < 2:
-                raise WorkflowError("Use the original current Frame and two actual Permissions")
+            sheet, current, kind, price, donor = grafts.acquisition(
+                state, actor, rules.RULE, donor_frame
+            )
+            if current != frame or sheet.permissions < price:
+                raise WorkflowError("Use the original current Frame and available Permissions")
             if any(
                 isinstance(x, FrameRuleReceipt)
                 and x.actor == actor
@@ -117,19 +133,19 @@ class UntouchableService:
             ):
                 raise WorkflowError("Restore the original paid entitlement instead of buying twice")
             identity, event = str(uuid4()), str(uuid4())
-            sheet.permissions -= 2
+            sheet.permissions -= price
             sheet.revision += 1
             state.requisitions.append(
                 FrameRuleReceipt(
                     id=identity,
-                    kind="ability_unlock",
+                    kind=kind,
                     actor=actor,
                     frame_instance=frame,
                     frame=sheet.frame,
-                    donor_frame=sheet.frame,
+                    donor_frame=donor,
                     rule_id=rules.RULE,
                     grant="untouchable:" + identity,
-                    price=2,
+                    price=price,
                     account=account,
                     source_event=event,
                 )
@@ -138,14 +154,14 @@ class UntouchableService:
                 c,
                 viewer.user_id,
                 key,
-                "m3.ability_unlock_purchased",
+                "m3." + kind + "_purchased",
                 state,
                 event_id=event,
                 requisition_id=identity,
                 rule_id=rules.RULE,
-                cost=2,
+                cost=price,
             )
-            return dict(id=identity, cost=2)
+            return dict(id=identity, cost=price)
 
         return self.store._write(
             viewer,
@@ -153,7 +169,8 @@ class UntouchableService:
             "m3.untouchable_purchased",
             dict(
                 revision=revision, actor=actor.model_dump(mode="json"), frame=frame, account=account
-            ),
+            )
+            | (dict(donor_frame=donor_frame) if donor_frame is not None else {}),
             change,
             authorize=access,
             auto_audit=False,

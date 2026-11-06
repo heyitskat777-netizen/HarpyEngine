@@ -3097,3 +3097,31 @@ Rationale: The printed escalation names Tags and eventual firing without a numer
 Alternatives: Fire immediately with no prior warning.; Invent a fixed countdown independent of actual conduct.
 
 Change impact: Warning/breach/physical or completed FramePlay proof and original departure remain separate events. Future campaign clarification can adjust escalation while retaining actual recorded history.
+
+## AM backup and Control Ritual source interpretation — 2026-11-05
+
+Adjustable delegated recommendations requiring printed-rule clarity review. Earlier explicit owner decisions remain in force.
+
+### `control-ritual-tag-lifetime`
+
+Source: Rulebook PDF148/printed146 High Rebellion4.2; ordinary Tag protocol.
+
+The next actual successful original Girl refusal reserves the opportunity, including a choice to decline. Its owner can mark the described Ritual only for Disobey Orders using the ordinary one-per-scene direction, proposal priority and repeated-mark rejection/embrace rules. A Ritual is a separate typed fact, not an unrestricted Girl Tag.
+
+Rationale: The source explicitly makes creation optional and marking Tag-like for one named Play. Reusing actual Tag lifetime avoids an unlimited modifier or an invented second universal Tag while preserving the ordinary scene response protocol.
+
+Alternatives: Treat the Ritual as an unrestricted ordinary Tag usable on any Play.; Allow unlimited repeated marks without the ordinary Tag consequences.
+
+Change impact: Future clarity can revise the repeated-mark interpretation without rewriting source/roll history. Technical native label length and missing nonnative/source adapters remain implementation gaps, not campaign restrictions.
+
+### `am-backup-content-not-mechanical-rewind`
+
+Source: Rulebook PDF55-56/printed53-54 Limited Identity and Just Code.
+
+Capture all original AM Identities and memory state immediately when the operator selects backup. Original AM may restore content without operator reapproval, charge or RNG. Preserve current mechanical marks/sedation and current protected, Paired, Limited or source-locked slots; explicitly show retained protected-content differences. Restore actual fictional memory horizon, preserving OOC evidence and current resources, person/body, Status, obligations and receipts.
+
+Rationale: The backup option does not price a fresh action or specify resource rollback, while Limited Identities cannot be replaced or erased. A content restore with explicit protected differences preserves the granted ordinary restoration and mandatory current constraints.
+
+Alternatives: Rewind marks/resources and remove later protected Identities with the entire mechanical snapshot.; Require operator approval each time the AM restores its own genuine backup.
+
+Change impact: The source interpretation is adjustable: changing it affects ordinary/protected restore slots and memory lineage, not immutable historical backups. Missing changed-topology, vessel or other actor adapters remain required implementation gaps.

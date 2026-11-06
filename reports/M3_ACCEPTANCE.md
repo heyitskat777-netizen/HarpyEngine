@@ -1,5 +1,41 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## AM restoration, Class grafts and Rebellion consequences — 2026-11-05
+
+This source extends sanitized checkpoint `a08715fadfcabd0f77681713829bdfa3d7e59c44`.
+Exact integrated bytes and hashes are retained in ignored reproducible snapshot
+`var/m3-abilities-and-strain-freeze/manifest.json`. M3 remains **RULES_SUBSET**;
+these completed workflows do not constitute whole-playbook or milestone acceptance.
+
+| Completed workflow | Focused local evidence and supported boundary |
+|---|---|
+| AM memory erasure | Memory-only or combined actual Identity rewrite is one printed option; selective/all fictional recall restrictions persist privately, preserving immutable OOC history, resources and marks. Four normal checks pass in 8.71s; changed owner/public sheet trace passes 1/3.71s. `var/m3-am-memory-normal.xml`, `var/m3-am-memory-sheet-privacy.xml`. |
+| AM backup/revert | Genuine snapshot at operator selection; original AM controls source-proven restoration without operator approval, cost or RNG. Current marks, Limiters, protected/source slots, resources and mandatory work remain; retained differences are explicit. Actual fictional memory horizon follows backup/reversion lineage. Three backup checks plus two affected native traces pass 5/11.83s; Records compatibility passes 3/7.75s; final owner/public sheet trace passes 1/3.52s. Exact artifacts are in `var/m3-am-backup-handoff.json`. |
+| All seven currently implemented Class graft consumers | Actual eligible donors and three-Permission receipts reach genuine existing Nightmare, Physiotherapist, Untouchable, Martyr, Dampener, Kicked Puppy and Modular effects. Native two-Permission sources remain. Nightmare selection passes 3/4.91s; Physiotherapist graft 1/3.24s with native compatibility; remaining five distinct consumers 5/8.84s. Actual Punishment suspension/owned restoration, hardware and charge/roll/repair replay are covered. Existing native privilege workflow also passes 1/1.78s. Artifacts: `var/m3-nightmare-graft-final.xml`, `var/m3-physiotherapist-graft-third.xml`, `var/m3-remaining-class-grafts-third.xml`, `var/m3-class-graft-native-privilege-compatibility.xml`. Other unimplemented Class abilities are not enabled by these receipts. |
+| High Rebellion Control Ritual | Actual source, next successful original Girl, optional native creation/decline, later source-only self mark with real total and ordinary priority/scene lifetime. Repeated mark has actual embrace or rejection followed by real removal. Mid/high/low and owned behavior pass 3/10.37s; existing ordinary Tag/Disobey compatibility passes 4/3.07s. `var/m3-control-ritual-normal.xml`, `var/m3-ritual-shared-compatibility.xml`. |
+| High Rebellion backstory Tag | Actual Handler authors its Tag and identifies genuine Girl witnesses. Original Girl can spend it for the source-only Helpless alternative; real original Handler-owned replacement consequence and actual chosen weakness resolve through existing Handler Assets rules. No extra favour/attention/compulsion benefit is invented. Source/native/ownership/replay plus ordinary-Tag denial pass 2/3.23s; two existing normal Handler Tag workflows pass 2/2.20s. `var/m3-rebel-backstory-normal.xml`, `var/m3-backstory-handler-tag-compatibility.xml`. Separate rolled Handler-as-Girl Tag-mark use remains unported. |
+| Completed private contact card | The read-only review finding at `a08715f` was verified: the route was rendered but stored NPC confirmation was omitted. Reopening now renders both saved fields in separate private embeds with mentions disabled. Extended existing source-to-confirmation/reopen trace passes 1/2.43s; prior unrelated Handler/public-data assertions remain. `var/m3-contact-completed-card.xml`. |
+
+Focused selections overlap and are not summed. Integration static scope includes
+all **58 changed Python files**, including nine test files and every changed shared
+interface; Ruff/format and mypy over all **49 changed source modules** pass after
+correcting one root menu variable and its formatting. No gameplay assertions were
+removed. Publishable check: **1,013 files / 40 original manifest entries / zero
+findings**. CI's explicit selection includes these normal paths and affected shared
+compatibility; remote evidence belongs to its actual checked commit.
+
+Two adjustable delegated interpretations record AM content restoration without a
+mechanical rewind and Control Ritual Tag lifetime. Registry: **263 clarifications,
+155 subsets, 318 unimplemented entries**, zero independent approvals. AM branch,
+vessel/body and broader operator ports; remaining Class/playbook abilities and
+retained/Frame Swap sources; other shared/physical/Strain/lifecycle consequences
+remain required. Missing implementations are not house rules.
+
+The bot stays off. No full regression, live migration, restart, deployment,
+environment publication, recovered-engine write, AI/M4 or Ancillary enablement
+occurred. Final integrated verification, independent review and player acceptance
+remain pending. Older sections retain their original source/evidence scope.
+
 ## Records, repair producers, storage and private contact — 2026-11-05
 
 This local source extends gameplay checkpoint `9d4223cf4dd95a90c132f981f2512346adfaf234` / evidence-only `dc4795ee9dba101cb3c92032821ca469f39dd949`. Exact changed bytes/hashes are retained in reproducible ignored snapshot `var/m3-next-freeze/manifest.json`. M3 remains **RULES_SUBSET**; these paths do not close the broader milestone.

@@ -35,7 +35,12 @@ def damaged_basis(values: dict[str, Any]) -> bool:
 async def open_purchase(interaction: discord.Interaction, service: KickedPuppyService) -> None:
     data = await asyncio.to_thread(service.menu, viewer_from_interaction(interaction))
     if not data["available"]:
-        raise WorkflowError("No reviewed native LEGION Kicked Puppy acquisition is available")
+        raise WorkflowError("No reviewed Kicked Puppy acquisition is available")
+    if data["suspended"]:
+        await reply(
+            interaction, "This Class Requisition is suspended. Restore its original paid source."
+        )
+        return
     if data["owned"]:
         await reply(
             interaction,
@@ -54,13 +59,21 @@ async def open_purchase(interaction: discord.Interaction, service: KickedPuppySe
             ActorRef.model_validate(data["actor"]),
             data["frame"],
             values["account"],
+            values["donor"][0] if data["donors"] else None,
         )
-        return "Kicked Puppy acquired for two Permissions. Its choices appear in Flirt."
+        return (
+            f"Kicked Puppy acquired for {data['price']} Permissions. Its choices appear in Flirt."
+        )
 
     await NativeForm(
         interaction.user.id,
-        "Kicked Puppy — native LEGION, 2 Permissions",
+        f"Kicked Puppy — {data['kind'].replace('_', ' ').title()}, {data['price']} Permissions",
         "Use Flirt for the alternate basis, original target-given Tag and care question.",
-        [Field("account", "Record your actual acquisition", paragraph=True)],
+        (
+            [Field("donor", "Choose the actual donor Frame", tuple((x, x) for x in data["donors"]))]
+            if data["donors"]
+            else []
+        )
+        + [Field("account", "Record your actual acquisition", paragraph=True)],
         submit,
     ).present(interaction)

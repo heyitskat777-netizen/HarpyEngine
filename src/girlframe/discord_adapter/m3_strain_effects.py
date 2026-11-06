@@ -149,6 +149,18 @@ async def open_effect(
 
     def build(values: dict[str, Any]) -> list[Field]:
         fields: list[Field] = []
+        if rule == "strain.rebellion.high.5.2":
+            fields.append(Field("backstory_tag", "Your backstory-based Handler Tag"))
+            fields.append(
+                Field(
+                    "backstory_observers",
+                    "Girls who actually observed this Tag",
+                    tuple((str(uid), state.sheets[str(uid)].callsign) for uid in state.order),
+                    0,
+                    len(state.order),
+                    required=False,
+                )
+            )
         if rule == "strain.rebellion.low.2.2":
             fields.append(
                 Field(
@@ -588,6 +600,11 @@ async def open_effect(
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         payload: dict[str, Any] = {"rule_id": rule, "account": values["account"]}
+        if rule == "strain.rebellion.high.5.2":
+            payload["tags"] = (dict(owner=handler, label=values["backstory_tag"]),)
+            payload["backstory_observers"] = tuple(
+                int(x) for x in values.get("backstory_observers", ())
+            )
         if rule == "strain.rebellion.low.2.2":
             payload["target"] = values["target"][0]
         elif spawned:

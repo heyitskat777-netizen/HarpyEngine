@@ -121,6 +121,21 @@ def test_actual_secret_regular_contact_owned_revision_confirmation_and_private_r
     )
     assert service.view(PLAYER, identity)["method"] == revised
     assert service.view(OTHER, identity)["method"] == revised
+
+    async def reopen_completed():
+        interaction = current(2, 29350)
+        await interaction.response.defer(ephemeral=True)
+        await open_contact(interaction, service, identity)
+        card = interaction.edit_original_response.call_args.kwargs
+        assert card["view"] is None
+        assert [x.description for x in card["embeds"]] == [
+            clean(revised),
+            clean("This actual regular contact route is established"),
+        ]
+        assert card["allowed_mentions"].to_dict() == {"parse": []}
+
+    asyncio.run(reopen_completed())
+    assert state(game) == actual  # Reading the completed card never changes its saved source.
     with pytest.raises(WorkflowError, match="private contact"):
         service.view(ADMIN, identity)
     assert actual.sheets == before.sheets and actual.world == before.world

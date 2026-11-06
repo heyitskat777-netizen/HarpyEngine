@@ -1,4 +1,4 @@
-"""Native paid NPC relationship and actual participant-owned treatment controls."""
+"""Paid native/grafted NPC relationship and participant-owned treatment controls."""
 
 import asyncio
 from typing import Any
@@ -15,7 +15,12 @@ from girlframe.services.onboarding import WorkflowError
 async def open_purchase(interaction: discord.Interaction, service: PhysiotherapistService) -> None:
     data = await asyncio.to_thread(service.menu, viewer_from_interaction(interaction))
     if not data["available"]:
-        raise WorkflowError("No reviewed native Priestess Physiotherapist source is available")
+        raise WorkflowError("No reviewed Void Physiotherapist source is available")
+    if data["suspended"]:
+        await reply(
+            interaction, "Void Physiotherapist is suspended. Restore its original paid source."
+        )
+        return
     if data["requests"]:
         await open_request(interaction, service, data["requests"][-1])
         return
@@ -35,15 +40,28 @@ async def open_purchase(interaction: discord.Interaction, service: Physiotherapi
             data["revision"],
             values["npc"][0],
             values["account"],
+            values["donor"][0] if data["donors"] else None,
         )
         await open_request(current, service, saved["id"])
 
     await NativeForm(
         interaction.user.id,
-        "Void Physiotherapist — 2 Permissions",
+        f"Void Physiotherapist — {data['kind'].replace('_', ' ').title()}, "
+        f"{data['price']} Permissions",
         "Gain a Personal NPC Bond after their actual controller confirms this relationship and "
         "knowledge of Void leakage. No acceptance is supplied for them.",
-        [
+        (
+            [
+                Field(
+                    "donor",
+                    "Choose the Priestess donor Frame",
+                    tuple((x, x) for x in data["donors"]),
+                )
+            ]
+            if data["donors"]
+            else []
+        )
+        + [
             Field(
                 "npc",
                 "Actual physiotherapist NPC",
