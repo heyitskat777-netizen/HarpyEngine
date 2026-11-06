@@ -14,7 +14,6 @@ from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
-from girlframe.services.m3_privileges import purchase_proof
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -35,7 +34,14 @@ def entitlement(
         access.registry.require_available(rules.RULE)
     except ValueError:
         return None
-    purchase_proof(c, game.store, receipt)
+    from girlframe.services.m3_class_retention import proof
+
+    _, chain = proof(game, c, state, receipt)
+    if len(chain) > 1:
+        try:
+            access.registry.require_available("core.core.frame-requisitions")
+        except ValueError:
+            return None
     return receipt
 
 
@@ -127,8 +133,8 @@ class UntouchableService:
             if any(
                 isinstance(x, FrameRuleReceipt)
                 and x.actor == actor
-                and x.frame_instance == frame
                 and x.rule_id == rules.RULE
+                and grafts.eligible(state, x)
                 for x in state.requisitions
             ):
                 raise WorkflowError("Restore the original paid entitlement instead of buying twice")

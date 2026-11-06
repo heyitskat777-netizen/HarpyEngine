@@ -1,5 +1,41 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Cute Uniforms and retained Untouchable — 2026-11-06 UTC
+
+Source extends `cd4ec147f7aa819ec47e56793c0cb45d65b90ba8`. Exact public bytes
+are retained in ignored `var/m3-cute-untouchable-freeze/manifest.json`.
+M3 remains **RULES_SUBSET**; final regression and independent/player review are pending.
+
+| Workflow | Actual focused evidence and supported boundary |
+|---|---|
+| Cute Uniforms | Genuine held-award acquisition, original Handler and player-confirmed physical dressing, one Status loss, actual wearing/Keep extra presentation, real observed Tag use, owner-controlled Identity or capacity-bound Girl Asset embrace, performed rejection and real Punishment completion. Ordinary doff/rewear changes wearing without automatic rejection or another Status loss. Original known positions cannot be overwritten by a presence claim. Four distinct normal workflows **4 passed / 30.55s**, `var/m3-cute-uniforms-final.xml`; final changed native/Inbox/capacity/clothing/private-audit trace **1 passed / 8.82s**, `var/m3-cute-uniforms-native-final.xml`. These selections overlap. Actual Execution preserves the original archive; actual Passing Responsibility reaches the real delegated effect without duplicate application. Other roles, hardware, generations and garment/container transitions remain required ports. |
+| Retained Untouchable | Actual native2P acquisition -> real4P different-Frame Swap -> genuine Engage low Tag-cost substitution. Marked Tags remain ineligible; another actual unmarked Tag succeeds. Real source suspension/restoration, immutable receipt, reward and resource continuity, replay and rebuild are covered. New trace **1 passed / 4.337s**, `var/m3-retained-untouchable.xml`; affected native/graft/retention compatibility **5 passed / 6.773s**, `var/m3-retained-untouchable-compat.xml`. The finite retained allowlist is Dampener, Kicked Puppy and Untouchable only. Synthetic reviewed sources do not approve production destinations or other hardware. |
+
+All **22 changed Python files**, including shared interfaces and three tests,
+pass Ruff/format; all **19 changed production modules** pass mypy. Genuine
+rejection synchronization is idempotent, and source completion follows the actual
+resolved Punishment event, including original-character endings and delegation.
+Dressing/clothing accounts stay in private state and out of audit metadata.
+
+Six adjustable interpretations are recorded centrally: **296 clarifications,
+170 subsets / 303 unimplemented entries**, zero independent approvals. Counts
+are inventory, not a completion percentage. Ordinary advancement producers,
+remaining playbooks/Strain/world/shared/lifecycle sources and retained hardware
+still block M3. Next source contracts address retained Martyr and the next
+whole Handler advancement workflow; missing implementations are not rulings.
+
+The delegated completed-contact UI finding is already resolved by ancestor
+`3c79d1178885562e0745fc1d6527309894f37c01`: reopening privately shows both saved
+route and NPC confirmation. Its existing reopen trace passed **1 / 2.43s**;
+unchanged behavior was not retested for this checkpoint.
+
+Preceding checkpoint `cd4ec147f7aa819ec47e56793c0cb45d65b90ba8` was pushed,
+with exact remote SHA verified. [Focused CI 42183390737](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42183390737)
+passed. This newer source does not inherit that result or the historical
+2,200-test full regression. No new full regression, bot restart/deployment,
+live migration, environment publication, private-engine write, AI/M4 or Ancillary
+activation occurred; bot remains off.
+
 ## Supply Drop, Budget Asset removals and retained Kicked Puppy — 2026-11-06 UTC
 
 Source extends `79fd40a70a5ea6aa1572fa56c4fe2b859e691e3e`. Exact public bytes

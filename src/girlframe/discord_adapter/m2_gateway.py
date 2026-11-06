@@ -126,6 +126,8 @@ class DiscordGameGateway:
             )
             if payload.get("total") is not None:
                 text += f" · {payload['total']} · {clean(payload['tier'])}"
+            for presentation in payload.get("forced_presentations", []):
+                text += "\n" + clean(presentation["presentation"])
             calamities = payload.get("asset_calamities", [])
             if calamities:
                 text += "\n**Asset failure:** " + clean("; ".join(calamities))[:1400]

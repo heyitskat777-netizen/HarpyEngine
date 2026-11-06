@@ -307,33 +307,47 @@ class GameWorker:
                             for x in state.obligations
                             if x.id == current["data"]["obligation_id"] and x.state == "pending"
                         )
+                        cute_rejection_event = None
                         if item.kind == "flirt_followthrough":
                             self.game.request(c, current, item.target, "followthrough_confirm")
                             self.game.save_action(c, current, state="awaiting_choices")
                         else:
                             sheet = state.sheets[str(item.owner)]
                             from girlframe.engine.m3_control_ritual import tags as ritual_tags
+                            from girlframe.services.m3_cute_uniforms import reject as reject_uniform
+                            from girlframe.services.m3_cute_uniforms import tags as uniform_tags
 
                             tag = next(
                                 x
-                                for x in sheet.tags + ritual_tags(state, item.owner)
+                                for x in sheet.tags
+                                + ritual_tags(state, item.owner)
+                                + uniform_tags(state, item.owner)
                                 if x.id == item.details["tag"]
                             )
-                            if sheet.girl == "NEWGIRL" and tag.giver == sheet.mentor:
-                                raise WorkflowError("A Newgirl cannot reject its Mentor's Tag.")
-                            sheet.tags = [x for x in sheet.tags if x.id != tag.id]
+                            cute_rejection_event = str(uuid4())
+                            if not reject_uniform(
+                                self.game, c, state, current, cute_rejection_event
+                            ):
+                                if sheet.girl == "NEWGIRL" and tag.giver == sheet.mentor:
+                                    raise WorkflowError("A Newgirl cannot reject its Mentor's Tag.")
+                                sheet.tags = [x for x in sheet.tags if x.id != tag.id]
                             sheet.revision += 1
                             ChoiceEngine(self.game).tag_resolved(state, item.owner, tag.id)
                             ChoiceEngine(self.game).finish(c, state, current)
                             self.game.save_action(c, current)
-                        self.game.event(
+                        ready_event = self.game.event(
                             c,
                             "system:confirmed_followthrough",
                             "m2.followthrough_ready:" + row["id"],
                             "m2.followthrough_ready",
                             state,
                             action_id=row["id"],
+                            event_id=cute_rejection_event,
                         )
+                        if current["data"].get("cute_uniform_rejection"):
+                            from girlframe.services.m3_cute_uniforms import synchronize_rejection
+
+                            synchronize_rejection(self.game, c, current, ready_event)
                 elif action["data"]["play"] == "am_code_maintenance":
                     with self.game.store.transaction() as c:
                         self.game.unpaused(c)

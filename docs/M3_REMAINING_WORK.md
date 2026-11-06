@@ -1,19 +1,21 @@
 # M3 remaining work — verified development snapshot
 
-Newest bounded additions: **full normal Supply Drop repair/delivery/expiry;
-actual per-player Budget Girl/Frame Asset removal and real mandatory outcomes;
-retained Kicked Puppy through paid Frame Swap**. Actual source/endpoint evidence
-is at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md).
-Registry: **169 subsets / 304 unimplemented / 290 adjustable clarifications**;
+Newest bounded additions: **Cute Uniforms acquisition, actual dressing, Keep,
+Tag/embrace/rejection/Punishment completion; retained Untouchable after paid Swap**.
+Actual source evidence is at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md).
+Registry: **170 subsets / 303 unimplemented / 296 adjustable clarifications**;
 M3 remains **IN_PROGRESS / RULES_SUBSET**, bot off.
 
-Next finite source contracts: Cute Uniforms advancement and retained Untouchable
-consumer. Other advancements, ordinary session/accomplishment award producers,
-other retained Class/hardware, temporary-container transitions and unported Asset/
-actor/lifecycle sources remain required. Remaining playbooks, shared rules, Strain/
-Endgames, world consumers, source reconciliation and final integrated checks still
-block M3. Production source/destination review stays pending and enforced; synthetic
-reviewed fixtures do not certify it. Counts are not completion percentages.
+Next source contract: retained Martyr through actual death and original-owner
+memorial. Other advancements, ordinary session/accomplishment award producers,
+other retained Class/hardware, temporary/clothing-container transitions and
+unported Asset/actor/lifecycle sources remain required. Remaining playbooks,
+shared rules, Strain/Endgames, world consumers, source reconciliation and final
+integrated checks still block M3. Production source/destination review remains
+enforced; synthetic fixtures do not certify it. Counts are not percentages.
+
+Previous bounded additions: full normal Supply Drop repair/delivery/expiry,
+actual per-player Budget Asset removals and retained Kicked Puppy.
 
 Previous bounded additions: retained Dampener, genuine Void advancement awards/
 Permission spending and actual NPC departures. Earlier snapshots retain their

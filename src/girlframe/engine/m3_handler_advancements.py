@@ -46,9 +46,13 @@ class Award(Model):
     account: str = Field(min_length=1, max_length=1200)
     phase: Literal["held", "spent"] = "held"
     effects: tuple[PermissionEffect, ...] = ()
-    acquired_rule: Literal["handler-advancement.handler-advancement.supply-drop"] | None = Field(
-        default=None, exclude_if=lambda value: value is None
-    )
+    acquired_rule: (
+        Literal[
+            "handler-advancement.handler-advancement.supply-drop",
+            "handler-advancement.handler-advancement.cute-uniforms",
+        ]
+        | None
+    ) = Field(default=None, exclude_if=lambda value: value is None)
     acquisition: str | None = Field(default=None, exclude_if=lambda value: value is None)
     spend_event: str | None = None
     spend_account: str | None = Field(default=None, min_length=1, max_length=1200)

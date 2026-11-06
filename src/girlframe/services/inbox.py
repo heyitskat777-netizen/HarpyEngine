@@ -842,6 +842,29 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_cute_uniforms import CuteUniformService
+
+            for uniform_control in CuteUniformService(self.store)._tasks(connection, viewer):
+                needs_confirmation = uniform_control["phase"] == "proposed"
+                items.append(
+                    InboxItem(
+                        "cute-uniform:" + uniform_control["id"],
+                        "cute_uniform",
+                        uniform_control["id"],
+                        uniform_control["revision"],
+                        "playbook",
+                        uniform_control["label"],
+                        "Actual original participants",
+                        "pending" if needs_confirmation else "established",
+                        needs_confirmation,
+                        False,
+                        "Confirm only an actual dressing or review your actual clothing control.",
+                        "An unperformed proposal or silence is not dressing or Tag rejection.",
+                        "Review uniform",
+                        task="m3_cute_uniforms",
+                    )
+                )
+
             from girlframe.services.m3_budget_removal import RemovalService
 
             for removal in RemovalService(self.store)._tasks(connection, viewer):

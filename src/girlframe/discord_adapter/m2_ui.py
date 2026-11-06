@@ -144,6 +144,26 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
             flags("Develop my Control Ritual?"),
             text("text", "Describe my Control Ritual (up to 120 characters)", False),
         ]
+    elif kind == "tag_resolution" and decision.get("cute_uniform_tag"):
+        fields = [
+            menu("options", "Your uniform response", ("reject", "embrace", "embrace_asset")),
+            entities(
+                "denied",
+                "Ordinary Identity replaced for Identity embrace",
+                [x for x in own["identities"] if not x["protected"]],
+                0,
+                1,
+                False,
+            ),
+            Field(
+                "fields.replace",
+                "Girl Asset replaced only if at capacity",
+                tuple((x["id"], x["name"]) for x in decision["cute_uniform_replacements"]),
+                0,
+                1,
+                required=False,
+            ),
+        ]
     elif kind == "tag_resolution":
         fields = [
             menu("options", "Resolve the repeated marked Tag", ("embrace", "reject")),
@@ -181,6 +201,14 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
             fields = [menu("options", "Choose one positive trait", traits)]
         else:
             fields = [text("text", "Take a Tag: write its label")]
+        if decision.get("cute_uniforms"):
+            fields.append(
+                Field(
+                    "fields.cute_uniform",
+                    "Also choose while wearing the uniform",
+                    (("helpless_adorable", "I seem helpless and adorable"),),
+                )
+            )
         if has_rule(own, "girl.oldgen.elder-bitch", "OLDGEN") or (
             harpy_mode and "girl.oldgen.elder-bitch" in retained
         ):
@@ -726,6 +754,15 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         instructions += "\nQuestion: " + str(
             decision["result"].get("question_text")
             or decision["result"].get("question", "Why did you withdraw?")
+        )
+    if decision.get("cute_uniforms"):
+        instructions += (
+            "\nThe uniform also makes you seem helpless and adorable; "
+            "this does not make you physically Helpless."
+        )
+    if decision["kind"] == "handler_keep" and decision["result"].get("forced_presentations"):
+        instructions += "\nAdditional appearance: " + "; ".join(
+            clean(x["presentation"]) for x in decision["result"]["forced_presentations"]
         )
     if decision.get("nightmare_core"):
         instructions += (

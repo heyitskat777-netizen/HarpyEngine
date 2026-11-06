@@ -1635,6 +1635,9 @@ class GameService:
                 from girlframe.services.m3_nightmare import prepare as prepare_nightmare
 
                 nightmare_core = prepare_nightmare(self, c, viewer, state, prepared)
+            from girlframe.services.m3_cute_uniforms import prepare_keep as prepare_cute_keep
+
+            cute_uniforms = prepare_cute_keep(self, c, viewer, state, prepared)
             preview_state = GameState.model_validate_json(state.model_dump_json())
             preview = preview_state.sheets[str(sheet.owner)]
             if prepared.identity:
@@ -1693,6 +1696,8 @@ class GameService:
                 data["kicked_puppy"] = kicked_puppy
             if nightmare_core is not None:
                 data["nightmare_core"] = nightmare_core
+            if cute_uniforms is not None:
+                data["cute_uniforms"] = cute_uniforms
             from girlframe.services.m3_scene_requisitions import audience as private_scene_audience
 
             private_audience = private_scene_audience(c, self.store, scene["id"])
@@ -2038,6 +2043,7 @@ class GameService:
                 or dampener is not None
                 or kicked_puppy is not None
                 or nightmare_core is not None
+                or cute_uniforms is not None
                 else "m2.play_confirmed",
                 state
                 if (
@@ -2278,6 +2284,9 @@ class GameService:
                 from girlframe.services.m3_nightmare import pre_roll as nightmare_pre_roll
 
                 nightmare_pre_roll(self, c, viewer, state, action)
+                from girlframe.services.m3_cute_uniforms import pre_roll as cute_pre_roll
+
+                cute_pre_roll(self, c, state, action)
             if action["data"].get("kicked_puppy") is not None or prepared.kicked_puppy_basis:
                 from girlframe.services.m3_kicked_puppy import pre_roll as kicked_pre_roll
 
@@ -2470,6 +2479,9 @@ class GameService:
                 or action["data"].get("dampener")
                 or action["data"].get("kicked_puppy")
                 or action["data"].get("nightmare_core")
+                or action["data"].get("cute_uniforms")
+                or action["data"].get("cute_uniform_tags")
+                or action["data"].get("cute_uniform_rejection")
                 or defeat is not None
                 else RULESET,
             }
@@ -2571,6 +2583,9 @@ class GameService:
                 or action["data"].get("dampener")
                 or action["data"].get("kicked_puppy")
                 or action["data"].get("nightmare_core")
+                or action["data"].get("cute_uniforms")
+                or action["data"].get("cute_uniform_tags")
+                or action["data"].get("cute_uniform_rejection")
                 or defeat is not None
                 else "m2.rolled",
                 state,
@@ -2912,6 +2927,9 @@ class GameService:
                 or action["data"].get("dampener")
                 or action["data"].get("kicked_puppy")
                 or action["data"].get("nightmare_core")
+                or action["data"].get("cute_uniforms")
+                or action["data"].get("cute_uniform_tags")
+                or action["data"].get("cute_uniform_rejection")
                 or action["data"].get("actor_basic")
                 or action["data"].get("beneath")
                 or action["data"].get("doctor")
@@ -2937,6 +2955,10 @@ class GameService:
                 action_id=action["id"],
                 choice_id=choice_id,
             )
+            if action["data"].get("cute_uniform_rejection"):
+                from girlframe.services.m3_cute_uniforms import synchronize_rejection
+
+                synchronize_rejection(self, c, action, event)
             if action["data"].get("gorgon_play"):
                 from girlframe.services.m3_gorgon_play import GorgonPlayService
 
@@ -3961,9 +3983,11 @@ class GameService:
             own = state.sheets.get(str(viewer.user_id))
             # Return only selectable entities needed by this decision, never another private sheet.
             body = json.loads(row["body_json"])
+            from girlframe.services.m3_cute_uniforms import tags as uniform_tags
+
             tags = [
                 x.model_dump(mode="json")
-                for x in actor.tags
+                for x in actor.tags + uniform_tags(state, actor.owner)
                 if viewer.user_id in x.observers or viewer.user_id == actor.owner
             ]
             if (
@@ -3977,7 +4001,7 @@ class GameService:
 
                 tags = [
                     x.model_dump(mode="json")
-                    for x in actor.tags
+                    for x in actor.tags + uniform_tags(state, actor.owner)
                     if kicked_self_tag(self, c, state, action, viewer.user_id, x)
                     or kicked_mentor_tag(actor, x, state)
                     or kicked_has_rule(actor, "girl.princess.objectively-beautiful", "PRINCESS")
@@ -3997,6 +4021,9 @@ class GameService:
                 if additional:
                     prove_additional(self, c, state, own.owner)
                 own_data["additional_identities"] = [x.model_dump(mode="json") for x in additional]
+                own_data["tags"] += [
+                    x.model_dump(mode="json") for x in uniform_tags(state, own.owner)
+                ]
             result = dict(row) | {
                 "body": body,
                 "play": action["data"]["play"],
@@ -4125,6 +4152,24 @@ class GameService:
                 result["tag_marker_discussion"] = discussion_projection(
                     self, c, state, action, viewer.user_id
                 )
+            if row["kind"] in ("actor_keep", "handler_keep") and action["data"].get(
+                "cute_uniforms"
+            ):
+                result["cute_uniforms"] = action["data"]["cute_uniforms"]
+            if row["kind"] == "tag_resolution" and str(body.get("tag", "")).startswith(
+                "cute-uniform:"
+            ):
+                from girlframe.engine.m3_assets import can_replace_at_limit
+                from girlframe.services.m3_cute_uniforms import prove_tag
+
+                uniform = next(x for x in uniform_tags(state, actor.owner) if x.id == body["tag"])
+                prove_tag(self, c, state, actor.owner, uniform)
+                result["cute_uniform_tag"] = True
+                result["cute_uniform_replacements"] = [
+                    dict(id=x.id, name=x.name)
+                    for x in actor.assets
+                    if x.family == "girl" and not x.void and can_replace_at_limit(actor, x)
+                ]
             from girlframe.engine.m3_beneath import rejection_blocked
 
             result["rejection_blocked"] = bool(

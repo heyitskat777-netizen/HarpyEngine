@@ -76,6 +76,9 @@ class ChoiceEngine:
         return tag
 
     def prove_tag_setter(self, c: Connection, state: GameState, owner: int, tag: TagState) -> None:
+        from girlframe.services.m3_cute_uniforms import prove_tag
+
+        prove_tag(self.game, c, state, owner, tag)
         if tag.gm_setter_appointment is not None or tag.gm_setter_event is not None:
             from girlframe.engine.m3_actor_bonds import current_ref
             from girlframe.services.m3_tag_setters import ooc_setter
@@ -290,6 +293,13 @@ class ChoiceEngine:
             return
         acting = state.sheets[str(actor)]
         if kind == "tag_resolution":
+            from girlframe.services.m3_cute_uniforms import resolve_choice
+
+            if resolve_choice(self.game, c, state, action, body, answer):
+                if answer.options != ("reject",):
+                    self.tag_resolved(state, actor, body["tag"])
+                self.results(c, state, action)
+                return
             from girlframe.engine.m3_control_ritual import save_tag
             from girlframe.engine.m3_control_ritual import tags as ritual_tags
 
@@ -390,6 +400,10 @@ class ChoiceEngine:
         result = action["data"]["result"]
         level = result.get("tier")
         if kind == "actor_keep":
+            from girlframe.services.m3_cute_uniforms import apply_keep_result, validate_keep_choice
+
+            validate_keep_choice(action, answer)
+            apply_keep_result(action)
             from girlframe.services.m3_enforcer_requisitions import keep_extras
             from girlframe.services.m3_nightmare import automatic as nightmare_automatic
 
@@ -519,8 +533,12 @@ class ChoiceEngine:
                     self.add_tag(state, action, actor, actor, answer.text)
                     acting.heat += int(answer.number or 0)
                 elif option == "reject_tag":
-                    picks(answer.denied, {x.id for x in acting.tags}, 1)
-                    rejected = next(x for x in acting.tags if x.id == answer.denied[0])
+                    from girlframe.services.m3_cute_uniforms import reject_tag as reject_uniform
+                    from girlframe.services.m3_cute_uniforms import tags as uniform_tags
+
+                    available = acting.tags + uniform_tags(state, actor)
+                    picks(answer.denied, {x.id for x in available}, 1)
+                    rejected = next(x for x in available if x.id == answer.denied[0])
                     self.prove_tag_setter(c, state, actor, rejected)
                     from girlframe.engine.m3_beneath import rejection_blocked
 
@@ -532,7 +550,10 @@ class ChoiceEngine:
                         not (mentor_tag(acting, rejected, state)),
                         "A Newgirl cannot reject a Mentor Tag.",
                     )
-                    acting.tags = [x for x in acting.tags if x.id != rejected.id]
+                    if not reject_uniform(
+                        self.game, c, state, action, rejected, action["data"]["response_event"]
+                    ):
+                        acting.tags = [x for x in acting.tags if x.id != rejected.id]
                     self.tag_resolved(state, actor, rejected.id)
                 else:
                     require(
@@ -770,8 +791,9 @@ class ChoiceEngine:
         sheet = state.sheets[str(actor)]
         from girlframe.services.m3_control_ritual import candidates
         from girlframe.services.m3_control_ritual import self_tag as ritual_self_tag
+        from girlframe.services.m3_cute_uniforms import tags as uniform_tags
 
-        available_tags = sheet.tags + candidates(state, action, owner)
+        available_tags = sheet.tags + candidates(state, action, owner) + uniform_tags(state, actor)
         picks(answer.options, {"pass", "tag"}, 1)
         require(
             set(answer.fields) <= {"status", "marker"}, "Choose only supported source-role fields."
@@ -887,10 +909,23 @@ class ChoiceEngine:
             from girlframe.engine.m3_control_ritual import save_tag
             from girlframe.services.m3_control_ritual import candidates
             from girlframe.services.m3_control_ritual import self_tag as ritual_self_tag
+            from girlframe.services.m3_cute_uniforms import tags as uniform_tags
 
             tag = next(
-                x for x in sheet.tags + candidates(state, action, actor) if x.id == answer.denied[0]
+                x
+                for x in sheet.tags + candidates(state, action, actor) + uniform_tags(state, actor)
+                if x.id == answer.denied[0]
             )
+            from girlframe.services.m3_cute_uniforms import (
+                prove_tag as prove_uniform_tag,
+            )
+            from girlframe.services.m3_cute_uniforms import (
+                save_tag as save_uniform_tag,
+            )
+
+            uniform = prove_uniform_tag(self.game, c, state, actor, tag)
+            if uniform:
+                action["data"].setdefault("cute_uniform_tags", []).append(tag.id)
             ritual = ritual_self_tag(self.game, c, state, action, person, tag)
             require(
                 not ritual or person == actor,
@@ -904,6 +939,7 @@ class ChoiceEngine:
             tag.scene_used = action["scene_id"]
             sheet.revision += 1
             save_tag(state, actor, tag)
+            save_uniform_tag(state, actor, tag)
             amount = modifier(
                 state, markers.roller(state, action), marker, 1 if answer.number == 1 else -1
             )
@@ -1090,6 +1126,7 @@ class ChoiceEngine:
                 "total": action["data"]["result"].get("total"),
                 "tier": action["data"]["result"].get("tier"),
                 "asset_calamities": action["data"]["result"].get("asset_calamities", []),
+                "forced_presentations": action["data"]["result"].get("forced_presentations", []),
             },
         )
         if any(

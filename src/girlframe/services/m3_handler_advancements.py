@@ -169,18 +169,32 @@ class HandlerAdvancementService:
                         "Recover this actual consumed advancement and group effects"
                     )
                 if value.acquired_rule is not None:
-                    from girlframe.engine.m3_supply_drop import acquisitions
+                    if (
+                        value.acquired_rule
+                        == "handler-advancement.handler-advancement.cute-uniforms"
+                    ):
+                        from girlframe.engine.m3_cute_uniforms import (
+                            acquisitions as uniform_acquisitions,
+                        )
+                    else:
+                        from girlframe.engine.m3_supply_drop import (
+                            acquisitions as drop_acquisitions,
+                        )
 
-                    receipt = next(
-                        (x for x in acquisitions(spent) if x.id == value.acquisition), None
+                    receipts: tuple[Any, ...] = (
+                        uniform_acquisitions(spent)
+                        if value.acquired_rule
+                        == "handler-advancement.handler-advancement.cute-uniforms"
+                        else drop_acquisitions(spent)
                     )
+                    receipt = next((x for x in receipts if x.id == value.acquisition), None)
                     if (
                         receipt is None
                         or receipt.award != identity
                         or receipt.event != value.spend_event
                     ):
                         raise WorkflowError(
-                            "Recover the actual acquired Supply Drop source receipt"
+                            "Recover the actual acquired advancement rule source receipt"
                         )
         elif row["state"] != "pending":
             raise WorkflowError("A resolved advancement source needs its actual saved award")

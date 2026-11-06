@@ -27,7 +27,7 @@ and NPC Orders, bounded AM discovery/Limiters/reset/identity-memory maintenance 
 native/grafted Class consumers including Home, five-source Sup growth, Appearance
 Matrix, Handler’s Special Girl, Clone AM and source-specific Succubus Orders,
 High Rebellion Ritual/backstory effects, actual Rebel group merger/leader opportunity, player-owned stipend retirement,
-finite retained Dampener/Kicked Puppy, genuine Handler advancement awards/Permission
+finite retained Dampener/Kicked Puppy/Untouchable, Cute Uniforms actual dressing/Keep/Tag/discipline, genuine Handler advancement awards/Permission
 spending, Supply Drop repair/delivery/expiry, actual NPC departures and Budget Asset removals, and
 further Budget meeting/Candidate/Anarchy/cleanup/sabotage/visitor/assassination/fight lifecycles. Focused
 normal-workflow evidence is listed in the report; it has not had a new full

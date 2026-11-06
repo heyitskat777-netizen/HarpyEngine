@@ -40,10 +40,11 @@ def substitute(
     event: str,
     receipt: FrameRuleReceipt,
 ) -> None:
-    from girlframe.engine.m3_class_grafts import acquisition
+    from girlframe.engine.m3_class_retention import binding
+    from girlframe.engine.m3_nightmare import current
 
-    sheet, frame, *_ = acquisition(state, actor, RULE, receipt.donor_frame)
-    if held(state, actor) != receipt:
+    sheet, frame = current(state, actor)
+    if held(state, actor) != receipt or binding(state, receipt)[0] != frame:
         raise ValueError("Recover the actual original Frame's acquired Untouchable source")
     tag = next((x for x in sheet.tags if x.id == tag_id and not x.marked), None)
     if tag is None:

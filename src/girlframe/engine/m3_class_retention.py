@@ -11,7 +11,13 @@ if TYPE_CHECKING:
     from girlframe.engine.m2 import GameState
 
 # Each consumer needs its own original-source/current-Frame adapter. Hardware is not implied.
-RULES = frozenset(("frame.class.legion.dampener-link", "frame.class.legion.kicked-puppy"))
+RULES = frozenset(
+    (
+        "frame.class.legion.dampener-link",
+        "frame.class.legion.kicked-puppy",
+        "frame.class.autocrat.untouchable-frame",
+    )
+)
 
 
 class Retention(Model):
@@ -38,7 +44,9 @@ def links(state: "GameState") -> tuple[Retention, ...]:
 def binding(state: "GameState", paid: FrameRuleReceipt) -> tuple[str, tuple[str, ...]]:
     if paid.rule_id not in RULES or paid not in state.requisitions:
         raise ValueError("Use an explicitly adapted original retained Class purchase")
-    required = "legion"
+    from girlframe.engine.m3_class_grafts import CLASSES
+
+    required = CLASSES[paid.rule_id]
     own = frame_class(paid.frame) == required
     if (
         frame_class(paid.donor_frame) != required
