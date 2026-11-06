@@ -57,7 +57,12 @@ def _access(
     access = Access(game.store)
     access.authorize(c, viewer, "plays", director_response=True)
     assert access.registry is not None
-    access.registry.require_available(RULE if origin_kind == "broken" else "girl.am.scrutinized")
+    rule = {
+        "broken": RULE,
+        "am_secret": "girl.am.scrutinized",
+        "secretary": "handler-advancement.handler-advancement.secretary",
+    }[origin_kind]
+    access.registry.require_available(rule)
 
 
 def source(
@@ -81,14 +86,23 @@ def source(
             x
             for x in original.facts
             if x.get("kind")
-            == ("npc_broken_order" if value.origin_kind == "broken" else "npc_am_secret_order")
+            == {
+                "broken": "npc_broken_order",
+                "am_secret": "npc_am_secret_order",
+                "secretary": "npc_secretary_order",
+            }[value.origin_kind]
             and x.get("id") == value.id
         ),
         None,
     )
     actual = resolve(state, value.issuer, profiles(c, game.store.campaign_id))
     recipient = resolve(state, value.target, profiles(c, game.store.campaign_id))
-    if value.origin_kind == "am_secret":
+    if value.origin_kind == "secretary":
+        from girlframe.services.m3_secretary import prove_order
+
+        prove_order(game, c, state, value)
+        condition_invalid = False
+    elif value.origin_kind == "am_secret":
         from girlframe.services.m3_am_scrutinized import prove_order_grant
 
         prove_order_grant(game, c, state, value)
@@ -113,7 +127,8 @@ def source(
         or audit.actor_id != str(value.controller)
         or recorded is None
         or rules.Order.model_validate_json(recorded["body"]) != value
-        or actual.controller != value.controller
+        or value.origin_kind != "secretary"
+        and actual.controller != value.controller
         or recipient.controller != int(value.target.entity)
         or fingerprint(_cast(game, c, state, value.cast.channel)) != fingerprint(value.cast)
         or condition_invalid
@@ -263,7 +278,7 @@ class NpcOrderService:
         *,
         origin_kind: rules.Origin = "broken",
     ) -> dict[str, Any]:
-        if origin_kind not in ("broken", "am_secret"):
+        if origin_kind not in ("broken", "am_secret", "secretary"):
             raise WorkflowError("Use only an implemented actual NPC order source")
         if not text.strip() or len(text) > 1200:
             raise WorkflowError("State the actual direct order in 1–1200 characters")
@@ -278,7 +293,14 @@ class NpcOrderService:
             recipient = ActorRef(
                 kind="pilot", entity=str(target), incarnation=state.sheets[str(target)].character_id
             )
-            if origin_kind == "am_secret":
+            principal = None
+            if origin_kind == "secretary":
+                from girlframe.services.m3_secretary import order_authority
+
+                authority = order_authority(self.game, c, state, issuer, recipient, viewer.user_id)
+                condition_id = authority.id
+                principal = authority.handler
+            elif origin_kind == "am_secret":
                 from girlframe.services.m3_am_scrutinized import secret_authority
 
                 condition_id = secret_authority(self.game, c, state, issuer, recipient).id
@@ -287,7 +309,11 @@ class NpcOrderService:
             if (
                 state.revision != expected
                 or self.game.pending_actions(c)
-                or not any(x.actor == issuer and x.controller == viewer.user_id for x in cast.roles)
+                or not any(
+                    x.actor == issuer
+                    and (origin_kind == "secretary" or x.controller == viewer.user_id)
+                    for x in cast.roles
+                )
                 or not any(x.actor == recipient and x.controller == target for x in cast.roles)
             ):
                 raise WorkflowError("STALE_NPC_ORDER: reopen the original NPC and Broken recipient")
@@ -308,6 +334,7 @@ class NpcOrderService:
                 cast=cast,
                 registry=self.store.policy.m3_approval.registry_sha256,
                 instruction=text,
+                principal=principal,
             )
             c.execute(
                 t.m2["m2_orders"]
@@ -392,11 +419,19 @@ class NpcOrderService:
                 )
             state.facts.append(
                 dict(
-                    kind="npc_broken_order" if origin_kind == "broken" else "npc_am_secret_order",
+                    kind={
+                        "broken": "npc_broken_order",
+                        "am_secret": "npc_am_secret_order",
+                        "secretary": "npc_secretary_order",
+                    }[origin_kind],
                     id=identity,
                     body=value.model_dump_json(),
                 )
             )
+            if origin_kind == "secretary":
+                from girlframe.services.m3_secretary import record_authority
+
+                record_authority(state, value)
             self.game.event(
                 c,
                 viewer.user_id,

@@ -1,5 +1,42 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Secretary acquisition and four Plays — 2026-11-06 UTC
+
+Source extends `e4a99f1f090a20200f5b884caf5254464ded1f04`; sanitized bytes are
+frozen in ignored `var/m3-secretary-freeze/manifest.json`. M3 remains
+**RULES_SUBSET**; final regression and independent/player review remain pending.
+
+Genuine award acquisition supports promotion preserving the real NPC's controller,
+identity, jobs, Bonds and resources, or actual new-NPC creation. Exact source-owned
+Handler authority grants only the four Secretary Plays. Full authority issues a
+real NPC Order with the original Handler principal and actual recipient response.
+Appearance updates only Secretary's position/cast. Competence delivers a substantive
+briefing from real mission facts to its actual private recipients/Inbox History.
+
+Gunpoint is optional before original dice, uses a proved ordinary carried firearm
+without an extra purchase/Asset fee, and holds the same actual hostile Engage.
+Withdrawal terminally completes that unrolled action with no RNG/resource spend.
+The other normal performs a genuine Keep child, resolves the real tactical source,
+then rolls and completes the original Engage exactly once. No automatic damage,
+Helplessness, actor-control alias or new staff acknowledgment is added.
+
+Normal promotion/all four Plays/child continuation plus short creation: **2 passed /
+8.74s**, `.venv/bin/pytest -q tests/rules/test_secretary.py -x`.
+Planned previous-award compatibility: **3 passed / 6.87s**. Coherent **14 changed
+Python files** pass Ruff/format; **13 source modules** pass mypy, including shared
+Game/Choice and native/Inbox hooks. Exact evidence and source hashes are in ignored
+`var/m3-secretary-handoff.json`; no full regression or repeated installation.
+
+Metadata: **177 subsets / 299 unimplemented / 319 adjustable clarifications**,
+476 total,439 required core,37 deferred Ancillary,zero independent approvals.
+The clarification count also records the pending AM branch policy, not its
+implementation. Counts are inventory, not a completion percentage. Gunpoint's
+finite native-Pilot Engage adapter does not cover other hostile actors/Plays;
+physical conflicts and unported competence effects remain real dependencies.
+AM branching and broader source/playbook/Strain/world/shared/lifecycle work still
+block M3. Bot stays off; no deployment, migration, environment publication,
+recovered-engine write, AI/M4 or Ancillary activation.
+
 ## AM actual body transfer and hooked return — 2026-11-06 UTC
 
 Source extends `a9e61b8f49acb4c06f972dc6cb62049c504686c3`; sanitized bytes are

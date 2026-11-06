@@ -487,6 +487,16 @@ def answer_values(values: dict[str, Any]) -> ChoiceAnswer:
 
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
     decision = await threaded(lambda: game.decision(viewer_from_interaction(interaction), identity))
+    if decision["kind"] in (
+        "secretary_gunpoint",
+        "secretary_response_play",
+        "secretary_gunpoint_resolution",
+    ):
+        from girlframe.discord_adapter.m3_secretary import open_gunpoint
+        from girlframe.services.m3_secretary import SecretaryService
+
+        await open_gunpoint(interaction, SecretaryService(game.store), identity)
+        return
     if decision.get("leviathan"):
         from girlframe.discord_adapter.m3_leviathan_obsession import (
             open_choice as open_influence_choice,

@@ -3342,3 +3342,27 @@ and adjustment impact are recorded in `rules/registry.json`.
   duplicate Assets and name-based classification are rejected. This delegated
   interpretation needs printed clarity review; changes affect future hardware
   handling without rewriting source contacts or saved physical/mind history.
+
+
+- `am_branch_distinct_mind_and_owned_takeover` (PDF56/54): a genuine NPC branch
+  has its own mind/person and sourced hardware. Copy current Identity marks,
+  software Limiters and available fictional recall with distinct source IDs;
+  preserve real branch postbirth state. OOC notes/history, reciprocal authority,
+  consent, money and physical Assets are not duplicated. Owned takeover keeps
+  that branch, permanently terminates the original software career and uses
+  campaign initial zero Heat/Permissions with an actual existing Frame assignment.
+  Account aliases, original-mind restoration and invented physical-death effects
+  are rejected. This delegated interpretation needs printed clarity review;
+  future changes must preserve original and branch history and human choices.
+
+
+- `secretary_exact_delegation_and_real_gunpoint` (PDF159/157): the original
+  Handler makes exactly the four printed Plays through the actual Secretary;
+  promotion preserves ordinary NPC control. Orders retain NPC speaker and exact
+  Handler principal. Optional gunpoint uses an actual ordinary carried firearm
+  and holds the genuine unrolled action for its owner’s tactical response; it
+  grants no free shot, Helplessness, weapon Asset or acknowledgment veto.
+  Appearance moves only Secretary; competence delivers genuine work without
+  omniscience or automatic mission success. Blanket control/rank and postdice
+  interruption alternatives are rejected. Delegated clarity review remains
+  pending; future changes must preserve actual events and human decisions.

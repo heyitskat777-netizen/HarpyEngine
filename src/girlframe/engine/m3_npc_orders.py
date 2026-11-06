@@ -9,7 +9,7 @@ from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
 from girlframe.engine.m3_alpha import conditions, current
 from girlframe.engine.m3_alpha_state import Broken
 
-Origin = Literal["broken", "am_secret"]
+Origin = Literal["broken", "am_secret", "secretary"]
 
 
 class Order(Model):
@@ -23,6 +23,7 @@ class Order(Model):
     cast: SceneCast
     registry: str
     instruction: str = Field(min_length=1, max_length=1200)
+    principal: ActorRef | None = Field(default=None, exclude_if=lambda value: value is None)
     origin_kind: Origin = Field(default="broken", exclude_if=lambda value: value == "broken")
 
 

@@ -634,6 +634,11 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_handler_pr import HandlerPRService
 
             await open_pr(interaction, HandlerPRService(self.service.store), item.identity)
+        elif item.task == "m3_secretary":
+            from girlframe.discord_adapter.m3_secretary import open_secretary
+            from girlframe.services.m3_secretary import SecretaryService
+
+            await open_secretary(interaction, SecretaryService(self.service.store), item.identity)
         elif item.task == "m3_deep_brain_spikes":
             from girlframe.discord_adapter.m3_deep_brain_spikes import open_spikes
             from girlframe.services.m3_deep_brain_spikes import DeepBrainSpikesService

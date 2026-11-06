@@ -1070,6 +1070,11 @@ class GameService:
             )
 
             gorgon_response = prepare_gorgon_response(self, c, viewer, prepared, state, channel)
+            from girlframe.services.m3_secretary import (
+                prepare_response as prepare_secretary_response,
+            )
+
+            secretary_scope = prepare_secretary_response(self, c, state, viewer, channel, prepared)
             from girlframe.services.m3_beneath import no_conflict
 
             no_conflict(self, c, viewer, prepared)
@@ -1320,6 +1325,7 @@ class GameService:
                         alpha_counter_scope,
                         npc_order_scope,
                         gorgon_response,
+                        secretary_scope,
                     )
                 )
                 and not scoped_defeat
@@ -1343,6 +1349,8 @@ class GameService:
                     )
                 elif gorgon_response is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(gorgon_response["cast"]))
+                elif secretary_scope is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(secretary_scope["cast"]))
                 elif scoped_defeat:
                     from girlframe.services.m3_actors import ActorService
                     from girlframe.services.m3_cast import CastService
@@ -1398,7 +1406,11 @@ class GameService:
                         | ({source_cast.facilitator} if source_cast.facilitator else set())
                     )
                 if source_cast.facilitator != state.handler or set(scene["participants"]) != (
-                    {role.controller for role in source_cast.roles if role.actor.kind == "pilot"}
+                    {
+                        role.controller
+                        for role in source_cast.roles
+                        if role.actor.kind == "pilot" or secretary_scope is not None
+                    }
                     | {source_cast.facilitator}
                 ):
                     raise WorkflowError(
@@ -1442,6 +1454,7 @@ class GameService:
             root_lock = self.lock(c, channel)
             parent = None
             counter_source = None
+            secretary_response = None
             if prepared.parent:
                 parent = self.action(c, prepared.parent)
                 if parent["data"].get("gorgon_play"):
@@ -1469,6 +1482,7 @@ class GameService:
                         if x["kind"]
                         in (
                             "escape_play",
+                            "secretary_response_play",
                             "order_disobey",
                             "am_prepare",
                             "am_code_prepare",
@@ -1497,6 +1511,12 @@ class GameService:
                 )
                 if required is None:
                     raise WorkflowError("Only the required player can make this response Play.")
+                if required["kind"] == "secretary_response_play":
+                    from girlframe.services.m3_secretary import prepare_response as secretary_child
+
+                    secretary_response = secretary_child(self, c, state, viewer, channel, prepared)
+                    if secretary_response is None:
+                        raise WorkflowError("Use this actual original gunpoint source response")
                 if (
                     required["kind"] in ("beneath_defeat", "required_defeat", "battle_defeat")
                     and defeat is None
@@ -1958,6 +1978,8 @@ class GameService:
             if void_keep is not None:
                 data["void_keep"] = void_keep
                 data["participants"] = list(void_keep["table"])
+            if secretary_response is not None:
+                data["secretary_response"] = secretary_response
             from girlframe.services.m3_recovery import enable as enable_recovery
 
             enable_recovery(self, c, viewer, data)
@@ -2024,6 +2046,12 @@ class GameService:
                 from girlframe.engine.m3_appearance_matrix import reset_at_start
 
                 appearance_reset = reset_at_start(state, acting_ref, m3["period_id"], identity)
+            secretary_event = str(uuid4()) if secretary_response is not None else None
+            if secretary_response is not None:
+                from girlframe.services.m3_secretary import link_response
+
+                assert secretary_event is not None
+                link_response(state, secretary_response["gunpoint"], identity, secretary_event)
             event = self.event(
                 c,
                 viewer.user_id,
@@ -2058,8 +2086,10 @@ class GameService:
                     or am_scrutinized is not None
                     or am_code is not None
                     or appearance_reset
+                    or secretary_response is not None
                 )
                 else None,
+                event_id=secretary_event,
                 action_id=identity,
                 play=prepared.play,
             )
@@ -2247,6 +2277,10 @@ class GameService:
             if action["data"].get("gorgon_play", {}).get("started"):
                 return {"action_id": identity, "receipt": None}
             self.unpaused(c)
+            if action["data"].get("secretary_gunpoint"):
+                from girlframe.services.m3_secretary import require_clear as secretary_clear
+
+                secretary_clear(self, c, load_state(c, self.store.campaign_id), action)
             lock = self.lock(c, action["channel_id"])
             if (
                 not lock
@@ -2847,6 +2881,14 @@ class GameService:
                 and HandlerService(self.store).current(c)[1].handler_id != viewer.user_id
             ):
                 raise WorkflowError("The Handler appointment changed; staff recovery is required.")
+            if row["kind"] in (
+                "secretary_gunpoint",
+                "secretary_response_play",
+                "secretary_gunpoint_resolution",
+            ):
+                from girlframe.services.m3_secretary import SecretaryService
+
+                SecretaryService(self.store)._access(c, viewer)
             if action["data"].get("beneath"):
                 from girlframe.services.m3_beneath import authorize as authorize_beneath
 
@@ -3779,6 +3821,24 @@ class GameService:
 
                 return SpriteService(self.store).decision(viewer, choice_id)
             action = self.action(c, row["action_id"])
+            if row["kind"] in (
+                "secretary_gunpoint",
+                "secretary_response_play",
+                "secretary_gunpoint_resolution",
+            ):
+                from girlframe.services.m3_secretary import response_projection
+
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    secretary=response_projection(
+                        self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                    ),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    actor=int(action["actor_id"]),
+                    play=action["data"]["play"],
+                    result={},
+                )
             if action["data"].get("leviathan_obsession"):
                 from girlframe.services.m3_leviathan_obsession import ObsessionService
 

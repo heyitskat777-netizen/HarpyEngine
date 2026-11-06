@@ -865,6 +865,29 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_secretary import SecretaryService
+
+            for secretary in SecretaryService(self.store)._tasks(connection, viewer):
+                pending_secretary = bool(secretary["pending"])
+                items.append(
+                    InboxItem(
+                        "secretary:" + secretary["id"],
+                        "secretary",
+                        secretary["id"],
+                        secretary["revision"],
+                        "playbook",
+                        secretary["label"],
+                        "Original Handler or actual work recipient",
+                        "pending" if pending_secretary else "established",
+                        pending_secretary,
+                        False,
+                        "Use the original Secretary or read work actually delivered to you.",
+                        "Optional interventions create no acknowledgment obligation.",
+                        "Review Secretary",
+                        task="m3_secretary",
+                    )
+                )
+
             from girlframe.services.m3_deep_brain_spikes import DeepBrainSpikesService
 
             for memory in DeepBrainSpikesService(self.store)._tasks(connection, viewer):

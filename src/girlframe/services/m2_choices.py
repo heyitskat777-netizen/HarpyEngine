@@ -163,6 +163,35 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         sheet = state.sheets.get(str(owner))
         body = json.loads(request["body_json"])
+        if kind in ("secretary_gunpoint", "secretary_gunpoint_resolution"):
+            from girlframe.services.m3_secretary import apply_response, refresh_after_response
+
+            phase = apply_response(self.game, c, state, action, request, answer)
+            if phase == "withdrawn":
+                require(
+                    action["data"].get("receipt") is None,
+                    "A known rolled action cannot become an unrolled withdrawal",
+                )
+                action["data"]["result"] = dict(withdrawn=True, source="secretary_gunpoint")
+                action["state"] = "complete"
+                self.game.queue(
+                    c,
+                    action,
+                    "outcome",
+                    dict(
+                        play=action["data"]["play"],
+                        callsign=self.original_callsign(state, action),
+                        receipt=None,
+                        total=None,
+                        tier=None,
+                        withdrawn=True,
+                        source="secretary_gunpoint",
+                    ),
+                )
+            elif phase in ("released", "proceeded"):
+                refresh_after_response(self.game, c, state, action)
+                action["state"] = "ready_to_roll"
+            return
         if kind == "budget_asset_calamity":
             from girlframe.services.m3_budget_sabotage import apply as apply_asset_calamity
 
@@ -1129,6 +1158,13 @@ class ChoiceEngine:
                 "forced_presentations": action["data"]["result"].get("forced_presentations", []),
             },
         )
+        if action["data"].get("secretary_response"):
+            from girlframe.services.m3_secretary import finish_response
+
+            finish_response(self.game, c, state, action)
+            parent = self.game.action(c, action["parent_id"])
+            self.game.save_action(c, parent, state="awaiting_choices")
+            return
         if any(
             action["data"].get(key)
             for key in (

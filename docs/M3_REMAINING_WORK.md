@@ -1,5 +1,12 @@
 # M3 remaining work — verified development snapshot
 
+Newest bounded addition: **Secretary promotion/creation and all four printed
+Plays**, including real Orders, pre-roll gunpoint withdrawal/child continuation,
+actual NPC appearance and delivered competence work. Evidence is at the top of
+[M3 acceptance](../reports/M3_ACCEPTANCE.md). AM branching remains active; Bomb
+Collar is source-contract work. Broader required systems and final integrated
+verification still prevent M3 completion. Bot off; RULES_SUBSET.
+
 Newest bounded addition: **Just Code actual AM body transfer and hooked return**,
 with real new-body damage, preserved mind/resources and private Inbox hardware
 history. Evidence is at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md).

@@ -5291,6 +5291,42 @@
       "revision": 1,
       "implementation_note": "Explicit source classification parks physical Girl Assets with hardware and preserves mind-linked Assets. Genuine local empty hardware, processing/Asset preparation and actual hookup are recorded. Same ActorRef, Identities, Limiters, memories, Bonds and current resources continue; Frame hardware is not a body snapshot.",
       "change_impact": "Affects future body preparation, transfer and return. Never rewrites original circuitry contacts, prepared body source, actual damage or saved mind history. Occupied/conditional/full-Void vessel adapters and branching remain required gaps."
+    },
+    {
+      "id": "am-branch-distinct-mind-and-owned-takeover",
+      "summary": "A branch is a distinct AM mind/person in actual appropriate hardware; taking it as the Girl preserves that branch and permanently terminates the original software career.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF56/printed54 Just Code branch option; owner initial-resource campaign defaults",
+      "authority": "delegated_recommendation",
+      "rationale": "The book explicitly permits an NPC branch and takeover terminating the original, without copying third-party consent, money, hardware or OOC history, or specifying bodily death.",
+      "alternatives": [
+        "Alias the branch to the original ActorRef/account or copy reciprocal authority and resource balances",
+        "Restore original mind/history during takeover",
+        "Treat software termination as physical death with unrelated death effects"
+      ],
+      "policy_key": "am_branch_distinct_mind_and_owned_takeover",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Copy current Identity content/marks, software Limiters and available fictional recall with distinct source IDs. Do not copy OOC notes/logs, third-party acts, consent, statutory authority, Heat/Permissions or physical assets. Actual branch postbirth state persists; only its own relationships rebind. New Girl Heat/Permissions use owner initial0 defaults; actual existing Frame assignment remains source-proved.",
+      "change_impact": "Affects future branch birth/takeover and source/resource reconciliation. Never rewrites original mind/archive, actual hardware, branch postbirth events or independent human choices. Occupied/conditional/Paired/cross-lifecycle adapters remain required gaps."
+    },
+    {
+      "id": "secretary-exact-delegation-and-real-gunpoint",
+      "summary": "The paid Secretary permits exactly four source-owned Handler Plays through the actual NPC; gunpoint holds a genuine unrolled hostile action without automatic damage or incapacitation.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF159/printed157 Secretary; actual NPC/cast/Order/item source procedures",
+      "authority": "delegated_recommendation",
+      "rationale": "The book explicitly grants these Plays through a Secretary but does not transfer all NPC control, rewrite rank or specify dice, weapon Assets, damage, Helplessness or a staff acknowledgment.",
+      "alternatives": [
+        "Transfer blanket NPC controller privilege or assign fictitious Handler rank",
+        "Use a postdice Tag window while claiming the original action was unrolled",
+        "Treat gunpoint as an automatic shot/Helplessness or a narrative flag ignored by continuation"
+      ],
+      "policy_key": "secretary_exact_delegation_and_real_gunpoint",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Preserve the promoted NPC controller and actual body. Orders name NPC speaker and exact Handler principal. Optional pre-roll hold uses a genuine ordinary carried firearm fact without extra purchase/Asset fee; actual attacker response controls the same action. Appearance moves only Secretary; competence delivers genuine source-supported work without omniscience or automatic mission success.",
+      "change_impact": "Affects future delegated authority and tactical continuation. Preserve original appointments, actual rolls/resources/positions, deliveries and human responses; broader unsupported mechanical outcomes remain required ports."
     }
   ],
   "entries": [
@@ -16837,14 +16873,54 @@
         "heading": "Secretary"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
-      "dependencies": [],
-      "test_evidence": [],
+      "contract": {
+        "trigger": "Original Handler spends a genuine held advancement, appoints an actual Secretary and performs its four printed Plays through that NPC",
+        "actor_type": "Original paid Handler/persona, actual promoted or newly created NPC and source-owned participants",
+        "pre_roll_sources": [
+          "Actual held award, consumed acquisition and original Secretary appointment",
+          "Real NPC identity/controller/body/cast and exact delegated Order principal",
+          "For gunpoint, genuine ordinary carried firearm and unrolled original hostile Engage",
+          "For competence, actual mission/objective facts and original recipients"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "normal": [
+            "Promote actual NPC preserving identity/controller/resources, or create actual new NPC",
+            "Full authority produces genuine NPC-issued Receive/Disobey protocol",
+            "Gunpoint terminal withdrawal with no RNG/resource spend, or actual child and original continuation",
+            "Appearance changes only Secretary position/cast",
+            "Competence delivers substantive source-backed work"
+          ]
+        },
+        "choice_ownership": "Original Handler owns exactly four source Plays through Secretary; ordinary NPC control remains unchanged; original attacker owns tactical response; real recipients read delivered work",
+        "target_policy": "Exact source identities and physical facts, no blanket NPC control/rank alias or automatic damage/Helplessness",
+        "post_roll_effects": [
+          "Real paid appointment and delegated Orders",
+          "Actual same-action pre-roll hold/cancellation or source-proved child continuation preserving known events",
+          "Real Secretary relocation and private mission-backed dossier delivery/history"
+        ],
+        "mandatory_followups": [
+          "Gunpoint continuation requires actual response/resolution before original dice",
+          "Unsupported hostile actors/Plays or physical conflicts need exact future adapters",
+          "No invented completed mechanical task from narrative competence alone"
+        ],
+        "handler_or_gm_intervention": "Optional source-owned pre-roll intervention without added mandatory staff acknowledgment; source-authorized factual resolution",
+        "test_fixture_ids": [
+          "tests/rules/test_secretary.py"
+        ]
+      },
+      "dependencies": [
+        "source.handler-advancement-triggers"
+      ],
+      "test_evidence": [
+        "tests/rules/test_secretary.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
