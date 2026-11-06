@@ -196,6 +196,8 @@ def revoke(
         "frame.class.legion.modular-build",
         "frame.class.legion.home-of-a-sort",
         "frame.class.priestess.sup-of-primordial-flesh",
+        "frame.class.autocrat.handlers-special-girl",
+        "frame.class.priestess.appearance-matrix",
     ):
         from girlframe.engine.m3_class_grafts import eligible
 

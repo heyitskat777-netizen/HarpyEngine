@@ -326,6 +326,21 @@ def resolve(
                         ).hexdigest(),
                     }
                 )
+    from girlframe.engine.m3_appearance_matrix import absence as matrix_absence
+
+    matrix = matrix_absence(state, ref)
+    if matrix is not None:
+        actual = actual.model_copy(
+            update={
+                "cell": None,
+                "frame_cell": None if matrix.travels_frame else actual.frame_cell,
+                "offstage_source": matrix.id,
+                "position_sha256": fingerprint(matrix),
+                "source_sha256": hashlib.sha256(
+                    (actual.source_sha256 + fingerprint(matrix)).encode()
+                ).hexdigest(),
+            }
+        )
     travel = offstage_travel(state, ref)
     if travel is None:
         return actual

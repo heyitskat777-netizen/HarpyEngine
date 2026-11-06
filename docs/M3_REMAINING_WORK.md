@@ -1,17 +1,21 @@
 # M3 remaining work — verified development snapshot
 
-Newest bounded additions: **Home, of a Sort; Sup of Primordial Flesh through all
-five existing native Void-gain producers; actual Rebel Endgame merger; corrected
-backstory Tag response closure**. Evidence is at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md).
-Registry: **158 subsets / 315 unimplemented / 264 adjustable clarifications**;
+Newest bounded additions: **Appearance Matrix; Handler’s Special Girl; actual
+Rebel Endgame leader opportunity**. Native/graft acquisitions and real consequences
+have focused evidence at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md).
+Registry: **161 subsets / 312 unimplemented / 268 adjustable clarifications**;
 M3 remains **IN_PROGRESS / RULES_SUBSET**, bot off.
 
-The four remaining Class abilities are **Clone AM, Handler's Special Girl,
-Succubus Protocol and Appearance Matrix**. Home/Sup still retain named actor,
-retention and unimplemented-source limits. AM branch/vessel/body, remaining other
-playbook runtimes, shared/physical/lifecycle effects, remaining Strain/Endgames,
-source reconciliation and final integrated checks also remain required. The
-following older snapshots preserve their original scope and counts.
+The two remaining Class abilities are **Clone AM and Succubus Protocol**. Frozen
+contracts identify actual clone actor/Identity/Tag/Bond and NPC recipient refusal
+dependencies. Their implementation follows this checkpoint. Existing Class
+consumers retain named actor, retention and unimplemented-source limits. AM
+branch/vessel/body, remaining playbook runtimes, shared/physical/lifecycle effects,
+remaining Strain/Endgames, source reconciliation and final integrated checks remain
+required. Earlier snapshots below preserve their original scope and counts.
+
+Previous bounded additions: Home, Sup through all five existing native Void-gain
+producers, actual Rebel merger and corrected backstory response closure.
 
 Prior completed bounded workflows: **AM memory erasure and genuine backup/revert;
 three-Permission grafts for all seven currently implemented Class consumers;

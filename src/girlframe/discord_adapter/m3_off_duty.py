@@ -206,7 +206,12 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
             saved = await asyncio.to_thread(
                 StrainService(service).work, viewer_from_interaction(current), identity
             )
-            if saved["body"]["rule_id"] == "strain.rebellion.endgame.2":
+            if saved["body"]["rule_id"] == "strain.rebellion.endgame.1":
+                from girlframe.discord_adapter.m3_rebel_leader import open_leader
+                from girlframe.services.m3_rebel_leader import LeaderService
+
+                await open_leader(current, LeaderService(service.store), identity)
+            elif saved["body"]["rule_id"] == "strain.rebellion.endgame.2":
                 from girlframe.discord_adapter.m3_rebel_merge import open_merger
                 from girlframe.services.m3_rebel_merge import MergerService
 

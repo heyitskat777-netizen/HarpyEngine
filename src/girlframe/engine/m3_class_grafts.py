@@ -17,6 +17,8 @@ CLASSES: dict[str, FrameClass] = {
     "frame.class.legion.modular-build": "legion",
     "frame.class.legion.home-of-a-sort": "legion",
     "frame.class.priestess.sup-of-primordial-flesh": "priestess",
+    "frame.class.autocrat.handlers-special-girl": "autocrat",
+    "frame.class.priestess.appearance-matrix": "priestess",
 }
 
 

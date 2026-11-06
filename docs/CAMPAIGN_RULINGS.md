@@ -3139,3 +3139,55 @@ Rationale: The ability does not restrict Asset family or grant extra slots or a 
 Alternatives: Restrict growth to Frame Assets.; Exceed caps or grant growth and rewriting/storage together.
 
 Change impact: Future clarity may revise family/entitlement interactions prospectively; retain actual Asset IDs, receipts and historical growth. Requires printed-rule clarity review.
+
+## Appearance Matrix source interpretation — 2026-11-05
+
+Adjustable delegated recommendations requiring printed-rule clarity review. Source omissions remain implementation gaps, not replacement rules.
+
+### `matrix-real-scene-and-unknown-endpoint`
+
+Source: Rulebook PDF93/printed91 Appearance Matrix and existing source/physical/Tag protocols.
+
+Use a factual source-GM location, separate from OOC cast; valid owner use has no further GM approval veto. Disappear original body/occupied Frame to actual offstage unknown endpoint; only genuine original-person factual return via existing review establishes subsequent location. Vacant assigned Frame stays at actual known cell.
+
+Rationale: The text grants scene presence/absence without a destination. Factual scene location and unknown offstage absence avoid invented travel or an extra owner-use veto.
+
+Alternatives: Cast-only withdrawal; guessed destination or free arbitrary travel.
+
+Change impact: Real physical entry/absence with preserved original vessel/Frame and no duplicated body; source role/unknown-position gaps fail closed.
+
+### `matrix-source-scene-damage-episodes`
+
+Source: Rulebook PDF93/printed91 Appearance Matrix and existing source/physical/Tag protocols.
+
+Both modes derive exact current damage episodes in same actual scene where owner is causal damager or victim. Include actual self-damage only when proven. Exclude consumed episodes; no client healing list.
+
+Rationale: The text repairs actual inflicted Assets in this scene. Current exact causal episodes preserve unrelated damage and prevent consuming the same repaired episode again.
+
+Alternatives: Lifetime/universal healing; selective owner list; one mode only.
+
+Change impact: Repairs preserve original Asset identity/Void/properties; prior unrelated damage and ended/replaced bodies are not revived.
+
+### `matrix-additive-witness-memories`
+
+Source: Rulebook PDF93/printed91 Appearance Matrix and existing source/physical/Tag protocols.
+
+Keep original history and memories; source-bound Use adds contradictory witnessed timeline memories to actual present original roles plus owner. Private service projection uses real AM can_recall and immutable original source proof.
+
+Rationale: The source explicitly preserves memories while adding contradictions; actual witnesses and canonical recall checks avoid rewriting OOC history or importing GM-only notes.
+
+Alternatives: Overwrite transcripts/answers or old memories.
+
+Change impact: Tags/Status/Void/Identities/resource marks and prior memories remain; no generic M4 knowledge engine.
+
+### `matrix-actual-start-and-physical-reset`
+
+Source: Rulebook PDF93/printed91 Appearance Matrix and existing source/physical/Tag protocols.
+
+Actual own normal Go-Off-Duty/Observation start before RNG, once original receipt+period. Eligible temporarily suspended physical source resets too; use still requires actual held entitlement.
+
+Rationale: The text resets at the start of Going Off-Duty, not on success or period preparation. Physical marks may reset while an entitlement is suspended; use still requires active source authority.
+
+Alternatives: Period preparation/read; successful outcome only; defer suspended physical mark reset.
+
+Change impact: Genuine printed start independent of result and replay; preserves physical source and does not grant an extra use while suspended.

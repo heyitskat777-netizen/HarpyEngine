@@ -613,6 +613,19 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_budget_patron import PatronService
 
             await open_patron(interaction, PatronService(self.service.store), item.identity)
+        elif item.task == "m3_special_girl":
+            from girlframe.discord_adapter.m3_special_girl import open_token
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_special_girl import SpecialGirlService
+
+            await open_token(
+                interaction, SpecialGirlService(GameService(self.service.store)), item.identity
+            )
+        elif item.task == "m3_rebel_leader":
+            from girlframe.discord_adapter.m3_rebel_leader import open_leader
+            from girlframe.services.m3_rebel_leader import LeaderService
+
+            await open_leader(interaction, LeaderService(self.service.store), item.identity)
         elif item.task == "m3_rebel_merge":
             from girlframe.discord_adapter.m3_rebel_merge import open_merger
             from girlframe.services.m3_rebel_merge import MergerService

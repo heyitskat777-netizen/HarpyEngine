@@ -24,8 +24,9 @@ in [M3 evidence](reports/M3_ACCEPTANCE.md).
 Newer development adds supported Virus/Sex/Call, JANUS Core and selected paid
 Requisitions including Storage, Leviathan Obsession, source-owned Alpha outcomes
 and NPC Orders, bounded AM discovery/Limiters/reset/identity-memory maintenance and backup/revert,
-native/grafted Class consumers including Home and five-source Sup growth,
-High Rebellion Ritual/backstory effects, actual Rebel group merger, and
+native/grafted Class consumers including Home, five-source Sup growth, Appearance
+Matrix and Handler’s Special Girl,
+High Rebellion Ritual/backstory effects, actual Rebel group merger and leader opportunity, and
 further Budget meeting/Candidate/Anarchy/cleanup/sabotage/visitor/assassination/fight lifecycles. Focused
 normal-workflow evidence is listed in the report; it has not had a new full
 regression. Remaining playbooks, Strain branches and world consumers still prevent

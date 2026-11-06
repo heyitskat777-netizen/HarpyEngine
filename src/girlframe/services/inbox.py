@@ -823,6 +823,50 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_special_girl import SpecialGirlService
+
+            for request in SpecialGirlService(GameService(self.store))._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "special-girl:" + request["id"],
+                        "special_girl_token",
+                        request["id"],
+                        canon.revision,
+                        "playbook",
+                        "Handler's Special Girl token",
+                        "Original Handler or token recipient",
+                        "pending" if request["actionable"] else "waiting",
+                        request["actionable"],
+                        False,
+                        "The Handler names the actual token; its owner chooses a legal Asset slot.",
+                        "Original source and exact authored Asset remain bound.",
+                        "Review token",
+                        task="m3_special_girl",
+                    )
+                )
+
+            from girlframe.services.m3_rebel_leader import LeaderService
+
+            for opportunity in LeaderService(self.store).available(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "rebel-leader:" + opportunity["id"],
+                        "rebel_leader",
+                        opportunity["id"],
+                        canon.revision,
+                        "world",
+                        "Rebel leader opportunity",
+                        "Original Handler",
+                        "pending" if opportunity["phase"] == "available" else "resolved",
+                        opportunity["phase"] == "available",
+                        False,
+                        "The leader's death can enable group destruction; this is optional.",
+                        "The actual source remains bound; no personal kill credit is inferred.",
+                        "Review opportunity",
+                        task="m3_rebel_leader",
+                    )
+                )
+
             from girlframe.services.m3_rebel_contact import ContactService
 
             for contact in ContactService(self.store).available(connection, viewer):
@@ -2373,6 +2417,11 @@ class InboxService:
                     and json.loads(work["body_json"]).get("rule_id") == "strain.rebellion.endgame.2"
                 ):
                     primary, task_name = "Resolve actual group merger", "m3_rebel_merge"
+                elif (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.rebellion.endgame.1"
+                ):
+                    primary, task_name = "Identify actual leader opportunity", "m3_rebel_leader"
                 elif kind == "budget_handler_tag" or (
                     kind == "strain_endgame_effect"
                     and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.5"

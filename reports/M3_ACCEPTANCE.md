@@ -1,5 +1,40 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Appearance Matrix, Handler’s Special Girl and Rebel leadership — 2026-11-05
+
+This source extends `1788dd1a1ec8f2e7a63e6dadea0b3046193500d1`; exact changed
+bytes are retained in ignored `var/m3-matrix-special-leader-freeze/manifest.json`.
+M3 remains **RULES_SUBSET**. These are bounded workflows, not whole-M3 acceptance.
+
+| Workflow | Expected-flow evidence and supported scope |
+|---|---|
+| Handler’s Special Girl | Genuine native2P/graft3P purchase; original Handler-authored token Asset, actual cap selection, higher-Status Beneath bonus, and real counterdamage followed by source-owned Punishment. Printed Passing Responsibility preserves the original source and permits the actual delegate to finish once. **2 passed/4.53s**, `var/m3-special-girl-delegation-final.xml`. |
+| Appearance Matrix | Native2P/graft3P appearance/absence, actual original body/Frame position, source-attributed current-scene damage reversal, retained original history and private contradictory witnessed memories. Actual own Off-Duty/Observation start resets once before RNG. Final changed traces **3 passed/5.91s**, `var/m3-appearance-matrix-final.xml`; prior focused feature and ordinary battle/physical/Beating compatibility **6/9.53s**, `var/m3-appearance-matrix-focused.xml`. Actual low Beneath attribution compatibility **2/5.57s**, `var/m3-special-girl-attribution.xml`. Overlapping selections are not summed. |
+| Rebel Endgame leader opportunity | Actual source group/leader, original Handler’s account and a genuine optional opportunity; source period closes after the opportunity is granted. Later real canonical NPC death permits owned group destruction, preserving surviving people/history; forgoing leaves the group intact. Saved initial account and final response both reopen privately. Destroy/forgo **2 passed/3.95s**, `var/m3-rebel-leader-normal.xml`. No personal kill credit or death is inferred from text. |
+
+All **25 changed Python files**, including shared interfaces and three tests, pass
+Ruff/format; all **22 changed source modules** pass mypy. Publishable check:
+**1,037 files / 40 original manifest entries / zero findings**. Four adjustable
+Matrix interpretations are recorded centrally: **268 clarifications, 161 subsets,
+312 unimplemented entries**, zero independent approvals. Counts are not progress
+percentages. CI’s focused selection names real expected-flow tests and affected
+shared compatibility. No new full suite or human acceptance is claimed.
+
+Remaining Class abilities are **Clone AM and Succubus Protocol**. Their contracts
+identify genuine actor/resource and recipient dependencies; source-only preparation
+has not implemented them. Broader source/retention/Frame Swap, playbook, Strain,
+physical and lifecycle ports still block M3. Matrix does not revive ended bodies,
+guess unproven damage or invent physical travel; unsupported actor/source adapters
+remain explicit. Leader opportunities currently require a real NPC and supported
+canonical death source. The bot remains off, with no deployment, migration,
+environment publication, private-engine write, AI/M4 or Ancillary activation.
+
+The preceding sanitized checkpoint **1788dd1a1ec8f2e7a63e6dadea0b3046193500d1**
+was pushed and its exact remote SHA verified. [Focused CI 42166490235](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42166490235)
+succeeded on that commit, including changed static, focused gameplay and
+publishable checks; full regression was skipped. Newer source does not inherit
+that CI result. The historical 2,200-test run remains tied to its older commit.
+
 ## Home, Void growth, Rebel merger and response closure — 2026-11-05
 
 Current source extends `3c79d1178885562e0745fc1d6527309894f37c01`. Exact source

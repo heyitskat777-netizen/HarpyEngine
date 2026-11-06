@@ -200,6 +200,32 @@ async def open_requisitions(interaction: discord.Interaction, service: Requisiti
                 class_label("Modular Build", modular_option),
             ),
         )
+    from girlframe.services.m3_appearance_matrix import MatrixService
+
+    matrix = MatrixService(service.game)
+    matrix_option = await asyncio.to_thread(matrix.menu, viewer)
+    if matrix_option["available"]:
+        options += (
+            (
+                "appearance-matrix",
+                "Use Appearance Matrix"
+                if matrix_option["owned"]
+                else class_label("Appearance Matrix", matrix_option),
+            ),
+        )
+    from girlframe.services.m3_special_girl import SpecialGirlService
+
+    special_girl = SpecialGirlService(service.game)
+    special_option = await asyncio.to_thread(special_girl.menu, viewer)
+    if special_option["available"]:
+        options += (
+            (
+                "special-girl",
+                "Review Handler's Special Girl token"
+                if special_option["owned"]
+                else class_label("Handler's Special Girl", special_option),
+            ),
+        )
     from girlframe.services.m3_sup import SupService
 
     sup = SupService(service.game)
@@ -259,6 +285,18 @@ async def open_requisitions(interaction: discord.Interaction, service: Requisiti
     )
 
     async def choose(current: discord.Interaction, token: str) -> None:
+        if token == "appearance-matrix":
+            from girlframe.discord_adapter.m3_appearance_matrix import (
+                open_purchase as open_matrix_purchase,
+            )
+
+            await open_matrix_purchase(current, matrix)
+            return
+        if token == "special-girl":
+            from girlframe.discord_adapter.m3_special_girl import open_special_girl
+
+            await open_special_girl(current, special_girl)
+            return
         if token == "sup":
             from girlframe.discord_adapter.m3_sup import open_purchase as open_sup
 

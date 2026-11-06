@@ -1,13 +1,10 @@
-# Focused current handoff: Home, Sup through all existing gain producers,
-# Rebel merger and real Handler body-response closure. Full suite at final M3.
-tests/rules/test_home.py
-tests/rules/test_sup.py
+# Focused current handoff: real HSG token/status/counter/delegation,
+# Matrix presence/damage/reset, genuine optional Rebel leader opportunity.
+# Full regression remains required at final M3 candidate.
+tests/rules/test_special_girl.py
+tests/rules/test_appearance_matrix.py
+tests/rules/test_rebel_leader.py
 tests/rules/test_rebel_merge.py
-tests/rules/test_rebel_backstory.py
-tests/rules/test_handler_consequence_service.py::test_actual_handler_injury_is_saved_and_patient_opponent_cannot_choose_for_handler
-tests/rules/test_handler_consequence_service.py::test_actual_handler_death_archives_body_but_keeps_the_actual_human_gm_appointment
-tests/rules/test_budget_fight.py
-tests/rules/test_budget_cleanup.py
 tests/rules/test_class_privileges.py
-tests/rules/test_strain_service.py::test_three_real_dice_and_handler_column_choices_are_saved_without_false_effect_completion
-tests/rules/test_budget_persistent_tag.py::test_real_recursive_source_native_owned_gift_persists_through_repeated_real_uses
+tests/rules/test_battle_pipeline.py::test_actual_mid_allout_damages_declared_opposing_asset_once_then_restores_chat
+tests/rules/test_mission_ui.py::test_native_offer_response_requires_owner_confirmation_and_handler_dispatch

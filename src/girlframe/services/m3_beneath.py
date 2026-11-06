@@ -136,10 +136,13 @@ def prepare(
         raise WorkflowError("STALE_POSITION: confirm your actual recorded Frame occupancy.")
     if not HandlerService(game.store)._member(c, prepared.target):
         raise WorkflowError("The actual target must still be a campaign member.")
+    from girlframe.services.m3_special_girl import prepare as prepare_special
+
     return dict(
         actor=refs[0].model_dump(mode="json"),
         target=refs[1].model_dump(mode="json"),
         target_sha256=actors[1].source_sha256,
+        special_girl=prepare_special(game, c, viewer, state, prepared),
     )
 
 
@@ -151,6 +154,9 @@ def pre_roll(
     action: dict[str, Any],
 ) -> None:
     authorize(game, c, viewer, action)
+    from girlframe.services.m3_special_girl import pre_roll as pre_roll_special
+
+    pre_roll_special(game, c, viewer, state, action)
     target = ActorRef.model_validate_json(json.dumps(action["data"]["beneath"]["target"]))
     actual = resolve(
         state, target, profiles(c, game.store.campaign_id), require_current_profile=False
@@ -487,8 +493,26 @@ def apply(
         actor_piloting=action["data"]["prepared"]["piloting"],
         source_event=action["data"]["response_event"],
     )
+    if "damage" in selected.options:
+        from girlframe.engine.m3_appearance_matrix import record_damage
+
+        record_damage(
+            state,
+            outcome.state,
+            damager=setter,
+            target=victim,
+            identity=asset,
+            scene=action["scene_id"],
+            event=action["data"]["response_event"],
+            action=action["id"],
+            work=None,
+            occurrence="beneath:" + source_choice,
+        )
     for name in GameState.model_fields:
         setattr(state, name, getattr(outcome.state, name))
+    from girlframe.services.m3_special_girl import counter as special_counter
+
+    special_counter(game, c, state, action, request, selected, source_choice, asset)
     for gate in state.obligations:
         if gate.id == action["id"] + ":consent:" + source_choice:
             gate.details["effect_choice"] = request["id"]
@@ -552,9 +576,14 @@ def synchronize(game: "GameService", c: Connection, action: dict[str, Any], even
             source_action=action["id"],
             source_choice=meta["source_choice"],
             continuation=meta["request"],
-            source_pdf=22,
+            source_pdf=92 if meta.get("special_girl") else 22,
             immediate=True,
             discipline_owner_character=meta["owner"]["incarnation"],
+            **(
+                dict(discipline_owner_actor=meta["owner"], special_girl=meta["special_girl"])
+                if meta.get("special_girl")
+                else {}
+            ),
         ),
         event,
     )
@@ -631,6 +660,11 @@ def discipline_action(
             "REQUIRED_RECOVERY: resume the original held social Play before discipline."
         )
     game.action_characters(c, action, state, allow_archived=allow_archived)
+    if body.get("special_girl"):
+        from girlframe.services.m3_special_girl import verify_discipline_owner
+
+        verify_discipline_owner(game, c, state, action, root)
+        return str(action["id"])
     if allow_archived:
         from girlframe.engine.m3_careers import archive_for
 

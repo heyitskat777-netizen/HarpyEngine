@@ -660,6 +660,37 @@ class PunishmentService:
                 from girlframe.services.m3_role_punishments import mark_pc_effect
 
                 mark_pc_effect(result.state, role_case, event_id, execution_account or "")
+            if details.kind == "beating":
+                from girlframe.engine.m3_actor_bonds import current_ref
+                from girlframe.engine.m3_appearance_matrix import record_damage
+                from girlframe.engine.m3_handler_consequences import active_handler
+                from girlframe.services.m3_beneath import discipline_action
+
+                source_action = discipline_action(self.game, c, row)
+                scene = row.get("scene_id") or (
+                    self.game.action(c, source_action)["scene_id"] if source_action else None
+                )
+                damager = (
+                    role_case.executor
+                    if role_case
+                    else (
+                        active_handler(state)
+                        if inflictor == state.handler
+                        else current_ref(state, inflictor)
+                    )
+                )
+                record_damage(
+                    state,
+                    result.state,
+                    damager=damager,
+                    target=current_ref(state, int(row["subject_id"])),
+                    identity=details.asset,
+                    scene=scene,
+                    event=event_id,
+                    action=source_action,
+                    work=identity,
+                    occurrence="beating:" + identity,
+                )
             observation_period = None
             if self._body(row).get("reason") == "void_observation":
                 from girlframe.services.m3_observation import discipline_applied

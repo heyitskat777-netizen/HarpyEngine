@@ -987,6 +987,9 @@ class PhysicalService:
                     body.proposed_event,
                     event,
                 )
+                from girlframe.engine.m3_appearance_matrix import actual_return
+
+                actual_return(state, body.proposal.actor, event)
             status = {"accept": "accepted", "decline": "declined", "withdraw": "withdrawn"}[
                 decision
             ]

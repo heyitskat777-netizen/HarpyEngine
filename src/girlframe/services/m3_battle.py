@@ -1664,6 +1664,29 @@ def damage_actor(
             asset=asset_id or "",
         )
     )
+    from girlframe.engine.m3_appearance_matrix import record_damage
+
+    scene = game.action(c, source_action)["scene_id"] if source_action else None
+    if scene is None and source_work:
+        work = t.m3["m3_required_work"]
+        scene = c.scalar(
+            sa.select(work.c.scene_id)
+            .where(work.c.campaign_id == game.store.campaign_id, work.c.id == source_work)
+            .order_by(work.c.revision.desc())
+            .limit(1)
+        )
+    record_damage(
+        state,
+        changed,
+        damager=actor or opponent,
+        target=target,
+        identity=asset_id,
+        scene=scene,
+        event=event,
+        action=source_action,
+        work=source_work,
+        occurrence=occurrence,
+    )
     return changed, tuple(ids)
 
 
@@ -1745,6 +1768,20 @@ def damage_frame_at_scene(
                 not any(x.family == "frame" and not x.damaged for x in destination.assets)
             ),
         )
+    )
+    from girlframe.engine.m3_appearance_matrix import record_damage
+
+    record_damage(
+        state,
+        changed,
+        damager=actor,
+        target=target,
+        identity=asset_id,
+        scene=game.action(c, source_action)["scene_id"],
+        event=event,
+        action=source_action,
+        work=None,
+        occurrence=occurrence,
     )
     return changed, ()
 

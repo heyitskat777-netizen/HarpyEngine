@@ -219,6 +219,12 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
         world = fresh["world"]
         if world is None:
             raise WorkflowError("Initialize the world first.")
+        if action == "matrix_context":
+            from girlframe.discord_adapter.m3_appearance_matrix import open_matrix
+            from girlframe.services.m3_appearance_matrix import MatrixService
+
+            await open_matrix(current, MatrixService(service.game))
+            return
         if action == "map":
             await MapPages(service, viewer.user_id).show(current)
             return
@@ -370,6 +376,7 @@ async def open_world(interaction: discord.Interaction, service: WorldService) ->
         "**World management**\nChoose an explicit action.",
         (
             ("map", "View the player map"),
+            ("matrix_context", "Set Matrix scene location"),
             ("gorgon_position", "Record an actually unknown Gorgon position"),
             ("npc", "Introduce an NPC"),
             ("npc_invite", "Invite someone to play an NPC / Director"),

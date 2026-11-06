@@ -39,9 +39,9 @@ a required M3 rule complete; required gaps stay in the milestone backlog.
 
 | Order | Assignment | Completion boundary |
 |---|---|---|
-| 1, parallel | Economy handoff: Sup growth, frozen | All five existing native growth consumers and genuine thresholds are verified. Prepare Appearance Matrix contract; source edits start after the current integration checkpoint. |
-| 1, parallel | Home handoff, frozen | Home native/graft, real occupancy and owned effects are verified. Prepare Handler Special Girl contract; source edits start after current integration. Other Class, retained and replacement sources stay required. |
-| 1, root | Source/CI integration checkpoint | Integrate Home, five-source Sup growth, actual Rebel merger and body-response closure with complete changed static scope. Then select the next dependency-ready whole consumer. |
+| 1, parallel | Clone AM | Frozen contract: real source-linked clone actor, extra Identity, own Tags/Bonds, shared Heat and actual Dive prohibition. Begin source edits after the current integration checkpoint. |
+| 1, parallel | Succubus Protocol | Frozen contract: target-specific order authority and real Pilot/NPC recipient responses. No global Status change, controller proxy or fictional acknowledgment. Begin after checkpoint. |
+| 1, root | Source/CI integration and next dependency | Freeze Matrix, Handler’s Special Girl and Rebel leader opportunity; integrate the two next consumers with explicit shared-file ownership. Then select the next dependency-ready whole workflow. |
 | 2 | Remaining required gameplay systems | Select the next dependency-ready whole workflow from M3_REMAINING_WORK.md and M3_COMPLETION_AUDIT.md. Freeze its contract, reuse implemented dependencies and complete it before opening unrelated work. |
 | 3 | M3 review candidate | Account for required core scope, complete expected gameplay flows and final integrated checks; provide a concise player-test checklist and stop for owner review. |
 

@@ -1958,6 +1958,11 @@ class GameService:
                 from girlframe.services.m3_alpha_sex import bind as bind_alpha_sex
 
                 bind_alpha_sex(state, self.action(c, identity))
+            appearance_reset = False
+            if m3 is not None and prepared.play in ("go_off_duty", "void_observation"):
+                from girlframe.engine.m3_appearance_matrix import reset_at_start
+
+                appearance_reset = reset_at_start(state, acting_ref, m3["period_id"], identity)
             event = self.event(
                 c,
                 viewer.user_id,
@@ -1990,6 +1995,7 @@ class GameService:
                     or alpha_sex is not None
                     or am_scrutinized is not None
                     or am_code is not None
+                    or appearance_reset
                 )
                 else None,
                 action_id=identity,
@@ -2343,6 +2349,9 @@ class GameService:
                 else []
             )
             pre_modifiers += refusal_modifiers
+            from girlframe.services.m3_special_girl import modifiers as special_girl_modifiers
+
+            pre_modifiers += special_girl_modifiers(action)
             if action["data"].get("janus") and action["data"]["janus"].get("mode") != "pandora":
                 pre_modifiers.append(
                     dict(source="battery_tags", amount=len(action["data"]["janus"]["tags"]))
@@ -2450,6 +2459,9 @@ class GameService:
                     modifier_source="Void Assets (Nightmare Core)",
                     nightmare_purchase=action["data"]["nightmare_core"]["purchase"],
                 )
+            from girlframe.services.m3_special_girl import receipt as special_girl_receipt
+
+            special_girl_receipt(action, receipt, pre_modifiers)
             c.execute(
                 t.m2["m2_receipts"]
                 .insert()
