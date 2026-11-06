@@ -174,7 +174,11 @@ class LeaderService:
             )
             alive = body.get("alive") if body else None
             if before is True and alive is False:
-                if row["kind"] in ("m3.npc_damage_applied", "m3.choice_resolved"):
+                if row["kind"] in (
+                    "m3.npc_damage_applied",
+                    "m3.choice_resolved",
+                    "m3.budget_bonds_departed",
+                ):
                     return str(row["id"])
                 raise WorkflowError(
                     "SOURCE_PORT_REQUIRED: actual leader death needs its supported runtime source"

@@ -60,6 +60,9 @@ async def configure(
     data = await asyncio.to_thread(service.get, viewer, identity)
     if not data["own"]:
         raise ValueError("Only the actual original buyer configures this exchange")
+    source_labels = {
+        x["rule"]: x["label"] + " · " + x["receipt"][:8] for x in data.get("class_sources", [])
+    }
     fields = [
         Field(
             "keep_asset",
@@ -69,7 +72,10 @@ async def configure(
         Field(
             "keep_rule",
             "Keep one actual supported old Frame rule",
-            tuple((x, x.rsplit(".", 1)[-1].replace("-", " ")) for x in data["rules"]),
+            tuple(
+                (x, source_labels.get(x, x.rsplit(".", 1)[-1].replace("-", " ")))
+                for x in data["rules"]
+            ),
         ),
         Field(
             "assets",
@@ -162,6 +168,14 @@ async def configure(
             ),
             retained_asset=selected["keep_asset"][0],
             retained_rule=selected["keep_rule"][0],
+            retained_receipt=next(
+                (
+                    x["receipt"]
+                    for x in data.get("class_sources", [])
+                    if x["rule"] == selected["keep_rule"][0]
+                ),
+                None,
+            ),
             account=selected["account"],
             fanbase=Fanbase(
                 demographics=tuple(selected["demographics"]),

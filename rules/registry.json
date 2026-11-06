@@ -4641,6 +4641,91 @@
       "revision": 1,
       "implementation_note": "Adjustable delegated interpretation, requiring printed-rule clarity review. Only supported original-source normal workflows are implemented; missing adapters remain required gaps.",
       "change_impact": "Actual career archive and source closure follow owned response. Existing mandatory-work/physical safeguards remain; salary currency and unsupported bodies remain explicit future adapters."
+    },
+    {
+      "id": "void-handler-advancement-distinct-finite-awards",
+      "summary": "Each genuine Endgame6/7 gives one independently held advancement. It is an explicit separate award source, independent of the ordinary1/session accomplishment cap. Source work closes on real token award; spending may occur later.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 146,153",
+      "authority": "delegated_recommendation",
+      "rationale": "Printed Endgame explicitly says take advancement, while ordinary session cap qualifies its own accomplishment list. Taking and spending are separate actual events.",
+      "alternatives": [
+        "Delay explicit Endgame until ordinary session cap resets.",
+        "Force an immediate Permission spend when source is selected."
+      ],
+      "policy_key": "void_handler_advancement_distinct_finite_awards",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review; supported actual-source normal scope only. Missing actors/producers/hardware adapters remain required implementation work, not house rules.",
+      "change_impact": "No ordinary session facade; two distinct immutable source slots cannot alias or duplicate one another. Mark as delegated interpretation requiring printed-rule clarity review."
+    },
+    {
+      "id": "handler-advancement-group-permission-spend",
+      "summary": "One award is consumed once for any nonempty selected set of current original Girls. Handler chooses1or2 per selected Girl; unequal amounts are allowed. No per-Girl award charge, no automatic all-Cadre distribution and no empty no-op consumption.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 153",
+      "authority": "delegated_recommendation",
+      "rationale": "Printed any number permits multiple chosen recipients;1–2 bounds each actual grant.",
+      "alternatives": [
+        "One uniform chosen amount for the entire selected group.",
+        "Charge an award per Girl or silently select every Girl."
+      ],
+      "policy_key": "handler_advancement_group_permission_spend",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review; supported actual-source normal scope only. Missing actors/producers/hardware adapters remain required implementation work, not house rules.",
+      "change_impact": "Atomic explicit mapping and before/after receipt. Demonstrated real two-Girl1/2 grant and real one-Girl2 grant. Per-recipient variation/empty-group policy require printed-rule clarity review."
+    },
+    {
+      "id": "handler-award-original-person-and-appointment",
+      "summary": "Awards remain bound to the original Handler body/persona and actual appointment proved at source selection. Temporary Director context may refer to same original body. New appointment/persona cannot inherit unspent old-source awards; historical original owner may still inspect saved source/effects.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF 153",
+      "authority": "delegated_recommendation",
+      "rationale": "Existing Handler lifecycle separates original fictional person, human account and campaign appointment; no printed account-wide inheritance is granted.",
+      "alternatives": [
+        "Account-wide transferable advancement balance.",
+        "Discard old private award history when owner changes."
+      ],
+      "policy_key": "handler_award_original_person_and_appointment",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review; supported actual-source normal scope only. Missing actors/producers/hardware adapters remain required implementation work, not house rules.",
+      "change_impact": "Prevents stale source grants to replacement bodies while preserving original records. Award retention/reappointment behavior requires printed-rule clarity review."
+    },
+    {
+      "id": "retained-class-original-source-continuity",
+      "summary": "Retaining an actually held paid Class rule carries its original immutable acquisition and usage state through the genuine paid4P Frame Swap chain. No repricing, duplicate source, fresh cooldown or mark/Heat reset.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF16/printed14 Frame Swap and PDF94/printed92 Dampener",
+      "authority": "delegated_recommendation",
+      "rationale": "The rule is selected from the original Frame and remains unlocked on its replacement. The book does not specify a fresh source or resetting consumed resources.",
+      "alternatives": [
+        "Treat retained rule as a fresh acquisition with reset uses",
+        "Rewrite/reprice original receipt as a destination Class graft"
+      ],
+      "policy_key": "retained_class_original_source_continuity",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review; supported actual-source normal scope only. Missing actors/producers/hardware adapters remain required implementation work, not house rules.",
+      "change_impact": "Finite Dampener consumer uses actual current replacement Frame and real source chain; selected Asset identity/damage/Void and original person/history persist. Other consumers/hardware remain missing adapters; production destination review gate remains enforced."
+    },
+    {
+      "id": "budget-endgame-npc-bond-departure-scope",
+      "summary": "Original Handler chooses3–5 actual living ordinary NPCs with positive current Cadre/Handler Bonds and each quit/death outcome. Quit ends employment and records actual post-departure jobs; it preserves personal Bonds/history. An already unemployed NPC cannot quit the same employment again.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF152/printed150 Budget Endgame7, PDF188/printed186 NPC principles",
+      "authority": "delegated_recommendation",
+      "rationale": "The printed NPC Bonds clause gives a quantity and outcomes without a separate chooser or job/relationship procedure. Use the existing source Handler and real canonical NPCs without inventing people, erasing relationships or teleporting survivors.",
+      "alternatives": [
+        "Only Handler-personal Bonds eligible",
+        "Remove all relationships or automatically discard living NPCs from the world"
+      ],
+      "policy_key": "budget_endgame_npc_bond_departure_scope",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review; supported actual-source normal scope only. Missing actors/producers/hardware adapters remain required implementation work, not house rules.",
+      "change_impact": "Real employment/job or life/cast/journey changes; surviving people/resources and immutable originals persist. Current Directors, insufficient three NPCs and unsupported bodies remain explicit gaps; no substitute completion or personal kill-credit invention."
     }
   ],
   "entries": [
@@ -5059,7 +5144,8 @@
       "test_evidence": [
         "tests/rules/test_requisitions.py",
         "tests/rules/test_requisition_service.py",
-        "tests/rules/test_installation_history.py"
+        "tests/rules/test_installation_history.py",
+        "tests/rules/test_class_retention.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -10429,7 +10515,8 @@
       "test_evidence": [
         "tests/rules/test_dampener.py",
         "tests/rules/test_class_privileges.py",
-        "tests/rules/test_class_grafts.py"
+        "tests/rules/test_class_grafts.py",
+        "tests/rules/test_class_retention.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -13440,14 +13527,45 @@
         "heading": "Void endgame slot 6"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Authentic selected Void Endgame6",
+        "actor_type": "Original Handler body/persona and actual appointment",
+        "pre_roll_sources": [
+          "Immutable recursive source selection and exact distinct Endgame work"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "award": [
+            "One real original-person held advancement; source closes after actual award"
+          ],
+          "permission_spend": [
+            "One selected nonempty group receives explicit1or2 Permissions each; consume this one award once"
+          ]
+        },
+        "choice_ownership": "Original source Handler claims/spends; actual original Girls are explicit recipients",
+        "target_policy": "Current original people and existing appointment, no account-wide inheritance",
+        "post_roll_effects": [
+          "Durable held award may be spent later",
+          "Atomic real group grants and immutable single-spend record"
+        ],
+        "mandatory_followups": [
+          "Ordinary accomplishment/session producers and other advancement spends remain required; no substitution or forced Permission use"
+        ],
+        "handler_or_gm_intervention": "Original Handler; private saved source/history stays accessible to its original human",
+        "test_fixture_ids": [
+          "tests/rules/test_handler_advancements.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_handler_advancements.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -13463,14 +13581,45 @@
         "heading": "Void endgame slot 7"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Authentic selected Void Endgame7",
+        "actor_type": "Original Handler body/persona and actual appointment",
+        "pre_roll_sources": [
+          "Immutable recursive source selection and exact distinct Endgame work"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "award": [
+            "One real original-person held advancement; source closes after actual award"
+          ],
+          "permission_spend": [
+            "One selected nonempty group receives explicit1or2 Permissions each; consume this one award once"
+          ]
+        },
+        "choice_ownership": "Original source Handler claims/spends; actual original Girls are explicit recipients",
+        "target_policy": "Current original people and existing appointment, no account-wide inheritance",
+        "post_roll_effects": [
+          "Durable held award may be spent later",
+          "Atomic real group grants and immutable single-spend record"
+        ],
+        "mandatory_followups": [
+          "Ordinary accomplishment/session producers and other advancement spends remain required; no substitution or forced Permission use"
+        ],
+        "handler_or_gm_intervention": "Original Handler; private saved source/history stays accessible to its original human",
+        "test_fixture_ids": [
+          "tests/rules/test_handler_advancements.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_handler_advancements.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -15478,14 +15627,44 @@
         "heading": "Budget endgame slot 7"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Actual selected Budget Endgame7",
+        "actor_type": "Original Handler and three to five actual ordinary living NPC Bonds",
+        "pre_roll_sources": [
+          "Authentic original Endgame, current original Handler and positive current canonical relationships"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "normal": [
+            "Explicit mixed quit/death dispositions for each selected original NPC",
+            "Insufficient actual eligible people stays pending; no invented substitutes"
+          ]
+        },
+        "choice_ownership": "Original Handler chooses3–5 distinct real people and actual dispositions/jobs/account",
+        "target_policy": "Ordinary living NPCs tied to current Cadre/Handler; Directors and other original-body adapters remain gaps",
+        "post_roll_effects": [
+          "Quit changes actual employment/jobs; death changes actual life and ends affected cast/journeys",
+          "Surviving people, PC resources, personal relationships and immutable originals preserved",
+          "Genuine canonical death is readable by existing later leader-opportunity source"
+        ],
+        "mandatory_followups": [
+          "Pending actual role discipline must finish before departure; no erased work"
+        ],
+        "handler_or_gm_intervention": "Original source Handler; original private outcome record reopens after completion",
+        "test_fixture_ids": [
+          "tests/rules/test_budget_departures.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_budget_departures.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

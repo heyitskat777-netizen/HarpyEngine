@@ -87,6 +87,18 @@ def choices(
         if receipt.id in resolved:
             continue
         purchase_proof(c, game.store, receipt)
+        from girlframe.engine.m3_class_retention import RULES, swap_source
+        from girlframe.engine.m3_frame_swap_state import SwapReceipt
+        from girlframe.engine.m3_requisition_state import FrameRuleReceipt
+        from girlframe.services.m3_class_retention import proof
+
+        if isinstance(receipt, FrameRuleReceipt) and receipt.rule_id in RULES:
+            proof(game, c, state, receipt)
+        elif (
+            isinstance(receipt, SwapReceipt)
+            and (original := swap_source(state, receipt)) is not None
+        ):
+            proof(game, c, state, original)
         if receipt.kind == "asset_installment":
             label = next(
                 x.name for x in state.sheets[str(subject)].assets if x.id == receipt.asset_id
@@ -405,6 +417,17 @@ class PrivilegeService:
         return state, gate
 
     def _current(self, c: Connection, state: GameState, gate: Obligation) -> None:
+        from girlframe.engine.m3_class_retention import RULES
+        from girlframe.engine.m3_requisition_state import FrameRuleReceipt
+        from girlframe.services.m3_class_retention import proof
+
+        original = gate.details.get("retained_class_receipt") or gate.details.get(
+            "implemented_class_receipt"
+        )
+        if original:
+            receipt = FrameRuleReceipt.model_validate_json(original)
+            if receipt.rule_id in RULES:
+                proof(self.game, c, state, receipt)
         if (
             gate.target is None
             or self.game.character_binding(c, state, gate.target, require_current_profile=False)

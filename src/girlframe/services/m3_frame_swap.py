@@ -11,7 +11,7 @@ from girlframe.database import tables as t
 from girlframe.engine import m3_frame_swap as rules
 from girlframe.engine.creation import official_frame
 from girlframe.engine.creation_catalog import CATALOG
-from girlframe.engine.m2 import PilotSheet
+from girlframe.engine.m2 import GameState, PilotSheet
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_frame_swap_state import Selection
@@ -29,6 +29,33 @@ KIND = "frame_swap"
 
 
 class FrameSwapService(PersonalFirearmService):
+    def _class_sources(
+        self, c: Connection, state: GameState, actor: ActorRef
+    ) -> list[dict[str, str]]:
+        from girlframe.engine.m3_class_grafts import held
+        from girlframe.engine.m3_class_retention import RULES
+        from girlframe.services.m3_class_retention import proof
+
+        result = []
+        for rule in RULES:
+            paid = held(state, actor, rule)
+            if paid is not None:
+                proof(self.game, c, state, paid)
+                result.append(
+                    dict(
+                        rule=rule,
+                        receipt=paid.id,
+                        label=rule.rsplit(".", 1)[-1].replace("-", " ").title()
+                        + " — original "
+                        + paid.kind.replace("_", " ")
+                        + " "
+                        + str(paid.price)
+                        + "P",
+                        origin_frame=paid.frame_instance,
+                    )
+                )
+        return result
+
     def _registry(self) -> Registry:
         registry = self.registry or Access(self.store).registry
         assert registry is not None
@@ -120,6 +147,7 @@ class FrameSwapService(PersonalFirearmService):
             Access(self.store, self._registry()).authorize(c, viewer, "economy")
             state = load_state(c, self.store.campaign_id)
             actor = self._actor(c, state, viewer)
+            self._class_sources(c, state, actor.ref)
             available, blocked = [], []
             for frame in FRAME_TYPES:
                 if official_frame(frame) == official_frame(actor.frame or ""):
@@ -166,6 +194,7 @@ class FrameSwapService(PersonalFirearmService):
         def operation(c: Connection) -> dict[str, Any]:
             state = load_state(c, self.store.campaign_id)
             actor = self._actor(c, state, viewer)
+            self._class_sources(c, state, actor.ref)
             selected, _ = rules.destination(self._registry(), frame)
             if official_frame(actor.frame or "") == official_frame(selected):
                 raise WorkflowError("Choose a different destination Frame.")
@@ -242,6 +271,7 @@ class FrameSwapService(PersonalFirearmService):
                 state, actor, profiles(c, self.store.campaign_id), require_current_profile=False
             )
             sheet = state.sheets[actor.entity]
+            class_sources = self._class_sources(c, state, actor)
             catalog_available = True
             try:
                 held_rules = rules.retained_rules(
@@ -266,6 +296,7 @@ class FrameSwapService(PersonalFirearmService):
                 assets=[dict(id=x.id, name=x.name) for x in sheet.assets if x.family == "frame"],
                 starting=list(CATALOG[official_frame(body["frame"])]["assets"]),
                 rules=held_rules,
+                class_sources=class_sources,
                 rule_catalog_available=catalog_available,
                 people=[
                     dict(
@@ -312,6 +343,7 @@ class FrameSwapService(PersonalFirearmService):
             actor = ActorRef.model_validate(body["actor"])
             bindings = profiles(c, self.store.campaign_id)
             current = resolve(state, actor, bindings, require_current_profile=False)
+            self._class_sources(c, state, actor)
             if current.frame_instance != body["old_frame"]:
                 raise WorkflowError("This plan belongs to its exact original current Frame.")
             if not accept and str(viewer.user_id) != actor.entity:

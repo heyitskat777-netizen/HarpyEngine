@@ -47,6 +47,14 @@ def retained_rules(
     from girlframe.engine import m3_enforcer_requisitions as enforcer
 
     result = []
+    from girlframe.engine.m3_class_grafts import held as class_held
+    from girlframe.engine.m3_class_retention import RULES
+
+    for rule in RULES:
+        if class_held(state, actor, rule):
+            registry.require_available(rule)
+            registry.require_available("core.core.frame-requisitions")
+            result.append(rule)
     if held(state, actor, actual.frame_instance):
         registry.require_available(RULE)
         result.append(RULE)
@@ -96,6 +104,15 @@ def validate(
     sheet = state.sheets[actor.entity]
     if selection.retained_rule not in retained_rules(state, actor, bindings, registry):
         raise ValueError("Select an actually held supported rule from your current Frame")
+    from girlframe.engine.m3_class_grafts import held as class_held
+    from girlframe.engine.m3_class_retention import RULES
+
+    if selection.retained_rule in RULES:
+        paid = class_held(state, actor, selection.retained_rule)
+        if paid is None or selection.retained_receipt != paid.id:
+            raise ValueError("Select this exact original retained Class purchase")
+    elif selection.retained_receipt is not None:
+        raise ValueError("This rule has no adapted paid Class retention source")
     if any(suspended(state, x.id) for x in state.requisitions if x.actor == actor):
         raise ValueError("Restore your original suspended Requisitions before exchanging Frames")
     retained = next(
@@ -166,6 +183,15 @@ def purchase(
     assert old_frame is not None
     kept = next(x for x in sheet.assets if x.id == selection.retained_asset)
     from girlframe.engine import m3_enforcer_requisitions as enforcer
+    from girlframe.engine.m3_class_grafts import held as class_held
+    from girlframe.engine.m3_class_retention import RULES
+    from girlframe.engine.m3_class_retention import retain as retain_class
+
+    class_receipt = (
+        class_held(state, actor, selection.retained_rule)
+        if selection.retained_rule in RULES
+        else None
+    )
 
     grant = held(state, actor, old_frame)[0] if selection.retained_rule == RULE else None
     retained_grant = (
@@ -239,6 +265,8 @@ def purchase(
                 requisition=identity,
             )
         )
+    elif class_receipt is not None:
+        pass  # The immutable paid Class source is linked after its SwapReceipt exists.
     elif selection.retained_rule in enforcer.BASE:
         retained = enforcer.Grant(
             id="swap-rule:" + identity,
@@ -264,4 +292,9 @@ def purchase(
             plan=plan,
         )
     )
+    if class_receipt is not None:
+        swap = next(
+            x for x in state.requisitions if isinstance(x, SwapReceipt) and x.id == identity
+        )
+        retain_class(state, class_receipt, swap)
     return GameState.model_validate_json(state.model_dump_json())

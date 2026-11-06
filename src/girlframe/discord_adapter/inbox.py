@@ -621,6 +621,18 @@ class InboxView(discord.ui.View):
             await open_token(
                 interaction, SpecialGirlService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_budget_departures":
+            from girlframe.discord_adapter.m3_budget_departures import open_departures
+            from girlframe.services.m3_budget_departures import DepartureService
+
+            await open_departures(interaction, DepartureService(self.service.store), item.identity)
+        elif item.task == "m3_handler_advancements":
+            from girlframe.discord_adapter.m3_handler_advancements import open_advancement
+            from girlframe.services.m3_handler_advancements import HandlerAdvancementService
+
+            await open_advancement(
+                interaction, HandlerAdvancementService(self.service.store), item.identity
+            )
         elif item.task == "m3_clone_am":
             from girlframe.discord_adapter.m3_clone_am import open_clone
             from girlframe.services.m2_game import GameService

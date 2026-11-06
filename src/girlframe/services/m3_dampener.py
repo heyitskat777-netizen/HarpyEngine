@@ -14,7 +14,6 @@ from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
-from girlframe.services.m3_privileges import purchase_proof
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -35,7 +34,14 @@ def entitlement(
         gate.registry.require_available(rules.RULE)
     except ValueError:
         return None
-    purchase_proof(c, game.store, receipt)
+    from girlframe.services.m3_class_retention import proof
+
+    _, source_chain = proof(game, c, state, receipt)
+    if len(source_chain) > 1:
+        try:
+            gate.registry.require_available("core.core.frame-requisitions")
+        except ValueError:
+            return None
     return receipt
 
 
@@ -56,9 +62,12 @@ def prepare(
             "Dampener requires its paid entitlement and at least five Heat spent on this roll"
         )
     assert game.store.policy.m3_approval is not None
+    from girlframe.engine.m3_class_retention import binding
+
+    actual_frame, _ = binding(state, receipt)
     return dict(
         actor=actor.model_dump(mode="json"),
-        frame=receipt.frame_instance,
+        frame=actual_frame,
         purchase=receipt.id,
         modifier=prepared.dampener_modifier,
         heat=prepared.heat,
@@ -167,7 +176,7 @@ class DampenerService:
             if any(
                 isinstance(x, FrameRuleReceipt)
                 and x.actor == actor
-                and x.frame_instance == frame
+                and (x.frame_instance == frame or grafts.eligible(state, x))
                 and x.rule_id == rules.RULE
                 for x in state.requisitions
             ):

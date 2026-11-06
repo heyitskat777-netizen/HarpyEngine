@@ -16,6 +16,9 @@ class Selection(Model):
     assets: tuple[AssetChoice, ...] = Field(min_length=2, max_length=2)
     retained_asset: str = Field(min_length=1)
     retained_rule: str = Field(min_length=1)
+    retained_receipt: str | None = Field(
+        default=None, min_length=1, exclude_if=lambda value: value is None
+    )
     fanbase: Fanbase | None = None
     court_role: str | None = None
     court_target: ActorRef | None = None

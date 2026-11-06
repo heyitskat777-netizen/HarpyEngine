@@ -1,20 +1,24 @@
 # M3 remaining work — verified development snapshot
 
-Newest bounded additions: **Clone AM; Succubus Protocol; actual player-owned
-Void Endgame retirement with stipend**. Real source/actor/resource effects and
-focused evidence are at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md).
-Registry: **164 subsets / 309 unimplemented / 279 adjustable clarifications**;
+Newest bounded additions: **genuine retained Dampener through paid Frame Swap;
+Void Endgame6/7 advancement awards and actual group Permission spending; Budget
+Endgame3–5 NPC Bond quit/death consequences**. Focused evidence and source limits
+are at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md).
+Registry: **167 subsets / 306 unimplemented / 284 adjustable clarifications**;
 M3 remains **IN_PROGRESS / RULES_SUBSET**, bot off.
 
-All thirteen named Class abilities now have bounded native/graft consumers.
-Retained/Frame Swap, copy basic actions and broader actor/body/hardware/source
-ports still prevent whole-Class acceptance. Next contracts address genuine Void
-Endgame6/7 advancement awards and real1–2 Permission spending, and ordinary Frame
-Swap retained Class sources. Ordinary advancement triggers still need actual
-session/event/conversion producers. Remaining playbook runtimes, shared/physical/
-lifecycle effects, Strain/Endgames, world consumers, source reconciliation and
-final integrated checks remain required. Counts are not completion percentages.
-Earlier snapshots below retain their original scope and counts.
+Next finite contracts: retained Kicked Puppy consumer, and full Supply Drop with
+both actual repair and temporary Frame Asset delivery/mission-end expiry. Other
+retained Class/hardware, ordinary Handler advancement session/accomplishment
+producers and other advancement choices remain required. All thirteen named Class
+abilities have bounded native/graft consumers, not whole-Class certification.
+Production source/destination review stays pending and enforced; synthetic reviewed
+fixtures never certify live availability. Remaining playbooks, shared/physical/
+lifecycle, Strain/Endgames, world consumers, source reconciliation and final checks
+still block M3. Counts are not completion percentages.
+
+Previous bounded additions: Clone AM, scoped Succubus Orders and owned stipend
+retirement. Earlier snapshots below retain their original scope and counts.
 
 Previous bounded additions: Appearance Matrix, Handler’s Special Girl and actual
 Rebel leader opportunity.

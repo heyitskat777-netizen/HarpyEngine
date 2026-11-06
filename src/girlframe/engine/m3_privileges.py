@@ -44,6 +44,8 @@ def suspended(state: GameState, purchase: str) -> bool:
 
 def available(state: GameState, subject: int, character: str) -> list[Requisition]:
     from girlframe.engine.m3_class_grafts import eligible as implemented_class_receipt
+    from girlframe.engine.m3_class_grafts import held as class_held
+    from girlframe.engine.m3_class_retention import RULES, swap_source
     from girlframe.engine.m3_enforcer_requisitions import binding, grants, held
     from girlframe.engine.m3_janus_requisitions import held as janus_held
     from girlframe.engine.m3_nightmare import receipt_eligible as nightmare_receipt
@@ -88,7 +90,11 @@ def available(state: GameState, subject: int, character: str) -> list[Requisitio
             or (isinstance(x, FrameRuleReceipt) and native_class_receipt(state, x))
             or (isinstance(x, FrameRuleReceipt) and nightmare_receipt(state, x))
             or (isinstance(x, FrameRuleReceipt) and physiotherapist_receipt(state, x))
-            or (isinstance(x, FrameRuleReceipt) and implemented_class_receipt(state, x))
+            or (
+                isinstance(x, FrameRuleReceipt)
+                and implemented_class_receipt(state, x)
+                and (x.rule_id not in RULES or class_held(state, x.actor, x.rule_id) is not None)
+            )
             or (
                 isinstance(x, FrameRuleReceipt)
                 and x.donor_frame == "JANUS"
@@ -116,7 +122,10 @@ def available(state: GameState, subject: int, character: str) -> list[Requisitio
             )
             or isinstance(x, SwapReceipt)
             and x.new_frame == frame
-            and held(state, x.actor, x.selection.retained_rule) is not None
+            and (
+                held(state, x.actor, x.selection.retained_rule) is not None
+                or swap_source(state, x) is not None
+            )
         )
     ]
 
@@ -205,9 +214,17 @@ def revoke(
 
         if not eligible(state, receipt):
             raise ValueError("Recover the actual original implemented Class source and Frame")
+        from girlframe.engine.m3_class_retention import RULES
+        from girlframe.engine.m3_class_retention import binding as retained_binding
+
+        actual_frame = (
+            retained_binding(state, receipt)[0]
+            if receipt.rule_id in RULES
+            else receipt.frame_instance
+        )
         details.update(
             implemented_class_receipt=receipt.model_dump_json(),
-            frame=receipt.frame_instance,
+            frame=actual_frame,
             rule_id=receipt.rule_id,
             label=receipt.rule_id.rsplit(".", 1)[1].replace("-", " ").title(),
         )
@@ -226,6 +243,20 @@ def revoke(
             frame=receipt.frame_instance,
             label=JANUS_TITLES[receipt.rule_id],
             rule_id=receipt.rule_id,
+        )
+    elif isinstance(receipt, SwapReceipt) and receipt.selection.retained_receipt is not None:
+        from girlframe.engine.m3_class_retention import swap_source
+
+        original_receipt = swap_source(state, receipt)
+        if original_receipt is None:
+            raise ValueError("Recover this exact current paid Class retention source")
+        details.update(
+            retained_class_receipt=original_receipt.model_dump_json(),
+            retained_swap_receipt=receipt.model_dump_json(),
+            frame=receipt.new_frame,
+            rule_id=original_receipt.rule_id,
+            label="Retained "
+            + original_receipt.rule_id.rsplit(".", 1)[-1].replace("-", " ").title(),
         )
     elif isinstance(receipt, (FrameRuleReceipt, SwapReceipt)):
         from girlframe.engine.m3_enforcer_requisitions import TITLES, frame, grants, held
@@ -323,6 +354,22 @@ def restore(original: GameState, identity: str, character: str, replace: str | N
                 raise ValueError("Recover the original Physiotherapist receipt and actual Frame")
             if replace is not None:
                 raise ValueError("Physiotherapist restoration adds no purchase, Bond or scene")
+        elif "retained_class_receipt" in gate.details:
+            from girlframe.engine.m3_class_retention import binding as retained_binding
+
+            original_receipt = FrameRuleReceipt.model_validate_json(
+                gate.details["retained_class_receipt"]
+            )
+            original_swap = SwapReceipt.model_validate_json(gate.details["retained_swap_receipt"])
+            if (
+                original_receipt not in state.requisitions
+                or original_swap not in state.requisitions
+                or retained_binding(state, original_receipt)[0] != frame
+                or original_swap.id not in retained_binding(state, original_receipt)[1]
+            ):
+                raise ValueError("Recover the original paid Class retention chain")
+            if replace is not None:
+                raise ValueError("Class retention restoration creates no purchase, marks or Asset")
         elif "implemented_class_receipt" in gate.details:
             from girlframe.engine.m3_class_grafts import eligible
 

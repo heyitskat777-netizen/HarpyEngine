@@ -842,6 +842,28 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_handler_advancements import HandlerAdvancementService
+
+            for award in HandlerAdvancementService(self.store)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "handler-advancement:" + award["id"],
+                        "handler_advancement",
+                        award["id"],
+                        award["revision"],
+                        "playbook",
+                        award["label"],
+                        "Original Handler",
+                        "pending",
+                        True,
+                        False,
+                        "Spend this actual source-bound award once on a supported advancement.",
+                        "Other advancement choices remain required separate implementations.",
+                        "Review held advancement",
+                        task="m3_handler_advancements",
+                    )
+                )
+
             from girlframe.services.m3_succubus import SuccubusService
 
             for request in SuccubusService(GameService(self.store))._tasks(connection, viewer):
@@ -2490,6 +2512,18 @@ class InboxService:
                     and json.loads(work["body_json"]).get("rule_id") == "strain.void.endgame.4"
                 ):
                     primary, task_name = "Offer retirement with stipend", "m3_void_retirement"
+                elif kind == "strain_endgame_effect" and json.loads(work["body_json"]).get(
+                    "rule_id"
+                ) in ("strain.void.endgame.6", "strain.void.endgame.7"):
+                    primary, task_name = (
+                        "Claim actual Handler advancement",
+                        "m3_handler_advancements",
+                    )
+                elif (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.7"
+                ):
+                    primary, task_name = "Resolve actual NPC departures", "m3_budget_departures"
                 elif kind == "budget_handler_tag" or (
                     kind == "strain_endgame_effect"
                     and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.5"

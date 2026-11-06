@@ -1,5 +1,39 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Retained Dampener, advancement awards and NPC departures — 2026-11-05
+
+Source extends `89455964af6ca8d1dc8b63a1d2d2492075ec8143`. Exact public bytes
+are retained in ignored `var/m3-awards-retention-departures-freeze/manifest.json`.
+M3 remains **RULES_SUBSET**; final regression and independent/player review remain pending.
+
+| Workflow | Focused evidence and boundary |
+|---|---|
+| Retained Dampener | Actual original2P acquisition -> genuine paid4P Frame Swap -> exact retained source/Asset/person -> new Frame Keep spends5 actual Heat with +3 Dampener basis and true completion. Original acquisition stays immutable; paid chain links suspend/restore without duplicate benefits. **2/2.89s**, `var/m3-class-retention-final.xml`; existing firearm exchange/native and graft Dampener/privilege compatibility **4/5.34s**, `var/m3-class-retention-compat.xml`. Production review gate remains denied; the clearly synthetic test registry enables exactly five needed entries, not all Frames. Hardware/other Class retention is not admitted. |
+| Void Endgame6/7 advancements | Both distinct genuine sources grant one original Handler/persona/appointment-bound held award; original source closes after real token creation. Later selected-group1–2 Permission grants change actual Girls and consume exactly one award. Native source and held-token Inbox routes, saved effects and ownership/replay pass **3/6.30s**, `var/m3-handler-advancements-first.xml`. Ordinary session/accomplishment producers and other advancement choices remain unimplemented; source.handler-advancement-triggers is not marked complete. |
+| Budget Endgame NPC departures | Actual original Handler chooses3–5 living related ordinary NPCs and real quit/death outcomes. Employment/jobs or life/cast/journeys change; unrelated NPCs, PC resources, personal relationships and immutable originals persist. True post-opportunity death reaches the existing Rebel leader source and actual group destruction. Native selection/details, completed private record, exact replay and source closure pass **1/3.15s**, `var/m3-budget-departures-normal.xml`. The fixture uses genuine NPC invitation/acceptance and actual effective-Void review after two initial setup corrections; product authority was preserved. Pending actual NPC discipline is guarded; Directors/other bodies and insufficient3NPCs stay blocked. |
+
+All **23 changed Python files**, including every shared interface and three tests,
+pass Ruff/format; all **20 changed production modules** pass mypy. Publishable
+check: **1,061 files / 40 original manifest entries / zero findings**. Five new
+adjustable interpretations record source continuity, actual award ownership/group
+spending and NPC departures. Registry: **284 clarifications, 167 subsets,
+306 unimplemented entries**, zero independent approvals. Counts are not percentages.
+
+No production source/destination review was fabricated to enable Frame Swap.
+Implementation evidence under a synthetic reviewed source remains distinct from
+actual production approval. Ordinary advancement triggers still need actual
+campaign sessions, conversion, successful PR and useful Identity replacement
+producers. Remaining playbook, Strain, shared, physical and lifecycle adapters
+still prevent whole-M3 acceptance. Next finite contracts address retained Kicked
+Puppy and both Supply Drop branches, including real delivery and mission expiry.
+Bot off; no live migration/deployment, environment publication, private-engine
+write, AI/M4 or Ancillary activation; no new full regression.
+
+The preceding sanitized checkpoint **89455964af6ca8d1dc8b63a1d2d2492075ec8143**
+was pushed and exact remote SHA verified. [Focused CI 42174490651](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42174490651)
+passed; full regression was skipped. Newer source does not inherit that CI result
+or the historical 2,200-test full-suite result.
+
 ## Clone AM, Succubus and owned stipend offer — 2026-11-05
 
 Source extends `df1a72abce1dd900a8e1686d133c5868ffedb8aa`. Exact public bytes

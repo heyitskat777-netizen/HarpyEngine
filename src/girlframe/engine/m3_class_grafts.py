@@ -60,6 +60,10 @@ def offer(
 def eligible(state: "GameState", receipt: "FrameRuleReceipt") -> bool:
     if receipt.rule_id not in CLASSES:
         return False
+    from girlframe.engine.m3_class_retention import eligible as retained
+
+    if retained(state, receipt):
+        return True
     try:
         sheet, frame, kind, price, donor = acquisition(
             state, receipt.actor, receipt.rule_id, receipt.donor_frame
@@ -105,6 +109,7 @@ def sheet_eligible(sheet: "PilotSheet", receipt: "FrameRuleReceipt") -> bool:
 
 
 def held(state: "GameState", actor: ActorRef, rule: str) -> "FrameRuleReceipt | None":
+    from girlframe.engine.m3_class_retention import RULES, binding
     from girlframe.engine.m3_privileges import suspended
     from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 
@@ -117,7 +122,10 @@ def held(state: "GameState", actor: ActorRef, rule: str) -> "FrameRuleReceipt | 
         and x.rule_id == rule
         and x.actor == actor
         and eligible(state, x)
-        and not suspended(state, x.id)
+        and not any(
+            suspended(state, identity)
+            for identity in (binding(state, x)[1] if rule in RULES else (x.id,))
+        )
     ]
     if len(values) > 1:
         raise ValueError("Recover one actual original Class acquisition source")
