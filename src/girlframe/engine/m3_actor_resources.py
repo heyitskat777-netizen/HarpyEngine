@@ -44,9 +44,43 @@ def commit(
 
         require_identity_gain(state, actor, prepared.identity)
     followups: list[Followup] = []
-    if view.rules == "girl_frame":
+    if view.rules == "clone_am":
+        from girlframe.engine.m3_clone_am import additional_identities, current, owner
+        from girlframe.engine.m3_clone_am import commit as commit_clone
+
+        original_copy = current(state, actor)
+        original_sheet = owner(state, actor)
+        was_full = all(
+            x.marked
+            for x in (
+                *original_sheet.identities,
+                *additional_identities(state, original_sheet.owner),
+            )
+        )
+        commit_clone(
+            state, actor, prepared.identity, prepared.gain, prepared.heat, prepared.pair_share
+        )
+        if (
+            original_sheet.frame == "PROJECT ANKOU"
+            and not was_full
+            and all(
+                x.marked
+                for x in (
+                    *original_sheet.identities,
+                    *additional_identities(state, original_sheet.owner),
+                )
+            )
+        ):
+            followups.append(
+                Followup(kind="ankou_feedback", actor=original_copy.original, source_pdf=84)
+            )
+    elif view.rules == "girl_frame":
+        from girlframe.engine.m3_clone_am import additional_identities
+
         sheet = state.sheets[actor.entity]
-        was_full = all(x.marked for x in sheet.identities)
+        was_full = all(
+            x.marked for x in (*sheet.identities, *additional_identities(state, sheet.owner))
+        )
         if prepared.identity is not None:
             share = mark_identity(
                 sheet, prepared.identity, prepared.gain, prepared.pair_share, state=state
@@ -77,7 +111,9 @@ def commit(
         if (
             sheet.frame == "PROJECT ANKOU"
             and not was_full
-            and all(x.marked for x in sheet.identities)
+            and all(
+                x.marked for x in (*sheet.identities, *additional_identities(state, sheet.owner))
+            )
         ):
             followups.append(Followup(kind="ankou_feedback", actor=actor, source_pdf=84))
     elif view.rules == "handler_girl":

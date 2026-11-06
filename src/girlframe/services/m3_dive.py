@@ -691,6 +691,10 @@ def apply(
             from girlframe.services.m3_sup import parse
 
             actor, _, _ = _context(action)
+            if actor.kind == "pilot":
+                from girlframe.services.m3_clone_am import prove_additional
+
+                prove_additional(game, c, state, int(actor.entity))
             growth = parse(game, c, state, actor, answer.fields)
             if growth is None and set(answer.fields) not in ({"asset"}, {"asset", "storage"}):
                 raise WorkflowError("Choose the actual uncorrupted Asset to rewrite.")

@@ -19,6 +19,10 @@ from girlframe.engine.m3_void_state import HarpyIdentity, HarpyTag
 
 
 def tags(state: GameState, actor: ActorRef) -> Sequence[TagState | HarpyTag]:
+    if actor.kind == "clone_am":
+        from girlframe.engine.m3_clone_am import tags as clone_tags
+
+        return clone_tags(state, actor)
     if actor.kind == "external_pilot":
         return harpy(state, actor).tags
     context(state, actor)
@@ -79,6 +83,11 @@ def keep(level: str, answer: ChoiceAnswer, *, harpy_mode: bool = False) -> dict[
 
 
 def add_tag(state: GameState, actor: ActorRef, label: str, participants: tuple[int, ...]) -> None:
+    if actor.kind == "clone_am":
+        from girlframe.engine.m3_clone_am import add_tag as clone_tag
+
+        clone_tag(state, actor, label, participants)
+        return
     if actor.kind == "external_pilot":
         actual_harpy = harpy(state, actor)
         _put_harpy(
@@ -167,6 +176,14 @@ def proposal(
 
 
 def defer_rejection(state: GameState, actor: ActorRef, tag_id: str) -> None:
+    if actor.kind == "clone_am":
+        from girlframe.engine.m3_clone_am import tag as clone_tag
+
+        selected = next((x for x in tags(state, actor) if x.id == tag_id and x.marked), None)
+        if selected is None:
+            raise ValueError("Choose the actual marked copy Tag")
+        clone_tag(state, actor, tag_id, rejection_pending=True)
+        return
     if actor.kind == "external_pilot":
         from girlframe.engine.m3_tag_permissions import can_reject
 
@@ -193,6 +210,11 @@ def mark(state: GameState, target: ActorRef, tag_id: str, scene: str) -> bool:
     if tag is None or tag.scene_used == scene:
         raise ValueError("The proposed Tag changed or was already used in this scene")
     was_marked = tag.marked
+    if target.kind == "clone_am":
+        from girlframe.engine.m3_clone_am import tag as clone_tag
+
+        clone_tag(state, target, tag_id, marked=True, scene_used=scene)
+        return was_marked
     if target.kind == "external_pilot":
         _put_harpy(
             state,
@@ -210,6 +232,11 @@ def mark(state: GameState, target: ActorRef, tag_id: str, scene: str) -> bool:
 
 
 def embrace(state: GameState, actor: ActorRef, tag_id: str, replaced: tuple[str, ...]) -> None:
+    if actor.kind == "clone_am":
+        from girlframe.engine.m3_clone_am import embrace as clone_embrace
+
+        clone_embrace(state, actor, tag_id, replaced)
+        return
     from girlframe.engine.m3_leviathan_obsession import require_identity_change
 
     require_identity_change(state, actor, replaced)
@@ -248,6 +275,11 @@ def embrace(state: GameState, actor: ActorRef, tag_id: str, replaced: tuple[str,
 
 
 def reject(state: GameState, actor: ActorRef, tag_id: str) -> None:
+    if actor.kind == "clone_am":
+        from girlframe.engine.m3_clone_am import reject as clone_reject
+
+        clone_reject(state, actor, tag_id)
+        return
     if actor.kind == "external_pilot":
         from girlframe.engine.m3_tag_permissions import can_reject
 

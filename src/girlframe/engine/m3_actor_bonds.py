@@ -23,6 +23,14 @@ def current_ref(state: GameState, owner: int) -> ActorRef:
 
 
 def _current(state: GameState, actor: ActorRef) -> bool:
+    if actor.kind == "clone_am":
+        from girlframe.engine.m3_clone_am import current
+
+        try:
+            current(state, actor)
+            return True
+        except ValueError:
+            return False
     if actor.kind == "handler":
         from girlframe.engine.m3_handler_consequences import same_handler_body
 
@@ -45,6 +53,10 @@ def _current(state: GameState, actor: ActorRef) -> bool:
 
 
 def _known(state: GameState, actor: ActorRef) -> bool:
+    if actor.kind == "clone_am":
+        from girlframe.engine.m3_clone_am import find
+
+        return find(state, actor) is not None
     if (
         _current(state, actor)
         or any(x.actor == actor for x in state.career_archives)
@@ -167,6 +179,15 @@ def set_depth(
 
 def _heat(state: GameState, actor: ActorRef, event: str) -> None:
     if not _current(state, actor):
+        return
+    if actor.kind == "clone_am":
+        from girlframe.engine.m3_clone_am import current, owner
+        from girlframe.engine.m3_leviathan_obsession import allowed_gain
+
+        copy = current(state, actor)
+        sheet = owner(state, actor)
+        sheet.heat += allowed_gain(state, copy.original, 2, "Clone AM Intense Bond overflow", event)
+        sheet.revision += 1
         return
     if actor.kind == "handler":
         from girlframe.engine.m3_handler_consequences import same_handler_body

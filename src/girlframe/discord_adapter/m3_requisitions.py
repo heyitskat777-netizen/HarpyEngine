@@ -226,6 +226,29 @@ async def open_requisitions(interaction: discord.Interaction, service: Requisiti
                 else class_label("Handler's Special Girl", special_option),
             ),
         )
+    from girlframe.services.m3_clone_am import CloneService
+    from girlframe.services.m3_succubus import SuccubusService
+
+    clone = CloneService(service.game)
+    clone_option = await asyncio.to_thread(clone.menu, viewer)
+    if clone_option["available"]:
+        options += (
+            (
+                "clone-am",
+                "Use Clone AM" if clone_option["owned"] else class_label("Clone AM", clone_option),
+            ),
+        )
+    succubus = SuccubusService(service.game)
+    succubus_option = await asyncio.to_thread(succubus.menu, viewer)
+    if succubus_option["available"]:
+        options += (
+            (
+                "succubus",
+                "Use Succubus Protocol"
+                if succubus_option["owned"]
+                else class_label("Succubus Protocol", succubus_option),
+            ),
+        )
     from girlframe.services.m3_sup import SupService
 
     sup = SupService(service.game)
@@ -326,6 +349,16 @@ async def open_requisitions(interaction: discord.Interaction, service: Requisiti
             from girlframe.discord_adapter.m3_kicked_puppy import open_purchase as open_kicked_puppy
 
             await open_kicked_puppy(current, kicked_puppy)
+            return
+        if token == "clone-am":
+            from girlframe.discord_adapter.m3_clone_am import open_purchase as open_clone
+
+            await open_clone(current, clone)
+            return
+        if token == "succubus":
+            from girlframe.discord_adapter.m3_succubus import open_succubus
+
+            await open_succubus(current, succubus)
             return
         if token == "dampener":
             from girlframe.discord_adapter.m3_dampener import open_purchase as open_dampener

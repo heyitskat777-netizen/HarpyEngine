@@ -200,6 +200,14 @@ def apply(
                 if entry.id not in locks:
                     entry.marked = False
             state.sheets[actor.entity] = sheet
+            from girlframe.engine.m3_clone_am import additional_identities, unmark_additional
+
+            selected_copy = tuple(
+                x.id
+                for x in additional_identities(state, sheet.owner)
+                if x.marked and x.id not in locks
+            )
+            unmark_additional(state, sheet.owner, selected_copy)
         else:
             from girlframe.engine.m3_harpy_defeat import update
             from girlframe.engine.m3_harpy_resources import assets

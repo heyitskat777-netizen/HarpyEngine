@@ -254,12 +254,21 @@ def request_from_play(
                 "The required Handler Play must affect the actual original All-Out actor."
             )
     if source_play == "flirt":
-        identities = action["data"].get("character_ids") or game.legacy_action_bindings(c, action)
-        owners = (int(action["actor_id"]), int(action["data"]["prepared"]["target"]))
-        expected = {
-            ActorRef(kind="pilot", entity=str(uid), incarnation=identities.get(str(uid)))
-            for uid in owners
-        }
+        if action["data"].get("clone_flirt"):
+            meta = action["data"]["clone_flirt"]
+            expected = {
+                ActorRef.model_validate(meta["actor"]),
+                ActorRef.model_validate(meta["target"]),
+            }
+        else:
+            identities = action["data"].get("character_ids") or game.legacy_action_bindings(
+                c, action
+            )
+            owners = (int(action["actor_id"]), int(action["data"]["prepared"]["target"]))
+            expected = {
+                ActorRef(kind="pilot", entity=str(uid), incarnation=identities.get(str(uid)))
+                for uid in owners
+            }
         if set(targets) != expected:
             raise WorkflowError(
                 "A Flirt Handler Play is scoped to the actual two original participants."
@@ -898,7 +907,12 @@ def finish_callback(
         if not game.pending(c, action["id"]):
             from girlframe.services.m2_choices import ChoiceEngine
 
-            ChoiceEngine(game).finish(c, load_state(c, game.store.campaign_id), action)
+            if action["data"].get("clone_flirt"):
+                from girlframe.services.m3_actor_plays import ActorPlayService
+
+                ActorPlayService(game).finish(c, load_state(c, game.store.campaign_id), action)
+            else:
+                ChoiceEngine(game).finish(c, load_state(c, game.store.campaign_id), action)
         game.save_action(c, action)
         if action["state"] == "complete" and action["data"].get("battle_counter_source"):
             from girlframe.services.m3_battle import complete_counter_play

@@ -539,6 +539,15 @@ class CycleService:
                 )
                 if entitlement(self.game, c, state, actor) is None:
                     raise WorkflowError("Restore the original Modular Build repair entitlement")
+            from girlframe.engine.m3_clone_am import additional_identities, unmark_additional
+            from girlframe.services.m3_clone_am import prove_additional
+
+            clone_unmark = choice.unmark_identity in {
+                x.id for x in additional_identities(state, viewer.user_id)
+            }
+            if clone_unmark:
+                prove_additional(self.game, c, state, viewer.user_id, choice.unmark_identity)
+                trusted = trusted.model_copy(update={"unmark_identity": None})
             updated, sheet = rules.recovery(
                 period,
                 expected,
@@ -548,6 +557,9 @@ class CycleService:
                 pending_effects=pending,
             )
             state.sheets[str(viewer.user_id)] = sheet
+            if clone_unmark:
+                assert choice.unmark_identity is not None
+                unmark_additional(state, viewer.user_id, (choice.unmark_identity,))
             if choice.modular_replacements:
                 from girlframe.engine.m3_modular import replace_repaired
 
@@ -734,6 +746,21 @@ class CycleService:
                 )
                 if entitlement(self.game, c, state, actor) is not None:
                     modular = replaceable(state, actor)
+            sheet_data = None
+            if (
+                viewer.user_id in period.pilots
+                and str(viewer.user_id) not in period.ended_characters
+            ):
+                from girlframe.engine.m3_clone_am import additional_identities
+                from girlframe.services.m3_clone_am import prove_additional
+
+                additional = additional_identities(state, viewer.user_id)
+                if additional:
+                    prove_additional(self.game, c, state, viewer.user_id)
+                sheet_data = state.sheets[str(viewer.user_id)].model_dump(mode="json")
+                sheet_data["additional_identities"] = [
+                    x.model_dump(mode="json") for x in additional
+                ]
             return {
                 **self.periods.get(viewer, identity),
                 "game_revision": state.revision,
@@ -766,10 +793,7 @@ class CycleService:
                     and x.owner.entity == str(viewer.user_id)
                     and x.owner.incarnation == period.character_ids.get(str(viewer.user_id))
                 ],
-                "sheet": state.sheets[str(viewer.user_id)].model_dump(mode="json")
-                if viewer.user_id in period.pilots
-                and str(viewer.user_id) not in period.ended_characters
-                else None,
+                "sheet": sheet_data,
                 "invitations": scenes,
                 "observation_participants": tuple(
                     (str(uid), "NPC controller " + str(uid))

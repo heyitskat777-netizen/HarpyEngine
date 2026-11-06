@@ -1,5 +1,50 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Clone AM, Succubus and owned stipend offer — 2026-11-05
+
+Source extends `df1a72abce1dd900a8e1686d133c5868ffedb8aa`. Exact public bytes
+are retained in ignored `var/m3-clone-succubus-stipend-freeze/manifest.json`.
+M3 remains **RULES_SUBSET**, with player/independent review and final regression pending.
+
+| Workflow | Actual supported outcome and focused evidence |
+|---|---|
+| Clone AM | Native2P/graft3P creates a distinct actual Frame-resident copy with one replaceable extra Identity, its own Tags/Bond endpoints and one shared original Heat pool. Native selectors/commit/recovery use its actual source; the copy cannot Dive. Real Keep/repeated Tags and Flirt low/mid/high include owned Bond confirmation, actual escape Asset/Helplessness/child Plays and real Handler intervention. Six changed traces **6/10.92s**, `var/m3-clone-am-final.xml`; source/Actor/Harpy/Handler compatibility **5/4.97s**, `var/m3-clone-am-compat.xml`. Later native role guard/UI trace **1/2.50s**, `var/m3-clone-am-native-ui.xml`; genuine owner Dive reset plus existing locked native Dive **2/4.42s**, `var/m3-clone-am-native-dive.xml`; actual host-Frame location **1/3.26s**, `var/m3-clone-am-location.xml`. Overlapping selections are not summed. |
+| Succubus Protocol | Source-specific superior authority for Orders to the exact qualifying Bond partner; global Status is unchanged. Real original Pilot and ordinary NPC recipient controls, controller-owned heatless NPC refusal receipt, every low/mid/high result, actual follower, Tags, noticed Status loss consumed by a later Order, and real original Handler-owned NPC discipline completion. Pre-RNG suspension blocks; known outcomes/receipt survive restoration and replay. Both normal workflows **2/9.07s**, `var/m3-succubus-final.xml`. |
+| Void Endgame retirement with stipend | Genuine recursive source, original Handler offer and affected-player accept/decline. Acceptance archives the actual original career with stipend and no Permission charge; decline preserves the Girl. Completed private card displays both saved fields. **2/3.56s**, `var/m3-void-retirement-normal.xml`. Existing native child-Play/Flirt and Off-Duty recovery compatibility **2/3.63s**, `var/m3-clone-native-compatibility.xml`. |
+
+Integration review corrected a concrete authority regression: a human present only
+as their copy cannot act or be targeted as their absent native Pilot. Native source
+controls now require the actual original role, while source-aware copy actions keep
+their own actor authority. Source-specific copy Tag debts also cannot compel the
+original Pilot. Existing native Identity limits/marks and source locks are preserved.
+
+All **36 changed Python files**, including every shared interface and three test
+files, pass Ruff/format. All **33 changed production modules** pass mypy after
+fixing a root Inbox variable type collision; no assertion was weakened. The initial
+retirement fixture expected unescaped Markdown labels; plain private fixture labels
+now test exact saved text. Clone fixture corrections and narrow source fixes are
+recorded in its ignored handoff. Publishable check: **1,050 files / 40 original
+manifest entries / zero findings**. Registry: **279 adjustable clarifications,
+164 subsets, 309 unimplemented entries**, zero independent approvals. Eleven new
+interpretations record actual source/control/resource semantics centrally, requiring
+printed-rule clarity review. These counts are not completion percentages.
+
+All thirteen named Class abilities now have bounded native/graft consumers; this
+is not whole-Class or M3 certification. Remaining copy basic/actor/body/hardware
+ports, retained Frame Swap sources, broader native Ankou follow-up, ordinary NPC
+administrative recovery and other role/status/discipline consumers remain explicit
+gaps. Remaining playbook, world, Strain and lifecycle systems still block M3.
+Next source contracts cover genuine Void Endgame advancement awards/Permission
+spend and retained Class sources; ordinary advancement triggers need their actual
+session/event/conversion producers. Bot off; no deployment, live migration,
+environment publication, private-engine write, AI/M4 or Ancillary activation.
+
+Preceding sanitized checkpoint **df1a72abce1dd900a8e1686d133c5868ffedb8aa** was
+pushed and exact remote SHA verified. [Focused CI 42171392845](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42171392845)
+passed its changed static, focused gameplay, contracts and publishable checks;
+full regression was skipped. Newer source does not inherit that CI or the
+historical 2,200-test full-suite result.
+
 ## Appearance Matrix, Handler’s Special Girl and Rebel leadership — 2026-11-05
 
 This source extends `1788dd1a1ec8f2e7a63e6dadea0b3046193500d1`; exact changed

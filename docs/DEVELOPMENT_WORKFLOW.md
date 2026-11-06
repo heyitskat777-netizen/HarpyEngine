@@ -39,9 +39,9 @@ a required M3 rule complete; required gaps stay in the milestone backlog.
 
 | Order | Assignment | Completion boundary |
 |---|---|---|
-| 1, parallel | Clone AM | Frozen contract: real source-linked clone actor, extra Identity, own Tags/Bonds, shared Heat and actual Dive prohibition. Begin source edits after the current integration checkpoint. |
-| 1, parallel | Succubus Protocol | Frozen contract: target-specific order authority and real Pilot/NPC recipient responses. No global Status change, controller proxy or fictional acknowledgment. Begin after checkpoint. |
-| 1, root | Source/CI integration and next dependency | Freeze Matrix, Handler’s Special Girl and Rebel leader opportunity; integrate the two next consumers with explicit shared-file ownership. Then select the next dependency-ready whole workflow. |
+| 1, parallel | Retained Class sources | Clone completed. Freeze ordinary Frame Swap retained-source contract; implement a dependency-ready genuine retained consumer without free rebuy, mark reset or invented hardware transfer. |
+| 1, parallel | Handler advancement awards/spend | Succubus completed. Genuine Void Endgame6/7 -> original-person award -> single real1–2 Permission group grant. Ordinary triggers retain their actual session/event/conversion proof dependencies. |
+| 1, root | Source/CI integration and Budget NPC departures | Freeze Clone/Succubus/stipend checkpoint, then complete actual Budget Endgame NPC Bond quit/death effects and native source routing under the frozen contract. |
 | 2 | Remaining required gameplay systems | Select the next dependency-ready whole workflow from M3_REMAINING_WORK.md and M3_COMPLETION_AUDIT.md. Freeze its contract, reuse implemented dependencies and complete it before opening unrelated work. |
 | 3 | M3 review candidate | Account for required core scope, complete expected gameplay flows and final integrated checks; provide a concise player-test checklist and stop for owner review. |
 

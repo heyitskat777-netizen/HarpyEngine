@@ -22,6 +22,7 @@ class RolePunishment(Model):
         "compliance_virus",
         "janus_training",
         "alpha_sex",
+        "succubus_npc_disobey",
     ]
     action: str | None = None
     source_work: str | None = None
@@ -58,6 +59,13 @@ class RolePunishment(Model):
             raise ValueError(
                 "Only an unperformed Virus consequence ends without a fabricated effect"
             )
+        if self.source_kind == "succubus_npc_disobey" and (
+            self.executor.kind != "handler"
+            or self.subject.kind != "npc"
+            or self.chooser != self.executor
+            or self.action is None
+        ):
+            raise ValueError("Preserve the actual NPC refusal and original Handler execution")
         if self.executor.kind not in ("pilot", "npc", "handler", "external_pilot"):
             raise ValueError("Use an actual source-proved executor")
         if self.executor.kind == "external_pilot" and self.source_kind not in (
@@ -67,9 +75,12 @@ class RolePunishment(Model):
             raise ValueError("Use the actual retained Harpy Initiative or Virus source")
         if self.executor == self.subject and self.source_kind != "compliance_virus":
             raise ValueError("Only an actual Compliance Virus self-purge requires self-Punishment")
-        if self.source_kind not in ("handler_play", "compliance_virus", "janus_training") and (
-            self.executor.kind not in ("pilot", "external_pilot") or self.chooser is None
-        ):
+        if self.source_kind not in (
+            "handler_play",
+            "compliance_virus",
+            "janus_training",
+            "succubus_npc_disobey",
+        ) and (self.executor.kind not in ("pilot", "external_pilot") or self.chooser is None):
             raise ValueError("Preserve the Enforcer source's original chooser and executor")
         if self.executor.kind in ("pilot", "external_pilot") and self.executor_frame is None:
             raise ValueError("A Girl/Harpy executor preserves its actual source Frame")

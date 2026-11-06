@@ -284,7 +284,7 @@ async def open_action(
                 "Optional marked Identity to unmark",
                 tuple(
                     (x["id"], entity_label(x))
-                    for x in sheet["identities"]
+                    for x in sheet["identities"] + sheet.get("additional_identities", [])
                     if x["marked"] and x["id"] not in sheet["sedation_locked"]
                 ),
                 0,

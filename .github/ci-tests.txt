@@ -1,10 +1,9 @@
-# Focused current handoff: real HSG token/status/counter/delegation,
-# Matrix presence/damage/reset, genuine optional Rebel leader opportunity.
-# Full regression remains required at final M3 candidate.
-tests/rules/test_special_girl.py
-tests/rules/test_appearance_matrix.py
-tests/rules/test_rebel_leader.py
-tests/rules/test_rebel_merge.py
-tests/rules/test_class_privileges.py
-tests/rules/test_battle_pipeline.py::test_actual_mid_allout_damages_declared_opposing_asset_once_then_restores_chat
-tests/rules/test_mission_ui.py::test_native_offer_response_requires_owner_confirmation_and_handler_dispatch
+# Focused real Clone actor/Identity/Tag/Bond, Succubus original recipients,
+# and Void stipend accept/decline; affected native recovery/source compatibility.
+# Full regression is reserved for the final M3 candidate.
+tests/rules/test_clone_am.py
+tests/rules/test_succubus.py
+tests/rules/test_void_retirement.py
+tests/test_m2_game.py::test_nested_escape_play_is_real_roll_then_mutual_followthrough
+tests/rules/test_off_duty_cycle.py::test_actual_preparation_owned_rolls_recovery_review_and_world_end_are_resumable
+tests/rules/test_class_privileges.py::test_native_class_receipt_real_revocation_blocks_rebuy_then_restores_original_without_cost

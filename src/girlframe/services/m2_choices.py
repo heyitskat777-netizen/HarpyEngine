@@ -94,13 +94,30 @@ class ChoiceEngine:
             ):
                 item.state = "fulfilled"
 
-    def unmark(self, sheet: PilotSheet, ids: tuple[str, ...], maximum: int) -> None:
+    def unmark(
+        self,
+        c: Connection,
+        state: GameState,
+        sheet: PilotSheet,
+        ids: tuple[str, ...],
+        maximum: int,
+    ) -> None:
+        from girlframe.engine.m3_clone_am import additional_identities, unmark_additional
+        from girlframe.services.m3_clone_am import prove_additional
+
+        additional = additional_identities(state, sheet.owner)
+        extra = tuple(x.id for x in additional if x.marked)
         picks(
             ids,
-            {x.id for x in sheet.identities if x.marked and x.id not in sheet.sedation_locked},
+            {x.id for x in sheet.identities if x.marked and x.id not in sheet.sedation_locked}
+            | set(extra),
             0,
             maximum,
         )
+        selected_extra = tuple(x for x in ids if x in extra)
+        if selected_extra:
+            prove_additional(self.game, c, state, sheet.owner)
+            unmark_additional(state, sheet.owner, selected_extra)
         for entry in sheet.identities:
             if entry.id in ids:
                 entry.marked = False
@@ -573,7 +590,7 @@ class ChoiceEngine:
             from girlframe.services.m3_kicked_puppy import questions as kicked_questions
 
             picks(answer.options, set(kicked_questions(self.game, c, state, action)), 1)
-            self.unmark(acting, answer.denied, 2)
+            self.unmark(c, state, acting, answer.denied, 2)
             result["question"] = answer.options[0]
             if result["question"] == QUESTION:
                 result["question_text"] = QUESTION_TEXT
@@ -592,7 +609,7 @@ class ChoiceEngine:
         if kind == "target_flirt":
             require(bool(answer.text.strip()), "The target player must provide its own answer.")
             assert sheet is not None
-            self.unmark(sheet, answer.denied, 1 if level == "low" else 2)
+            self.unmark(c, state, sheet, answer.denied, 1 if level == "low" else 2)
             sheet.revision += 1
             result["target_answer"] = answer.text
             if level == "low":
@@ -1122,7 +1139,12 @@ class ChoiceEngine:
             if requests[0]["kind"] == "escape_play":
                 parent["data"]["result"]["escaped"] = True
             if not self.game.pending(c, parent["id"]):
-                self.finish(c, state, parent)
+                if parent["data"].get("actor_basic"):
+                    from girlframe.services.m3_actor_plays import ActorPlayService
+
+                    ActorPlayService(self.game).finish(c, state, parent)
+                else:
+                    self.finish(c, state, parent)
             self.game.save_action(c, parent)
 
     def original_callsign(self, state: GameState, action: dict[str, Any]) -> str:

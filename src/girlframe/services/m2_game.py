@@ -310,6 +310,14 @@ class GameService:
                 if sheet.owner == viewer.user_id
                 else public_sheet(sheet, state)
             )
+            if sheet.owner == viewer.user_id:
+                from girlframe.engine.m3_clone_am import additional_identities
+                from girlframe.services.m3_clone_am import prove_additional
+
+                additional = additional_identities(state, sheet.owner)
+                if additional:
+                    prove_additional(self, c, state, sheet.owner)
+                data["additional_identities"] = [x.model_dump(mode="json") for x in additional]
             if sheet.owner == viewer.user_id and sheet.character_id:
                 from girlframe.engine.m3_actor_state import ActorRef
 
@@ -877,11 +885,18 @@ class GameService:
                     "STALE_CHARACTER: this saved decision belongs to an earlier character."
                 )
 
-    def pilot_cast(self, c: Connection, state: GameState, scene: dict[str, Any]) -> None:
+    def pilot_cast(
+        self,
+        c: Connection,
+        state: GameState,
+        scene: dict[str, Any],
+        *,
+        owners: tuple[int, ...] = (),
+    ) -> None:
         cast = next((x for x in state.scene_casts if x.id == scene["id"] and x.open), None)
         if cast is None:
             return
-        if any(x.actor.kind != "pilot" for x in cast.roles):
+        if any(x.actor.kind not in ("pilot", "clone_am") for x in cast.roles):
             raise WorkflowError(
                 "UNSUPPORTED_RULE: this mixed-role scene needs its actor-aware Play controls."
             )
@@ -889,7 +904,24 @@ class GameService:
             {x.controller for x in cast.roles} | {cast.facilitator}
         ):
             raise WorkflowError("STALE_CAST: recover the actual scene participation.")
+        for owner in owners:
+            if owner == state.handler and cast.facilitator == owner:
+                continue
+            if not any(x.actor.kind == "pilot" and x.controller == owner for x in cast.roles):
+                raise WorkflowError(
+                    "Join this scene as the actual original Pilot, not only its copy"
+                )
         for role in cast.roles:
+            if role.actor.kind == "clone_am":
+                from girlframe.engine.m3_actors import resolve
+                from girlframe.services.m3_actors import profiles
+                from girlframe.services.m3_clone_am import prove_copy
+
+                prove_copy(self, c, state, role.actor)
+                actual = resolve(state, role.actor, profiles(c, self.store.campaign_id))
+                if actual.controller != role.controller:
+                    raise WorkflowError("STALE_CAST: recover the original copy controller")
+                continue
             if (
                 str(role.controller) != role.actor.entity
                 or self.character_binding(c, state, role.controller, require_current_profile=False)
@@ -1286,7 +1318,12 @@ class GameService:
                 )
                 and not scoped_defeat
             ):
-                self.pilot_cast(c, state, scene)
+                self.pilot_cast(
+                    c,
+                    state,
+                    scene,
+                    owners=(viewer.user_id,) + ((prepared.target,) if prepared.target else ()),
+                )
             else:
                 from girlframe.engine.m3_actor_state import SceneCast
 
@@ -1598,11 +1635,24 @@ class GameService:
                 from girlframe.services.m3_nightmare import prepare as prepare_nightmare
 
                 nightmare_core = prepare_nightmare(self, c, viewer, state, prepared)
-            preview = PilotSheet.model_validate_json(sheet.model_dump_json())
+            preview_state = GameState.model_validate_json(state.model_dump_json())
+            preview = preview_state.sheets[str(sheet.owner)]
             if prepared.identity:
-                share = mark_identity(
-                    preview, prepared.identity, prepared.gain, prepared.pair_share, state=state
+                from girlframe.engine.m3_clone_am import mark_additional
+                from girlframe.services.m3_clone_am import prove_additional
+
+                prove_additional(self, c, state, sheet.owner, prepared.identity)
+                share = mark_additional(
+                    preview_state, preview, prepared.identity, prepared.gain, prepared.pair_share
                 )
+                if share is None:
+                    share = mark_identity(
+                        preview,
+                        prepared.identity,
+                        prepared.gain,
+                        prepared.pair_share,
+                        state=preview_state,
+                    )
                 if share and str(sheet.pair) not in state.sheets:
                     raise WorkflowError("The Pair must have an active sheet to receive Heat.")
             elif prepared.gain or prepared.pair_share:
@@ -2068,7 +2118,14 @@ class GameService:
 
             if valid_npc_order(self, c, state, owner, channel, dict(row)):
                 return dict(row)
-        if row is None or not higher(state, int(row["issuer_id"]), owner):
+        source_authority = False
+        if row is not None and json.loads(row["body_json"]).get("succubus"):
+            from girlframe.services.m3_succubus import valid_order as valid_succubus_order
+
+            source_authority = valid_succubus_order(self, c, state, dict(row))
+        if row is None or (
+            not source_authority and not higher(state, int(row["issuer_id"]), owner)
+        ):
             raise WorkflowError("A recorded direct order from a current superior is required.")
         if any(
             x.kind == "cannot_refuse_until_tag_resolved"
@@ -2321,9 +2378,17 @@ class GameService:
 
                 refusal_modifiers = consume_refusal(self, c, viewer, state, action)
             if prepared.identity:
-                share = mark_identity(
-                    sheet, prepared.identity, prepared.gain, prepared.pair_share, state=state
+                from girlframe.engine.m3_clone_am import mark_additional
+                from girlframe.services.m3_clone_am import prove_additional
+
+                prove_additional(self, c, state, sheet.owner, prepared.identity)
+                share = mark_additional(
+                    state, sheet, prepared.identity, prepared.gain, prepared.pair_share
                 )
+                if share is None:
+                    share = mark_identity(
+                        sheet, prepared.identity, prepared.gain, prepared.pair_share, state=state
+                    )
                 if share:
                     state.sheets[str(sheet.pair)].heat += share
                     state.sheets[str(sheet.pair)].revision += 1
@@ -2902,6 +2967,10 @@ class GameService:
                 from girlframe.services.m3_defeat import synchronize as synchronize_defeat
 
                 synchronize_defeat(self, c, action, event, viewer, key)
+            if action["data"].get("clone_flirt"):
+                from girlframe.services.m3_clone_am_plays import synchronize as synchronize_clone
+
+                synchronize_clone(self, c, action, event)
             if action["data"].get("dive"):
                 from girlframe.services.m3_dive import synchronize as synchronize_dive
 
@@ -3029,16 +3098,24 @@ class GameService:
             self.unpaused(c)
             state = load_state(c, self.store.campaign_id)
             scene = self.scene(c, channel)
-            self.pilot_cast(c, state, scene)
+            self.pilot_cast(c, state, scene, owners=(viewer.user_id, target))
             if (
                 viewer.user_id not in scene["participants"]
                 or target not in scene["participants"]
                 or str(target) not in state.sheets
-                or not higher(state, viewer.user_id, target)
             ):
                 raise WorkflowError(
                     "Only a current superior in this scene can issue a direct order."
                 )
+            authority = None
+            if not higher(state, viewer.user_id, target):
+                from girlframe.services.m3_succubus import issue_authority
+
+                authority = issue_authority(self, c, state, viewer.user_id, target)
+                if authority is None:
+                    raise WorkflowError(
+                        "A current superior or qualifying order source is required."
+                    )
             lock = self.lock(c, channel)
             if lock and lock["state"] != "released":
                 raise WorkflowError("SCENE_BUSY: resolve the current action first.")
@@ -3052,7 +3129,9 @@ class GameService:
                     issuer_id=str(viewer.user_id),
                     target_id=str(target),
                     channel_id=str(channel),
-                    body_json=json.dumps({"text": text}),
+                    body_json=json.dumps(
+                        {"text": text} | ({"succubus": authority} if authority else {})
+                    ),
                     state="awaiting_response",
                 )
             )
@@ -3348,7 +3427,7 @@ class GameService:
             self.unpaused(c)
             state = load_state(c, self.store.campaign_id)
             scene = self.scene(c, channel)
-            self.pilot_cast(c, state, scene)
+            self.pilot_cast(c, state, scene, owners=(viewer.user_id,))
             obligation = next(
                 (
                     x
@@ -3361,6 +3440,8 @@ class GameService:
                 raise WorkflowError(
                     "This obligation has no implemented owner follow-through action."
                 )
+            if obligation.kind == "flirt_followthrough" and obligation.target is not None:
+                self.pilot_cast(c, state, scene, owners=(obligation.target,))
             if (
                 viewer.user_id not in scene["participants"]
                 or state.handler not in scene["participants"]
@@ -3619,8 +3700,14 @@ class GameService:
             if viewer.user_id not in scene["participants"]:
                 return {"participants": [], "lock": None, "joined": False}
             state = load_state(c, self.store.campaign_id)
+            cast = next((x for x in state.scene_casts if x.id == scene["id"] and x.open), None)
+            native = {x.controller for x in cast.roles if x.actor.kind == "pilot"} if cast else None
             return {
-                "pilots": [uid for uid in scene["participants"] if str(uid) in state.sheets],
+                "pilots": [
+                    uid
+                    for uid in scene["participants"]
+                    if str(uid) in state.sheets and (native is None or uid in native)
+                ],
                 "labels": {
                     str(uid): state.sheets[str(uid)].callsign
                     if str(uid) in state.sheets
@@ -3901,13 +3988,22 @@ class GameService:
                 tags += [
                     x.model_dump(mode="json") for x in ritual_candidates(state, action, actor.owner)
                 ]
+            own_data = own.model_dump(mode="json") if own else None
+            if own is not None and own_data is not None:
+                from girlframe.engine.m3_clone_am import additional_identities
+                from girlframe.services.m3_clone_am import prove_additional
+
+                additional = additional_identities(state, own.owner)
+                if additional:
+                    prove_additional(self, c, state, own.owner)
+                own_data["additional_identities"] = [x.model_dump(mode="json") for x in additional]
             result = dict(row) | {
                 "body": body,
                 "play": action["data"]["play"],
                 "result": action["data"]["result"],
                 "actor": actor.owner,
                 "tags": tags,
-                "own": own.model_dump(mode="json") if own else None,
+                "own": own_data,
                 "participants": action["data"]["participants"],
                 "pilots": [
                     uid for uid in action["data"]["participants"] if str(uid) in state.sheets

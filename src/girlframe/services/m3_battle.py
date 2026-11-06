@@ -1994,6 +1994,10 @@ def complete_damage_work(
             from girlframe.services.m3_alpha import synchronize as synchronize_alpha
 
             synchronize_alpha(game, c, action, event)
+        elif action["data"].get("clone_flirt"):
+            from girlframe.services.m3_clone_am_plays import synchronize as sync_clone
+
+            sync_clone(game, c, action, event)
         elif action["data"].get("engage"):
             from girlframe.services.m3_engage import complete_damage_work as complete_engage_damage
 

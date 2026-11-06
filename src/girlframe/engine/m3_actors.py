@@ -381,6 +381,36 @@ def _resolve(
     _physical_seen: tuple[ActorRef, ...] = (),
 ) -> ActorView:
     ref = ActorRef.model_validate_json(ref.model_dump_json())
+    if ref.kind == "clone_am":
+        from girlframe.engine.m3_clone_am import current, owner
+
+        copy = current(state, ref)
+        clone_sheet = owner(state, ref)
+        original = resolve(
+            state,
+            copy.original,
+            profiles,
+            require_alive=require_alive,
+            require_current_profile=require_current_profile,
+        )
+        located = frame_position(state, copy.original, copy.frame, fallback=original.frame_cell)
+        return ActorView(
+            ref=ref,
+            controller=clone_sheet.owner,
+            label="Clone AM",
+            alive=original.alive,
+            rules="clone_am",
+            frame=clone_sheet.frame,
+            frame_instance=copy.frame,
+            heat=clone_sheet.heat,
+            identities=identities((copy.identity,)),
+            cell=located,
+            frame_cell=located,
+            offstage_source=original.offstage_source if located is None else None,
+            source_sha256=hashlib.sha256(
+                (fingerprint(copy) + original.source_sha256).encode()
+            ).hexdigest(),
+        )
     if ref in _physical_seen:
         raise ValueError("Recover the actual inconsistent physical custody cycle")
 
@@ -868,6 +898,15 @@ def owned_refs(
     state: GameState, controller: int, profiles: tuple[ProfileBinding, ...]
 ) -> tuple[ActorRef, ...]:
     refs: list[ActorRef] = []
+    from girlframe.engine.m3_clone_am import copies, current
+
+    for copy in copies(state):
+        if copy.original.entity == str(controller):
+            try:
+                current(state, copy.ref)
+            except ValueError:
+                continue
+            refs.append(copy.ref)
     refs.extend(
         ActorRef(kind="external_pilot", entity=x.id)
         for x in state.janus_cores

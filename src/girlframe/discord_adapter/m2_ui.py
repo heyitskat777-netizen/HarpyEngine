@@ -85,6 +85,10 @@ def one(values: dict[str, Any], key: str, default: Any = None) -> Any:
 
 
 def choice_fields(decision: dict[str, Any]) -> list[Field]:
+    if decision.get("clone_flirt"):
+        from girlframe.discord_adapter.m3_clone_am import choice_fields as clone_fields
+
+        return clone_fields(decision)
     kind = decision["kind"]
     own = decision["own"]
     result = decision["result"]
@@ -92,7 +96,7 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
     identities = (
         [
             x
-            for x in own["identities"]
+            for x in own["identities"] + own.get("additional_identities", [])
             if x["marked"] and x["id"] not in own.get("sedation_locked", ())
         ]
         if own
@@ -697,9 +701,12 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         )
         if decision["kind"] == "tag_resolution":
             instructions += (
-                " Embracing adds an Identity; choose a replacement only if you already have four. "
-                "Rejecting requires an actual later action."
+                " Embracing replaces this copy's sole Identity. "
+                if decision.get("copy_identity_cap") == 1
+                else " Embracing adds an Identity; choose a replacement only "
+                "if you already have four. "
             )
+            instructions += "Rejecting requires an actual later action."
         for proposal in decision.get("proposals", ()):
             instructions += (
                 "\nProposal: "
@@ -890,7 +897,9 @@ async def open_play(
         if accepted_sex["available"]:
             plays = (*plays, "alpha_sex")
             alpha_sex_sources = {x["id"]: x for x in accepted_sex["sessions"]}
-    identities = [x for x in sheet["identities"] if not x["marked"]]
+    identities = [
+        x for x in sheet["identities"] + sheet.get("additional_identities", []) if not x["marked"]
+    ]
     from girlframe.discord_adapter.m3_dampener import fields as dampener_fields
     from girlframe.discord_adapter.m3_dampener import modifier as dampener_modifier
     from girlframe.services.m3_dampener import DampenerService
@@ -1403,6 +1412,10 @@ class StatePages(discord.ui.View):
         lines += [
             "Identity: " + entity_label(x) + (" [marked]" if x["marked"] else "")
             for x in sheet["identities"]
+        ]
+        lines += [
+            "Clone Identity: " + entity_label(x) + (" [marked]" if x["marked"] else "")
+            for x in sheet.get("additional_identities", [])
         ]
         lines += [
             "Asset: "

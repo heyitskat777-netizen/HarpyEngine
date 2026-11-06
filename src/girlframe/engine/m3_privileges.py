@@ -198,6 +198,8 @@ def revoke(
         "frame.class.priestess.sup-of-primordial-flesh",
         "frame.class.autocrat.handlers-special-girl",
         "frame.class.priestess.appearance-matrix",
+        "frame.class.autocrat.succubus-protocol",
+        "frame.class.autocrat.clone-am",
     ):
         from girlframe.engine.m3_class_grafts import eligible
 

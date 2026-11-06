@@ -1,18 +1,23 @@
 # M3 remaining work — verified development snapshot
 
-Newest bounded additions: **Appearance Matrix; Handler’s Special Girl; actual
-Rebel Endgame leader opportunity**. Native/graft acquisitions and real consequences
-have focused evidence at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md).
-Registry: **161 subsets / 312 unimplemented / 268 adjustable clarifications**;
+Newest bounded additions: **Clone AM; Succubus Protocol; actual player-owned
+Void Endgame retirement with stipend**. Real source/actor/resource effects and
+focused evidence are at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md).
+Registry: **164 subsets / 309 unimplemented / 279 adjustable clarifications**;
 M3 remains **IN_PROGRESS / RULES_SUBSET**, bot off.
 
-The two remaining Class abilities are **Clone AM and Succubus Protocol**. Frozen
-contracts identify actual clone actor/Identity/Tag/Bond and NPC recipient refusal
-dependencies. Their implementation follows this checkpoint. Existing Class
-consumers retain named actor, retention and unimplemented-source limits. AM
-branch/vessel/body, remaining playbook runtimes, shared/physical/lifecycle effects,
-remaining Strain/Endgames, source reconciliation and final integrated checks remain
-required. Earlier snapshots below preserve their original scope and counts.
+All thirteen named Class abilities now have bounded native/graft consumers.
+Retained/Frame Swap, copy basic actions and broader actor/body/hardware/source
+ports still prevent whole-Class acceptance. Next contracts address genuine Void
+Endgame6/7 advancement awards and real1–2 Permission spending, and ordinary Frame
+Swap retained Class sources. Ordinary advancement triggers still need actual
+session/event/conversion producers. Remaining playbook runtimes, shared/physical/
+lifecycle effects, Strain/Endgames, world consumers, source reconciliation and
+final integrated checks remain required. Counts are not completion percentages.
+Earlier snapshots below retain their original scope and counts.
+
+Previous bounded additions: Appearance Matrix, Handler’s Special Girl and actual
+Rebel leader opportunity.
 
 Previous bounded additions: Home, Sup through all five existing native Void-gain
 producers, actual Rebel merger and corrected backstory response closure.

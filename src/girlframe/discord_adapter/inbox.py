@@ -621,6 +621,25 @@ class InboxView(discord.ui.View):
             await open_token(
                 interaction, SpecialGirlService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_clone_am":
+            from girlframe.discord_adapter.m3_clone_am import open_clone
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_clone_am import CloneService
+
+            await open_clone(interaction, CloneService(GameService(self.service.store)))
+        elif item.task == "m3_succubus":
+            from girlframe.discord_adapter.m3_succubus import open_order
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_succubus import SuccubusService
+
+            await open_order(
+                interaction, SuccubusService(GameService(self.service.store)), item.identity
+            )
+        elif item.task == "m3_void_retirement":
+            from girlframe.discord_adapter.m3_void_retirement import open_offer
+            from girlframe.services.m3_void_retirement import StipendService
+
+            await open_offer(interaction, StipendService(self.service.store), item.identity)
         elif item.task == "m3_rebel_leader":
             from girlframe.discord_adapter.m3_rebel_leader import open_leader
             from girlframe.services.m3_rebel_leader import LeaderService

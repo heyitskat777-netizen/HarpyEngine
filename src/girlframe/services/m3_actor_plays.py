@@ -38,7 +38,7 @@ class ActorPlayService:
         self.game, self.store = game, game.store
 
     def _judge(self, c: Connection, state: GameState, cast: SceneCast, acting: ActorRef) -> Judge:
-        if acting.kind == "external_pilot" and cast.adjudicator is None:
+        if acting.kind in ("external_pilot", "clone_am") and cast.adjudicator is None:
             from girlframe.services.m3_medical import MedicalService
 
             human, appointment = MedicalService(self.store)._handler(c)
@@ -53,6 +53,15 @@ class ActorPlayService:
     def _eligible_play(
         self, state: GameState, actor: ActorRef, *, rejection: bool, play: str = "keep_your_head"
     ) -> None:
+        from girlframe.engine.m3_clone_am import require_play
+
+        require_play(actor, play)
+        if actor.kind == "clone_am":
+            if play not in ("keep_your_head", "flirt", "clone_followthrough", "actor_reject_tag"):
+                raise WorkflowError(
+                    "SOURCE_PORT_REQUIRED: this copy basic Play needs its actual producer"
+                )
+            return
         from girlframe.engine.m3_janus import can_act
 
         can_act(state, actor)
@@ -219,7 +228,7 @@ class ActorPlayService:
                 (x for x in actors if x.ref == ref and x.controller == viewer.user_id), None
             )
             if actor is None or not (
-                actor.rules == "handler_girl"
+                actor.rules in ("handler_girl", "clone_am")
                 or actor.ref.kind == "external_pilot"
                 and actor.girl == "harpy"
             ):
@@ -284,6 +293,9 @@ class ActorPlayService:
         rejection: str | None = None,
     ) -> dict[str, Any]:
         prepared = PlayInput.model_validate_json(prepared.model_dump_json())
+        from girlframe.engine.m3_clone_am import require_play
+
+        require_play(ref, prepared.play)
         if prepared.dampener_modifier is not None:
             raise WorkflowError("Dampener Link currently requires its native original Pilot port")
         if prepared.kicked_puppy_basis:
@@ -308,6 +320,7 @@ class ActorPlayService:
                 not in (
                     "disobey_orders",
                     "keep_your_head",
+                    *(("flirt", "clone_followthrough") if ref.kind == "clone_am" else ()),
                     "dive_deep",
                     "check_sensors",
                     "engage",
@@ -341,10 +354,13 @@ class ActorPlayService:
                 battle_play
                 or prepared.play in ("engage", "snoop", "enforcement_initiative")
                 or mockingbird_play
+                or ref.kind == "clone_am"
+                and prepared.play == "flirt"
             )
             or prepared.source_work is not None
             and prepared.play != "dive_deep"
             and not mockingbird_play
+            and not (ref.kind == "clone_am" and prepared.play == "clone_followthrough")
         ):
             raise WorkflowError("UNSUPPORTED_RULE: select an implemented actual-role Play.")
 
@@ -361,7 +377,7 @@ class ActorPlayService:
                 actor is None
                 or actor.controller != viewer.user_id
                 or not (
-                    actor.rules == "handler_girl"
+                    actor.rules in ("handler_girl", "clone_am")
                     or actor.ref.kind == "external_pilot"
                     and actor.girl == "harpy"
                 )
@@ -370,6 +386,22 @@ class ActorPlayService:
                 or cast.revision != cast_revision
             ):
                 raise ValueError("STALE_ACTOR: confirm your actual resources and Director first")
+            if ref.kind == "clone_am":
+                from girlframe.services.m3_clone_am import prove_copy
+
+                prove_copy(self.game, c, state, ref)
+            clone_followthrough = None
+            if ref.kind == "clone_am" and prepared.play == "clone_followthrough":
+                from girlframe.services.m3_clone_am_plays import prepare_followthrough
+
+                clone_followthrough = prepare_followthrough(
+                    self.game, c, state, cast, ref, prepared
+                )
+            clone_flirt = None
+            if ref.kind == "clone_am" and prepared.play == "flirt":
+                from girlframe.services.m3_clone_am_plays import prepare as clone_prepare
+
+                clone_flirt = clone_prepare(self.game, c, state, cast, ref, prepared)
             parent = self.game.action(c, prepared.parent) if prepared.parent else None
             counter = None
             dive = None
@@ -542,6 +574,16 @@ class ActorPlayService:
                 cast_sha256=fingerprint(cast),
                 table=participants,
             )
+            if ref.kind == "clone_am":
+                data["character_ids"] = {
+                    x.actor.entity: x.actor.incarnation
+                    for x in cast.roles
+                    if x.actor.kind == "pilot"
+                }
+            if clone_followthrough is not None:
+                data["clone_followthrough"] = clone_followthrough
+            if clone_flirt is not None:
+                data["clone_flirt"] = clone_flirt
             if virus_disobey is not None:
                 data["virus_disobey"] = virus_disobey
             if dive is not None:
@@ -660,6 +702,12 @@ class ActorPlayService:
             return continued
         meta = action["data"]["actor_basic"]
         ref = ActorRef.model_validate(meta["ref"])
+        if ref.kind == "clone_am":
+            from girlframe.engine.m3_clone_am import require_play
+            from girlframe.services.m3_clone_am import prove_copy
+
+            prove_copy(self.game, c, state, ref)
+            require_play(ref, action["data"]["play"])
         cast, actors = self.actors(c, state, int(action["channel_id"]), fresh=False)
         actor = next((x for x in actors if x.ref == ref), None)
         source = action["data"].get("tag_context")
@@ -701,7 +749,7 @@ class ActorPlayService:
             or actor is None
             or actor.controller != int(action["actor_id"])
             or not (
-                actor.rules == "handler_girl"
+                actor.rules in ("handler_girl", "clone_am")
                 or actor.ref.kind == "external_pilot"
                 and actor.girl == "harpy"
             )
@@ -754,6 +802,14 @@ class ActorPlayService:
             action["state"] = "awaiting_choices"
             action["data"]["result"]["questions"] = action["data"]["prepared"]["context"]
             self.game.request(c, action, meta["adjudicator_controller"], "harpy_sensor_answers")
+        elif action["data"].get("clone_followthrough"):
+            action["state"] = "awaiting_choices"
+            self.game.request(
+                c,
+                action,
+                action["data"]["clone_followthrough"]["target_controller"],
+                "clone_flirt_followthrough_confirm",
+            )
         elif meta.get("rejection"):
             item = next(x for x in state.obligations if x.id == meta["rejection"])
             if item.state != "pending":
@@ -926,7 +982,11 @@ class ActorPlayService:
         state = state or load_state(c, self.store.campaign_id)
         if intercept_results(self.game, c, state, action):
             return
-        if action["data"].get("virus_disobey"):
+        if action["data"].get("clone_flirt"):
+            from girlframe.services.m3_clone_am_plays import results as clone_results
+
+            clone_results(self.game, c, state, action)
+        elif action["data"].get("virus_disobey"):
             from girlframe.services.m3_virus_orders import actor_results
 
             actor_results(self.game, c, state, action)
@@ -1030,7 +1090,13 @@ class ActorPlayService:
         owner, kind = int(row["actor_id"]), row["kind"]
         body, meta = json.loads(row["body_json"]), action["data"]["actor_basic"]
         judge = meta["adjudicator_controller"]
-        if kind.startswith("virus_disobey_") and action["data"].get("virus_disobey"):
+        if kind.startswith("clone_flirt_") and (
+            action["data"].get("clone_flirt") or action["data"].get("clone_followthrough")
+        ):
+            from girlframe.services.m3_clone_am_plays import respond as clone_respond
+
+            clone_respond(self.game, c, state, action, row, answer)
+        elif kind.startswith("virus_disobey_") and action["data"].get("virus_disobey"):
             from girlframe.services.m3_virus_orders import apply_actor
 
             apply_actor(self.game, c, state, action, row, answer)
@@ -1062,6 +1128,10 @@ class ActorPlayService:
             from girlframe.services.m3_engage import apply as engage_apply
 
             engage_apply(self.game, c, state, action, row, answer)
+        elif action["data"].get("clone_flirt") and kind.startswith("battle_"):
+            from girlframe.services.m3_battle import apply_damage_response
+
+            apply_damage_response(self.game, c, state, action, row, answer)
         elif action["data"].get("engage") and kind.startswith("battle_"):
             from girlframe.services.m3_battle import apply_damage_response
 
@@ -1298,6 +1368,18 @@ class ActorPlayService:
             "channel": int(action["channel_id"]),
             "context": action["data"]["prepared"]["context"],
         }
+        if (action["data"].get("clone_flirt") or action["data"].get("clone_followthrough")) and row[
+            "kind"
+        ].startswith("clone_flirt_"):
+            from girlframe.services.m3_clone_am_plays import projection as clone_projection
+
+            result["clone_flirt"] = clone_projection(self.game, c, state, action, row)
+        if action["data"].get("clone_flirt") and row["kind"].startswith("battle_"):
+            from girlframe.services.m3_battle import damage_projection
+
+            result["battle"] = damage_projection(self.game, c, state, action, row)
+        if row["kind"] == "tag_resolution" and actor.ref.kind == "clone_am":
+            result["copy_identity_cap"] = 1
         if action["data"].get("dive") and row["kind"].startswith("dive_"):
             from girlframe.services.m3_dive import projection
 

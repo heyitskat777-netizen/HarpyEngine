@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from girlframe.engine.identity import Snowflake
 
-Kind = Literal["pilot", "npc", "external_pilot", "gorgon", "handler"]
+Kind = Literal["pilot", "npc", "external_pilot", "gorgon", "handler", "clone_am"]
 
 
 class Model(BaseModel):
@@ -110,7 +110,14 @@ class ActorView(Model):
     label: str
     alive: bool
     rules: Literal[
-        "girl_frame", "npc", "director", "external_pilot", "gorgon", "handler", "handler_girl"
+        "girl_frame",
+        "npc",
+        "director",
+        "external_pilot",
+        "gorgon",
+        "handler",
+        "handler_girl",
+        "clone_am",
     ]
     girl: str | None = None
     frame: str | None = None

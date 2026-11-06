@@ -580,6 +580,25 @@ class InboxService:
                     )
                 )
             for item in canon.obligations:
+                if item.kind == "clone_flirt_followthrough" and item.owner == viewer.user_id:
+                    items.append(
+                        InboxItem(
+                            "clone-followthrough:" + item.id,
+                            "clone_flirt_followthrough",
+                            item.id,
+                            canon.revision,
+                            "plays",
+                            "Clone AM follow-through",
+                            "Original copy owner",
+                            item.state,
+                            item.state == "pending",
+                            False,
+                            "Fulfill the actual interaction with its original partner.",
+                            "The partner confirms the outcome before any Bond changes.",
+                            "Review your copy",
+                            task="m3_clone_am",
+                        )
+                    )
                 if item.kind == "revoked_requisition" and viewer.user_id in (
                     item.owner,
                     item.target,
@@ -823,6 +842,28 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_succubus import SuccubusService
+
+            for request in SuccubusService(GameService(self.store))._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "succubus:" + request["id"],
+                        "succubus_npc_order",
+                        request["id"],
+                        request["revision"],
+                        "playbook",
+                        request["label"],
+                        "Original response owner",
+                        "pending",
+                        True,
+                        False,
+                        "Respond for the actual NPC role.",
+                        "No controller Pilot resources substitute for this recipient.",
+                        "Review original Order",
+                        task="m3_succubus",
+                    )
+                )
+
             from girlframe.services.m3_special_girl import SpecialGirlService
 
             for request in SpecialGirlService(GameService(self.store))._tasks(connection, viewer):
@@ -864,6 +905,28 @@ class InboxService:
                         "The actual source remains bound; no personal kill credit is inferred.",
                         "Review opportunity",
                         task="m3_rebel_leader",
+                    )
+                )
+
+            from girlframe.services.m3_void_retirement import StipendService
+
+            for stipend_offer in StipendService(self.store).available(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "void-retirement:" + stipend_offer["id"],
+                        "void_retirement",
+                        stipend_offer["id"],
+                        canon.revision,
+                        "world",
+                        "Retirement with stipend",
+                        "Affected player",
+                        "pending" if stipend_offer["phase"] == "offered" else "resolved",
+                        stipend_offer["phase"] == "offered",
+                        False,
+                        "Your original Girl owns acceptance or refusal.",
+                        "Acceptance ends this career with a saved archive and stipend.",
+                        "Review private offer",
+                        task="m3_void_retirement",
                     )
                 )
 
@@ -2422,6 +2485,11 @@ class InboxService:
                     and json.loads(work["body_json"]).get("rule_id") == "strain.rebellion.endgame.1"
                 ):
                     primary, task_name = "Identify actual leader opportunity", "m3_rebel_leader"
+                elif (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.void.endgame.4"
+                ):
+                    primary, task_name = "Offer retirement with stipend", "m3_void_retirement"
                 elif kind == "budget_handler_tag" or (
                     kind == "strain_endgame_effect"
                     and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.5"
