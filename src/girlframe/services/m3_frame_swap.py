@@ -14,7 +14,7 @@ from girlframe.engine.creation_catalog import CATALOG
 from girlframe.engine.m2 import GameState, PilotSheet
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import resolve
-from girlframe.engine.m3_frame_swap_state import Selection
+from girlframe.engine.m3_frame_swap_state import Selection, SwapReceipt
 from girlframe.engine.playbooks import FRAME_TYPES
 from girlframe.engine.rules_registry import Registry
 from girlframe.services.m2_state import load_state
@@ -419,6 +419,18 @@ class FrameSwapService(PersonalFirearmService):
                         or accepted["role"] != chosen.court_role
                     ):
                         raise WorkflowError("Recover the exact original external Court acceptance.")
+                from girlframe.engine.m3_clone_am import RULE as CLONE_RULE
+
+                clone_before: GameState | None = None
+                clone_paid = None
+                if chosen.retained_rule == CLONE_RULE:
+                    from girlframe.engine.m3_class_grafts import held as class_held
+                    from girlframe.services.m3_clone_am import prepare_transfer
+
+                    clone_paid = class_held(state, actor, CLONE_RULE)
+                    if clone_paid is None:
+                        raise WorkflowError("Recover the exact original retained Clone source.")
+                    clone_before = prepare_transfer(self.game, c, state, clone_paid)
                 original = PilotSheet.model_validate_json(
                     state.sheets[actor.entity].model_dump_json()
                 )
@@ -438,6 +450,16 @@ class FrameSwapService(PersonalFirearmService):
                 state = exchange_assigned_frame(
                     state, bindings, actor, original, current.cell, event, chosen.account
                 )
+                if clone_before is not None:
+                    from girlframe.engine.m3_clone_residency import transfer
+
+                    assert clone_paid is not None
+                    swap = next(
+                        item
+                        for item in state.requisitions
+                        if isinstance(item, SwapReceipt) and item.id == purchase_id
+                    )
+                    transfer(clone_before, state, clone_paid, swap)
                 body.update(requisition=purchase_id, resolution="actual_paid_exchange_completed")
                 kind = "purchased"
             metadata: dict[str, Any] = dict(plan_id=row["id"])

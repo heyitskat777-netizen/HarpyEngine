@@ -71,6 +71,9 @@ def current(state: GameState, ref: ActorRef) -> CloneAM:
         value.source_event,
     ):
         raise ValueError("Restore the original copy's actual Frame entitlement")
+    from girlframe.engine.m3_clone_residency import residence
+
+    residence(state, ref)
     return value
 
 

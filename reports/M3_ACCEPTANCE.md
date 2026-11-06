@@ -1,5 +1,39 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Retained Clone AM residency — 2026-11-06 UTC
+
+Source extends `6e9be50f441eb702032c8ebbd82b42d2d56fb53c`; exact bytes are retained
+in ignored `var/m3-retained-clone-freeze/manifest.json`. M3 remains **RULES_SUBSET**;
+final regression and independent/player review remain pending.
+
+Actual paid4P delivery transfers the existing artificial person's residency in
+the same transaction. It preserves ActorRef/controller, immutable birth Frame,
+current Identity/marks/Tags/Bonds/shared Heat and obligations. Current actor pose
+and source fingerprint use the proved residence, contained but not piloting.
+The normal completes real native additional-Identity use and Clone Flirt/Bond/chat;
+no new copy, regrant or lifetime reset. **1 passed / 5.621s**,
+`var/m3-retained-clone-am.xml`; planned native/graft/source compatibility
+**3 passed / 8.461s**, `var/m3-retained-clone-am-compat.xml`.
+
+The trace caught an existing Initiative preview crash indexing a Clone UUID as a
+native Pilot. The service now checks the same actual actor types as the engine;
+the copy inherits no Enforcer base ability from its carrier. Final normal and
+compatibility passed after this narrow fix. All **9 changed Python files** pass
+Ruff/format and all **7 changed source modules** pass mypy; that coherent passing
+scope is reused without a redundant rerun. Frozen source hashes are checked.
+
+Metadata: **174 subsets / 301 unimplemented / 313 clarifications**,475 total,
+438 required core,37 deferred,zero independent approvals. Counts are not percentages.
+One same-copy delivery interpretation is adjustable centrally. Home object transfer,
+Harpy repossession and remaining source/body/playbook/Strain/world/shared/lifecycle
+work still block M3.
+
+Preceding checkpoint `6e9be50f441eb702032c8ebbd82b42d2d56fb53c` was pushed,
+with exact remote verified. [Focused CI 42207446607](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42207446607)
+passed; newer source inherits neither that result nor the historical full regression.
+No new full suite, restart/deployment, live migration, environment publication,
+private-engine write, AI/M4 or Ancillary activation; bot stays off.
+
 ## Retained Void Physiotherapist — 2026-11-06 UTC
 
 Source extends `f7a68df08d0371fa5cdf01df2150242bde64816e`; exact bytes are retained

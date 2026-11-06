@@ -24,6 +24,7 @@ RULES = frozenset(
         "frame.class.priestess.appearance-matrix",
         "frame.class.priestess.nightmare-core",
         "frame.class.priestess.void-physiotherapist",
+        "frame.class.autocrat.clone-am",
     )
 )
 

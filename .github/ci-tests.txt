@@ -1,7 +1,7 @@
-# Retained original NPC/Bond -> new-Frame source -> actual NPC-owned treatment,
+# Actual same-copy paid delivery -> native extra Identity -> Clone Flirt/Bond/chat,
 # native/graft compatibility and exact retained source/hardware boundary.
 # Final whole-M3 regression remains a separate candidate check.
-tests/rules/test_retained_physiotherapist.py
-tests/rules/test_physiotherapist.py::test_native_paid_physiotherapist_bond_actual_scene_tag_and_void_removal
-tests/rules/test_physiotherapist_graft.py::test_grafted_physiotherapist_owned_bond_scene_suspension_and_exact_treatment
+tests/rules/test_retained_clone_am.py
+tests/rules/test_clone_am.py::test_native_copy_identity_is_actual_additional_source_in_native_game_and_private_sheet
+tests/rules/test_clone_am.py::test_grafted_copy_real_keep_tag_repeated_in_next_scene_replaces_only_copy_identity
 tests/rules/test_class_retention.py::test_retained_class_requires_true_original_swap_chain_and_keeps_hardware_out

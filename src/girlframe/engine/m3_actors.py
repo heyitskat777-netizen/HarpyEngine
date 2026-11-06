@@ -383,6 +383,7 @@ def _resolve(
     ref = ActorRef.model_validate_json(ref.model_dump_json())
     if ref.kind == "clone_am":
         from girlframe.engine.m3_clone_am import current, owner
+        from girlframe.engine.m3_clone_residency import residence, residence_token
 
         copy = current(state, ref)
         clone_sheet = owner(state, ref)
@@ -393,7 +394,8 @@ def _resolve(
             require_alive=require_alive,
             require_current_profile=require_current_profile,
         )
-        located = frame_position(state, copy.original, copy.frame, fallback=original.frame_cell)
+        current_frame = residence(state, ref)
+        located = frame_position(state, copy.original, current_frame, fallback=original.frame_cell)
         return ActorView(
             ref=ref,
             controller=clone_sheet.owner,
@@ -401,14 +403,16 @@ def _resolve(
             alive=original.alive,
             rules="clone_am",
             frame=clone_sheet.frame,
-            frame_instance=copy.frame,
+            frame_instance=current_frame,
+            inside_frame=True,
+            piloting=False,
             heat=clone_sheet.heat,
             identities=identities((copy.identity,)),
             cell=located,
             frame_cell=located,
             offstage_source=original.offstage_source if located is None else None,
             source_sha256=hashlib.sha256(
-                (fingerprint(copy) + original.source_sha256).encode()
+                (fingerprint(copy) + residence_token(state, ref) + original.source_sha256).encode()
             ).hexdigest(),
         )
     if ref in _physical_seen:

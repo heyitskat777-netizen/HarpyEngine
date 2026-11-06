@@ -9,6 +9,7 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_class_grafts as grafts
 from girlframe.engine import m3_clone_am as rules
+from girlframe.engine import m3_clone_residency as residency
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
@@ -16,12 +17,73 @@ from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
-from girlframe.services.m3_privileges import purchase_proof
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
 if TYPE_CHECKING:
     from girlframe.services.m2_game import GameService
+
+
+def _paid_source(
+    game: "GameService", c: Connection, state: GameState, paid: FrameRuleReceipt
+) -> None:
+    from girlframe.services.m3_class_retention import proof
+
+    _, chain = proof(game, c, state, paid)
+    gate = Access(game.store)
+    assert gate.registry is not None
+    gate.registry.require_available(rules.RULE)
+    if len(chain) > 1:
+        gate.registry.require_available("core.core.frame-requisitions")
+
+
+def _prove_residence(game: "GameService", c: Connection, state: GameState, ref: ActorRef) -> None:
+    history = t.m2["m2_state_history"]
+    for change in residency.transfers(state, ref):
+        source = c.execute(
+            sa.select(t.events.c.seq, t.events.c.kind, t.events.c.actor_id, history.c.body_json)
+            .join(history, history.c.event_id == t.events.c.id)
+            .where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                history.c.campaign_id == game.store.campaign_id,
+                t.events.c.id == change.event,
+            )
+        ).first()
+        if source is None or (source.kind, source.actor_id) != (
+            "m3.frame_swap_purchased",
+            change.original.entity,
+        ):
+            raise WorkflowError("Recover the copy's actual paid residency event")
+        saved = GameState.model_validate_json(source.body_json)
+        if change not in residency.transfers(saved, ref):
+            raise WorkflowError("Recover the original same-copy residence snapshot")
+        previous = c.scalar(
+            sa.select(history.c.body_json)
+            .join(t.events, t.events.c.id == history.c.event_id)
+            .where(
+                history.c.campaign_id == game.store.campaign_id,
+                t.events.c.seq < source.seq,
+            )
+            .order_by(t.events.c.seq.desc())
+            .limit(1)
+        )
+        if previous is None:
+            raise WorkflowError("Recover the actual copy before carrier transfer")
+        from girlframe.engine.m3_frame_swap_state import SwapReceipt
+
+        paid = next(x for x in saved.requisitions if x.id == change.purchase)
+        swap = next(x for x in saved.requisitions if x.id == change.swap)
+        if not isinstance(paid, FrameRuleReceipt) or not isinstance(swap, SwapReceipt):
+            raise WorkflowError("Recover the exact copy's paid transfer receipts")
+        replay = saved.model_copy(deep=True)
+        replay.facts = [
+            x
+            for x in replay.facts
+            if not (x.get("kind") == residency.KIND and x.get("body") == change.model_dump_json())
+        ]
+        residency.transfer(GameState.model_validate_json(previous), replay, paid, swap)
+        if replay != saved:
+            raise WorkflowError("Recover the actual unchanged copy and delivered carrier")
 
 
 def prove_copy(game: "GameService", c: Connection, state: GameState, ref: ActorRef) -> None:
@@ -32,7 +94,7 @@ def prove_copy(game: "GameService", c: Connection, state: GameState, ref: ActorR
     gate = Access(game.store)
     assert gate.registry is not None
     gate.registry.require_available(rules.RULE)
-    purchase_proof(c, game.store, receipt)
+    _paid_source(game, c, state, receipt)
     raw = c.scalar(
         sa.select(t.m2["m2_state_history"].c.body_json).where(
             t.m2["m2_state_history"].c.campaign_id == game.store.campaign_id,
@@ -60,6 +122,19 @@ def prove_copy(game: "GameService", c: Connection, state: GameState, ref: ActorR
     )
     if latest is None or rules.find(GameState.model_validate_json(latest), ref) != value:
         raise WorkflowError("Recover the copy's actual saved Identity, marks and Tags")
+    _prove_residence(game, c, state, ref)
+
+
+def prepare_transfer(
+    game: "GameService", c: Connection, state: GameState, paid: FrameRuleReceipt
+) -> GameState:
+    if paid.rule_id != rules.RULE or grafts.held(state, paid.actor, rules.RULE) != paid:
+        raise WorkflowError("Transfer only the actual held original Clone AM source")
+    copies = tuple(x for x in rules.copies(state) if x.receipt == paid.id)
+    if len(copies) != 1:
+        raise WorkflowError("Recover the one actual existing copy before transfer")
+    prove_copy(game, c, state, copies[0].ref)
+    return state.model_copy(deep=True)
 
 
 def prove_additional(
@@ -85,7 +160,7 @@ def entitlement(
         gate.registry.require_available(rules.RULE)
     except ValueError:
         return None
-    purchase_proof(c, game.store, receipt)
+    _paid_source(game, c, state, receipt)
     return receipt
 
 
@@ -162,7 +237,8 @@ class CloneService:
                     for x in state.actor_bonds
                     if value.ref in (x.first, x.second)
                 ],
-                frame=value.frame,
+                frame=residency.residence(state, value.ref),
+                birth_frame=value.frame,
                 cell=actual.cell,
             )
 
@@ -181,6 +257,20 @@ class CloneService:
                 return dict(available=False)
             self.game.character_binding(c, state, viewer.user_id)
             receipt = entitlement(self.game, c, state, actor)
+            acquired = next(
+                (
+                    x
+                    for x in state.requisitions
+                    if isinstance(x, FrameRuleReceipt)
+                    and x.actor == actor
+                    and x.rule_id == rules.RULE
+                    and grafts.eligible(state, x)
+                ),
+                None,
+            )
+            from girlframe.engine.m3_class_retention import binding
+
+            chain = binding(state, acquired)[1] if acquired is not None else ()
             return dict(
                 available=True,
                 revision=state.revision,
@@ -190,14 +280,7 @@ class CloneService:
                 kind=kind,
                 price=price,
                 donors=list(grafts.donors(rules.RULE)) if kind == "frame_grafting" else [],
-                suspended=any(
-                    isinstance(x, FrameRuleReceipt)
-                    and x.actor == actor
-                    and x.rule_id == rules.RULE
-                    and grafts.eligible(state, x)
-                    and suspended(state, x.id)
-                    for x in state.requisitions
-                ),
+                suspended=any(suspended(state, identity) for identity in chain),
                 owned=receipt is not None,
                 receipt=receipt.id if receipt else None,
             )
@@ -242,8 +325,8 @@ class CloneService:
             if any(
                 isinstance(x, FrameRuleReceipt)
                 and x.actor == actor
-                and x.frame_instance == frame
                 and x.rule_id == rules.RULE
+                and grafts.eligible(state, x)
                 for x in state.requisitions
             ):
                 raise WorkflowError("Restore the original paid entitlement instead of buying twice")

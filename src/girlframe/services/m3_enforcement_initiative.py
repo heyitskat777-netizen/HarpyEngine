@@ -46,6 +46,8 @@ def _low_options(
 
 
 def _prove_harpy(c: Connection, game: "GameService", state: GameState, actor: ActorRef) -> None:
+    if actor.kind not in ("pilot", "external_pilot"):
+        raise WorkflowError("Initiative requires its actual original Pilot or Harpy source.")
     from girlframe.services.m3_enforcer_requisitions import owned
 
     if actor.kind == "external_pilot":

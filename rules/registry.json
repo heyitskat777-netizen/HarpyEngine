@@ -5204,6 +5204,22 @@
       "revision": 1,
       "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review. Missing PR formats/NPC moves/capture sources remain required separate ports.",
       "change_impact": "Saved facts remain truthful, cap/mark stay strict, and later claim cannot duplicate a criterion or resource effect."
+    },
+    {
+      "id": "retained-clone-same-copy-residency",
+      "summary": "Paid retained Clone rule transfers the existing artificial person into actually delivered replacement Frame, using a real source-attributed residency fact; immutable birth Frame remains history.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF92/printed90 Clone AM; PDF16/printed14 Frame Swap",
+      "authority": "delegated_recommendation",
+      "rationale": "Retaining the contained artificial person requires actual current residency while preserving original birth and ongoing source identity.",
+      "alternatives": [
+        "Leave clone in parked Frame while granting remote duplicate capability, spawn fresh Perfect Copy, or block all retention indefinitely."
+      ],
+      "policy_key": "retained_clone_same_copy_residency",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable interpretation requiring printed-rule clarity review. Applies only to exact source-proved paid delivery, not generic person/carrier movement.",
+      "change_impact": "Printed contains requires genuine carrier, while paid rule retention provides continuing same ability. Explicit same-person transfer preserves identity/history/resources without copying a person or inventing a lifetime reset; adjustable printed clarity review."
     }
   ],
   "entries": [
@@ -5633,7 +5649,8 @@
         "tests/rules/test_retained_modular.py",
         "tests/rules/test_retained_appearance_matrix.py",
         "tests/rules/test_retained_nightmare.py",
-        "tests/rules/test_retained_physiotherapist.py"
+        "tests/rules/test_retained_physiotherapist.py",
+        "tests/rules/test_retained_clone_am.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -10672,19 +10689,22 @@
           "One sole separate replaceable copy Identity usable by original owner; native cap and marks preserved",
           "Actual copy Keep/Tags/repeated-Tag resolution and Flirt tiers with real Bond follow-through",
           "Real high escape Asset/Helplessness/child Play and original Handler consequences",
-          "Copy cannot Dive; genuine original-owner all-Identity Dive reset includes eligible copy"
+          "Copy cannot Dive; genuine original-owner all-Identity Dive reset includes eligible copy",
+          "Finite retained Clone records one same-copy residency transfer at actual paid4P delivery. Actor/controller, birth source, current Identity/marks/Tags/Bonds/shared Heat and obligations persist; current Frame/position use proved residence. Actual native extraIdentity and clone Flirt/Bond/chat consumers complete. No copy/regrant/lifetime reset or unowned Enforcer ability."
         ],
         "mandatory_followups": [
           "Actual Tag rejection/follow-through, required escape damage/child and Handler work retain source until completion"
         ],
         "handler_or_gm_intervention": "Actual human source owners; unsupported actor/source/lifecycle adapters remain explicit gaps.",
         "test_fixture_ids": [
-          "tests/rules/test_clone_am.py"
+          "tests/rules/test_clone_am.py",
+          "tests/rules/test_retained_clone_am.py"
         ]
       },
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_clone_am.py"
+        "tests/rules/test_clone_am.py",
+        "tests/rules/test_retained_clone_am.py"
       ],
       "m2_play_id": null,
       "module": "core",

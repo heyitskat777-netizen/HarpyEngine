@@ -1,6 +1,13 @@
 # M3 remaining work — verified development snapshot
 
-Newest bounded addition: **retained Void Physiotherapist**, preserving the original
+Newest bounded addition: **retained Clone AM same-copy residency**, completing actual
+paid delivery, native additional-Identity use and Clone Flirt/Bond/chat. Source
+evidence is at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md). Metadata:
+**313 clarifications / 174 subsets / 301 unimplemented**; no percentage or M3-ready
+claim. Home object transfer and actual Harpy repossession are next; remaining
+source/body/playbook/Strain/world/shared/lifecycle work still blocks M3. Bot off.
+
+Previous bounded addition: **retained Void Physiotherapist**, preserving the original
 NPC/Bond through Swap and finishing actual NPC-owned Off-Duty treatment. Evidence
 is at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md). Metadata remains
 **312 clarifications / 174 subsets / 301 unimplemented**; no percentage or M3-ready
