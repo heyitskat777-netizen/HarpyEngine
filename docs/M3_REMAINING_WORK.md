@@ -1,18 +1,22 @@
 # M3 remaining work — verified development snapshot
 
-Newest bounded additions: **Cute Uniforms acquisition, actual dressing, Keep,
-Tag/embrace/rejection/Punishment completion; retained Untouchable after paid Swap**.
-Actual source evidence is at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md).
-Registry: **170 subsets / 303 unimplemented / 296 adjustable clarifications**;
+Newest bounded additions: **Girl Insurance actual death/Budget effect, real
+storage return and next-Strain exclusion; retained Martyr actual death/archive,
+original-human memorial and source relief**. Actual source evidence is at the top
+of [M3 acceptance](../reports/M3_ACCEPTANCE.md).
+Registry: **171 subsets / 302 unimplemented / 300 adjustable clarifications**;
 M3 remains **IN_PROGRESS / RULES_SUBSET**, bot off.
 
-Next source contract: retained Martyr through actual death and original-owner
-memorial. Other advancements, ordinary session/accomplishment award producers,
-other retained Class/hardware, temporary/clothing-container transitions and
-unported Asset/actor/lifecycle sources remain required. Remaining playbooks,
-shared rules, Strain/Endgames, world consumers, source reconciliation and final
-integrated checks still block M3. Production source/destination review remains
-enforced; synthetic fixtures do not certify it. Counts are not percentages.
+Next finite source contract: retained Succubus Orders. Other advancements,
+ordinary session/accomplishment award producers, other retained Class/hardware,
+temporary/clothing-container transitions and unported Asset/actor/lifecycle sources
+remain required. Remaining playbooks, shared rules, Strain/Endgames, world
+consumers, source reconciliation and final integrated checks still block M3.
+Production source/destination review remains enforced; synthetic fixtures do not
+certify it. Counts are not percentages.
+
+Previous bounded additions: Cute Uniforms acquisition/dressing/Keep/Tag/discipline
+and retained Untouchable.
 
 Previous bounded additions: full normal Supply Drop repair/delivery/expiry,
 actual per-player Budget Asset removals and retained Kicked Puppy.

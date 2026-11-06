@@ -16,6 +16,7 @@ RULES = frozenset(
         "frame.class.legion.dampener-link",
         "frame.class.legion.kicked-puppy",
         "frame.class.autocrat.untouchable-frame",
+        "frame.class.autocrat.martyr",
     )
 )
 

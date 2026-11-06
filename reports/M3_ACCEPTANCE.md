@@ -1,5 +1,43 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Girl Insurance and retained Martyr — 2026-11-06 UTC
+
+Source extends `59da895486855ccd7a08b91e2077424524567d72`. Exact public bytes
+are retained in ignored `var/m3-insurance-martyr-freeze/manifest.json`.
+M3 remains **RULES_SUBSET**; final regression and independent/player review are pending.
+
+| Workflow | Actual focused evidence and supported boundary |
+|---|---|
+| Girl Insurance | Genuine held-award acquisition -> actual original Girl death/Execution -> one immutable consumption. Budget High becomes Low; Low stays Low. The High trace returns an actually stored original Frame through the existing owned endpoint, without moving bodies or altering resources. The Low trace reopens original History and the native factual review, then actually prepares the next Low Budget roll with only that proved death exempt. Both expected traces **2 passed / 10.40s**, command/evidence in ignored `var/m3-girl-insurance-handoff.json`. Actual effects create History rather than acknowledgment debt. Prevented death, retirement and conversion are not triggers; other actor and unordered mass-death sources remain explicit gaps. |
+| Retained Martyr | Actual native2P acquisition -> real4P Swap -> genuine piloting, damage and low-result Defeat death -> actual archive/new death Frame and Low Budget/Rebellion -> original-human memorial and saved private reopening -> source storage relief proof and next Strain exclusion. **1 passed / 3.785s**, `var/m3-retained-martyr.xml`; existing native/graft/source-hardware compatibility **3 passed / 2.992s**, `var/m3-retained-martyr-compat.xml`. Original paid receipt stays immutable; historical proof does not require a living successor. Only Dampener, Kicked Puppy, Untouchable and Martyr are admitted to the finite retained allowlist. |
+
+All **19 changed Python files**, including shared interfaces and three tests,
+pass Ruff/format; all **16 changed production modules** pass mypy. The canonical
+event hook runs Insurance after Doctor prevention and Martyr. Actual original
+sources are independently preserved. Budget-storage reduction validates the real
+retained Martyr chain or exact Insurance event. Strain exempts only proved deaths;
+independent Severe Punishments and other Budget causes still count.
+
+Development corrected test setup rather than gameplay: Martyr death uses the
+printed low Defeat result; Insurance selects the actual unstored subject and
+completes separate ordinary Dog discipline. No required work was waived.
+
+Publishable check: **1,081 files / 40 original manifest entries / zero findings**.
+
+Four adjustable Insurance interpretations are recorded centrally: **300
+clarifications, 171 subsets / 302 unimplemented entries**, zero independent
+approvals. Counts are inventory, not percentages. Next finite contract covers
+retained Succubus Orders. Other advancements/ordinary award producers, remaining
+playbooks/Strain/world/shared/lifecycle and retained hardware still block M3.
+Missing implementations remain required work, not campaign rulings.
+
+Preceding checkpoint `59da895486855ccd7a08b91e2077424524567d72` was pushed and
+its exact remote SHA verified. [Focused CI 42188790788](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42188790788)
+passed all executed steps; final full regression was skipped. This newer source
+does not inherit that result or the historical 2,200-test full regression.
+No new full regression, bot restart/deployment, live migration, environment
+publication, private-engine write, AI/M4 or Ancillary activation; bot remains off.
+
 ## Cute Uniforms and retained Untouchable — 2026-11-06 UTC
 
 Source extends `cd4ec147f7aa819ec47e56793c0cb45d65b90ba8`. Exact public bytes

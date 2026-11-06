@@ -25,6 +25,8 @@ async def open_advancement(
             + (
                 "Cute Uniforms"
                 if data["acquired_rule"].endswith("cute-uniforms")
+                else "Girl Insurance"
+                if data["acquired_rule"].endswith("girl-insurance")
                 else "Supply Drop"
             )
             + ". Its original acquisition source is saved; open the acquired rule to use it.",
@@ -120,6 +122,7 @@ async def open_advancement(
     )
     form.add_item(AcquireSupplyDrop(form, service))
     form.add_item(AcquireCuteUniforms(form, service))
+    form.add_item(AcquireGirlInsurance(form, service))
     await form.present(interaction)
 
 
@@ -198,3 +201,17 @@ class AcquireCuteUniforms(discord.ui.Button[NativeForm]):
         from girlframe.services.m3_cute_uniforms import CuteUniformService
 
         await open_uniforms(interaction, CuteUniformService(self.service.store))
+
+
+class AcquireGirlInsurance(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService):
+        super().__init__(label="Acquire Girl Insurance instead", row=3)
+        self.form, self.service = form, service
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_girl_insurance import open_insurance
+        from girlframe.services.m3_girl_insurance import GirlInsuranceService
+
+        await open_insurance(interaction, GirlInsuranceService(self.service.store))

@@ -17,13 +17,26 @@ from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
-from girlframe.services.m3_privileges import purchase_proof
 from girlframe.services.m3_work import related
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
 if TYPE_CHECKING:
     from girlframe.services.m2_game import GameService
+
+
+def _paid_source(
+    game: "GameService", c: Connection, state: GameState, receipt: FrameRuleReceipt
+) -> None:
+    from girlframe.services.m3_class_retention import proof
+
+    gate = Access(game.store)
+    if gate.registry is None:
+        raise WorkflowError("Recover the original Martyr source before this death")
+    gate.registry.require_available(rules.RULE)
+    _, chain = proof(game, c, state, receipt)
+    if len(chain) > 1:
+        gate.registry.require_available("core.core.frame-requisitions")
 
 
 def prepare(
@@ -35,11 +48,7 @@ def prepare(
         receipt = rules.held(previous, archive.actor)
         if receipt is None:
             continue
-        gate = Access(game.store)
-        if gate.registry is None:
-            raise WorkflowError("Recover the original Martyr source before this death")
-        gate.registry.require_available(rules.RULE)
-        purchase_proof(c, game.store, receipt)
+        _paid_source(game, c, previous, receipt)
         rules.trigger(state, archive, receipt)
 
 
@@ -95,7 +104,7 @@ class MartyrService:
             self.game.character_binding(c, state, viewer.user_id)
             receipt = rules.held(state, actor)
             if receipt:
-                purchase_proof(c, self.store, receipt)
+                _paid_source(self.game, c, state, receipt)
             return dict(
                 available=True,
                 revision=state.revision,
@@ -158,8 +167,8 @@ class MartyrService:
             if any(
                 isinstance(x, FrameRuleReceipt)
                 and x.actor == actor
-                and x.frame_instance == frame
                 and x.rule_id == rules.RULE
+                and grafts.eligible(state, x)
                 for x in state.requisitions
             ):
                 raise WorkflowError(
@@ -242,7 +251,11 @@ class MartyrService:
         ):
             raise WorkflowError("Recover the actual immutable paid Martyr death and archive")
         receipt = next(x for x in original.requisitions if x.id == value.purchase)
-        purchase_proof(c, self.store, receipt)
+        from girlframe.services.m3_class_retention import proof
+
+        if not isinstance(receipt, FrameRuleReceipt):
+            raise WorkflowError("Recover the original paid Martyr acquisition")
+        proof(self.game, c, original, receipt)
         work = t.m3["m3_required_work"]
         row = (
             c.execute(

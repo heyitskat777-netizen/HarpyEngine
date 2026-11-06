@@ -223,6 +223,9 @@ class StrainService:
                 or 0
             )
             martyr_deaths = []
+            insured_deaths = []
+            from girlframe.services.m3_girl_insurance import verify_exclusion
+
             for archive in state.career_archives:
                 if archive.actor.kind != "pilot" or archive.ending not in ("death", "execution"):
                     continue
@@ -234,13 +237,17 @@ class StrainService:
                 )
                 if actual_seq is None or actual_seq <= prior_preparation:
                     continue
-                if budget_death_excluded(state, archive.source_event) and any(
+                martyr = budget_death_excluded(state, archive.source_event) and any(
                     x.archive == archive.id and x.actor == archive.actor for x in episodes(state)
-                ):
+                )
+                insured = verify_exclusion(self.game, c, state, archive.source_event, archive.id)
+                if martyr:
                     martyr_deaths.append(archive.id)
-                elif not facts.girl_death_or_severe:
+                if insured:
+                    insured_deaths.append(archive.id)
+                if not (martyr or insured) and not facts.girl_death_or_severe:
                     raise WorkflowError(
-                        "An actual non-Martyr Girl death requires the Budget death/severe fact"
+                        "An actual non-exempt Girl death requires the Budget death/severe fact"
                     )
             if facts.last_mission_success_no_frame_death_infrastructure_loss:
                 history = t.m3["m3_mission_history"]
@@ -275,6 +282,7 @@ class StrainService:
                 period_id=period_id,
                 levels=dict(state.strain.levels),
                 martyr_budget_deaths=martyr_deaths,
+                insured_budget_deaths=insured_deaths,
             )
             updated = clone_period(period)
             updated.revision += 1
@@ -525,7 +533,49 @@ class StrainService:
                 )
                 for uid in state.order
             )
+            from girlframe.engine.m2 import PilotSheet
+            from girlframe.engine.m3_martyr import budget_death_excluded, episodes
+            from girlframe.services.m3_girl_insurance import verify_exclusion
+
+            prior = (
+                c.scalar(
+                    sa.select(sa.func.max(t.events.c.seq)).where(
+                        t.events.c.campaign_id == self.store.campaign_id,
+                        t.events.c.kind == "m3.strain_start_prepared",
+                    )
+                )
+                or 0
+            )
+            exemptions = []
+            for archive in state.career_archives:
+                if archive.ending not in ("death", "execution"):
+                    continue
+                sequence = c.scalar(
+                    sa.select(t.events.c.seq).where(
+                        t.events.c.campaign_id == self.store.campaign_id,
+                        t.events.c.id == archive.source_event,
+                    )
+                )
+                if sequence is None or sequence <= prior:
+                    continue
+                sources = []
+                if budget_death_excluded(state, archive.source_event) and any(
+                    x.archive == archive.id and x.actor == archive.actor for x in episodes(state)
+                ):
+                    sources.append("Martyr")
+                if verify_exclusion(self.game, c, state, archive.source_event, archive.id):
+                    sources.append("Girl Insurance")
+                if sources:
+                    exemptions.append(
+                        dict(
+                            id=archive.id,
+                            label=PilotSheet.model_validate_json(archive.sheet_json).callsign
+                            + " — "
+                            + " + ".join(sources),
+                        )
+                    )
             return {
+                "budget_death_exemptions": exemptions,
                 **{k: row[k] for k in ("id", "revision", "kind", "state", "off_duty_id")},
                 "body": json.loads(row["body_json"]),
                 "game_revision": state.revision,

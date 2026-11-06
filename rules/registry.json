@@ -4930,6 +4930,74 @@
       "revision": 1,
       "implementation_note": "Adjustable interpretation requiring printed-rule clarity review. Unsupported actor/hardware/container ports remain required implementation work.",
       "change_impact": "No invented last-Asset consequence or duplicate Asset grant; re-embracing a no-longer-owned previously installed Asset fails rather than reinstalling it. Clothing/container clarity review remains."
+    },
+    {
+      "id": "girl-insurance-clarity-1",
+      "summary": "High becomes Low immediately on real insured death; Low remains Low. Engine/book have exactly two levels. Preserve already committed table outcomes/dice and their immutable request provenance; do not reroll prior High rolls.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF157 / printed155 Girl Insurance; actual Strain triggers and lifecycle sources",
+      "authority": "delegated_recommendation",
+      "rationale": "Reduce High Budget: preserve the printed actual-death trigger and exact single source effect.",
+      "alternatives": [
+        "Delay all effect until next Off-Duty start.",
+        "Rewrite already rolled High result as Low."
+      ],
+      "policy_key": "girl_insurance_clarity_1",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable interpretation requiring printed-rule clarity review. Missing actor/source adapters remain implementation work.",
+      "change_impact": "Real current severity change and actual release proof, no lost known result. Printed-rule clarity review."
+    },
+    {
+      "id": "girl-insurance-clarity-2",
+      "summary": "Actual current Cadre Girl death, including execution, in original current actor roster at death; not original Handler/NPC proxies, retirement, conversion, or Doctor-prevented death. Actual Martyr death still consumes next-death insurance even if Martyr independently excludes Budget; preserve both sources.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF157 / printed155 Girl Insurance; actual Strain triggers and lifecycle sources",
+      "authority": "delegated_recommendation",
+      "rationale": "Which actual death: preserve the printed actual-death trigger and exact single source effect.",
+      "alternatives": [
+        "Consume on attempted or prevented death.",
+        "Save insurance whenever another death protection already affected Budget."
+      ],
+      "policy_key": "girl_insurance_clarity_2",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable interpretation requiring printed-rule clarity review. Missing actor/source adapters remain implementation work.",
+      "change_impact": "Matches actual dies trigger and finite single consumption; preserves source ownership. Printed-rule clarity review."
+    },
+    {
+      "id": "girl-insurance-clarity-3",
+      "summary": "Exclude only exact proved insured archive from canonical death requirement, as existing Martyr source exclusion does. Never force combined girl_death_or_severe false or clear unrelated canonical triggers; actual independent severe punishment remains a genuine reason for High.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF157 / printed155 Girl Insurance; actual Strain triggers and lifecycle sources",
+      "authority": "delegated_recommendation",
+      "rationale": "Combined death/severe factual review: preserve the printed actual-death trigger and exact single source effect.",
+      "alternatives": [
+        "Globally suppress entire combined death/severe field.",
+        "Let insured death force High again next period."
+      ],
+      "policy_key": "girl_insurance_clarity_3",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable interpretation requiring printed-rule clarity review. Missing actor/source adapters remain implementation work.",
+      "change_impact": "Insurance actually protects that death without erasing independent printed causes. Existing factual review remains human-owned."
+    },
+    {
+      "id": "girl-insurance-clarity-4",
+      "summary": "One advancement insures one actual next Girl death. Use genuine canonical source archive ordering when producer has a real order; another uninsured actual death still contributes. A truly unordered mass-death producer needs a narrow real ordering choice before consumption rather than invented actor priority.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF157 / printed155 Girl Insurance; actual Strain triggers and lifecycle sources",
+      "authority": "delegated_recommendation",
+      "rationale": "Simultaneous actual deaths: preserve the printed actual-death trigger and exact single source effect.",
+      "alternatives": [
+        "Insure every death in one bulk event.",
+        "Choose by user id or role hierarchy."
+      ],
+      "policy_key": "girl_insurance_clarity_4",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable interpretation requiring printed-rule clarity review. Missing actor/source adapters remain implementation work.",
+      "change_impact": "No unprinted blanket cancellation or fake ordering; source-specific unordered producer remains an explicit gap if encountered, no matrix."
     }
   ],
   "entries": [
@@ -5351,7 +5419,8 @@
         "tests/rules/test_installation_history.py",
         "tests/rules/test_class_retention.py",
         "tests/rules/test_retained_kicked_puppy.py",
-        "tests/rules/test_retained_untouchable.py"
+        "tests/rules/test_retained_untouchable.py",
+        "tests/rules/test_retained_martyr.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -10466,7 +10535,8 @@
       "test_evidence": [
         "tests/rules/test_martyr.py",
         "tests/rules/test_class_privileges.py",
-        "tests/rules/test_class_grafts.py"
+        "tests/rules/test_class_grafts.py",
+        "tests/rules/test_retained_martyr.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -16168,14 +16238,48 @@
         "heading": "Girl Insurance"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Genuine held-award acquisition followed by actual next original Cadre Girl death/execution",
+        "actor_type": "Original current Handler and actual original Cadre Girl at death",
+        "pre_roll_sources": [
+          "Exact award, original Handler/persona/appointment and acquisition event",
+          "Actual canonical death archive and original source event after Doctor prevention",
+          "Real current Budget before/after and immutable source history"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "normal": [
+            "Budget High becomes Low; Budget Low remains Low",
+            "Insurance consumes once against exactly one actual death",
+            "Exact proved insured death is excluded at next ordinary Budget preparation"
+          ]
+        },
+        "choice_ownership": "Original Handler acquires; existing printed owners determine actual death, storage return and factual Strain review",
+        "target_policy": "Actual original Girl in source Cadre; no attempted/prevented death, retirement, conversion, Handler/NPC aliases or unordered mass-death inference",
+        "post_roll_effects": [
+          "Actual single consumption and real Budget effect preserve source/archive/known outcomes",
+          "Exact insured death cannot re-raise Budget next preparation; independent severe punishments and other Budget causes remain",
+          "Genuine High-to-Low source permits existing Budget-storage return consumer"
+        ],
+        "mandatory_followups": [
+          "Actual storage and Strain consumers must validate exact original event/history",
+          "Automatic effect creates History, not acknowledgment debt; other actor/mass-death adapters remain implementation work"
+        ],
+        "handler_or_gm_intervention": "Actual original Handler buys the source; factual preparation remains human-owned and cannot waive independent printed causes",
+        "test_fixture_ids": [
+          "tests/rules/test_girl_insurance.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_girl_insurance.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

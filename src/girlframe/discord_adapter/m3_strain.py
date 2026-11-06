@@ -24,7 +24,7 @@ FACT_LABELS = {
     "rebel_handler_killed": "Was a rebel Handler killed?",
     "rebel_pilot_captured_and_broken": "Was a rebel Pilot captured and broken?",
     "structure_destroyed": "Was a city, base or major structure destroyed?",
-    "girl_death_or_severe": "Any Girl deaths or Severe Punishments besides proved Martyr deaths?",
+    "girl_death_or_severe": ("Any non-exempt Girl deaths or independent Severe Punishments?"),
     "frame_full_or_all_frames_some_repairs": (
         "Did one Frame need full repairs, or every Frame some repair?"
     ),
@@ -116,6 +116,14 @@ async def open_work(
             "Current Void Assets are checked automatically against canon. "
             "This queues three actual d6 rolls; it does not select their columns."
         )
+
+        exemptions = data.get("budget_death_exemptions", ())
+        if exemptions:
+            instructions += (
+                " Proved source exemptions apply only to these actual deaths: "
+                + "; ".join(str(value["label"]) for value in exemptions)
+                + ". Independent Severe Punishments and other Budget causes still count."
+            )
 
         async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
             if not set(FACT_LABELS) <= set(values):

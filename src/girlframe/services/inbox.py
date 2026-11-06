@@ -842,6 +842,28 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_girl_insurance import GirlInsuranceService
+
+            for insurance_control in GirlInsuranceService(self.store)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "girl-insurance:" + insurance_control["id"],
+                        "girl_insurance",
+                        insurance_control["id"],
+                        insurance_control["revision"],
+                        "playbook",
+                        insurance_control["label"],
+                        "Actual original Handler",
+                        "established",
+                        False,
+                        False,
+                        "Review the acquired insurance and its actual death/Budget effect.",
+                        "Automatic source effects create no acknowledgment debt.",
+                        "Review insurance",
+                        task="m3_girl_insurance",
+                    )
+                )
+
             from girlframe.services.m3_cute_uniforms import CuteUniformService
 
             for uniform_control in CuteUniformService(self.store)._tasks(connection, viewer):

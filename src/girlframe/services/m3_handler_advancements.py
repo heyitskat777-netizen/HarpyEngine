@@ -169,6 +169,7 @@ class HandlerAdvancementService:
                         "Recover this actual consumed advancement and group effects"
                     )
                 if value.acquired_rule is not None:
+                    receipts: tuple[Any, ...]
                     if (
                         value.acquired_rule
                         == "handler-advancement.handler-advancement.cute-uniforms"
@@ -176,17 +177,23 @@ class HandlerAdvancementService:
                         from girlframe.engine.m3_cute_uniforms import (
                             acquisitions as uniform_acquisitions,
                         )
+
+                        receipts = uniform_acquisitions(spent)
+                    elif (
+                        value.acquired_rule
+                        == "handler-advancement.handler-advancement.girl-insurance"
+                    ):
+                        from girlframe.engine.m3_girl_insurance import (
+                            acquisitions as insurance_acquisitions,
+                        )
+
+                        receipts = insurance_acquisitions(spent)
                     else:
                         from girlframe.engine.m3_supply_drop import (
                             acquisitions as drop_acquisitions,
                         )
 
-                    receipts: tuple[Any, ...] = (
-                        uniform_acquisitions(spent)
-                        if value.acquired_rule
-                        == "handler-advancement.handler-advancement.cute-uniforms"
-                        else drop_acquisitions(spent)
-                    )
+                        receipts = drop_acquisitions(spent)
                     receipt = next((x for x in receipts if x.id == value.acquisition), None)
                     if (
                         receipt is None

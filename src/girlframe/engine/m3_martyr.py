@@ -58,6 +58,29 @@ def held(state: GameState, actor: ActorRef) -> FrameRuleReceipt | None:
     return acquired(state, actor, RULE)
 
 
+def _death_frame(state: GameState, archive: CareerArchive, purchase: FrameRuleReceipt) -> str:
+    from girlframe.engine.m3_class_grafts import sheet_eligible
+    from girlframe.engine.m3_class_retention import binding
+
+    original = PilotSheet.model_validate_json(archive.sheet_json)
+    frame = (
+        original.frame_runtime.id
+        if original.frame_runtime
+        else "initial:" + str(archive.actor.incarnation)
+    )
+    assigned, chain = binding(state, purchase)
+    if (
+        archive.actor != purchase.actor
+        or str(original.owner) != archive.actor.entity
+        or original.character_id != archive.actor.incarnation
+        or frame != assigned
+        or len(chain) == 1
+        and not sheet_eligible(original, purchase)
+    ):
+        raise ValueError("Recover the original dead Girl's actual paid Frame source")
+    return frame
+
+
 def trigger(state: GameState, archive: CareerArchive, purchase: FrameRuleReceipt) -> Martyr:
     if (
         archive not in state.career_archives
@@ -67,6 +90,7 @@ def trigger(state: GameState, archive: CareerArchive, purchase: FrameRuleReceipt
         or state.strain is None
     ):
         raise ValueError("Martyr needs its actual paid original death and existing Strain")
+    frame = _death_frame(state, archive, purchase)
     identity = str(uuid5(NAMESPACE_URL, "girlframe:martyr:" + archive.id + ":" + purchase.id))
     existing = next((x for x in episodes(state) if x.id == identity), None)
     if existing:
@@ -77,7 +101,7 @@ def trigger(state: GameState, archive: CareerArchive, purchase: FrameRuleReceipt
     value = Martyr(
         id=identity,
         actor=archive.actor,
-        frame=purchase.frame_instance,
+        frame=frame,
         purchase=purchase.id,
         archive=archive.id,
         source_event=archive.source_event,
@@ -117,17 +141,11 @@ def budget_death_excluded(state: GameState, source_event: str) -> bool:
             or receipt is None
             or receipt.actor != value.actor
             or receipt.rule_id != RULE
-            or receipt.frame_instance != value.frame
         ):
             continue
-        original = PilotSheet.model_validate_json(archive.sheet_json)
-        frame = (
-            original.frame_runtime.id
-            if original.frame_runtime
-            else "initial:" + str(value.actor.incarnation)
-        )
-        from girlframe.engine.m3_class_grafts import sheet_eligible
-
-        if frame == value.frame and sheet_eligible(original, receipt):
-            return True
+        try:
+            if _death_frame(state, archive, receipt) == value.frame:
+                return True
+        except (ValueError, KeyError):
+            continue
     return False

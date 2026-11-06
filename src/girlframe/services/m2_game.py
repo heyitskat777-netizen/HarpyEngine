@@ -155,6 +155,12 @@ class GameService:
                 from girlframe.services.m3_martyr import prepare as prepare_martyr
 
                 prepare_martyr(self, c, previous_state, state, event)
+            if any(
+                fact.get("kind") == "girl_insurance_acquisition" for fact in previous_state.facts
+            ):
+                from girlframe.services.m3_girl_insurance import prepare as prepare_insurance
+
+                prepare_insurance(self, c, previous_state, state, event)
             if state.neural_connections:
                 from girlframe.engine.m3_frame_control import prepare_endings as end_neural_sources
 

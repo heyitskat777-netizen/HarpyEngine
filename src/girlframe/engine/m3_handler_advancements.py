@@ -50,6 +50,7 @@ class Award(Model):
         Literal[
             "handler-advancement.handler-advancement.supply-drop",
             "handler-advancement.handler-advancement.cute-uniforms",
+            "handler-advancement.handler-advancement.girl-insurance",
         ]
         | None
     ) = Field(default=None, exclude_if=lambda value: value is None)

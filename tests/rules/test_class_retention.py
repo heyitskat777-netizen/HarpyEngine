@@ -332,6 +332,7 @@ def test_retained_class_requires_true_original_swap_chain_and_keeps_hardware_out
         dampener.RULE,
         "frame.class.legion.kicked-puppy",
         "frame.class.autocrat.untouchable-frame",
+        "frame.class.autocrat.martyr",
     }
     with ledger.engine.connect() as c:
         assert "frame.class.autocrat.clone-am" not in swap_rules.retained_rules(

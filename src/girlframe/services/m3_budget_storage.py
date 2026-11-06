@@ -80,7 +80,8 @@ class StorageService:
 
     def _reduction(self, c: Connection, source_event: str) -> str | None:
         from girlframe.engine import m3_martyr
-        from girlframe.services.m3_privileges import purchase_proof
+        from girlframe.services.m3_class_retention import proof
+        from girlframe.services.m3_girl_insurance import prove_reduction
 
         previous = None
         after_source = False
@@ -96,6 +97,8 @@ class StorageService:
                 and previous.strain.levels["budget"] == "high"
                 and actual.strain.levels["budget"] == "low"
             ):
+                if prove_reduction(self.game, c, previous, actual, str(row["id"])):
+                    return str(row["id"])
                 if row["kind"] == "m3.strain_start_prepared":
                     payload = json.loads(row["payload_json"])
                     if (
@@ -115,8 +118,7 @@ class StorageService:
                         held = m3_martyr.held(previous, episode.actor)
                         if held is None or held.id != episode.purchase:
                             continue
-                        receipt = next(x for x in actual.requisitions if x.id == episode.purchase)
-                        purchase_proof(c, self.store, receipt)
+                        proof(self.game, c, previous, held)
                         return str(row["id"])
             previous = actual
         return None

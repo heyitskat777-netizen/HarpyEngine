@@ -621,6 +621,13 @@ class InboxView(discord.ui.View):
             await open_token(
                 interaction, SpecialGirlService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_girl_insurance":
+            from girlframe.discord_adapter.m3_girl_insurance import open_insurance
+            from girlframe.services.m3_girl_insurance import GirlInsuranceService
+
+            await open_insurance(
+                interaction, GirlInsuranceService(self.service.store), item.identity
+            )
         elif item.task == "m3_cute_uniforms":
             from girlframe.discord_adapter.m3_cute_uniforms import open_uniform
             from girlframe.services.m3_cute_uniforms import CuteUniformService
