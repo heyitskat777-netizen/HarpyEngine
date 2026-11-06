@@ -4374,6 +4374,23 @@
       "revision": 1,
       "implementation_note": "Delegated recommendation, not independent printed-rule certification. Preserve current fail-closed source/role limits and explicit earlier owner decisions.",
       "change_impact": "The source interpretation is adjustable: changing it affects ordinary/protected restore slots and memory lineage, not immutable historical backups. Missing changed-topology, vessel or other actor adapters remain required implementation gaps."
+    },
+    {
+      "id": "sup-primordial-flesh-source-family-and-cap",
+      "summary": "Sup may grow a Girl or Frame Asset through its actual gaining owner, within normal caps and owned replacement rules. Growth is already corrupted and excludes simultaneous rewrite or JANUS storage. Suspension blocks future use without deleting grown physical resources.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF93/printed91; general Void/Asset limits PDF10/15",
+      "authority": "delegated_recommendation",
+      "rationale": "The ability does not restrict Asset family or grant extra slots or a second gain; physical effects are distinct from future entitlement.",
+      "alternatives": [
+        "Restrict growth to Frame Assets.",
+        "Exceed caps or grant growth and rewriting/storage together."
+      ],
+      "policy_key": "sup_primordial_flesh_source_family_and_cap",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable recommendation; missing actor/lifecycle/gain adapters remain implementation gaps.",
+      "change_impact": "Future clarity may revise family/entitlement interactions prospectively; retain actual Asset IDs, receipts and historical growth."
     }
   ],
   "entries": [
@@ -10019,14 +10036,16 @@
         "heading": "Sup of Primordial Flesh"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_sup.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "aliases": [
@@ -10113,14 +10132,16 @@
         "heading": "Home, of a Sort"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_home.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "aliases": [
@@ -13776,7 +13797,7 @@
           "Genuine pending source-owned Handler consequence, then actual chosen injury/opportunity/death through existing service"
         ],
         "mandatory_followups": [
-          "Actual original Handler-owned consequence rather than a fake complete Helpless flag"
+          "Tag receipt/work stay pending until real original Handler body consequence. Ordinary Tag reply cannot waive it. Original body ending retains its distinct source-proved close."
         ],
         "handler_or_gm_intervention": "Printed Handler Assets replacement reused; separate rolled Handler-as-Girl Tag-mark and broader role/ending ports remain gaps",
         "test_fixture_ids": [
@@ -13871,14 +13892,44 @@
         "heading": "Rebellion endgame slot 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
+      "contract": {
+        "trigger": "Actual Rebel Endgame2 and selected active source faction",
+        "actor_type": "Original Handler as human GM",
+        "pre_roll_sources": [
+          "Genuine drawn source and active group frozen at selection",
+          "Distinct active receiving group, actual memberships/territory/recruitment"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "source": [
+            "Actual source group loses funding and merges"
+          ]
+        },
+        "choice_ownership": "Original source Handler selects both actual groups and authors merger",
+        "target_policy": "Distinct current groups; preserve people, bodies, custody, Frames, controllers and relationships",
+        "post_roll_effects": [
+          "Retain inactive underfunded source record; receiver gains territory",
+          "Transfer actual NPC/external Pilot affiliations, secret memberships and queued city recruitment",
+          "Actual later recruitment follows receiver; source work resolves once"
+        ],
+        "mandatory_followups": [
+          "Actual source/world merger, never generic acknowledgment"
+        ],
+        "handler_or_gm_intervention": "Owned GM selection; other Endgames, ended roles and absent faction ports remain gaps",
+        "test_fixture_ids": [
+          "tests/rules/test_rebel_merge.py"
+        ]
+      },
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_rebel_merge.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

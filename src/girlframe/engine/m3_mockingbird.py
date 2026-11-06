@@ -10,6 +10,7 @@ from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_core import Followup
 from girlframe.engine.m3_girl_runtime_state import has_rule
 from girlframe.engine.m3_janus_storage import GainSource
+from girlframe.engine.m3_sup import Growth
 
 if TYPE_CHECKING:
     from girlframe.engine.m2 import TagState
@@ -64,6 +65,7 @@ def risk(
     *,
     piloting: bool,
     storage: GainSource | None = None,
+    growth: Growth | None = None,
 ) -> tuple[GameState, tuple[Followup, ...], RiskPayment]:
     """The player pays real Void to choose an actual 8, 9 or 10 after modifiers."""
     from girlframe.engine.m3_dive import _harpy_assets, resources
@@ -84,7 +86,7 @@ def risk(
         raise ValueError("Choose an actual 8, 9 or 10 for this real original roll")
     actual, _ = resources(original, actor)
     selected = next((x for x in actual if x.id == asset and not x.void), None)
-    if selected is None or not description.strip() or len(description) > 1200:
+    if (selected is None and growth is None) or not description.strip() or len(description) > 1200:
         raise ValueError("Risk Factor requires an actual uncorrupted owned Asset's Void alteration")
     if actor.kind == "pilot":
         own_frame = (
@@ -94,9 +96,19 @@ def risk(
         from girlframe.engine.m3_janus_storage import alter
 
         changed, followups = alter(
-            original, actor, asset, description, action, event, piloting=context, source=storage
+            original,
+            actor,
+            asset,
+            description,
+            action,
+            event,
+            piloting=context,
+            source=storage,
+            growth=growth,
         )
     else:
+        if growth is not None:
+            raise ValueError("Recover the actual current Pilot Frame's Sup source")
         from girlframe.engine.m3_harpy_defeat import assets
 
         changed = _harpy_assets(
@@ -111,12 +123,21 @@ def risk(
             event=event,
         )
         followups = ()
+    family: str
+    if growth is not None:
+        from girlframe.engine.m3_sup import growths
+
+        grown = next(x for x in growths(changed) if x.actor == actor and x.event == event)
+        asset, family = grown.asset, growth.family
+    else:
+        assert selected is not None
+        family = selected.family
     payment = RiskPayment(
         action=action,
         actor=actor,
         event=event,
         asset=asset,
-        family=selected.family,
+        family=family,
         total_before=before,
         total_after=after,
         account=description,

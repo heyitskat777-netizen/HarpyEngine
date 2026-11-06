@@ -199,6 +199,19 @@ async def open_work(
             )
             return
         fields = [Field("option", "Choose an unused Endgame", options)]
+        if body["track"] == "rebellion":
+            if not data["rebel_groups"]:
+                await reply(
+                    interaction, "Introduce an actual active Rebel Group, then reopen this Endgame."
+                )
+                return
+            fields.append(
+                Field(
+                    "faction",
+                    "Actual active Rebel Group",
+                    tuple((x["id"], x["label"]) for x in data["rebel_groups"]),
+                )
+            )
         instructions = (
             "Choose a previously unused slot. Ancillary is disabled. "
             "Actual Endgame effects remain required work."
@@ -214,6 +227,7 @@ async def open_work(
                 data["game_revision"],
                 int(values["option"][0]),
                 endgame=True,
+                faction=values["faction"][0] if body["track"] == "rebellion" else None,
             )
             return "Endgame selected once. Resolve its actual effects before advancing."
     else:

@@ -102,6 +102,17 @@ def results(game: "GameService", c: Connection, state: GameState, action: dict[s
         elif any(not x.void for x in rules.assets(state, target)):
             game.request(c, action, int(action["actor_id"]), "mockingbird_sex_infect")
         else:
+            from girlframe.services.m3_sup import offer
+
+            if offer(game, c, state, target):
+                meta["sex_infection"] = dict(
+                    target=target.model_dump(mode="json"),
+                    asset=None,
+                    snapshot=None,
+                    caster_choice=None,
+                )
+                game.request(c, action, actual.controller, "mockingbird_sex_rewrite")
+                return
             # Mandatory existing all-Void is a factual no-change outcome, not a fake answer.
             values = rules.assets(state, target)
             if not values or not all(x.void for x in values):
@@ -390,19 +401,26 @@ def apply(
         )
         _finish(game, c, state, action)
     elif kind == "mockingbird_sex_rewrite":
-        _strict(answer, {"storage"} if "storage" in answer.fields else set(), text=True)
-        if answer.fields.get("storage", "yes") != "yes":
-            raise WorkflowError("Choose only the actual offered Storage destination")
         infection = meta["sex_infection"]
         recipient = ActorRef.model_validate(infection["target"])
+        from girlframe.services.m3_sup import parse
+
+        growth = parse(game, c, state, recipient, answer.fields)
+        _strict(
+            answer,
+            set(answer.fields) if growth else {"storage"} if "storage" in answer.fields else set(),
+            text=True,
+        )
+        if answer.fields.get("storage", "yes") != "yes":
+            raise WorkflowError("Choose only the actual offered Storage destination")
         actual = _actual(game, c, state, recipient)
         chosen = next(
             (x for x in rules.assets(state, recipient) if x.id == infection["asset"]), None
         )
         if (
             int(row["actor_id"]) != actual.controller
-            or chosen is None
-            or chosen.model_dump_json() != infection["snapshot"]
+            or (chosen is None and not (growth and infection["asset"] is None))
+            or (chosen is not None and chosen.model_dump_json() != infection["snapshot"])
         ):
             raise WorkflowError(
                 "Only the real unchanged destination Asset's owner supplies its rewrite"
@@ -420,7 +438,7 @@ def apply(
             profiles(c, game.store.campaign_id),
             actor,
             recipient,
-            chosen.id,
+            chosen.id if chosen is not None and growth is None else "",
             answer.text,
             action["id"],
             event,
@@ -433,6 +451,7 @@ def apply(
                 "mockingbird_sex",
                 "storage" in answer.fields,
             ),
+            growth=growth,
         )
         _copy(state, changed)
         _bond_risk(state, action, risk=action["data"]["result"]["tier"] == "high")
@@ -555,6 +574,18 @@ def projection(
             dict(id=i, label=label) for i, label in rules.corruption_options(state, target)
         ],
         destinations=[],
+    )
+    from girlframe.services.m3_sup import offer
+
+    recipient = (
+        ActorRef.model_validate(action["data"]["mockingbird"]["sex_infection"]["target"])
+        if kind == "mockingbird_sex_rewrite"
+        else target
+    )
+    result["sup"] = offer(game, c, state, recipient) if kind == "mockingbird_sex_rewrite" else None
+    result["sup_only"] = (
+        kind == "mockingbird_sex_rewrite"
+        and action["data"]["mockingbird"]["sex_infection"]["asset"] is None
     )
     result["destinations"] = _destinations(game, c, state, action)
     if not result["destinations"] and "collect" in choices:

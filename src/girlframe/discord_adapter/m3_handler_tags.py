@@ -12,6 +12,7 @@ from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_handler_tags import HandlerTagService
+from girlframe.services.onboarding import WorkflowError
 
 
 async def open_handler_tags(
@@ -42,6 +43,16 @@ async def open_handler_tags(
                 + clean(data["tag_label"])
                 + "\nActual request: "
                 + clean(data["account"]),
+            )
+            return
+        if data["kind"] == "helpless" and data["original_current"]:
+            from girlframe.discord_adapter.m3_handler_consequences import open_consequence
+            from girlframe.services.m3_handler_consequences import HandlerConsequenceService
+
+            if not data["body_consequence"]:
+                raise WorkflowError("Recover the actual original Handler consequence")
+            await open_consequence(
+                interaction, HandlerConsequenceService(game.store), data["body_consequence"]
             )
             return
         options = (

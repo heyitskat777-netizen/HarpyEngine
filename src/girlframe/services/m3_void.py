@@ -106,6 +106,10 @@ def source(
             or not all(x.void for x in assets)
         ):
             raise ValueError()
+        from girlframe.services.m3_sup import prove_growth
+
+        if proof is not None:
+            prove_growth(game, c, proof, actor, first["event_id"])
         if proof and for_family(proof, actor, family):
             from girlframe.services.m3_janus_storage import prove as prove_stored_point
 

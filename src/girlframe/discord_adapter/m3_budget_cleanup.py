@@ -29,7 +29,9 @@ async def open_cleanup(
             return
         fields.append(Field("action", "Your cleanup response", tuple(choices)))
     elif data["phase"] == "rewrite" and data["own"]:
-        if not data["assets"]:
+        from girlframe.discord_adapter.m3_sup import add_growth
+
+        if not data["assets"] and not data.get("sup"):
             await reply(
                 interaction, "Recover your original uncorrupted Assets before this Void alteration."
             )
@@ -38,7 +40,9 @@ async def open_cleanup(
             Field(
                 "asset",
                 "Your Asset to alter",
-                tuple((x["id"], x["label"] + " · " + x["family"]) for x in data["assets"]),
+                add_growth(
+                    tuple((x["id"], x["label"] + " · " + x["family"]) for x in data["assets"]), data
+                ),
             )
         )
         if data["storage"]:
@@ -62,9 +66,37 @@ async def open_cleanup(
             interaction, "Waiting for the selected Girl's alteration, or this cleanup is complete."
         )
         return
-    fields.append(Field("account", "Your attendance or Void alteration", paragraph=True))
+    fields.append(
+        Field(
+            "account",
+            "Your attendance or existing Asset alteration",
+            paragraph=True,
+            required=not bool(data.get("sup")),
+        )
+    )
 
-    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str | None:
+        from girlframe.discord_adapter.m3_sup import GROW, open_growth
+
+        if values.get("asset") == (GROW,):
+
+            async def grow(actual: discord.Interaction, fields: dict[str, str], text: str) -> str:
+                await asyncio.to_thread(
+                    service.act,
+                    viewer_from_interaction(actual),
+                    str(actual.id),
+                    identity,
+                    data["revision"],
+                    "rewrite",
+                    text,
+                    growth_fields=fields,
+                )
+                return (
+                    "Actual new Void Asset grown; complete the original cleanup Void consequence."
+                )
+
+            await open_growth(current, data, grow)
+            return None
         await asyncio.to_thread(
             service.act,
             viewer_from_interaction(current),

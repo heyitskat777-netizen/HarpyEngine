@@ -613,6 +613,11 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_budget_patron import PatronService
 
             await open_patron(interaction, PatronService(self.service.store), item.identity)
+        elif item.task == "m3_rebel_merge":
+            from girlframe.discord_adapter.m3_rebel_merge import open_merger
+            from girlframe.services.m3_rebel_merge import MergerService
+
+            await open_merger(interaction, MergerService(self.service.store), item.identity)
         elif item.task == "m3_budget_ruin":
             from girlframe.discord_adapter.m3_budget_ruin import open_ruin
             from girlframe.services.m3_budget_ruin import RuinService

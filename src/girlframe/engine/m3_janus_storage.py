@@ -11,6 +11,7 @@ from girlframe.engine.m3_janus_link_state import BatteryLink
 if TYPE_CHECKING:
     from girlframe.engine.m2 import AssetState, GameState
     from girlframe.engine.m3_core import Followup
+    from girlframe.engine.m3_sup import Growth
 
 
 class StoredVoid(Model):
@@ -211,11 +212,21 @@ def alter(
     piloting: bool,
     source: GainSource | None = None,
     step: int = 0,
+    growth: "Growth | None" = None,
 ) -> tuple["GameState", tuple["Followup", ...]]:
     from girlframe.engine.m2 import GameState
     from girlframe.engine.m3_core import corrupt, void_followups
 
     state = GameState.model_validate_json(original.model_dump_json())
+    if growth is not None:
+        from girlframe.engine.m3_sup import grow
+
+        if source is not None or asset:
+            raise ValueError("Sup growth is an alternative to existing-Asset rewriting or Storage")
+        changed, required, _ = grow(
+            state, actor, growth, description, action, event, piloting=piloting, step=step
+        )
+        return changed, required
     if source is not None:
         store(
             state,

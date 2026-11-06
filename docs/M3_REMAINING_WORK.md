@@ -1,11 +1,24 @@
 # M3 remaining work — verified development snapshot
 
-Newest completed bounded workflows: **AM memory erasure and genuine backup/revert;
+Newest bounded additions: **Home, of a Sort; Sup of Primordial Flesh through all
+five existing native Void-gain producers; actual Rebel Endgame merger; corrected
+backstory Tag response closure**. Evidence is at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md).
+Registry: **158 subsets / 315 unimplemented / 264 adjustable clarifications**;
+M3 remains **IN_PROGRESS / RULES_SUBSET**, bot off.
+
+The four remaining Class abilities are **Clone AM, Handler's Special Girl,
+Succubus Protocol and Appearance Matrix**. Home/Sup still retain named actor,
+retention and unimplemented-source limits. AM branch/vessel/body, remaining other
+playbook runtimes, shared/physical/lifecycle effects, remaining Strain/Endgames,
+source reconciliation and final integrated checks also remain required. The
+following older snapshots preserve their original scope and counts.
+
+Prior completed bounded workflows: **AM memory erasure and genuine backup/revert;
 three-Permission grafts for all seven currently implemented Class consumers;
 High Rebellion Control Ritual and backstory Tag consequences; completed private
 contact route/confirmation display**. Actual focused evidence and source limits
 are at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md).
-Current registry: **155 subsets, 318 unimplemented entries and 263 adjustable
+At that checkpoint: **155 subsets, 318 unimplemented entries and 263 adjustable
 clarifications**. Counts are inventory, not a completion percentage.
 
 Still required: AM branching/vessel/body and broader operator/source paths; the

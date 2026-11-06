@@ -17,6 +17,8 @@ async def open_mockingbird(
 ) -> None:
     data = await asyncio.to_thread(game.decision, viewer_from_interaction(interaction), identity)
     detail = data["mockingbird"]
+    from girlframe.discord_adapter.m3_sup import GROW, add_growth, open_choice_growth
+
     if data["kind"] == "mockingbird_void_threshold":
         from girlframe.discord_adapter.m3_void import open_void
         from girlframe.services.m3_void import VoidService
@@ -32,7 +34,7 @@ async def open_mockingbird(
         Field(
             "asset",
             "For a shift: actual uncorrupted Asset",
-            tuple((x["id"], x["label"]) for x in detail["assets"]),
+            add_growth(tuple((x["id"], x["label"]) for x in detail["assets"]), detail),
             minimum=0,
             required=False,
         ),
@@ -54,7 +56,7 @@ async def open_mockingbird(
             )
         )
 
-    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         choice = values["total"][0]
         if choice == "pass":
             if (
@@ -67,6 +69,9 @@ async def open_mockingbird(
         else:
             if not values.get("asset"):
                 raise WorkflowError("Choose the actual Asset that pays for this shift")
+            if values["asset"][0] == GROW:
+                await open_choice_growth(current, game, identity, data, detail, number=int(choice))
+                return None
             answer = ChoiceAnswer(
                 number=int(choice),
                 fields=dict(asset=values["asset"][0])

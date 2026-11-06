@@ -412,7 +412,18 @@ class HandlerTagService:
             if viewer.user_id not in (value.girl_controller, value.handler_controller):
                 raise WorkflowError("Only the original two humans can read this request")
             return value.model_dump(mode="json") | dict(
-                original_current=rules.current(state, value.handler)
+                original_current=rules.current(state, value.handler),
+                body_consequence=next(
+                    (
+                        x.id
+                        for x in state.handler_consequences
+                        if value.kind == "helpless"
+                        and x.source_event == value.source_event
+                        and x.actor == value.handler
+                        and x.opponent == value.girl
+                    ),
+                    None,
+                ),
             )
 
     def notices(self, c: Connection, viewer: GuildViewer) -> list[dict[str, Any]]:

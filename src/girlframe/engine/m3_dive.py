@@ -165,7 +165,7 @@ def apply(
         if k != "account" and getattr(effect, k) != getattr(default, k)
     }
     allowed = {
-        "void_and_unmark_all": {"asset", "description"},
+        "void_and_unmark_all": {"asset", "description", "growth"},
         "erase_identity_and_table_question": {"identity", "question"},
         "nearby_npcs_gain_void": {"npcs"},
         "table_replaces_identity": {"identity", "replacement"},
@@ -174,7 +174,7 @@ def apply(
     if allowed is None or supplied - allowed:
         raise ValueError("Supply only this chosen printed Dive effect's actual details")
     if option == "void_and_unmark_all":
-        if effect.asset is None:
+        if effect.asset is None and effect.growth is None:
             raise ValueError("Choose an actual uncorrupted Asset")
         if sheet is not None:
             own_frame = (
@@ -186,13 +186,14 @@ def apply(
             state, required = alter(
                 state,
                 actor,
-                effect.asset,
+                effect.asset or "",
                 effect.description,
                 action,
                 event,
                 piloting=context,
                 source=storage,
                 step=step,
+                growth=effect.growth,
             )
             sheet = state.sheets[actor.entity]
             for entry in sheet.identities:

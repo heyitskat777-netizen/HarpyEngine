@@ -48,8 +48,10 @@ async def open_dormant(
         await reply(interaction, "Resume the source-owned Void threshold before the required Dive.")
         return
     if data["phase"] == "void":
+        from girlframe.discord_adapter.m3_sup import GROW, add_growth, open_growth
+
         already_void = not data["assets"] and data["actor"]["kind"] == "external_pilot"
-        if not data["assets"] and not already_void:
+        if not data["assets"] and not already_void and not data.get("sup"):
             await reply(
                 interaction,
                 "No uncorrupted Asset remains. Resume the original Void-state consequence.",
@@ -61,9 +63,14 @@ async def open_dormant(
                 "Actual Void payment",
                 (("already_void", "Confirm all actual Harpy Assets are already Void"),)
                 if already_void
-                else tuple((x["id"], x["name"]) for x in data["assets"]),
+                else add_growth(tuple((x["id"], x["name"]) for x in data["assets"]), data),
             ),
-            Field("description", "Describe its actual Void alteration", paragraph=True),
+            Field(
+                "description",
+                "For an existing Asset: actual Void alteration",
+                paragraph=True,
+                required=not bool(data.get("sup")),
+            ),
             Field(
                 "piloting",
                 "Actual own-Frame context",
@@ -81,7 +88,31 @@ async def open_dormant(
                 )
             )
 
-        async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        async def submit(current: discord.Interaction, values: dict[str, Any]) -> str | None:
+            if values["asset"][0] == GROW:
+
+                async def grow(
+                    actual: discord.Interaction, fields: dict[str, str], text: str
+                ) -> str:
+                    await asyncio.to_thread(
+                        service.alter,
+                        viewer_from_interaction(actual),
+                        str(actual.id),
+                        identity,
+                        data["revision"],
+                        data["game_revision"],
+                        None,
+                        text,
+                        piloting=values["piloting"][0] == "yes",
+                        growth_fields=fields,
+                    )
+                    return (
+                        "Actual new Void Asset grown; "
+                        "complete the original threshold/required Dive."
+                    )
+
+                await open_growth(current, data, grow)
+                return None
             await asyncio.to_thread(
                 service.alter,
                 viewer_from_interaction(current),
@@ -169,7 +200,7 @@ async def open_dormant(
         if data.get("forbidden_dive"):
             fields = [x for x in fields if x.key not in ("identity", "gain", "pair_share", "heat")]
 
-        async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        async def submit(current: discord.Interaction, values: dict[str, Any]) -> str | None:
             chosen = values.get("identity", ("none",))[0]
             result = await asyncio.to_thread(
                 service.game.begin,

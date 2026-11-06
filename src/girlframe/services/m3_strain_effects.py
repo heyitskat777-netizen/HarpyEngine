@@ -97,6 +97,10 @@ class EffectService:
             self.game.unpaused(c)
 
         def operation(c: Connection) -> dict[str, Any]:
+            from girlframe.engine.m3_actor_bonds import current_ref
+            from girlframe.engine.m3_actors import resolve
+            from girlframe.services.m3_actors import profiles
+
             row = self._row(c, identity)
             self.strain._check(c, viewer, row, revision)
             state = self.strain._state(c, game_revision)
@@ -138,9 +142,7 @@ class EffectService:
 
                     _, public_appointment = MedicalService(self.store)._handler(c)
             if choice.rule_id == "strain.budget.high.4.1":
-                from girlframe.engine.m3_actor_bonds import current_ref
-                from girlframe.engine.m3_actors import resolve
-                from girlframe.services.m3_actors import ActorService, profiles
+                from girlframe.services.m3_actors import ActorService
                 from girlframe.services.m3_cast import CastService
 
                 rules.fields(choice, {"target", "fighters", "fight_channel"})
@@ -186,8 +188,6 @@ class EffectService:
                 if past.phase != "complete" or site is None or choice.cleanup_mode is None:
                     raise WorkflowError("Choose a completed past mission and its actual map site")
                 if choice.cleanup_mode == "exposure":
-                    from girlframe.engine.m3_actor_bonds import current_ref
-
                     for uid in state.order:
                         actual = resolve(
                             state,

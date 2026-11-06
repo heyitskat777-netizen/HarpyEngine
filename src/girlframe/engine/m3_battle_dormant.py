@@ -7,6 +7,7 @@ from girlframe.engine.m3_actor_state import ActorRef, Model, ProfileBinding
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_core import Followup
 from girlframe.engine.m3_janus_storage import GainSource
+from girlframe.engine.m3_sup import Growth
 
 
 class Corruption(Model):
@@ -31,6 +32,7 @@ def inflict(
     *,
     piloting: bool,
     storage: GainSource | None = None,
+    growth: Growth | None = None,
 ) -> tuple[GameState, tuple[Followup, ...]]:
     """No resources are invented, repaired or transferred by taking actual Void."""
     if (
@@ -54,6 +56,8 @@ def inflict(
     if source is None or source.gorgon_class != "dormant":
         raise ValueError("Recover the actual Dormant Gorgon's original source")
     if actor.kind == "external_pilot":
+        if growth is not None:
+            raise ValueError("Sup requires an actual current Pilot Frame source")
         from girlframe.engine.m3_dive import _harpy_assets
         from girlframe.engine.m3_harpy_resources import assets
 
@@ -86,13 +90,29 @@ def inflict(
         followups: tuple[Followup, ...] = ()
     else:
         sheet = original.sheets.get(actor.entity)
-        if sheet is None or sheet.character_id != actor.incarnation or asset is None:
+        if (
+            sheet is None
+            or sheet.character_id != actor.incarnation
+            or (asset is None and growth is None)
+        ):
             raise ValueError("Choose the original Girl's actual uncorrupted Asset")
         from girlframe.engine.m3_janus_storage import alter
 
         changed, followups = alter(
-            original, actor, asset, description, work, event, piloting=piloting, source=storage
+            original,
+            actor,
+            asset or "",
+            description,
+            work,
+            event,
+            piloting=piloting,
+            source=storage,
+            growth=growth,
         )
+        if growth is not None:
+            from girlframe.engine.m3_sup import growths
+
+            asset = next(x.asset for x in growths(changed) if x.actor == actor and x.event == event)
         selected_pilot = next(x for x in changed.sheets[actor.entity].assets if x.id == asset)
         family = selected_pilot.family
     proof = Corruption(

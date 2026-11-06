@@ -51,3 +51,42 @@ def prove(
         or json.loads(row["payload_json"]).get("work_id") != value.source_work
     ):
         raise WorkflowError("Recover the actual original Handler backstory source")
+
+
+def finish_work(
+    game: "GameService", c: Connection, identities: tuple[str, ...], event: str
+) -> None:
+    work = t.m3["m3_required_work"]
+    for identity in identities:
+        row = (
+            c.execute(
+                sa.select(work)
+                .where(
+                    work.c.campaign_id == game.store.campaign_id,
+                    work.c.id == identity,
+                )
+                .order_by(work.c.revision.desc())
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
+        if (
+            row is None
+            or row["kind"] != "handler_tag_response"
+            or row["state"] != "pending"
+            or json.loads(row["body_json"]).get("case") != identity
+        ):
+            raise WorkflowError("Recover the genuine pending backstory Tag response")
+        c.execute(
+            work.insert().values(
+                **(
+                    dict(row)
+                    | dict(
+                        revision=row["revision"] + 1,
+                        state="resolved",
+                        event_id=event,
+                    )
+                )
+            )
+        )

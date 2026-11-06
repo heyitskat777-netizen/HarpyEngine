@@ -3125,3 +3125,17 @@ Rationale: The backup option does not price a fresh action or specify resource r
 Alternatives: Rewind marks/resources and remove later protected Identities with the entire mechanical snapshot.; Require operator approval each time the AM restores its own genuine backup.
 
 Change impact: The source interpretation is adjustable: changing it affects ordinary/protected restore slots and memory lineage, not immutable historical backups. Missing changed-topology, vessel or other actor adapters remain required implementation gaps.
+
+## Sup growth source choice — 2026-11-05
+
+### `sup-primordial-flesh-source-family-and-cap`
+
+Source: Rulebook PDF93/printed91; general Void/Asset limits PDF10/15.
+
+Sup may grow a Girl or Frame Asset through its actual gaining owner, within normal caps and owned replacement rules. Growth is already corrupted and excludes simultaneous rewrite or JANUS storage. Suspension blocks future use without deleting grown physical resources.
+
+Rationale: The ability does not restrict Asset family or grant extra slots or a second gain; physical effects are distinct from future entitlement.
+
+Alternatives: Restrict growth to Frame Assets.; Exceed caps or grant growth and rewriting/storage together.
+
+Change impact: Future clarity may revise family/entitlement interactions prospectively; retain actual Asset IDs, receipts and historical growth. Requires printed-rule clarity review.

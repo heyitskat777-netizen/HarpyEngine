@@ -74,3 +74,33 @@ def eligible(state: GameState, handler: ActorRef, tag: str) -> Backstory | None:
         ),
         None,
     )
+
+
+def finish_body_response(state: GameState, consequence: str) -> tuple[str, ...]:
+    from girlframe.engine.m3_handler_tags import save, uses
+
+    case = next(x for x in state.handler_consequences if x.id == consequence)
+    if case.state == "pending" or not case.effect_event:
+        raise ValueError("The actual Handler-owned consequence is still pending")
+    finished = []
+    for value in uses(state):
+        if (
+            value.kind == "helpless"
+            and value.state == "pending"
+            and value.source_event == case.source_event
+            and value.handler == case.actor
+            and value.girl == case.opponent
+        ):
+            save(
+                state,
+                value.model_copy(
+                    update=dict(
+                        revision=value.revision + 1,
+                        state="resolved",
+                        response_account=case.account,
+                        response_event=case.effect_event,
+                    )
+                ),
+            )
+            finished.append(value.id)
+    return tuple(finished)

@@ -118,8 +118,23 @@ async def open_sex(interaction: discord.Interaction, game: GameService, identity
                 if kind == "mockingbird_sex_restore"
                 else "Rewrite your actual chosen Asset's Void alteration",
                 paragraph=True,
+                required=not bool(detail.get("sup")),
             )
         ]
+        if kind == "mockingbird_sex_rewrite" and detail.get("sup"):
+            fields.insert(
+                0,
+                Field(
+                    "mode",
+                    "Actual owned Void gain",
+                    (("grow", "Sup: grow a NEW already-Void Asset"),)
+                    if detail.get("sup_only")
+                    else (
+                        ("rewrite", "Rewrite the selected existing Asset"),
+                        ("grow", "Sup: grow a NEW already-Void Asset"),
+                    ),
+                ),
+            )
         if kind == "mockingbird_sex_rewrite" and detail.get("storage_available"):
             fields.append(
                 Field(
@@ -177,7 +192,7 @@ async def open_sex(interaction: discord.Interaction, game: GameService, identity
     else:
         raise WorkflowError("Use this exact owned intimacy response")
 
-    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         if kind == "mockingbird_sex_select":
             answer = ChoiceAnswer(
                 options=(values["option"][0],),
@@ -197,6 +212,11 @@ async def open_sex(interaction: discord.Interaction, game: GameService, identity
         elif kind == "mockingbird_sex_hide":
             answer = ChoiceAnswer(options=tuple(values["corruption"]), text=values["account"])
         elif kind in ("mockingbird_sex_restore", "mockingbird_sex_rewrite"):
+            if values.get("mode") == ("grow",):
+                from girlframe.discord_adapter.m3_sup import open_choice_growth
+
+                await open_choice_growth(current, game, identity, data, detail)
+                return None
             answer = ChoiceAnswer(
                 text=values["description"],
                 fields={"storage": "yes"} if values.get("storage") else {},

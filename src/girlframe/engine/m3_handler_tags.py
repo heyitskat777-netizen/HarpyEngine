@@ -146,8 +146,8 @@ def consume(
         account=account.strip(),
         source_event=event,
         scene=scene,
-        state="resolved" if kind in ("attention", "helpless") else "pending",
-        response_event=event if kind in ("attention", "helpless") else None,
+        state="resolved" if kind == "attention" else "pending",
+        response_event=event if kind == "attention" else None,
         persistent=retained,
     )
     if npc is not None:
@@ -199,6 +199,8 @@ def respond(
     if value is None or value.state != "pending" or value.revision != expected:
         raise ValueError("Refresh the actual original Handler Tag request")
     live = current(state, value.handler)
+    if value.kind == "helpless" and response != "original_handler_ended":
+        raise ValueError("Resolve the actual original Handler-owned body consequence instead")
     if response == "original_handler_ended":
         if live or not ended_source:
             raise ValueError("Prove the actual original Handler ending before closing its request")

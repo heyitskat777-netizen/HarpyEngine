@@ -184,7 +184,9 @@ def endgame_options(
     )
 
 
-def choose_endgame(state: State, request_id: str, option: int) -> State:
+def choose_endgame(
+    state: State, request_id: str, option: int, *, faction: str | None = None
+) -> State:
     request = next((x for x in state.requests if x.id == request_id), None)
     if request is None or request.kind != "endgame" or request.parent is None:
         raise ValueError("Resume an actual pending Endgame request")
@@ -196,6 +198,7 @@ def choose_endgame(state: State, request_id: str, option: int) -> State:
         track=request.track,
         option=option,
         parent=request.parent,
+        faction=faction,
     )
     return copy(
         state,

@@ -49,6 +49,7 @@ class Event(PeriodRecord):
 
 
 class Endgame(PeriodRecord):
+    faction: str | None = Field(default=None, min_length=1, exclude_if=lambda value: value is None)
     option: int = Field(ge=1, le=8)
     parent: str = Field()
 

@@ -68,7 +68,9 @@ def intercept_results(
         return False
     actual, _ = resources(state, ref)
     eligible = [x.id for x in actual if not x.void]
-    if not eligible:
+    from girlframe.services.m3_sup import offer
+
+    if not eligible and not offer(game, c, state, ref):
         data["risk_factor"] = dict(state="unavailable", actor=ref.model_dump(mode="json"))
         return False
     data["risk_factor"] = dict(
@@ -99,8 +101,10 @@ def projection(
     ref = ActorRef.model_validate(meta["actor"])
     actual, _ = resources(state, ref)
     from girlframe.services.m3_janus_storage import available as storage_available
+    from girlframe.services.m3_sup import offer
 
     return dict(
+        sup=offer(game, c, state, ref),
         storage_available=storage_available(game, c, state, ref),
         total=meta["before"],
         assets=[
@@ -139,7 +143,10 @@ def apply(
             raise WorkflowError("Decline without selecting a cost or replacement total")
         meta["state"] = "declined"
     else:
-        if (
+        from girlframe.services.m3_sup import parse
+
+        growth = parse(game, c, state, ref, answer.fields)
+        if growth is None and (
             set(answer.fields) not in ({"asset"}, {"asset", "storage"})
             or answer.fields["asset"] not in meta["eligible"]
             or answer.fields.get("storage", "yes") != "yes"
@@ -154,7 +161,7 @@ def apply(
             ref,
             action["id"],
             event,
-            answer.fields["asset"],
+            answer.fields.get("asset", ""),
             answer.text,
             meta["before"],
             answer.number,
@@ -162,6 +169,7 @@ def apply(
             storage=gain_source(
                 game, c, state, ref, request["id"], "mockingbird_risk", "storage" in answer.fields
             ),
+            growth=growth,
         )
         _copy(state, changed)
         meta.update(state="paid", payment=payment.model_dump(mode="json"), choice=request["id"])

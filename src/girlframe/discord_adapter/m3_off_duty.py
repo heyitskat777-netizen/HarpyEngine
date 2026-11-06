@@ -200,6 +200,23 @@ async def open_period(interaction: discord.Interaction, service: OffDutyService)
             from girlframe.services.m3_replacement import ReplacementService
 
             await open_replacement(current, ReplacementService(service.missions), identity)
+        elif row["kind"] == "strain_endgame_effect":
+            from girlframe.services.m3_strain import StrainService
+
+            saved = await asyncio.to_thread(
+                StrainService(service).work, viewer_from_interaction(current), identity
+            )
+            if saved["body"]["rule_id"] == "strain.rebellion.endgame.2":
+                from girlframe.discord_adapter.m3_rebel_merge import open_merger
+                from girlframe.services.m3_rebel_merge import MergerService
+
+                await open_merger(current, MergerService(service.store), identity)
+            else:
+                await reply(
+                    current,
+                    "Review this Endgame in /character requests. "
+                    "Its actual effects remain required.",
+                )
         elif row["kind"] == "strain_event":
             from girlframe.discord_adapter.m3_strain_effects import open_effect
             from girlframe.services.m3_strain import StrainService

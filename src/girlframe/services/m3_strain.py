@@ -397,6 +397,7 @@ class StrainService:
         option: int,
         *,
         endgame: bool = False,
+        faction: str | None = None,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             row = self._row(c, identity)
@@ -407,13 +408,24 @@ class StrainService:
             old_requests = {x.id for x in state.strain.requests}
             cascade = False
             if endgame:
-                state.strain = rules.choose_endgame(state.strain, identity, option)
+                request = next((x for x in state.strain.requests if x.id == identity), None)
+                if request and request.track == "rebellion":
+                    if not state.world or not any(
+                        x.id == faction and x.kind == "rebel" and x.active
+                        for x in state.world.factions
+                    ):
+                        raise WorkflowError("Select the actual active Rebel Group for this Endgame")
+                elif faction is not None:
+                    raise WorkflowError("Only a Rebel Endgame selects a Rebel Group")
+                state.strain = rules.choose_endgame(state.strain, identity, option, faction=faction)
                 chosen = next(x for x in state.strain.endgames if x.id == identity)
                 rule_id, source_pdf = (
                     chosen.rule_id,
                     {"void": 146, "rebellion": 149, "budget": 152}[chosen.track],
                 )
             else:
+                if faction is not None:
+                    raise WorkflowError("An ordinary event does not select an Endgame group")
                 state.strain = rules.choose(state.strain, identity, option)
                 selected = next(x for x in state.strain.events if x.id == identity)
                 selected_rule = selected.rule_id
@@ -472,7 +484,8 @@ class StrainService:
                 "game_revision": game_revision,
                 "option": option,
                 "endgame": endgame,
-            },
+            }
+            | ({"faction": faction} if faction is not None else {}),
             operation,
             lambda c: self._authorize(c, viewer),
         )
@@ -522,6 +535,13 @@ class StrainService:
                     "no_girl_void": count == 0,
                 },
                 "initialized": state.strain is not None,
+                "rebel_groups": [
+                    dict(id=x.id, label=x.name)
+                    for x in state.world.factions
+                    if x.kind == "rebel" and x.active
+                ]
+                if state.world
+                else [],
                 "endgame_options": rules.endgame_options(
                     state.strain, json.loads(row["body_json"])["track"]
                 )

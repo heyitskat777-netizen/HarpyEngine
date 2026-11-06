@@ -2368,6 +2368,11 @@ class InboxService:
                     and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.3"
                 ):
                     primary, task_name = "Choose two ruined locations", "m3_budget_ruin"
+                elif (
+                    kind == "strain_endgame_effect"
+                    and json.loads(work["body_json"]).get("rule_id") == "strain.rebellion.endgame.2"
+                ):
+                    primary, task_name = "Resolve actual group merger", "m3_rebel_merge"
                 elif kind == "budget_handler_tag" or (
                     kind == "strain_endgame_effect"
                     and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.5"

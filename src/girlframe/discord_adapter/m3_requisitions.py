@@ -200,6 +200,25 @@ async def open_requisitions(interaction: discord.Interaction, service: Requisiti
                 class_label("Modular Build", modular_option),
             ),
         )
+    from girlframe.services.m3_sup import SupService
+
+    sup = SupService(service.game)
+    sup_option = await asyncio.to_thread(sup.menu, viewer)
+    if sup_option["available"]:
+        options += (("sup", class_label("Sup of Primordial Flesh", sup_option)),)
+    from girlframe.services.m3_home import HomeService
+
+    home = HomeService(service.game)
+    home_option = await asyncio.to_thread(home.menu, viewer)
+    if home_option["available"]:
+        options += (
+            (
+                "home",
+                "Use Home, of a Sort"
+                if home_option["owned"]
+                else class_label("Home, of a Sort", home_option),
+            ),
+        )
     from girlframe.services.m3_frame_swap import FrameSwapService
     from girlframe.services.m3_personal_firearm import PersonalFirearmService
 
@@ -240,6 +259,16 @@ async def open_requisitions(interaction: discord.Interaction, service: Requisiti
     )
 
     async def choose(current: discord.Interaction, token: str) -> None:
+        if token == "sup":
+            from girlframe.discord_adapter.m3_sup import open_purchase as open_sup
+
+            await open_sup(current, sup)
+            return
+        if token == "home":
+            from girlframe.discord_adapter.m3_home import open_home
+
+            await open_home(current, home)
+            return
         if token == "modular":
             from girlframe.discord_adapter.m3_modular import open_purchase as open_modular
 

@@ -273,6 +273,9 @@ class DormantService:
             from girlframe.services.m3_janus_storage import available as storage_available
 
             detail["storage_available"] = own and storage_available(self.game, c, state, current)
+            from girlframe.services.m3_sup import offer
+
+            detail["sup"] = offer(self.game, c, state, current) if own else None
             detail["requires_source_role_resume"] = (
                 actual
                 and current.kind == "external_pilot"
@@ -401,6 +404,7 @@ class DormantService:
         *,
         piloting: bool,
         store_void: bool = False,
+        growth_fields: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         def authorize(c: Connection) -> None:
             self._owned(c, viewer, identity)
@@ -425,6 +429,11 @@ class DormantService:
             assert required.opponent is not None
             actor = actual_actor(self.game, c, state, actor)
             event = str(uuid4())
+            from girlframe.services.m3_sup import parse
+
+            growth = parse(self.game, c, state, actor, growth_fields or {})
+            if growth and (asset is not None or store_void):
+                raise WorkflowError("Sup growth replaces the existing-Asset/Storage choice")
             from girlframe.services.m3_janus_storage import gain_source
 
             storage = gain_source(self.game, c, state, actor, identity, "dormant_void", store_void)
@@ -443,6 +452,7 @@ class DormantService:
                 event,
                 piloting=piloting,
                 storage=storage,
+                growth=growth,
             )
             self.game.event(
                 c,
@@ -453,7 +463,16 @@ class DormantService:
                 event_id=event,
                 work_id=identity,
             )
-            body.update(corruption_event=event, asset=asset, thresholds=[])
+            asset_id: str | None
+            if growth:
+                from girlframe.engine.m3_sup import growths
+
+                asset_id = next(
+                    x.asset for x in growths(changed) if x.actor == actor and x.event == event
+                )
+            else:
+                asset_id = asset
+            body.update(corruption_event=event, asset=asset_id, thresholds=[])
             for index, item in enumerate(followups):
                 family = "girl" if item.kind == "girl_void_threshold" else "frame"
                 work = str(
@@ -516,7 +535,8 @@ class DormantService:
                     description=description,
                     piloting=piloting,
                     store_void=store_void,
-                ),
+                )
+                | (dict(growth_fields=growth_fields) if growth_fields is not None else {}),
                 operation,
                 auto_audit=False,
                 authorize=authorize,

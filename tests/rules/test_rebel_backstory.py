@@ -4,6 +4,7 @@ import asyncio
 from uuid import uuid4
 
 import pytest
+import sqlalchemy as sa
 from test_control_ritual import source
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
@@ -20,7 +21,10 @@ from girlframe.services.m3_handler_tags import HandlerTagService
 from girlframe.services.onboarding import WorkflowError
 
 
-def test_actual_backstory_source_native_alternative_owned_consequence_and_replay(ledger):
+@pytest.mark.parametrize("body_choice", ["weakness", "death"])
+def test_actual_backstory_source_native_alternative_owned_consequence_and_replay(
+    ledger, body_choice
+):
     game, _, _ = source(
         ledger,
         rebellion_face=5,
@@ -58,11 +62,21 @@ def test_actual_backstory_source_native_alternative_owned_consequence_and_replay
     actual = state(game)
     assert all(x.id != value.tag for x in actual.handler_tags)
     assert actual.sheets == before.sheets and game.dice.calls == 0
-    assert uses(actual)[0].kind == "helpless" and uses(actual)[0].state == "resolved"
+    assert uses(actual)[0].kind == "helpless" and uses(actual)[0].state == "pending"
     case = actual.handler_consequences[-1]
     assert case.trigger == "helpless" and case.opponent == girl and case.state == "pending"
     consequences = HandlerConsequenceService(ledger)
     data = consequences.get(ADMIN, case.id)
+    tag_use = uses(actual)[0]
+    with pytest.raises(WorkflowError, match="body consequence"):
+        service.respond(
+            ADMIN,
+            "no-ordinary-response-waiver",
+            tag_use.id,
+            tag_use.revision,
+            "give_in",
+            "Cannot waive the actual body consequence",
+        )
     with pytest.raises(WorkflowError):
         consequences.respond(
             PLAYER,
@@ -72,30 +86,73 @@ def test_actual_backstory_source_native_alternative_owned_consequence_and_replay
             "injury",
             "I cannot choose for the Handler",
         )
+
+    response_account = (
+        "My real grief exposes a specific weakness to this Girl"
+        if body_choice == "weakness"
+        else "This original Handler dies as the actual replacement consequence"
+    )
+
+    async def resolve_actual_request():
+        interaction = current(1, 29705)
+        await interaction.response.defer(ephemeral=True)
+        await open_handler_tags(interaction, game, identity=tag_use.id)
+        form = interaction.edit_original_response.call_args.kwargs["view"]
+        assert {x.key for x in form.fields} == {"choice", "account", "confirmation"}
+        form.values.update(
+            choice=(body_choice,),
+            account=response_account,
+            confirmation="END THIS HANDLER" if body_choice == "death" else "",
+        )
+        await form.confirm.callback(current(1, 29706))
+        assert form.completed
+
+    asyncio.run(resolve_actual_request())
     result = consequences.respond(
         ADMIN,
-        "real-backstory-opportunity",
+        "29706",
         case.id,
         data["game_revision"],
-        "weakness",
-        "My real grief exposes a specific weakness to this Girl",
+        body_choice,
+        response_account,
     )
     assert (
         consequences.respond(
             ADMIN,
-            "real-backstory-opportunity",
+            "29706",
             case.id,
             data["game_revision"],
-            "weakness",
-            "My real grief exposes a specific weakness to this Girl",
+            body_choice,
+            response_account,
         )
         == result
     )
     after = state(game)
     assert after.handler_consequences[-1].state == "resolved"
-    assert len(after.handler_opportunities) == len(before.handler_opportunities) + 1
-    assert after.handler_opportunities[-1].beneficiary == girl
+    if body_choice == "weakness":
+        assert len(after.handler_opportunities) == len(before.handler_opportunities) + 1
+        assert after.handler_opportunities[-1].beneficiary == girl
+    else:
+        assert len(after.handler_archives) == len(before.handler_archives) + 1
+        assert after.handler_archives[-1].actor == case.actor
+        assert after.handler_archives[-1].ending == "death"
     assert not consequences.tasks(ADMIN) and game.dice.calls == 0
+    assert uses(after)[0].state == "resolved"
+    with ledger.engine.connect() as c:
+        from girlframe.database import tables as t
+
+        work = t.m3["m3_required_work"]
+        row = (
+            c.execute(
+                sa.select(work)
+                .where(work.c.campaign_id == ledger.campaign_id, work.c.id == tag_use.id)
+                .order_by(work.c.revision.desc())
+                .limit(1)
+            )
+            .mappings()
+            .one()
+        )
+        assert row["state"] == "resolved"
     # A fresh use cannot spend this source again.
     with pytest.raises(WorkflowError):
         service.use(

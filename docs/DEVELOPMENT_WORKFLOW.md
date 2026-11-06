@@ -39,9 +39,9 @@ a required M3 rule complete; required gaps stay in the milestone backlog.
 
 | Order | Assignment | Completion boundary |
 |---|---|---|
-| 1, parallel | Economy handoff: AM memory and backup, frozen | Genuine memory effects and source-owned backup/revert are verified. Branch/vessel/body, broader operators and remaining source limits stay required; select one next bounded consumer. |
-| 1, parallel | Class graft handoff, frozen | Seven implemented Class consumers now accept genuine eligible graft receipts and exact suspension/restoration. Other Class abilities, retained and replacement sources stay required. |
-| 1, root | Source/CI integration checkpoint | Integrate AM, Class grafts, Control Ritual, backstory consequences and completed-contact UI with complete changed static scope. Then select the next dependency-ready whole gameplay consumer. |
+| 1, parallel | Economy handoff: Sup growth, frozen | All five existing native growth consumers and genuine thresholds are verified. Prepare Appearance Matrix contract; source edits start after the current integration checkpoint. |
+| 1, parallel | Home handoff, frozen | Home native/graft, real occupancy and owned effects are verified. Prepare Handler Special Girl contract; source edits start after current integration. Other Class, retained and replacement sources stay required. |
+| 1, root | Source/CI integration checkpoint | Integrate Home, five-source Sup growth, actual Rebel merger and body-response closure with complete changed static scope. Then select the next dependency-ready whole consumer. |
 | 2 | Remaining required gameplay systems | Select the next dependency-ready whole workflow from M3_REMAINING_WORK.md and M3_COMPLETION_AUDIT.md. Freeze its contract, reuse implemented dependencies and complete it before opening unrelated work. |
 | 3 | M3 review candidate | Account for required core scope, complete expected gameplay flows and final integrated checks; provide a concise player-test checklist and stop for owner review. |
 

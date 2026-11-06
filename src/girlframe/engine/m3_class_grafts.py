@@ -1,4 +1,4 @@
-"""Source eligibility for five named, already implemented Class consumers."""
+"""Source eligibility for named, already implemented Class consumers."""
 
 from typing import TYPE_CHECKING, Literal
 
@@ -15,6 +15,8 @@ CLASSES: dict[str, FrameClass] = {
     "frame.class.legion.dampener-link": "legion",
     "frame.class.legion.kicked-puppy": "legion",
     "frame.class.legion.modular-build": "legion",
+    "frame.class.legion.home-of-a-sort": "legion",
+    "frame.class.priestess.sup-of-primordial-flesh": "priestess",
 }
 
 

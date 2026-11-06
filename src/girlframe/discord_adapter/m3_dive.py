@@ -136,13 +136,20 @@ async def open_dive(
                 ),
             ]
         elif option == "void_and_unmark_all":
+            from girlframe.discord_adapter.m3_sup import add_growth
+
             fields = [
                 Field(
                     "asset",
                     "Choose your uncorrupted Asset",
-                    tuple((x["id"], x["label"]) for x in detail["assets"]),
+                    add_growth(tuple((x["id"], x["label"]) for x in detail["assets"]), detail),
                 ),
-                Field("description", "Describe the actual Void alteration", paragraph=True),
+                Field(
+                    "description",
+                    "For an existing Asset: actual Void alteration",
+                    paragraph=True,
+                    required=not bool(detail.get("sup")),
+                ),
             ]
             if detail.get("storage_available"):
                 fields.append(
@@ -215,7 +222,7 @@ async def open_dive(
         await open_void(interaction, VoidService(game.store), detail["work_id"])
         return
 
-    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         if kind == "dive_select":
             answer = ChoiceAnswer(options=(values["option"][0],), text=values["account"])
         elif kind == "dive_effect":
@@ -229,6 +236,11 @@ async def open_dive(
                     options=tuple(values.get("moves", ())), denied=tuple(values.get("replaced", ()))
                 )
             elif option == "void_and_unmark_all":
+                from girlframe.discord_adapter.m3_sup import GROW, open_choice_growth
+
+                if values["asset"][0] == GROW:
+                    await open_choice_growth(current, game, identity, data, detail)
+                    return None
                 answer = ChoiceAnswer(
                     fields=dict(asset=values["asset"][0])
                     | ({"storage": "yes"} if values.get("storage") else {}),

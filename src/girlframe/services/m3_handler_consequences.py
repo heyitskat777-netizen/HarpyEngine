@@ -362,6 +362,10 @@ class HandlerConsequenceService:
                 raise WorkflowError("STALE_HANDLER_CONSEQUENCE: reopen the actual current body.")
             source = str(uuid4())
             updated = rules.apply(state, identity, choice, account, source)
+            from girlframe.engine.m3_rebel_backstory import finish_body_response
+            from girlframe.services.m3_rebel_backstory import finish_work
+
+            finished_tags = finish_body_response(updated, identity)
             self.game.event(
                 c,
                 viewer.user_id,
@@ -373,6 +377,7 @@ class HandlerConsequenceService:
                 choice=choice,
                 original_handler=record.actor.model_dump(mode="json"),
             )
+            finish_work(self.game, c, finished_tags, source)
             for archive in updated.handler_archives:
                 if archive.source_event == source:
                     end_body_reviews(self.game, c, archive)

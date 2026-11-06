@@ -184,6 +184,7 @@ class CleanupService:
             own = target is not None and target.entity == str(viewer.user_id)
             assets = []
             storage = False
+            sup = None
             if own and value.phase == "rewrite":
                 assert target is not None
                 current(self.game, c, state, value)
@@ -196,6 +197,9 @@ class CleanupService:
                     if not x.void
                 ]
                 storage = available(self.game, c, state, target)
+                from girlframe.services.m3_sup import offer
+
+                sup = offer(self.game, c, state, target)
             return dict(
                 id=identity,
                 revision=state.revision,
@@ -211,6 +215,7 @@ class CleanupService:
                 summary=value.account,
                 assets=assets,
                 storage=storage,
+                sup=sup,
                 thresholds=value.thresholds,
             )
 
@@ -224,6 +229,7 @@ class CleanupService:
         account: str,
         asset: str | None = None,
         storage: bool = False,
+        growth_fields: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         if not account.strip() or len(account) > 1200:
             raise WorkflowError("Describe your actual cleanup attendance or owned Void alteration")
@@ -249,7 +255,7 @@ class CleanupService:
             event = str(uuid4())
             followups: tuple[Followup, ...] = ()
             if value.phase == "scene" and value.scene is not None:
-                if asset is not None or storage:
+                if asset is not None or storage or growth_fields:
                     raise WorkflowError("This cleanup scene grants no Asset or automatic Void")
                 scene = value.scene.model_copy(deep=True)
                 if action == "attend" and viewer.user_id not in scene.acknowledgements:
@@ -273,10 +279,15 @@ class CleanupService:
                     )
             elif value.phase == "rewrite" and action == "rewrite" and value.selected is not None:
                 actor = value.people[value.selected]
-                if actor.entity != str(viewer.user_id) or asset is None:
+                from girlframe.services.m3_sup import parse
+
+                growth = parse(self.game, c, state, actor, growth_fields or {})
+                if actor.entity != str(viewer.user_id) or (asset is None and growth is None):
                     raise WorkflowError(
                         "Only the randomly selected original Girl chooses its Void alteration"
                     )
+                if growth and (asset is not None or storage):
+                    raise WorkflowError("Sup growth replaces the existing-Asset/Storage choice")
                 from girlframe.engine.m3_janus_storage import alter
                 from girlframe.services.m3_janus_storage import gain_source
 
@@ -291,18 +302,28 @@ class CleanupService:
                 state, followups = alter(
                     state,
                     actor,
-                    asset,
+                    asset or "",
                     account.strip(),
                     identity,
                     event,
                     piloting=actual.piloting,
                     source=gain,
+                    growth=growth,
                 )
+                actual_asset: str | None
+                if growth:
+                    from girlframe.engine.m3_sup import growths
+
+                    actual_asset = next(
+                        x.asset for x in growths(state) if x.actor == actor and x.event == event
+                    )
+                else:
+                    actual_asset = asset
                 thresholds = tuple(identity + ":void:" + x.kind for x in followups)
                 value = value.model_copy(
                     update=dict(
                         phase="threshold" if thresholds else "complete",
-                        asset=asset,
+                        asset=actual_asset,
                         description=account.strip(),
                         storage=storage,
                         gain_event=event,
@@ -374,7 +395,8 @@ class CleanupService:
                     account=account,
                     asset=asset,
                     storage=storage,
-                ),
+                )
+                | (dict(growth_fields=growth_fields) if growth_fields is not None else {}),
                 operation,
                 auto_audit=False,
                 authorize=authorize,

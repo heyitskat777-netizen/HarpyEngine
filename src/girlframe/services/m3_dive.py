@@ -419,6 +419,9 @@ def projection(
                 if not x.void and x.id not in stored
             ]
             data["storage_available"] = storage_available(game, c, state, actor)
+            from girlframe.services.m3_sup import offer
+
+            data["sup"] = offer(game, c, state, actor)
         elif option in ("erase_identity_and_table_question", "table_replaces_identity"):
             data["identities"] = [
                 dict(id=x.id, label=x.name) for x in actual_identities if not x.protected
@@ -454,7 +457,9 @@ def available_options(
     except ValueError:
         return ()
     values = list(DIVE)
-    if not any(not x.void for x in actual_assets):
+    from girlframe.engine.m3_sup import offers
+
+    if not any(not x.void for x in actual_assets) and not offers(state, actor):
         values.remove("void_and_unmark_all")
     if not any(not x.protected for x in actual_identities):
         values.remove("erase_identity_and_table_question")
@@ -683,14 +688,21 @@ def apply(
             return
         elif option == "void_and_unmark_all":
             _strict(answer, {"text", "fields"})
-            if set(answer.fields) not in ({"asset"}, {"asset", "storage"}):
+            from girlframe.services.m3_sup import parse
+
+            actor, _, _ = _context(action)
+            growth = parse(game, c, state, actor, answer.fields)
+            if growth is None and set(answer.fields) not in ({"asset"}, {"asset", "storage"}):
                 raise WorkflowError("Choose the actual uncorrupted Asset to rewrite.")
             if "storage" in answer.fields:
                 if answer.fields["storage"] != "yes":
                     raise WorkflowError("Choose only the actual offered Void Storage destination")
                 selected["store_void"] = True
             effect = Effect(
-                account=selected["account"], asset=answer.fields["asset"], description=answer.text
+                account=selected["account"],
+                asset=answer.fields.get("asset"),
+                description=answer.text,
+                growth=growth,
             )
         elif option == "erase_identity_and_table_question":
             _strict(answer, {"text", "fields"})
@@ -1035,7 +1047,25 @@ def prove_void_source(
 
         actual_assets = effective_assets(original, actor) if original and sheet else ()
         family_assets = [x for x in actual_assets if x.family == family]
-        asset = next((x for x in actual_assets if x.id == effect.asset), None)
+        actual_id: str | None
+        if effect.growth is not None:
+            from girlframe.services.m3_sup import prove_growth
+
+            assert original is not None
+            grown = prove_growth(game, c, original, actor, first["event_id"])
+            if grown is None or grown.choice != effect.growth:
+                raise ValueError()
+            expected = dict(
+                sup_name=effect.growth.name,
+                sup_family=effect.growth.family,
+                sup_replace=effect.growth.replace or "",
+            )
+            if answer.fields != expected:
+                raise ValueError()
+            actual_id = grown.asset
+        else:
+            actual_id = effect.asset
+        asset = next((x for x in actual_assets if x.id == actual_id), None)
         if (
             sheet is None
             or sheet.character_id != actor.incarnation

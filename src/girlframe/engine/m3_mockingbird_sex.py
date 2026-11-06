@@ -12,6 +12,7 @@ from girlframe.engine.m3_harpy_resources import HarpyResource
 from girlframe.engine.m3_janus_storage import GainSource
 from girlframe.engine.m3_mockingbird import SEX, give_tag, owns
 from girlframe.engine.m3_mockingbird_state import Capability, Exposure, Starry
+from girlframe.engine.m3_sup import Growth
 from girlframe.engine.m3_world_state import AdversaryPilot, Gorgon
 
 
@@ -172,6 +173,7 @@ def infect(
     event: str,
     *,
     storage: GainSource | None = None,
+    growth: Growth | None = None,
 ) -> tuple[GameState, tuple[Followup, ...]]:
     if not owns(original, actor, SEX):
         raise ValueError("Use this actual original person's owned Sex Play")
@@ -189,7 +191,10 @@ def infect(
             piloting=view.inside_frame is True
             and view.occupied_frame_instance == view.frame_instance,
             source=storage,
+            growth=growth,
         )
+    if growth is not None:
+        raise ValueError("Sup requires this actual original Pilot's paid current Frame")
     actual = assets(original, target)
     chosen = next((x for x in actual if x.id == asset and not x.void), None)
     if chosen is None or not description.strip() or len(description) > 1200:

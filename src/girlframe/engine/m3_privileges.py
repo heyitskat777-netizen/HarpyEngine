@@ -194,6 +194,8 @@ def revoke(
         "frame.class.legion.dampener-link",
         "frame.class.legion.kicked-puppy",
         "frame.class.legion.modular-build",
+        "frame.class.legion.home-of-a-sort",
+        "frame.class.priestess.sup-of-primordial-flesh",
     ):
         from girlframe.engine.m3_class_grafts import eligible
 

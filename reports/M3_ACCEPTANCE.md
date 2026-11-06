@@ -1,6 +1,47 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Home, Void growth, Rebel merger and response closure — 2026-11-05
+
+Current source extends `3c79d1178885562e0745fc1d6527309894f37c01`. Exact source
+bytes/hashes are retained in ignored `var/m3-home-growth-and-merger-freeze/manifest.json`.
+M3 remains **RULES_SUBSET**; full regression and human/independent review are pending.
+
+| Completed workflow | Actual focused evidence and supported scope |
+|---|---|
+| Home, of a Sort | Native2P/graft3P, exactly three private installed items, real source-proved same-Frame occupancy, Bond deepening/Intense overflow and no-action Tag rejection. Genuine rescue establishes occupancy; actual suspension/restoration, original-setter permission, Mentor restriction, replay and public privacy are checked. **2/5.44s**, `var/m3-home-verified.xml`. Non-Pilot occupants, retained sources and further hardware/actor ports remain gaps. |
+| Sup of Primordial Flesh | Actual native/graft acquisition and optional new already-Void Asset through **all five existing native producers**: Dive, Mockingbird Risk/Sex, Dormant and Budget cleanup. Genuine caps/replacement/receiver ownership, effective Void and actual threshold→escape/Gorgon with retained grown Asset are implemented. All five new workflows and five affected existing normal workflows have passing evidence: current repaired Dive/Cleanup plus five compatibility checks **7/10.15s**, `var/m3-sup-compatibility.xml`; unchanged earlier new Risk/Sex/Dormant passes retained from `var/m3-sup-normal.xml`. That earlier command also failed Cleanup's synthetic cached policy and is **not** reported as a green five-test run. No results are summed or claimed as full regression. |
+| Rebel Endgame merger | Actual recursive Endgame source, active source group frozen in the native selection, distinct receiving group and genuine membership/territory/secret-recruitment changes. People, bodies, custody, controllers and history remain attached to original actors. Real next city NPC joins the merged group; source closes once and replay changes nothing. **1/2.75s**, `var/m3-rebel-merge-normal.xml`; ordinary Strain/Budget Endgame compatibility **2/2.78s**, `var/m3-rebel-merge-strain-compatibility.xml`. Other Rebel Endgames and unported faction/ended-role contexts remain required. |
+| Backstory response closure correction | Integration review found the special Tag receipt could report resolved before its real Handler body consequence. The receipt and actual response work now stay pending; ordinary Tag responses cannot waive it. The native request opens the original Handler's consequence; actual weakness or death closes the original receipt/work atomically. **3/4.49s**, `var/m3-backstory-native-body-closure.xml`; existing ordinary Handler injury/death compatibility **2/1.44s**, `var/m3-backstory-body-ordinary-compatibility.xml`. Earlier evidence remains tied to its older source. |
+
+Sup expected-path checks exposed a preexisting shared import-shadow defect in
+`m3_strain_effects.operation`: imports restricted to the High Budget fight branch
+were also used by Cleanup/other branches. Moving those imports to operation entry
+fixes actual new/existing Cleanup behavior without changing rule effects or
+weakening source approval. Initial fixture repairs and actual commands are in the
+compact ignored Sup handoff. Merger's initial privacy assertion incorrectly
+assumed the public map included NPCs; corrected to assert that it omits NPC and
+secret-membership data, without exposing new public fields.
+
+All **47 changed Python files**, including every shared interface and four test
+files, pass Ruff/format; all **43 changed production modules** pass mypy. A new
+adjustable Sup family/cap interpretation is recorded centrally: **264 clarifications,
+158 subsets, 315 unimplemented inventory entries**, zero independent approvals.
+These counts are not a completion percentage. Remaining Class abilities include
+Clone AM, Handler's Special Girl, Succubus Protocol and Appearance Matrix; remaining
+playbook, physical/lifecycle, shared-rule and Strain coverage still blocks M3.
+
+CI's focused list now names these workflows and affected shared source checks.
+No new full regression, bot restart, live migration, deployment, environment
+publication, private recovered-engine write, AI/M4 or Ancillary activation occurred.
+The bot remains off; newer local source does not inherit older CI/full-suite results.
+
 ## AM restoration, Class grafts and Rebellion consequences — 2026-11-05
+
+Sanitized checkpoint **`3c79d1178885562e0745fc1d6527309894f37c01`** was pushed and
+its exact remote SHA verified. [Focused CI run 42163437998](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42163437998)
+passed on that commit, including changed static checks, focused gameplay and the
+publishable/manifest check; full regression was skipped by design. Newer local
+work does not inherit that result.
 
 This source extends sanitized checkpoint `a08715fadfcabd0f77681713829bdfa3d7e59c44`.
 Exact integrated bytes and hashes are retained in ignored reproducible snapshot
