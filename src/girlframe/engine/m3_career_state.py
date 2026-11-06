@@ -8,7 +8,14 @@ from girlframe.engine.identity import Snowflake
 from girlframe.engine.m3_actor_state import ActorRef, Model
 
 Ending = Literal[
-    "death", "execution", "imprisonment", "retirement", "reserve", "harpy", "factory_reset"
+    "death",
+    "execution",
+    "imprisonment",
+    "retirement",
+    "reserve",
+    "harpy",
+    "factory_reset",
+    "am_branch_terminated",
 ]
 
 

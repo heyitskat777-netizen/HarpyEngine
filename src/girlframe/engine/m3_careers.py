@@ -14,6 +14,7 @@ from girlframe.engine.m3_career_state import (
 )
 
 if TYPE_CHECKING:
+    from girlframe.engine.m3_am_branch import Branch
     from girlframe.engine.m3_handler_conversion import Repossession
 
 
@@ -711,5 +712,160 @@ def return_original(
         if x.id == identity
         else x
         for x in state.career_returns
+    ]
+    return GameState.model_validate_json(state.model_dump_json())
+
+
+def activate_branch(
+    original: GameState,
+    *,
+    branch: "Branch",
+    event: str,
+    profile_id: str,
+    profile_revision: int,
+    sheet: PilotSheet,
+    archive_id: str,
+) -> GameState:
+    """Source-owned same branch changes NPC representation; original mind stays ended."""
+    from girlframe.engine import m3_am_branch as source
+    from girlframe.engine.m3_actor_bonds import rebind
+    from girlframe.engine.m3_actor_state import CastRole
+    from girlframe.engine.m3_am import Limiter
+    from girlframe.engine.m3_am_body import Body, bodies, put
+    from girlframe.engine.m3_physical_state import Placement
+
+    value = source.get(original, branch.id)
+    archive = next((x for x in original.career_archives if x.id == archive_id), None)
+    assigned = value.assignment
+    result = value.resulting_actor
+    npc = (
+        next((x for x in original.world.npcs if x.id == value.npc.entity), None)
+        if original.world
+        else None
+    )
+    body = source.current_body(original, value.npc)
+    if (
+        value != branch
+        or value.takeover_event
+        or assigned is None
+        or result is None
+        or not value.ready_event
+        or archive is None
+        or archive.actor != value.original
+        or archive.ending != "am_branch_terminated"
+        or archive.source_event != event
+        or npc is None
+        or not npc.alive
+        or sheet.model_dump_json()
+        != source.build_sheet(original, value, profile_revision).model_dump_json()
+        or sheet.character_id != result.incarnation
+        or int(result.entity) in original.order
+    ):
+        raise ValueError(
+            "Activate only the actual ready branch after irreversible original termination"
+        )
+    state = replacement(
+        original,
+        archive.id,
+        owner=value.owner,
+        new_character=str(result.incarnation),
+        profile_id=profile_id,
+        profile_revision=profile_revision,
+        source_event=event,
+    )
+    state = replacement_status(
+        state, value.owner, str(result.incarnation), assigned.position, event
+    )
+    state.facts = [
+        dict(
+            x,
+            body=Limiter.model_validate_json(x["body"])
+            .model_copy(update=dict(actor=result))
+            .model_dump_json(),
+        )
+        if x.get("kind") == "am_limiter" and x.get("id") in value.limiter_ids
+        else x
+        for x in state.facts
+    ]
+    state.sheets[result.entity] = sheet.model_copy(deep=True)
+    state.order = (
+        state.order[: assigned.position] + (value.owner,) + state.order[assigned.position :]
+    )
+    changed = value.model_copy(
+        update=dict(takeover_event=event, archive=archive.id, npc_history=npc.model_dump_json())
+    )
+    put(state, "am_branch", value.id, changed)
+    put(
+        state,
+        "am_body_hardware",
+        body.vessel,
+        body.model_copy(update=dict(actor=result, occupant=result, event=event)),
+    )
+    saved = PilotSheet.model_validate_json(archive.sheet_json)
+    import json
+
+    prior_poses = json.loads(archive.links_json)["placements"]
+    if len(prior_poses) != 1:
+        raise ValueError("Preserve the terminated original's actual body hardware")
+    prior = Placement.model_validate_json(json.dumps(prior_poses[0]))
+    if prior.girl_cell is None:
+        raise ValueError("Keep the terminated original's known physical body")
+    previous = next((x for x in bodies(state) if x.vessel == prior.vessel_id), None)
+    old_body = Body(
+        vessel=prior.vessel_id,
+        actor=value.original,
+        label="Terminated original AM hardware",
+        cell=prior.girl_cell,
+        assets=tuple(x for x in saved.assets if x.family == "girl"),
+        medical=saved.medical_state,
+        occupant=None,
+        origin_event=previous.origin_event if previous else prior.proposed_event,
+        event=event,
+    )
+    put(state, "am_body_hardware", old_body.vessel, old_body)
+    state.placements.append(
+        Placement(
+            actor=result,
+            vessel_id=value.vessel,
+            frame_instance=assigned.instance,
+            girl_cell=body.cell,
+            frame_cell=assigned.cell,
+            mode="outside_frame",
+            vitals_active=True,
+            incapacitated=body.medical != "fit",
+            proposed_event=value.ready_event,
+            source_event=event,
+            account="Actual branch takeover and existing Frame reassignment",
+        )
+    )
+    state = rebind(state, value.npc, result, event)
+    state.alpha_broken = [
+        condition.model_copy(
+            update=dict(
+                subject=result if condition.subject == value.npc else condition.subject,
+                inflictor=result if condition.inflictor == value.npc else condition.inflictor,
+            )
+        )
+        for condition in state.alpha_broken
+    ]
+    assert state.world is not None
+    state.world = state.world.model_copy(
+        update=dict(npcs=tuple(x for x in state.world.npcs if x.id != value.npc.entity))
+    )
+    state.scene_casts = [
+        cast.model_copy(
+            update=dict(
+                roles=tuple(
+                    CastRole(actor=result, controller=value.owner, source_event=event)
+                    if x.actor == value.npc
+                    else x
+                    for x in cast.roles
+                ),
+                revision=cast.revision + 1,
+            )
+        )
+        if any(x.actor == value.npc for x in cast.roles)
+        else cast
+        for cast in state.scene_casts
     ]
     return GameState.model_validate_json(state.model_dump_json())

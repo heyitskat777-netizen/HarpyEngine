@@ -967,3 +967,74 @@ class CareerService:
             )
         except ValueError as error:
             raise WorkflowError(str(error)) from None
+
+
+def activate_branch_in_transaction(
+    c: Connection,
+    game: GameService,
+    state: GameState,
+    *,
+    branch_id: str,
+    event: str,
+) -> tuple[GameState, CareerArchive]:
+    """One actual branch takeover, stable profile revision and original career ending."""
+    from girlframe.engine import m3_am_branch as branch_rules
+    from girlframe.services.m3_am_branch import prove
+
+    value = prove(game, c, state, branch_id, ready=True)
+    profile = (
+        c.execute(
+            sa.select(t.characters).where(
+                t.characters.c.campaign_id == game.store.campaign_id,
+                t.characters.c.user_id == str(value.owner),
+            )
+        )
+        .mappings()
+        .one_or_none()
+    )
+    if profile is None or value.resulting_actor is None:
+        raise WorkflowError("Recover the original human's actual stable profile and ready branch")
+    source_sheet = branch_rules.build_sheet(state, value, profile["revision"] + 1)
+    public = json.loads(profile["public_json"])
+    private = json.loads(profile["private_json"])
+    public.update(
+        callsign=source_sheet.callsign, girl_playbook="AM", frame_playbook=source_sheet.frame
+    )
+    DraftInput.model_validate(dict(public, notes=private.get("notes", "")))
+    state = branch_rules.materialize_relationships(state, value, event)
+    archive_id = str(uuid4())
+    ended = end_in_transaction(
+        c,
+        game,
+        state,
+        value.original,
+        reason="am_branch_terminated",
+        source_event=event,
+        account="Original AM irreversibly terminated by owned branch takeover",
+        archive_id=archive_id,
+    )
+    changed = rules.activate_branch(
+        ended,
+        branch=value,
+        event=event,
+        profile_id=profile["id"],
+        profile_revision=profile["revision"] + 1,
+        sheet=source_sheet,
+        archive_id=archive_id,
+    )
+    updated = c.execute(
+        t.characters.update()
+        .where(
+            t.characters.c.campaign_id == game.store.campaign_id,
+            t.characters.c.user_id == str(value.owner),
+            t.characters.c.revision == profile["revision"],
+        )
+        .values(
+            revision=profile["revision"] + 1,
+            public_json=json.dumps(public),
+            private_json=json.dumps(private),
+        )
+    )
+    if updated.rowcount != 1:
+        raise WorkflowError("STALE_BRANCH_PROFILE: recover the actual source profile revision")
+    return changed, next(x for x in changed.career_archives if x.id == archive_id)

@@ -1,4 +1,7 @@
-# Actual Secretary promote/create -> four Plays -> real pre-roll interruption/continuation.
-# Planned previous-award compatibility; final whole-M3 regression remains separate.
-tests/rules/test_secretary.py
-tests/rules/test_handler_advancements.py
+# Actual NPC branch -> NPC Guard -> irreversible takeover -> current Girl Keep/Inbox.
+# Planned Code/body/career/Guard compatibility; final M3 regression remains separate.
+tests/rules/test_am_branch.py
+tests/rules/test_am_code.py::test_mid_actual_operator_native_rewrite_retains_mark_slot_body_hardware_and_finishes
+tests/rules/test_am_body.py::test_real_code_body_swap_new_asset_damage_and_private_hooked_return
+tests/rules/test_career_service.py::test_fresh_draft_has_new_incarnation_empty_creation_and_keeps_original_sql_receipt_identity
+tests/rules/test_alpha_brutalize.py::test_guard_low_actual_weapon_review_native_counter_then_optional_unarmed_kill

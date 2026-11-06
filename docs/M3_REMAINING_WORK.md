@@ -1,5 +1,12 @@
 # M3 remaining work — verified development snapshot
 
+Newest bounded addition: **actual independent AM NPC branch, real NPC action and
+owned Girl takeover terminating the original**, with preserved software/recall,
+exact existing hardware and actual current-Girl Play/Inbox history. Evidence is at
+the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md). Bomb Collar and self-directed
+Jailbroken occupancy are next bounded work. Other required systems and final
+integrated verification still prevent M3 completion. Bot off; RULES_SUBSET.
+
 Newest bounded addition: **Secretary promotion/creation and all four printed
 Plays**, including real Orders, pre-roll gunpoint withdrawal/child continuation,
 actual NPC appearance and delivered competence work. Evidence is at the top of

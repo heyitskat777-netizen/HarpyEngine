@@ -1,5 +1,46 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## AM independent branch and owned takeover — 2026-11-06 UTC
+
+Source extends `a5b0e8938d6d7ac359837257260d8a60f09c83d9`; sanitized bytes are
+frozen in ignored `var/m3-am-branch-freeze/manifest.json`. M3 remains
+**RULES_SUBSET**; final regression and independent/player review remain pending.
+
+A genuine Just Code branch uses actual prepared empty hardware once, creating a
+distinct NPC mind/person with its own ActorRef, body and source. The normal performs
+a real NPC Guard counter before the original player takes that same branch as the
+Girl. A distinct software-termination ending irreversibly archives the original;
+it is not bodily death and triggers no invented death/Strain effect. The real
+branch state, software Limiters and available fictional recall persist into its
+new incarnation/profile. Only its actual relationships/cast rebind; original-person
+Bonds, consent, balances and OOC notes/history are not cloned or inherited by account.
+
+The available existing Enforcer's exact instance, condition and history are
+reassigned without extra hardware or original person-bound purchased abilities.
+Actual prepared Assets become live resources; activation metadata does not invent
+starting catalog choices. Branch actor/Guard entry points prove canonical birth;
+physical occupancy guards prevent the same prepared vessel serving body+branch.
+The normal reopens private Inbox history and completes the new Girl's real Keep
+and Handler response with released chat. **1 passed / 6.239s**,
+`var/m3-am-branch-normal.xml`. Four planned Code/body/career/Guard compatibility
+checks pass **4 / 10.917s**, `var/m3-am-branch-compat.xml`.
+
+Coherent **19 changed Python files** pass Ruff/format; **18 source modules** pass
+mypy, including all shared actor, memory, body, career, proof and native/Inbox
+ports. Exact hashes and commands are in ignored
+`var/m3-am-branch-handoff.json` and `var/m3-am-branch-final-source-snapshot.json`.
+No full regression or role/lifecycle matrix.
+
+Metadata remains **177 subsets / 299 unimplemented / 319 clarifications**,
+476 total,439 required core,37 deferred Ancillary,zero independent approvals.
+Counts are inventory, not a completion percentage. Activation is finite to the
+available colocated original Enforcer. Other Frame/coupled/conditional packages,
+occupied/remote vessels, branch-body lifecycle/reuse and NPC AM-specific Plays
+remain explicit required adapters. Self-directed Jailbroken occupancy, Bomb Collar
+and broader source/playbook/Strain/world/shared/lifecycle systems still block M3.
+Bot stays off; no deployment, migration, environment publication, recovered-engine
+write, AI/M4 or Ancillary activation.
+
 ## Secretary acquisition and four Plays — 2026-11-06 UTC
 
 Source extends `e4a99f1f090a20200f5b884caf5254464ded1f04`; sanitized bytes are

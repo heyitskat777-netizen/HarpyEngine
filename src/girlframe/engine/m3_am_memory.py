@@ -55,6 +55,10 @@ def can_recall(state: GameState, actor: ActorRef, memory: str, *, learned_revisi
     """
     if learned_revision < 0 or learned_revision > state.revision or not memory.strip():
         raise ValueError("Use actual memory contents and their original learning revision")
+    from girlframe.engine.m3_am_branch import remembered_before_birth
+
+    if remembered_before_birth(state, actor, memory, learned_revision) is False:
+        return False
     from girlframe.engine.m3_am_backup import recall_state
 
     available, actual_losses = recall_state(state, actor, learned_revision)

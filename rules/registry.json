@@ -7808,7 +7808,8 @@
         "tests/rules/test_am_records.py",
         "tests/rules/test_am_memory.py",
         "tests/rules/test_am_backup.py",
-        "tests/rules/test_am_body.py"
+        "tests/rules/test_am_body.py",
+        "tests/rules/test_am_branch.py"
       ],
       "m2_play_id": null,
       "module": "core"

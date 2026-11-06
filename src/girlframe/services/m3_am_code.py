@@ -119,6 +119,10 @@ def source(game: GameService, c: Connection, state: GameState, identity: str) ->
         from girlframe.services.m3_am_body import prove as prove_body
 
         prove_body(game, c, state, value.body_swap)
+    if value.branch:
+        from girlframe.services.m3_am_branch import prove as prove_branch
+
+        prove_branch(game, c, state, value.branch)
     return value
 
 
@@ -268,6 +272,8 @@ def finish(
         raise WorkflowError("The actual selected backup must contain its genuine original snapshot")
     if "body" in value.selected_options and not value.body_swap:
         raise WorkflowError("The selected body option requires its actual physical effect")
+    if "branch" in value.selected_options and not value.branch:
+        raise WorkflowError("The selected branch requires its actual independent NPC and vessel")
     rules.put(
         state,
         value.model_copy(update=dict(phase="complete", effect_event=value.effect_event or event)),
@@ -287,6 +293,12 @@ def apply(
 
     value = rules.session(state, action["data"]["am_code"]["maintenance"])
     event = action["data"]["response_event"]
+    if request["kind"] == "am_code_branch":
+        from girlframe.services.m3_am_branch import apply as apply_branch
+
+        apply_branch(game, c, state, action, answer)
+        finish(game, c, state, action, event)
+        return
     if request["kind"] == "am_code_body":
         from girlframe.services.m3_am_body import apply as apply_body
 
@@ -307,7 +319,7 @@ def apply(
     ):
         raise WorkflowError("Use the actual original operator/recipient's concrete source response")
     if request["kind"] == "am_code_options":
-        options = {"identities", "backup", "body"} | (
+        options = {"identities", "backup", "body", "branch"} | (
             {"records"} if value.records_access else set()
         )
         if (
@@ -329,6 +341,8 @@ def apply(
             game.request(c, action, value.controller, "am_code_edit")
         if "body" in answer.options:
             game.request(c, action, value.controller, "am_code_body")
+        if "branch" in answer.options:
+            game.request(c, action, value.controller, "am_code_branch")
         if "records" in answer.options:
             from girlframe.services.m3_am_records import grant
 
@@ -470,6 +484,10 @@ def projection(
 ) -> dict[str, Any]:
     value = rules.session(state, action["data"]["am_code"]["maintenance"])
     details: dict[str, Any] = {}
+    if request["kind"] == "am_code_branch":
+        from girlframe.services.m3_am_branch import projection as project_branch
+
+        details["branch"] = project_branch(game, c, state, value)
     if request["kind"] == "am_code_body":
         from girlframe.services.m3_am_body import projection as project_body
 
@@ -481,9 +499,9 @@ def projection(
         details["records_id"] = value.records_access
     return dict(
         **details,
-        available_options=("identities", "backup", "body", "records")
+        available_options=("identities", "backup", "body", "branch", "records")
         if value.records_access
-        else ("identities", "backup", "body"),
+        else ("identities", "backup", "body", "branch"),
         maintenance=value.id,
         identities=[x.model_dump(mode="json") for x in rules.choices(state, value.actor)],
         instruction=value.instruction,

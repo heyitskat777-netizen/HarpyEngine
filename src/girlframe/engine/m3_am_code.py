@@ -30,8 +30,8 @@ class Maintenance(Model):
     cell: tuple[int, int]
     order_scope: Literal["spoken_statement"] = "spoken_statement"
     records_access: str | None = Field(default=None, exclude_if=lambda value: value is None)
-    selected_options: tuple[Literal["identities", "records", "backup", "body"], ...] = Field(
-        default=("identities",), exclude_if=lambda value: value == ("identities",)
+    selected_options: tuple[Literal["identities", "records", "backup", "body", "branch"], ...] = (
+        Field(default=("identities",), exclude_if=lambda value: value == ("identities",))
     )
     phase: Literal["proposed", "ready", "active", "complete"] = "proposed"
     confirmed_event: str | None = None
@@ -43,6 +43,7 @@ class Maintenance(Model):
     memory_erasure: str | None = Field(default=None, exclude_if=lambda value: value is None)
     backup: str | None = Field(default=None, exclude_if=lambda value: value is None)
     body_swap: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    branch: str | None = Field(default=None, exclude_if=lambda value: value is None)
     order: str | None = None
     order_event: str | None = None
     instruction: str = ""
@@ -144,7 +145,9 @@ def rewrite(
                 effect_event=event,
                 replacements=changed,
                 memory_erasure=erased,
-                phase="active" if value.records_access else "complete",
+                phase="active"
+                if value.records_access or set(value.selected_options) & {"body", "branch"}
+                else "complete",
             )
         ),
     )

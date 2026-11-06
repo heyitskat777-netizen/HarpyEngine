@@ -117,6 +117,16 @@ def prove_performed(
             raise WorkflowError("The Guard drew no actual carried weapon")
 
 
+def _prove_branch(game: GameService, c: Connection, state: GameState, actor: ActorRef) -> None:
+    from girlframe.engine.m3_am_branch import branch
+
+    copied = branch(state, actor)
+    if copied is not None:
+        from girlframe.services.m3_am_branch import prove
+
+        prove(game, c, state, copied.id)
+
+
 class GuardService:
     def __init__(self, game: GameService):
         self.game, self.store = game, game.store
@@ -143,6 +153,7 @@ class GuardService:
                 if not targets:
                     continue
                 actual = resolve(state, role.actor, ())
+                _prove_branch(self.game, c, state, role.actor)
                 guards.append(
                     dict(
                         ref=role.actor.model_dump(mode="json"),
@@ -179,6 +190,7 @@ class GuardService:
             state = load_state(c, self.store.campaign_id)
             cast = _cast(self.game, c, state, channel)
             actual = resolve(state, npc, ())
+            _prove_branch(self.game, c, state, npc)
             if (
                 state.revision != expected
                 or actual.controller != viewer.user_id
@@ -242,6 +254,7 @@ class GuardService:
             self._access(c, viewer)
             state, npc, attacker, cast = npc_counter_context(self.game, c, parent, choice)
             actual = resolve(state, npc, ())
+            _prove_branch(self.game, c, state, npc)
             if actual.controller != viewer.user_id or not rules.supported(
                 state, npc, attacker, cast
             ):
@@ -274,6 +287,7 @@ class GuardService:
             self.game.unpaused(c)
             state, npc, attacker, cast = npc_counter_context(self.game, c, parent, choice)
             actual = resolve(state, npc, ())
+            _prove_branch(self.game, c, state, npc)
             if (
                 state.revision != expected
                 or actual.controller != viewer.user_id

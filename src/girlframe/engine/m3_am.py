@@ -92,6 +92,11 @@ def put(state: GameState, value: Discovery) -> None:
 
 
 def limiters(state: GameState, actor: ActorRef) -> tuple[Limiter, ...]:
+    from girlframe.engine.m3_am_branch import branch_limiters
+
+    copied = branch_limiters(state, actor)
+    if copied is not None:
+        return copied
     if actor.kind == "npc":
         from girlframe.engine.m3_am_reset import origin
 
@@ -228,6 +233,10 @@ def require_identity_change(state: GameState, actor: ActorRef, selected: tuple[s
 
 
 def human_target(state: GameState, target: ActorRef) -> bool | None:
+    from girlframe.engine.m3_am_branch import is_branch
+
+    if is_branch(state, target):
+        return False
     if target.kind == "pilot":
         sheet = state.sheets.get(target.entity)
         if sheet is not None and sheet.character_id == target.incarnation:

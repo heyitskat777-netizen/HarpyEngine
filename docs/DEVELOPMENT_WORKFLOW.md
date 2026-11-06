@@ -39,9 +39,9 @@ a required M3 rule complete; required gaps stay in the milestone backlog.
 
 | Order | Assignment | Completion boundary |
 |---|---|---|
-| 1, parallel | AM branch | Body transfer handed off. Freeze actual appropriate vessel -> usable independent NPC branch -> optional owned Girl takeover terminating original -> current Girl consumer; preserve actual identity/resource/source boundaries. |
-| 1, parallel | Secretary | Memory scenes handed off. Finish genuine acquisition by promotion/creation -> all four actual delegated NPC Plays -> source-owned continuation, authority, position and delivered work/history. |
-| 1, root | Source/CI integration | Integrate Secretary acquisition/Inbox and exact original-action gunpoint hooks; reserve AM branch actor/career/source ports only after its frozen contract. No third implementation unit. |
+| 1, parallel | Jailbroken occupancy | AM branch handed off. Freeze self-directed appropriate-body movement without a fabricated Just Code/operator roll; preserve actual hardware, same mind/resources and genuine consumer. |
+| 1, parallel | Bomb Collar | Secretary handed off. Freeze genuine acquisition -> body-bound Tag-like collar without embrace/reject -> actual trigger -> real Dive/other survival or actual death/history. |
+| 1, root | Source/CI integration | Freeze AM branch integration, coordinate Bomb Collar native/source hooks and assign Jailbroken ports after its contract. No third implementation unit. |
 | 2 | Remaining required gameplay systems | Select the next dependency-ready whole workflow from M3_REMAINING_WORK.md and M3_COMPLETION_AUDIT.md. Freeze its contract, reuse implemented dependencies and complete it before opening unrelated work. |
 | 3 | M3 review candidate | Account for required core scope, complete expected gameplay flows and final integrated checks; provide a concise player-test checklist and stop for owner review. |
 

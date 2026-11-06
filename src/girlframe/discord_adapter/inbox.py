@@ -528,6 +528,14 @@ class InboxView(discord.ui.View):
             await open_source(
                 interaction, ScrutinyService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_am_branch":
+            from girlframe.discord_adapter.m3_am_branch import open_branch
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_am_branch import BranchService
+
+            await open_branch(
+                interaction, BranchService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_am_body":
             from girlframe.discord_adapter.m3_am_body import open_body
             from girlframe.services.m2_game import GameService

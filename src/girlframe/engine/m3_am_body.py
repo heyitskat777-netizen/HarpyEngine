@@ -236,6 +236,10 @@ def transfer(state: GameState, value: Maintenance, preparation: str, event: str)
         )
     ):
         raise ValueError("Use this actual operator-selected prepared body once")
+    from girlframe.engine.m3_am_branch import uses_vessel
+
+    if uses_vessel(state, source.spec.vessel):
+        raise ValueError("This actual prepared vessel already contains an AM branch")
     mind = tuple(x for x in sheet.assets if x.id in source.spec.mind_assets)
     if len(mind) != len(source.spec.mind_assets):
         raise ValueError("Recover the original mind-linked Asset classification")

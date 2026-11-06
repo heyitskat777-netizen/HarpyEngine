@@ -1380,6 +1380,29 @@ class InboxService:
                         task="m3_am_source",
                     )
                 )
+            from girlframe.services.m3_am_branch import BranchService
+
+            for branch in BranchService(GameService(self.store))._tasks(connection, viewer):
+                pending_branch = bool(branch["pending"])
+                items.append(
+                    InboxItem(
+                        "am-branch:" + branch["id"],
+                        "am_branch",
+                        branch["id"],
+                        branch["revision"],
+                        "playbook",
+                        branch["label"],
+                        "Original AM or actual branch controller",
+                        "pending" if pending_branch else "established",
+                        pending_branch,
+                        False,
+                        "Review the distinct branch and its source-owned takeover.",
+                        "Mind history and hardware remain distinct from account authority.",
+                        "Review AM branch",
+                        task="m3_am_branch",
+                    )
+                )
+
             from girlframe.services.m3_am_body import BodyService
 
             for body_swap in BodyService(GameService(self.store))._tasks(connection, viewer):

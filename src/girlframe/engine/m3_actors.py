@@ -105,6 +105,11 @@ def frame_position(
     fallback: tuple[int, int] | None = None,
 ) -> tuple[int, int] | None:
     """Follow one actual Frame body through parking or transformation, never its controller."""
+    from girlframe.engine.m3_am_branch import frame_owner_alias
+
+    branch_owner = frame_owner_alias(state, owner, instance)
+    if branch_owner is not None and branch_owner != owner:
+        return frame_position(state, branch_owner, instance, fallback=fallback)
     from girlframe.engine.m3_handler_conversion import converted_frame_owner
 
     converted = converted_frame_owner(state, owner, instance)
@@ -806,7 +811,7 @@ def _resolve(
             sources.append(fingerprint(case))
         if journey is not None:
             sources.append(fingerprint(journey))
-        return ActorView(
+        view = ActorView(
             ref=ref,
             controller=npc.controller,
             label=npc.name,
@@ -832,6 +837,9 @@ def _resolve(
             if len(sources) == 1
             else hashlib.sha256("|".join(sources).encode()).hexdigest(),
         )
+        from girlframe.engine.m3_am_branch import npc_view
+
+        return npc_view(state, view)
     if ref.kind == "external_pilot":
         pilot = next((x for x in world.pilots if x.id == ref.entity), None)
         if pilot is None or (require_alive and not pilot.alive):

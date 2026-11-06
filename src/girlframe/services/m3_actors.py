@@ -87,6 +87,13 @@ class ActorService:
             ) from None
         if actor.controller != viewer.user_id:
             raise WorkflowError("This actor is controlled by another human.")
+        from girlframe.engine.m3_am_branch import branch
+
+        copied = branch(state, ref)
+        if copied is not None:
+            from girlframe.services.m3_am_branch import prove
+
+            prove(self.game, c, state, copied.id)
         from girlframe.engine.m3_janus import find
 
         if find(state, ref) is not None:
