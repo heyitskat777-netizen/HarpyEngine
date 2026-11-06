@@ -3650,6 +3650,12 @@ class GameService:
 
         def operation(c: Connection) -> dict[str, Any]:
             scene = self.scene(c, channel)
+            from girlframe.engine.m3_deep_brain_spikes import require_return
+
+            try:
+                require_return(load_state(c, self.store.campaign_id), scene["id"])
+            except ValueError as error:
+                raise WorkflowError(str(error)) from None
             lock = self.lock(c, channel)
             if lock and lock["state"] != "released":
                 raise WorkflowError(
@@ -3730,6 +3736,8 @@ class GameService:
             state = load_state(c, self.store.campaign_id)
             cast = next((x for x in state.scene_casts if x.id == scene["id"] and x.open), None)
             native = {x.controller for x in cast.roles if x.actor.kind == "pilot"} if cast else None
+            from girlframe.engine.m3_deep_brain_spikes import scene_context
+
             return {
                 "pilots": [
                     uid
@@ -3742,6 +3750,7 @@ class GameService:
                     else "Handler"
                     for uid in scene["participants"]
                 },
+                "memory": scene_context(state, scene["id"]),
                 "participants": scene["participants"],
                 "lock": {k: lock[k] for k in ("action_id", "state")} if lock else None,
                 "joined": True,

@@ -3322,3 +3322,13 @@ and adjustment impact are recorded in `rules/registry.json`.
   fresh objects, remote arrival and barring all structural retention are rejected.
   Delegated clarity review remains pending; adjust future delivery policy without
   rewriting original installation or earlier transfer/use history.
+
+
+- `deep_brain_spikes_played_memory_context` (PDF158/156): play the memory as an
+  actual scene using the current cast and saved present reference. Remembered
+  fiction never rewinds bodies, resources or world. Genuinely applicable current
+  Plays keep their real consequences; return preserves the present’s Tag quota.
+  The original Handler records relevance or major discrepancy without an audience
+  veto, minimum roll count or extra charge. Static-note and historic-world-cloning
+  alternatives are rejected. Delegated clarity review remains pending; changes
+  affect future scene handling without erasing actual events or saved history.

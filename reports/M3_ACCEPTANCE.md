@@ -1,5 +1,38 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Deep-Brain-Spikes memory scenes — 2026-11-06 UTC
+
+Source extends `3b82763b9571e2e55133b9e92e2e49ab6c3c17c1`; sanitized bytes are
+frozen in ignored `var/m3-deep-brain-spikes-freeze/manifest.json`. M3 remains
+**RULES_SUBSET**; final regression and independent/player review remain pending.
+
+A genuine held advancement can acquire Deep-Brain-Spikes through native controls.
+Its original Handler sets an actual memory scene/cast in the bound channel while
+preserving the present reference. Normal Play controls identify the context;
+participants own contributions and genuinely applicable current-actor Plays keep
+their real effects. The normal performs an actual Keep, then returns for clear
+relevance. A second memory returns for major discrepancy without a forced roll.
+Return restores the exact present scene/cast and same-source surviving Tag-use
+quota, bumping affected sheet revision; it never rewinds resources, bodies or world.
+Generic scene closure cannot bypass this source-owned return or pending work.
+
+Native acquisition, identical retries, both printed causes, actual resource use,
+private History and privacy pass **1 normal / 5.64s**. Planned previous-award
+compatibility passes **3 / 7.75s**. Coherent **11 changed Python files** pass
+Ruff/format and **10 source modules** pass mypy, including root scene, UI and Inbox
+integration. Two formatting-only findings were fixed; passing gameplay, Ruff and
+type evidence is reused. Ignored `var/m3-deep-brain-spikes-handoff.json` records
+exact commands and hashes. No full regression or repeated installation.
+
+Metadata: **176 subsets / 300 unimplemented / 316 adjustable clarifications**,
+476 total,439 required core,37 deferred Ancillary,zero independent approvals.
+Counts are inventory, not a completion percentage. Current native Handler/Girl
+memory scenes are bounded; external subjects, historical mechanical simulation
+and conflicting protected scenes remain explicit gaps. AM transfer and broader
+source/body/playbook/Strain/world/shared/lifecycle work still block M3.
+Bot stays off; no deployment, migration, environment publication, private-engine
+write, AI/M4 or Ancillary activation.
+
 ## Retained Home — 2026-11-06 UTC
 
 Source extends `401efd01185c089735c2fe07e5adb7aa16667eb3`; exact bytes are frozen

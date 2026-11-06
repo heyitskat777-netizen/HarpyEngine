@@ -5255,6 +5255,24 @@
       "revision": 1,
       "implementation_note": "Exact original paid source, known accessible colocated delivery, original-owner factual confirmation and same possession IDs are mandatory; new fixtures link prior realization history. No new Asset slots, charge, approval or automatic remote recovery.",
       "change_impact": "Affects future paid Home delivery and physical source proof; preserve immutable original choices, installation and prior use/transfer history. Independent printed clarity review remains pending."
+    },
+    {
+      "id": "deep-brain-spikes-played-memory-context",
+      "summary": "A played memory is an actual scene context attached to the saved present scene; remembered fiction does not rewind current bodies, resources or world.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF158/printed156 Deep-Brain-Spikes",
+      "authority": "delegated_recommendation",
+      "rationale": "The rule says to set and play an offscreen/pre-game scene and allows discrepancies, without creating historical sheets or restoring a past campaign snapshot.",
+      "alternatives": [
+        "Treat the memory as only a static note",
+        "Clone historical actors/world and restore current GameState afterward",
+        "Require an audience acknowledgment or a minimum number of rolls before returning"
+      ],
+      "policy_key": "deep_brain_spikes_played_memory_context",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Use the actual channel and current scene cast; preserve the present reference/cast and its used-Tag quota. Only genuinely applicable current-actor Plays affect real resources. Original Handler records either printed return cause; no extra charge, quota or acknowledgment veto.",
+      "change_impact": "Changes future memory-scene context and return bookkeeping; keeps actual intervening resource events and immutable acquisition/memory history. Printed-rule clarity and independent/player review remain pending."
     }
   ],
   "entries": [
@@ -16693,14 +16711,52 @@
         "heading": "Deep-Brain-Spikes"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
-      "contract": null,
-      "dependencies": [],
-      "test_evidence": [],
+      "contract": {
+        "trigger": "Original current Handler spends a genuine held advancement and dives into a current cast member’s human-authored offscreen/pre-game memories",
+        "actor_type": "Exact original Handler and actual current scene participants",
+        "pre_roll_sources": [
+          "Source-proved actual held award and consumed acquisition receipt",
+          "Actual ordinary present scene/channel/cast and eligible subject",
+          "Human-authored memory scope, beginning and current circumstances; no harvested private memories"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "normal": [
+            "Real canonical memory scene and normal current-actor play",
+            "Return when relevance becomes clear",
+            "Return when discrepancies become too major"
+          ]
+        },
+        "choice_ownership": "Original Handler sets the scene and records the printed return cause; each human owns actual contributions and character actions",
+        "target_policy": "Native original Handler/current Girl in actual scene cast; no past-sheet simulation, private memory harvesting or actor impersonation",
+        "post_roll_effects": [
+          "Genuine single-award acquisition",
+          "Actual temporary canonical scene/cast and private original history",
+          "Restore same present scene/cast and surviving same-source Tag usage quota without resource/world rollback",
+          "Real current-actor Play effects, events and paid resources remain current"
+        ],
+        "mandatory_followups": [
+          "Finish actual pending Plays, recovery, locks and source work before return",
+          "Generic scene close cannot bypass the owned printed return",
+          "Broader memory-subject and protected-scene source paths remain required M3 work"
+        ],
+        "handler_or_gm_intervention": "Source Handler authors remembered fiction and assesses actual relevance/discrepancy; no minimum rolls, invented charge or audience acknowledgment veto",
+        "test_fixture_ids": [
+          "tests/rules/test_deep_brain_spikes.py"
+        ]
+      },
+      "dependencies": [
+        "source.handler-advancement-triggers"
+      ],
+      "test_evidence": [
+        "tests/rules/test_deep_brain_spikes.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

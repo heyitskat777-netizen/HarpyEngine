@@ -39,9 +39,9 @@ a required M3 rule complete; required gaps stay in the milestone backlog.
 
 | Order | Assignment | Completion boundary |
 |---|---|---|
-| 1, parallel | Next retained consumer | Clone handed off; retained Home is active. Finish same portable possessions plus genuinely prepared replacement fixtures and actual Bond/Tag consumer, preserving original source and paid delivery. |
-| 1, parallel | Next ordinary source workflow | Harpy repossession and capture award handed off. Freeze Deep-Brain-Spikes acquisition -> played memory scene -> saved present return/history; no invented historical-world rewrite. |
-| 1, root | Source/CI integration | Integrate retained Home payment confirmation/source proof and the next source/native consumers after modules exist, without opening a third implementation unit. |
+| 1, parallel | AM body transfer | Retained Home handed off. Finish actual prepared hardware -> same-AM body transfer -> real new-body consequence -> AM-owned hooked return; preserve mind/resources and both bodies’ actual conditions. |
+| 1, parallel | Deep-Brain-Spikes | Harpy repossession and capture award handed off. Finish genuine acquisition -> played memory scene -> either printed return/history; no invented historical-world rewrite. |
+| 1, root | Source/CI integration | Integrate memory scene/context/acquisition/Inbox and AM body native/source access after modules exist, without opening a third implementation unit. |
 | 2 | Remaining required gameplay systems | Select the next dependency-ready whole workflow from M3_REMAINING_WORK.md and M3_COMPLETION_AUDIT.md. Freeze its contract, reuse implemented dependencies and complete it before opening unrelated work. |
 | 3 | M3 review candidate | Account for required core scope, complete expected gameplay flows and final integrated checks; provide a concise player-test checklist and stop for owner review. |
 

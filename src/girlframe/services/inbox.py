@@ -865,6 +865,29 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_deep_brain_spikes import DeepBrainSpikesService
+
+            for memory in DeepBrainSpikesService(self.store)._tasks(connection, viewer):
+                pending_memory = bool(memory["pending"])
+                items.append(
+                    InboxItem(
+                        "deep-brain-spikes:" + memory["id"],
+                        "deep_brain_spikes",
+                        memory["id"],
+                        memory["revision"],
+                        "playbook",
+                        memory["label"],
+                        "Original memory-scene participant",
+                        "pending" if pending_memory else "established",
+                        pending_memory,
+                        False,
+                        "Play the memory scene or review its original return.",
+                        "Remembered fiction never rewinds current campaign resources.",
+                        "Open memory scene",
+                        task="m3_deep_brain_spikes",
+                    )
+                )
+
             from girlframe.services.m3_handler_conversion import HandlerConversionService
 
             for conversion in HandlerConversionService(self.store)._tasks(connection, viewer):

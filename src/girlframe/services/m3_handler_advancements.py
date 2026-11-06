@@ -124,6 +124,15 @@ class HandlerAdvancementService:
                     )
 
                     receipts = insurance_acquisitions(spent)
+                elif (
+                    value.acquired_rule
+                    == "handler-advancement.handler-advancement.deep-brain-spikes"
+                ):
+                    from girlframe.engine.m3_deep_brain_spikes import (
+                        acquisitions as spike_acquisitions,
+                    )
+
+                    receipts = spike_acquisitions(spent)
                 else:
                     from girlframe.engine.m3_supply_drop import (
                         acquisitions as drop_acquisitions,

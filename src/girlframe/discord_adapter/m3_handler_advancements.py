@@ -30,6 +30,12 @@ async def open_advancement(
 
         await open_rebuild(interaction, LocationRebuildService(service.store), identity)
         return
+    if data.get("acquired_rule") == ("handler-advancement.handler-advancement.deep-brain-spikes"):
+        from girlframe.discord_adapter.m3_deep_brain_spikes import open_spikes
+        from girlframe.services.m3_deep_brain_spikes import DeepBrainSpikesService
+
+        await open_spikes(interaction, DeepBrainSpikesService(service.store), data["acquisition"])
+        return
     if data.get("acquired_rule"):
         await reply(
             interaction,
@@ -148,6 +154,7 @@ async def open_advancement(
     form.add_item(AcquireGirlInsurance(form, service))
     form.add_item(RebuildLocation(form, service))
     form.add_item(BuildLocation(form, service))
+    form.add_item(AcquireDeepBrainSpikes(form, service))
     await form.present(interaction)
 
 
@@ -268,3 +275,17 @@ class BuildLocation(discord.ui.Button[NativeForm]):
         from girlframe.services.m3_location_build import LocationBuildService
 
         await open_build(interaction, LocationBuildService(self.service.store))
+
+
+class AcquireDeepBrainSpikes(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService):
+        super().__init__(label="Acquire Deep-Brain-Spikes instead", row=4)
+        self.form, self.service = form, service
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_deep_brain_spikes import open_spikes
+        from girlframe.services.m3_deep_brain_spikes import DeepBrainSpikesService
+
+        await open_spikes(interaction, DeepBrainSpikesService(self.service.store))

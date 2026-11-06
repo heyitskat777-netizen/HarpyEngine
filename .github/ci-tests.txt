@@ -1,6 +1,4 @@
-# Mixed Home same-possession/new-fixture paid delivery -> actual Bond/Tag effects.
-# Focused native/graft/source compatibility; final M3 regression remains separate.
-tests/rules/test_retained_home.py
-tests/rules/test_home.py::test_native_home_secret_purchase_actual_rescue_shared_cockpit_bond_tag_and_restore
-tests/rules/test_home.py::test_grafted_home_requires_real_legion_donor_and_preserves_secrets_source
-tests/rules/test_class_retention.py::test_retained_class_requires_true_original_swap_chain_and_keeps_hardware_out
+# Genuine memory acquisition -> real scene/Keep -> relevance and discrepancy returns.
+# Planned previous-award compatibility; final M3 regression remains separate.
+tests/rules/test_deep_brain_spikes.py
+tests/rules/test_handler_advancements.py

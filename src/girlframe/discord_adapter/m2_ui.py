@@ -1171,6 +1171,16 @@ async def open_play(
             else ""
         )
         + (
+            " "
+            + scene["memory"]["label"]
+            + ". Saved present scene: "
+            + scene["memory"]["present_scene"]
+            + ". "
+            + scene["memory"]["instruction"]
+            if scene.get("memory")
+            else ""
+        )
+        + (
             " Your next Disobey Orders roll has +"
             + str(sum(x["amount"] for x in refusal_modifiers))
             + " from control slips, separate from Heat and later Tags."
@@ -1409,7 +1419,12 @@ class SceneControls(discord.ui.View):
                 )
             )
             if not scene["lock"]:
-                await reply(interaction, "No saved lock in this scene.")
+                context = scene.get("memory")
+                await reply(
+                    interaction,
+                    "No saved lock in this scene."
+                    + (" " + context["label"] + ". " + context["instruction"] if context else ""),
+                )
                 return
             await reply(
                 interaction,
