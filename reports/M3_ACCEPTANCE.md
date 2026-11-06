@@ -1,5 +1,41 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Actual Location rebuilding and retained Succubus — 2026-11-06 UTC
+
+Source extends `62fa1ebdd5622d5ee18c569d057e416ddfc0fa55`. Exact public bytes
+are retained in ignored `var/m3-rebuild-succubus-freeze/manifest.json`.
+M3 remains **RULES_SUBSET**; final regression and independent/player review are pending.
+
+| Workflow | Actual focused evidence and supported boundary |
+|---|---|
+| Rebuild a location | Genuine held award and persistent storage order -> actual Budget Endgame Ruin destroys Base and City -> storage fails at destroyed Base -> native direct advancement rebuild restores only that Base -> original owner actually stores the original empty Frame there. Other City loss, stable world identities, living blockers, actual destruction/Budget triggers and source history persist. Same trace checks a genuinely stale quote, atomic single spend, semantic replay and private cross-channel History. New normal plus existing advancement compatibility **4 passed / 11.21s**; exact command/console in ignored `var/m3-location-rebuild-handoff.json`. This restores an existing resource; it grants neither general world editing nor new construction. |
+| Retained Succubus | Actual2P acquisition -> genuine4P different-Frame Swap -> source-bound authority permits a lower-rank issuer's actual Order to the exact Intense-Bond partner. Recipient rolls real Disobey, gains the printed2Heat and completes actual parent/child/Handler response with chat restored. Ordinary Rank and immutable receipt stay unchanged; paid-chain suspension/restoration and Bond loss gate the actual source. **1 passed / 2.787s**, `var/m3-retained-succubus.xml`. Three distinct affected native/NPC/source-assertion checks pass: initial selection had two passes and one temporary missing-module failure; only that previously blocked NPC trace reran, **1 passed / 9.009s**, `var/m3-retained-succubus-npc-compat.xml`. No previously passed cases were repeated. |
+
+All **15 changed Python files**, including shared interfaces and three tests,
+pass Ruff/format; all **12 changed production modules** pass mypy. The typed
+advancement spend admits exactly one of Permissions, acquired rule or actual
+Location effect, preserving existing source histories. New Inbox registration
+was deferred until its real implementation existed; the completed Rebuild trace
+uses the registered actual service. No stub or gameplay/source guard was used.
+
+Publishable check: **1,086 files / 40 original manifest entries / zero findings**.
+
+The source inventory now includes the previously omitted precise direct-spend
+branch on PDF153/printed151: **474 total / 437 required core / 37 deferred**.
+This is an inventory correction, not an extra completion claim. Ordinary
+`source.handler-advancement-triggers` stays unimplemented. Current metadata:
+**172 subsets / 302 unimplemented / 302 adjustable clarifications**, zero
+independent approvals. Counts are not percentages. Next finite contract covers
+retained Sup growth; other advancements/ordinary producers, playbook/Strain/world/
+shared/lifecycle and retained hardware ports still block M3. Missing code remains
+required implementation work, not campaign rulings.
+
+Preceding checkpoint `62fa1ebdd5622d5ee18c569d057e416ddfc0fa55` was pushed and
+its exact remote SHA verified. [Focused CI 42191500431](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42191500431)
+passed. Newer source does not inherit that result or the historical 2,200-test full
+regression. No new full regression, restart/deployment, live migration, environment
+publication, private-engine write, AI/M4 or Ancillary activation; bot remains off.
+
 ## Girl Insurance and retained Martyr — 2026-11-06 UTC
 
 Source extends `59da895486855ccd7a08b91e2077424524567d72`. Exact public bytes

@@ -39,9 +39,9 @@ a required M3 rule complete; required gaps stay in the milestone backlog.
 
 | Order | Assignment | Completion boundary |
 |---|---|---|
-| 1, parallel | Retained Succubus | Martyr handed off. Finish genuine retained source -> target-scoped Order and actual recipient refusal/Handler response; preserve exact paid chain, ordinary Rank and source gates. |
-| 1, parallel | Next Handler workflow | Insurance handed off. Select one dependency-ready whole source workflow; freeze acquisition, real effects and immediate consumers before coding. |
-| 1, root | Source/CI integration | Freeze Insurance and retained Martyr; coordinate the next actual-source consumers and native/Inbox hooks without opening a third implementation unit. |
+| 1, parallel | Retained Sup | Succubus handed off. Finish genuine retained source -> new actual Void growth on replacement Frame -> real capacity and mandatory consequence endpoint; preserve exact paid chain and source gates. |
+| 1, parallel | Next Handler/world workflow | Location rebuilding handed off. Select one dependency-ready whole source workflow; freeze actual source, real effects and immediate consumer before coding. |
+| 1, root | Source/CI integration | Freeze Location rebuilding and retained Succubus; coordinate next actual-source/native consumers after implementation modules exist, without opening a third implementation unit. |
 | 2 | Remaining required gameplay systems | Select the next dependency-ready whole workflow from M3_REMAINING_WORK.md and M3_COMPLETION_AUDIT.md. Freeze its contract, reuse implemented dependencies and complete it before opening unrelated work. |
 | 3 | M3 review candidate | Account for required core scope, complete expected gameplay flows and final integrated checks; provide a concise player-test checklist and stop for owner review. |
 

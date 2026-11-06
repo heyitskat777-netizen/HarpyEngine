@@ -1,6 +1,7 @@
-# Actual insured death/High and Low Budget, storage return and next Strain;
-# retained Martyr real death/memorial and exact source/hardware boundaries.
+# Genuine Ruin -> Rebuild -> actual storage, prior advancement variants,
+# retained Succubus Order/refusal and exact source/hardware boundaries.
 # Final whole-M3 regression remains a separate candidate check.
-tests/rules/test_girl_insurance.py
-tests/rules/test_retained_martyr.py
+tests/rules/test_location_rebuild.py
+tests/rules/test_handler_advancements.py
+tests/rules/test_retained_succubus.py
 tests/rules/test_class_retention.py::test_retained_class_requires_true_original_swap_chain_and_keeps_hardware_out

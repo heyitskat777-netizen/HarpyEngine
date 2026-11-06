@@ -4998,6 +4998,41 @@
       "revision": 1,
       "implementation_note": "Adjustable interpretation requiring printed-rule clarity review. Missing actor/source adapters remain implementation work.",
       "change_impact": "No unprinted blanket cancellation or fake ordering; source-specific unordered producer remains an explicit gap if encountered, no matrix."
+    },
+    {
+      "id": "location-rebuild-clarity-1",
+      "summary": "Restore one actual existing damaged/destroyed Location condition to intact; do not rename, move, replace or clear living blockers. Treat actual source spend as direct printed physical-world rebuild effect, not an optional proposal or generic progress acknowledgment.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF153 / printed151 direct Handler advancement spends",
+      "authority": "delegated_recommendation",
+      "rationale": "Meaning of rebuild: preserve the specific actual rebuild effect and existing independent source consequences.",
+      "alternatives": [
+        "Create a new location at another cell.",
+        "Clear every unrelated blocker/occupant automatically.",
+        "Record only a narrative note with no World condition change."
+      ],
+      "policy_key": "location_rebuild_clarity_1",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable interpretation requiring printed-rule clarity review. Missing source/actor/construction adapters remain required implementation work.",
+      "change_impact": "Finite genuine physical resource effect using existing typed Location. New construction, base alteration and transport remain separate. Printed-rule clarity review."
+    },
+    {
+      "id": "location-rebuild-clarity-2",
+      "summary": "Rebuilding does not undo a prior genuine destruction event, its already scheduled Budget source, dead NPCs, or any actual mandatory loss consequences. Preserve their source records.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF153 / printed151 direct Handler advancement spends",
+      "authority": "delegated_recommendation",
+      "rationale": "Destruction history and other losses: preserve the specific actual rebuild effect and existing independent source consequences.",
+      "alternatives": [
+        "Erase destruction history and retroactively waive triggered Strain.",
+        "Resurrect every prior occupant."
+      ],
+      "policy_key": "location_rebuild_clarity_2",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable interpretation requiring printed-rule clarity review. Missing source/actor/construction adapters remain required implementation work.",
+      "change_impact": "No source loss or invented additional benefits; exact printed rebuild scope. Printed-rule clarity review."
     }
   ],
   "entries": [
@@ -5420,7 +5455,8 @@
         "tests/rules/test_class_retention.py",
         "tests/rules/test_retained_kicked_puppy.py",
         "tests/rules/test_retained_untouchable.py",
-        "tests/rules/test_retained_martyr.py"
+        "tests/rules/test_retained_martyr.py",
+        "tests/rules/test_retained_succubus.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -10586,19 +10622,22 @@
           "Source-only superior authority for this exact Order; global Cadre/other mechanics unchanged",
           "Original Pilot receives/refuses through native core; actual NPC chooses its own Receive/Disobey response",
           "Real NPC heatless2d6 receipt and low/mid/high immediate results, owned follower and actual Tag effects",
-          "Source-owned noticed Status loss is consumed by later actual Orders; discovered refusal has real NPC Punishment completion"
+          "Source-owned noticed Status loss is consumed by later actual Orders; discovered refusal has real NPC Punishment completion",
+          "Finite retained Succubus proves original paid acquisition and actual4P Swap chain; exact qualifying Bond grants only target-specific Order authority on the real replacement Frame. Ordinary Rank remains unchanged. Actual recipient refusal/Handler response completes through existing source pipeline; suspension/restoration preserves chain and receipt. No hardware or production approval."
         ],
         "mandatory_followups": [
           "Known results survive source suspension; actual discovered-refusal Punishment completes before original Order"
         ],
         "handler_or_gm_intervention": "Actual human source owners; unsupported actor/source/lifecycle adapters remain explicit gaps.",
         "test_fixture_ids": [
-          "tests/rules/test_succubus.py"
+          "tests/rules/test_succubus.py",
+          "tests/rules/test_retained_succubus.py"
         ]
       },
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_succubus.py"
+        "tests/rules/test_succubus.py",
+        "tests/rules/test_retained_succubus.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -18963,6 +19002,62 @@
       "dependencies": [],
       "test_evidence": [],
       "m2_play_id": null
+    },
+    {
+      "id": "handler-advancement.direct-spend.rebuild-location",
+      "title": "Rebuild a location (direct Handler advancement spend)",
+      "scope": "handler-advancement",
+      "kind": "mechanic",
+      "source": {
+        "document": "rulebook",
+        "pdf_page": 153,
+        "printed_page": 151,
+        "heading": "You can also use Handler advancements to: Rebuild a location"
+      },
+      "required": true,
+      "implementation": "subset",
+      "source_audit": "inventoried",
+      "independent_review": "pending",
+      "reviewer": null,
+      "review_reference": null,
+      "contract": {
+        "trigger": "Actual original Handler spends one genuine held advancement to rebuild one existing non-intact Location",
+        "actor_type": "Original Handler/persona/appointment",
+        "pre_roll_sources": [
+          "Genuine held award and current original Handler",
+          "Exact canonical existing Location and quoted revision/fingerprint",
+          "Actual before/after world snapshot and immutable spend event"
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "normal": [
+            "Restore actual existing Location condition to intact",
+            "Consume exact award atomically with typed location effect history"
+          ]
+        },
+        "choice_ownership": "Original Handler selects source and actual existing Location; existing storage/physical owners retain downstream choices",
+        "target_policy": "One canonical existing damaged/destroyed Location; preserve stable identity/cell/allegiance, living blockers and unrelated world state",
+        "post_roll_effects": [
+          "Existing operational-location consumer sees actual restored condition",
+          "Original private History records exact before/after and source; replay cannot spend twice",
+          "Existing living threats/blockers and prior destruction/death/mandatory consequences remain"
+        ],
+        "mandatory_followups": [
+          "Actual operational consumer proves restored resource is usable within existing separate constraints",
+          "Ordinary advancement triggers/new construction/Base alteration remain required separate implementations"
+        ],
+        "handler_or_gm_intervention": "Original current Handler consumes source; no general world-edit or acknowledgment authority",
+        "test_fixture_ids": [
+          "tests/rules/test_location_rebuild.py"
+        ]
+      },
+      "dependencies": [],
+      "test_evidence": [
+        "tests/rules/test_location_rebuild.py"
+      ],
+      "m2_play_id": null,
+      "module": "core"
     }
   ],
   "enabled_modules": [

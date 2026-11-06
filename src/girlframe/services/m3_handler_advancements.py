@@ -168,6 +168,10 @@ class HandlerAdvancementService:
                     raise WorkflowError(
                         "Recover this actual consumed advancement and group effects"
                     )
+                if value.location_rebuild is not None:
+                    from girlframe.services.m3_location_rebuild import prove_effect
+
+                    prove_effect(self.game, c, value.location_rebuild)
                 if value.acquired_rule is not None:
                     receipts: tuple[Any, ...]
                     if (
@@ -251,6 +255,9 @@ class HandlerAdvancementService:
                 spend_account=value.spend_account if value else None,
                 acquired_rule=value.acquired_rule if value else None,
                 acquisition=value.acquisition if value else None,
+                location_rebuild=value.location_rebuild.model_dump(mode="json")
+                if value and value.location_rebuild
+                else None,
                 effects=[
                     dict(
                         actor=x.actor.model_dump(mode="json"),

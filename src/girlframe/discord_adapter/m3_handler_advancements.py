@@ -18,6 +18,12 @@ async def open_advancement(
     interaction: discord.Interaction, service: HandlerAdvancementService, identity: str
 ) -> None:
     data = await asyncio.to_thread(service.view, viewer_from_interaction(interaction), identity)
+    if data.get("location_rebuild"):
+        from girlframe.discord_adapter.m3_location_rebuild import open_rebuild
+        from girlframe.services.m3_location_rebuild import LocationRebuildService
+
+        await open_rebuild(interaction, LocationRebuildService(service.store), identity)
+        return
     if data.get("acquired_rule"):
         await reply(
             interaction,
@@ -123,6 +129,7 @@ async def open_advancement(
     form.add_item(AcquireSupplyDrop(form, service))
     form.add_item(AcquireCuteUniforms(form, service))
     form.add_item(AcquireGirlInsurance(form, service))
+    form.add_item(RebuildLocation(form, service))
     await form.present(interaction)
 
 
@@ -215,3 +222,17 @@ class AcquireGirlInsurance(discord.ui.Button[NativeForm]):
         from girlframe.services.m3_girl_insurance import GirlInsuranceService
 
         await open_insurance(interaction, GirlInsuranceService(self.service.store))
+
+
+class RebuildLocation(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService):
+        super().__init__(label="Rebuild a location instead", row=3)
+        self.form, self.service = form, service
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_location_rebuild import open_rebuild
+        from girlframe.services.m3_location_rebuild import LocationRebuildService
+
+        await open_rebuild(interaction, LocationRebuildService(self.service.store))

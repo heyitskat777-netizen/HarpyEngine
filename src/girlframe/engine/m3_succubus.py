@@ -69,6 +69,8 @@ def held(state: GameState, actor: ActorRef) -> FrameRuleReceipt | None:
 
 
 def authority(state: GameState, issuer: ActorRef, target: ActorRef) -> Authority:
+    from girlframe.engine.m3_class_retention import binding
+
     receipt = held(state, issuer)
     if issuer == target or receipt is None:
         raise ValueError("Use this original Pilot's actual active Succubus source")
@@ -91,7 +93,7 @@ def authority(state: GameState, issuer: ActorRef, target: ActorRef) -> Authority
         target=target,
         purchase=receipt.id,
         event=receipt.source_event,
-        frame=receipt.frame_instance,
+        frame=binding(state, receipt)[0],
     )
 
 

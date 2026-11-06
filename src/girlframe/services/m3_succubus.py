@@ -23,7 +23,6 @@ from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access, digest
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_enforcement_initiative import _cast
-from girlframe.services.m3_privileges import purchase_proof
 from girlframe.services.m3_requisitions import RequisitionService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
@@ -50,6 +49,20 @@ def _registry(game: "GameService") -> str:
     return approval.registry_sha256
 
 
+def _paid_source(
+    game: "GameService", c: Connection, state: GameState, paid: FrameRuleReceipt
+) -> tuple[str, ...]:
+    from girlframe.services.m3_class_retention import proof
+
+    _, chain = proof(game, c, state, paid)
+    _registry(game)
+    if len(chain) > 1:
+        registry = Access(game.store).registry
+        assert registry is not None
+        registry.require_available("core.core.frame-requisitions")
+    return chain
+
+
 def _proof(game: "GameService", c: Connection, state: GameState, value: rules.Authority) -> None:
     if rules.authority(state, value.issuer, value.target) != value:
         raise WorkflowError(
@@ -57,8 +70,7 @@ def _proof(game: "GameService", c: Connection, state: GameState, value: rules.Au
         )
     paid = rules.held(state, value.issuer)
     assert paid is not None
-    purchase_proof(c, game.store, paid)
-    _registry(game)
+    _paid_source(game, c, state, paid)
 
 
 def issue_authority(
@@ -263,8 +275,7 @@ class SuccubusService:
                 ),
                 None,
             )
-            if paid:
-                purchase_proof(c, self.store, paid)
+            chain = _paid_source(self.game, c, state, paid) if paid else ()
             return dict(
                 available=True,
                 revision=state.revision,
@@ -275,7 +286,7 @@ class SuccubusService:
                 permissions=sheet.permissions,
                 donors=list(grafts.donors(rules.RULE)) if kind == "frame_grafting" else [],
                 owned=paid is not None,
-                suspended=bool(paid and suspended(state, paid.id)),
+                suspended=any(suspended(state, identity) for identity in chain),
             )
 
     def buy(
@@ -309,8 +320,8 @@ class SuccubusService:
             if any(
                 isinstance(x, FrameRuleReceipt)
                 and x.actor == actor
-                and x.frame_instance == frame
                 and x.rule_id == rules.RULE
+                and grafts.eligible(state, x)
                 for x in state.requisitions
             ):
                 raise WorkflowError("Restore the original Succubus source instead of buying twice")

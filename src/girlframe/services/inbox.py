@@ -842,6 +842,28 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_location_rebuild import LocationRebuildService
+
+            for rebuild_control in LocationRebuildService(self.store)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "location-rebuild:" + rebuild_control["id"],
+                        "location_rebuild",
+                        rebuild_control["id"],
+                        rebuild_control["revision"],
+                        "playbook",
+                        rebuild_control["label"],
+                        "Actual original Handler",
+                        "established",
+                        False,
+                        False,
+                        "Review the actual rebuilt Location and consumed advancement.",
+                        "Rebuilding preserves living blockers and original destruction history.",
+                        "Review rebuild",
+                        task="m3_location_rebuild",
+                    )
+                )
+
             from girlframe.services.m3_girl_insurance import GirlInsuranceService
 
             for insurance_control in GirlInsuranceService(self.store)._tasks(connection, viewer):

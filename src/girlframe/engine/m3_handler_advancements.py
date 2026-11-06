@@ -8,6 +8,7 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_handler_consequences import same_handler_body
+from girlframe.engine.m3_location_rebuild import Effect as LocationRebuildEffect
 
 RULES = ("strain.void.endgame.6", "strain.void.endgame.7")
 
@@ -54,7 +55,12 @@ class Award(Model):
         ]
         | None
     ) = Field(default=None, exclude_if=lambda value: value is None)
-    acquisition: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    acquisition: str | None = Field(
+        default=None, min_length=1, exclude_if=lambda value: value is None
+    )
+    location_rebuild: LocationRebuildEffect | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     spend_event: str | None = None
     spend_account: str | None = Field(default=None, min_length=1, max_length=1200)
 
@@ -62,26 +68,30 @@ class Award(Model):
     def exact_original_award(self) -> "Award":
         if self.handler.kind != "handler" or self.id != self.source_work:
             raise ValueError("Keep this exact actual original Handler source award")
+        variants = (
+            int(bool(self.effects))
+            + int(self.acquired_rule is not None)
+            + int(self.location_rebuild is not None)
+        )
         if self.phase == "held":
-            if (
-                self.effects
-                or self.spend_event
-                or self.spend_account
-                or self.acquired_rule
-                or self.acquisition
-            ):
+            if variants or self.spend_event or self.spend_account or self.acquisition:
                 raise ValueError("An unspent advancement has no fabricated effects")
         elif (
             not self.spend_event
             or not self.spend_account
-            or self.acquired_rule is None
-            and (not self.effects or self.acquisition is not None)
-            or self.acquired_rule is not None
-            and (self.effects or not self.acquisition)
+            or variants != 1
+            or (self.acquired_rule is None) != (self.acquisition is None)
         ):
             raise ValueError(
                 "A spent advancement preserves its exact implemented effect and source"
             )
+        if self.location_rebuild is not None and (
+            self.location_rebuild.award != self.id
+            or self.location_rebuild.handler != self.handler
+            or self.location_rebuild.appointment != self.appointment
+            or self.location_rebuild.event != self.spend_event
+        ):
+            raise ValueError("Keep this exact original Handler's actual location rebuild spend")
         if len({x.actor for x in self.effects}) != len(self.effects):
             raise ValueError("One advancement grants each selected original Girl Permissions once")
         return self

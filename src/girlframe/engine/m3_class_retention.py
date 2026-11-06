@@ -17,6 +17,7 @@ RULES = frozenset(
         "frame.class.legion.kicked-puppy",
         "frame.class.autocrat.untouchable-frame",
         "frame.class.autocrat.martyr",
+        "frame.class.autocrat.succubus-protocol",
     )
 )
 

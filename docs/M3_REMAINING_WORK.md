@@ -1,19 +1,23 @@
 # M3 remaining work — verified development snapshot
 
-Newest bounded additions: **Girl Insurance actual death/Budget effect, real
-storage return and next-Strain exclusion; retained Martyr actual death/archive,
-original-human memorial and source relief**. Actual source evidence is at the top
-of [M3 acceptance](../reports/M3_ACCEPTANCE.md).
-Registry: **171 subsets / 302 unimplemented / 300 adjustable clarifications**;
+Newest bounded additions: **actual Location rebuilding through a genuine held
+advancement and real restored storage consumer; retained Succubus target-scoped
+Orders/refusal completion**. Evidence is at the top of
+[M3 acceptance](../reports/M3_ACCEPTANCE.md).
+Registry: **172 subsets / 302 unimplemented / 302 adjustable clarifications**.
+The inventory adds one previously omitted printed direct-spend branch:
+**474 total / 437 required core / 37 deferred Ancillary**. Counts are not percentages.
 M3 remains **IN_PROGRESS / RULES_SUBSET**, bot off.
 
-Next finite source contract: retained Succubus Orders. Other advancements,
-ordinary session/accomplishment award producers, other retained Class/hardware,
-temporary/clothing-container transitions and unported Asset/actor/lifecycle sources
-remain required. Remaining playbooks, shared rules, Strain/Endgames, world
-consumers, source reconciliation and final integrated checks still block M3.
-Production source/destination review remains enforced; synthetic fixtures do not
-certify it. Counts are not percentages.
+Next finite source contract: retained Sup growth. Other advancements, ordinary
+session/accomplishment award producers, other retained Class/hardware, temporary/
+clothing-container transitions and unported Asset/actor/lifecycle sources remain
+required. Remaining playbooks, shared rules, Strain/Endgames, world consumers,
+source reconciliation and final integrated checks still block M3. Production
+source/destination review remains enforced; synthetic fixtures do not certify it.
+
+Previous bounded additions: Girl Insurance death/Budget/storage effects and
+retained Martyr actual death/archive/memorial/next-Strain relief.
 
 Previous bounded additions: Cute Uniforms acquisition/dressing/Keep/Tag/discipline
 and retained Untouchable.
