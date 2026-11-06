@@ -1,5 +1,33 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Retained Handler’s Special Girl — 2026-11-06 UTC
+
+Source extends `b4ca152e5960b8e65e0b09a7132df8bcbabcda20`; exact bytes are retained
+in ignored `var/m3-retained-special-girl-freeze/manifest.json`. M3 remains
+**RULES_SUBSET**, with final regression and independent/player review pending.
+
+Native2P acquisition, actual Handler-authored/owner-installed gift and paid4P Swap
+preserve the original Token.frame, Girl Asset and source history. Beneath uses the
+replacement Frame's proved chain and higher-Status +1. Real counter-damage creates
+required original-Handler discipline; Stimulant Injection adds7 actual target Heat
+before the parent completes and chat restores. No second gift, reset or copied
+Frame hardware is granted. Normal trace: **1 passed / 3.658s**,
+`var/m3-retained-special-girl.xml`. Existing native/graft/source-hardware checks:
+**3 passed / 6.212s**, `var/m3-retained-special-girl-compat.xml`.
+
+All **4 changed Python files** pass Ruff/format; both changed source modules pass
+mypy. Registry remains **173 subsets / 302 unimplemented / 304 clarifications**
+(475 total,438 required core,37 deferred), zero independent approvals. The finite
+retained allowlist now includes Special Girl alongside the preceding six supported
+consumers; other Class/hardware/body adapters remain required. Counts are not
+percentages. Ordinary session/accomplishment awards remain the next priority.
+
+Preceding checkpoint `b4ca152e5960b8e65e0b09a7132df8bcbabcda20` was pushed,
+with remote SHA verified. [Focused CI 42196848870](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42196848870)
+passed; this newer source does not inherit it or the historical full regression.
+No full suite, deployment/restart, live migration, environment publication,
+private-engine write, AI/M4 or Ancillary activation occurred; bot stays off.
+
 ## New Location construction and retained Sup — 2026-11-06 UTC
 
 Source extends `e71b962e2a8b5bf4a94cd39f6cc0eb837970506c`. Exact public bytes

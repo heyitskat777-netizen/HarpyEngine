@@ -21,7 +21,6 @@ from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
-from girlframe.services.m3_privileges import purchase_proof
 from girlframe.services.m3_requisitions import RequisitionService
 from girlframe.services.m3_work import related
 from girlframe.services.onboarding import WorkflowError
@@ -29,6 +28,20 @@ from girlframe.services.read_only_bot import GuildViewer
 
 if TYPE_CHECKING:
     from girlframe.services.m2_game import GameService
+
+
+def _paid_source(
+    game: "GameService", c: Connection, state: GameState, paid: FrameRuleReceipt
+) -> tuple[str, tuple[str, ...]]:
+    from girlframe.services.m3_class_retention import proof
+
+    frame, chain = proof(game, c, state, paid)
+    if len(chain) > 1:
+        registry = Access(game.store).registry
+        if registry is None:
+            raise WorkflowError("Recover the actual paid retained Special Girl source")
+        registry.require_available("core.core.frame-requisitions")
+    return frame, chain
 
 
 def entitlement(
@@ -51,6 +64,8 @@ def entitlement(
 def prepare(
     game: "GameService", c: Connection, viewer: GuildViewer, state: GameState, prepared: PlayInput
 ) -> dict[str, Any] | None:
+    from girlframe.engine.m3_class_retention import binding
+
     if prepared.play != "put_someone_beneath_you":
         return None
     actor = current_ref(state, viewer.user_id)
@@ -67,7 +82,7 @@ def prepare(
         purchase=receipt.id,
         actor=actor.model_dump(mode="json"),
         target=target.model_dump(mode="json"),
-        frame=receipt.frame_instance,
+        frame=binding(state, receipt)[0],
         handler=handler.model_dump(mode="json"),
         bonus=int(higher(state, viewer.user_id, prepared.target)),
     )
@@ -292,7 +307,7 @@ class SpecialGirlService:
         )
         if row is None or value is None or paid is None:
             raise WorkflowError("Recover the original actual Handler token request")
-        purchase_proof(c, self.store, paid)
+        _paid_source(self.game, c, state, paid)
         raw = c.scalar(
             sa.select(t.m2["m2_state_history"].c.body_json).where(
                 t.m2["m2_state_history"].c.campaign_id == self.store.campaign_id,
@@ -402,6 +417,7 @@ class SpecialGirlService:
             )
             if paid:
                 self._source(c, state, paid.id)
+            chain = _paid_source(self.game, c, state, paid)[1] if paid else ()
             return dict(
                 available=True,
                 revision=state.revision,
@@ -411,7 +427,7 @@ class SpecialGirlService:
                 price=price,
                 donors=list(grafts.donors(rules.RULE)) if kind == "frame_grafting" else [],
                 owned=paid is not None,
-                suspended=bool(paid and suspended(state, paid.id)),
+                suspended=any(suspended(state, identity) for identity in chain),
                 request=paid.id if paid else None,
                 permissions=sheet.permissions,
             )
@@ -449,8 +465,8 @@ class SpecialGirlService:
             if any(
                 isinstance(x, FrameRuleReceipt)
                 and x.actor == actor
-                and x.frame_instance == frame
                 and x.rule_id == rules.RULE
+                and grafts.eligible(state, x)
                 for x in state.requisitions
             ):
                 raise WorkflowError(

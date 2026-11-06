@@ -1,6 +1,11 @@
 # M3 remaining work — verified development snapshot
 
-Newest bounded additions: **new Location construction through a held advancement
+Newest bounded addition: **retained Handler’s Special Girl**, preserving the original
+gift through Swap and completing real counter-damage/Punishment. Evidence is at
+the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md). Ordinary session/
+accomplishment awards remain the next priority.
+
+Previous bounded additions: **new Location construction through a held advancement
 and actual storage use; retained Sup growth/capacity/full-Void consequence**.
 Evidence is at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md).
 Registry: **173 subsets / 302 unimplemented / 304 adjustable clarifications**.

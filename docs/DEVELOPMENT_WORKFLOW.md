@@ -39,9 +39,9 @@ a required M3 rule complete; required gaps stay in the milestone backlog.
 
 | Order | Assignment | Completion boundary |
 |---|---|---|
-| 1, parallel | Next retained consumer | Sup handed off. Freeze one dependency-ready paid source -> replacement-Frame consumer and actual endpoint, preserving original receipt and source gates; no assumed hardware transfer. |
+| 1, parallel | Next retained consumer | Special Girl handed off. Freeze one dependency-ready paid source -> replacement-Frame consumer and actual endpoint, preserving original receipt and source gates; no assumed hardware transfer. |
 | 1, parallel | Ordinary advancement workflow | Construction handed off. Freeze canonical session -> one existing actual accomplishment -> held award -> spend. Other trigger producers remain explicit gaps; no session-only foundation. |
-| 1, root | Source/CI integration | Freeze construction and retained Sup; coordinate next source/native consumers after modules exist, without opening a third implementation unit. |
+| 1, root | Source/CI integration | Freeze retained Special Girl; coordinate next source/native consumers after modules exist, without opening a third implementation unit. |
 | 2 | Remaining required gameplay systems | Select the next dependency-ready whole workflow from M3_REMAINING_WORK.md and M3_COMPLETION_AUDIT.md. Freeze its contract, reuse implemented dependencies and complete it before opening unrelated work. |
 | 3 | M3 review candidate | Account for required core scope, complete expected gameplay flows and final integrated checks; provide a concise player-test checklist and stop for owner review. |
 
