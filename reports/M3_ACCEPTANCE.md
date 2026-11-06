@@ -1,5 +1,36 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Retained Void Physiotherapist — 2026-11-06 UTC
+
+Source extends `f7a68df08d0371fa5cdf01df2150242bde64816e`; exact bytes are retained
+in ignored `var/m3-retained-physio-freeze/manifest.json`. M3 remains **RULES_SUBSET**;
+final regression and independent/player review remain pending.
+
+Native2P acquisition and the original NPC's accepted Bond survive paid4P Swap.
+Real superior Punishment revokes the new Frame's source, and trusted restoration
+checks its paid chain. A genuine Off-Duty scene then reaches the NPC-owned Inbox
+response from another channel: one NPC Tag, permanent Void removed, Asset identity
+and damage preserved. The child closes while wider period duties remain active.
+Historical relationship/work records remain readable under suspension; current
+writes require active original patient, living NPC/controller and full source.
+Normal **1 passed / 4.886s**, `var/m3-retained-physiotherapist.xml`;
+planned native/graft/source checks **3 passed / 5.755s**,
+`var/m3-retained-physiotherapist-compat.xml`.
+
+All **7 changed Python files** pass Ruff/format; all **5 changed source modules**
+pass mypy. No new NPC/Bond, body, hardware, scene attendance or resource is granted
+by retention/restoration. Metadata remains **174 subsets / 301 unimplemented /
+312 clarifications**,475 total,438 required core,37 deferred,zero independent
+approvals. Counts are not percentages. The next whole workflow is genuine Harpy
+repossession into a usable Mockingbird; remaining source/body/playbook/Strain/world/
+shared/lifecycle and retained-carrier work still blocks M3.
+
+Preceding checkpoint `f7a68df08d0371fa5cdf01df2150242bde64816e` was pushed,
+with exact remote verified. [Focused CI 42205549767](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42205549767)
+passed; newer source inherits neither that result nor the historical full regression.
+No new full suite, restart/deployment, live migration, environment publication,
+private-engine write, AI/M4 or Ancillary activation; bot stays off.
+
 ## Ordinary PR events and retained Nightmare — 2026-11-06 UTC
 
 Source extends `9973d2e1f250937d723deb629f5cec310544b747`; exact bytes are retained

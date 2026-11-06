@@ -20,6 +20,7 @@ CLASSES: dict[str, FrameClass] = {
     "frame.class.autocrat.handlers-special-girl": "autocrat",
     "frame.class.priestess.appearance-matrix": "priestess",
     "frame.class.priestess.nightmare-core": "priestess",
+    "frame.class.priestess.void-physiotherapist": "priestess",
     "frame.class.autocrat.succubus-protocol": "autocrat",
     "frame.class.autocrat.clone-am": "autocrat",
 }

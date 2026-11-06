@@ -1,8 +1,7 @@
-# Actual PR result/shared cap/deferred ordinary award/spend and earlier source paths,
-# retained Nightmare Keep/restoration and exact source/hardware boundary.
+# Retained original NPC/Bond -> new-Frame source -> actual NPC-owned treatment,
+# native/graft compatibility and exact retained source/hardware boundary.
 # Final whole-M3 regression remains a separate candidate check.
-tests/rules/test_handler_pr.py
-tests/rules/test_handler_ordinary.py
-tests/rules/test_handler_advancements.py
-tests/rules/test_retained_nightmare.py
+tests/rules/test_retained_physiotherapist.py
+tests/rules/test_physiotherapist.py::test_native_paid_physiotherapist_bond_actual_scene_tag_and_void_removal
+tests/rules/test_physiotherapist_graft.py::test_grafted_physiotherapist_owned_bond_scene_suspension_and_exact_treatment
 tests/rules/test_class_retention.py::test_retained_class_requires_true_original_swap_chain_and_keeps_hardware_out

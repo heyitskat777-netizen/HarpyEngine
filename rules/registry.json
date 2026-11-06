@@ -5632,7 +5632,8 @@
         "tests/rules/test_retained_special_girl.py",
         "tests/rules/test_retained_modular.py",
         "tests/rules/test_retained_appearance_matrix.py",
-        "tests/rules/test_retained_nightmare.py"
+        "tests/rules/test_retained_nightmare.py",
+        "tests/rules/test_retained_physiotherapist.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -10978,7 +10979,8 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_physiotherapist.py",
-        "tests/rules/test_physiotherapist_graft.py"
+        "tests/rules/test_physiotherapist_graft.py",
+        "tests/rules/test_retained_physiotherapist.py"
       ],
       "m2_play_id": null,
       "module": "core",

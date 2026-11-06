@@ -93,7 +93,11 @@ def available(state: GameState, subject: int, character: str) -> list[Requisitio
                 and nightmare_receipt(state, x)
                 and class_held(state, x.actor, x.rule_id) is not None
             )
-            or (isinstance(x, FrameRuleReceipt) and physiotherapist_receipt(state, x))
+            or (
+                isinstance(x, FrameRuleReceipt)
+                and physiotherapist_receipt(state, x)
+                and class_held(state, x.actor, x.rule_id) is not None
+            )
             or (
                 isinstance(x, FrameRuleReceipt)
                 and implemented_class_receipt(state, x)
@@ -200,12 +204,16 @@ def revoke(
 
         if not receipt_eligible(state, receipt):
             raise ValueError("Recover the actual original Physiotherapist source and Frame")
+        from girlframe.engine.m3_class_retention import binding as retained_binding
+
         details.update(
             physiotherapist_receipt=receipt.model_dump_json(),
-            frame=receipt.frame_instance,
+            frame=retained_binding(state, receipt)[0],
             rule_id=receipt.rule_id,
             label="Void Physiotherapist",
         )
+        if len(retained_binding(state, receipt)[1]) > 1:
+            details["implemented_class_receipt"] = receipt.model_dump_json()
     elif isinstance(receipt, FrameRuleReceipt) and receipt.rule_id in (
         "frame.class.autocrat.untouchable-frame",
         "frame.class.autocrat.martyr",

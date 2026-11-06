@@ -1,6 +1,13 @@
 # M3 remaining work — verified development snapshot
 
-Newest bounded additions: **ordinary performed PR success/failure, shared session cap,
+Newest bounded addition: **retained Void Physiotherapist**, preserving the original
+NPC/Bond through Swap and finishing actual NPC-owned Off-Duty treatment. Evidence
+is at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md). Metadata remains
+**312 clarifications / 174 subsets / 301 unimplemented**; no percentage or M3-ready
+claim. Next is genuine Harpy capture/treatment into an actual Mockingbird, including
+the necessary finite extraction/transport/activation ports. Bot off.
+
+Previous bounded additions: **ordinary performed PR success/failure, shared session cap,
 saved/deferred award and real spending; retained Nightmare Keep/restoration**.
 Evidence is at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md). Metadata:
 **312 clarifications / 174 subsets / 301 unimplemented**,475 total,438 required

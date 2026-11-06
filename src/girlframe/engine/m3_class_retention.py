@@ -23,6 +23,7 @@ RULES = frozenset(
         "frame.class.legion.modular-build",
         "frame.class.priestess.appearance-matrix",
         "frame.class.priestess.nightmare-core",
+        "frame.class.priestess.void-physiotherapist",
     )
 )
 

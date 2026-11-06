@@ -99,6 +99,14 @@ class PhysiotherapistService:
             raise WorkflowError(
                 "Restore this original paid Physiotherapist source before treatment"
             )
+        from girlframe.services.m3_class_retention import proof
+
+        _, chain = proof(self.game, c, state, receipt)
+        if len(chain) > 1:
+            gate = Access(self.store)
+            if gate.registry is None:
+                raise WorkflowError("Restore the actual paid Frame Swap source before treatment")
+            gate.registry.require_available("core.core.frame-requisitions")
         npc = (
             next((x for x in state.world.npcs if x.id == value.npc.entity), None)
             if state.world
@@ -161,13 +169,16 @@ class PhysiotherapistService:
                 ),
                 None,
             )
+            from girlframe.engine.m3_class_retention import binding
+
+            chain = binding(state, acquired)[1] if acquired is not None else ()
             return dict(
                 available=True,
                 revision=state.revision,
                 actor=actor.model_dump(mode="json"),
                 frame=frame,
                 owned=rules.held(state, actor) is not None,
-                suspended=acquired is not None and suspended(state, acquired.id),
+                suspended=any(suspended(state, identity) for identity in chain),
                 kind="ability_unlock" if native else "frame_grafting",
                 price=2 if native else 3,
                 donors=[] if native else list(DONORS),
@@ -276,8 +287,7 @@ class PhysiotherapistService:
             if any(
                 isinstance(x, FrameRuleReceipt)
                 and x.actor == actor
-                and x.frame_instance == frame
-                and x.rule_id == rules.RULE
+                and rules.receipt_eligible(state, x)
                 for x in state.requisitions
             ):
                 raise WorkflowError("Restore the original paid relationship rather than buy twice")

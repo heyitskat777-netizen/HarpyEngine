@@ -4,12 +4,9 @@ from typing import Literal
 
 from pydantic import Field
 
-from girlframe.engine.frame_classes import frame_class
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model, ProfileBinding, SceneCast
 from girlframe.engine.m3_actors import resolve
-from girlframe.engine.m3_nightmare import current
-from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import ComfortScene, FrameRuleReceipt
 
 RULE = "frame.class.priestess.void-physiotherapist"
@@ -36,38 +33,15 @@ class Therapy(Model):
 
 def receipt_eligible(state: GameState, receipt: FrameRuleReceipt) -> bool:
     """Only this implemented Class rule, including its exact suspended receipt."""
-    try:
-        sheet, frame = current(state, receipt.actor)
-        own = frame_class(sheet.frame) == "priestess"
-        return (
-            receipt.rule_id == RULE
-            and receipt.frame_instance == frame
-            and receipt.frame == sheet.frame
-            and frame_class(receipt.donor_frame) == "priestess"
-            and (
-                receipt.kind == "ability_unlock"
-                and own
-                and receipt.donor_frame == sheet.frame
-                or receipt.kind == "frame_grafting"
-                and not own
-            )
-        )
-    except (ValueError, KeyError):
-        return False
+    from girlframe.engine.m3_class_grafts import eligible
+
+    return receipt.rule_id == RULE and eligible(state, receipt)
 
 
 def held(state: GameState, actor: ActorRef) -> FrameRuleReceipt | None:
-    values = [
-        x
-        for x in state.requisitions
-        if isinstance(x, FrameRuleReceipt)
-        and x.actor == actor
-        and receipt_eligible(state, x)
-        and not suspended(state, x.id)
-    ]
-    if len(values) > 1:
-        raise ValueError("Recover one actual original Void Physiotherapist acquisition")
-    return values[0] if values else None
+    from girlframe.engine.m3_class_grafts import held as source_held
+
+    return source_held(state, actor, RULE)
 
 
 def put(state: GameState, value: Therapy) -> None:
