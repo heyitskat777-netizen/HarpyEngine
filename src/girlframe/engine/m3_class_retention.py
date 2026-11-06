@@ -21,6 +21,7 @@ RULES = frozenset(
         "frame.class.priestess.sup-of-primordial-flesh",
         "frame.class.autocrat.handlers-special-girl",
         "frame.class.legion.modular-build",
+        "frame.class.priestess.appearance-matrix",
     )
 )
 

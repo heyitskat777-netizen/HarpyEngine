@@ -1,5 +1,34 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Retained Appearance Matrix — 2026-11-06 UTC
+
+Source extends `79fe0b113762e332c00b22331969f26974b1d062`; exact bytes are retained
+in ignored `var/m3-retained-matrix-freeze/manifest.json`. M3 remains **RULES_SUBSET**;
+final regression and independent/player review remain pending.
+
+Native2P purchase and an old-Frame use spend the original mark. Paid4P Swap keeps
+it spent. Only actual original-owner Go-Off-Duty start resets it before RNG. A real
+counter damages the new Frame; Matrix then performs attributed undamage and
+absence, followed by the existing factual same-body/vessel return. Old/new use
+and reset proofs use their event-time paid chain; original mark and history remain
+unchanged. No separate device, new mark, free reset or new body is created.
+Normal: **1 passed / 6.090s**, `var/m3-retained-appearance-matrix.xml`;
+planned native/graft/source-hardware compatibility **3 passed / 7.338s**,
+`var/m3-retained-appearance-matrix-compat.xml`.
+
+All **4 changed Python files** pass Ruff/format; both changed source modules pass
+mypy. One adjustable ability/mark interpretation is recorded centrally. Metadata:
+**174 subsets / 301 unimplemented / 310 clarifications**,475 total,438 required
+core,37 deferred,zero independent approvals. Counts are not percentages. PR is
+next; remaining ordinary/advancement/playbook/Strain/world/shared/lifecycle and
+retained body/hardware source work still blocks M3.
+
+Preceding checkpoint `79fe0b113762e332c00b22331969f26974b1d062` was pushed,
+with remote SHA verified. [Focused CI 42201189583](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42201189583)
+passed; newer source inherits neither that result nor the historical full regression.
+No new full suite, restart/deployment, live migration, environment publication,
+private-engine write, AI/M4 or Ancillary activation; bot stays off.
+
 ## Ordinary Identity advancement and retained Modular — 2026-11-06 UTC
 
 Source extends `3f6834bf1cb4dd028a443639e39ca8406d5dcdfb`; exact bytes are retained

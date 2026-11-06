@@ -5152,6 +5152,22 @@
       "revision": 1,
       "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review. Missing producers/actor/body adapters remain required implementation work.",
       "change_impact": "Uses existing source-driven capacity and genuine repair consumer, preserves printed1Asset Swap constraint and original acquisition lifetime. Adjustable printed-rule clarity review remains pending."
+    },
+    {
+      "id": "retained-matrix-source-ability-and-mark",
+      "summary": "Root release explicitly directs use of existing modelled ability: paidSwap unlocks selected active rule on actual new Frame, retaining original purchase/mark. No separate device is invented/moved/copied and no hypothetical hardware prerequisite blocks this implemented model.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF93 / printed91 Appearance Matrix; PDF16 / printed14 Frame Swap",
+      "authority": "delegated_recommendation",
+      "rationale": "Retain the modelled ongoing ability and original source mark; the printed selected rule does not create a second acquisition.",
+      "alternatives": [
+        "Require standalone device/implant carrier transfer (would need explicit new typed physical-source port, not currently implemented); silently move device or reset mark/free re-acquire."
+      ],
+      "policy_key": "retained_matrix_source_ability_and_mark",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Adjustable delegated interpretation requiring printed-rule clarity review. No standalone device/body transfer is claimed.",
+      "change_impact": "Existing direct ability/physical endpoints are dependency-ready and verified. Printed-rule clarity review may adjust interpretation later, but no extra hardware blocker is introduced."
     }
   ],
   "entries": [
@@ -5578,7 +5594,8 @@
         "tests/rules/test_retained_succubus.py",
         "tests/rules/test_retained_sup.py",
         "tests/rules/test_retained_special_girl.py",
-        "tests/rules/test_retained_modular.py"
+        "tests/rules/test_retained_modular.py",
+        "tests/rules/test_retained_appearance_matrix.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -10825,7 +10842,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_appearance_matrix.py"
+        "tests/rules/test_appearance_matrix.py",
+        "tests/rules/test_retained_appearance_matrix.py"
       ],
       "m2_play_id": null,
       "module": "core",

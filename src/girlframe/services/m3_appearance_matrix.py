@@ -17,12 +17,25 @@ from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
-from girlframe.services.m3_privileges import purchase_proof
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
 if TYPE_CHECKING:
     from girlframe.services.m2_game import GameService
+
+
+def _paid_source(
+    game: "GameService", c: Connection, state: GameState, paid: FrameRuleReceipt
+) -> tuple[str, tuple[str, ...]]:
+    from girlframe.services.m3_class_retention import proof
+
+    frame, chain = proof(game, c, state, paid)
+    if len(chain) > 1:
+        registry = Access(game.store).registry
+        if registry is None:
+            raise WorkflowError("Recover the actual paid retained Matrix source")
+        registry.require_available("core.core.frame-requisitions")
+    return frame, chain
 
 
 def entitlement(
@@ -38,7 +51,7 @@ def entitlement(
         access.registry.require_available(rules.RULE)
     except ValueError:
         return None
-    purchase_proof(c, game.store, receipt)
+    _paid_source(game, c, state, receipt)
     return receipt
 
 
@@ -52,6 +65,27 @@ def history(game: "GameService", c: Connection, event: str) -> GameState:
     if raw is None:
         raise WorkflowError("Recover the actual original Matrix source history")
     return GameState.model_validate_json(raw)
+
+
+def _historical_source(
+    game: "GameService", c: Connection, state: GameState, purchase: str, actor: ActorRef
+) -> tuple[FrameRuleReceipt, str]:
+    from girlframe.services.m3_class_retention import proof
+
+    paid = next(
+        (
+            x
+            for x in state.requisitions
+            if isinstance(x, FrameRuleReceipt)
+            and x.id == purchase
+            and x.rule_id == rules.RULE
+            and x.actor == actor
+        ),
+        None,
+    )
+    if paid is None or not grafts.eligible(state, paid):
+        raise WorkflowError("Recover the original event's actual Matrix Frame and source")
+    return paid, proof(game, c, state, paid)[0]
 
 
 def prove_use(game: "GameService", c: Connection, state: GameState, value: rules.Use) -> int:
@@ -69,6 +103,9 @@ def prove_use(game: "GameService", c: Connection, state: GameState, value: rules
         or event.actor_id != value.actor.entity
     ):
         raise WorkflowError("Recover the original actual owner-marked Matrix event")
+    _, frame = _historical_source(game, c, original, value.purchase, value.actor)
+    if value.frame != frame or value.origin.frame_instance != frame:
+        raise WorkflowError("Recover this actual Matrix use's historical Frame binding")
     if value.returned_event:
         returned = history(game, c, value.returned_event)
         if value not in rules.uses(returned):
@@ -117,6 +154,11 @@ def prove_mark(
             )
         ):
             raise WorkflowError("Recover the actual original Matrix Go-Off-Duty start")
+        historical, _ = _historical_source(
+            game, c, history(game, c, matched.id), reset.purchase, reset.actor
+        )
+        if historical != paid:
+            raise WorkflowError("Recover this original Matrix reset's immutable acquisition")
         periods.append(reset.period)
         events.append((int(matched.seq), False, ""))
     expected = max(events, default=(0, False, ""), key=lambda x: x[0])
@@ -443,6 +485,18 @@ class MatrixService:
                 return dict(available=False)
             self.game.character_binding(c, state, viewer.user_id)
             receipt = entitlement(self.game, c, state, actor)
+            paid = next(
+                (
+                    x
+                    for x in state.requisitions
+                    if isinstance(x, FrameRuleReceipt)
+                    and x.actor == actor
+                    and x.rule_id == rules.RULE
+                    and grafts.eligible(state, x)
+                ),
+                None,
+            )
+            chain = _paid_source(self.game, c, state, paid)[1] if paid else ()
             return dict(
                 available=True,
                 revision=state.revision,
@@ -452,14 +506,7 @@ class MatrixService:
                 kind=kind,
                 price=price,
                 donors=list(grafts.donors(rules.RULE)) if kind == "frame_grafting" else [],
-                suspended=any(
-                    isinstance(x, FrameRuleReceipt)
-                    and x.actor == actor
-                    and x.rule_id == rules.RULE
-                    and grafts.eligible(state, x)
-                    and suspended(state, x.id)
-                    for x in state.requisitions
-                ),
+                suspended=any(suspended(state, identity) for identity in chain),
                 owned=receipt is not None,
                 receipt=receipt.id if receipt else None,
             )
@@ -504,8 +551,8 @@ class MatrixService:
             if any(
                 isinstance(x, FrameRuleReceipt)
                 and x.actor == actor
-                and x.frame_instance == frame
                 and x.rule_id == rules.RULE
+                and grafts.eligible(state, x)
                 for x in state.requisitions
             ):
                 raise WorkflowError("Restore the original paid entitlement instead of buying twice")

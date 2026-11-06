@@ -1,10 +1,16 @@
 # M3 remaining work — verified development snapshot
 
-Newest bounded additions: **ordinary Handler advancement through actual sessions,
+Newest bounded addition: **retained Appearance Matrix**, preserving spent mark through
+Swap and finishing genuine reset/new-Frame undamage/disappearance/factual return.
+Evidence is at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md). Registry now
+has **310 clarifications / 174 subsets / 301 unimplemented**, with release gates
+unchanged; counts are not percentages. PR is next.
+
+Previous bounded additions: **ordinary Handler advancement through actual sessions,
 proved replacement of all starting Identities, scoped usefulness judgment and
 actual token spending; retained Modular capacity/repair without hardware regrant**.
 Evidence is at the top of [M3 acceptance](../reports/M3_ACCEPTANCE.md).
-Registry: **174 subsets / 301 unimplemented / 309 adjustable clarifications**;
+At the ordinary/Modular checkpoint: **174 subsets / 301 unimplemented / 309 clarifications**;
 475 total,438 required core,37 deferred Ancillary. Counts are not percentages.
 M3 remains **IN_PROGRESS / RULES_SUBSET**, bot off.
 
