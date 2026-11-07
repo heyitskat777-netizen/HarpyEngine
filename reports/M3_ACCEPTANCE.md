@@ -1,5 +1,59 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Captive player Execution source and addressed Secretary delivery — 2026-11-07
+
+Local source extends `b2c0f95`; exact eight changed Python files are frozen in
+ignored `var/m3-reign-secretary-checkpoint/manifest.json`. Root reviewed immutable
+source proofs and private projections. M3 remains **RULES_SUBSET**.
+
+A genuine native Enforcer body Grasp, current original captive Helplessness and
+known physical positions at an operational Foundation Base can prove a prisoner.
+The original Handler must already own Reign and personally complete canonical
+Punishment Execution. Only the actual death archive and same-event custody release
+create a claim, exactly once across bundled causes. Actual Rebellion Low and
+original-player private History complete the normal trace. No direct PC kill or
+fake NPC custody endpoint was added. The optional initial-position control records
+only the original Handler's own previously unknown presence from a genuine pending
+discipline/capture source; known conflicts, offstage and custody are rejected.
+Root caught missing co-presence in the first implementation before acceptance;
+the final normal includes that actual source guard. Historical claims remain
+readable without transferring current authority to a successor.
+
+Secretary statements now have an explicit addressed option. The Handler chooses
+actual source-scene roles; the exact statement is available to the selected
+original humans through their durable private Requests/History notice. Actual
+cast/controller/source versions are frozen; late roster changes cannot add readers.
+Recipient projections omit other audience and private operational fields. This is
+scoped inbox access, not proactive Discord channel/DM delivery, fictional reading,
+consent or acknowledgment. Existing omitted-audience statements remain private
+records, and direct Orders retain their existing response workflow.
+
+Focused verification:
+
+- `.venv/bin/pytest tests/rules/test_reign_pc_execution.py tests/rules/test_reign_terror.py -q`:
+  **3 passed / 11.60s** (one actual PC source normal plus two existing NPC effect
+  workflows after their shared helper extraction).
+- `tests/rules/test_secretary_statement.py`: **2 passed / 5.758s** (new addressed
+  native workflow plus preserved private-record normal).
+- Existing `test_actual_promoted_secretary_all_plays_withdraw_child_continuation_history`:
+  **1 passed / 5.665s**. Source/privacy/replay/rebuild checks are scoped to the
+  new addressed flow; no actor/lifecycle matrix or new full regression.
+- **8 changed Python files** pass Ruff/format; **6 source modules** pass mypy.
+  Exact static/test artifacts and source hashes are linked from the two ignored
+  workflow handoffs. Passing scopes reused; no repeated global checks.
+
+The preceding Pilot compatibility label was corrected to its actual three nodes:
+first-time NPC high secret/refuge plus already-known high. Low/mid evidence remains
+in the preceding Code checkpoint; it was not freshly rerun for the Pilot unit.
+Metadata:181 subsets,295 unimplemented,326 clarifications;476 total,439 required
+core,37 deferred Ancillary,zero independent approvals. Counts are not percentages.
+Formal PC detention, native group membership, broader body/actor adapters, required
+remaining gameplay, independent/printed/player review and final integrated M3
+verification remain open. Next source contracts: Tracker Implants and Contaminant
+Zone, each including all printed normal effects and actual consumers. Bot off;
+local only, no push/live migration/deployment/environment publish/private writes,
+AI/M4 or Ancillary activation.
+
 ## Reign of Terror and actual player circuit operators — 2026-11-07
 
 Combined local source extends `4a70ac0`; the exact 25 changed Python files are
@@ -32,7 +86,7 @@ Focused evidence, reused without redundant runs:
   **2 passed / 9.17s**; prior awards `tests/rules/test_handler_advancements.py`,
   **3 passed / 5.45s**. Console evidence retained; no repeat merely for XML.
 - Pilot Code normal workflows: `tests/rules/test_am_code_pilot_operator.py`,
-  **2 passed / 7.176s**; selected NPC high/low/mid compatibility,
+  **2 passed / 7.176s**; first-time NPC high secret/refuge and already-known high compatibility,
   **3 passed / 7.316s**. Exact selections and JUnit in the ignored handoff.
 - Coherent completed scopes cover **25 unique changed Python files** passing
   Ruff/format and **23 source modules** passing mypy, including every shared

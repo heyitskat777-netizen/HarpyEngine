@@ -1,7 +1,6 @@
-# Actual prisoner execution -> three Reign effect consumers; real Pilot circuit workflows.
-# Reuse bounded prior awards and NPC high/low/mid compatibility; final full suite separate.
+# Captive native Execution source and actual addressed Secretary notices.
+# Existing NPC effect/helper compatibility plus prior Secretary all-plays workflow.
+tests/rules/test_reign_pc_execution.py
 tests/rules/test_reign_terror.py
-tests/rules/test_am_code_pilot_operator.py
-tests/rules/test_handler_advancements.py
-tests/rules/test_am_code_new_operator.py
-tests/rules/test_am_code.py::test_high_already_knowing_operator_causes_status_loss_and_real_selected_no_rewrite
+tests/rules/test_secretary_statement.py
+tests/rules/test_secretary.py::test_actual_promoted_secretary_all_plays_withdraw_child_continuation_history

@@ -542,11 +542,8 @@ class ReignTerrorService:
             group = condition_id = tag_id = None
             rebellion_before = None
             if choice == "rebellion_low":
-                if state.strain is None:
-                    raise WorkflowError("Configure actual Strain before this reduction")
-                rebellion_before = state.strain.levels["rebellion"]
-                state.strain = state.strain.model_copy(
-                    update=dict(levels=state.strain.levels | {"rebellion": "low"})
+                rebellion_before, tag_id = _direct_effect(
+                    state, receipt.handler, event, choice, target, label
                 )
             elif choice == "underfunded":
                 faction = next(
@@ -608,26 +605,9 @@ class ReignTerrorService:
                     )
                 )
             elif choice == "girl_tag":
-                if (
-                    target is None
-                    or target.kind != "pilot"
-                    or target != current_ref(state, int(target.entity))
-                    or not label.strip()
-                ):
-                    raise WorkflowError(
-                        "Choose your actual current native Girl and human-authored Tag"
-                    )
-                tag_id = "reign-girl-tag:" + event
-                state.sheets[target.entity].tags.append(
-                    TagState(
-                        id=tag_id,
-                        label=label.strip(),
-                        giver=viewer.user_id,
-                        giver_actor=receipt.handler,
-                        observers=tuple(sorted(set(state.order) | {viewer.user_id})),
-                    )
+                rebellion_before, tag_id = _direct_effect(
+                    state, receipt.handler, event, choice, target, label
                 )
-                state.sheets[target.entity].revision += 1
             else:
                 raise WorkflowError("Choose one printed execution effect")
             value = rules.Execution(
@@ -680,6 +660,126 @@ class ReignTerrorService:
                 choice=choice,
                 account=account,
                 actual=actual,
+                target=target.model_dump(mode="json") if target else None,
+                label=label,
+            ),
+            operation,
+        )
+
+    def prepare_pc_execution_presence(
+        self, viewer: GuildViewer, key: str, work: str, revision: int, account: str
+    ) -> dict[str, Any]:
+        """Record only the original Handler's own previously unknown initial body position."""
+
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            state = load_state(c, self.store.campaign_id)
+            context = pc_presence_context(self.game, c, state, work)
+            handler = ActorRef.model_validate(context["handler"])
+            if (
+                viewer.user_id != int(handler.entity)
+                or state.revision != revision
+                or self.game.pending_actions(c)
+                or not account.strip()
+            ):
+                raise WorkflowError(
+                    "Only the original Handler records their actual initial position"
+                )
+            event = str(uuid4())
+            fact = dict(
+                kind="reign_terror_actual_position",
+                actor=handler.model_dump_json(),
+                cell=json.dumps(context["cell"]),
+                event=event,
+                source_work=work,
+                grasp=context["grasp"],
+                appointment=context["appointment"],
+                acquisition=context["acquisition"],
+                account=account.strip(),
+            )
+            state.facts.append(fact)
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.reign_pc_execution_position",
+                state,
+                event_id=event,
+                handler_actor=fact["actor"],
+                **{k: v for k, v in fact.items() if k not in ("kind", "event", "actor")},
+            )
+            return dict(id=work, event=event)
+
+        return self._write(
+            viewer,
+            key,
+            "m3.reign_pc_execution_position",
+            dict(work=work, revision=revision, account=account),
+            operation,
+        )
+
+    def claim_pc_execution(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        ending_event: str,
+        revision: int,
+        choice: Literal["rebellion_low", "girl_tag"],
+        account: str,
+        *,
+        target: ActorRef | None = None,
+        label: str = "",
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            state = load_state(c, self.store.campaign_id)
+            proof = prove_pc_execution(self.game, c, state, ending_event)
+            if (
+                state.revision != revision
+                or proof.handler.entity != str(viewer.user_id)
+                or self.game.pending_actions(c)
+                or not account.strip()
+                or any(
+                    x.execution_event == ending_event or x.archive == proof.archive
+                    for x in rules.pc_claims(state)
+                )
+            ):
+                raise WorkflowError("Claim exactly one effect from this original actual execution")
+            event = str(uuid4())
+            before, tag = _direct_effect(state, proof.handler, event, choice, target, label)
+            value = rules.PCExecutionClaim(
+                **proof.model_dump(),
+                id="reign-pc-claim:" + ending_event,
+                event=event,
+                choice=choice,
+                account=account.strip(),
+                target=target,
+                tag=tag,
+                rebellion_before=before,
+            )
+            rules.put(state, value)
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.reign_pc_execution_claimed",
+                state,
+                event_id=event,
+                execution_event=ending_event,
+                claim_id=value.id,
+                archive=proof.archive,
+            )
+            return dict(id=value.id, choice=choice)
+
+        return self._write(
+            viewer,
+            key,
+            "m3.reign_pc_claim",
+            dict(
+                ending_event=ending_event,
+                revision=revision,
+                choice=choice,
+                account=account,
                 target=target.model_dump(mode="json") if target else None,
                 label=label,
             ),
@@ -815,6 +915,53 @@ class ReignTerrorService:
         with self.store.engine.connect() as c:
             self._access(c, viewer)
             state = load_state(c, self.store.campaign_id)
+            if identity and identity.startswith("reign-pc-presence:"):
+                context = pc_presence_context(
+                    self.game, c, state, identity.removeprefix("reign-pc-presence:")
+                )
+                if context["handler"]["entity"] != str(viewer.user_id):
+                    raise WorkflowError(
+                        "Only the original Handler records their own initial location"
+                    )
+                return dict(kind="pc_presence", revision=state.revision, body=context)
+            if identity and identity.startswith("reign-pc-source:"):
+                proof = prove_pc_execution(
+                    self.game, c, state, identity.removeprefix("reign-pc-source:")
+                )
+                if proof.handler.entity != str(viewer.user_id):
+                    raise WorkflowError(
+                        "Only the original actual executing Handler chooses this effect"
+                    )
+                if any(x.execution_event == proof.execution_event for x in rules.pc_claims(state)):
+                    raise WorkflowError("This actual execution effect is already claimed")
+                return dict(
+                    kind="pc_execution",
+                    revision=state.revision,
+                    body=proof.model_dump(mode="json"),
+                    girls=[
+                        dict(
+                            ref=current_ref(state, uid).model_dump(mode="json"),
+                            label=state.sheets[str(uid)].callsign,
+                        )
+                        for uid in state.order
+                    ],
+                )
+            pc = next(
+                (
+                    pc_claim_proof(self.game, c, state, x.id)
+                    for x in rules.pc_claims(state)
+                    if x.id == identity
+                ),
+                None,
+            )
+            if pc:
+                if viewer.user_id not in (int(pc.handler.entity), int(pc.prisoner.entity)):
+                    raise WorkflowError(
+                        "This private execution claim belongs to its original people"
+                    )
+                return dict(
+                    kind="pc_claim", revision=state.revision, body=pc.model_dump(mode="json")
+                )
             owned = (
                 [
                     x
@@ -937,6 +1084,58 @@ class ReignTerrorService:
             for x in rules.acquisitions(state)
             if x.handler.entity == str(viewer.user_id)
         ]
+        work_table = t.m3["m3_required_work"]
+        for work in c.scalars(
+            sa.select(work_table.c.id).where(
+                work_table.c.campaign_id == self.store.campaign_id,
+                work_table.c.kind == "punishment",
+                work_table.c.state != "resolved",
+                work_table.c.owner_id == str(viewer.user_id),
+            )
+        ):
+            try:
+                pc_presence_context(self.game, c, state, work)
+            except (ValueError, WorkflowError):
+                continue
+            result.append(
+                dict(
+                    id="reign-pc-presence:" + work,
+                    revision=state.revision,
+                    label="Optional: record your unknown initial execution position",
+                    phase="pc_presence",
+                    pending=False,
+                )
+            )
+        for archive in state.career_archives:
+            if archive.ending != "execution" or any(
+                x.execution_event == archive.source_event for x in rules.pc_claims(state)
+            ):
+                continue
+            try:
+                proof = prove_pc_execution(self.game, c, state, archive.source_event)
+            except (ValueError, WorkflowError):
+                continue
+            if proof.handler.entity == str(viewer.user_id):
+                result.append(
+                    dict(
+                        id="reign-pc-source:" + proof.execution_event,
+                        revision=state.revision,
+                        label="PC prisoner execution — choose Reign effect",
+                        phase="pc_execution",
+                        pending=True,
+                    )
+                )
+        result.extend(
+            dict(
+                id=x.id,
+                revision=state.revision,
+                label="PC execution Reign effect",
+                phase=x.choice,
+                pending=False,
+            )
+            for x in rules.pc_claims(state)
+            if viewer.user_id in (int(x.handler.entity), int(x.prisoner.entity))
+        )
         result.extend(
             dict(
                 id=x.id,
@@ -978,3 +1177,366 @@ class ReignTerrorService:
             == viewer.user_id
         )
         return result
+
+
+def pc_captive(
+    game: GameService, c: Connection, state: GameState, subject: ActorRef
+) -> tuple[Any, tuple[int, int]]:
+    """Prove a live original body capture and both canonical physical placements."""
+    from girlframe.engine.m3_actor_bonds import is_helpless
+    from girlframe.engine.m3_enforcer import initiative
+
+    grip = next(
+        (
+            x
+            for x in state.enforcer_grasps
+            if x.target == subject and x.held and x.contact == "body" and x.actor.kind == "pilot"
+        ),
+        None,
+    )
+    if (
+        grip is None
+        or int(grip.actor.entity) not in state.order
+        or current_ref(state, int(grip.actor.entity)) != grip.actor
+        or not initiative(state, grip.actor)
+        or not is_helpless(state, subject, grip.actor)
+    ):
+        raise WorkflowError("Prove actual still-held body captivity, not free Helplessness")
+    born = next(
+        (x for x in _history(c, game, grip.source_event).enforcer_grasps if x.id == grip.id), None
+    )
+    action = game.action(c, grip.action)
+    meta = action["data"].get("enforcement", {})
+    if (
+        born != grip
+        or action["state"] != "complete"
+        or not action["data"].get("receipt")
+        or meta.get("actor") != grip.actor.model_dump(mode="json")
+        or meta.get("target") != subject.model_dump(mode="json")
+        or meta.get("grasp") != grip.id
+        or meta.get("contact", {}).get("piloting") is not False
+    ):
+        raise WorkflowError("Recover the genuine source-proved body capture")
+    positions = [
+        next((x for x in state.placements if x.actor == ref), None) for ref in (subject, grip.actor)
+    ]
+    for position in positions:
+        if (
+            position is None
+            or position.mode != "outside_frame"
+            or position.girl_cell is None
+            or position.custody is not None
+            or not position.vitals_active
+            or position.subsumed
+        ):
+            raise WorkflowError(
+                "Use the known available original captive and holder body positions"
+            )
+        if position not in _history(c, game, position.source_event).placements:
+            raise WorkflowError("Recover the canonical original physical placement source")
+    assert positions[0] is not None and positions[1] is not None
+    cell = positions[0].girl_cell
+    assert cell is not None
+    if (
+        positions[1].girl_cell != cell
+        or positions[1].frame_instance != grip.frame_instance
+        or state.world is None
+        or not any(
+            x.kind == "base" and x.allegiance == "foundation" and x.operational and x.cell == cell
+            for x in state.world.locations
+        )
+    ):
+        raise WorkflowError("Actual body custody must share an operational Foundation Base")
+    return grip, cell
+
+
+def pc_presence_context(
+    game: GameService, c: Connection, state: GameState, work: str
+) -> dict[str, Any]:
+    from girlframe.engine.m3_handler_consequences import active_handler
+    from girlframe.services.m3_punishments import PunishmentService
+
+    discipline = PunishmentService(game.store)
+    row = discipline._row(c, work)
+    body = discipline._body(row)
+    handler = active_handler(state)
+    receipt = next((x for x in rules.acquisitions(state) if x.handler == handler), None)
+    subject_sheet = state.sheets.get(row["subject_id"])
+    if (
+        handler is None
+        or receipt is None
+        or row["kind"] != "punishment"
+        or row["state"] == "resolved"
+        or row["owner_id"] != handler.entity
+        or body.get("role_case")
+        or subject_sheet is None
+        or subject_sheet.girl != "MOCKINGBIRD"
+        or body.get("character") != subject_sheet.character_id
+    ):
+        raise WorkflowError("Use genuine pending original Handler-owned native Execution work")
+    paid(game, c, state, receipt.id)
+    if (
+        HandlerCreationService(game.store)._appointment_source(c, int(handler.entity))
+        != receipt.appointment
+    ):
+        raise WorkflowError("Use the original actual Handler appointment")
+    subject = current_ref(state, int(row["subject_id"]))
+    grip, cell = pc_captive(game, c, state, subject)
+    actor = resolve(state, handler, (), require_current_profile=False)
+    if (
+        actor.rules != "handler"
+        or not actor.alive
+        or actor.cell is not None
+        or actor.offstage_source
+        or actor.custody not in (None, "free")
+    ):
+        raise WorkflowError(
+            "Only an available original Handler with unknown initial position may record it; "
+            "use actual movement for a known position"
+        )
+    return dict(
+        work=work,
+        handler=handler.model_dump(mode="json"),
+        appointment=receipt.appointment,
+        acquisition=receipt.id,
+        grasp=grip.id,
+        cell=cell,
+        prisoner=subject.model_dump(mode="json"),
+        label=subject_sheet.callsign,
+    )
+
+
+def pc_handler_presence(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    handler: ActorRef,
+    receipt: rules.Acquisition,
+    grip: Any,
+    cell: tuple[int, int],
+    works: set[str],
+) -> str:
+    actor = resolve(state, handler, (), require_current_profile=False)
+    if (
+        actor.rules != "handler"
+        or not actor.alive
+        or actor.cell != cell
+        or actor.offstage_source
+        or actor.custody not in (None, "free")
+    ):
+        raise WorkflowError("Prove the original Handler's actual available Foundation co-presence")
+    kinds = {
+        "recorded_handler_recovery_position",
+        "cute_uniform_actual_dressing_position",
+        "hidden_sidearm_actual_position",
+        "reign_terror_actual_position",
+        "handler_transport_arrived",
+        "leviathan_actual_arrival",
+    }
+    fact = next(
+        (
+            x
+            for x in reversed(state.facts)
+            if x.get("kind") in kinds and ActorRef.model_validate_json(x["actor"]) == handler
+        ),
+        None,
+    )
+    if fact is None or fact not in _history(c, game, fact["event"]).facts:
+        raise WorkflowError("Recover the original Handler's canonical physical source event")
+    if fact.get("source_work") is not None:
+        audit = c.execute(
+            sa.select(t.events.c.kind, t.events.c.actor_id, t.events.c.payload_json).where(
+                t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == fact["event"]
+            )
+        ).first()
+        if (
+            audit is None
+            or audit.kind != "m3.reign_pc_execution_position"
+            or audit.actor_id != handler.entity
+            or fact["source_work"] not in works
+            or fact.get("appointment") != receipt.appointment
+            or fact.get("acquisition") != receipt.id
+            or fact.get("grasp") != grip.id
+            or any(
+                json.loads(audit.payload_json).get("handler_actor" if k == "actor" else k) != v
+                for k, v in fact.items()
+                if k not in ("kind", "event")
+            )
+        ):
+            raise WorkflowError(
+                "Preserve actual initial Handler position, appointment, work and body capture"
+            )
+    return fact["event"]
+
+
+def prove_pc_execution(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    ending_event: str,
+    *,
+    current_handler: bool = True,
+) -> rules.PCExecutionSource:
+    """Read an actual completed direct Handler Execution; a claim cannot create a death."""
+    from girlframe.engine.m2 import PilotSheet
+    from girlframe.engine.m3_handler_consequences import active_handler
+    from girlframe.services.m3_girl_insurance import _before
+
+    archive = next(
+        (
+            x
+            for x in state.career_archives
+            if x.source_event == ending_event
+            and x.ending == "execution"
+            and x.actor.kind == "pilot"
+        ),
+        None,
+    )
+    if archive is None:
+        raise WorkflowError("Only an actual completed execution death grants a Reign effect")
+    before, after = _before(game, c, ending_event), _history(c, game, ending_event)
+    original = before.sheets.get(archive.actor.entity)
+    handler = active_handler(before)
+    receipt = next((x for x in rules.acquisitions(before) if x.handler == handler), None)
+    if (
+        original is None
+        or original.character_id != archive.actor.incarnation
+        or PilotSheet.model_validate_json(archive.sheet_json).girl != "MOCKINGBIRD"
+        or handler is None
+        or receipt is None
+        or archive not in after.career_archives
+        or current_handler
+        and not same_handler_body(state, handler)
+    ):
+        raise WorkflowError(
+            "Prove the original ordinary captive and Handler's prior Reign ownership"
+        )
+    receipt = paid(game, c, state, receipt.id)
+    if (
+        current_handler
+        and HandlerCreationService(game.store)._appointment_source(c, int(handler.entity))
+        != receipt.appointment
+    ):
+        raise WorkflowError("Only the original Handler appointment owns this execution claim")
+    audit = c.execute(
+        sa.select(
+            t.events.c.actor_id, t.events.c.kind, t.events.c.payload_json, t.events.c.seq
+        ).where(t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == ending_event)
+    ).first()
+    acquired = c.scalar(
+        sa.select(t.events.c.seq).where(
+            t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == receipt.event
+        )
+    )
+    if (
+        audit is None
+        or audit.actor_id != handler.entity
+        or audit.kind != "m3.punishment_applied"
+        or not acquired
+        or acquired >= audit.seq
+    ):
+        raise WorkflowError(
+            "A later purchase or different executor cannot claim an earlier execution"
+        )
+    payload = json.loads(audit.payload_json)
+    table = t.m3["m3_required_work"]
+    rows = list(
+        c.execute(
+            sa.select(table).where(
+                table.c.campaign_id == game.store.campaign_id,
+                table.c.kind == "punishment",
+                table.c.state == "resolved",
+                sa.func.json_extract(table.c.body_json, "$.applied_event") == ending_event,
+            )
+        ).mappings()
+    )
+    works = set()
+    for row in rows:
+        body = json.loads(row["body_json"])
+        if (
+            row["subject_id"] != archive.actor.entity
+            or row["owner_id"] != handler.entity
+            or body.get("punishment", {}).get("kind") != "execution"
+            or body.get("character") != archive.actor.incarnation
+            or body.get("role_case")
+        ):
+            raise WorkflowError(
+                "Use the direct original Handler's genuine native Execution receipts"
+            )
+        works.add(row["id"])
+    if not works or payload.get("work_id") not in works or payload.get("punishment") != "execution":
+        raise WorkflowError("Finish actual canonical Punishment Execution before claiming")
+    grip, cell = pc_captive(game, c, before, archive.actor)
+    ended = next((x for x in after.enforcer_grasps if x.id == grip.id), None)
+    if ended is None or ended.held or ended.release_event != ending_event:
+        raise WorkflowError("Only this exact execution may release the pre-existing body capture")
+    position_event = pc_handler_presence(game, c, before, handler, receipt, grip, cell, works)
+    return rules.PCExecutionSource(
+        acquisition=receipt.id,
+        handler=handler,
+        appointment=receipt.appointment,
+        prisoner=archive.actor,
+        label=original.callsign,
+        archive=archive.id,
+        execution_event=ending_event,
+        grasp=grip.id,
+        custody_event=grip.source_event,
+        cell=cell,
+        handler_position_event=position_event,
+        works=tuple(sorted(works)),
+    )
+
+
+def pc_claim_proof(
+    game: GameService, c: Connection, state: GameState, identity: str
+) -> rules.PCExecutionClaim:
+    value = next((x for x in rules.pc_claims(state) if x.id == identity), None)
+    if value is None:
+        raise WorkflowError("Recover the actual original PC execution claim")
+    actual = prove_pc_execution(game, c, state, value.execution_event, current_handler=False)
+    born = next(
+        (x for x in rules.pc_claims(_history(c, game, value.event)) if x.id == identity), None
+    )
+    if born != value or any(
+        getattr(actual, k) != getattr(value, k) for k in rules.PCExecutionSource.model_fields
+    ):
+        raise WorkflowError("Preserve the actual original death and its one claimed effect")
+    return value
+
+
+def _direct_effect(
+    state: GameState,
+    handler: ActorRef,
+    event: str,
+    choice: str,
+    target: ActorRef | None,
+    label: str,
+) -> tuple[str | None, str | None]:
+    if choice == "rebellion_low":
+        if state.strain is None:
+            raise WorkflowError("Configure actual Strain before this reduction")
+        previous = state.strain.levels["rebellion"]
+        state.strain = state.strain.model_copy(
+            update=dict(levels=state.strain.levels | {"rebellion": "low"})
+        )
+        return previous, None
+    if (
+        choice != "girl_tag"
+        or target is None
+        or target.kind != "pilot"
+        or target != current_ref(state, int(target.entity))
+        or not label.strip()
+    ):
+        raise WorkflowError("Choose your actual current native Girl and human-authored Tag")
+    tag_id = "reign-girl-tag:" + event
+    state.sheets[target.entity].tags.append(
+        TagState(
+            id=tag_id,
+            label=label.strip(),
+            giver=int(handler.entity),
+            giver_actor=handler,
+            observers=tuple(sorted(set(state.order) | {int(handler.entity)})),
+        )
+    )
+    state.sheets[target.entity].revision += 1
+    return None, tag_id

@@ -73,6 +73,110 @@ async def open_terror(
     interaction: discord.Interaction, service: ReignTerrorService, identity: str | None = None
 ) -> None:
     data = await asyncio.to_thread(service.menu, viewer_from_interaction(interaction), identity)
+    if data["kind"] == "pc_presence":
+        body = data["body"]
+
+        async def presence(current: discord.Interaction, values: dict[str, Any]) -> str:
+            await asyncio.to_thread(
+                service.prepare_pc_execution_presence,
+                viewer_from_interaction(current),
+                str(current.id),
+                body["work"],
+                data["revision"],
+                values["account"],
+            )
+            return (
+                "Your own actual initial body position was recorded; no custody or death changed."
+            )
+
+        await NativeForm(
+            interaction.user.id,
+            "Your actual unknown initial position",
+            "Only use this if your original Handler is physically at Foundation Base cell "
+            + str(body["cell"])
+            + " with the already held original captive "
+            + clean(body["label"])
+            + ". This truthfully establishes your own previously unknown position, "
+            "without moving anyone. "
+            "For a known conflicting position, use real movement instead. "
+            "This neither executes nor consents for the captive.",
+            [Field("account", "Your actual presence at this Base", paragraph=True)],
+            presence,
+        ).present(interaction)
+        return
+    if data["kind"] == "pc_claim":
+        body = data["body"]
+        await reply(
+            interaction,
+            "Actual native prisoner execution effect: "
+            + body["choice"]
+            + ".\n"
+            + clean(body["account"])
+            + "\nOriginal execution archive: "
+            + body["archive"],
+        )
+        return
+    if data["kind"] == "pc_execution":
+        body = data["body"]
+
+        async def claim(current: discord.Interaction, values: dict[str, Any]) -> str:
+            selected = (values.get("girl") or (None,))[0]
+            target = (
+                ActorRef.model_validate(
+                    next(
+                        x["ref"]
+                        for x in data["girls"]
+                        if ActorRef.model_validate(x["ref"]).token == selected
+                    )
+                )
+                if selected
+                else None
+            )
+            await asyncio.to_thread(
+                service.claim_pc_execution,
+                viewer_from_interaction(current),
+                str(current.id),
+                body["execution_event"],
+                data["revision"],
+                values["choice"][0],
+                values["account"],
+                target=target,
+                label=values.get("label", ""),
+            )
+            return "One actual Reign effect claimed from the original completed execution."
+
+        await NativeForm(
+            interaction.user.id,
+            "Reign — actual native prisoner execution",
+            "The original native Girl was genuinely held and actually executed by your original "
+            "Handler. Choose one effect once for the actual ending, including all bundled "
+            "discipline causes. Native Rebel Group membership needs its own source port.",
+            [
+                Field(
+                    "choice",
+                    "One actual Reign effect",
+                    (
+                        ("rebellion_low", "Reduce Rebellion Strain to Low"),
+                        ("girl_tag", "Inflict an ordinary Tag on my Girl"),
+                    ),
+                ),
+                Field(
+                    "girl",
+                    "Actual own Girl (Tag option)",
+                    tuple(
+                        (ActorRef.model_validate(x["ref"]).token, clean(x["label"]))
+                        for x in data["girls"]
+                    ),
+                    0,
+                    1,
+                    required=False,
+                ),
+                Field("label", "Human-authored Tag (Tag option)", required=False),
+                Field("account", "Actual effect from this completed execution", paragraph=True),
+            ],
+            claim,
+        ).present(interaction)
+        return
     if data["kind"] == "inventory":
         if data["known"]:
             await reply(

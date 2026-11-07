@@ -5415,6 +5415,40 @@
       "revision": 1,
       "implementation_note": "Exact public faction and genuine NPC custody source required. The original external controller confirms unknown current resources once. Embrace changes an actual Identity; rejection is a genuine owed locked action. Redundant underfunding preserves existing condition and usage history.",
       "change_impact": "Applies to future source-bound enemy Tag use. Preserve existing effects, inventory and player responses; no automatic group-merger inheritance. Broader resource/actor adapters remain required gaps."
+    },
+    {
+      "id": "reign-body-grasp-captive-source",
+      "summary": "A genuine still-held original native body Grasp with actual Helplessness qualifies as a physical prisoner for direct Handler Execution and Reign; free Helplessness or an escaped/stale hold does not.",
+      "source": "Rulebook PDF157/printed155 Reign of Terror; actual Enforcer body Grasp and Punishment Execution sources",
+      "rationale": "The advancement says prisoner without requiring a formal NPC detention job. A genuine bodily captor and helpless captive provide finite actual custody without converting a player into an NPC.",
+      "alternatives": [
+        "Require formal imprisonment for every prisoner, deferring this route until its producer exists",
+        "Treat any Helpless or past-captured person as currently a prisoner"
+      ],
+      "policy_key": "reign_body_grasp_captive_source",
+      "implementation_note": "Existing Rule and exact original Handler appointment precede canonical direct Execution. Prove actual Foundation co-presence and actual death archive, with hold released by that same ending event. One effect per death/archive across bundled punishment causes. Initial Handler presence control records only its own unknown position, never movement or another person's consent.",
+      "change_impact": "Future finite original ordinary native captive executions only; preserve actual source/death records. Formal detention and other actor/body/group adapters remain separate required gaps.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "secretary-addressed-source-notices",
+      "summary": "A Secretary authority statement may explicitly address actual scene roles; share its exact text through those original humans' durable private Requests/History access, without universal knowledge or compelled agreement.",
+      "source": "Rulebook PDF159/printed157 Secretary: speak with Handler's full authority",
+      "rationale": "Speech shares the actual chosen statement with its addressed audience. Authority does not grant omniscience, disclose private records or compel an OOC reply; legacy author-only records must stay private.",
+      "alternatives": [
+        "Automatically broadcast every old/new statement to the current roster",
+        "Treat private author-only History as recipient delivery"
+      ],
+      "policy_key": "secretary_addressed_source_notices",
+      "implementation_note": "Freeze actual scene/cast version, original ActorRefs/controllers and recipient labels at speech. Current roster changes never expand access. UI names Requests/History, not a Discord channel/DM post, fictional reading, acknowledgment or consent. Omitted audience preserves private record behavior.",
+      "change_impact": "Only future explicitly addressed statements share content. Preserve prior records and immutable original recipients. Proactive transport is separate from this bounded mechanism.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -16825,7 +16859,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_reign_terror.py"
+        "tests/rules/test_reign_terror.py",
+        "tests/rules/test_reign_pc_execution.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -17020,7 +17055,8 @@
         "source.handler-advancement-triggers"
       ],
       "test_evidence": [
-        "tests/rules/test_secretary.py"
+        "tests/rules/test_secretary.py",
+        "tests/rules/test_secretary_statement.py"
       ],
       "m2_play_id": null,
       "module": "core"

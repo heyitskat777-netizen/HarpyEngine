@@ -56,6 +56,31 @@ class MemberTag(Model):
     identity: str | None = None
 
 
+class PCExecutionSource(Model):
+    acquisition: str
+    handler: ActorRef
+    appointment: str
+    prisoner: ActorRef
+    label: str
+    archive: str
+    execution_event: str
+    grasp: str
+    custody_event: str
+    works: tuple[str, ...]
+    cell: tuple[int, int]
+    handler_position_event: str
+
+
+class PCExecutionClaim(PCExecutionSource):
+    id: str
+    event: str
+    choice: Literal["rebellion_low", "girl_tag"]
+    account: str = Field(min_length=1, max_length=1200)
+    target: ActorRef | None = None
+    tag: str | None = None
+    rebellion_before: str | None = None
+
+
 def values[T: Model](state: GameState, kind: str, cls: type[T]) -> tuple[T, ...]:
     return tuple(cls.model_validate_json(x["body"]) for x in state.facts if x.get("kind") == kind)
 
@@ -76,12 +101,19 @@ def member_tags(state: GameState) -> tuple[MemberTag, ...]:
     return values(state, "reign_member_tag", MemberTag)
 
 
-def put(state: GameState, value: Acquisition | Execution | Condition | MemberTag) -> None:
+def pc_claims(state: GameState) -> tuple[PCExecutionClaim, ...]:
+    return values(state, "reign_pc_execution_claim", PCExecutionClaim)
+
+
+def put(
+    state: GameState, value: Acquisition | Execution | Condition | MemberTag | PCExecutionClaim
+) -> None:
     kind = {
         Acquisition: "reign_acquisition",
         Execution: "reign_execution",
         Condition: "reign_condition",
         MemberTag: "reign_member_tag",
+        PCExecutionClaim: "reign_pc_execution_claim",
     }[type(value)]
     state.facts = [
         x for x in state.facts if not (x.get("kind") == kind and x.get("id") == value.id)

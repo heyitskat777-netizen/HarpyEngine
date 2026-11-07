@@ -5,7 +5,7 @@ from typing import Any, Literal
 from pydantic import Field
 
 from girlframe.engine.m2 import GameState
-from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
+from girlframe.engine.m3_actor_state import ActorRef, CastRole, Model, SceneCast
 from girlframe.engine.m3_world_state import Cell
 
 RULE = "handler-advancement.handler-advancement.secretary"
@@ -47,6 +47,14 @@ class Performed(Model):
     mission_event: str | None = None
     mission_json: str | None = None
     recipients: tuple[ActorRef, ...] = ()
+    recipient_roles: tuple[CastRole, ...] = Field(default=(), exclude_if=lambda value: not value)
+    recipient_labels: dict[str, str] = Field(
+        default_factory=dict, exclude_if=lambda value: not value
+    )
+    statement_channel: int | None = Field(default=None, exclude_if=lambda value: value is None)
+    statement_cast_revision: int | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
 
 class Gunpoint(Model):
@@ -154,3 +162,11 @@ def scene_gunpoints(state: GameState, scene: str) -> list[dict[str, Any]]:
         if x.cast.id == scene
         and x.phase in ("awaiting_attacker", "responding", "awaiting_resolution")
     ]
+
+
+def reads_performance(value: Performed, controller: int) -> bool:
+    if value.principal.entity == str(controller):
+        return True
+    if value.recipient_roles:
+        return any(x.controller == controller for x in value.recipient_roles)
+    return any(x.entity == str(controller) for x in value.recipients)

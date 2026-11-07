@@ -11,6 +11,7 @@ from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m2 import ChoiceAnswer
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_missions import Mission
 from girlframe.services.m3_secretary import SecretaryService
 from girlframe.services.onboarding import WorkflowError
@@ -71,7 +72,15 @@ async def open_secretary(
     data = await asyncio.to_thread(service.menu, viewer_from_interaction(interaction), identity)
     if data["kind"] == "performed":
         body = data["body"]
-        text = "Actual Secretary work: " + body["play"] + ".\n" + clean(body["account"])
+        text = (
+            "Addressed Secretary notice — original recipients' Requests/History.\n"
+            if body.get("addressed_notice")
+            else "Actual Secretary work: " + body["play"] + ".\n"
+        ) + clean(body["account"])
+        if body.get("addressed_notice"):
+            text += "\nAddressed original role(s): " + ", ".join(
+                clean(x) for x in body["addressed_to"]
+            )
         if body["mission_json"]:
             mission = Mission.model_validate_json(body["mission_json"])
             text += "\nVerified mission objective: " + clean(mission.objective)
@@ -225,7 +234,65 @@ async def open_secretary(
                 x["ref"]["entity"]: x["label"] for scene in data["scenes"] for x in scene["girls"]
             }
 
-            async def speak(next_step: discord.Interaction, answers: dict[str, Any]) -> str:
+            async def speak(next_step: discord.Interaction, answers: dict[str, Any]) -> str | None:
+                if answers["target"][0] == "addressed_statement":
+                    fresh = await asyncio.to_thread(
+                        service.menu, viewer_from_interaction(next_step), value["id"]
+                    )
+                    scene = next(
+                        (x for x in fresh["scenes"] if x["channel"] == int(answers["scene"][0])),
+                        None,
+                    )
+                    if scene is None or not scene["audience"]:
+                        raise WorkflowError(
+                            "Choose actual other cast recipients in this source scene"
+                        )
+                    available = {x["token"]: x for x in scene["audience"]}
+
+                    async def address(confirm: discord.Interaction, choices: dict[str, Any]) -> str:
+                        if not choices.get("recipients") or any(
+                            x not in available for x in choices["recipients"]
+                        ):
+                            raise WorkflowError(
+                                "Choose actual addressed roles from this source scene"
+                            )
+                        await asyncio.to_thread(
+                            service.speak,
+                            viewer_from_interaction(confirm),
+                            str(confirm.id),
+                            value["id"],
+                            fresh["revision"],
+                            scene["channel"],
+                            answers["text"],
+                            recipients=tuple(
+                                ActorRef.model_validate(available[x]["ref"])
+                                for x in choices["recipients"]
+                            ),
+                        )
+                        return (
+                            "Addressed statement available to the selected original "
+                            "recipients in Requests/History."
+                        )
+
+                    await NativeForm(
+                        next_step.user.id,
+                        "Addressed Secretary notice",
+                        "Share only this statement with selected original cast roles "
+                        "through their Requests/History. "
+                        "No channel/DM post or read acknowledgment is claimed.\nStatement: "
+                        + clean(answers["text"]),
+                        [
+                            Field(
+                                "recipients",
+                                "Actual addressed original cast roles",
+                                tuple((x["token"], x["label"]) for x in scene["audience"]),
+                                1,
+                                len(scene["audience"]),
+                            )
+                        ],
+                        address,
+                    ).present(next_step)
+                    return None
                 target = None if answers["target"][0] == "statement" else int(answers["target"][0])
                 await asyncio.to_thread(
                     service.speak,
@@ -246,14 +313,19 @@ async def open_secretary(
             await NativeForm(
                 current.user.id,
                 "Secretary — full authority",
-                "Statements are saved only in your History; share them in the scene yourself. "
+                "Record-only statements stay in your private History; share them yourself. "
+                "Addressed notices share the exact statement with chosen scene roles "
+                "in Requests/History. "
                 "Direct Orders use the recipient's normal responses.",
                 [
                     Field("scene", "Actual speaking scene", scenes),
                     Field(
                         "target",
                         "Actual speech/Order",
-                        (("statement", "Record an authoritative statement (private History)"),)
+                        (
+                            ("statement", "Record only (private History)"),
+                            ("addressed_statement", "Addressed notice to selected scene roles"),
+                        )
                         + tuple(girls.items()),
                     ),
                     Field("text", "Actual statement or direct Order", paragraph=True),

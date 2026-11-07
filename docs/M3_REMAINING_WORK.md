@@ -1,5 +1,12 @@
 # M3 remaining work — verified development snapshot
 
+Latest local addition proves **actual captive player Execution as a Reign source**
+and **explicit Secretary addressed-statement Requests/History delivery**, preserving
+private legacy records. Evidence and finite scope are in
+[the M3 report](../reports/M3_ACCEPTANCE.md). Tracker Implants and Contaminant Zone
+are the next source contracts. Other required gameplay and final review remain
+open; bot off and RULES_SUBSET. Earlier additions below are historical checkpoints.
+
 Current local checkpoint adds **Reign of Terror's actual NPC execution and three
 supported effect consumers**, plus **another native Pilot as Just Code operator**
 with source-scoped Orders and actual damage/owned response. Focused evidence is in

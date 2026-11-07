@@ -39,9 +39,9 @@ a required M3 rule complete; required gaps stay in the milestone backlog.
 
 | Order | Assignment | Completion boundary |
 |---|---|---|
-| 1, parallel | Native-PC captive Execution Reign claim | NPC Reign and Pilot Code handed off. Prove genuine body captivity, actual original Handler Execution/death archive and prior acquisition; claim one real existing effect. |
-| 1, parallel | Secretary statement delivery | Freeze actual source-owned statement -> addressed scene recipients -> durable private/scope-correct delivery and history. History-only storage is not delivery. |
-| 1, root | Shared integration | Consolidate completed Reign/Pilot source, metadata and focused evidence, then wire only exact next-workflow interfaces. No third implementation unit. |
+| 1, parallel | Tracker Implants source contract | Secretary delivery handed off. Freeze actual implant/location, both printed Handler Plays and removal/Void alerts with real consumers before code. |
+| 1, parallel | Contaminant Zone source contract | Native-PC Execution Reign handed off. Freeze actual territory/quarantine, all four selected-effect branches, break lifecycle and warp Play before code. |
+| 1, root | Shared integration | Consolidate completed Reign/Secretary source, rulings and exact evidence; release next contracts only after actual dependency/ownership review. No third implementation unit. |
 | 2 | Remaining required gameplay systems | Select the next dependency-ready whole workflow from M3_REMAINING_WORK.md and M3_COMPLETION_AUDIT.md. Freeze its contract, reuse implemented dependencies and complete it before opening unrelated work. |
 | 3 | M3 review candidate | Account for required core scope, complete expected gameplay flows and final integrated checks; provide a concise player-test checklist and stop for owner review. |
 

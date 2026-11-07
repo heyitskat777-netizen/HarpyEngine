@@ -183,6 +183,60 @@ def prove_performed(
     )
     if born != value or (value.actor, value.principal) != (appointment.actor, appointment.handler):
         raise WorkflowError("Preserve the original actual Secretary's source-owned work")
+    if value.recipient_roles:
+        original = _history(c, game, value.event)
+        cast = next((x for x in original.scene_casts if x.id == value.scene), None)
+        event = c.execute(
+            sa.select(t.events.c.kind, t.events.c.actor_id).where(
+                t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == value.event
+            )
+        ).first()
+        if (
+            value.play != "authority"
+            or value.order is not None
+            or cast is None
+            or not cast.open
+            or cast.channel != value.statement_channel
+            or cast.revision != value.statement_cast_revision
+            or value.recipients != tuple(x.actor for x in value.recipient_roles)
+            or len(set(value.recipients)) != len(value.recipients)
+            or not any(x.actor == value.actor for x in cast.roles)
+            or any(
+                role not in cast.roles or role.actor == value.actor
+                for role in value.recipient_roles
+            )
+            or event is None
+            or (event.kind, event.actor_id) != ("m3.secretary_spoke", value.principal.entity)
+        ):
+            raise WorkflowError(
+                "Recover the original spoken scene and exact addressed cast/controllers"
+            )
+        for role in value.recipient_roles:
+            if role.actor.kind == "pilot":
+                sheet = original.sheets.get(role.actor.entity)
+                if (
+                    sheet is None
+                    or sheet.character_id != role.actor.incarnation
+                    or sheet.owner != role.controller
+                    or sheet.owner not in original.order
+                ):
+                    raise WorkflowError(
+                        "Recover the original addressed Pilot incarnation/controller"
+                    )
+                label = sheet.callsign
+            else:
+                actual_recipient = resolve(original, role.actor, (), require_current_profile=False)
+                if actual_recipient.controller != role.controller:
+                    raise WorkflowError("Recover the actual original recipient controller")
+                label = actual_recipient.label
+            if value.recipient_labels.get(role.actor.token) != label:
+                raise WorkflowError("Recover the actual original recipient role label")
+    elif (
+        value.statement_channel is not None
+        or value.statement_cast_revision is not None
+        or value.recipient_labels
+    ):
+        raise WorkflowError("An addressed statement requires its exact original recipients")
     if value.mission:
         raw = c.scalar(
             sa.select(t.m3["m3_mission_history"].c.body_json).where(
@@ -786,7 +840,11 @@ class SecretaryService:
         channel: int,
         text: str,
         target: int | None = None,
+        *,
+        recipients: tuple[ActorRef, ...] = (),
     ) -> dict[str, Any]:
+        if target is not None and recipients:
+            raise WorkflowError("Choose a direct Order or addressed statement, not both")
         if target is not None:
             with self.store.engine.connect() as c:
                 state = load_state(c, self.store.campaign_id)
@@ -802,6 +860,29 @@ class SecretaryService:
             cast = _cast(self.game, c, state, channel)
             if not any(x.actor == value.actor for x in cast.roles) or not text.strip():
                 raise WorkflowError("The actual Secretary speaks to this real source scene")
+            addressed = tuple(
+                next((x for x in cast.roles if x.actor == ref), None) for ref in recipients
+            )
+            if (
+                len(set(recipients)) != len(recipients)
+                or any(x is None for x in addressed)
+                or value.actor in recipients
+            ):
+                raise WorkflowError("Choose distinct actual addressed roles from this source scene")
+            roles = tuple(x for x in addressed if x is not None)
+            for role in roles:
+                if (
+                    resolve(
+                        state,
+                        role.actor,
+                        profiles(c, self.store.campaign_id),
+                        require_current_profile=False,
+                    ).controller
+                    != role.controller
+                ):
+                    raise WorkflowError(
+                        "Refresh this actual scene's original recipient controllers"
+                    )
             event = str(uuid4())
             played = rules.Performed(
                 id=str(uuid4()),
@@ -812,6 +893,19 @@ class SecretaryService:
                 event=event,
                 account=text.strip(),
                 scene=cast.id,
+                recipients=recipients,
+                recipient_roles=roles,
+                recipient_labels={
+                    role.actor.token: resolve(
+                        state,
+                        role.actor,
+                        profiles(c, self.store.campaign_id),
+                        require_current_profile=False,
+                    ).label
+                    for role in roles
+                },
+                statement_channel=cast.channel if roles else None,
+                statement_cast_revision=cast.revision if roles else None,
             )
             rules.put(state, played)
             self.game.event(
@@ -830,7 +924,12 @@ class SecretaryService:
             viewer,
             key,
             "m3.secretary_spoke",
-            dict(id=identity, revision=revision, channel=channel, text=text, target=target),
+            dict(id=identity, revision=revision, channel=channel, text=text, target=target)
+            | (
+                dict(recipients=[x.model_dump(mode="json") for x in recipients])
+                if recipients
+                else {}
+            ),
             operation,
         )
 
@@ -960,18 +1059,31 @@ class SecretaryService:
             performed = next((x for x in rules.performances(state) if x.id == identity), None)
             if performed:
                 performed = prove_performed(self.game, c, state, performed.id)
-                source_appointment = appointed(self.game, c, state, performed.secretary)
-                if viewer.user_id != int(source_appointment.handler.entity) and not any(
-                    x.entity == str(viewer.user_id) for x in performed.recipients
-                ):
+                if not rules.reads_performance(performed, viewer.user_id):
                     raise WorkflowError(
                         "This substantive Secretary work belongs to original recipients"
                     )
-                return dict(
-                    kind="performed",
-                    revision=state.revision,
-                    body=performed.model_dump(mode="json"),
+                author = performed.principal.entity == str(viewer.user_id)
+                visible = tuple(
+                    x for x in performed.recipient_roles if author or x.controller == viewer.user_id
                 )
+                body = performed.model_dump(
+                    mode="json",
+                    exclude={
+                        "recipient_roles",
+                        "recipient_labels",
+                        "statement_channel",
+                        "statement_cast_revision",
+                    },
+                )
+                body.update(
+                    addressed_notice=bool(performed.recipient_roles),
+                    addressed_to=[performed.recipient_labels[x.actor.token] for x in visible],
+                    recipient_roles=[x.model_dump(mode="json") for x in visible],
+                )
+                if performed.recipient_roles:
+                    body["recipients"] = [x.actor.model_dump(mode="json") for x in visible]
+                return dict(kind="performed", revision=state.revision, body=body)
             receipts = [
                 paid(self.game, c, state, x.id)
                 for x in rules.acquisitions(state)
@@ -1003,6 +1115,20 @@ class SecretaryService:
                     dict(
                         id=row["id"],
                         channel=int(row["channel_id"]),
+                        audience=[
+                            dict(
+                                ref=role.actor.model_dump(mode="json"),
+                                token=role.actor.token,
+                                label=resolve(
+                                    state,
+                                    role.actor,
+                                    profiles(c, self.store.campaign_id),
+                                    require_current_profile=False,
+                                ).label,
+                            )
+                            for role in cast.roles
+                            if value is not None and role.actor != value.actor
+                        ],
                         girls=[
                             dict(
                                 ref=x.actor.model_dump(mode="json"),
@@ -1081,14 +1207,14 @@ class SecretaryService:
             if x.handler.entity == str(viewer.user_id)
         ]
         for value in rules.performances(state):
-            if value.principal.entity == str(viewer.user_id) or any(
-                x.entity == str(viewer.user_id) for x in value.recipients
-            ):
+            if rules.reads_performance(value, viewer.user_id):
                 result.append(
                     dict(
                         id=value.id,
                         revision=state.revision,
-                        label="Secretary work — " + value.play,
+                        label="Addressed Secretary statement"
+                        if value.recipient_roles
+                        else "Secretary work — " + value.play,
                         phase="performed",
                         pending=False,
                     )
