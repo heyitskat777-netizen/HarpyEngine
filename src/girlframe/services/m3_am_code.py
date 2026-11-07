@@ -1136,6 +1136,17 @@ class CodeService:
         with self.store.engine.connect() as c:
             access(self.game, c, viewer)
             state = load_state(c, self.store.campaign_id)
+            scenes = t.m2["m2_scenes"]
+            scene_available = (
+                c.scalar(
+                    sa.select(scenes.c.id).where(
+                        scenes.c.campaign_id == self.store.campaign_id,
+                        scenes.c.channel_id == str(channel),
+                        scenes.c.open.is_(True),
+                    )
+                )
+                is not None
+            )
             known = [
                 dict(
                     id=x.id,
@@ -1201,7 +1212,9 @@ class CodeService:
             ]
             return dict(
                 revision=state.revision,
-                operators=unknown_operators(self.game, c, state, viewer, channel),
+                operators=unknown_operators(self.game, c, state, viewer, channel)
+                if scene_available
+                else [],
                 known=known,
                 sessions=values,
                 subjects=subjects(self.game, c, state),

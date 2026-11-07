@@ -1,5 +1,54 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Full integration baseline and two minimal repairs — 2026-11-07
+
+Owner instruction now authorizes continuing through play-test readiness; the
+previous stop-at-regression handoff is historical. Frozen `eb7eec5` ran one full
+process: `.venv/bin/pytest -q --junitxml=var/m3-pre-marriage-regression.xml`, output
+retained in `var/m3-pre-marriage-regression.log`: **2,562 passed, 3 failed in
+1781.24s**, zero errors/skips, 2,565 collected cases. This is a failed full run,
+not a green regression. No tracked source changed during it.
+
+Global Ruff check passed; Ruff format checked1,092 Python files; mypy passed643
+source modules. CLI help/health (isolated temporary SQLite), runtime registry,
+original planning verifier and repository/manifest checks passed. Exact commands,
+outputs and source commit: `var/m3-pre-marriage/global-static.json` and
+`var/m3-pre-marriage/auxiliary.json`. No live database/bot was touched.
+
+Two failures shared one cause: an ordinary external world Pilot without supplied
+RebelInventory was reported with Heat0, inventing a resource. Only its missing-
+inventory fallback now returns None. Real supplied inventories, native branches,
+original actors/controllers, all assertions and fixtures remain unchanged. The two
+failed nodes plus genuine owned external Reign rejection/lock/history:
+**3 passed /5.05s**. One-source Ruff/format/mypy pass. Contract/hash/command:
+`var/m3-external-heat-regression-repair.json`.
+
+The third failure reached the AM Code menu while reopening a genuine saved backup
+from an unbound channel. Optional new-operator enumeration incorrectly demanded
+a scene before presenting owned recovery. Only that enumeration is now conditional
+on a real open campaign/channel scene. Discovery/mutation/cast proof and all backup
+logic/tests stay unchanged; no broad exception catch or bypass flag. Failed backup
+normal **1 passed /3.46s** through snapshot/Limiter/marks/work/memory/privacy/replay;
+existing high/low backups plus genuine bound-scene operator Secret:
+**3 passed /7.47s**. One-source Ruff/format/mypy pass. Exact hash/commands:
+`var/m3-am-backup-regression-handoff.json`.
+
+Thus all three reported failures pass targeted rechecks, with four relevant
+compatibility cases also green. Two changed Python source modules are covered by
+their final static checks; remaining baseline static evidence is reused. The whole
+suite has **not** been rerun after repairs, and these seven scoped checks do not
+turn the failed full artifact into a new full pass. Final candidate regression
+remains required; further broad repeats need a relevant source/integration concern.
+The focused CI list retains its existing checks and adds the actual failure and
+compatibility selectors. No test/assertion was removed or weakened.
+
+The next Gender Designation Request source contract is frozen but implementation
+was held throughout baseline/repair. Marriage remains source-only pending exact
+shared Status/financial/discipline ownership. M3 is still RULES_SUBSET; required
+core implementation, independent source/clarity review and actual human acceptance
+remain open. Bot off; local source only, no deployment/restart/environment
+publication/live migration/private-engine writes/AI/Ancillary.
+
 ## A-Bomb world interactions verified; pre-Marriage regression boundary — 2026-11-07
 
 Source extends local `ac91aa0`. Two new ordinary world cases are frozen in

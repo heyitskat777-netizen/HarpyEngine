@@ -896,7 +896,7 @@ def _resolve(
             alive=pilot.alive,
             rules="external_pilot",
             girl=pilot.girl,
-            heat=rebel.heat if rebel else 0,
+            heat=rebel.heat if rebel else None,
             identities=identities(rebel.identities) if rebel else (),
             frame=pilot.frame,
             frame_instance="initial:" + pilot.id,

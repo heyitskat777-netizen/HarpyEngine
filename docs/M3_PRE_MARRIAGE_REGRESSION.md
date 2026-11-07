@@ -1,14 +1,20 @@
 # M3 integration regression boundary
 
-Status: **NOT_RUN**. M3 remains **RULES_SUBSET**; bot off. This is an integration
+Status: **FULL RUN FAILED; ALL REPORTED FAILURES PASS FOCUSED RECHECKS**.
+M3 remains **RULES_SUBSET**; bot off. This is an integration
 baseline before the next shared-core migration, not a final M3 acceptance claim.
 The current source checkpoint and focused evidence are linked from
 [M3_CURRENT_QUEUE.md](M3_CURRENT_QUEUE.md).
 
-The owner asked to continue M3 until regression testing is required, then stop.
-Finish the active A-Bomb Armoured/quarantine interaction checks and freeze that
-source before starting the Marriage producer migration. Do not run the broad
-regression as part of that development handoff.
+The earlier stop-at-regression boundary was honored. The owner subsequently
+authorized continuing the queue until M3 is ready for play-testing, including this
+baseline and its repairs. Frozen source `eb7eec5` completed one full process:
+**2,562 passed, 3 failed, zero errors/skips in 1781.24s**. Global Ruff/format, types
+(643 source modules), isolated CLI health, registry/planning/repository checks
+passed. Two minimal production repairs address all three failures; seven focused
+checks pass. Full-suite results after those repairs remain **NOT_RERUN**, not green.
+Exact artifacts are in the current M3 acceptance report. Resume bounded gameplay
+delivery after integrating these repairs; preserve final-candidate verification.
 
 ## Why this is the next boundary
 
@@ -29,11 +35,12 @@ from future Status, wallet and discipline changes and avoids interleaving both.
 This is the specific integration concern permitting an earlier broad run under
 the development workflow; final M3 candidate verification is still required later.
 
-## Next verification action
+## Executed baseline and future verification
 
-Use the frozen current branch, installed locked environment and synthetic fixtures.
-Record the exact commit, actual commands, durations, failures/skips and JUnit.
-Run the existing global checks and complete suite:
+The following commands ran against the frozen baseline with the installed locked
+environment and synthetic fixtures. Results and exact scope are recorded in
+`var/m3-pre-marriage/` and `var/m3-pre-marriage-regression.xml`. Future broad runs
+need a relevant failure/change or the final M3 candidate:
 
 ```bash
 .venv/bin/ruff check .
