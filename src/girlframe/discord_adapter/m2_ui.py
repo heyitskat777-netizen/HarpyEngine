@@ -1,6 +1,6 @@
 """Native M2 Play and owned-response wizards; all state changes go through services."""
 
-from typing import Any
+from typing import Any, Literal, cast
 
 import discord
 from discord import app_commands
@@ -534,6 +534,11 @@ def answer_values(values: dict[str, Any]) -> ChoiceAnswer:
 
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
     decision = await threaded(lambda: game.decision(viewer_from_interaction(interaction), identity))
+    if decision.get("princess_sex") is not None:
+        from girlframe.discord_adapter.m3_princess_sex import open_choice as open_princess_choice
+
+        await open_princess_choice(interaction, game, identity)
+        return
     if decision["kind"] in ("dose_up_components", "dose_up_target_low"):
         from girlframe.discord_adapter.m3_dose_up import open_choice as open_dose_choice
 
@@ -982,6 +987,7 @@ async def open_play(
             "am_scrutinized",
             "am_just_code",
             "dose_up",
+            "princess_sex",
         )
     )
     if parent and parent["kind"] == "am_code_prepare":
@@ -1065,7 +1071,14 @@ async def open_play(
         menu(
             "heat",
             "Heat for other Plays; Nightmare Keep uses 0" if nightmare else "Heat to spend",
-            range(sheet["heat"] + 6),
+            range(
+                sheet["heat"]
+                + (
+                    8
+                    if has_rule(sheet, "girl.stim-blissed.disposable-psyche", "STIM-BLISSED")
+                    else 6
+                )
+            ),
         ),
         Field("piloting", "Are you piloting your Frame?", YES),
         Field("witnessed", "Foundation member witnesses refusal?", YES),
@@ -1076,6 +1089,18 @@ async def open_play(
             (("yes", "I confirm the trigger applies"),),
         ),
     ]
+    if has_rule(sheet, "girl.stim-blissed.disposable-psyche", "STIM-BLISSED"):
+        fields.append(
+            Field(
+                "disposable_heat",
+                "Optional Identity disposal: additional Heat",
+                (
+                    ("0", "Keep marked Identity"),
+                    ("3", "Remove it: +3 Heat"),
+                    ("4", "Remove it: +4 Heat"),
+                ),
+            )
+        )
     fields.extend(dampener_controls)
     fields.extend(kicked_controls)
 
@@ -1227,6 +1252,7 @@ async def open_play(
             identity=identity,
             gain=int(one(values, "gain")),
             pair_share=int(one(values, "pair_share")),
+            disposable_heat=cast(Literal[0, 3, 4], int(one(values, "disposable_heat") or "0")),
             target=int(one(values, "target"))
             if play in ("flirt", "put_someone_beneath_you") and one(values, "target")
             else None,
@@ -1862,6 +1888,32 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         await interaction.response.defer(ephemeral=True)
         try:
             await open_alpha(interaction, SexService(game))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @campaign.command(
+        name="princess", description="Voluntary Princess source and private saved choices"
+    )
+    async def princess_controls(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_princess_sex import open_princess
+        from girlframe.services.m3_princess_sex import SexService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_princess(interaction, SexService(game))
+        except WorkflowError as exc:
+            await interaction.followup.send(str(exc), ephemeral=True)
+
+    @campaign.command(
+        name="psyche", description="Owned Disposable Psyche choices and private history"
+    )
+    async def psyche_controls(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_disposable_psyche import open_psyche
+        from girlframe.services.m3_disposable_psyche import PsycheService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_psyche(interaction, PsycheService(game.store, game))
         except WorkflowError as error:
             await reply(interaction, str(error))
 

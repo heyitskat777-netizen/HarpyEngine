@@ -171,6 +171,11 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         sheet = state.sheets.get(str(owner))
         body = json.loads(request["body_json"])
+        if kind.startswith("princess_sex_") and action["data"].get("princess_sex"):
+            from girlframe.services.m3_princess_sex import apply as apply_princess
+
+            apply_princess(self.game, c, state, action, request, answer)
+            return
         if kind in ("dose_up_components", "dose_up_target_low"):
             from girlframe.services.m3_dose_up import apply_choice as apply_dose_choice
 
@@ -1144,6 +1149,11 @@ class ChoiceEngine:
 
             results_am(self.game, c, state, action)
             return
+        if action["data"].get("princess_sex"):
+            from girlframe.services.m3_princess_sex import results as princess_results
+
+            princess_results(self.game, c, state, action)
+            return
         if action["data"].get("alpha_sex"):
             from girlframe.services.m3_alpha_sex import results as results_alpha_sex
 
@@ -1268,6 +1278,14 @@ class ChoiceEngine:
                 "forced_presentations": action["data"]["result"].get("forced_presentations", []),
             },
         )
+        if action["data"].get("princess_child"):
+            from girlframe.services.m3_princess_sex import complete_child
+
+            require(
+                complete_child(self.game, c, state, action, action["data"]["response_event"]),
+                "Complete this exact source-owned counterpart Play.",
+            )
+            return
         if action["data"].get("secretary_response"):
             from girlframe.services.m3_secretary import finish_response
 

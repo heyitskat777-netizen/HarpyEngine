@@ -1065,6 +1065,13 @@ class GameService:
         def operation(c: Connection) -> dict[str, Any]:
             self.unpaused(c)
             state = load_state(c, self.store.campaign_id)
+            from girlframe.services.m3_princess_sex import child_source
+
+            princess_child = child_source(self, c, viewer, state, prepared, channel)
+            mechanical_owner = (
+                int(princess_child["actor_controller"]) if princess_child else viewer.user_id
+            )
+            princess_sex = None
             m3 = None
             beneath = None
             defeat = None
@@ -1112,6 +1119,7 @@ class GameService:
                 prepared.play == "keep_your_head"
                 and prepared.source_work is not None
                 and bomb_collar_source is None
+                and princess_child is None
             ):
                 from girlframe.services.m3_void_keep import prepare_keep
 
@@ -1131,10 +1139,12 @@ class GameService:
             elif (
                 prepared.source_work is not None
                 and bomb_collar_source is None
+                and princess_child is None
                 and prepared.play
                 not in (
                     "alpha_sex",
                     "dose_up",
+                    "princess_sex",
                     "am_scrutinized",
                     "am_just_code",
                 )
@@ -1148,10 +1158,10 @@ class GameService:
                 actual_battle_actor = ActorRef.model_validate(battle["actor"])
                 if (
                     actual_battle_actor.kind != "pilot"
-                    or actual_battle_actor.entity != str(viewer.user_id)
+                    or actual_battle_actor.entity != str(mechanical_owner)
                     or actual_battle_actor.incarnation
                     != self.character_binding(
-                        c, state, viewer.user_id, require_current_profile=False
+                        c, state, mechanical_owner, require_current_profile=False
                     )
                 ):
                     raise WorkflowError(
@@ -1178,6 +1188,10 @@ class GameService:
                 from girlframe.services.m3_am_scrutinized import prepare as prepare_am
 
                 am_scrutinized = prepare_am(self, c, viewer, state, prepared, channel)
+            if prepared.play == "princess_sex":
+                from girlframe.services.m3_princess_sex import prepare as prepare_princess
+
+                princess_sex = prepare_princess(self, c, viewer, state, prepared, channel)
             if prepared.play == "dose_up":
                 from girlframe.services.m3_dose_up import prepare as prepare_dose
 
@@ -1216,6 +1230,9 @@ class GameService:
                 from girlframe.services.m3_play_support import prepare
 
                 m3 = prepare(self, c, viewer, prepared)
+                from girlframe.services.m3_disposable_psyche import prepare_off_duty
+
+                prepare_off_duty(self, state, mechanical_owner)
             elif prepared.off_duty_id is not None:
                 raise WorkflowError("A period reference belongs only to its actual M3 Play.")
             from girlframe.services.m3_adjudication import prepare_required
@@ -1240,7 +1257,7 @@ class GameService:
 
                     authorize_alpha(self, c, viewer, alpha_source)
                     validate_alpha_response(
-                        self, c, alpha_source, alpha_response_ref(state, viewer.user_id), prepared
+                        self, c, alpha_source, alpha_response_ref(state, mechanical_owner), prepared
                     )
                     alpha_counter_scope = alpha_source["data"]["alpha"]
             if prepared.parent is not None:
@@ -1254,25 +1271,25 @@ class GameService:
 
                     authorize_sex(self, c, viewer, sex_parent)
                     validate_sex_counter(
-                        self, c, sex_parent, sex_response_ref(state, viewer.user_id), prepared
+                        self, c, sex_parent, sex_response_ref(state, mechanical_owner), prepared
                     )
                     alpha_sex_counter_scope = sex_parent["data"]["alpha_sex"]
             from girlframe.services.m3_npc_orders import prepare as prepare_npc_order
 
             npc_order_scope = prepare_npc_order(self, c, state, viewer, channel, prepared)
-            sheet = state.sheets.get(str(viewer.user_id))
+            sheet = state.sheets.get(str(mechanical_owner))
             if sheet is None or sheet.revision != sheet_revision:
                 raise WorkflowError("STALE_SHEET: refresh the Play wizard.")
             if any(x.get("kind") == "a_bomb_drop" for x in state.facts):
                 from girlframe.engine.m3_actor_bonds import current_ref as blast_actor
                 from girlframe.services.m3_a_bomb import require_damage_cleared
 
-                require_damage_cleared(self, c, state, blast_actor(state, viewer.user_id))
+                require_damage_cleared(self, c, state, blast_actor(state, mechanical_owner))
             if any(x.get("kind") == "alpha_sex_session" for x in state.facts):
                 from girlframe.engine.m3_actor_bonds import current_ref as sleeping_original
                 from girlframe.engine.m3_alpha_sex import require_awake
 
-                require_awake(state, sleeping_original(state, viewer.user_id))
+                require_awake(state, sleeping_original(state, mechanical_owner))
             if sheet.frame_scrapped and prepared.piloting and defeat is None:
                 raise WorkflowError(
                     "REQUIRED_FOLLOWUP: replace the scrapped Frame before new Plays."
@@ -1283,7 +1300,7 @@ class GameService:
             if (
                 self.immediate_work(
                     c,
-                    viewer.user_id,
+                    mechanical_owner,
                     scene_id=self.scene(c, channel)["id"],
                     excluding=frozenset(
                         x
@@ -1310,9 +1327,9 @@ class GameService:
 
             current_ref = ActorRef(
                 kind="pilot",
-                entity=str(viewer.user_id),
+                entity=str(mechanical_owner),
                 incarnation=self.character_binding(
-                    c, state, viewer.user_id, require_current_profile=False
+                    c, state, mechanical_owner, require_current_profile=False
                 ),
             )
             if (
@@ -1345,7 +1362,7 @@ class GameService:
                 raise WorkflowError(
                     "UNSUPPORTED_RULE: recover from Helplessness before a new defensive Play."
                 )
-            self.character_binding(c, state, viewer.user_id)
+            self.character_binding(c, state, mechanical_owner)
             if HandlerService(self.store).current(c)[1].handler_id != state.handler:
                 raise WorkflowError("STALE_HANDLER: canonical Handler replacement needs review.")
             scene = self.scene(c, channel)
@@ -1390,7 +1407,7 @@ class GameService:
                     c,
                     state,
                     scene,
-                    owners=(viewer.user_id,) + ((prepared.target,) if prepared.target else ()),
+                    owners=(mechanical_owner,) + ((prepared.target,) if prepared.target else ()),
                 )
             else:
                 from girlframe.engine.m3_actor_state import SceneCast
@@ -1477,9 +1494,9 @@ class GameService:
 
             acting_ref = ActorRef(
                 kind="pilot",
-                entity=str(viewer.user_id),
+                entity=str(mechanical_owner),
                 incarnation=self.character_binding(
-                    c, state, viewer.user_id, require_current_profile=False
+                    c, state, mechanical_owner, require_current_profile=False
                 ),
             )
             from girlframe.engine.m3_am import require_freedom, require_harm
@@ -1503,7 +1520,7 @@ class GameService:
                 c, self.store, scene["id"], acting_ref, continuation=prepared.parent is not None
             )
             if (
-                viewer.user_id not in scene["participants"]
+                mechanical_owner not in scene["participants"]
                 or state.handler not in scene["participants"]
             ):
                 raise WorkflowError("The acting Pilot and Handler must explicitly join this scene.")
@@ -1553,6 +1570,7 @@ class GameService:
                             "battle_counter_play",
                             "alpha_counter_play",
                             "alpha_sex_counter_play",
+                            "princess_sex_child",
                             "battle_dormant_dive",
                             "battle_dormant_threshold",
                             "mockingbird_void_threshold",
@@ -1561,12 +1579,15 @@ class GameService:
                             "snoop_item_void_threshold",
                             "gorgon_response_play",
                         )
-                        and x["actor_id"] == str(viewer.user_id)
+                        and x["actor_id"]
+                        == str(viewer.user_id if princess_child else mechanical_owner)
                     ),
                     None,
                 )
                 if required is None:
                     raise WorkflowError("Only the required player can make this response Play.")
+                if required["kind"] == "princess_sex_child" and princess_child is None:
+                    raise WorkflowError("Use this fixed counterpart's actual Princess directive.")
                 if required["kind"] == "secretary_response_play":
                     from girlframe.services.m3_secretary import prepare_response as secretary_child
 
@@ -1605,9 +1626,9 @@ class GameService:
 
                     alpha_counter_actor = ActorRef(
                         kind="pilot",
-                        entity=str(viewer.user_id),
+                        entity=str(mechanical_owner),
                         incarnation=self.character_binding(
-                            c, state, viewer.user_id, require_current_profile=False
+                            c, state, mechanical_owner, require_current_profile=False
                         ),
                     )
                     alpha_counter = validate_alpha_counter(
@@ -1619,9 +1640,9 @@ class GameService:
 
                     counter_actor = ActorRef(
                         kind="pilot",
-                        entity=str(viewer.user_id),
+                        entity=str(mechanical_owner),
                         incarnation=self.character_binding(
-                            c, state, viewer.user_id, require_current_profile=False
+                            c, state, mechanical_owner, require_current_profile=False
                         ),
                     )
                     actual_counter = validate_counter_child(
@@ -1689,6 +1710,7 @@ class GameService:
                     alpha,
                     alpha_sex,
                     dose_up,
+                    princess_sex,
                     am_scrutinized,
                     am_code,
                     doctor,
@@ -1697,7 +1719,7 @@ class GameService:
                 raise WorkflowError("This implemented Play does not take a fictional actor target.")
             if prepared.play in ("flirt", "put_someone_beneath_you"):
                 if (
-                    prepared.target == viewer.user_id
+                    prepared.target == mechanical_owner
                     or str(prepared.target) not in state.sheets
                     or prepared.target not in scene["participants"]
                 ):
@@ -1707,7 +1729,7 @@ class GameService:
             if prepared.play == "engage" and not any(not x.damaged for x in sheet.assets):
                 raise WorkflowError("No legal undamaged Asset is available for Engage.")
             if prepared.play == "disobey_orders":
-                self.valid_order(c, state, viewer.user_id, channel, prepared.order_id)
+                self.valid_order(c, state, mechanical_owner, channel, prepared.order_id)
             kicked_puppy = None
             if prepared.play == "flirt" or prepared.kicked_puppy_basis:
                 from girlframe.services.m3_kicked_puppy import prepare as prepare_kicked_puppy
@@ -1717,10 +1739,24 @@ class GameService:
             if prepared.play == "keep_your_head":
                 from girlframe.services.m3_nightmare import prepare as prepare_nightmare
 
-                nightmare_core = prepare_nightmare(self, c, viewer, state, prepared)
+                nightmare_core = prepare_nightmare(
+                    self, c, viewer, state, prepared, actor=acting_ref
+                )
             from girlframe.services.m3_cute_uniforms import prepare_keep as prepare_cute_keep
 
-            cute_uniforms = prepare_cute_keep(self, c, viewer, state, prepared)
+            cute_uniforms = prepare_cute_keep(self, c, viewer, state, prepared, actor=acting_ref)
+            from girlframe.services.m3_disposable_psyche import prepare_disposal
+
+            prepare_disposal(self, c, state, sheet.owner, prepared)
+            if prepared.disposable_heat and (
+                m3 is not None
+                or nightmare_core is not None
+                or (janus is not None and janus.get("mode") != "pandora")
+                or prepared.kicked_puppy_basis
+            ):
+                raise WorkflowError(
+                    "UNSUPPORTED_RULE: disposal needs this non-Heat Play's source adapter."
+                )
             preview_state = GameState.model_validate_json(state.model_dump_json())
             preview = preview_state.sheets[str(sheet.owner)]
             if prepared.identity:
@@ -1738,6 +1774,7 @@ class GameService:
                         prepared.gain,
                         prepared.pair_share,
                         state=preview_state,
+                        disposable_heat=prepared.disposable_heat,
                     )
                 if share and str(sheet.pair) not in state.sheets:
                     raise WorkflowError("The Pair must have an active sheet to receive Heat.")
@@ -1773,6 +1810,28 @@ class GameService:
                 "result": {},
                 "choices": {},
             }
+            if princess_child is not None:
+                data["princess_child"] = princess_child
+            if princess_sex is not None:
+                from girlframe.engine.m3_actor_state import SceneCast as PrincessCast
+                from girlframe.engine.m3_actors import fingerprint as princess_fingerprint
+                from girlframe.engine.m3_handler_consequences import active_handler
+
+                princess_handler = active_handler(state)
+                data["princess_sex"] = princess_sex
+                data["participants"] = list(princess_sex["table"])
+                data["tag_context"] = dict(
+                    actor=princess_sex["actor"],
+                    handler=(
+                        princess_handler.model_dump(mode="json") if princess_handler else None
+                    ),
+                    gm_controller=state.handler,
+                    table=list(princess_sex["table"]),
+                    cast=princess_sex["cast"],
+                    cast_sha256=princess_fingerprint(
+                        PrincessCast.model_validate_json(json.dumps(princess_sex["cast"]))
+                    ),
+                )
             if dampener is not None:
                 data["dampener"] = dampener
             if kicked_puppy is not None:
@@ -2068,7 +2127,7 @@ class GameService:
                 .values(
                     campaign_id=self.store.campaign_id,
                     id=identity,
-                    actor_id=str(viewer.user_id),
+                    actor_id=str(mechanical_owner),
                     channel_id=str(channel),
                     scene_id=scene["id"],
                     parent_id=prepared.parent,
@@ -2139,7 +2198,20 @@ class GameService:
                     if legacy_cast:
                         state.scene_casts.append(source_cast)
                         marriage_cast_saved = True
-            secretary_event = str(uuid4()) if secretary_response is not None else None
+            secretary_event = (
+                str(uuid4())
+                if secretary_response is not None or princess_child or princess_sex
+                else None
+            )
+            if princess_child is not None:
+                from girlframe.services.m3_princess_sex import bind_child
+
+                assert secretary_event is not None
+                bind_child(self, c, state, action, secretary_event)
+            if princess_sex is not None:
+                from girlframe.services.m3_princess_sex import bind as bind_princess
+
+                bind_princess(state, action, secretary_event)
             if secretary_response is not None:
                 from girlframe.services.m3_secretary import link_response
 
@@ -2163,6 +2235,9 @@ class GameService:
                 or alpha is not None
                 or alpha_sex is not None
                 or dose_up is not None
+                or princess_sex is not None
+                or princess_child is not None
+                or prepared.disposable_heat
                 or am_scrutinized is not None
                 or am_code is not None
                 or npc_order_scope is not None
@@ -2178,6 +2253,8 @@ class GameService:
                     void_keep is not None
                     or alpha_sex is not None
                     or dose_up is not None
+                    or princess_sex is not None
+                    or princess_child is not None
                     or am_scrutinized is not None
                     or am_code is not None
                     or appearance_reset
@@ -2378,7 +2455,12 @@ class GameService:
 
         def operation(c: Connection) -> dict[str, Any]:
             action = self.action(c, identity)
-            if action["actor_id"] != str(viewer.user_id):
+            from girlframe.services.m3_princess_sex import authorize_child
+
+            child_actor = authorize_child(
+                self, c, viewer, load_state(c, self.store.campaign_id), action
+            )
+            if child_actor is None and action["actor_id"] != str(viewer.user_id):
                 raise WorkflowError("Only the acting Pilot can confirm this roll.")
             if action["data"]["receipt"]:
                 return {"action_id": identity, "receipt": action["data"]["receipt"]}
@@ -2428,14 +2510,14 @@ class GameService:
                 authorize_keep(self, c, state, action)
             if HandlerService(self.store).current(c)[1].handler_id != state.handler:
                 raise WorkflowError("STALE_HANDLER: staff recovery is required.")
-            sheet = state.sheets[str(viewer.user_id)]
+            sheet = state.sheets[str(action["actor_id"])]
             if sheet.revision != action["data"]["sheet_revision"]:
                 raise WorkflowError("STALE_SHEET: recover the unrolled action; no dice consumed.")
             prepared = PlayInput.model_validate_json(json.dumps(action["data"]["prepared"]))
             if prepared.play == "keep_your_head":
                 from girlframe.services.m3_nightmare import pre_roll as nightmare_pre_roll
 
-                nightmare_pre_roll(self, c, viewer, state, action)
+                nightmare_pre_roll(self, c, viewer, state, action, actor=child_actor)
                 from girlframe.services.m3_cute_uniforms import pre_roll as cute_pre_roll
 
                 cute_pre_roll(self, c, state, action)
@@ -2463,6 +2545,10 @@ class GameService:
 
                 enforcement_pre_roll(self, c, viewer, state, action)
                 action["data"]["enforcement"]["roll_event"] = str(uuid4())
+            if action["data"].get("princess_sex"):
+                from girlframe.services.m3_princess_sex import pre_roll as princess_pre_roll
+
+                princess_pre_roll(self, c, viewer, state, action)
             if action["data"].get("dose_up"):
                 from girlframe.services.m3_dose_up import pre_roll as dose_pre_roll
 
@@ -2517,7 +2603,7 @@ class GameService:
 
                 action["data"]["doctor"]["roll_event"] = str(uuid4())
                 doctor_pre_roll(self, c, viewer, state, action)
-                sheet = state.sheets[str(viewer.user_id)]
+                sheet = state.sheets[str(action["actor_id"])]
             m3 = action["data"].get("m3")
             defeat = action["data"].get("defeat")
             if defeat is not None:
@@ -2542,6 +2628,14 @@ class GameService:
                 from girlframe.services.m3_refusal import pre_roll as consume_refusal
 
                 refusal_modifiers = consume_refusal(self, c, viewer, state, action)
+            disposal_before = (
+                GameState.model_validate_json(state.model_dump_json())
+                if prepared.disposable_heat
+                else None
+            )
+            from girlframe.services.m3_disposable_psyche import prepare_disposal
+
+            prepare_disposal(self, c, state, sheet.owner, prepared)
             if prepared.identity:
                 from girlframe.engine.m3_clone_am import mark_additional
                 from girlframe.services.m3_clone_am import prove_additional
@@ -2552,7 +2646,12 @@ class GameService:
                 )
                 if share is None:
                     share = mark_identity(
-                        sheet, prepared.identity, prepared.gain, prepared.pair_share, state=state
+                        sheet,
+                        prepared.identity,
+                        prepared.gain,
+                        prepared.pair_share,
+                        state=state,
+                        disposable_heat=prepared.disposable_heat,
                     )
                 if share:
                     state.sheets[str(sheet.pair)].heat += share
@@ -2630,6 +2729,9 @@ class GameService:
                 or action["data"].get("alpha")
                 or action["data"].get("alpha_sex")
                 or action["data"].get("dose_up")
+                or action["data"].get("princess_sex")
+                or action["data"].get("princess_child")
+                or prepared.disposable_heat
                 or action["data"].get("am_scrutinized")
                 or action["data"].get("am_code")
                 or action["data"].get("npc_order")
@@ -2700,6 +2802,28 @@ class GameService:
             from girlframe.services.m3_special_girl import receipt as special_girl_receipt
 
             special_girl_receipt(action, receipt, pre_modifiers)
+            roll_event_id = (
+                defeat["roll_event"]
+                if defeat is not None
+                else action["data"]["doctor"]["roll_event"]
+                if action["data"].get("doctor")
+                else action["data"]["dive"]["roll_event"]
+                if action["data"].get("dive")
+                else action["data"]["enforcement"]["roll_event"]
+                if action["data"].get("enforcement")
+                else action["data"]["battle"]["roll_event"]
+                if action["data"].get("battle")
+                else action["data"]["janus"]["roll_event"]
+                if action["data"].get("janus")
+                else None
+            )
+            if disposal_before is not None:
+                from girlframe.services.m3_disposable_psyche import record_disposal
+
+                roll_event_id = roll_event_id or str(uuid4())
+                receipt["disposable_psyche"] = identity
+                action["data"]["receipt"] = receipt
+                record_disposal(self, c, state, action, disposal_before, roll_event_id)
             c.execute(
                 t.m2["m2_receipts"]
                 .insert()
@@ -2739,6 +2863,9 @@ class GameService:
                 or action["data"].get("alpha")
                 or action["data"].get("alpha_sex")
                 or action["data"].get("dose_up")
+                or action["data"].get("princess_sex")
+                or action["data"].get("princess_child")
+                or prepared.disposable_heat
                 or action["data"].get("am_scrutinized")
                 or action["data"].get("am_code")
                 or action["data"].get("npc_order")
@@ -2751,19 +2878,7 @@ class GameService:
                 or defeat is not None
                 else "m2.rolled",
                 state,
-                event_id=defeat["roll_event"]
-                if defeat is not None
-                else action["data"]["doctor"]["roll_event"]
-                if action["data"].get("doctor")
-                else action["data"]["dive"]["roll_event"]
-                if action["data"].get("dive")
-                else action["data"]["enforcement"]["roll_event"]
-                if action["data"].get("enforcement")
-                else action["data"]["battle"]["roll_event"]
-                if action["data"].get("battle")
-                else action["data"]["janus"]["roll_event"]
-                if action["data"].get("janus")
-                else None,
+                event_id=roll_event_id,
                 action_id=identity,
                 receipt_id=receipt["id"],
             )
@@ -2794,20 +2909,44 @@ class GameService:
         except ValueError as error:
             raise WorkflowError(str(error)) from None
 
+    def pending_choices(self, c: Connection, viewer: GuildViewer) -> list[dict[str, Any]]:
+        """Original row owners, with only the proven Princess child's scoped author."""
+        table, actions = t.m2["m2_choices"], t.m2["m2_actions"]
+        rows = c.execute(
+            sa.select(table)
+            .join(
+                actions,
+                sa.and_(
+                    actions.c.campaign_id == table.c.campaign_id, actions.c.id == table.c.action_id
+                ),
+            )
+            .where(
+                table.c.campaign_id == self.store.campaign_id,
+                table.c.state == "pending",
+                sa.or_(
+                    table.c.actor_id == str(viewer.user_id),
+                    sa.func.json_extract(actions.c.body_json, "$.princess_child.author")
+                    == viewer.user_id,
+                ),
+            )
+        ).mappings()
+        from girlframe.services.m3_princess_sex import decision_author
+
+        state = load_state(c, self.store.campaign_id)
+        result = []
+        for row in rows:
+            action = self.action(c, row["action_id"])
+            source_author = decision_author(self, c, state, action, dict(row))
+            if viewer.user_id == (
+                source_author if source_author is not None else int(row["actor_id"])
+            ):
+                result.append(dict(row))
+        return result
+
     def choices(self, viewer: GuildViewer) -> list[dict[str, Any]]:
         with self.store.engine.connect() as c:
             self.authorize(c, viewer, game=False)
-            table = t.m2["m2_choices"]
-            return [
-                dict(x)
-                for x in c.execute(
-                    sa.select(table).where(
-                        table.c.campaign_id == self.store.campaign_id,
-                        table.c.actor_id == str(viewer.user_id),
-                        table.c.state == "pending",
-                    )
-                ).mappings()
-            ]
+            return self.pending_choices(c, viewer)
 
     def respond(
         self, viewer: GuildViewer, key: str, choice_id: str, revision: int, answer: ChoiceAnswer
@@ -2869,7 +3008,6 @@ class GameService:
                     sa.select(table).where(
                         table.c.campaign_id == self.store.campaign_id,
                         table.c.id == choice_id,
-                        table.c.actor_id == str(viewer.user_id),
                     )
                 )
                 .mappings()
@@ -2878,6 +3016,15 @@ class GameService:
             if row is None:
                 raise WorkflowError("This decision belongs to another player or is unavailable.")
             action = self.action(c, row["action_id"])
+            from girlframe.services.m3_princess_sex import decision_author
+
+            scoped_author = decision_author(
+                self, c, load_state(c, self.store.campaign_id), action, dict(row)
+            )
+            if viewer.user_id != (
+                scoped_author if scoped_author is not None else int(row["actor_id"])
+            ):
+                raise WorkflowError("This decision belongs to another player or is unavailable.")
             if action["data"].get("gorgon_play"):
                 from girlframe.services.m3_gorgon_play import GorgonPlayService
 
@@ -2888,6 +3035,11 @@ class GameService:
 
                 Access(self.store).authorize(c, viewer, "strain")
             director_tag_response = False
+            if action["data"].get("princess_sex"):
+                from girlframe.services.m3_princess_sex import authorize as princess_authorize
+
+                princess_authorize(self, c, viewer, action)
+                director_tag_response = True
             if action["data"].get("doctor"):
                 from girlframe.services.m3_doctor import authorize as authorize_doctor
 
@@ -3124,6 +3276,9 @@ class GameService:
                 or action["data"].get("alpha")
                 or action["data"].get("alpha_sex")
                 or action["data"].get("dose_up")
+                or action["data"].get("princess_sex")
+                or action["data"].get("princess_child")
+                or (action["data"].get("receipt") or {}).get("disposable_psyche")
                 or action["data"].get("am_scrutinized")
                 or action["data"].get("am_code")
                 or action["data"].get("npc_order")
@@ -3257,6 +3412,14 @@ class GameService:
                 from girlframe.services.m3_am_scrutinized import synchronize as synchronize_am
 
                 synchronize_am(self, c, action, event)
+            if action["data"].get("m3_finished"):
+                from girlframe.services.m3_disposable_psyche import sync_off_duty
+
+                sync_off_duty(self, c, action, event)
+            if action["data"].get("princess_sex") or action["data"].get("princess_child"):
+                from girlframe.services.m3_princess_sex import synchronize as sync_princess
+
+                sync_princess(self, c, self.action(c, action["id"]), event)
             if action["data"].get("dose_up"):
                 from girlframe.services.m3_role_punishments import (
                     synchronize as synchronize_dose_role,
@@ -4011,7 +4174,6 @@ class GameService:
                     sa.select(table).where(
                         table.c.campaign_id == self.store.campaign_id,
                         table.c.id == choice_id,
-                        table.c.actor_id == str(viewer.user_id),
                         table.c.state == "pending",
                     )
                 )
@@ -4020,11 +4182,39 @@ class GameService:
             )
             if row is None:
                 raise WorkflowError("This decision is no longer available to you.")
+            from girlframe.services.m3_princess_sex import decision_author
+
+            original_action = self.action(c, row["action_id"])
+            scoped_author = decision_author(
+                self, c, load_state(c, self.store.campaign_id), original_action, dict(row)
+            )
+            if viewer.user_id != (
+                scoped_author if scoped_author is not None else int(row["actor_id"])
+            ):
+                raise WorkflowError("This decision is no longer available to you.")
             if row["kind"] == "battle_sprite_intercept":
                 from girlframe.services.m3_sprite import SpriteService
 
                 return SpriteService(self.store).decision(viewer, choice_id)
             action = self.action(c, row["action_id"])
+            if row["kind"].startswith("princess_sex_"):
+                from girlframe.services.m3_princess_sex import authorize as princess_authorize
+                from girlframe.services.m3_princess_sex import projection as princess_projection
+
+                princess_authorize(self, c, viewer, action)
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    actor=int(action["actor_id"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    play=action["data"]["play"],
+                    result={
+                        k: v for k, v in action["data"]["result"].items() if k in ("tier", "total")
+                    },
+                    princess_sex=princess_projection(
+                        self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                    ),
+                )
             if row["kind"] in ("dose_up_components", "dose_up_target_low"):
                 from girlframe.services.m3_dose_up import choice_projection as dose_projection
 
@@ -4326,7 +4516,8 @@ class GameService:
                     battle=battle_projection(self, c, state, action, dict(row)),
                 )
             actor = state.sheets[str(action["actor_id"])]
-            own = state.sheets.get(str(viewer.user_id))
+            decision_owner = int(row["actor_id"]) if scoped_author is not None else viewer.user_id
+            own = state.sheets.get(str(decision_owner))
             # Return only selectable entities needed by this decision, never another private sheet.
             body = json.loads(row["body_json"])
             from girlframe.services.m3_bomb_collar import tags as collar_tags
@@ -4337,7 +4528,7 @@ class GameService:
                 for x in actor.tags
                 + uniform_tags(state, actor.owner)
                 + collar_tags(state, actor.owner)
-                if viewer.user_id in x.observers or viewer.user_id == actor.owner
+                if decision_owner in x.observers or decision_owner == actor.owner
             ]
             if (
                 action["data"].get("kicked_puppy")
@@ -4359,13 +4550,39 @@ class GameService:
                     or kicked_mentor_tag(actor, x, state)
                     or kicked_has_rule(actor, "girl.princess.objectively-beautiful", "PRINCESS")
                 ]
-            if viewer.user_id == actor.owner and row["kind"] == "tag_window":
+            if decision_owner == actor.owner and row["kind"] == "tag_window":
                 from girlframe.services.m3_control_ritual import candidates as ritual_candidates
 
                 tags += [
                     x.model_dump(mode="json") for x in ritual_candidates(state, action, actor.owner)
                 ]
             own_data = own.model_dump(mode="json") if own else None
+            if scoped_author is not None and own_data is not None:
+                # Only the mechanical inputs needed for this exact actor-owned decision.
+                fields = {
+                    "owner",
+                    "girl",
+                    "identities",
+                    "assets",
+                    "harpy",
+                    "retained_plays",
+                    "sedation_locked",
+                    "status_marked",
+                }
+                own_data = {k: v for k, v in own_data.items() if k in fields}
+                runtime = own.girl_runtime if own else None
+                own_data["girl_runtime"] = (
+                    {
+                        "swaps": [x.model_dump(mode="json") for x in runtime.swaps],
+                        "retained_rules": list(runtime.retained_rules),
+                    }
+                    if runtime
+                    else None
+                )
+            if scoped_author is not None and own_data is not None:
+                if row["kind"] != "tag_resolution":
+                    own_data["identities"] = []
+                own_data["assets"] = []
             if own is not None and own_data is not None:
                 from girlframe.engine.m3_clone_am import additional_identities
                 from girlframe.services.m3_clone_am import prove_additional
@@ -4374,9 +4591,15 @@ class GameService:
                 if additional:
                     prove_additional(self, c, state, own.owner)
                 own_data["additional_identities"] = [x.model_dump(mode="json") for x in additional]
+                own_data.setdefault("tags", [])
                 own_data["tags"] += [
                     x.model_dump(mode="json") for x in uniform_tags(state, own.owner)
                 ]
+            if scoped_author is not None:
+                if row["kind"] != "tag_resolution" and own_data is not None:
+                    own_data["additional_identities"] = []
+                if row["kind"] not in ("tag_window", "tag_resolution"):
+                    tags = []
             from girlframe.engine.m3_actors import resolve as resolve_reign_actor
             from girlframe.services.m3_actors import profiles as reign_profiles
             from girlframe.services.m3_reign_terror import candidates as reign_candidates
@@ -4512,7 +4735,7 @@ class GameService:
             if row["kind"] == "tag_window":
                 from girlframe.services.m3_tag_markers import projection as marker_projection
 
-                result["tag_markers"] = marker_projection(self, c, state, action, viewer.user_id)
+                result["tag_markers"] = marker_projection(self, c, state, action, decision_owner)
             if action["data"].get("nightmare_core") and row["kind"] in (
                 "actor_keep",
                 "handler_keep",

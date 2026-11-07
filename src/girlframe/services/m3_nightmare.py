@@ -50,11 +50,17 @@ def entitlement(
 
 
 def prepare(
-    game: "GameService", c: Connection, viewer: GuildViewer, state: GameState, prepared: PlayInput
+    game: "GameService",
+    c: Connection,
+    viewer: GuildViewer,
+    state: GameState,
+    prepared: PlayInput,
+    *,
+    actor: ActorRef | None = None,
 ) -> dict[str, Any] | None:
     if prepared.play != "keep_your_head":
         return None
-    actor = current_ref(state, viewer.user_id)
+    actor = actor or current_ref(state, viewer.user_id)
     receipt = entitlement(game, c, state, actor)
     if receipt is None:
         return None
@@ -81,8 +87,12 @@ def pre_roll(
     viewer: GuildViewer,
     state: GameState,
     action: dict[str, Any],
+    *,
+    actor: ActorRef | None = None,
 ) -> None:
-    actual = prepare(game, c, viewer, state, PlayInput.model_validate(action["data"]["prepared"]))
+    actual = prepare(
+        game, c, viewer, state, PlayInput.model_validate(action["data"]["prepared"]), actor=actor
+    )
     if actual != action["data"].get("nightmare_core"):
         raise WorkflowError(
             "Recover this original Keep's paid Frame and actual effective Void Assets"

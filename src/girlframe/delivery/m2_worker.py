@@ -434,7 +434,19 @@ class GameWorker:
                             action_id=row["id"],
                         )
                 else:
-                    viewer = await gateway.actor(int(row["actor_id"]))
+                    author = int(row["actor_id"])
+                    if action["data"].get("princess_child"):
+                        from girlframe.services.m2_state import load_state
+                        from girlframe.services.m3_princess_sex import child_author
+
+                        with self.game.store.engine.connect() as c:
+                            source_author = child_author(
+                                self.game, c, load_state(c, self.game.store.campaign_id), action
+                            )
+                        if source_author is None:
+                            raise WorkflowError("Recover this actual child decision author.")
+                        author = source_author
+                    viewer = await gateway.actor(author)
                     await asyncio.to_thread(
                         self.game.roll, viewer, "m2.confirmed_roll:" + row["id"], row["id"]
                     )

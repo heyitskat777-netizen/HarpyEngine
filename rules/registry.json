@@ -5994,6 +5994,54 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "princess-child-private-decision-grant",
+      "policy_key": "princess_child_private_decision_grant",
+      "summary": "Expose only fields necessary for the actual one-child decision and expire resource projection after that source is used; original actor/controller remain unchanged.",
+      "source": "girl.princess.sex-play PDF33/printed31 high any actor-owned decisions",
+      "rationale": "Makes the printed decision authority usable without granting another full private profile or authority over other humans.",
+      "alternatives": [
+        "Negotiate each private field disclosure separately, narrowing the printed authority and adding interaction gates."
+      ],
+      "implementation_note": "Original Princess can prepare and answer original counterpart Keep; others retain decisions and safety. Adjustable delegated clarity; version1.",
+      "change_impact": "Version future changes explicitly; preserve original people, sources, known receipts, effects and historical choices.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "princess-favour-owned-response",
+      "policy_key": "princess_favour_owned_response",
+      "summary": "A favour response is actual owned speech. Mechanical fulfilment requires its genuine consumer; agreement does not fabricate mechanical completion.",
+      "source": "PDF33/printed31 mid favour/refusal",
+      "rationale": "Book grants request and optional Tag on refusal, without automatic remote resource mutation.",
+      "alternatives": [
+        "Add an unprinted compulsory fulfilment workflow."
+      ],
+      "implementation_note": "No fake task acknowledgment or automatic fulfilment.",
+      "change_impact": "Version future changes explicitly; preserve original people, sources, known receipts, effects and historical choices.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "disposable-no-available-tags",
+      "policy_key": "disposable_no_available_tags",
+      "summary": "At the genuine Go Off-Duty trigger, zero actual owned Tags records zero applicable conversions; any available Tags require the actual one-to-four conversion choice.",
+      "source": "Disposable Psyche, rulebook PDF38/printed36",
+      "rationale": "The instruction requires existing Tags. Inventing a Tag or an Identity would fabricate resources.",
+      "alternatives": [
+        "Block recovery until an unrelated future Tag arrives."
+      ],
+      "implementation_note": "Freeze real Tag IDs and source time in mandatory period work. Only actual zero availability resolves applicability; missing producers, stale sources and unresolved Tag debts do not qualify.",
+      "change_impact": "Future policy changes need versioned work/source handling; never rewrite historical Tag availability or waive existing owed work.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -7330,14 +7378,16 @@
         "heading": "Sex Play"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_princess_sex.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -7709,14 +7759,16 @@
         "heading": "Disposable Psyche"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_disposable_psyche.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

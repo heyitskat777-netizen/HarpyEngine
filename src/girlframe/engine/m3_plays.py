@@ -17,6 +17,7 @@ HEAT_IDS = (
     "nanobot_injection",
     "doctor_support",
     "dose_up",
+    "princess_sex",
 )
 ASSET_IDS = ("defeat",)
 

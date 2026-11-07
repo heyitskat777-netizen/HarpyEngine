@@ -124,17 +124,24 @@ def prove_tag(
 
 
 def prepare_keep(
-    game: GameService, c: Connection, viewer: GuildViewer, state: GameState, prepared: PlayInput
+    game: GameService,
+    c: Connection,
+    viewer: GuildViewer,
+    state: GameState,
+    prepared: PlayInput,
+    *,
+    actor: ActorRef | None = None,
 ) -> dict[str, Any] | None:
     if prepared.play != "keep_your_head":
         return None
-    values = tuple(x for x in rules.owned(state, viewer.user_id) if x.wearing)
+    actor = actor or current_ref(state, viewer.user_id)
+    values = tuple(x for x in rules.owned(state, int(actor.entity)) if x.wearing)
     if not values:
         return None
     for value in values:
         source(game, c, state, value.id)
     return dict(
-        actor=current_ref(state, viewer.user_id).model_dump(mode="json"),
+        actor=actor.model_dump(mode="json"),
         uniforms=[dict(id=x.id, event=x.dressing_event) for x in values],
         presentation=rules.PRESENTATION,
     )

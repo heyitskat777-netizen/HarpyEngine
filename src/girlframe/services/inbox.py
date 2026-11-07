@@ -508,14 +508,9 @@ class InboxService:
                             task="m3_npc_role",
                         )
                     )
-            table = t.m2["m2_choices"]
-            for play_row in connection.execute(
-                sa.select(table).where(
-                    table.c.campaign_id == self.store.campaign_id,
-                    table.c.actor_id == user,
-                    table.c.state == "pending",
-                )
-            ).mappings():
+            from girlframe.services.m2_game import GameService
+
+            for play_row in GameService(self.store).pending_choices(connection, viewer):
                 if play_row["kind"] in ("dive_call", "dive_handler_void"):
                     continue
                 items.append(
@@ -591,7 +586,6 @@ class InboxService:
                         task="m3_actor_recovery",
                     )
                 )
-            from girlframe.services.m2_game import GameService
             from girlframe.services.m3_contraband import ContrabandService
 
             contraband = ContrabandService(GameService(self.store))
@@ -927,6 +921,38 @@ class InboxService:
                         "Only the actual addressed humans receive the performance.",
                         "Review NPC Bond Play",
                         task="m3_npc_bond_play",
+                    )
+                )
+
+            from girlframe.services.m3_disposable_psyche import PsycheService
+
+            for psyche in PsycheService(self.store)._tasks(connection, viewer):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, psyche),
+                        prefix="disposable-psyche:",
+                        source="disposable_psyche",
+                        counterpart="Actual original Girl only",
+                        effect="Resolve Off-Duty conversions or read your saved disposal history.",
+                        details="Mandatory conversion precedes recovery and period completion.",
+                        primary="Review Disposable Psyche",
+                        task="m3_disposable_psyche",
+                    )
+                )
+
+            from girlframe.services.m3_princess_sex import SexService as PrincessSexService
+
+            for princess in PrincessSexService(GameService(self.store))._tasks(connection, viewer):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, princess),
+                        prefix="princess-sex:",
+                        source="princess_sex",
+                        counterpart="Original voluntary participants",
+                        effect="Read your saved source and resume the actual owned decision.",
+                        details="Each other human retains their actual voluntary response.",
+                        primary="Review Princess source",
+                        task="m3_princess_sex",
                     )
                 )
 

@@ -1,16 +1,12 @@
-# Current bounded Dose Up integration and directly affected shared behavior.
-# Earlier feature selections remain in Git/full suite; final M3 mode runs all tests.
-tests/rules/test_dose_up.py
-tests/rules/test_alpha_sex.py::test_low_real_sleep_and_owned_opportunity_then_actual_wake[punish]
-tests/test_m2_game.py::test_disobey_requires_recorded_superior_order_and_low_halts
-tests/rules/test_retained_kicked_puppy.py::test_retained_kicked_real_flirt_gift_care_followthrough_and_source_suspension
+# Current Princess/Disposable Psyche delivery and affected shared behavior.
+# Previous focused selections remain in Git/full suite; final M3 mode runs all tests.
+tests/rules/test_princess_sex.py
+tests/rules/test_disposable_psyche.py
+tests/test_m2_game.py::test_keep_three_tiers_and_handler_ownership
+tests/test_m2_game.py::test_heat_identity_before_roll_and_forced_spend
 tests/rules/test_tag_markers.py::test_new_own_role_cannot_bypass_existing_self_mark_exception_through_owned_npc
-tests/rules/test_role_punishments.py::test_pc_existing_punishment_keeps_original_chooser_and_actual_executor_giver
-tests/rules/test_cast_service.py::test_cast_atomic_rollback_restart_rebuild_and_close_preserve_source_links
-# Recent source providers using the same roll/Order/Inbox interfaces.
-tests/rules/test_promotional_opportunity.py::test_native_actual_map_rival_downfall_takeover_physical_storage_and_world
 tests/rules/test_gender_designation.py
-# Preserve targeted release, privacy, pause/restart and delivery integrity gates.
+# Preserve privacy, pause/restart, delivery isolation and release boundaries.
 tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng
 tests/test_m2_game.py::test_campaign_isolation_and_delivery_uncertainty_no_reroll
 tests/test_m2_game.py::test_live_default_gate_and_active_editor_protection

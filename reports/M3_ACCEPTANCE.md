@@ -1,5 +1,61 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Princess source choices and Disposable Psyche — 2026-11-07
+
+Extends gameplay source `99865b0`; bot stays off. These two bounded native workflows
+share the real Heat/roll/choice/Inbox pipeline. Their ordinary flows are implemented;
+other child Plays and the conditional adapters below still prevent rules-complete
+certification. No controller aliases, substitute bodies or second state authority.
+
+Princess uses separately owned, disclosed voluntary source confirmation. All result
+tiers resolve actual Tags/Bond changes or an owned favour response. High creates a
+real counterpart Keep: original actor/controller/resources remain the counterpart's,
+while the original Princess authors that actor's decisions. Handler and other-human
+choices retain their owners. The worker fetches the actual source author, then the
+service proves the grant before spending. Private projection contains necessary
+mechanical fields only. Saved choices, original receipts, one-child expiry, native
+resume and private history are source-proved. Genuine Gender Man/Animal effects use
+this same actual Sex source, including the final high floor and deferred aftermath.
+
+Disposable Psyche adds optional3/4 Heat to ordinary Identity gain and removes that
+same native Identity. Preview has no effects; the actual roll atomically saves the
+original Identity, Heat/debit, source event and immutable receipt. Zero extra keeps
+old payloads. Genuine completed Off-Duty Tag windows create mandatory, owner-bound
+period work; choose1–4 actual Tags and only capacity-required ordinary replacements.
+New IDs/labels are server-derived; protected identities, unaffected marks and owed
+Tag work survive. Actual pending-work gates recovery and period closure. Zero Tag
+availability records applicability without inventing a resource. Native selectors,
+`/campaign psyche` and private Inbox/history use these same services.
+
+| Evidence | Executed outcome |
+|---|---|
+| New and affected existing flows before the last two-file proof delta | 23 passed /34.55s; exact command in `var/m3-princess-psyche-root-evidence.json`, JUnit `var/m3-princess-psyche-final-focused.xml` |
+| Final source-proof delta | 2 passed in 6.04s; only the two affected Disposable nodes rerun, `var/m3-princess-psyche-disposal-proof-final.xml` |
+| Complete changed-file static scope | Ruff/format19 Python, mypy17 source; exact hashes/commands in `var/m3-princess-psyche-union-source-snapshot.json` and `var/m3-princess-psyche-union-static.json` |
+| Offline Discord SDK registration | Dose/Princess/Psyche present,11 campaign subcommands, optional typed Order unchanged; no login/network/command execution |
+
+Worker handoffs retain their earlier focused runs and debugging failures separately.
+The final Disposable canonical `m3.rolled`/M3-ruleset assertion changed its service
+and test after the23-node snapshot. Only those two affected nodes were rerun; the
+coherent19-file static snapshot was refreshed. The23-node run is preserved as
+earlier integration evidence, not relabelled as a post-delta full run.
+The first root Keep compatibility attempt failed three assertions solely because
+an ownership-denial message changed; restore the established message, with existing
+tests unchanged. The actual Princess normal also found an Inbox local-import order
+error, repaired before its final green run. No failed-full result is relabelled green.
+
+Required gaps: Princess child Plays other than ordinary Keep; Kicked/Dampener child
+source adapters and other body/controller paths. Disposable protected/Paired/Limiter,
+Clone-extra and source-changing Identity paths, forced/other marking producers,
+non-Heat bases and Ankou Feedback need their actual source consumers. Disposable
+removals needing Feedback fail closed; they are not waived by a ruling.
+Other Stim-Blissed facets remain required. Three interpretations are recorded for
+clarity review. Full final-candidate regression/global/migration/privacy checks,
+independent source review and human play-testing remain pending. The earlier full
+baseline's2562 pass/3 fail and focused repairs are preserved; this is focused
+verification, not a repaired full regression or remote CI result.
+
+
 ## Dose Up / cocktail Tag lifecycle — 2026-11-07
 
 Feature extends `42e0426`. Coherent12 Python/11 source files pass Ruff, format and

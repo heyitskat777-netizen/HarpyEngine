@@ -657,6 +657,19 @@ class InboxView(discord.ui.View):
             await open_npc_bond_play(
                 interaction, NpcBondPlayService(self.service.store), item.identity
             )
+        elif item.task == "m3_disposable_psyche":
+            from girlframe.discord_adapter.m3_disposable_psyche import open_psyche
+            from girlframe.services.m3_disposable_psyche import PsycheService
+
+            await open_psyche(interaction, PsycheService(self.service.store), item.identity)
+        elif item.task == "m3_princess_sex":
+            from girlframe.discord_adapter.m3_princess_sex import open_princess
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_princess_sex import SexService as PrincessSexService
+
+            await open_princess(
+                interaction, PrincessSexService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_dose_up":
             from girlframe.discord_adapter.m3_dose_up import open_dose_up
             from girlframe.services.m3_dose_up import DoseUpService

@@ -388,6 +388,7 @@ class PlayInput(Model):
     identity: str | None = None
     gain: int = Field(default=0, ge=0, le=5)
     pair_share: int = Field(default=0, ge=0, le=5)
+    disposable_heat: Literal[0, 3, 4] = Field(default=0, exclude_if=lambda value: value == 0)
     target: Snowflake | None = None
     target_actor: ActorRef | None = None
     attacking_asset: str | None = Field(default=None, min_length=1, max_length=200)
@@ -404,6 +405,8 @@ class PlayInput(Model):
 
     @model_validator(mode="after")
     def battle_fields_only(self) -> "PlayInput":
+        if self.disposable_heat and self.identity is None:
+            raise ValueError("Disposable Psyche removes the actual Identity being marked")
         if self.kicked_puppy_basis and (self.play != "flirt" or self.heat != 0):
             raise ValueError("Kicked Puppy's alternative is only actual Flirt with zero Heat spent")
         if self.dampener_modifier is not None and self.heat < 5:
@@ -506,7 +509,13 @@ def higher(state: GameState, first: int, second: int) -> bool:
 
 
 def mark_identity(
-    sheet: PilotSheet, entry: str, gain: int, share: int = 0, *, state: GameState | None = None
+    sheet: PilotSheet,
+    entry: str,
+    gain: int,
+    share: int = 0,
+    *,
+    state: GameState | None = None,
+    disposable_heat: Literal[0, 3, 4] = 0,
 ) -> int:
     identity = next((x for x in sheet.identities if x.id == entry), None)
     if identity is None or identity.marked:
@@ -527,8 +536,18 @@ def mark_identity(
             raise ValueError("Paired Identity grants five Heat, split by its owner")
     elif not 1 <= gain <= 3 or share:
         raise ValueError("An ordinary Identity grants one to three Heat")
+    if disposable_heat not in (0, 3, 4):
+        raise ValueError("Disposable Psyche grants exactly three or four additional Heat")
+    if disposable_heat:
+        if state is None:
+            raise ValueError("Disposable Psyche requires the actual source state")
+        from girlframe.engine.m3_disposable_psyche import admit_removal
+
+        admit_removal(state, sheet, identity)
     identity.marked = True
-    sheet.heat += gain - share
+    sheet.heat += gain - share + disposable_heat
+    if disposable_heat:
+        sheet.identities = [x for x in sheet.identities if x.id != entry]
     return share
 
 
