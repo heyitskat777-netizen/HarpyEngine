@@ -971,6 +971,61 @@
           "limitation": "Ordinary native cargo/Gorgon threat scope; conditional/AM/Harpy/nested cargo/special Core and other opening producers remain adapters. Canonical last-Base work preserved, unrelated endpoint not claimed tested. Not full regression or independent/player approval."
         }
       ]
+    },
+    {
+      "id": "M3-CORE-NPC-BOND-NORMAL-001",
+      "title": "Actual NPC Bond cost and other-human Conversation performance",
+      "expected": "Original Girl weakens canonical NPC Bond; actual NPC human performs a supported source job Play; work and addressed private receipt close without an invented Girl roll.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_npc_bond_play.py"
+      ],
+      "related_cases": [
+        "M3-ADD-006",
+        "M3-ADD-007"
+      ],
+      "evidence": [
+        {
+          "test_name": "test_real_girl_bond_cost_other_npc_human_performance_addressed_receipt_and_history",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_npc_bond_play.py --junitxml=var/m3-npc-bond-play-normal.xml",
+          "actual_result": "Final normal1 passed3.935s; unchanged canonical primitive3 retained from focused4/4.07s; final6Python5source static plus changed2/1 delta passed; old scoped noticeprivacy1/1.30s passed.",
+          "log_or_trace": "var/m3-npc-bond-play-handoff.json; var/m3-npc-bond-final-source-snapshot.json; var/m3-npc-bond-final-static.json",
+          "git_commit": "907b16689334d89eacdcdfe4f3e47c86d3853296",
+          "limitation": "Existing nonmechanical Conversation subset only; mechanical/other job and changed-controller/body adapters remain. Service Intense2→1 not separately tested; unchanged reducer reused. No full regression, independent review or human acceptance."
+        }
+      ]
+    },
+    {
+      "id": "M3C-A-BOMB-NORMAL-001",
+      "title": "Actual nuclear device, blast effects, conditional Budget and fallout lifecycle",
+      "expected": "Genuine award/device/custody; immutable release/impact/roster; actual deaths and owner-chosen resource effects; safe/unsafe ejection; successful direct waiver preserves independent writes; real temporary fallout expiry.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_a_bomb.py"
+      ],
+      "related_cases": [
+        "M3-ADD-001",
+        "M3-ADD-006",
+        "M3-ADD-007",
+        "M3G-WORLD-001",
+        "M3F-SCHED-001"
+      ],
+      "evidence": [
+        {
+          "test_name": "test_actual_casualties_core_exposure_owned_damage_safe_defeat_ejection_history; test_actual_causal_mission_waiver_real_expiry_and_independent_high_noop",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_a_bomb.py --junitxml=var/m3-a-bomb-final-normal.xml",
+          "actual_result": "Final2 passed9.01s in one process; affected existing8 passed27.49s. Static coverage28Python/27source passes with exact4 static-only corrections and unchanged checks reused.",
+          "log_or_trace": "var/m3-a-bomb-test-evidence.json; var/m3-a-bomb-compatibility.xml; var/m3-a-bomb-final-source-snapshot.json; var/m3-a-bomb-final-static.json",
+          "git_commit": "e223c1adeb56401a6c1339ca9637f0f925ee7f64",
+          "limitation": "Actual Armoured blast interception and quarantine-boundary breach were not exercised; no separate nuclear Doctor branch. JANUS/Core, conditional/guest/parked/unknown/external/layered/overlaid body adapters fail closed. Not a full regression or independent/player acceptance."
+        }
+      ]
     }
   ],
   "enabled_modules": [
