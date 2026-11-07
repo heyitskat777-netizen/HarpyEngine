@@ -18,34 +18,29 @@ from girlframe.engine.m3_handler_consequences import same_handler_body
 from girlframe.engine.m3_handler_play_state import Effect, HandlerPlay
 from girlframe.engine.m3_item_state import HeldItem
 from girlframe.engine.m3_work_scope import WorkScope
+from girlframe.services import m3_advancement_acquisition as acquisition_source
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_battle import _cast
-from girlframe.services.m3_handler_advancements import HandlerAdvancementService, _history
+from girlframe.services.m3_handler_advancements import _history
 from girlframe.services.m3_handler_creation import HandlerCreationService
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
 
 def paid(game: GameService, c: Connection, state: GameState, identity: str) -> rules.Acquisition:
-    value = next((x for x in rules.acquisitions(state) if x.id == identity), None)
-    gate = Access(game.store)
-    assert gate.registry is not None
-    gate.registry.require_available(rules.RULE)
-    if value is None or value not in rules.acquisitions(_history(c, game, value.event)):
-        raise WorkflowError("Recover the immutable original Tracker Implants acquisition")
-    _, _, handler, appointment, award = HandlerAdvancementService(game.store)._proof(c, value.award)
-    if (
-        award is None
-        or award.acquisition != value.id
-        or award.acquired_rule != rules.RULE
-        or award.spend_event != value.event
-        or (handler, appointment) != (value.handler, value.appointment)
-    ):
-        raise WorkflowError("Recover the actual original held advancement and exact tracker spend")
-    return value
+    return acquisition_source.prove(
+        game,
+        c,
+        state,
+        identity,
+        rule=rules.RULE,
+        receipts=rules.acquisitions,
+        missing="Recover the immutable original Tracker Implants acquisition",
+        failure="Recover the actual original held advancement and exact tracker spend",
+    )
 
 
 def current(game: GameService, c: Connection, state: GameState, identity: str) -> rules.Acquisition:
@@ -492,17 +487,18 @@ class TrackerService:
         actual: bool,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
-            _, state, handler, appointment, award = HandlerAdvancementService(self.store)._source(
-                c, viewer, award_id
+            state, handler, appointment, award = acquisition_source.held(
+                self.game,
+                c,
+                viewer,
+                award_id,
+                revision,
+                account,
+                failure="Spend one held advancement to actually implant each current original Girl",
             )
-            HandlerAdvancementService(self.store)._current(c, state, handler, appointment)
             roster = tuple(current_ref(state, x) for x in state.order)
             if (
-                state.revision != revision
-                or award is None
-                or award.phase != "held"
-                or not actual
-                or not account.strip()
+                not actual
                 or len(account) > 1200
                 or len(sites) != len(roster)
                 or {x.actor for x in sites} != set(roster)
@@ -550,20 +546,7 @@ class TrackerService:
                 implants=tuple(installed),
             )
             rules.put(state, source)
-            awards.put(
-                state,
-                awards.Award.model_validate_json(
-                    award.model_copy(
-                        update=dict(
-                            phase="spent",
-                            acquired_rule=rules.RULE,
-                            acquisition=identity,
-                            spend_event=event,
-                            spend_account=account.strip(),
-                        )
-                    ).model_dump_json()
-                ),
-            )
+            acquisition_source.record_spend(state, award, source, rules.RULE)
             self.game.event(
                 c,
                 viewer.user_id,

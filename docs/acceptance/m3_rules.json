@@ -21,7 +21,7 @@
     },
     {
       "id": "M3-002",
-      "title": "Go Off-Duty Status modifiers and 7\u2212 scene",
+      "title": "Go Off-Duty Status modifiers and 7− scene",
       "expected": "Dog/Wing/Ace and on-screen harsh scene.",
       "status": "IN_PROGRESS",
       "planned_tests": [
@@ -861,6 +861,61 @@
           "limitation": "Full physical/career/control, further secret discovery, remaining core rules and independent/human acceptance remain unfinished."
         }
       ]
+    },
+    {
+      "id": "M3C-TRACKER-NORMAL-001",
+      "title": "Tracker installed hardware, live pose/location, two source Plays and exact removal/site alerts",
+      "expected": "Actual original award/body/site/vessel; owned contact/observed moment, real same-object recovery and source-bound private alerts; no implicit map journey or source adaptation.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_tracker_implants.py"
+      ],
+      "related_cases": [
+        "M3-ADD-001",
+        "M3-ADD-006",
+        "M3-ADD-007"
+      ],
+      "evidence": [
+        {
+          "test_name": "test_native_secret_tracker_location_both_plays_real_removal_and_exact_site_void",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_tracker_implants.py",
+          "actual_result": "1 passed /7.804s; affected compatibility3 passed /3.346s; union Ruff/format30 and mypy28source passed",
+          "log_or_trace": "var/m3-tracker-implants-handoff.json; var/m3-tracker-implants-normal.xml; var/m3-tracker-contaminant-final-source-snapshot.json",
+          "git_commit": "37c8d6bc4557badccaf734d2cc5508cace8c117d",
+          "limitation": "Cockpit/pose read, not distinct-square journey. Current native original bodies; finite actual Dive anatomical source. Other source/body/lifecycle adapters and independent/player review remain. Not full regression."
+        }
+      ]
+    },
+    {
+      "id": "M3G-CONTAMINANT-NORMAL-001",
+      "title": "Actual quarantine four effects, warp and breach lifecycle",
+      "expected": "Real territory/temporary effective Void source; resource-preserving Dormancy/awakening; group organization replacement into usable Harpy; actual study/protection; sourced warp and real break.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE_SEGMENTED",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_contaminant_zone.py"
+      ],
+      "related_cases": [
+        "M3-ADD-001",
+        "M3-ADD-006",
+        "M3G-WORLD-001",
+        "M3F-SCHED-001"
+      ],
+      "evidence": [
+        {
+          "test_name": "test_actual_relief_dormancy_awakening_strain_consumer_and_real_breach; test_actual_group_harpy_study_warp_protection_expiry_and_private_history",
+          "executed_command": "Initial module attempt, then final second normal plus tests/rules/test_handler_advancements.py; exact commands in artifact",
+          "actual_result": "First normal passed in mixed1 failed/1 passed5.76s (second fake Picker defer fixed); unchanged first called paths reused. Final second+awards4 passed9.36s. Unionstatic30Python28source passed.",
+          "log_or_trace": "var/m3-contaminant-zone-test-results.json; var/m3-contaminant-zone-first-mixed-attempt.txt; var/m3-tracker-contaminant-final-source-snapshot.json",
+          "git_commit": "37c8d6bc4557badccaf734d2cc5508cace8c117d",
+          "limitation": "No single final two-normal process claimed. Partial-footprint/conditional actor/source adapters, independent/player review and full regression remain pending."
+        }
+      ]
     }
   ],
   "enabled_modules": [
@@ -869,5 +924,7 @@
   "deferred_modules": [
     "ancillary"
   ],
-  "pending_owner_rulings": []
+  "pending_owner_rulings": [],
+  "working_queue": "docs/M3_CURRENT_QUEUE.md",
+  "evidence_note": "Scoped automated cases overlap broader acceptance gates and are not equal-sized tasks. Historical evidence is preserved; IN_PROGRESS and independent/human gates remain open."
 }

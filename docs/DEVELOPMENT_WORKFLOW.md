@@ -37,18 +37,22 @@ a required M3 rule complete; required gaps stay in the milestone backlog.
 
 ## Current delivery order
 
-| Order | Assignment | Completion boundary |
-|---|---|---|
-| 1, parallel | Tracker Implants source contract | Secretary delivery handed off. Freeze actual implant/location, both printed Handler Plays and removal/Void alerts with real consumers before code. |
-| 1, parallel | Contaminant Zone source contract | Native-PC Execution Reign handed off. Freeze actual territory/quarantine, all four selected-effect branches, break lifecycle and warp Play before code. |
-| 1, root | Shared integration | Consolidate completed Reign/Secretary source, rulings and exact evidence; release next contracts only after actual dependency/ownership review. No third implementation unit. |
-| 2 | Remaining required gameplay systems | Select the next dependency-ready whole workflow from M3_REMAINING_WORK.md and M3_COMPLETION_AUDIT.md. Freeze its contract, reuse implemented dependencies and complete it before opening unrelated work. |
-| 3 | M3 review candidate | Account for required core scope, complete expected gameplay flows and final integrated checks; provide a concise player-test checklist and stop for owner review. |
+The concise assignment/dependency/action/evidence view is
+[M3_CURRENT_QUEUE.md](M3_CURRENT_QUEUE.md). Update it at useful handoffs rather
+than copying historical checkpoint narratives into the active queue.
 
-Physical and Lifecycle agents hand off existing work and stop; their completed
-code and evidence remain available. No work is discarded to reduce concurrency.
-Ancillary playbooks remain deferred. AI/M4, deployment and publication are outside
-this development path. The bot stays off.
+Owner efficiency update, 2026-11-07: finish or safely integrate active work before
+shared infrastructure changes. Pilot only demonstrated repeated operations with
+near-term consumers; keep unusual eligibility/effects/ownership/lifecycle explicit.
+The current pilots cover acquisition/proof, matching Inbox entry shape and neutral
+real scenario setup. They do not authorize an engine rewrite, generic DSL or broad
+suite migration. Preserve schemas/events/idempotency and synthetic approval bounds;
+run focused affected old/new flows and relevant permission/privacy/stale/rollback/
+retry checks. Do not claim faster tests without measuring a comparable workload.
+
+After these pilots, resume the next dependency-ready whole gameplay workflow.
+Required unfinished core rules still block M3 completion. Ancillary, AI/M4,
+deployment and publication remain outside this path; the bot stays off.
 
 ## Verification budget
 

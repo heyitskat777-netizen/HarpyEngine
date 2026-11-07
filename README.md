@@ -62,6 +62,8 @@ requests inbox. The original recipient explicitly accepts or declines the
 ordinary Girl Asset. Its details stay out of public sheet views until owned
 sharing. This also remains under the M3 development release gate.
 
+Current assignments and scoped evidence are in the [M3 current queue](docs/M3_CURRENT_QUEUE.md).
+
 The bot is currently **intentionally off** at the owner's request. See the
 [M3 completion audit and bounded plan](docs/M3_COMPLETION_AUDIT.md) for implemented
 features, unfinished systems and the next delivery units. No new completion

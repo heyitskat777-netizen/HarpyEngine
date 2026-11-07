@@ -4,14 +4,14 @@ import asyncio
 from uuid import uuid4
 
 import pytest
+from handler_award_scenario import ordinary_pr_award
 from test_cast_service import change
 from test_enforcer_requisitions import approved
-from test_handler_ordinary import finish_keep, session_native, setup
+from test_handler_ordinary import finish_keep
 from test_ledger import ADMIN, PLAYER
 from test_ledger import ledger as ledger
 from test_m2_game import Dice, answer, pass_tags, state, tick
 from test_mission_ui import current
-from test_physical_operations import place
 
 from girlframe.discord_adapter.inbox import InboxView
 from girlframe.discord_adapter.m2_ui import open_choice
@@ -21,7 +21,6 @@ from girlframe.engine import m3_handler_ordinary as ordinary_rules
 from girlframe.engine import m3_secretary as rules
 from girlframe.engine.m2 import PlayInput
 from girlframe.engine.m3_actor_bonds import current_ref
-from girlframe.engine.m3_world_state import Location
 from girlframe.services.inbox import InboxService
 from girlframe.services.m3_actors import ActorService
 from girlframe.services.m3_cast import CastService
@@ -32,53 +31,8 @@ from girlframe.services.onboarding import WorkflowError
 
 
 def ready(store, tmp_path, monkeypatch):
-    from girlframe.services.m3_handler_pr import HandlerPRService
-
-    game, ordinary, worker, gateway = setup(store, tmp_path, monkeypatch)
+    game, worker, gateway = ordinary_pr_award(store, tmp_path, monkeypatch)
     approved(store, game, tmp_path, monkeypatch, extra=(ordinary_rules.RULE, rules.RULE))
-    store.policy = store.policy.model_copy(
-        update={
-            "m3_approval": store.policy.m3_approval.model_copy(
-                update={"subsystems": store.policy.m3_approval.subsystems | {"world", "discipline"}}
-            )
-        }
-    )
-    with store.transaction() as c:
-        canon = place(place(state(game), 2, mode="outside_frame"), 3, mode="outside_frame")
-        canon.world = canon.world.model_copy(
-            update=dict(
-                locations=(
-                    Location(id="base0", name="Actual briefing room", cell=(0, 0), kind="base"),
-                    Location(id="base1", name="Actual personnel office", cell=(1, 0), kind="base"),
-                ),
-                npcs=(canon.world.npcs[0].model_copy(update=dict(cell=(1, 0))),),
-            )
-        )
-        game.event(c, 1, "actual-secretary-initial-facts", "synthetic.initial_facts", canon)
-    session_native(ordinary, "Actual Secretary advancement Session", 41000)
-    pr = HandlerPRService(store)
-    event = pr.plan(
-        ADMIN,
-        str(uuid4()),
-        state(game).revision,
-        "Actual Foundation media fundraiser",
-        "Real Foundation photoshoot and public interview",
-        (current_ref(state(game), 2),),
-    )["id"]
-    for viewer, hosting, account in (
-        (ADMIN, True, "I actually hosted the Foundation presentation"),
-        (PLAYER, False, "I actually posed and spoke in the public Foundation feature"),
-    ):
-        pr.activity(viewer, str(uuid4()), event, state(game).revision, account, hosting=hosting)
-    pr.submit_result(ADMIN, str(uuid4()), event, state(game).revision, "Actual event is performed")
-    pr.resolve(
-        ADMIN,
-        str(uuid4()),
-        event,
-        state(game).revision,
-        True,
-        "The actual Foundation fundraiser and public feature succeeded",
-    )
     return game, SecretaryService(store), worker, gateway
 
 

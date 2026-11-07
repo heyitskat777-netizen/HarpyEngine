@@ -19,6 +19,7 @@ from girlframe.engine.m3_missions import Mission
 from girlframe.engine.m3_npc_orders import Order
 from girlframe.engine.m3_world import introduce_npc, update
 from girlframe.engine.m3_world_state import Npc
+from girlframe.services import m3_advancement_acquisition as acquisition_source
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -33,26 +34,16 @@ from girlframe.services.read_only_bot import GuildViewer
 
 
 def paid(game: GameService, c: Connection, state: GameState, identity: str) -> rules.Acquisition:
-    value = next((x for x in rules.acquisitions(state) if x.id == identity), None)
-    if value is None:
-        raise WorkflowError("Recover the actual original Secretary acquisition")
-    gate = Access(game.store)
-    assert gate.registry is not None
-    gate.registry.require_available(rules.RULE)
-    born = next(
-        (x for x in rules.acquisitions(_history(c, game, value.event)) if x.id == identity), None
+    return acquisition_source.prove(
+        game,
+        c,
+        state,
+        identity,
+        rule=rules.RULE,
+        receipts=rules.acquisitions,
+        missing="Recover the actual original Secretary acquisition",
+        failure="Recover the genuine original held award and exact Secretary spend",
     )
-    _, _, handler, appointment, award = HandlerAdvancementService(game.store)._proof(c, value.award)
-    if (
-        born != value
-        or award is None
-        or award.acquired_rule != rules.RULE
-        or award.acquisition != value.id
-        or award.spend_event != value.event
-        or (handler, appointment) != (value.handler, value.appointment)
-    ):
-        raise WorkflowError("Recover the genuine original held award and exact Secretary spend")
-    return value
 
 
 def appointed(game: GameService, c: Connection, state: GameState, identity: str) -> rules.Secretary:
@@ -579,17 +570,16 @@ class SecretaryService:
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             self.game.unpaused(c)
-            _, state, handler, appointment, award = HandlerAdvancementService(self.store)._source(
-                c, viewer, award_id
+            state, handler, appointment, award = acquisition_source.held(
+                self.game,
+                c,
+                viewer,
+                award_id,
+                revision,
+                account,
+                failure="Spend one actual held award on this original Handler's Secretary",
             )
-            HandlerAdvancementService(self.store)._current(c, state, handler, appointment)
-            if (
-                state.revision != revision
-                or award is None
-                or award.phase != "held"
-                or not account.strip()
-                or any(same_handler_body(state, x.handler) for x in rules.acquisitions(state))
-            ):
+            if any(same_handler_body(state, x.handler) for x in rules.acquisitions(state)):
                 raise WorkflowError(
                     "Spend one actual held award on this original Handler's Secretary"
                 )
@@ -603,20 +593,7 @@ class SecretaryService:
                 account=account.strip(),
             )
             rules.put(state, value)
-            advancement.put(
-                state,
-                advancement.Award.model_validate_json(
-                    award.model_copy(
-                        update=dict(
-                            phase="spent",
-                            acquired_rule=rules.RULE,
-                            acquisition=value.id,
-                            spend_event=event,
-                            spend_account=account.strip(),
-                        )
-                    ).model_dump_json()
-                ),
-            )
+            acquisition_source.record_spend(state, award, value, rules.RULE)
             self.game.event(
                 c,
                 viewer.user_id,

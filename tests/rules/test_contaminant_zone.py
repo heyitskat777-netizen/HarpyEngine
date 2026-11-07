@@ -4,6 +4,7 @@ import asyncio
 from uuid import uuid4
 
 import pytest
+from handler_award_scenario import ordinary_pr_award
 from test_battle_pipeline import table
 from test_cast_service import change
 from test_enforcer_requisitions import approved
@@ -11,7 +12,6 @@ from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
 from test_m2_game import Dice, answer, pass_tags, state, tick
 from test_mission_ui import current
-from test_secretary import ready as award_ready
 from test_strain import facts
 from test_strain_service import D6
 from test_world import gorgon
@@ -56,7 +56,7 @@ from girlframe.services.onboarding import WorkflowError
 
 
 def setup(store, tmp_path, monkeypatch):
-    game, _, worker, gateway = award_ready(store, tmp_path, monkeypatch)
+    game, worker, gateway = ordinary_pr_award(store, tmp_path, monkeypatch)
     approved(store, game, tmp_path, monkeypatch, extra=(rules.RULE,))
     store.policy = store.policy.model_copy(
         update=dict(

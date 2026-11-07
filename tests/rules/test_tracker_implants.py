@@ -6,13 +6,13 @@ from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
+from handler_award_scenario import ordinary_pr_award
 from test_cast_service import change
 from test_enforcer_requisitions import approved
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
 from test_m2_game import Dice, answer, pass_tags, state, tick
 from test_mission_ui import current
-from test_secretary import ready as actual_award
 
 from girlframe.database import tables as t
 from girlframe.discord_adapter.inbox import InboxView
@@ -150,7 +150,7 @@ def dive(game, worker, gateway, viewer, asset):
 def test_native_secret_tracker_location_both_plays_real_removal_and_exact_site_void(
     ledger, tmp_path, monkeypatch
 ):
-    game, _, worker, gateway = actual_award(ledger, tmp_path, monkeypatch)
+    game, worker, gateway = ordinary_pr_award(ledger, tmp_path, monkeypatch)
     approved(ledger, game, tmp_path, monkeypatch, extra=(ordinary.RULE, rules.RULE))
     ledger.policy = ledger.policy.model_copy(
         update={

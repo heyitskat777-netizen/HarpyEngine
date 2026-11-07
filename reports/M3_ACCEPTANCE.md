@@ -1,5 +1,68 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Bounded efficiency pilots after active gameplay integration — 2026-11-07
+
+The owner requested assessment against current work, not historical `4096705`.
+Active Tracker/Contaminant source was frozen and committed as `37c8d6b` before
+shared infrastructure changed. Two agents retained separate file ownership; root
+owned inbox projection and queue/evidence integration. Exact ten changed Python
+files are frozen in `var/m3-efficiency-pilot-final-source-snapshot.json`.
+
+Adopted:
+
+- A small typed acquisition service core now serves Secretary, Deep-Brain-Spikes
+  and the newly delivered Tracker use. Held-award validation, common spend receipt
+  and original acquisition proof share one implementation. Specific eligibility,
+  roster/body rules, receipt creation/put, effects, lifecycle, event names, returned
+  phases, transaction boundaries and idempotency remain explicit. Schema, existing
+  records and canonical audit events were preserved; no optional proof waiver.
+- A typed pure inbox-entry adapter formats only the matching Tracker, Contaminant
+  and Reign rows. Original stable keys, labels, pending/history/incoming semantics
+  and presentation are preserved. Rule services still choose visibility/urgency;
+  native routes and authorization stay unchanged.
+- A neutral synthetic scenario creates an actual ordinary Handler campaign,
+  Session and performed PR award for Secretary/Tracker/Contaminant tests. The old
+  Secretary test API remains a wrapper. New consumers no longer inherit Secretary
+  approval incidentally. Real events/actors/history/isolation and synthetic-only
+  approval boundaries remain, with no shortcut world or global shared fixture.
+- [M3_CURRENT_QUEUE.md](../docs/M3_CURRENT_QUEUE.md) provides owner, dependency,
+  concrete next action and evidence. The acceptance tracker gained scoped Tracker
+  and Contaminant cases pinned to the actual gameplay commit; broad historical
+  cases remain in progress. Registry coverage was reconciled in that checkpoint,
+  not converted into equal-sized tasks or a percentage.
+
+Deferred: migrating every advancement (especially Girl Insurance's unusual
+consumption lifecycle); a generic inbox routing registry; broad fixture cleanup;
+a new rules DSL/engine rewrite. They offer no demonstrated need in these bounded
+uses. Shared receipt creation stays explicit for distinct schemas, and routing
+continues to expose each workflow's actual service/native interface.
+
+One coordinated focused run: **8 passed / 29.757s**. Selection is the new real
+acquisition integrity case, Secretary two existing normals, Deep-Brain-Spikes
+memory/return, Tracker normal, both Contaminant normals, and Reign's actual owned
+rejection/private inbox case. The integrity test stages a real audit/history and
+spend, forces rollback, then proves exact-key success/retry, wrong-owner/stale/
+second-spend denial, forged original receipt rejection and private audit payload.
+Existing normal flows exercise permissions/private audiences and durable state.
+Exact command: `var/m3-efficiency-pilot-pytest-command.txt`; JUnit:
+`var/m3-efficiency-pilot-focused.xml`.
+
+Coherent static: **10 Python** Ruff/format pass, **5 source modules** mypy pass.
+Initial lint reported three overlong root inbox literals; their final wrapping
+has an asserted identical AST and text. Only the affected lint/format was checked
+again; unchanged gameplay evidence was reused. Artifacts:
+`var/m3-efficiency-pilot-static.json` and each assignment handoff. There is **no
+measured or claimed test-speed improvement**; this pilot reduces repeated
+implementation/setup maintenance while preserving realistic checks.
+
+This is local focused evidence, not a full regression, independent review or
+human acceptance. Existing required gameplay/body/source/world/Strain gaps still
+block M3 completion. Next work uses the proven operations for whole gameplay
+workflows after their dependency contracts. Final integrated regression,
+independent printed-rule review and owner/player gates remain unchanged. Bot off;
+no push/deploy/live migration/environment publication/private-engine writes/AI/M4
+or Ancillary activation.
+
 ## Tracker Implants and Contaminant Zone normal workflows — 2026-11-07
 
 Source extends local `04a4160`. Exact **30 changed Python files / 28 source

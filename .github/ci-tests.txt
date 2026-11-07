@@ -1,6 +1,8 @@
-# Captive native Execution source and actual addressed Secretary notices.
-# Existing NPC effect/helper compatibility plus prior Secretary all-plays workflow.
-tests/rules/test_reign_pc_execution.py
-tests/rules/test_reign_terror.py
-tests/rules/test_secretary_statement.py
-tests/rules/test_secretary.py::test_actual_promoted_secretary_all_plays_withdraw_child_continuation_history
+# Bounded acquisition/proof, neutral real scenario and matching inbox projection pilots.
+# Actual affected old/new workflows; final integrated full suite remains separate.
+tests/rules/test_advancement_acquisition.py
+tests/rules/test_secretary.py
+tests/rules/test_deep_brain_spikes.py
+tests/rules/test_tracker_implants.py
+tests/rules/test_contaminant_zone.py
+tests/rules/test_reign_terror.py::test_actual_enemy_owned_rejection_is_real_external_action_with_lock_and_history

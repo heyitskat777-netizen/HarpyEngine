@@ -3,6 +3,7 @@
 import hashlib
 import json
 from datetime import datetime
+from typing import TypedDict, cast
 
 import sqlalchemy as sa
 
@@ -18,6 +19,44 @@ from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.pair_assets import PairService
 from girlframe.services.read_only_bot import GuildViewer
 from girlframe.services.shared_setup import SharedSetupService
+
+
+class _RuleTask(TypedDict):
+    id: str
+    revision: int
+    label: str
+    pending: bool
+
+
+def _playbook_task(
+    row: _RuleTask,
+    *,
+    prefix: str,
+    source: str,
+    counterpart: str,
+    effect: str,
+    details: str,
+    primary: str,
+    task: str,
+) -> InboxItem:
+    """Format an already authorized row; its rule service owns visibility and urgency."""
+    pending = bool(row["pending"])
+    return InboxItem(
+        prefix + row["id"],
+        source,
+        row["id"],
+        row["revision"],
+        "playbook",
+        row["label"],
+        counterpart,
+        "pending" if pending else "established",
+        pending,
+        False,
+        effect,
+        details,
+        primary,
+        task=task,
+    )
 
 
 class InboxService:
@@ -868,22 +907,15 @@ class InboxService:
             from girlframe.services.m3_tracker_implants import TrackerService
 
             for tracker in TrackerService(self.store)._tasks(connection, viewer):
-                tracker_pending = bool(tracker["pending"])
                 items.append(
-                    InboxItem(
-                        "m3_tracker_implants:" + tracker["id"],
-                        "m3_tracker_implants",
-                        tracker["id"],
-                        tracker["revision"],
-                        "playbook",
-                        tracker["label"],
-                        "Original source owner or explicitly addressed controller",
-                        "pending" if tracker_pending else "established",
-                        tracker_pending,
-                        False,
-                        "Review actual installed hardware, location or source-owned alerts.",
-                        "Actual people, physical sources and private audience stay bound.",
-                        "Review Tracker Implants",
+                    _playbook_task(
+                        cast(_RuleTask, tracker),
+                        prefix="m3_tracker_implants:",
+                        source="m3_tracker_implants",
+                        counterpart="Original source owner or explicitly addressed controller",
+                        effect="Review actual installed hardware, location or source-owned alerts.",
+                        details="Actual people, physical sources and private audience stay bound.",
+                        primary="Review Tracker Implants",
                         task="m3_tracker_implants",
                     )
                 )
@@ -891,22 +923,18 @@ class InboxService:
             from girlframe.services.m3_contaminant_zone import ContaminantZoneService
 
             for zone in ContaminantZoneService(self.store)._tasks(connection, viewer):
-                zone_pending = bool(zone["pending"])
                 items.append(
-                    InboxItem(
-                        "m3_contaminant_zone:" + zone["id"],
-                        "m3_contaminant_zone",
-                        zone["id"],
-                        zone["revision"],
-                        "playbook",
-                        zone["label"],
-                        "Original source owner or explicitly addressed controller",
-                        "pending" if zone_pending else "established",
-                        zone_pending,
-                        False,
-                        "Review actual territory, quarantine effects and source-owned operations.",
-                        "Actual people, physical sources and private audience stay bound.",
-                        "Review Contaminant Zone",
+                    _playbook_task(
+                        cast(_RuleTask, zone),
+                        prefix="m3_contaminant_zone:",
+                        source="m3_contaminant_zone",
+                        counterpart="Original source owner or explicitly addressed controller",
+                        effect=(
+                            "Review actual territory, quarantine effects "
+                            "and source-owned operations."
+                        ),
+                        details="Actual people, physical sources and private audience stay bound.",
+                        primary="Review Contaminant Zone",
                         task="m3_contaminant_zone",
                     )
                 )
@@ -914,22 +942,19 @@ class InboxService:
             from girlframe.services.m3_reign_terror import ReignTerrorService
 
             for reign in ReignTerrorService(self.store)._tasks(connection, viewer):
-                pending_reign = bool(reign["pending"])
                 items.append(
-                    InboxItem(
-                        "reign-terror:" + reign["id"],
-                        "reign_terror",
-                        reign["id"],
-                        reign["revision"],
-                        "playbook",
-                        reign["label"],
-                        "Original Handler or actual affected character controller",
-                        "pending" if pending_reign else "established",
-                        pending_reign,
-                        False,
-                        "Review actual execution effects or your real Tag/resource response.",
-                        "Group membership, custody and character ownership are source-bound.",
-                        "Review Reign of Terror",
+                    _playbook_task(
+                        cast(_RuleTask, reign),
+                        prefix="reign-terror:",
+                        source="reign_terror",
+                        counterpart="Original Handler or actual affected character controller",
+                        effect=(
+                            "Review actual execution effects or your real Tag/resource response."
+                        ),
+                        details=(
+                            "Group membership, custody and character ownership are source-bound."
+                        ),
+                        primary="Review Reign of Terror",
                         task="m3_reign_terror",
                     )
                 )
