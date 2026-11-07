@@ -581,3 +581,276 @@ def test_actual_causal_mission_waiver_real_expiry_and_independent_high_noop(
     assert any(not x["active"] for x in public["world"]["fallout"])
     assert any(x["active"] for x in public["world"]["fallout"])
     assert "PRIVATE_NUCLEAR_CAPABILITY" not in str(public)
+
+
+def world_interaction_award(strain, game, *, slot=6):
+    """Real additional Void Award; preserves the active period and other actual work."""
+    from test_strain import facts
+
+    from girlframe.engine.m3_janus_storage import effective_assets
+
+    canon = state(game)
+    assert not canon.strain.requests
+    actual_void = sum(
+        any(x.void for x in effective_assets(canon, current_ref(canon, uid))) for uid in canon.order
+    )
+    assert 2 * actual_void >= len(canon.order)
+    old_awards = {x.id for x in awards.awards(canon)}
+    period = strain.periods.begin(ADMIN, str(uuid4()))
+    frames = [
+        [x for x in canon.sheets[str(uid)].assets if x.family == "frame"] for uid in canon.order
+    ]
+    strain.prepare(
+        ADMIN,
+        str(uuid4()),
+        period["id"],
+        1,
+        state(game).revision,
+        facts(
+            at_least_half_have_void=True,
+            no_girl_void=False,
+            frame_full_or_all_frames_some_repairs=(
+                any(values and all(x.damaged for x in values) for values in frames)
+                or bool(frames)
+                and all(any(x.damaged for x in values) for values in frames)
+            ),
+        ),
+    )
+    strain.dice = D6(6)
+    while True:
+        request = next(
+            x
+            for x in state(game).strain.requests
+            if x.track == "void" and (x.kind == "endgame" or x.severity == "high")
+        )
+        if request.kind == "endgame":
+            break
+        strain.roll(ADMIN, str(uuid4()), request.id, 1, state(game).revision)
+        strain.choose(ADMIN, str(uuid4()), request.id, 2, state(game).revision, 2)
+    strain.choose(ADMIN, str(uuid4()), request.id, 1, state(game).revision, slot, endgame=True)
+    service = HandlerAdvancementService(game.store)
+    identity = request.id + ":effect"
+    current = service.view(ADMIN, identity)
+    service.claim_void(
+        ADMIN,
+        str(uuid4()),
+        identity,
+        state(game).revision,
+        current["work_revision"],
+        "The actual Void Endgame grants this original Handler another advancement",
+    )
+    award = next(x for x in awards.awards(state(game)) if x.id not in old_awards)
+    assert award.rule == "strain.void.endgame." + str(slot) and award.phase == "held"
+    with game.store.engine.connect() as c:
+        assert service._proof(c, award.id)[-1] == award
+    return award
+
+
+def test_actual_armoured_ship_intercepts_blast_then_unarmoured_base_is_destroyed(
+    ledger, tmp_path, monkeypatch
+):
+    from girlframe.engine import m3_handler_ordinary as ordinary
+    from girlframe.engine import m3_ship_base as ships
+    from girlframe.services.m3_ship_base import ShipBaseService
+    from girlframe.services.m3_ship_base import paid as ship_paid
+
+    game, bomb, acquisition, _, _, strain = ready(ledger, tmp_path, monkeypatch)
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(rules.RULE, ships.RULE, ordinary.RULE, *awards.RULES),
+    )
+    strain = StrainService(OffDutyService(MissionService(ledger)), dice=D6(6))
+    award = world_interaction_award(strain, game)
+    ship = ShipBaseService(ledger)
+    receipt = ship.buy(
+        ADMIN,
+        str(uuid4()),
+        award.id,
+        state(game).revision,
+        "outside-base",
+        "The genuine second Award makes this existing remote Base Armoured",
+    )["id"]
+    before = state(game)
+    original = next(x for x in before.world.locations if x.id == "outside-base")
+    assert original.ship.armoured and original.operational
+    pending = before.strain.requests
+    first_device = device(bomb, game, acquisition, "Actual Armoured-Base nuclear device", (3, 3))
+    first_key = str(uuid4())
+    arguments = (
+        ADMIN,
+        first_key,
+        acquisition.id,
+        state(game).revision,
+        first_device,
+        (6, 6),
+        ("gentle_fallout", "cores"),
+        "Actual carried nuclear release at 3,3 reaches the remote Armoured Base at 5,6",
+    )
+    first = bomb.drop(*arguments)["id"]
+    after = state(game)
+    intercepted = next(x for x in after.world.locations if x.id == original.id)
+    assert intercepted.condition == original.condition == "intact"
+    assert intercepted.cell == original.cell
+    assert not intercepted.ship.armoured and intercepted.ship.damage_count == 1
+    assert not intercepted.operational and intercepted.fallout_sources == (first,)
+    assert not any(
+        x.get("kind") == "structure_destroyed_source" and x.get("entity") == original.id
+        for x in after.facts
+    )
+    assert not any(x.entity == original.id for x in after.strain.triggers)
+    assert after.order == before.order and after.placements == before.placements
+    assert after.strain.requests == pending
+    assert bomb.drop(*arguments)["id"] == first and state(game) == after
+    bomb.finish(ADMIN, str(uuid4()), first, after.revision)
+    second_device = device(bomb, game, acquisition, "Actual unarmoured-Base nuclear device", (3, 3))
+    second = bomb.drop(
+        ADMIN,
+        str(uuid4()),
+        acquisition.id,
+        state(game).revision,
+        second_device,
+        (6, 6),
+        ("gentle_fallout", "cores"),
+        "A distinct real nuclear device strikes the now actually unarmoured Base",
+    )["id"]
+    destroyed = state(game)
+    actual = next(x for x in destroyed.world.locations if x.id == original.id)
+    assert actual.condition == "destroyed" and actual.ship.damage_count == 1
+    stamps = [
+        x
+        for x in destroyed.facts
+        if x.get("kind") == "structure_destroyed_source" and x.get("entity") == original.id
+    ]
+    assert len(stamps) == 1 and stamps[0]["source"] == second
+    assert len([x for x in destroyed.strain.triggers if x.entity == original.id]) == 1
+    with ledger.engine.connect() as c:
+        assert ship_paid(game, c, destroyed, receipt).award == award.id
+        assert (
+            prove_drop(game, c, destroyed, first).device
+            != prove_drop(game, c, destroyed, second).device
+        )
+    bomb.finish(ADMIN, str(uuid4()), second, destroyed.revision)
+    public = WorldService(MissionService(ledger)).get(OTHER)["world"]
+    site = next(x for x in public["locations"] if x["id"] == original.id)
+    assert site["condition"] == "destroyed"
+    assert site["ship"] == {"armoured": False, "airborne": False}
+    assert "fallout_sources" not in site
+    assert award.id not in str(public) and "PRIVATE_NUCLEAR_CAPABILITY" not in str(public)
+
+
+def test_actual_nuclear_perimeter_breach_removes_relief_and_protected_study_before_destruction(
+    ledger, tmp_path, monkeypatch
+):
+    from girlframe.engine import m3_contaminant_zone as zones
+    from girlframe.engine import m3_handler_ordinary as ordinary
+    from girlframe.engine.m3_strain import effective_levels
+    from girlframe.services.m3_contaminant_zone import ContaminantZoneService, zone_proof
+
+    game, bomb, acquisition, _, _, strain = ready(ledger, tmp_path, monkeypatch)
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(rules.RULE, zones.RULE, ordinary.RULE, *awards.RULES),
+    )
+    strain = StrainService(OffDutyService(MissionService(ledger)), dice=D6(6))
+    award = world_interaction_award(strain, game)
+    quarantine = ContaminantZoneService(ledger)
+    source = quarantine.buy(
+        ADMIN,
+        str(uuid4()),
+        award.id,
+        state(game).revision,
+        "The genuine second Award grants my original quarantine authority",
+    )["id"]
+    world = WorldService(MissionService(ledger))
+    manager = Npc(
+        id="actual-nuclear-study-manager",
+        name="PRIVATE_ORIGINAL_RESEARCH_MANAGER",
+        jobs=("scientist",),
+        detail="Actual scientist assigned to the real protected field study",
+        controller=1,
+        cell=(4, 3),
+    )
+    world.npc(ADMIN, str(uuid4()), state(game).revision, manager)
+    request = zones.Quarantine(
+        cells=((4, 3), (4, 4)),
+        effects=("void_relief", "field_study"),
+        perimeter="The actual continuous containment fence surrounding these two map squares",
+        account="The original Handler physically establishes this real two-square quarantine",
+        study=zones.StudySetup(
+            location=Location(
+                id="actual-nuclear-study",
+                name="Actual protected field study",
+                kind="important",
+                cell=(4, 3),
+            ),
+            manager=manager.id,
+        ),
+    )
+    quarantine.quarantine(ADMIN, str(uuid4()), source, state(game).revision, request)
+    before = state(game)
+    original = zones.zones(before)[0]
+    site = next(x for x in before.world.locations if x.id == request.study.location.id)
+    assert site.protection_sources == (original.id,) and site.condition == "intact"
+    assert (
+        before.strain.levels["void"] == "high" and effective_levels(before.strain)["void"] == "low"
+    )
+    assert original.id in before.strain.void_relief_sources
+    public_before = world.get(OTHER)["world"]
+    assert any(x["protected"] for x in public_before["field_studies"])
+    assert manager.name not in str(public_before) and "manager" not in str(public_before)
+    nuclear = device(bomb, game, acquisition, "Actual containment-breach nuclear device", (3, 3))
+    key = str(uuid4())
+    arguments = (
+        ADMIN,
+        key,
+        acquisition.id,
+        state(game).revision,
+        nuclear,
+        (5, 3),
+        ("gentle_fallout", "cores"),
+        "Actual nuclear release at 3,3 crosses the original containment fence at impact 5,3",
+    )
+    evidence = {
+        original.id: (
+            "PRIVATE_ACTUAL_BREACH: the crossing blast physically destroys "
+            "the original recorded fence at the 4,3 to 5,3 boundary"
+        )
+    }
+    identity = bomb.drop(*arguments, breaches=evidence)["id"]
+    after = state(game)
+    breached = zones.zones(after)[0]
+    value = next(x for x in rules.drops(after) if x.id == identity)
+    assert breached.broken_event == value.initial_event and breached.breach_actor is None
+    assert (
+        breached.breach_cell in original.cells and breached.breach_account == evidence[original.id]
+    )
+    destroyed = next(x for x in after.world.locations if x.id == site.id)
+    assert destroyed.condition == "destroyed" and not destroyed.protection_sources
+    assert not next(x for x in after.world.field_studies if x.zone == original.id).protected
+    assert not next(x for x in after.world.npcs if x.id == manager.id).alive
+    assert after.world.territory == before.world.territory
+    assert (
+        after.strain.levels["void"] == "high" and effective_levels(after.strain)["void"] == "high"
+    )
+    assert original.id not in after.strain.void_relief_sources
+    assert (
+        after.strain.events == before.strain.events
+        and after.strain.requests == before.strain.requests
+    )
+    assert bomb.drop(*arguments, breaches=evidence)["id"] == identity and state(game) == after
+    with ledger.engine.connect() as c:
+        assert zone_proof(game, c, after, original.id) == breached
+        assert prove_drop(game, c, after, identity).breaches == evidence
+    bomb.finish(ADMIN, str(uuid4()), identity, after.revision)
+    public = world.get(OTHER)["world"]
+    assert not next(x for x in public["field_studies"] if x["location"] == site.id)["protected"]
+    assert manager.name not in str(public) and "manager" not in str(public)
+    assert "PRIVATE_ACTUAL_BREACH" not in str(public)
+    assert source not in str(public) and award.id not in str(public)
+    assert any(x.get("kind") == "a_bomb_perimeter_breach" for x in state(game).facts)

@@ -1,5 +1,60 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## A-Bomb world interactions verified; pre-Marriage regression boundary — 2026-11-07
+
+Source extends local `ac91aa0`. Two new ordinary world cases are frozen in
+`var/m3-a-bomb-world-interactions-source-snapshot.json`. **No production code
+changed.** The entire original test/helper prefix has the same normalized AST as
+that baseline; the prior two core blast results remain reused scoped evidence.
+
+An actual second Award comes from real Strain preparation, High6.2 cascades and
+Void6 claim/proof, preserving the original Award, state and unrelated pending
+work. Actual Ship-Base acquisition then proves Armoured intercepts a real blast:
+the same Base/position remains, no false structure/Budget destruction trigger is
+created, and exact-key replay changes nothing. A distinct second nuclear device
+then genuinely destroys the unarmoured Base and creates exactly one real trigger.
+
+Actual Quarantine/Field Study on an original two-cell perimeter uses a real NPC
+manager and owned source receipts. A crossing nuclear blast with factual physical
+breach evidence removes protection before actual site destruction/NPC death.
+Temporary Void relief and protection end, while natural High Void, permanent
+territory and original history persist. Private proof/History and sanitized public
+projections remain available; retry does not duplicate effects. This closes the
+two previously unexercised ordinary Armoured/quarantine interaction gaps; it does
+not claim broader conditional-body or separate nuclear Doctor coverage.
+
+Exact selection: test_actual_armoured_ship_intercepts_blast_then_unarmoured_base_is_destroyed
+and test_actual_nuclear_perimeter_breach_removes_relief_and_protected_study_before_destruction,
+with `--junitxml=var/m3-a-bomb-world-interactions-normal.xml`: **2 passed /5.85s**.
+Changed test Ruff/format pass; no source types were rerun because production is
+unchanged. One final adjacent-literal wrap has identical normalized AST; no test
+rerun solely for formatting. Earlier failures were stale cached synthetic approval
+and an obsolete public-projection assertion; real services were reopened against
+the same saved state, without resetting or loosening source/approval rules.
+Commands, failed attempts and hashes: `var/m3-a-bomb-world-interactions-evidence.json`.
+
+The focused CI selection now includes the blast module and each previously
+verified affected Award/Budget/passenger path, retaining the earlier NPC/Bond and
+recipient-privacy checks. Selector collection is recorded separately in
+`var/m3-world-interactions-ci-collection.json`; collection is not test execution or
+remote CI. No previous green tests were rerun without a relevant source change.
+
+The next work crosses shared Status, seven Permission grant paths, more than twenty
+direct charge/loss paths, immutable receipt proof and allocated Punishment sources.
+Marriage producer contracts are source-only, with no implementation released.
+Per the owner's instruction to stop when regression testing is required, freeze
+this integration baseline before that shared-core migration. The next broad check
+is documented in [M3_PRE_MARRIAGE_REGRESSION.md](../docs/M3_PRE_MARRIAGE_REGRESSION.md)
+and is **NOT_RUN**. This is an earlier integration baseline for a specific shared-
+core concern, not a final M3 candidate or rules-complete claim. No broad/full suite,
+global static run or live migration was performed in this handoff.
+
+M3 remains RULES_SUBSET; original conditional-body/source and remaining required
+systems, final integrated verification, independent source/clarity review and
+human acceptance stay open. Registry counts and interpretations are unchanged;
+only current evidence notes were reconciled. Bot off; local source only, no
+push/deploy/restart/environment publication/private-engine writes/AI/Ancillary.
+
 ## A-Bomb actual device, blast outcomes and shared source consumers — 2026-11-07
 
 Source extends local `907b166`; exact 28 changed Python files are frozen in

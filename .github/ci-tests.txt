@@ -1,5 +1,13 @@
-# Genuine NPC Bond cost ->actual controller Conversation ->addressed private receipt.
-# Existing canonical relationship primitives and scoped notice privacy remain separate.
+# Current M3 integration: actual blast branches, armour/quarantine interactions,
+# prior awards and each affected Budget writer/passenger source.
+tests/rules/test_a_bomb.py
+tests/rules/test_handler_advancements.py
+tests/rules/test_retained_martyr.py::test_retained_martyr_real_defeat_death_original_memorial_and_next_strain
+tests/rules/test_girl_insurance.py::test_high_budget_real_insurance_death_and_actual_empty_frame_storage_release
+tests/rules/test_politician_bribery.py::test_actual_cadre_political_aid_budget_tag_and_causal_job_loss_with_saved_history
+tests/rules/test_strain_service.py::test_three_real_dice_and_handler_column_choices_are_saved_without_false_effect_completion
+tests/rules/test_mockingbird_communion.py::test_actual_guest_subsumption_requires_genuine_core_voice_and_real_extraction_then_medical_help
+# Preserve the prior actual NPC Bond and recipient privacy checks.
 tests/rules/test_npc_bond_play.py
 tests/rules/test_actor_bonds.py
 tests/rules/test_handler_plays.py::test_source_notice_reaches_only_affected_original_humans_without_private_npc_details

@@ -5668,7 +5668,7 @@
       "alternatives": [
         "Treat any area overlap as automatic protection cancellation."
       ],
-      "implementation_note": "Preserve actual source, original people/resources, mandatory proof and canonical receipts. No new generic waiver or actor alias. Implemented source-bound helper is not demonstrated by the final two blast normals; retain that verification gap.",
+      "implementation_note": "Preserve actual source, original people/resources, mandatory proof and canonical receipts. No new generic waiver or actor alias. The source-bound quarantine breach and relief/protection cleanup are now demonstrated by test_actual_nuclear_perimeter_breach_removes_relief_and_protected_study_before_destruction. The earlier two core blast normals did not exercise this interaction; independent clarity and broader body/source review remain pending.",
       "change_impact": "Actual original perimeter/source proof is mandatory; shared cleanup removes relief/protection while permanent outcomes persist. Future clarification must preserve original effects/history; requires printed-rule clarity review.",
       "provenance": "owner_approved_campaign_ruling",
       "authority": "delegated_recommendation",
