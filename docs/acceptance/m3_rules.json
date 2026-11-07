@@ -1087,6 +1087,32 @@
           "limitation": "Ending/replacement/Handler-roster recovery; nonparty/remote/unknown-position witness; separately played married Permission-loss Defeat/sharedDog/tiedTag branches and further body/Class combinations remain visible gaps. No full regression, independent source review, human acceptance or deployment claim. Six interpretations require clarity review."
         }
       ]
+    },
+    {
+      "id": "M3G-PROMOTIONAL-OPPORTUNITY-NORMAL-001",
+      "title": "Actual neighbouring map, source-proved rival downfall and responsibility",
+      "expected": "Native original Award creates three real boons/two threats; genuine arranged NPC death authorizes takeover, actual Base intake and regional source effects; original map/bodies/history preserved.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_promotional_opportunity.py"
+      ],
+      "related_cases": [
+        "M3-ADD-001",
+        "M3G-WORLD-001"
+      ],
+      "evidence": [
+        {
+          "test_name": "test_native_actual_map_rival_downfall_takeover_physical_storage_and_world; alternate resource cases",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_promotional_opportunity.py::test_native_actual_map_rival_downfall_takeover_physical_storage_and_world --junitxml=var/m3-promotional-registry-final.xml",
+          "actual_result": "Main1/7.09s, alternatives2/3.87s, oldcompat11/5.12s separate; final registry+storage source authority delta1/6.11s. Coherent19Python18source static and registry/repository pass.",
+          "log_or_trace": "var/m3-promotional-opportunity-contract.json; var/m3-promotional-union-static.json; var/m3-promotional-union-source-snapshot.json; var/m3-promotional-registry-final.xml",
+          "git_commit": "4e59ccd38965da3844f51492e708c174d0c2bf2b",
+          "limitation": "Ordinary rivalNPC death source only; nonfatal/native/Director/other death producer, body/office inheritance and known-body actual transport remain adapters. No separate regional A-Bomb/lifecycle matrix/full regression/independent/player approval. Five interpretations require source clarity review."
+        }
+      ]
     }
   ],
   "enabled_modules": [
