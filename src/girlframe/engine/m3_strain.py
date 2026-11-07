@@ -60,6 +60,11 @@ def copy(state: State, **updates: object) -> State:
     return State.model_validate_json(state.model_copy(update=updates).model_dump_json())
 
 
+def effective_levels(state: State) -> dict[Track, Severity]:
+    """Temporary quarantine relief never overwrites the natural Strain progression."""
+    return state.levels | ({"void": "low"} if state.void_relief_sources else {})
+
+
 def start(state: State, period_id: str, facts: StartFacts) -> State:
     if not period_id.strip() or period_id in state.periods or not facts.account.strip():
         raise ValueError("Each actual Off-Duty period has one explicit factual Strain start")
@@ -103,7 +108,7 @@ def start(state: State, period_id: str, facts: StartFacts) -> State:
                 id=period_id + ":strain:" + track,
                 period_id=period_id,
                 track=track,
-                severity=levels[track],
+                severity="low" if track == "void" and state.void_relief_sources else levels[track],
             )
             for track in TRACKS
         ),

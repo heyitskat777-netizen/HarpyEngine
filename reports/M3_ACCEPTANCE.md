@@ -1,5 +1,65 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Tracker Implants and Contaminant Zone normal workflows — 2026-11-07
+
+Source extends local `04a4160`. Exact **30 changed Python files / 28 source
+modules** are frozen in ignored
+`var/m3-tracker-contaminant-final-source-snapshot.json`; all hashes matched at
+integration. One coherent union passes Ruff/format/mypy, recorded in
+`var/m3-tracker-contaminant-static.json`. M3 remains **RULES_SUBSET**.
+
+Tracker spends a real held award, installs actual private source-bound hardware
+at original body sites/vessels, and reads current canonical location. Its native
+intercept commits real contact; voyeur consumes an original human's actual
+fictional moment, with private Handler-only saved knowledge. Removal recovers the
+same object through normal Item custody proofs. Real mapped Girl-body Void changes
+produce alerts; unmapped anatomy is attributed by the original human to a genuine
+committed Dive source. Generic all-Void/Frame-Void/Handler assertions are rejected.
+The optional initial Handler-position control records only its own unknown
+presence; known positions and other people never move through that control.
+
+Tracker normal: **1 passed / 7.804s**; exact affected native Handler form, notice
+privacy and genuine Void6-award compatibility: **3 passed / 3.346s**. The normal
+uses real cockpit/pose operations and live reads, **not a distinct-square journey**.
+Earlier failed attempts were test adapter acknowledgments/route/Markdown handling;
+corrected artifacts remain retained. Other source/GM anatomy, roster/body/career
+and ordinary map-walking adapters remain explicit gaps, not inferred features.
+
+Contaminant acquisition quarantines a real connected area and chooses exactly two
+printed effects. Across two normal traces, actual Void relief affects the next
+Strain request while underlying levels evolve; existing Gorgons become Dormant
+without resource resets and really awaken; actual contained groups end as
+organizations and create source-proved usable world Harpies; actual study sites
+and present managers gain the finite protection. Native sourced warp creates a
+real public terrain feature. Actual breach removes only relief/protection,
+preserving permanent outcomes, other sources and intervening events. Harpy birth
+uses its own genuine producer proof, never a fabricated factual-setup approval.
+Public map projection omits manager/private source data.
+
+Contaminant evidence is deliberately segmented: first normal **passed** in an
+attempt with **1 failed / 1 passed / 5.76s** (second test used an undeferred fake
+Picker). Its called acquisition/quarantine/Strain/break paths did not change
+subsequently; later source changes were warp-only. Final second normal plus prior
+award compatibility: **4 passed / 9.36s**. No single final two-normal process or
+full-regression pass is claimed. Original attempts and exact called-path reuse
+are recorded in `var/m3-contaminant-zone-handoff.json`. Tracker evidence is in
+`var/m3-tracker-implants-handoff.json`; no rerun merely to manufacture a green XML.
+
+Metadata:183 subsets,293 unimplemented,330 clarifications;476 total,439 required
+core,37 deferred Ancillary,zero independent approvals. These counts are inventory,
+not equal-sized work units or progress percentages. Full remaining gameplay,
+independent/printed review, final integrated regression and human acceptance stay
+open. Bot off; local source only, no deployment/push/live migration/environment
+publication/private-engine writes/AI/M4/Ancillary.
+
+Owner's new efficiency request was assessed read-only while these active files
+were owned/frozen. Demonstrated award-consumption/proof duplication remains in
+Secretary/Deep-Brain-Spikes/Tracker; a small pilot follows this integration.
+Repeated task projections and Secretary-coupled synthetic setup are also bounded
+candidates. No active infrastructure was refactored mid-work, and no test-speed
+improvement is asserted. A concise current queue and scoped acceptance-tracker
+reconciliation will accompany those pilots; historical evidence stays intact.
+
 ## Captive player Execution source and addressed Secretary delivery — 2026-11-07
 
 Local source extends `b2c0f95`; exact eight changed Python files are frozen in

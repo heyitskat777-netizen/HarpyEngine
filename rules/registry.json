@@ -5449,6 +5449,70 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "tracker-anatomical-source-attribution",
+      "policy_key": "tracker_anatomical_source_attribution",
+      "summary": "Tracker sites bind actual original hardware/vessel and anatomy. Mapped sites use a real Girl Asset Void transition; an unmapped site needs an original human's factual attribution to a genuine same-body Void source, not a generic Void flag.",
+      "source": "Rulebook PDF155/printed153 Tracker Implants",
+      "rationale": "The rule names the implanted body part. Requiring every site to be an Asset invents anatomy; alerting for all Void overstates reach.",
+      "alternatives": [
+        "All-Void or Frame-Void alerts; requiring every anatomical site to be an existing Asset."
+      ],
+      "change_impact": "The finite unmapped adapter currently proves the original human's real Dive transition. Further actual source/GM adapters remain separate. New acquisition/old transition cannot create retroactive alerts; source history and private placement stay preserved.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Installed hardware/site/vessel uses real canonical source proofs. Mapped automatic observer and finite original-human Dive attribution preserve anatomical scope; alerts do not consume or remove still-attached hardware."
+    },
+    {
+      "id": "tracker-original-scene-observation",
+      "policy_key": "tracker_original_scene_observation",
+      "summary": "Interception uses actual known co-presence; voyeur observes a genuine scene-bound fictional moment authored by its original human source. Neither creates travel, player consent or private-chat access.",
+      "source": "Rulebook PDF155/printed153 Tracker Implants Handler Plays",
+      "rationale": "The special Plays have real fictional effects without granting OOC transcript ingestion or knowledge of private notes. Unknown initial own Handler position can be truthfully sourced once; known positions require actual travel.",
+      "alternatives": [
+        "Handler narration alone invents observation; teleporting interception; passive transcript access."
+      ],
+      "change_impact": "The completed observation is Handler-only Requests/History. Target retains its own moment without a voyeur notice. Further bodily/actor/travel adapters remain required; no tested distinct-square journey is claimed.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Native source grants admit only their exact printed Play, actual current original body/contact and original human moment. Optional initial own position rejects known/offstage/custody; completed voyeur notice is Handler-only."
+    },
+    {
+      "id": "contaminant-contained-group-replacement",
+      "policy_key": "contaminant_contained_group_replacement",
+      "summary": "Quarantine is a connected area of at least two actual squares. A Rebel Group with its actual whole footprint inside is destroyed as an organization and replaced by one genuine new world Harpy; existing members are not automatically killed.",
+      "source": "Rulebook PDF156/printed154 Contaminant Zone",
+      "rationale": "Wholly contained footprint bounds the printed area and avoids silently destroying distant organization resources. A group is not one existing player person; new Harpy birth must prove its own real source.",
+      "alternatives": [
+        "Any overlap destroys a remote group; treat each member as killed or converted; create only a Harpy label."
+      ],
+      "change_impact": "Preserve original faction JSON/membership history and source-authored Harpy body/resources. Partial footprints and conditional original-person conversions remain separate; changes never rewrite prior members or birth sources.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "The source stores connected cells and original faction JSON; only wholly contained active footprints produce one new actual source-proved Harpy each. Existing named members and their resources/careers remain unchanged."
+    },
+    {
+      "id": "contaminant-source-effect-duration",
+      "policy_key": "contaminant_source_effect_duration",
+      "summary": "Void relief supplies effective Low while its quarantine survives; natural Strain progression is retained. Study protection expires at real breach. Territory, organizational replacement and creation-time Gorgon dormancy are not rolled back.",
+      "source": "Rulebook PDF156/printed154 Contaminant Zone; PDF165/printed163 Dormant",
+      "rationale": "Only Void reduction is explicitly temporary. Study protection is tied to the quarantine; dormancy is a real Class change, not repeated sleep or a refreshed Asset package.",
+      "alternatives": [
+        "Restore an old Strain snapshot, undo destroyed groups/territory, repeatedly re-sleep every arrival, or grant permanent invulnerability."
+      ],
+      "change_impact": "Break removes only that source, preserving other zones and intervening Strain/events. Existing actual awakening/owned Void works. Finite protection consumers are world destruction and ordinary unopposed manager Attack; further actor/context adapters remain explicit.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Source-bound effective_levels feeds actual Strain start and Harpy conversion severity; breach removes only the surviving relief/protection sources. Actual Class/resources, terrain/organization history and existing awakening consumers remain canonical."
     }
   ],
   "entries": [
@@ -16702,14 +16766,16 @@
         "heading": "Tracker Implants"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_tracker_implants.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -16725,14 +16791,16 @@
         "heading": "Contaminant Zone"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_contaminant_zone.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

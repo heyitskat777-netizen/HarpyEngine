@@ -651,6 +651,17 @@ class HarpyDefeatService:
             from girlframe.services.m3_janus import prove_core
 
             return prove_core(c, self.game, state, actor)
+        if isinstance(body, NativeHarpyRuntime):
+            origin_kind = c.scalar(
+                sa.select(t.events.c.kind).where(
+                    t.events.c.campaign_id == self.store.campaign_id,
+                    t.events.c.id == body.source_event,
+                )
+            )
+            if origin_kind == "m3.contaminant_quarantined":
+                from girlframe.services.m3_contaminant_zone import prove_harpy
+
+                return prove_harpy(self.game, c, state, actor)
         raw = c.scalar(
             sa.select(t.m2["m2_state_history"].c.body_json).where(
                 t.m2["m2_state_history"].c.campaign_id == self.store.campaign_id,

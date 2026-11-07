@@ -66,6 +66,8 @@ class Award(Model):
             "handler-advancement.handler-advancement.bomb-collar",
             "handler-advancement.handler-advancement.hidden-sidearm",
             "handler-advancement.handler-advancement.reign-of-terror",
+            "handler-advancement.handler-advancement.tracker-implants",
+            "handler-advancement.handler-advancement.contaminant-zone",
         ]
         | None
     ) = Field(default=None, exclude_if=lambda value: value is None)

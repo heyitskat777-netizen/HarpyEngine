@@ -24,6 +24,21 @@ def select(state: GameState, identity: str, play: Play, effect: Effect, event: s
     expected = "mess" if effect.kind in ("status", "tag", "damage") else effect.kind
     if grant.state != "pending" or play != expected or not event.strip():
         raise ValueError("Use this actual pending Handler Play and its matching effect")
+    from girlframe.engine import m3_tracker_implants as trackers
+
+    tracker_source = next(
+        (x for x in trackers.records(changed, trackers.PlaySource) if x.id == grant.id), None
+    )
+    if tracker_source is not None:
+        if play != tracker_source.play or grant.clause != "tracker:" + tracker_source.tracker:
+            raise ValueError("This actual tracker source grants only its own printed Play")
+    elif play in ("tracker_intercept", "tracker_voyeur"):
+        raise ValueError("A basic Handler grant has no tracker authority")
+    if grant.clause.startswith("contaminant-zone:"):
+        if play != "contaminant_warp" or grant.clause != "contaminant-zone:" + str(effect.zone):
+            raise ValueError("This zone source grants only its actual warp Play")
+    elif play == "contaminant_warp":
+        raise ValueError("A basic Handler grant has no quarantined-zone authority")
     if grant.nonbody_only and effect.kind not in ("brief", "escalate", "support", "expectation"):
         raise ValueError(
             "The actual original ended; only the source-owned nonbody procedure remains"

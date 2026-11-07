@@ -1330,6 +1330,7 @@ def pc_handler_presence(
         "cute_uniform_actual_dressing_position",
         "hidden_sidearm_actual_position",
         "reign_terror_actual_position",
+        "tracker_initial_handler_position",
         "handler_transport_arrived",
         "leviathan_actual_arrival",
     }

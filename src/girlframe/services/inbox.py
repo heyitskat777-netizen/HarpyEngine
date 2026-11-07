@@ -865,6 +865,52 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_tracker_implants import TrackerService
+
+            for tracker in TrackerService(self.store)._tasks(connection, viewer):
+                tracker_pending = bool(tracker["pending"])
+                items.append(
+                    InboxItem(
+                        "m3_tracker_implants:" + tracker["id"],
+                        "m3_tracker_implants",
+                        tracker["id"],
+                        tracker["revision"],
+                        "playbook",
+                        tracker["label"],
+                        "Original source owner or explicitly addressed controller",
+                        "pending" if tracker_pending else "established",
+                        tracker_pending,
+                        False,
+                        "Review actual installed hardware, location or source-owned alerts.",
+                        "Actual people, physical sources and private audience stay bound.",
+                        "Review Tracker Implants",
+                        task="m3_tracker_implants",
+                    )
+                )
+
+            from girlframe.services.m3_contaminant_zone import ContaminantZoneService
+
+            for zone in ContaminantZoneService(self.store)._tasks(connection, viewer):
+                zone_pending = bool(zone["pending"])
+                items.append(
+                    InboxItem(
+                        "m3_contaminant_zone:" + zone["id"],
+                        "m3_contaminant_zone",
+                        zone["id"],
+                        zone["revision"],
+                        "playbook",
+                        zone["label"],
+                        "Original source owner or explicitly addressed controller",
+                        "pending" if zone_pending else "established",
+                        zone_pending,
+                        False,
+                        "Review actual territory, quarantine effects and source-owned operations.",
+                        "Actual people, physical sources and private audience stay bound.",
+                        "Review Contaminant Zone",
+                        task="m3_contaminant_zone",
+                    )
+                )
+
             from girlframe.services.m3_reign_terror import ReignTerrorService
 
             for reign in ReignTerrorService(self.store)._tasks(connection, viewer):

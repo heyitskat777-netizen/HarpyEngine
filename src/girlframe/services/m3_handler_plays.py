@@ -452,6 +452,14 @@ def _source(c: Connection, game: "GameService", identity: str) -> tuple[GameStat
         raise WorkflowError(
             "SOURCE_HANDLER_PLAY_MISSING: recover this actual owned grant's immutable event."
         )
+    if grant.clause.startswith("tracker:"):
+        from girlframe.services.m3_tracker_implants import prove_tracker_play
+
+        prove_tracker_play(game, c, state, grant)
+    elif grant.clause.startswith("contaminant-zone:"):
+        from girlframe.services.m3_contaminant_zone import prove_warp
+
+        prove_warp(game, c, state, grant)
     if grant.source == "battle_counter":
         answer = c.scalar(
             sa.select(t.m2["m2_responses"].c.answer_json).where(
@@ -526,6 +534,14 @@ def _source(c: Connection, game: "GameService", identity: str) -> tuple[GameStat
 def _authority(c: Connection, game: "GameService", state: GameState, grant: HandlerPlay) -> None:
     if not HandlerService(game.store)._member(c, grant.chooser_controller):
         raise WorkflowError("The original decision owner must remain a campaign member.")
+    if grant.clause.startswith("tracker:"):
+        from girlframe.services.m3_tracker_implants import prove_tracker_play
+
+        prove_tracker_play(game, c, state, grant)
+    elif grant.clause.startswith("contaminant-zone:"):
+        from girlframe.services.m3_contaminant_zone import prove_warp
+
+        prove_warp(game, c, state, grant)
     if grant.source in ("ordinary", "required"):
         if grant.source == "required" and grant.clause == "doctor_support.low":
             from girlframe.services.m3_battle import _scene_judge
@@ -970,7 +986,14 @@ class HandlerPlayService:
                 state=x.state,
             )
             for x in reversed(state.handler_plays)
-            if x.effect_event and viewer.user_id in x.target_controllers.values()
+            if x.effect_event
+            and (
+                (x.selected == "tracker_voyeur" and viewer.user_id == x.chooser_controller)
+                or (
+                    x.selected != "tracker_voyeur"
+                    and viewer.user_id in x.target_controllers.values()
+                )
+            )
         ][:25]
 
     def notice(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
@@ -987,6 +1010,8 @@ class HandlerPlayService:
             if grant.effect is None or grant.effect_event is None:
                 raise WorkflowError("The owner has not committed this actual Handler Play yet.")
             effect = grant.effect
+            if grant.selected == "tracker_voyeur" and viewer.user_id != grant.chooser_controller:
+                raise WorkflowError("This observed knowledge belongs only to its original Handler")
             return dict(
                 id=identity,
                 play=grant.selected,
@@ -1007,6 +1032,8 @@ class HandlerPlayService:
             self.game.authorize(c, viewer, game=False)
             HandlerService(self.store).authorize(c, viewer)
             state = load_state(c, self.store.campaign_id)
+            from girlframe.services.m3_contaminant_zone import warp_options
+
             return dict(
                 game_revision=state.revision,
                 plays=BASIC,
@@ -1021,7 +1048,44 @@ class HandlerPlayService:
                     if s.character_id
                 ],
                 tasks=self._tasks(c, viewer),
+                warp_zones=warp_options(self.game, c, state, active_handler(state)),
             )
+
+    def start_warp(self, viewer: GuildViewer, key: str, expected: int, zone: str) -> dict[str, Any]:
+        def access(c: Connection) -> None:
+            Access(self.store).authorize(c, viewer, "plays")
+            HandlerService(self.store).authorize(c, viewer)
+            self.game.unpaused(c)
+
+        def operation(c: Connection) -> dict[str, Any]:
+            from girlframe.services.m3_contaminant_zone import start_warp
+
+            _ordinary_scene_idle(c, self.game)
+            state = load_state(c, self.store.campaign_id)
+            if state.revision != expected:
+                raise WorkflowError("Reopen the actual active quarantined zone")
+            event = str(uuid4())
+            identity = start_warp(self.game, c, state, viewer, zone, event)
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.handler_play_started",
+                state,
+                event_id=event,
+                grant_id=identity,
+            )
+            return dict(id=identity, game_revision=state.revision)
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.handler_play_started",
+            dict(expected=expected, zone=zone),
+            operation,
+            auto_audit=False,
+            authorize=access,
+        )
 
     def start(
         self, viewer: GuildViewer, key: str, expected: int, targets: tuple[ActorRef, ...]
@@ -1183,13 +1247,33 @@ class HandlerPlayService:
                 executors.append(
                     dict(ref=ref.model_dump(mode="json"), token=ref.token, label=actor.label)
                 )
+            special_plays = None
+            observed = None
+            zone = None
+            if grant.clause.startswith("tracker:"):
+                from girlframe.engine import m3_tracker_implants as trackers
+                from girlframe.services.m3_tracker_implants import prove_moment, prove_tracker_play
+
+                source = prove_tracker_play(self.game, c, state, grant)
+                special_plays = tuple(x for x in trackers.PLAYS if x[0] == source.play)
+                if source.moment:
+                    observed = prove_moment(self.game, c, state, source.moment).account
+            elif grant.clause.startswith("contaminant-zone:"):
+                from girlframe.engine.m3_handler_play_state import EXTRA
+                from girlframe.services.m3_contaminant_zone import prove_warp
+
+                zone = prove_warp(self.game, c, state, grant).id
+                special_plays = tuple(x for x in EXTRA if x[0] == "contaminant_warp")
             return dict(
                 id=identity,
                 game_revision=state.revision,
                 grant=grant.model_dump(mode="json"),
                 stale=stale,
                 targets=targets,
-                plays=tuple(
+                observed_moment=observed,
+                zone=zone,
+                plays=special_plays
+                or tuple(
                     x
                     for x in BASIC
                     if not grant.nonbody_only
@@ -1341,15 +1425,48 @@ class HandlerPlayService:
                     profiles(c, self.store.campaign_id),
                     require_current_profile=False,
                 )
-            if effect.source_label is not None and effect.source_label not in dict(
-                source_labels(state, grant)
+            if (
+                effect.kind != "contaminant_warp"
+                and effect.source_label is not None
+                and effect.source_label not in dict(source_labels(state, grant))
             ):
                 raise WorkflowError(
                     "This optional source prompt does not belong to the actual affected Cadre."
                 )
             event = str(uuid4())
             state = rules.select(state, identity, play, effect, event)
-            if effect.kind == "off_duty":
+            if effect.kind in ("tracker_intercept", "tracker_voyeur"):
+                from girlframe.services.m3_tracker_implants import apply_play
+
+                state = apply_play(self.game, c, state, grant, effect)
+                state = rules.complete(state, identity, event)
+            elif effect.kind == "contaminant_warp":
+                from girlframe.services.m3_contaminant_zone import apply_warp, prove_warp
+
+                zone_source = prove_warp(self.game, c, state, grant)
+                if (
+                    grant.chooser_actor is None
+                    or grant.appointment is None
+                    or effect.cell is None
+                    or effect.zone != zone_source.id
+                ):
+                    raise WorkflowError("Use the exact source-owned zone and original Handler")
+                state = apply_warp(
+                    self.game,
+                    c,
+                    state,
+                    handler=grant.chooser_actor,
+                    appointment=grant.appointment,
+                    zone=zone_source.id,
+                    cell=effect.cell,
+                    label=effect.source_label or "",
+                    description=effect.detail,
+                    event=event,
+                    grant=identity,
+                    scene=grant.scope.scene_id,
+                )
+                state = rules.complete(state, identity, event)
+            elif effect.kind == "off_duty":
                 assert effect.off_duty is not None
                 _off_duty(c, self.game, grant, effect.off_duty)
             elif effect.kind == "punish":

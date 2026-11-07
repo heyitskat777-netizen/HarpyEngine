@@ -196,6 +196,35 @@ class WorldService:
                         if x.revealed
                     ],
                     "territory": [list(x) for x in sorted(world.territory)],
+                    **(
+                        {
+                            "features": [
+                                {
+                                    "id": feature.id,
+                                    "cell": list(feature.cell),
+                                    "label": feature.label,
+                                    "description": feature.description,
+                                }
+                                for feature in world.features
+                            ]
+                        }
+                        if world.features
+                        else {}
+                    ),
+                    **(
+                        {
+                            "field_studies": [
+                                {
+                                    "id": study.id,
+                                    "location": study.location,
+                                    "protected": study.protected,
+                                }
+                                for study in world.field_studies
+                            ]
+                        }
+                        if world.field_studies
+                        else {}
+                    ),
                 },
             }
 

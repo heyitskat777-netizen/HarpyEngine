@@ -76,6 +76,7 @@ class Location(PlacedEntity):
     allegiance: Literal["foundation", "rebel", "independent"] = "foundation"
     condition: Literal["intact", "damaged", "destroyed"] = "intact"
     blocked_by: tuple[str, ...] = ()
+    protection_sources: tuple[str, ...] = Field(default=(), exclude_if=lambda x: not x)
 
     @property
     def operational(self) -> bool:
@@ -286,8 +287,29 @@ class NpcRoleOffer(Model):
     response_event: str | None = None
 
 
+class FieldStudy(Model):
+    id: str = Field(min_length=1)
+    zone: str = Field(min_length=1)
+    location: str = Field(min_length=1)
+    manager: str = Field(min_length=1)
+    source_event: str = Field(min_length=1)
+    protected: bool = True
+
+
+class AreaFeature(Model):
+    id: str = Field(min_length=1)
+    zone: str = Field(min_length=1)
+    cell: Cell
+    label: str = Field(min_length=1, max_length=120)
+    description: str = Field(min_length=1, max_length=1200)
+    source_event: str = Field(min_length=1)
+    grant: str = Field(min_length=1)
+
+
 class World(Model):
     board: Board
+    features: tuple[AreaFeature, ...] = Field(default=(), exclude_if=lambda x: not x)
+    field_studies: tuple[FieldStudy, ...] = Field(default=(), exclude_if=lambda x: not x)
     locations: tuple[Location, ...]
     npcs: tuple[Npc, ...] = ()
     gorgons: tuple[Gorgon, ...] = ()
@@ -319,6 +341,21 @@ class World(Model):
         ) or any(x.cell is not None and not self.board.contains(x.cell) for x in self.gorgons):
             raise ValueError("Entities must occupy squares on the current map")
         factions, npcs = {x.id for x in self.factions}, {x.id for x in self.npcs}
+        sites = {x.id: x for x in self.locations}
+        if (
+            len({x.id for x in self.features}) != len(self.features)
+            or any(not self.board.contains(x.cell) for x in self.features)
+            or len({x.id for x in self.field_studies}) != len(self.field_studies)
+        ):
+            raise ValueError("Keep distinct source-owned features and actual study sites")
+        for study in self.field_studies:
+            if study.location not in sites or study.manager not in npcs:
+                raise ValueError("An actual field study requires its real site and NPC manager")
+        for site in self.locations:
+            if len(set(site.protection_sources)) != len(site.protection_sources) or set(
+                site.protection_sources
+            ) != {x.zone for x in self.field_studies if x.location == site.id and x.protected}:
+                raise ValueError("Protected locations require their actual source-owned study")
         if any(x.npc not in npcs for x in self.starting_npc_links) or len(
             {(x.owner, x.character_id, x.slot) for x in self.starting_npc_links}
         ) != len(self.starting_npc_links):

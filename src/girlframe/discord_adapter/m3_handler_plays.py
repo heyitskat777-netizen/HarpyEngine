@@ -10,7 +10,7 @@ from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
-from girlframe.engine.m3_handler_play_state import BASIC, Effect, Play
+from girlframe.engine.m3_handler_play_state import BASIC, EXTRA, Effect, Play
 from girlframe.engine.m3_world_state import Npc
 from girlframe.services.m3_handler_plays import HandlerPlayService
 from girlframe.services.onboarding import WorkflowError
@@ -23,10 +23,22 @@ async def open_handler_plays(interaction: discord.Interaction, service: HandlerP
         ("new", "Make a basic Handler Play"),
         ("off_duty", "Go Off-Duty / actual period and scenes"),
     ]
+    options.extend(
+        ("warp:" + x["id"], "Warp area: " + x["label"]) for x in data.get("warp_zones", [])
+    )
     options.extend((x["id"], "Resume saved Handler Play") for x in data["tasks"])
 
     async def choose(current: discord.Interaction, identity: str) -> None:
-        if identity == "off_duty":
+        if identity.startswith("warp:"):
+            result = await asyncio.to_thread(
+                service.start_warp,
+                viewer_from_interaction(current),
+                str(current.id),
+                data["game_revision"],
+                identity[5:],
+            )
+            await open_play(current, service, result["id"])
+        elif identity == "off_duty":
             from girlframe.discord_adapter.m3_off_duty import open_period
             from girlframe.services.m3_missions import MissionService
             from girlframe.services.m3_off_duty import OffDutyService
@@ -249,7 +261,7 @@ async def effect_form(
 ) -> None:
     targets = {x["token"]: x for x in data["targets"]}
     fields = [Field("account", "Information / consequence to communicate", paragraph=True)]
-    if kind in ("status", "tag", "damage", "punish"):
+    if kind in ("status", "tag", "damage", "punish", "tracker_intercept", "tracker_voyeur"):
         fields.insert(
             0,
             Field(
@@ -258,7 +270,22 @@ async def effect_form(
                 tuple((token, x["label"]) for token, x in targets.items()),
             ),
         )
-    if kind == "status":
+    if kind == "contaminant_warp":
+        fields.extend(
+            [
+                Field("cell", "Actual zone cell x,y"),
+                Field("feature_label", "Actual warped feature name"),
+                Field(
+                    "detail", "Actual warped feature / investigation description", paragraph=True
+                ),
+            ]
+        )
+    elif kind == "tracker_voyeur":
+        # Exact original-human content is supplied by the actual source; no OOC-text fetch.
+        fields[0] = Field(
+            "account", "Your actual observation of the supplied fictional moment", paragraph=True
+        )
+    elif kind == "status":
         fields.append(
             Field(
                 "status",
@@ -345,7 +372,19 @@ async def effect_form(
         selected = values.get("target", (None,))[0]
         if selected is not None:
             effect_data["target"] = ActorRef.model_validate(targets[selected]["ref"])
-        if kind == "status":
+        if kind == "contaminant_warp":
+            coordinates = values["cell"].split(",")
+            if len(coordinates) != 2:
+                raise WorkflowError("Choose one actual zone coordinate as x,y")
+            effect_data.update(
+                zone=data["zone"],
+                cell=(int(coordinates[0]), int(coordinates[1])),
+                source_label=values["feature_label"],
+                detail=values["detail"],
+            )
+        elif kind == "tracker_voyeur":
+            effect_data["detail"] = data["observed_moment"]
+        elif kind == "status":
             effect_data["status"] = int(values["status"][0])
         elif kind == "tag":
             effect_data["tag"] = values["tag"]
@@ -402,7 +441,7 @@ async def effect_form(
         )
     form = NativeForm(
         viewer_from_interaction(interaction).user_id,
-        "Handler Play — " + dict(BASIC)[play],
+        "Handler Play — " + dict((*BASIC, *EXTRA))[play],
         "Describe and apply the actual effect. Narrative facts do not silently change "
         "Identities, resources, consent or printed abilities.",
         fields,

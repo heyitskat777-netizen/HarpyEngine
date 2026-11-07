@@ -264,6 +264,9 @@ class StrainService:
                     or Mission.model_validate_json(body).phase != "complete"
                 ):
                     raise WorkflowError("The last mission does not record a successful outcome.")
+            from girlframe.services.m3_contaminant_zone import prove_relief
+
+            prove_relief(self.game, c, state)
             state.strain = rules.start(state.strain, period_id, facts)
             scrapped = []
             if state.strain.levels["budget"] == "high":
@@ -503,9 +506,20 @@ class StrainService:
             self.game.authorize(c, viewer, game=False)
             self.missions._handler(c, viewer)
             state = load_state(c, self.store.campaign_id)
+            from girlframe.services.m3_contaminant_zone import prove_relief
+
+            prove_relief(self.game, c, state)
             return {
                 "game_revision": state.revision,
-                "strain": state.strain.model_dump(mode="json") if state.strain else None,
+                "strain": (
+                    state.strain.model_dump(mode="json")
+                    | {
+                        "levels": rules.effective_levels(state.strain),
+                        "underlying_levels": dict(state.strain.levels),
+                    }
+                )
+                if state.strain
+                else None,
             }
 
     def work(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:

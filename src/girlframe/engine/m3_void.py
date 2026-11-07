@@ -696,7 +696,9 @@ def rebirth(
     archived = bonds.rebind(archived, value.actor, ref, event)
     count = 1
     if archived.strain:
-        if archived.strain.levels["void"] == "high" or any(
+        from girlframe.engine.m3_strain import effective_levels
+
+        if effective_levels(archived.strain)["void"] == "high" or any(
             x.track == "void" and x.severity == "high" for x in archived.strain.events
         ):
             count = 2

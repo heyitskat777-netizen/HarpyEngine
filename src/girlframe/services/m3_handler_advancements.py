@@ -151,6 +151,24 @@ class HandlerAdvancementService:
                     from girlframe.engine.m3_reign_terror import acquisitions as reign_acquisitions
 
                     receipts = reign_acquisitions(spent)
+                elif (
+                    value.acquired_rule
+                    == "handler-advancement.handler-advancement.tracker-implants"
+                ):
+                    from girlframe.engine.m3_tracker_implants import (
+                        acquisitions as tracker_acquisitions,
+                    )
+
+                    receipts = tracker_acquisitions(spent)
+                elif (
+                    value.acquired_rule
+                    == "handler-advancement.handler-advancement.contaminant-zone"
+                ):
+                    from girlframe.engine.m3_contaminant_zone import (
+                        acquisitions as zone_acquisitions,
+                    )
+
+                    receipts = zone_acquisitions(spent)
                 elif value.acquired_rule == "handler-advancement.handler-advancement.secretary":
                     from girlframe.engine.m3_secretary import acquisitions as secretary_acquisitions
 

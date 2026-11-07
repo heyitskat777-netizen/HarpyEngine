@@ -207,6 +207,13 @@ class GameService:
             )
             for field in GameState.model_fields:
                 setattr(state, field, getattr(bound, field))
+            if any(
+                fact.get("kind") == "tracker_acquisition"
+                for fact in (*previous_state.facts, *state.facts)
+            ):
+                from girlframe.services.m3_tracker_implants import prepare as prepare_trackers
+
+                prepare_trackers(self, c, previous_state, state, event)
             body = GameState.model_validate_json(state.model_dump_json()).model_dump_json()
             c.execute(
                 t.m2["m2_state_history"]

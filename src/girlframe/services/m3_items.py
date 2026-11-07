@@ -66,6 +66,10 @@ def prove_item(c: Connection, game: GameService, state: GameState, item_id: str)
         from girlframe.services.m3_hidden_sidearm import prove_gun
 
         prove_gun(game, c, state, item)
+    elif item.id.startswith("tracker-implant:"):
+        from girlframe.services.m3_tracker_implants import prove_recovered
+
+        prove_recovered(game, c, state, item)
     elif item.source_owner.kind == "handler" and item.confirmed_event and item.origin_asset_json:
         from girlframe.services.m3_handler_girl_void import prove_handler_item
 

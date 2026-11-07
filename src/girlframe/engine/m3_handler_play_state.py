@@ -7,7 +7,7 @@ from pydantic import Field, model_validator
 from girlframe.engine.identity import Snowflake
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_work_scope import WorkScope
-from girlframe.engine.m3_world_state import Npc
+from girlframe.engine.m3_world_state import Cell, Npc
 
 BASIC = (
     ("brief", "Brief them on the situation"),
@@ -18,7 +18,23 @@ BASIC = (
     ("expectation", "Place an expectation on them"),
     ("off_duty", "Go Off-Duty"),
 )
-Play = Literal["brief", "punish", "escalate", "support", "mess", "expectation", "off_duty"]
+EXTRA = (
+    ("tracker_intercept", "Intercept them"),
+    ("tracker_voyeur", "Play voyeur to a private moment"),
+    ("contaminant_warp", "Warp the quarantined area"),
+)
+Play = Literal[
+    "brief",
+    "punish",
+    "escalate",
+    "support",
+    "mess",
+    "expectation",
+    "off_duty",
+    "tracker_intercept",
+    "tracker_voyeur",
+    "contaminant_warp",
+]
 
 
 class Effect(Model):
@@ -32,6 +48,9 @@ class Effect(Model):
         "damage",
         "expectation",
         "off_duty",
+        "tracker_intercept",
+        "tracker_voyeur",
+        "contaminant_warp",
     ]
     account: str = Field(min_length=1, max_length=1200)
     detail: str = Field(default="", max_length=1200)
@@ -47,6 +66,11 @@ class Effect(Model):
     source_label: str | None = Field(default=None, min_length=1, max_length=100)
     off_duty: str | None = Field(default=None, min_length=1, max_length=100)
 
+    zone: str | None = Field(
+        default=None, min_length=1, max_length=100, exclude_if=lambda x: x is None
+    )
+    cell: Cell | None = Field(default=None, exclude_if=lambda x: x is None)
+
     @model_validator(mode="after")
     def actual_effect(self) -> "Effect":
         if not self.account.strip():
@@ -61,6 +85,9 @@ class Effect(Model):
             "damage": {"target", "asset", "opponent"},
             "expectation": {"detail", "stakes"},
             "off_duty": {"off_duty"},
+            "tracker_intercept": {"target"},
+            "tracker_voyeur": {"target", "detail"},
+            "contaminant_warp": {"zone", "cell", "detail"},
         }[self.kind] | {"kind", "account", "source_label"}
         baseline = Effect.model_construct(kind=self.kind, account=self.account)
         if any(
@@ -92,6 +119,17 @@ class Effect(Model):
             raise ValueError("Specify the real threat/rule and stakes/consequence")
         if self.kind == "off_duty" and self.off_duty is None:
             raise ValueError("Use the actual canonical Off-Duty period")
+        if self.kind in ("tracker_intercept", "tracker_voyeur") and self.target is None:
+            raise ValueError("Use the actual original tracker target")
+        if self.kind == "tracker_voyeur" and not self.detail.strip():
+            raise ValueError("Observe an actual human-authored fictional moment")
+        if self.kind == "contaminant_warp" and (
+            self.zone is None
+            or self.cell is None
+            or not self.source_label
+            or not self.detail.strip()
+        ):
+            raise ValueError("Warp a real owned zone with an actual located feature")
         return self
 
 

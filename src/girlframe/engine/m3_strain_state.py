@@ -69,6 +69,7 @@ class Trigger(Model):
 class State(Model):
     scenario: Scenario
     levels: dict[Track, Severity]
+    void_relief_sources: tuple[str, ...] = Field(default=(), exclude_if=lambda x: not x)
     periods: tuple[str, ...] = ()
     requests: tuple[Request, ...] = ()
     events: tuple[Event, ...] = ()
@@ -78,6 +79,10 @@ class State(Model):
 
     @model_validator(mode="after")
     def inventory(self) -> "State":
+        if len(set(self.void_relief_sources)) != len(self.void_relief_sources):
+            raise ValueError(
+                "Each actual quarantine contributes one independent Void relief source"
+            )
         if set(self.levels) != set(TRACKS) or len(set(self.periods)) != len(self.periods):
             raise ValueError("Retain all three Strain tracks and distinct period starts")
         if len({x.id for x in self.triggers}) != len(self.triggers) or any(

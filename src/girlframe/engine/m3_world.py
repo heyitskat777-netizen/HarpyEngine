@@ -45,7 +45,7 @@ def create(board: Board, locations: tuple[Location, ...], secret: Gorgon) -> Wor
         or sum(x.kind == "city" for x in locations) < 2
         or sum(x.kind == "important" for x in locations) != 3
         or any(x.condition != "intact" for x in locations)
-        or any(x.allegiance != "foundation" for x in locations)
+        or any(x.allegiance != "foundation" or x.protection_sources for x in locations)
     ):
         raise ValueError(
             "Start with three bases, at least two cities and three important locations"
@@ -168,6 +168,8 @@ def destroy(world: World, identity: str, *, gorgon_cause: bool) -> Result:
         raise ValueError(
             "Destroy a current location once; repeated destruction creates no new event"
         )
+    if target.protection_sources:
+        raise ValueError("Break the actual quarantine before harming its protected field site")
     territory = world.territory
     if gorgon_cause:
         territory |= frozenset(
@@ -277,6 +279,8 @@ def end_off_duty(
             and gorgon.id not in unplaced
         ):
             target = next(x for x in world.locations if x.cell == gorgon.cell and x.operational)
+            if target.protection_sources:
+                continue
             if target.id not in destroyed:
                 outcome = destroy(updated, target.id, gorgon_cause=True)
                 updated = outcome.world

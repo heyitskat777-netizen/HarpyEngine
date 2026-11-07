@@ -28,7 +28,7 @@ native/grafted Class consumers including Home, five-source Sup growth, Appearanc
 Matrix, Handler’s Special Girl, Clone AM and source-specific Succubus Orders,
 High Rebellion Ritual/backstory effects, actual Rebel group merger/leader opportunity, player-owned stipend retirement,
 finite retained Dampener/Kicked Puppy/Untouchable/Martyr/Succubus/Sup/Special Girl/Modular/Matrix/Nightmare/Physiotherapist/Clone/Home, Cute Uniforms actual dressing/Keep/Tag/discipline, Girl Insurance death/Budget/storage effects, direct Location rebuilding/construction, ordinary session/Identity/PR advancement and genuine award/Permission
-spending, Deep-Brain-Spikes played memory scenes and return, Secretary appointment/delegated Plays with addressed private inbox statements, Bomb Collar Tag/survival workflows, Hidden Sidearm source-owned effects and Reign NPC/captive-player execution sources, Supply Drop repair/delivery/expiry, actual NPC departures and Budget Asset removals, and
+spending, Deep-Brain-Spikes played memory scenes and return, Secretary appointment/delegated Plays with addressed private inbox statements, Bomb Collar Tag/survival workflows, Hidden Sidearm source-owned effects, Reign NPC/captive-player execution sources, Tracker source-owned location/Plays/alerts and Contaminant quarantine/effect/warp workflows, Supply Drop repair/delivery/expiry, actual NPC departures and Budget Asset removals, and
 further Budget meeting/Candidate/Anarchy/cleanup/sabotage/visitor/assassination/fight lifecycles. Focused
 normal-workflow evidence is listed in the report; it has not had a new full
 regression. Remaining playbooks, Strain branches and world consumers still prevent

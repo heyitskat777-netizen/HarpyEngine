@@ -42,6 +42,18 @@ def eligible(state: GameState, attacker: ActorRef, target: ActorRef) -> None:
         raise ValueError("A Benevolent Gorgon will not Attack or cause Collateral Damage")
     if gorgon.gorgon_class == "dormant":
         raise ValueError("UNSUPPORTED_RULE: the actual dormancy/awakening response needs its port")
+    if any(
+        study.protected
+        and study.manager == target.entity
+        and any(
+            site.id == study.location
+            and study.zone in site.protection_sources
+            and site.cell == second.cell
+            for site in state.world.locations
+        )
+        for study in state.world.field_studies
+    ):
+        raise ValueError("Break the actual quarantine before attacking its protected study manager")
     if "director" in second.jobs:
         raise ValueError(
             "UNSUPPORTED_RULE: this Director's death needs its own replacement resolver"
