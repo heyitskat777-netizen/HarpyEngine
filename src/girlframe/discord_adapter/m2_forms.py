@@ -2,6 +2,7 @@
 
 import asyncio
 from collections.abc import Awaitable, Callable
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
 
@@ -104,6 +105,8 @@ class NativeForm(discord.ui.View):
         self.index = 0
         self.option_page = 0
         self.completed = False
+        self._submitting = False
+        self._submission_uncertain = False
         self.controls()
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -114,6 +117,16 @@ class NativeForm(discord.ui.View):
             await reply(
                 interaction, "This form was submitted. Reopen the saved action to continue."
             )
+            return False
+        if self._submission_uncertain:
+            await reply(
+                interaction,
+                "This confirmation's outcome is unknown. Reopen the saved action to check "
+                "progress before trying again.",
+            )
+            return False
+        if self._submitting:
+            await reply(interaction, "This confirmation is being saved. Please wait.")
             return False
         return True
 
@@ -200,6 +213,9 @@ class NativeForm(discord.ui.View):
     async def confirm(
         self, interaction: discord.Interaction, button: discord.ui.Button[Any]
     ) -> None:
+        # Recheck inside the callback too: another interaction may already be admitted.
+        if not await self.interaction_check(interaction):
+            return
         missing = [
             x.label
             for x in self.fields
@@ -209,21 +225,40 @@ class NativeForm(discord.ui.View):
             await reply(interaction, "Complete: " + ", ".join(missing), self)
             return
         # This button is the explicit confirmation; selections alone never commit effects.
-        await interaction.response.defer(ephemeral=True, thinking=True)
+        # Freeze the human's choices before the first transport await, and allow only
+        # one submission of this form while its result is unknown.
+        values = deepcopy(self.values)
+        self._submitting = True
+        submission_started = False
+        outcome_known = False
         try:
-            message = await self.submit_action(interaction, self.values)
-        except WorkflowError as error:
-            await reply(interaction, str(error), self)
-            return
-        except (ValueError, KeyError):
-            await reply(interaction, "Choose valid values for every required step.", self)
-            return
-        self.completed = True
-        self.stop()
-        # A multi-step callback returns None after presenting its next screen.
-        # Do not replace those controls with an empty/plain completion reply.
-        if message is not None:
-            await reply(interaction, message)
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            submission_started = True
+            try:
+                message = await self.submit_action(interaction, values)
+            except WorkflowError as error:
+                outcome_known = True
+                await reply(interaction, str(error), self)
+                return
+            except (ValueError, KeyError):
+                outcome_known = True
+                await reply(interaction, "Choose valid values for every required step.", self)
+                return
+            outcome_known = True
+            self.completed = True
+            self.stop()
+            # A multi-step callback returns None after presenting its next screen.
+            # Do not replace those controls with an empty/plain completion reply.
+            if message is not None:
+                await reply(interaction, message)
+        finally:
+            # Cancelling an asyncio.to_thread await does not stop its backend worker.
+            # An unexpected callback failure can likewise follow a committed effect.
+            # Never reopen this form until a known outcome permits a safe retry.
+            if submission_started and not outcome_known:
+                self._submission_uncertain = True
+            else:
+                self._submitting = False
 
 
 async def threaded(operation: Callable[[], Any]) -> Any:

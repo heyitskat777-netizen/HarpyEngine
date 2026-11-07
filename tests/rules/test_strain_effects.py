@@ -169,17 +169,32 @@ def test_room_assignments_cover_every_pilot_and_apply_bond_depth_or_overflow_hea
 
 
 def test_supply_delay_tags_every_pilot_and_handler_exactly_once_with_stable_ids(canon):
+    before = canon.model_dump_json()
     selected = choice(
         "budget.high.2.2", tags=tuple(rules.TagChoice(owner=x, label="Hungry") for x in (1, 2, 3))
     )
     result = rules.apply(canon, selected, "work")
+    assert len(result.handler_tags) == len(canon.handler_tags) + 1
+    assert all(
+        len(sheet.tags) == len(canon.sheets[uid].tags) + 1 for uid, sheet in result.sheets.items()
+    )
     assert result.handler_tags[-1].label == "Hungry" and all(
         x.tags[-1].label == "Hungry" for x in result.sheets.values()
     )
     repeat = rules.apply(canon, selected, "work")
     assert repeat.handler_tags[-1].id == result.handler_tags[-1].id
-    with pytest.raises(ValueError, match="Every current Girl"):
+    assert all(
+        repeat.sheets[uid].tags[-1].id == sheet.tags[-1].id for uid, sheet in result.sheets.items()
+    )
+    with pytest.raises(ValueError, match="exactly one source-authored Tag"):
         rules.apply(canon, selected.model_copy(update={"tags": selected.tags[:-1]}), "work")
+    with pytest.raises(ValueError, match="exactly one source-authored Tag"):
+        rules.apply(
+            canon,
+            selected.model_copy(update={"tags": selected.tags[:-1] + (selected.tags[0],)}),
+            "work",
+        )
+    assert canon.model_dump_json() == before
 
 
 @pytest.mark.parametrize("prior_destruction", (False, True))
@@ -242,11 +257,30 @@ def test_fired_npc_retains_bonds_and_city_anarchy_does_not_create_gorgon_territo
 
 
 def test_sanctions_create_named_faction_with_map_area_and_problems(canon):
+    before = canon.model_dump_json()
     faction = Faction(id="faction", name="External government", kind="political", cells=((4, 4),))
     result = rules.apply(canon, choice("budget.high.3.2", faction=faction), "work")
-    assert result.world.factions[-1].description == "An actual human-described source event"
+    expected = faction.model_copy(update={"description": "An actual human-described source event"})
+    assert result.world.factions == canon.world.factions + (expected,)
+    assert canon.model_dump_json() == before
+
+
+def test_photoshoot_requires_appointed_human_source_without_mutating_input(canon):
+    before = canon.model_dump_json()
+    selected = choice(
+        "budget.low.1.1",
+        tags=tuple(rules.TagChoice(owner=uid, label="Public impression") for uid in canon.order),
+    )
+    with pytest.raises(ValueError, match="appointed human's source"):
+        rules.apply(canon, selected, "photoshoot")
+    assert canon.model_dump_json() == before
+
+
+def test_unknown_strain_effect_remains_unsupported_without_mutating_input(canon):
+    before = canon.model_dump_json()
     with pytest.raises(ValueError, match="UNSUPPORTED_RULE"):
-        rules.apply(canon, choice("budget.low.1.1"), "unimplemented")
+        rules.apply(canon, choice("unknown.result"), "unimplemented")
+    assert canon.model_dump_json() == before
 
 
 def test_actual_director_introduction_death_ends_only_original_context_and_consumes_same_victim(

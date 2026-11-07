@@ -6,6 +6,9 @@ from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
+from test_enforcer_requisitions import approved
+from test_janus_core import facts
+from test_janus_core_service import change as change_core
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
 from test_m2_game import state
@@ -14,17 +17,20 @@ from test_physical_service import decide, propose, ready
 
 from girlframe.database import tables as t
 from girlframe.discord_adapter.m3_physical import open_frame, open_initial
+from girlframe.engine import m3_janus as cores
 from girlframe.engine import m3_physical as rules
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_frame_state import FrameRuntime
 from girlframe.engine.m3_physical_state import CockpitAction, ExtractionConsent, InitialPlacement
 from girlframe.engine.m3_world_state import Npc
 from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_janus import JanusService
 from girlframe.services.onboarding import WorkflowError
 
 
-def placed(store):
-    svc, game = ready(store)
+def placed(store, frame="THE ENFORCER"):
+    # Ordinary cockpit fixtures need an ordinary Frame, not an unadmitted JANUS Core.
+    svc, game = ready(store, frame=frame)
     request = propose(svc)
     decide(svc, request["id"])
     return svc, game
@@ -41,8 +47,8 @@ def command(svc, operation="exit", *, viewer=PLAYER, data=None):
     )
 
 
-def locked(store):
-    svc, game = placed(store)
+def locked(store, frame="THE ENFORCER"):
+    svc, game = placed(store, frame=frame)
     policy = store.policy.owner_m3_rulings
     store.policy = store.policy.model_copy(
         update={
@@ -94,6 +100,16 @@ def respond(svc, identity, action="allow", *, viewer=ADMIN, key=None, data=None,
         "PRIVATE_ACTUAL_FRAME_RESPONSE",
         target=target,
     )
+
+
+def admitted_cockpit(store, tmp_path, monkeypatch):
+    svc, game, identity = locked(store, frame="JANUS-B")
+    approved(store, game, tmp_path, monkeypatch, extra=(cores.CORE,))
+    service = JanusService(game)
+    setup = service.request(PLAYER, "actual-cockpit-core-request", OTHER.user_id)["id"]
+    change_core(service, OTHER, setup, facts=facts())
+    change_core(service, ADMIN, setup, approve=True, account="Actual original Core review")
+    return svc, game, identity
 
 
 def test_actual_ordinary_cockpit_exit_and_control_are_owned_durable_and_exactly_once(ledger):
@@ -462,3 +478,73 @@ def test_current_guest_needs_own_frame_consent_and_voice_selects_actual_occupant
     svc.operate(OTHER, "actual-guest-leaves", data["game_revision"], choice)
     assert state(game).placements[1].mode == "outside_frame"
     assert state(game).placements[0].subsumed
+
+
+def test_original_janus_without_admitted_core_cannot_use_handler_frame_voice(ledger):
+    svc, game, identity = locked(ledger, frame="JANUS-B")
+    before = state(game)
+    assert not svc.frame(ADMIN, identity)["can_voice"]
+    with pytest.raises(WorkflowError, match="CORE_SETUP_REQUIRED"):
+        respond(svc, identity)
+    assert state(game) == before
+
+
+def test_source_admitted_janus_controller_owns_cockpit_response_and_native_opening(
+    ledger, tmp_path, monkeypatch
+):
+    svc, game, identity = admitted_cockpit(ledger, tmp_path, monkeypatch)
+    original = state(game)
+    core = original.janus_cores[0]
+    assert core.controller == OTHER.user_id and original.handler == ADMIN.user_id
+    assert original.frame_locks[0].core_id is None
+    with pytest.raises(WorkflowError, match="human voice"):
+        respond(svc, identity, viewer=ADMIN)
+    with pytest.raises(WorkflowError, match="human voice"):
+        respond(svc, identity, viewer=PLAYER)
+    assert svc.frame(OTHER, identity)["can_voice"]
+    respond(svc, identity, "refuse", viewer=OTHER)
+    assert not svc.frame(PLAYER, identity)["allowed"]
+    data = svc.frame(OTHER, identity)
+    result = respond(svc, identity, viewer=OTHER, key="actual-core-consent", data=data)
+    assert respond(svc, identity, viewer=OTHER, key="actual-core-consent", data=data) == result
+    assert svc.frame(PLAYER, identity)["allowed"]
+
+    async def run():
+        controller = current(3, 60410)
+        await controller.response.defer(ephemeral=True)
+        await open_frame(controller, svc, identity)
+        form = controller.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(current(1))
+        form.values.update(operation=("open",), account="The actual Core opens its cockpit")
+        await form.confirm.callback(current(3, 60411))
+        assert form.completed
+
+    asyncio.run(run())
+    after = state(game)
+    assert not after.frame_locks[0].active
+    with ledger.engine.connect() as c:
+        assert c.scalar(
+            sa.select(t.events.c.actor_id).where(
+                t.events.c.id == after.frame_locks[0].released_event,
+            )
+        ) == str(OTHER.user_id)
+    assert after.placements == original.placements and after.janus_cores == original.janus_cores
+    assert after.sheets == original.sheets and game.dice.calls == 0
+    game.rebuild()
+    assert state(game) == after
+
+
+def test_changed_janus_controller_cannot_grant_cockpit_consent_without_original_source(
+    ledger, tmp_path, monkeypatch
+):
+    svc, game, identity = admitted_cockpit(ledger, tmp_path, monkeypatch)
+    with ledger.transaction() as c:
+        canon = state(game)
+        canon.janus_cores[0] = canon.janus_cores[0].model_copy(
+            update={"controller": PLAYER.user_id}
+        )
+        game.event(c, 1, "forged-core-controller", "synthetic.state", canon)
+    before = state(game)
+    with pytest.raises(WorkflowError, match="SOURCE_JANUS_CHANGED"):
+        respond(svc, identity, viewer=PLAYER)
+    assert state(game) == before and not state(game).frame_locks[0].consents

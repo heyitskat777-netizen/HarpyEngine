@@ -19,8 +19,8 @@ from girlframe.services.m3_physical import PhysicalService
 from girlframe.services.onboarding import WorkflowError
 
 
-def ready(store):
-    world, game = world_ready(store)
+def ready(store, frame="JANUS-B"):
+    world, game = world_ready(store, frame=frame)
     return PhysicalService(world.store), game
 
 

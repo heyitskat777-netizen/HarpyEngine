@@ -1,9 +1,12 @@
+import json
+
 import pytest
+from pydantic import ValidationError
 from test_ledger import PLAYER
 from test_ledger import ledger as ledger_fixture
-from test_m2_game import setup_game
+from test_m2_game import setup_game, state
 
-from girlframe.engine.m2 import AssetState, IdentityState
+from girlframe.engine.m2 import AssetState, IdentityState, PilotSheet
 from girlframe.engine.m3_core import (
     Recovery,
     RepairSelection,
@@ -21,9 +24,24 @@ ledger = ledger_fixture
 @pytest.fixture
 def sheet(ledger):
     game, *_ = setup_game(ledger)
-    from girlframe.engine.m2 import PilotSheet
+    # Reducers consume validated canonical state, not the enriched owner-facing view.
+    return state(game).sheets[str(PLAYER.user_id)]
 
-    return PilotSheet.model_validate_json(__import__("json").dumps(game.sheet(PLAYER)))
+
+def test_private_sheet_projection_remains_separate_from_canonical_state(ledger):
+    game, *_ = setup_game(ledger)
+    canonical = state(game).sheets[str(PLAYER.user_id)]
+    projection = game.sheet(PLAYER)
+    view_fields = {"additional_identities", "control_rituals"}
+
+    assert view_fields <= projection.keys()
+    assert view_fields.isdisjoint(canonical.model_dump())
+    assert PilotSheet.model_validate_json(canonical.model_dump_json()) == canonical
+    with pytest.raises(ValidationError) as error:
+        PilotSheet.model_validate_json(json.dumps(projection))
+    assert view_fields <= {
+        item["loc"][0] for item in error.value.errors() if item["type"] == "extra_forbidden"
+    }
 
 
 @pytest.mark.parametrize(

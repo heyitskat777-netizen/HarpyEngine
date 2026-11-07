@@ -50,7 +50,11 @@ def test_mission_handler_native_hub_separates_persona_and_actual_human_gm_contro
         caller = current(1, 98602)
         await group.get_command("handler").callback(caller)
         menu = caller.edit_original_response.call_args.kwargs["view"]
-        assert isinstance(menu, Picker) and set(dict(menu.options)) == {"persona", "plays"}
+        assert isinstance(menu, Picker) and set(dict(menu.options)) == {
+            "persona",
+            "plays",
+            "ordinary",
+        }
         await menu.open_item(caller, "plays")
         plays = caller.edit_original_response.call_args.kwargs["view"]
         assert isinstance(plays, Picker) and "new" in dict(plays.options)

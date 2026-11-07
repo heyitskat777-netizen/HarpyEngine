@@ -1,5 +1,337 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Local integration of verified repair package — 2026-11-07
+
+Local branch `codex/integrated-repairs-20261107`, based on
+`409670549db925e3a3740fc29ee79ae514c08ec1`. Reviewed the supplied ten-repair
+candidate `f47470bf53bcf9ae10558c064dc7fe44ce5d6fb5`. All twenty reconstructed
+file hashes match its manifest; the staged repair matches all **1,129 non-report
+files** of tested code freeze `d908fb646e69f63d61a052a5dd3896b282546151`.
+Only this integration note changes the supplied acceptance report.
+
+Preserved all 27 pre-existing changed/new files in an ignored byte snapshot.
+Twenty-four remain byte-identical. The overlapping Dive service retains its exact
+newer Bomb Collar content plus the three-line privacy repair; CI selections are
+combined without dropping newer entries, and reports retain both newer and imported
+acceptance history. Bomb Collar/Jailbroken work remains unstaged. Only the reviewed
+repair candidate is committed; no runtime-registry or original-planning edit.
+
+Fresh verification against the **expanded working tree**, including preserved newer
+features: **219 unique tests passed / 107.12s**, no failures/errors/skips;
+`var/integrated-repairs-20261107/current-focused.xml`. This is the repair/adjacent
+selection plus the current Bomb Collar and Jailbroken workflows, not a full run.
+Ruff/format pass for **37 changed Python files**; mypy passes **22 changed source
+modules**. Runtime registry, publishable repository/privacy, CI-declared original
+planning checker, and staged/working whitespace checks pass. Two initial planning
+checker path lookups were invalid; the declared `verification/verify_handoff.py`
+then passed. No migration or dependency/schema change warrants repeating the
+package's matching migration evidence.
+
+Imported evidence below records **2,538 cases covered through segmented execution**
+on identical frozen code/test bytes, with 117 chunks, reused focused cases and one
+documented collection-context recheck. The labelled aggregate contains 2,538 unique
+cases and no final failures/errors/skips. This is not one uninterrupted pytest
+process or proof of whole-process ordering; the historical failed attempt remains
+in the private evidence bundle. It is not a full-suite claim for newer unstaged work.
+
+M3 remains **RULES_SUBSET**. Secretary statement scene-recipient delivery, existing
+beyond-Intense world-Heat printed-rule clarity, unfinished gameplay, independent
+rules review, human play-testing and release approval remain open. No new ruling,
+push, merge, deployment, bot restart, environment publication, private import,
+AI/M4 work or Ancillary activation. The bot stays off.
+
+## Integrated regression repair candidate — 2026-11-07 UTC
+
+Isolated branch based on `409670549db925e3a3740fc29ee79ae514c08ec1`.
+All ten bounded repair patches were combined without source conflicts. Original
+acceptance entries are retained below; their per-patch results describe those
+historical isolated candidates, not this integrated source. Shared CI selection
+preserves every existing entry and includes each repaired workflow and its
+adjacent compatibility checks. The original baseline checkout stays unchanged.
+
+Production changes are limited to the actual admitted JANUS Core controller's
+cockpit authority, Director-only Dive effect confirmation without private Director
+identities/counts, native confirmation snapshot/in-flight/uncertain-outcome safety,
+and accurate Secretary owner-only History wording. Test-only corrections use
+canonical Core fixtures and current Handler, Harpy Core, world Heat, Strain and
+Disobey behavior without removing production guards. Dampener adds the printed
+5-Heat/+2 boundary case without a gameplay change.
+
+The Handler route repair retains exact menu equality, including the intentionally
+implemented `ordinary` route from `79fe0b1`; the actual ordinary-session workflow
+passes in this integrated compatibility check. Harpy/Director v2 supersedes the
+initial v1 and keeps the regression covering an accepted, unrevealed, uncast
+private Director. It omits private names, ActorRefs and counts from the effect
+chooser while retaining all original Directors' required physiology responses and
+scene holds. No engine-target filtering, inferred player consent or new ruling
+was introduced. The existing beyond-Intense no-invented-world-Heat interpretation
+still requires printed-rule clarity review. Secretary scene-recipient delivery is
+still an unresolved integration decision, not implemented by a wording change.
+
+Executed against this isolated candidate with Python 3.12.14, uv 0.12.23 and the
+unchanged committed lockfile, using its own `.venv` installed once by
+`PATH=<pinned-uv-directory>:$PATH bash tools/install.sh`:
+
+- Changed-file Ruff lint and format: passed for all 18 changed Python files.
+  Applicable mypy: passed for all five changed source modules.
+- `.venv/bin/pytest -q <focused-selection> --junitxml=var/integration-evidence/focused.xml`:
+  **141 passed / 126.42s**, no failures/errors/skips.
+- `.venv/bin/pytest -q <compatibility-selection> --junitxml=var/integration-evidence/compatibility.xml`:
+  **72 passed / 28.80s**, no failures/errors/skips. These disjoint selections
+  together equal the final explicit `.github/ci-tests.txt` selection.
+- `.venv/bin/ruff check .`: passed; `.venv/bin/ruff format --check .`:
+  **1,043 files already formatted**; `.venv/bin/mypy`: **611 source files passed**.
+- CLI help and local SQLite health, runtime registry, original planning contracts,
+  and repository/manifest checks: passed. Repository check: **1,130 publishable
+  files, 40 original manifest entries, zero findings**.
+- Fresh synthetic migration (`GIRLFRAME_DATABASE_URL=sqlite:///./var/integration-evidence/smoke.db`):
+  `.venv/bin/python -m alembic upgrade head`, `alembic check` and `alembic current`
+  passed; head **0014**, no new upgrade operations. No real database was accessed.
+- `git diff --check`: passed.
+
+Full-suite coverage is now complete on code freeze
+`d908fb646e69f63d61a052a5dd3896b282546151`: **2,538 passed, zero unresolved
+failures/errors/skips**, verified against the exact 2,538 collected node IDs.
+This is segmented execution, not one uninterrupted pytest run. The 213 passing
+focused cases above were reused only after exact source and node-ID checks; the
+remaining 2,325 cases completed in 117 bounded batches with durable JUnit and exit
+records. Two earlier monolithic attempts were interrupted without final XML;
+their partial logs earn no extra credit. No completed batch was repeated.
+
+One selected-node batch exposed a collection-context dependency in the unchanged
+Handler test
+`test_counter_is_source_bound_to_dying_original_and_never_appoints_chooser_gm`.
+It replaces the battle module before Secretary's lazy import; the complete suite
+normally imports Secretary during collection. The test passed **1 / 3.12s** when
+all 2,538 cases were collected before selection, with 2,537 deselected and no
+source change. Subsequent batches preserved that full collection context. The
+original failed batch and passing recheck are both retained. This is a verification
+harness difference, not a concealed production fix. Earlier passing batch evidence
+is preserved; segmented execution does not establish whole-process order effects.
+
+The ignored evidence directory contains the exact selections, runner, all raw XML,
+`full-segmented.xml` (a clearly labelled aggregate), and `verification-summary.json`.
+All 1,130 tracked-file hashes matched the code freeze before this final report-only
+update. Runtime/test bytes, rules, dependencies and original planning remain
+unchanged. No remote CI, live Discord session, human play-test or independent
+printed-rule certification is claimed. M3 remains **RULES_SUBSET**. Bot stays off;
+no merge, push, deployment, restart, environment publication, recovered-engine
+mutation, AI/M4 or Ancillary activation.
+
+## Cockpit regression triage — 2026-11-07 UTC
+
+Isolated candidate extends `409670549db925e3a3740fc29ee79ae514c08ec1`.
+The unchanged cockpit service suite reproduced **6 failed / 6 passed, 9.52s**
+(`var/cockpit-triage/before.xml`). Its ordinary-Frame fixtures inherited JANUS-B
+without admitting an original Core; `12a08c2` correctly made that voice fail closed.
+The shared test setup now accepts an explicit Frame while retaining its previous
+JANUS-B default. Cockpit tests explicitly select an ordinary Enforcer; the existing
+legacy represented-Core case and all prior assertions are retained.
+
+A new actual owner-request/controller-facts/Handler-admission workflow exposed a
+separate service defect: the real Core controller was offered voice controls, then
+incorrectly required to be the Handler. Before the service fix the corrected suite
+reported **13 passed / 1 failed, 11.47s**
+(`var/cockpit-triage/fixture-and-new-regression.xml`). Physical response authorization
+now recognizes the exact bound canonical Core and verifies its original admission
+with `prove_core` before accepting that controller. It does not weaken the engine's
+missing/dead/detached-Core guards or appoint the Handler as its substitute.
+
+Final focused command: `PYTHONPATH="$PWD/src" ../harpyengine-regression-20261107/.venv/bin/python -m pytest -q tests/rules/test_cockpit_service.py tests/rules/test_physical_service.py tests/rules/test_world_service.py tests/rules/test_janus_core.py tests/rules/test_janus_core_service.py --junitxml=var/cockpit-triage/focused.xml`.
+Result: **56 passed / 38.98s**. Coverage includes original-owner rejection, explicit
+refusal/consent, idempotent replay, native controller-only opening, unchanged body
+vitals/resources, history rebuild, missing admission and forged-controller rejection.
+The focused CI selection adds the cockpit module without removing existing checks.
+The two existing Void entry/Keep tests that import `placed` also pass
+**2 / 3.42s**, `var/cockpit-triage/helper-consumers.xml`.
+
+All four changed Python files pass Ruff and format checks. Scoped mypy
+(`--follow-imports=silent src/girlframe/services/m3_physical.py`) passes; `git diff --check`
+passes. Tests reused the installed locked interpreter with this clone's `src` on
+`PYTHONPATH`; the separately running frozen regression checkout was not modified.
+No new full regression, remote CI, human validation, merge or deployment is claimed.
+Existing Frame-voice rulings are unchanged; M3 remains **RULES_SUBSET**.
+
+## Canonical core fixture regression repair — 2026-11-07 UTC
+
+Isolated local copy of `409670549db925e3a3740fc29ee79ae514c08ec1`.
+`tests/rules/test_core.py` reparsed the owner-facing `GameService.sheet` projection
+as a canonical `PilotSheet`. That projection intentionally includes derived
+`additional_identities` and `control_rituals`, which strict canonical validation
+correctly rejects. The fixture now uses the existing `test_m2_game.state` helper,
+which loads and validates persisted canonical state. Production behavior and model
+validation are unchanged; all 23 existing tests and their assertions are retained.
+One focused regression proves canonical round-trip validity and rejection of the
+enriched view as canonical state.
+
+Exact focused commands in the isolated copy:
+
+- `.venv/bin/python -m pytest -q tests/rules/test_core.py --junitxml=var/core-fixture-triage/baseline.xml`
+  reproduced **23 setup errors in 8.26s**, before the fix.
+- `.venv/bin/python -m pytest -q tests/rules/test_core.py --junitxml=var/core-fixture-triage/repaired.xml`
+  passed **24 tests in 7.98s**, after the fix.
+- `.venv/bin/python -m ruff check tests/rules/test_core.py`: passed.
+- `.venv/bin/python -m ruff format --check tests/rules/test_core.py`: one file already formatted.
+
+The existing dependency environment was reused with its copied editable source
+path rebound to this isolated copy; Python import location was verified before
+testing. No reinstall, full-suite rerun or source type check was needed for this
+test-only correction. These are local focused results, not remote CI or a full
+regression pass. The source snapshot under full regression was not modified.
+M3 remains **RULES_SUBSET**; independent/player review, deployment and release
+approval remain separate. No bot start, migration, push or merge occurred.
+
+## World Quality Time regression assertions — 2026-11-07 UTC
+
+Isolated triage extends frozen `409670549db925e3a3740fc29ee79ae514c08ec1`.
+Both original `tests/rules/test_role_world_tags.py` cases failed (**2 failed /
+6.49s**). Their historical unsupported-Heat expectation predates `12a08c2`,
+which deliberately removed that gate under the existing
+`beyond-intense-source-legal-no-heat` delegated ruling. No runtime rule,
+eligibility, authorization or release gate changes in this repair.
+
+The existing two cases now prove actual Quality Time Tags and source provenance,
+retained Intense Bonds, exactly +2 Heat to the real Pilot endpoint, no Heat or
+proxy sheet for the world target, and no changes to unrelated character resources.
+Sources checked: rulebook PDF 13 / printed 11 (Bonds), PDF 17 / printed 15
+(Quality Time), and the existing delegated ruling in `rules/registry.json` and
+`docs/CAMPAIGN_RULINGS.md`. The ruling's existing “PDF 11” reference denotes the
+printed Bonds page; its no-invented-Heat interpretation still requires clarity review.
+
+Locked `bash tools/install.sh` succeeded. Ruff check and format check pass for the
+only changed Python file. Focused command:
+`.venv/bin/pytest -q tests/rules/test_role_world_tags.py tests/rules/test_actor_bonds.py::test_intense_heat_goes_to_actual_two_actors_not_npc_controller tests/rules/test_role_punishments.py::test_actual_npc_tag_and_executor_bond_then_actual_selected_bond_reduction --junitxml=var/world-heat-triage/focused.xml`
+passed **4 tests / 3.74s**. Source snapshot and compact handoff are in ignored
+`var/world-heat-triage/`. No source module changed, so no new source type-check run.
+This is focused regression repair evidence, not a full-suite or independent rules
+pass. M3 remains **RULES_SUBSET**; human review, deployment and restart stay separate.
+
+## Disobey regression expectation repair — 2026-11-07
+
+Base `409670549db925e3a3740fc29ee79ae514c08ec1`; isolated offline clone.
+The three `test_disobey_requires_recorded_superior_order_and_low_halts` cases
+failed only at their pre-roll error substring. Commit `8945596` added the
+source-scoped Succubus authority fallback to non-superior Orders; these existing
+M2 fixtures have no qualifying source and correctly fail closed. The original
+`superior` expectation predates that extension. Current source/intent is recorded
+in `m3_succubus.authority`, `GameService.issue_order`, registry
+`frame.class.autocrat.succubus-protocol` (PDF92/printed90), and campaign ruling
+`succubus-order-target-authority`. No printed-rule reinterpretation is needed.
+
+Only the existing test changes: expect the specific missing-active-source denial;
+verify failed attempts preserve canonical state, use no RNG and create no Order,
+action or lock; retain every original low/mid/high outcome assertion and verify
+one eventual roll. No production code, authority gate, source proof or release
+policy changes.
+
+Validation in `var/disobey-triage-20261107/`:
+
+- Locked `bash tools/install.sh`: passed with uv 0.12.23.
+- Before repair, `.venv/bin/pytest -q tests/test_m2_game.py::test_disobey_requires_recorded_superior_order_and_low_halts --junitxml=var/disobey-triage-20261107/before.xml`: **3 failed in 4.86s**, reproducing all reported mismatches.
+- After repair, that node plus `tests/rules/test_succubus.py::test_native_scoped_pilot_order_actual_refusal_and_source_restore` and `tests/rules/test_retained_succubus.py::test_retained_succubus_real_scoped_order_refusal_source_suspension_and_immutable_chain`, with `--junitxml=var/disobey-triage-20261107/after.xml`: **5 passed in 7.17s**. Valid ordinary superior and native/retained source Orders, source suspension/restoration and actual owned refusal remain covered.
+- `.venv/bin/ruff check tests/test_m2_game.py`, `.venv/bin/ruff format --check tests/test_m2_game.py`, `git diff --check`: passed after one formatter-only correction; no production Python changed, so source mypy was not applicable.
+
+Focused evidence only; no repeat full regression, remote CI, human review, merge,
+deployment or restart. The original full-run evidence and frozen source are
+unchanged. M3 remains **RULES_SUBSET** and the bot stays off.
+
+## Native-form interrupted submission review — 2026-11-07 UTC
+
+Review of the initial isolated confirmation candidate (`0997fef`) found that
+cancelling an awaited `asyncio.to_thread` call can leave its backend running.
+The former unconditional cleanup incorrectly unlocked the form. Focused
+reproduction yielded **2 failed / 1 passed**, five deselected
+(`var/native-form-cancellation-before.xml`): cancellation during a real backend
+thread and an unexpected failure after an effect both reopened the old form.
+
+The reviewed candidate now keeps that form closed when submission started but
+its result is unknown. It tells the player to check saved progress rather than
+claiming success or cancellation. A backend thread completing after cancellation
+does not unlock the uncertain form. Cancellation during acknowledgment, before
+submission starts, remains safely retryable; existing validation-error retries
+and successful completion still work.
+
+Final focused verification: **71 passed / 4.85s**, zero failures or skips,
+`var/native-form-reviewed-final.xml`. The command is the same four-file/node
+selection below, with this updated JUnit path. All eight confirmation-specific
+cases pass, including the actual surviving backend thread, an unexpected
+post-effect exception, and cancellation before any backend invocation. Ruff and
+format pass both changed Python files; mypy passes the changed source module.
+Updated hashes are in `var/native-form-source-snapshot.json`.
+
+CI integration note: add `tests/test_native_form_confirmation.py` to the active
+focused `.github/ci-tests.txt` selection. The isolated patch leaves that shared
+integration-owned selection unchanged. This remains a per-form safeguard, not a
+durable or cross-form operation coordinator. Backend transactions, revision
+checks, and idempotency remain authoritative. No full regression, remote CI,
+publication, deployment, or M3 completion is claimed.
+
+## Native-form confirmation integrity — 2026-11-07 UTC
+
+Isolated candidate extends `4096705`; it does not alter gameplay rules or claim
+additional rules coverage. Confirmations now freeze the selected values before
+acknowledging Discord and reject duplicate submissions and modal edits while the
+save is running. Failed validation releases the form for an explicitly corrected
+retry; successful and multi-step submissions retain the existing completion flow.
+The change is confined to the common native-form adapter and focused tests.
+
+Before the fix, focused reproduction yielded **2 failed / 3 passed**: a changed
+account was submitted after confirmation, and an in-flight form still admitted
+another interaction (`var/native-form-before.xml`). Final checks yielded
+**68 passed / 8.18s**, with no failures or skips
+(`var/native-form-focused-final.xml`). These cover the new confirmation checks,
+existing M2 UI behavior, actual new-Location advancement/storage/history and
+native Mission acceptance/dispatch. No broad role matrix or full regression ran.
+
+Executed from the isolated checkout using the already-installed baseline
+interpreter, without changing its environment:
+
+```bash
+PY=../harpyengine-regression-20261107/.venv/bin/python
+PYTHONPATH=src:tests:tests/rules "$PY" -m pytest -q \
+  tests/test_native_form_confirmation.py tests/test_m2_ui.py \
+  tests/rules/test_location_build.py \
+  tests/rules/test_mission_ui.py::test_native_offer_response_requires_owner_confirmation_and_handler_dispatch \
+  --junitxml=var/native-form-focused-final.xml
+PYTHONPATH=src:tests:tests/rules "$PY" -m ruff check \
+  src/girlframe/discord_adapter/m2_forms.py tests/test_native_form_confirmation.py
+PYTHONPATH=src:tests:tests/rules "$PY" -m ruff format --check \
+  src/girlframe/discord_adapter/m2_forms.py tests/test_native_form_confirmation.py
+PYTHONPATH=src:tests:tests/rules "$PY" -m mypy src/girlframe/discord_adapter/m2_forms.py
+```
+
+Ruff passes, both changed Python files are formatted, and mypy passes its one
+changed source module. Exact Python-file hashes are recorded in ignored
+`var/native-form-source-snapshot.json`. Shared-adapter integration review remains
+pending. Backend idempotency and revision checks remain authoritative; this is a
+per-form UI safeguard, not a cross-process exactly-once delivery claim. Bot off;
+M3 remains **RULES_SUBSET**. No deployment, merge, or publication.
+
+## Dampener Link focused source/coverage review — 2026-11-07 UTC
+
+Isolated coverage-only patch based on `409670549db925e3a3740fc29ee79ae514c08ec1`.
+The official September 1 rulebook, PDF page 94 / printed page 92, requires at
+least 5 Heat for the optional +2 or +3 roll basis. Existing native, grafted and
+retained tests exercised 5 Heat with +3; the +2 choice and rejection below the
+printed threshold lacked direct coverage. No gameplay mismatch was demonstrated.
+
+One added normal workflow purchases the real native entitlement, rejects 4
+Heat/+2 without saved-state changes, pending actions, chat lock or RNG use, then
+completes a genuine 5 Heat/+2 Keep. Faces 2 and 3 produce total 7 and the actual
+low-result choices, deduct all 5 Heat, retain the original receipt and release
+chat. The prior +3 test remains unchanged.
+
+Focused `pytest -q tests/rules/test_dampener.py -x`: **2 passed / 4.72s**;
+JUnit evidence: ignored `var/dampener-boundary.xml`. Ruff and format checks pass
+for the sole changed Python file. Existing locked dependencies were reused with
+an explicitly verified isolated source import. No source module changed, so no
+new source-type check was required. No full regression was run.
+
+M3 remains **RULES_SUBSET**. This is automated coverage and a bounded source
+comparison, not independent certification or human acceptance. No registry,
+release gate, original planning files or active implementation workflow changed;
+no push, merge, deployment, restart or live campaign operation occurred.
+
 ## AM independent branch and owned takeover — 2026-11-06 UTC
 
 Source extends `a5b0e8938d6d7ac359837257260d8a60f09c83d9`; sanitized bytes are
@@ -77,6 +409,32 @@ physical conflicts and unported competence effects remain real dependencies.
 AM branching and broader source/playbook/Strain/world/shared/lifecycle work still
 block M3. Bot stays off; no deployment, migration, environment publication,
 recovered-engine write, AI/M4 or Ancillary activation.
+
+### Statement recording clarification — 2026-11-07 UTC
+
+Source extends `409670549db925e3a3740fc29ee79ae514c08ec1`. The native authority
+form now accurately distinguishes an untargeted statement's owner-only History
+record from a direct Order. Its option, instructions and confirmation say to share
+the statement in the scene manually. This changes no saved audience, permissions,
+mechanics or existing targeted Order behavior.
+
+One native statement-path test proves the disclosure, exact source-owned record,
+Handler Inbox reopen, no dice/Order/character/world effects, and read-only history.
+It also characterizes the present access boundary: neither another scene member
+nor an absent campaign member can find or reopen this statement. The initial
+characterization passed **1 / 6.82s**; adding the disclosure assertion failed as
+expected **1 / 3.46s** before the UI correction. On final Python bytes,
+`.venv/bin/pytest -q tests/rules/test_secretary_statement.py tests/rules/test_secretary.py`
+passed **3 / 10.83s**. Ruff and format checks pass for both changed Python files;
+mypy passes for the one changed source module. Focused offline evidence only,
+with JUnit in ignored `var/secretary-statement-review/final.xml`.
+
+Book PDF159 / printed157 grants authority to speak but does not specify this
+application's delivery or History audience. Scene-recipient delivery remains an
+unresolved integration decision, not a confirmed printed-rule violation or a
+completed feature. No all-cast visibility policy, NPC-controller access expansion,
+retroactive history disclosure or new campaign ruling is inferred. M3 remains
+**RULES_SUBSET**; independent/player review and final-candidate checks remain pending.
 
 ## AM actual body transfer and hooked return — 2026-11-06 UTC
 
@@ -3073,3 +3431,34 @@ v0.1.0** and actual Gateway/command readiness; the process probe confirmed one
 instance, PID195086, execution session63256. No token value or campaign data was
 printed, and no schema migration, policy change, M3 deployment or environment
 publication was performed. The existing bot remains available during development.
+
+## Full-regression Strain expectation repair — 2026-11-07
+
+Isolated snapshot based on `409670549db925e3a3740fc29ee79ae514c08ec1`;
+no gameplay code, registry, live bot, or frozen regression source changed.
+Both reported `test_strain_effects.py` failures reproduced (2 failed in 2.74s).
+Commit `12a08c2` added source-owned Low Budget 1/1 photoshoot handling and generalized
+its shared Tag-validation message, leaving these earlier assertions stale.
+Private rulebook PDF150/printed148 and PDF151/printed149 corroborate the current
+photoshoot, supply-delay and sanctions behavior; no printed-rule change is made.
+
+The repaired supply test retains the failure guard and verifies exactly one Tag
+per actual recipient, stable IDs for every recipient, incomplete/duplicate-roster
+rejection and unchanged input. The sanctions test now checks the entire new
+political faction, its map cells and problem description. Separate checks retain
+photoshoot source rejection and `UNSUPPORTED_RULE` for an unknown result without
+misclassifying an implemented result as unsupported.
+
+Final local validation (the existing locked environment was reused, with
+`PYTHONPATH="$PWD/src"` selecting this isolated source):
+
+- `python -m pytest -q tests/rules/test_strain_effects.py tests/rules/test_budget_photoshoot.py tests/rules/test_strain_effect_service.py tests/rules/test_strain_effect_ui.py --junitxml=var/strain-triage-20261107/after.xml`: **24 passed in 11.32s**.
+- `ruff check tests/rules/test_strain_effects.py`: passed.
+- `ruff format --check tests/rules/test_strain_effects.py`: passed after one
+  formatting-only correction, before the final pytest run.
+- `git diff --check`: passed.
+
+These are focused reducer, service/replay, native UI and photoshoot checks, not a
+new full-regression pass or remote CI result. Source type checks are not applicable
+because no production Python changed. Independent rules review and player testing
+remain pending; no merge, push, restart or deployment was performed.

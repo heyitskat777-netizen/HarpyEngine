@@ -9,6 +9,7 @@ from pydantic import ValidationError
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
+from girlframe.engine import m3_janus as cores
 from girlframe.engine import m3_physical as rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef
@@ -20,6 +21,7 @@ from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_janus import prove_core
 from girlframe.services.m3_work import related
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
@@ -661,6 +663,9 @@ class PhysicalService:
             state, lock, _ = self._frame_lock(c, viewer, identity)
             if rules.frame_voice(state, lock.owner, lock.frame_instance) != viewer.user_id:
                 raise WorkflowError("Only the actual Frame's human voice can give this response.")
+            original_core = cores.bound(state, lock.owner, lock.frame_instance)
+            if original_core is not None:
+                prove_core(c, self.game, state, cores.ref(original_core))
             represented_core = state.world is not None and any(
                 x.id == lock.core_id for x in (*state.world.npcs, *state.world.pilots)
             )
@@ -672,7 +677,7 @@ class PhysicalService:
                 and x.core_frame_instance == lock.frame_instance
                 for x in state.harpy_states
             )
-            if not represented_core:
+            if original_core is None and not represented_core:
                 self._handler(c, viewer)
             policy = self.store.policy.owner_m3_rulings
             if (

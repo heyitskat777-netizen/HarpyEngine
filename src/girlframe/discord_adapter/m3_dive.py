@@ -182,6 +182,18 @@ async def open_dive(
                 Field("npc_" + str(i), "Void: " + x["label"], MANIFESTATIONS)
                 for i, x in enumerate(detail["npcs"])
             ]
+            instructions += (
+                " If any Director is affected, she uses Handler physiology and chooses her "
+                "own actual response. The scene stays held until required responses resolve."
+            )
+            if not fields and detail.get("has_targets"):
+                fields.append(
+                    Field(
+                        "confirm",
+                        "Confirm the nearby effect",
+                        (("yes", "Apply the effect and open any required owned responses"),),
+                    )
+                )
             if not fields:
                 await reply(
                     interaction,

@@ -237,18 +237,23 @@ async def open_secretary(
                     answers["text"],
                     target,
                 )
+                if target is None:
+                    return (
+                        "Statement recorded in your History only. Share it in the scene yourself."
+                    )
                 return "The actual Secretary speaks with its original Handler's authority."
 
             await NativeForm(
                 current.user.id,
                 "Secretary — full authority",
-                "The Secretary speaks; direct Orders use the recipient's normal responses.",
+                "Statements are saved only in your History; share them in the scene yourself. "
+                "Direct Orders use the recipient's normal responses.",
                 [
                     Field("scene", "Actual speaking scene", scenes),
                     Field(
                         "target",
                         "Actual speech/Order",
-                        (("statement", "An actual authoritative statement"),)
+                        (("statement", "Record an authoritative statement (private History)"),)
                         + tuple(girls.items()),
                     ),
                     Field("text", "Actual statement or direct Order", paragraph=True),

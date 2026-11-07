@@ -433,6 +433,9 @@ def projection(
                 if state.world
                 else []
             )
+            # Directors own their later physiology choices, not details on this form.
+            # Do not reveal their identities or counts to the effect's chooser.
+            data["has_targets"] = bool(rules.nearby_all(state, actor, npcs))
     if request["kind"] == "dive_table_answer":
         data["question"] = selected["effect"]["question"]
         data["answers"] = selected.get("answers", {})

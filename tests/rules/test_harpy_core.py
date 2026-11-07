@@ -107,10 +107,7 @@ def begin(plays, actor, own, prepared):
     )["action_id"]
 
 
-def test_actual_harpy_core_mid_kills_actual_npc_without_touching_controllers_pc(
-    ledger, monkeypatch
-):
-    monkeypatch.setattr(m3_plays, "HEAT_IDS", (*m3_plays.HEAT_IDS, "go_for_the_core"))
+def test_actual_harpy_core_mid_kills_actual_npc_without_touching_controllers_pc(ledger):
     plays, game, actor, target, own, prepared = context(ledger)
     original = state(game)
     action = begin(plays, actor, own, prepared)
@@ -132,8 +129,7 @@ def test_actual_harpy_core_mid_kills_actual_npc_without_touching_controllers_pc(
         assert game.lock(c, 900)["state"] == "released"
 
 
-def test_harpy_cannot_pay_for_same_humans_different_declared_actor(ledger, monkeypatch):
-    monkeypatch.setattr(m3_plays, "HEAT_IDS", (*m3_plays.HEAT_IDS, "go_for_the_core"))
+def test_harpy_cannot_pay_for_same_humans_different_declared_actor(ledger):
     plays, game, actor, target, own, prepared = context(ledger, pc_actor=True)
     before = state(game)
     with pytest.raises(WorkflowError, match="this exact Harpy body"):
@@ -141,9 +137,21 @@ def test_harpy_cannot_pay_for_same_humans_different_declared_actor(ledger, monke
     assert state(game) == before and not game.dice.calls
 
 
-def test_harpy_core_remains_gated_with_production_heat_play_list(ledger):
+def test_harpy_core_remains_gated_when_heat_play_is_disabled(ledger, monkeypatch):
     plays, game, actor, target, own, prepared = context(ledger)
+    monkeypatch.setattr(
+        m3_plays, "HEAT_IDS", tuple(x for x in m3_plays.HEAT_IDS if x != "go_for_the_core")
+    )
     before = state(game)
     with pytest.raises(WorkflowError, match="release-gated"):
+        begin(plays, actor, own, prepared)
+    assert state(game) == before and not game.dice.calls
+
+
+def test_harpy_core_production_catalog_still_requires_scoped_release_approval(ledger):
+    plays, game, actor, target, own, prepared = context(ledger)
+    ledger.policy = ledger.policy.model_copy(update={"m3_approval": None})
+    before = state(game)
+    with pytest.raises(WorkflowError, match="M3_REVIEW_PENDING"):
         begin(plays, actor, own, prepared)
     assert state(game) == before and not game.dice.calls

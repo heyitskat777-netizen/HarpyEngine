@@ -343,10 +343,25 @@ def test_one_postroll_tag_bond_bonus_and_observer_auth(ledger, depth):
 @pytest.mark.parametrize("faces", [(2, 3), (4, 5), (6, 6)])
 def test_disobey_requires_recorded_superior_order_and_low_halts(ledger, faces):
     game, worker, gateway, dice = setup_game(ledger, faces=faces)
+    before = state(game)
     with pytest.raises(WorkflowError, match="recorded direct order"):
         start(game, play="disobey_orders")
-    with pytest.raises(WorkflowError, match="superior"):
+    # A non-superior needs an actual qualifying source; this Pilot has none.
+    with pytest.raises(WorkflowError, match="actual active Succubus source"):
         game.issue_order(OTHER, "bad-order", 900, 2, "No authority")
+    assert state(game) == before and dice.calls == 0
+    with ledger.engine.connect() as c:
+        assert game.lock(c, 900) is None
+        for name in ("m2_orders", "m2_actions"):
+            table = t.m2[name]
+            assert (
+                c.scalar(
+                    sa.select(sa.func.count())
+                    .select_from(table)
+                    .where(table.c.campaign_id == ledger.campaign_id)
+                )
+                == 0
+            )
     root = game.issue_order(ADMIN, "order", 900, 2, "Synthetic order")
     tick(worker, gateway)
     answer(game, PLAYER, "order_response", options=("disobey",))
@@ -378,6 +393,7 @@ def test_disobey_requires_recorded_superior_order_and_low_halts(ledger, faces):
     assert game.inspect(PLAYER, child)["result"]["can_disobey"] == (sum(faces) > 7)
     assert game.inspect(PLAYER, root["action_id"])["state"] == "complete"
     assert any(x.kind == "punishment" for x in state(game).obligations)
+    assert dice.calls == 1
 
 
 @pytest.mark.parametrize(
