@@ -291,7 +291,29 @@ class GameWorker:
                 if not lock or lock["state"] != "held":
                     continue
             try:
-                if action["data"]["play"] in ("flirt_followthrough", "reject_tag"):
+                if action["data"]["play"] == "reign_reject_tag":
+                    from girlframe.services.m2_state import load_state
+                    from girlframe.services.m3_reign_terror import complete_rejection
+
+                    with self.game.store.transaction() as c:
+                        self.game.unpaused(c)
+                        current = self.game.action(c, row["id"])
+                        if current["state"] != "acquiring":
+                            continue
+                        state = load_state(c, self.game.store.campaign_id)
+                        rejection_event = str(uuid4())
+                        complete_rejection(self.game, c, state, current, rejection_event)
+                        self.game.save_action(c, current)
+                        self.game.event(
+                            c,
+                            "system:confirmed_reign_rejection",
+                            "reign.rejection.ready:" + row["id"],
+                            "m3.reign_tag_rejected",
+                            state,
+                            event_id=rejection_event,
+                            action_id=row["id"],
+                        )
+                elif action["data"]["play"] in ("flirt_followthrough", "reject_tag"):
                     from girlframe.services.m2_choices import ChoiceEngine
 
                     with self.game.store.transaction() as c:

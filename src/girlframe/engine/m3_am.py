@@ -221,6 +221,14 @@ def holds_secret(state: GameState, value: Discovery) -> bool:
 def can_report(state: GameState, value: Discovery) -> bool:
     if value.report_event or not current(state, value.discoverer):
         return False
+    if value.blackmail_tag and value.discoverer.kind == "pilot":
+        sheet = state.sheets.get(value.discoverer.entity)
+        if (
+            sheet is not None
+            and sheet.character_id == value.discoverer.incarnation
+            and any(x.id == value.blackmail_tag for x in sheet.tags)
+        ):
+            return False
     if value.blackmail_tag and state.world is not None:
         npc = next((x for x in state.world.npcs if x.id == value.discoverer.entity), None)
         if npc is not None and any(x.id == value.blackmail_tag for x in npc.tags):

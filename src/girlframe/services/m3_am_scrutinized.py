@@ -9,9 +9,9 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_am as rules
-from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput
+from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput, TagState
 from girlframe.engine.m3_actor_bonds import change, current_ref
-from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_actor_state import ActorRef, AssetView, ProfileBinding
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_alpha import current
 from girlframe.engine.m3_girl_runtime_state import has_rule
@@ -122,14 +122,22 @@ def _actual(
     actor = resolve(state, value.actor, bound, require_alive=require_alive)
     discoverer = resolve(state, value.discoverer, bound, require_alive=require_alive)
     cast = _cast(game, c, state, value.cast.channel)
+    native = (
+        value.code_origin is not None
+        and value.discoverer.kind == "pilot"
+        and value.discoverer != value.actor
+        and discoverer.rules == "girl_frame"
+        and discoverer.controller == int(value.discoverer.entity)
+    )
+    if native:
+        game.character_binding(c, state, discoverer.controller)
     if (
         value.actor.kind != "pilot"
         or actor.girl != "AM"
         or not has_rule(state.sheets[value.actor.entity], rules.RULE, "AM")
-        or value.discoverer.kind != "npc"
-        or discoverer.rules != "npc"
+        or not (native or value.discoverer.kind == "npc" and discoverer.rules == "npc")
         or discoverer.controller != value.controller
-        or value.controller != value.handler_controller
+        or (not native and value.controller != value.handler_controller)
         or value.handler != active_handler(state)
         or value.handler_controller != state.handler
         or cast.adjudicator is not None
@@ -138,6 +146,21 @@ def _actual(
         raise WorkflowError(
             "Recover this actual original AM, ordinary NPC and canonical Handler source"
         )
+
+
+def pilot_damage_assets(
+    state: GameState, actor: ActorRef, bindings: tuple[ProfileBinding, ...]
+) -> tuple[AssetView, ...]:
+    actual = resolve(state, actor, bindings)
+    return tuple(
+        x
+        for x in actual.assets
+        if not x.damaged
+        and (
+            x.family != "frame"
+            or any(y.family == "frame" and not y.damaged and y.id != x.id for y in actual.assets)
+        )
+    )
 
 
 def allowed(
@@ -159,7 +182,14 @@ def allowed(
     ):
         from girlframe.engine.m3_sprite import candidates
 
-        if not candidates(state, value.discoverer, value.actor, bound):
+        if (
+            (
+                value.discoverer.kind == "pilot"
+                and pilot_damage_assets(state, value.discoverer, bound)
+            )
+            or value.discoverer.kind != "pilot"
+            and not candidates(state, value.discoverer, value.actor, bound)
+        ):
             result.append("violence")
     if value.handler is not None:
         body = resolve(state, value.handler, bound)
@@ -210,7 +240,9 @@ def preview(game: GameService, viewer: GuildViewer, channel: int) -> dict[str, A
                         dict(
                             id=value.id,
                             ref=value.discoverer.model_dump(mode="json"),
-                            label=resolve(state, value.discoverer, ()).label,
+                            label=resolve(
+                                state, value.discoverer, profiles(c, game.store.campaign_id)
+                            ).label,
                         )
                     )
             return dict(available=bool(ready), discoveries=ready)
@@ -326,6 +358,9 @@ def apply(
     meta = action["data"]["am_scrutinized"]
     value = rules.discovery(state, meta["discovery"])
     event = action["data"]["response_event"]
+    if request["kind"] in ("am_pilot_damage", "am_pilot_response", "am_pilot_damage_wait"):
+        apply_pilot_damage(game, c, state, action, request, answer)
+        return
     if (
         answer.denied
         or answer.flag is not None
@@ -388,6 +423,23 @@ def apply(
     if outcome == "blackmail":
         if not answer.text.strip() or len(answer.text) > 120:
             raise WorkflowError("Write the actual discovered blackmail as a bounded Tag")
+        if value.discoverer.kind == "pilot":
+            tag_id = value.id + ":blackmail"
+            target = state.sheets[value.discoverer.entity]
+            target.tags.append(
+                TagState(
+                    id=tag_id,
+                    label=answer.text.strip(),
+                    giver=value.caster,
+                    giver_actor=value.actor,
+                )
+            )
+            target.revision += 1
+            value = value.model_copy(update=dict(blackmail_tag=tag_id))
+            rules.put(state, value)
+            meta["phase"] = "effects"
+            _finish(game, c, state, action)
+            return
         assert state.world is not None
         tag = WorldTag(
             id=value.id + ":blackmail",
@@ -414,6 +466,18 @@ def apply(
         if not value.lower_status or not answer.text.strip():
             raise WorkflowError("The actual source Handler must establish their lower Status")
     elif outcome == "violence":
+        if value.discoverer.kind == "pilot":
+            if not answer.text.strip():
+                raise WorkflowError("Describe actual damage to this original operator")
+            rules.put(state, value)
+            meta["pilot_damage"] = dict(
+                target=value.discoverer.model_dump(mode="json"),
+                phase="select",
+                selected_event=event,
+                work=[],
+            )
+            game.request(c, action, value.caster, "am_pilot_damage")
+            return
         if not answer.text.strip():
             raise WorkflowError("Describe the actual source killing")
         from girlframe.engine.m3_battle import end_actor_casts
@@ -466,6 +530,20 @@ def projection(
     request: dict[str, Any],
 ) -> dict[str, Any]:
     value = rules.discovery(state, action["data"]["am_scrutinized"]["discovery"])
+    if request["kind"].startswith("am_pilot_"):
+        target = resolve(state, value.discoverer, profiles(c, game.store.campaign_id))
+        return dict(
+            discovery=value.id,
+            target=target.label,
+            assets=[
+                dict(id=x.id, label=x.name, family=x.family)
+                for x in pilot_damage_assets(
+                    state, value.discoverer, profiles(c, game.store.campaign_id)
+                )
+            ],
+            question="How do you play your original Girl now?",
+            phase=action["data"]["am_scrutinized"].get("pilot_damage", {}).get("phase"),
+        )
     options = allowed(game, c, state, value)
     if (
         request["kind"] == "am_select"
@@ -483,7 +561,8 @@ def projection(
         freedoms=[
             dict(id=k, label=v) for k, v in rules.FREEDOMS if rules.free(state, value.actor, k)
         ],
-        discoverer=resolve(state, value.discoverer, ()).label,
+        discoverer=resolve(state, value.discoverer, profiles(c, game.store.campaign_id)).label,
+        pilot_operator=value.discoverer.kind == "pilot",
         discovery=value.id,
         handler_grant=value.refuge_grant,
     )
@@ -492,6 +571,15 @@ def projection(
 def synchronize(game: GameService, c: Connection, action: dict[str, Any], event: str) -> None:
     from girlframe.services.m3_am_reset import materialize
 
+    details = action["data"]["am_scrutinized"].get("pilot_damage", {})
+    if details.get("damage_event") == event and not details.get("materialized"):
+        from girlframe.services.m3_battle import synchronize_damage
+
+        synchronize_damage(game, c, event)
+        current = game.action(c, action["id"])
+        action.clear()
+        action.update(current)
+        action["data"]["am_scrutinized"]["pilot_damage"]["materialized"] = event
     materialize(
         game,
         c,
@@ -554,7 +642,7 @@ def secret_authority(
         raise WorkflowError("The actual original NPC must still be keeping this AM's secret")
     value = source(game, c, state, found[0].id)
     _prove_effect(game, c, value)
-    if resolve(state, issuer, ()).controller != value.controller:
+    if resolve(state, issuer, profiles(c, game.store.campaign_id)).controller != value.controller:
         raise WorkflowError("Recover the original discoverer's actual controller")
     return value
 
@@ -568,6 +656,8 @@ def _prove_effect(game: GameService, c: Connection, value: rules.Discovery) -> N
         from girlframe.services.m3_am_code import prove_code_discovery
 
         prove_code_discovery(game, c, _history(game, c, value.effect_event), action)
+        if value.discoverer.kind == "pilot" and value.outcome == "violence":
+            _pilot_damage_proof(game, c, load_state(c, game.store.campaign_id), action)
     receipt = c.scalar(
         sa.select(t.m2["m2_receipts"].c.body_json).where(
             t.m2["m2_receipts"].c.campaign_id == game.store.campaign_id,
@@ -901,7 +991,12 @@ class ScrutinyService:
                         and value.unbelief_ended_event is None,
                         handler_controller=value.handler_controller,
                         secret=rules.holds_secret(state, value),
-                        label=resolve(state, value.discoverer, (), require_alive=False).label,
+                        label=resolve(
+                            state,
+                            value.discoverer,
+                            profiles(c, self.store.campaign_id),
+                            require_alive=False,
+                        ).label,
                     )
                 )
             return dict(
@@ -1157,6 +1252,8 @@ class ScrutinyService:
             secret_authority(self.game, c, state, value.discoverer, value.actor)
             if viewer.user_id != value.controller:
                 raise WorkflowError("Only the actual original discoverer issues this NPC order")
+        if value.discoverer.kind == "pilot":
+            return self.game.issue_order(viewer, key, channel, value.caster, instruction)
         from girlframe.services.m3_npc_orders import NpcOrderService
 
         return NpcOrderService(self.game).issue(
@@ -1271,3 +1368,227 @@ class ScrutinyService:
             auto_audit=False,
             authorize=lambda c: _access(self.game, c, viewer),
         )
+
+
+def pilot_order_authority(
+    game: GameService, c: Connection, state: GameState, issuer: int, target: int
+) -> dict[str, Any] | None:
+    """Actual native Pilot's target-scoped authority from this original AM's secret."""
+    first, second = current_ref(state, issuer), current_ref(state, target)
+    candidates = [
+        x
+        for x in rules.discoveries(state)
+        if x.code_origin
+        and x.discoverer == first
+        and x.actor == second
+        and first.kind == "pilot"
+        and rules.holds_secret(state, x)
+    ]
+    if not candidates:
+        return None
+    if len(candidates) != 1:
+        raise WorkflowError("Recover the exact original Pilot/AM secret authority")
+    registry = Access(game.store).registry
+    assert registry is not None
+    registry.require_available(rules.RULE)
+    value = secret_authority(game, c, state, first, second)
+    return dict(
+        discovery=value.id,
+        secret_event=value.secret_event,
+        issuer=first.model_dump(mode="json"),
+        target=second.model_dump(mode="json"),
+    )
+
+
+def valid_pilot_order(
+    game: GameService, c: Connection, state: GameState, row: dict[str, Any]
+) -> bool:
+    frozen = json.loads(row["body_json"]).get("am_secret")
+    if frozen is None:
+        return False
+    actual = pilot_order_authority(game, c, state, int(row["issuer_id"]), int(row["target_id"]))
+    if actual is None or actual != frozen:
+        raise WorkflowError(
+            "AM_SECRET_EXPIRED: preserve the actual original issuer, AM and kept secret"
+        )
+    return True
+
+
+def _pilot_damage_proof(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any]
+) -> rules.Discovery:
+    value = source(game, c, state, action["data"]["am_scrutinized"]["discovery"])
+    details = action["data"]["am_scrutinized"].get("pilot_damage", {})
+    if (
+        not value.code_origin
+        or value.discoverer.kind != "pilot"
+        or value.outcome != "violence"
+        or details.get("target") != value.discoverer.model_dump(mode="json")
+        or not details.get("damage_event")
+    ):
+        raise WorkflowError("Recover actual original Pilot damage and its own response")
+    original = _history(game, c, details["damage_event"])
+    applied = any(
+        x.get("kind") == "battle_damage_stage"
+        and x.get("event") == details["damage_event"]
+        and x.get("applied") == value.discoverer.model_dump_json()
+        and x.get("asset") == details.get("asset")
+        for x in original.facts
+    )
+    deferred = False
+    for fact in original.facts:
+        if (
+            fact.get("kind") != "battle_damage_stage"
+            or fact.get("event") != details["damage_event"]
+            or fact.get("source_action") != action["id"]
+            or not fact.get("requirement")
+        ):
+            continue
+        requirement = json.loads(fact["requirement"])
+        if requirement.get("kind") != "sprite_intercept":
+            continue
+        blow = json.loads(requirement["details"]["blow"])
+        if (
+            blow.get("target") == value.discoverer.model_dump(mode="json")
+            and blow.get("asset") == details.get("asset")
+            and blow.get("source_action") == action["id"]
+            and blow.get("source_event") == details["damage_event"]
+            and blow.get("occurrence") == "am_scrutinized_pilot"
+            and fact.get("id") in details["work"]
+        ):
+            deferred = True
+    if not (applied or deferred):
+        raise WorkflowError("Recover the actual damaged Asset or its exact pending interception")
+    responses, choices = t.m2["m2_responses"], t.m2["m2_choices"]
+    answered = c.scalar(
+        sa.select(responses.c.answer_json)
+        .join(
+            choices,
+            sa.and_(
+                choices.c.campaign_id == responses.c.campaign_id,
+                choices.c.id == responses.c.choice_id,
+            ),
+        )
+        .where(
+            responses.c.campaign_id == game.store.campaign_id,
+            responses.c.event_id == details["damage_event"],
+            choices.c.action_id == action["id"],
+            choices.c.kind == "am_pilot_damage",
+            responses.c.actor_id == str(value.caster),
+        )
+    )
+    if answered is None or json.loads(answered).get("options") != [details.get("asset")]:
+        raise WorkflowError("Recover the original AM's actual Asset choice")
+    return value
+
+
+def apply_pilot_damage(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    request: dict[str, Any],
+    answer: ChoiceAnswer,
+) -> None:
+    value = source(game, c, state, action["data"]["am_scrutinized"]["discovery"])
+    meta = action["data"]["am_scrutinized"]
+    details = meta.get("pilot_damage", {})
+    event = action["data"]["response_event"]
+    if (
+        not value.code_origin
+        or value.discoverer.kind != "pilot"
+        or value.outcome != "violence"
+        or answer.denied
+        or answer.fields
+        or answer.flag is not None
+        or answer.member is not None
+        or answer.number is not None
+        or not answer.text.strip()
+        or len(answer.text) > 1200
+    ):
+        raise WorkflowError("Use the actual original Pilot's source-owned damage/response")
+    if request["kind"] == "am_pilot_damage":
+        actual = resolve(state, value.discoverer, profiles(c, game.store.campaign_id))
+        if (
+            details.get("phase") != "select"
+            or len(answer.options) != 1
+            or not any(x.id == answer.options[0] and not x.damaged for x in actual.assets)
+        ):
+            raise WorkflowError("The original AM chooses one actual intact operator Asset")
+        chosen = next(x for x in actual.assets if x.id == answer.options[0])
+        if chosen.family == "frame" and not any(
+            x.family == "frame" and not x.damaged and x.id != chosen.id for x in actual.assets
+        ):
+            raise WorkflowError(
+                "SOURCE_FRAME_CONSEQUENCE_REQUIRED: preserve actual battle/Frame exhaustion context"
+            )
+        from girlframe.services.m3_battle import damage_actor
+
+        changed, work = damage_actor(
+            game,
+            c,
+            state,
+            target=value.discoverer,
+            asset_id=answer.options[0],
+            source_action=action["id"],
+            source_work=None,
+            event=event,
+            actor=value.actor,
+            opponent=value.actor,
+            chooser_controller=value.caster,
+            occurrence="am_scrutinized_pilot",
+            physical_blow=True,
+        )
+        _copy(state, changed)
+        details.update(
+            asset=answer.options[0],
+            damage_event=event,
+            work=list(work),
+            phase="work" if work else "response",
+        )
+        if not work:
+            game.request(c, action, value.controller, "am_pilot_response")
+        return
+    if request["kind"] == "am_pilot_response":
+        _pilot_damage_proof(game, c, state, action)
+        if details.get("phase") != "response" or answer.options:
+            raise WorkflowError("The original operator answers only after actual damage work")
+        details.update(phase="answered", response_event=event)
+        action["data"]["result"]["am_operator_response"] = dict(
+            actor=value.discoverer.model_dump(mode="json"), text=answer.text
+        )
+        _finish(game, c, state, action)
+        return
+    raise WorkflowError("Complete the actual required damage work through its owner controls")
+
+
+def complete_pilot_damage(
+    game: GameService,
+    c: Connection,
+    row: dict[str, Any],
+    event: str,
+    viewer: GuildViewer | None,
+    key: str,
+) -> None:
+    body = json.loads(row["body_json"])
+    action = game.action(c, body["source_action"])
+    state = load_state(c, game.store.campaign_id)
+    value = _pilot_damage_proof(game, c, state, action)
+    details = action["data"]["am_scrutinized"]["pilot_damage"]
+    if row["id"] not in details["work"] or row["state"] != "resolved":
+        raise WorkflowError("Only this actual original damage work advances its human response")
+    if details["phase"] != "work":
+        return
+    work_table = t.m3["m3_required_work"]
+    for identity in details["work"]:
+        status = c.scalar(
+            sa.select(work_table.c.state)
+            .where(work_table.c.campaign_id == game.store.campaign_id, work_table.c.id == identity)
+            .order_by(work_table.c.revision.desc())
+            .limit(1)
+        )
+        if status != "resolved":
+            return
+    details["phase"] = "response"
+    game.request(c, action, value.controller, "am_pilot_response")
+    game.save_action(c, action)

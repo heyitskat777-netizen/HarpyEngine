@@ -34,6 +34,11 @@ async def open_code(
         ("operator:" + x["id"], "First-time circuits: " + x["label"]) for x in data["operators"]
     ]
     options += [
+        ("response:" + x["id"], "Read original operator's own response")
+        for x in data["sessions"]
+        if x["operator_response"]
+    ]
+    options += [
         ("confirm:" + x["id"], "Confirm actual circuit access")
         for x in data["sessions"]
         if x["phase"] == "proposed" and x["controller"] == viewer.user_id
@@ -53,7 +58,8 @@ async def open_code(
     from girlframe.services.m3_am_body import BodyService
 
     hardware = await asyncio.to_thread(BodyService(service.game).menu, viewer)
-    if hardware["preparations"] or hardware["swaps"]:
+    pilot_sources = {x["id"] for x in data["sessions"] if x["operator"]["kind"] == "pilot"}
+    if any(x["id"] not in pilot_sources for x in hardware["preparations"]) or hardware["swaps"]:
         options.append(("body:menu", "Actual AM bodies and hooked return"))
     from girlframe.services.m3_am_branch import BranchService
 
@@ -73,6 +79,12 @@ async def open_code(
 
     async def choose(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         operation, identity = values["source"][0].split(":", 1)
+        if operation == "response":
+            value = next(x for x in data["sessions"] if x["id"] == identity)
+            await reply(
+                current, "Original operator's own response: " + value["operator_response"]["text"]
+            )
+            return None
         if operation == "branch":
             from girlframe.discord_adapter.m3_am_branch import open_branch
 
@@ -109,7 +121,15 @@ async def open_code(
         source_fields = [
             Field("account", "Your actual maintenance or factual circuit access", paragraph=True)
         ]
-        if operation in ("propose", "operator"):
+        candidate = (
+            next((x for x in data["operators"] if x["id"] == identity), None)
+            if operation == "operator"
+            else next((x for x in data["known"] if x["id"] == identity), None)
+        )
+        pilot = bool(
+            candidate and (candidate.get("ref") or candidate.get("operator"))["kind"] == "pilot"
+        )
+        if operation in ("propose", "operator") and not pilot:
             source_fields.insert(
                 0,
                 Field(
@@ -136,7 +156,12 @@ async def open_code(
                 ]
             )
 
-        if session and session["new_operator"] and operation == "confirm":
+        if (
+            session
+            and session["new_operator"]
+            and session["operator"]["kind"] != "pilot"
+            and operation == "confirm"
+        ):
             source_fields += [
                 Field(
                     "operator_lower",
@@ -166,7 +191,7 @@ async def open_code(
                         (
                             ActorRef.model_validate(x["ref"])
                             for x in data["subjects"]
-                            if x["token"] == answer["records_subject"][0]
+                            if x["token"] == answer.get("records_subject", ("none",))[0]
                         ),
                         None,
                     ),
@@ -187,7 +212,7 @@ async def open_code(
                         (
                             ActorRef.model_validate(x["ref"])
                             for x in data["subjects"]
-                            if x["token"] == answer["records_subject"][0]
+                            if x["token"] == answer.get("records_subject", ("none",))[0]
                         ),
                         None,
                     ),
@@ -211,7 +236,9 @@ async def open_code(
                         operator_lower=answer["operator_lower"] == ("yes",),
                         operator_human=answer["operator_human"] == ("yes",),
                     )
-                    if session and session["new_operator"]
+                    if session
+                    and session["new_operator"]
+                    and session["operator"]["kind"] != "pilot"
                     else {}
                 ),
             )
@@ -246,7 +273,7 @@ async def open_code(
     form = NativeForm(
         viewer.user_id,
         "AM Identity/memory circuit maintenance",
-        f"Original scene <#{channel}>. The actual NPC circuit operator owns her response. "
+        f"Original scene <#{channel}>. The actual original circuit operator owns her response. "
         "Actual prepared bodies, hooked return and branching are available. "
         "A first-time high result creates its actual new Scrutinized consequence.",
         [Field("source", "Actual source or owned response", tuple(options))],
@@ -257,6 +284,57 @@ async def open_code(
 
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
     data = await asyncio.to_thread(game.decision, viewer_from_interaction(interaction), identity)
+    if data["kind"].startswith("am_pilot_"):
+        detail = data["am_scrutinized"]
+        if data["kind"] == "am_pilot_damage_wait":
+            await reply(
+                interaction, "This source waits for actual damage work through its owner controls."
+            )
+            return
+
+        async def respond(current: discord.Interaction, values: dict[str, Any]) -> str:
+            await asyncio.to_thread(
+                game.respond,
+                viewer_from_interaction(current),
+                str(current.id),
+                identity,
+                data["revision"],
+                ChoiceAnswer(options=tuple(values.get("asset", ())), text=values["account"]),
+            )
+            return (
+                "Actual source damage saved; its original operator supplies her own response."
+                if data["kind"] == "am_pilot_damage"
+                else "Your original Girl's response saved; required work stays authoritative."
+            )
+
+        fields = [
+            Field(
+                "account",
+                "Actual damage" if data["kind"] == "am_pilot_damage" else detail["question"],
+                paragraph=True,
+            )
+        ]
+        if data["kind"] == "am_pilot_damage":
+            fields.insert(
+                0,
+                Field(
+                    "asset",
+                    "Original operator's actual intact Asset",
+                    tuple((x["id"], x["label"]) for x in detail["assets"]),
+                ),
+            )
+        form = NativeForm(
+            interaction.user.id,
+            "Original AM damage"
+            if data["kind"] == "am_pilot_damage"
+            else "Original operator: how do you play now?",
+            "Only the actual original human owns this choice. "
+            "Required consequences resolve before completion.",
+            fields,
+            respond,
+        )
+        await reply(interaction, form.text(), form)
+        return
     detail = data["am_code"]
     if data["kind"] == "am_code_prepare":
         from girlframe.discord_adapter.m2_ui import open_play

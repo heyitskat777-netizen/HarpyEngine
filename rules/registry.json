@@ -5383,7 +5383,7 @@
     },
     {
       "id": "am-new-operator-high-consequence-owner",
-      "summary": "On first-time NPC high Just Code, the AM chooses one applicable Scrutinized8-10 consequence, retaining the real high Code receipt and separate operator-owned Code effects.",
+      "summary": "On first-time high Just Code, the AM chooses one applicable Scrutinized8-10 consequence, retaining the real high Code receipt and separate operator-owned Code effects.",
       "provenance": "owner_approved_campaign_ruling",
       "source": "Rulebook PDF56/printed54 Just Code high; PDF55/printed53 Scrutinized8-10",
       "authority": "delegated_recommendation",
@@ -5397,7 +5397,24 @@
       "clarity_review": true,
       "revision": 1,
       "implementation_note": "Actual operator retains up-to2 Code selections. Finish their actual effects before AM consequence so violence cannot strand work. Record awareness at genuine high receipt; existing already-aware high still lowers Status. Applicable source/physical/refuge dependencies must be real before RNG.",
-      "change_impact": "Affects future first-time high compound consequence ownership/order only. Never rewrites original knowledge, actual receipt/tier/resources or completed Code/Scrutinized choices. Human/Director operator adapters and independent printed clarity remain pending."
+      "change_impact": "Affects future first-time high compound consequence ownership/order only. Never rewrites original knowledge, actual receipt/tier/resources or completed Code/Scrutinized choices. Further Handler/Director operator adapters and independent printed clarity remain pending."
+    },
+    {
+      "id": "reign-underfunded-ordinary-tag",
+      "summary": "The Underfunded Tag against an actual enemy group member uses ordinary marked, scene-use, arbitration and owned repeated-mark resolution rules.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF157/printed155 Reign of Terror; PDF11/printed9 Tags; PDF188/printed186 Rebel Girls are not NPCs",
+      "authority": "delegated_recommendation",
+      "rationale": "The advancement grants a Tag without exempting it from ordinary Tag rules; treating a Rebel Girl as an NPC would bypass her actual Identity resources and choices.",
+      "alternatives": [
+        "Permanent NPC-style modifier without marking or repeated resolution",
+        "Independent bonus stacked with another selected Tag"
+      ],
+      "policy_key": "reign_underfunded_ordinary_tag",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Exact public faction and genuine NPC custody source required. The original external controller confirms unknown current resources once. Embrace changes an actual Identity; rejection is a genuine owed locked action. Redundant underfunding preserves existing condition and usage history.",
+      "change_impact": "Applies to future source-bound enemy Tag use. Preserve existing effects, inventory and player responses; no automatic group-merger inheritance. Broader resource/actor adapters remain required gaps."
     }
   ],
   "entries": [
@@ -7883,7 +7900,8 @@
         "tests/rules/test_am_backup.py",
         "tests/rules/test_am_body.py",
         "tests/rules/test_am_branch.py",
-        "tests/rules/test_am_code_new_operator.py"
+        "tests/rules/test_am_code_new_operator.py",
+        "tests/rules/test_am_code_pilot_operator.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -16799,14 +16817,16 @@
         "heading": "Reign of Terror"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_reign_terror.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

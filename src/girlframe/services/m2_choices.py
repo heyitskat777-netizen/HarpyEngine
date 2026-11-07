@@ -166,6 +166,11 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         sheet = state.sheets.get(str(owner))
         body = json.loads(request["body_json"])
+        if kind == "reign_group_tag_resolution":
+            from girlframe.services.m3_reign_terror import resolution as resolve_reign_tag
+
+            resolve_reign_tag(self.game, c, state, action, request, answer)
+            return
         if kind == "sidearm_reconsider":
             from girlframe.services.m3_hidden_sidearm import apply_response as apply_sidearm
 
@@ -841,6 +846,10 @@ class ChoiceEngine:
             + uniform_tags(state, actor)
             + collar_tags(state, actor)
         )
+        from girlframe.services.m3_reign_terror import candidates as reign_candidates
+        from girlframe.services.m3_reign_terror import propose as propose_reign
+
+        available_tags += reign_candidates(self.game, c, state, action)
         picks(answer.options, {"pass", "tag"}, 1)
         require(
             set(answer.fields) <= {"status", "marker"}, "Choose only supported source-role fields."
@@ -867,9 +876,12 @@ class ChoiceEngine:
                 1,
             )
             tag = next(x for x in available_tags if x.id == answer.denied[0])
-            self.prove_tag_setter(c, state, actor, tag)
+            reign = propose_reign(self.game, c, state, action, owner, tag)
+            if not reign:
+                self.prove_tag_setter(c, state, actor, tag)
             require(
-                owner != actor
+                reign
+                or owner != actor
                 or mentor_tag(sheet, tag, state)
                 or (
                     has_rule(sheet, "girl.princess.objectively-beautiful", "PRINCESS")
@@ -953,6 +965,10 @@ class ChoiceEngine:
                     selected = entry
         if selected:
             person, answer, marker = selected
+            from girlframe.services.m3_reign_terror import mark as mark_reign
+
+            if mark_reign(self.game, c, state, action, answer.denied[0], person, marker, answer):
+                return
             from girlframe.engine.m3_control_ritual import save_tag
             from girlframe.services.m3_bomb_collar import (
                 prove_tag as prove_collar_tag,

@@ -1,6 +1,6 @@
 """Pure source-specific Heat/Identity ports; non-Girls never become proxy Pilot sheets."""
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from girlframe.engine.m2 import GameState, IdentityState, mark_identity, spend_heat
 from girlframe.engine.m3_actor_state import ActorRef, Model, ProfileBinding
@@ -23,6 +23,82 @@ class Followup(Model):
 class Committed(Model):
     state: GameState
     followups: tuple[Followup, ...] = ()
+
+
+class RebelInventory(Model):
+    actor: ActorRef
+    controller: int
+    initial_event: str
+    account: str = Field(min_length=1, max_length=1200)
+    heat: int = Field(ge=0)
+    identities: tuple[IdentityState, ...]
+
+    @model_validator(mode="after")
+    def ordinary_inventory(self) -> "RebelInventory":
+        if (
+            self.actor.kind != "external_pilot"
+            or len(self.identities) > 4
+            or len({x.id for x in self.identities}) != len(self.identities)
+            or len({x.slot for x in self.identities}) != len(self.identities)
+            or any(
+                x.slot is None
+                or x.paired
+                or x.protected
+                or x.am_limiter
+                or x.obsession_sources
+                or not x.name.strip()
+                for x in self.identities
+            )
+        ):
+            raise ValueError("Only an actual ordinary Rebel Girl inventory has this resource port")
+        return self
+
+
+def rebel_inventory(state: GameState, actor: ActorRef) -> RebelInventory | None:
+    pilot = (
+        next(
+            (
+                x
+                for x in state.world.pilots
+                if actor.kind == "external_pilot" and x.id == actor.entity
+            ),
+            None,
+        )
+        if state.world
+        else None
+    )
+    if pilot is None or pilot.rebel_resources_json is None:
+        return None
+    if pilot.kind != "rebel" or pilot.girl.upper() != "MOCKINGBIRD":
+        raise ValueError(
+            "UNSUPPORTED_REBEL_INVENTORY: conditional Girl resources need their own port"
+        )
+    value = RebelInventory.model_validate_json(pilot.rebel_resources_json)
+    if value.actor != actor or value.controller != pilot.controller:
+        raise ValueError("Preserve the actual original Rebel Girl resource controller")
+    return value
+
+
+def save_rebel_inventory(state: GameState, value: RebelInventory) -> None:
+    old = rebel_inventory(state, value.actor)
+    if old is not None and (old.initial_event, old.account, old.controller) != (
+        value.initial_event,
+        value.account,
+        value.controller,
+    ):
+        raise ValueError("Never reset or reauthor this original Rebel inventory")
+    if state.world is None:
+        raise ValueError("The actual world Rebel Girl is missing")
+    state.world = state.world.model_copy(
+        update=dict(
+            pilots=tuple(
+                x.model_copy(update=dict(rebel_resources_json=value.model_dump_json()))
+                if x.id == value.actor.entity
+                else x
+                for x in state.world.pilots
+            )
+        )
+    )
 
 
 def commit(
@@ -168,6 +244,29 @@ def commit(
             and all(x.marked for x in actual_identities)
         ):
             followups.append(Followup(kind="ankou_feedback", actor=actor, source_pdf=84))
+    elif actor.kind == "external_pilot" and rebel_inventory(state, actor) is not None:
+        inventory = rebel_inventory(state, actor)
+        assert inventory is not None
+        if prepared.pair_share:
+            raise ValueError("This ordinary Rebel Girl has no Paired resource port")
+        values = list(inventory.identities)
+        heat = inventory.heat
+        if prepared.identity is not None:
+            rebel_selected = next((x for x in values if x.id == prepared.identity), None)
+            if rebel_selected is None or rebel_selected.marked or not 1 <= prepared.gain <= 3:
+                raise ValueError(
+                    "Mark an actual owned unmarked Rebel Identity for one to three Heat"
+                )
+            rebel_selected.marked = True
+            heat += prepared.gain
+        elif prepared.gain:
+            raise ValueError("Rebel Heat gain needs its actual Identity")
+        if prepared.heat > heat or heat >= 5 and prepared.heat != heat:
+            raise ValueError("Spend actual available Rebel Heat; five or more requires all")
+        save_rebel_inventory(
+            state,
+            inventory.model_copy(update=dict(heat=heat - prepared.heat, identities=tuple(values))),
+        )
     else:
         raise ValueError(
             "UNSUPPORTED_RULE: this role has no supported Girl Heat/Identity resource port"

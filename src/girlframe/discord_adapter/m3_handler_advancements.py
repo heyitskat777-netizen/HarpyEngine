@@ -54,6 +54,12 @@ async def open_advancement(
 
         await open_sidearm(interaction, HiddenSidearmService(service.store), data["acquisition"])
         return
+    if data.get("acquired_rule") == "handler-advancement.handler-advancement.reign-of-terror":
+        from girlframe.discord_adapter.m3_reign_terror import open_terror
+        from girlframe.services.m3_reign_terror import ReignTerrorService
+
+        await open_terror(interaction, ReignTerrorService(service.store), data["acquisition"])
+        return
     if data.get("acquired_rule"):
         await reply(
             interaction,
@@ -176,6 +182,7 @@ async def open_advancement(
     form.add_item(AcquireSecretary(form, service))
     form.add_item(AcquireBombCollar(form, service))
     form.add_item(AcquireHiddenSidearm(form, service))
+    form.add_item(AcquireReignTerror(form, service))
     await form.present(interaction)
 
 
@@ -352,3 +359,17 @@ class AcquireHiddenSidearm(discord.ui.Button[NativeForm]):
         from girlframe.services.m3_hidden_sidearm import HiddenSidearmService
 
         await open_sidearm(interaction, HiddenSidearmService(self.service.store))
+
+
+class AcquireReignTerror(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService):
+        super().__init__(label="Acquire Reign of Terror instead", row=2)
+        self.form, self.service = form, service
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_reign_terror import open_terror
+        from girlframe.services.m3_reign_terror import ReignTerrorService
+
+        await open_terror(interaction, ReignTerrorService(self.service.store))

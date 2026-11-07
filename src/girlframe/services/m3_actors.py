@@ -319,3 +319,189 @@ class ActorService:
             raise WorkflowError(
                 "Invalid actor binding; recover the actual source snapshot."
             ) from None
+
+    def introduce_rebel(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        expected: int,
+        pilot: Any,
+        *,
+        actual: bool,
+        account: str,
+    ) -> dict[str, Any]:
+        """Finite actual ordinary Rebel Girl introduction, under existing world authority."""
+        from girlframe.engine.m3_world import update
+        from girlframe.engine.m3_world_state import AdversaryPilot
+        from girlframe.services.m3_world import WorldService
+
+        value = AdversaryPilot.model_validate_json(pilot.model_dump_json())
+        world = WorldService(self.missions)
+
+        def operation(c: Connection) -> dict[str, Any]:
+            state = world._state(c, expected)
+            if (
+                state.world is None
+                or not actual
+                or not account.strip()
+                or value.controller != viewer.user_id
+                or value.kind != "rebel"
+                or value.girl.upper() != "MOCKINGBIRD"
+                or not value.alive
+                or value.rebel_resources_json is not None
+                or value.custody != "free"
+                or value.tags
+                or not value.assets
+                or not state.world.board.contains(value.cell)
+                or any(x.id == value.id for x in state.world.pilots)
+                or not any(
+                    x.id == value.faction and x.active and x.kind == "rebel"
+                    for x in state.world.factions
+                )
+            ):
+                raise WorkflowError(
+                    "Introduce only your actual new ordinary Rebel Girl with real "
+                    "group/body/Assets; conditional resources need a source port"
+                )
+            from uuid import uuid4
+
+            event = str(uuid4())
+            state.world = update(state.world, pilots=(*state.world.pilots, value))
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.rebel_girl_introduced",
+                state,
+                event_id=event,
+                actor_ref=value.id,
+                account=account.strip(),
+            )
+            return dict(id=value.id, game_revision=state.revision)
+
+        return world._write(
+            viewer,
+            key,
+            "m3.rebel_girl_introduced",
+            dict(
+                expected=expected,
+                pilot=value.model_dump(mode="json"),
+                actual=actual,
+                account=account,
+            ),
+            operation,
+        )
+
+    def confirm_rebel_inventory(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        expected: int,
+        actor: ActorRef,
+        identities: tuple[Any, ...],
+        heat: int,
+        account: str,
+        *,
+        actual: bool,
+    ) -> dict[str, Any]:
+        from uuid import uuid4
+
+        from girlframe.engine.m2 import IdentityState
+        from girlframe.engine.m3_actor_resources import RebelInventory, save_rebel_inventory
+
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            state = load_state(c, self.store.campaign_id)
+            current = self._actor(c, viewer, state, actor, require_current_profile=False)
+            pilot = (
+                next(
+                    (
+                        x
+                        for x in state.world.pilots
+                        if actor.kind == "external_pilot" and x.id == actor.entity
+                    ),
+                    None,
+                )
+                if state.world
+                else None
+            )
+            if (
+                state.revision != expected
+                or not actual
+                or not account.strip()
+                or pilot is None
+                or pilot.kind != "rebel"
+                or pilot.girl.upper() != "MOCKINGBIRD"
+                or pilot.rebel_resources_json is not None
+                or current.controller != viewer.user_id
+                or self.game.pending_actions(c)
+            ):
+                raise WorkflowError(
+                    "Only this actual Rebel Girl controller confirms its previously unknown "
+                    "inventory once"
+                )
+            event = str(uuid4())
+            inventory = RebelInventory(
+                actor=actor,
+                controller=viewer.user_id,
+                initial_event=event,
+                account=account.strip(),
+                heat=heat,
+                identities=tuple(
+                    IdentityState.model_validate_json(x.model_dump_json()) for x in identities
+                ),
+            )
+            save_rebel_inventory(state, inventory)
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.rebel_inventory_confirmed",
+                state,
+                event_id=event,
+                actor_ref=actor.model_dump(mode="json"),
+            )
+            return dict(id=actor.entity, game_revision=state.revision)
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.rebel_inventory_confirmed",
+            dict(
+                expected=expected,
+                actor_ref=actor.model_dump(mode="json"),
+                identities=[x.model_dump(mode="json") for x in identities],
+                heat=heat,
+                account=account,
+                actual=actual,
+            ),
+            operation,
+            authorize=lambda c: self.missions.access.authorize(c, viewer, "world"),
+            auto_audit=False,
+        )
+
+
+def prove_rebel_inventory(game: Any, c: Connection, state: GameState, actor: ActorRef) -> Any:
+    """Prove the original controller-authored inventory without resetting current resources."""
+    from girlframe.engine.m3_actor_resources import rebel_inventory
+    from girlframe.services.m3_handler_advancements import _history
+
+    value = rebel_inventory(state, actor)
+    if value is None:
+        raise WorkflowError(
+            "REBEL_INVENTORY_REQUIRED: actual controller must confirm unknown current resources"
+        )
+    born = rebel_inventory(_history(c, game, value.initial_event), actor)
+    audit = c.execute(
+        sa.select(t.events.c.actor_id, t.events.c.kind).where(
+            t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == value.initial_event
+        )
+    ).first()
+    if (
+        born is None
+        or (born.controller, born.actor, born.account)
+        != (value.controller, value.actor, value.account)
+        or audit != (str(value.controller), "m3.rebel_inventory_confirmed")
+    ):
+        raise WorkflowError("Recover the genuine original controller-owned Rebel inventory source")
+    return value

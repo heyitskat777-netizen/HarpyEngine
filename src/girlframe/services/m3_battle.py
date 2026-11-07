@@ -1970,7 +1970,11 @@ def complete_damage_work(
         complete_damage(game, c, body["source_work"], event, viewer, key)
     if body.get("source_action"):
         action = game.action(c, body["source_action"])
-        if action["data"].get("battle"):
+        if action["data"].get("am_scrutinized", {}).get("pilot_damage"):
+            from girlframe.services.m3_am_scrutinized import complete_pilot_damage
+
+            complete_pilot_damage(game, c, dict(latest), event, viewer, key)
+        elif action["data"].get("battle"):
             synchronize(game, c, action, event, viewer, key)
         elif action["data"].get("gorgon_play"):
             from girlframe.services.m3_gorgon_play import (

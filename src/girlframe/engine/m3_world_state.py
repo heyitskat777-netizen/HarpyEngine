@@ -246,6 +246,7 @@ class AdversaryPilot(PlacedEntity):
     custody: Literal["free", "captured", "transported", "converted"] = "free"
     custodian: Snowflake | None = None
     custody_event: str | None = None
+    rebel_resources_json: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def provenance(self) -> "AdversaryPilot":

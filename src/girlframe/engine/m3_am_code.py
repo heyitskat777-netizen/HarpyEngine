@@ -17,6 +17,9 @@ class Maintenance(Model):
     id: str
     actor: ActorRef
     operator: ActorRef
+    operator_position: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    operator_vessel: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    operator_frame: str | None = Field(default=None, exclude_if=lambda value: value is None)
     owner: int
     controller: int
     discovery: str = Field(default="", exclude_if=lambda value: not value)

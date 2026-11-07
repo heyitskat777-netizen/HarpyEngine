@@ -1,5 +1,12 @@
 # M3 remaining work — verified development snapshot
 
+Current local checkpoint adds **Reign of Terror's actual NPC execution and three
+supported effect consumers**, plus **another native Pilot as Just Code operator**
+with source-scoped Orders and actual damage/owned response. Focused evidence is in
+[the M3 report](../reports/M3_ACCEPTANCE.md). Native-PC Execution claims and real Secretary scene
+statement delivery are next; other required systems and final review remain open.
+Bot off; RULES_SUBSET. Older dated additions below are historical checkpoints.
+
 Newest bounded addition: **first-time ordinary NPC Just Code and real high-result
 awareness/Scrutinized consequence**, with actual secret/Order and refuge/Handler
 consumers and unconditional original-source proof. See

@@ -286,6 +286,11 @@ async def open_source(
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(game.decision, viewer, identity)
+    if data["kind"] in ("am_pilot_damage", "am_pilot_response", "am_pilot_damage_wait"):
+        from girlframe.discord_adapter.m3_am_code import open_choice as open_code_choice
+
+        await open_code_choice(interaction, game, identity)
+        return
     if data.get("am_code") is not None:
         from girlframe.discord_adapter.m3_am_code import open_choice as open_code_choice
 
@@ -332,7 +337,15 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             Field(
                 "options",
                 "Handler: choose two" if count == 2 else "Choose one actual outcome",
-                tuple((x, LABELS[x]) for x in detail["options"]),
+                tuple(
+                    (
+                        x,
+                        "Damage an operator Asset; ask how she plays now"
+                        if x == "violence" and detail.get("pilot_operator")
+                        else LABELS[x],
+                    )
+                    for x in detail["options"]
+                ),
                 minimum=count,
                 maximum=count,
             )

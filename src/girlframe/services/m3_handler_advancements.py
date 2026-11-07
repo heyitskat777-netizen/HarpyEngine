@@ -145,6 +145,12 @@ class HandlerAdvancementService:
                     )
 
                     receipts = sidearm_acquisitions(spent)
+                elif (
+                    value.acquired_rule == "handler-advancement.handler-advancement.reign-of-terror"
+                ):
+                    from girlframe.engine.m3_reign_terror import acquisitions as reign_acquisitions
+
+                    receipts = reign_acquisitions(spent)
                 elif value.acquired_rule == "handler-advancement.handler-advancement.secretary":
                     from girlframe.engine.m3_secretary import acquisitions as secretary_acquisitions
 

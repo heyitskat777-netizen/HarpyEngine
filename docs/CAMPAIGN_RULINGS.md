@@ -3401,10 +3401,20 @@ and adjustment impact are recorded in `rules/registry.json`.
 
 
 - `am_new_operator_high_consequence_owner` (PDF56/54,55/53): the AM chooses one
-  applicable Scrutinized8-10 consequence against a genuinely newly-aware NPC
+  applicable Scrutinized8-10 consequence against a genuinely newly-aware actual operator
   after high Just Code, while the operator retains the separate up-to2 Code
   choices. Keep the actual high receipt without a second roll; finish operator
   effects first so violence cannot strand work. Existing already-aware high still
   lowers Status. Operator-owned AM consequence and an extra roll are alternatives
   rejected under the delegated interpretation. Printed clarity review remains
   pending; future changes preserve actual knowledge, receipts and human choices.
+
+
+- `reign_underfunded_ordinary_tag` (PDF157/155,11/9,188/186): Underfunded is an
+  ordinary source-bound Tag against an actual member of that group. Apply normal
+  marking, scene use, one-Tag arbitration and the subject's real repeated-mark
+  embrace/reject choice. Rebel Girls are not NPCs; their actual original controller
+  supplies unknown current resources once. Redundant underfunding preserves the
+  same condition and use history. Permanent NPC-style modifiers and free stacked
+  bonuses are rejected alternatives. Delegated printed clarity review remains
+  pending; future changes preserve existing inventory, effects and human replies.

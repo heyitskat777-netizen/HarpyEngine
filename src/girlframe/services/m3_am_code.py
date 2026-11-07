@@ -10,9 +10,10 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_am as scrutiny
 from girlframe.engine import m3_am_code as rules
-from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput, shift_status
+from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput, higher, shift_status
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import fingerprint, resolve
+from girlframe.engine.m3_alpha import current
 from girlframe.engine.m3_girl_runtime_state import has_rule
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
@@ -48,6 +49,9 @@ def _prove_maintenance(
         "id",
         "actor",
         "operator",
+        "operator_position",
+        "operator_vessel",
+        "operator_frame",
         "owner",
         "controller",
         "discovery",
@@ -162,6 +166,23 @@ def actual(game: GameService, c: Connection, state: GameState, value: rules.Main
             raise WorkflowError("KNOWLEDGE_CHANGED: refresh the actual operator's prior source")
     bound = profiles(c, game.store.campaign_id)
     actor, operator = resolve(state, value.actor, bound), resolve(state, value.operator, bound)
+    native_operator = (
+        value.operator.kind == "pilot"
+        and value.operator != value.actor
+        and operator.rules == "girl_frame"
+        and operator.controller == int(value.operator.entity)
+    )
+    if native_operator:
+        game.character_binding(c, state, operator.controller)
+        if (
+            operator.position_sha256 != value.operator_position
+            or operator.vessel_id != value.operator_vessel
+            or operator.frame_instance != value.operator_frame
+            or operator.inside_frame is not False
+            or operator.piloting
+            or game.immediate_work(c, operator.controller)
+        ):
+            raise WorkflowError("SOURCE_CONTACT_REQUIRED: preserve the real operator's free body")
     sheet = state.sheets[value.actor.entity]
     physical = next((x for x in state.placements if x.actor == value.actor), None)
     cast = _cast(game, c, state, value.cast.channel)
@@ -178,10 +199,9 @@ def actual(game: GameService, c: Connection, state: GameState, value: rules.Main
     if (
         actor.girl != "AM"
         or value.actor.kind != "pilot"
-        or value.operator.kind != "npc"
-        or operator.rules != "npc"
+        or not (native_operator or value.operator.kind == "npc" and operator.rules == "npc")
         or operator.controller != value.controller
-        or state.handler != value.controller
+        or (not native_operator and state.handler != value.controller)
         or any(x.active for x in state.director_contexts)
         or game.store.policy.m3_approval is None
         or value.registry != game.store.policy.m3_approval.registry_sha256
@@ -379,6 +399,15 @@ def apply(
 
     value = rules.session(state, action["data"]["am_code"]["maintenance"])
     event = action["data"]["response_event"]
+    if value.operator.kind == "pilot" and request["kind"] in (
+        "am_code_body",
+        "am_code_branch",
+        "am_code_records_question",
+        "am_code_records_answer",
+    ):
+        raise WorkflowError(
+            "SOURCE_OPERATOR_ADAPTER_REQUIRED: actual GM records/body source is unavailable"
+        )
     if request["kind"] == "am_code_branch":
         from girlframe.services.m3_am_branch import apply as apply_branch
 
@@ -405,9 +434,7 @@ def apply(
     ):
         raise WorkflowError("Use the actual original operator/recipient's concrete source response")
     if request["kind"] == "am_code_options":
-        options = {"identities", "backup", "body", "branch"} | (
-            {"records"} if value.records_access else set()
-        )
+        options = set(ready_options(value))
         if (
             len(answer.options) > 2
             or len(set(answer.options)) != len(answer.options)
@@ -585,15 +612,33 @@ def projection(
         details["records_id"] = value.records_access
     return dict(
         **details,
-        available_options=("identities", "backup", "body", "branch", "records")
-        if value.records_access
-        else ("identities", "backup", "body", "branch"),
+        available_options=ready_options(value),
         maintenance=value.id,
         identities=[x.model_dump(mode="json") for x in rules.choices(state, value.actor)],
         instruction=value.instruction,
         spoken_words=value.spoken_words,
         actor=state.sheets[value.actor.entity].callsign,
         behavior=rules.FOLLOW,
+    )
+
+
+def ready_options(value: rules.Maintenance) -> tuple[str, ...]:
+    if value.operator.kind == "pilot":
+        return ("identities", "backup")
+    return ("identities", "backup", "body", "branch") + (
+        ("records",) if value.records_access else ()
+    )
+
+
+def _operator_contact(operator: Any) -> dict[str, Any]:
+    return (
+        dict(
+            operator_position=operator.position_sha256,
+            operator_vessel=operator.vessel_id,
+            operator_frame=operator.frame_instance,
+        )
+        if operator.ref.kind == "pilot"
+        else {}
     )
 
 
@@ -619,16 +664,34 @@ def unknown_operators(
     result = []
     for role in cast.roles:
         npc = role.actor
-        if npc.kind != "npc" or role.controller != state.handler:
+        if npc == actor or npc.kind not in ("npc", "pilot"):
+            continue
+        if npc.kind == "npc" and role.controller != state.handler:
             continue
         if any(
             x.actor == actor and x.discoverer == npc and x.phase != "declined"
             for x in scrutiny.discoveries(state)
         ):
             continue
-        other = resolve(state, npc, ())
+        try:
+            other = resolve(state, npc, profiles(c, game.store.campaign_id))
+        except ValueError:
+            continue
+        native = (
+            npc.kind == "pilot"
+            and other.rules == "girl_frame"
+            and other.controller == role.controller
+        )
         if (
-            other.rules == "npc"
+            (other.rules == "npc" or native)
+            and (
+                not native
+                or other.inside_frame is False
+                and not other.piloting
+                and other.position_sha256
+                and other.vessel_id
+                and other.frame_instance
+            )
             and other.alive
             and other.cell == own.cell
             and other.custody in (None, "free")
@@ -692,7 +755,15 @@ def prove_code_discovery(
             responses.c.campaign_id == game.store.campaign_id,
             responses.c.event_id == value.proposed_event,
             choices.c.action_id == action["id"],
-            choices.c.kind == "tag_window",
+            choices.c.kind.in_(
+                (
+                    "tag_window",
+                    "tag_resolution",
+                    "paired_tag",
+                    "tag_marker_selection",
+                    "tag_marker_agreement",
+                )
+            ),
         )
     )
     if (
@@ -766,9 +837,15 @@ class CodeService:
                 or self.game.pending_actions(c)
                 or viewer.user_id != known.caster
                 or actor.girl != "AM"
-                or known.discoverer.kind != "npc"
-                or operator.rules != "npc"
-                or operator.controller != state.handler
+                or not (
+                    known.discoverer.kind == "npc"
+                    and operator.rules == "npc"
+                    and operator.controller == state.handler
+                    or known.code_origin
+                    and known.discoverer.kind == "pilot"
+                    and operator.rules == "girl_frame"
+                    and known.discoverer != known.actor
+                )
                 or cast.adjudicator is not None
                 or any(x.active for x in state.director_contexts)
                 or actor.cell is None
@@ -795,6 +872,7 @@ class CodeService:
                 operator=known.discoverer,
                 owner=viewer.user_id,
                 controller=operator.controller,
+                **_operator_contact(operator),
                 discovery=discovery,
                 cast=cast,
                 registry=self.store.policy.m3_approval.registry_sha256,
@@ -806,6 +884,10 @@ class CodeService:
                 cell=actor.cell,
             )
             if records_subject is not None:
+                if value.operator.kind == "pilot":
+                    raise WorkflowError(
+                        "SOURCE_RECORDS_ADAPTER_REQUIRED: separate actual GM dossier delivery"
+                    )
                 from girlframe.services.m3_am_records import request as request_records
 
                 pointer = request_records(self.game, c, state, value, records_subject, event)
@@ -870,7 +952,22 @@ class CodeService:
                 raise WorkflowError(
                     "Only the original real operator confirms actual circuit access"
                 )
-            if value.new_operator:
+            if value.new_operator and value.operator.kind == "pilot":
+                actual_human = scrutiny.human_target(state, value.operator)
+                actual_lower = higher(state, value.owner, int(value.operator.entity))
+                if (
+                    operator_lower is not None
+                    and operator_lower != actual_lower
+                    or operator_human is not None
+                    and operator_human != actual_human
+                ):
+                    raise WorkflowError(
+                        "Use the actual Pilot's canonical rank and human classification"
+                    )
+                value = value.model_copy(
+                    update=dict(operator_lower=actual_lower, operator_human=actual_human)
+                )
+            elif value.new_operator:
                 if type(operator_lower) is not bool or type(operator_human) is not bool:
                     raise WorkflowError("Record this actual operator's rank and human-body facts")
                 value = value.model_copy(
@@ -1040,15 +1137,18 @@ class CodeService:
             access(self.game, c, viewer)
             state = load_state(c, self.store.campaign_id)
             known = [
-                dict(id=x.id, label=resolve(state, x.discoverer, ()).label)
+                dict(
+                    id=x.id,
+                    label=resolve(state, x.discoverer, profiles(c, self.store.campaign_id)).label,
+                    operator=x.discoverer.model_dump(mode="json"),
+                )
                 for x in scrutiny.discoveries(state)
                 if x.caster == viewer.user_id
                 and x.cast.channel == channel
                 and x.effect_event
                 and x.phase in ("complete", "limited")
-                and x.discoverer.kind == "npc"
-                and state.world
-                and any(n.id == x.discoverer.entity and n.alive for n in state.world.npcs)
+                and (x.discoverer.kind == "npc" or x.code_origin and x.discoverer.kind == "pilot")
+                and current(state, x.discoverer)
             ]
             values = [
                 dict(
@@ -1056,7 +1156,13 @@ class CodeService:
                     phase=x.phase,
                     owner=x.owner,
                     controller=x.controller,
+                    operator=x.operator.model_dump(mode="json"),
                     new_operator=x.new_operator,
+                    operator_response=self.game.action(c, x.action)["data"]
+                    .get("result", {})
+                    .get("am_operator_response")
+                    if x.action
+                    else None,
                     proposal=x.proposal,
                     root=x.root,
                     records=x.records_access,
@@ -1131,7 +1237,7 @@ class CodeService:
 
             actor = current_ref(state, viewer.user_id)
             own = resolve(state, actor, profiles(c, self.store.campaign_id))
-            operator = resolve(state, npc, ())
+            operator = resolve(state, npc, profiles(c, self.store.campaign_id))
             cast = _cast(self.game, c, state, channel)
             assert self.store.policy.m3_approval is not None
             assert (
@@ -1147,6 +1253,7 @@ class CodeService:
                 operator=npc,
                 owner=viewer.user_id,
                 controller=operator.controller,
+                **_operator_contact(operator),
                 new_operator=True,
                 cast=cast,
                 registry=self.store.policy.m3_approval.registry_sha256,
@@ -1159,6 +1266,10 @@ class CodeService:
             )
             actual(self.game, c, state, value)
             if records_subject is not None:
+                if value.operator.kind == "pilot":
+                    raise WorkflowError(
+                        "SOURCE_RECORDS_ADAPTER_REQUIRED: separate actual GM dossier delivery"
+                    )
                 from girlframe.services.m3_am_records import request as request_records
 
                 pointer = request_records(self.game, c, state, value, records_subject, event)

@@ -865,6 +865,29 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_reign_terror import ReignTerrorService
+
+            for reign in ReignTerrorService(self.store)._tasks(connection, viewer):
+                pending_reign = bool(reign["pending"])
+                items.append(
+                    InboxItem(
+                        "reign-terror:" + reign["id"],
+                        "reign_terror",
+                        reign["id"],
+                        reign["revision"],
+                        "playbook",
+                        reign["label"],
+                        "Original Handler or actual affected character controller",
+                        "pending" if pending_reign else "established",
+                        pending_reign,
+                        False,
+                        "Review actual execution effects or your real Tag/resource response.",
+                        "Group membership, custody and character ownership are source-bound.",
+                        "Review Reign of Terror",
+                        task="m3_reign_terror",
+                    )
+                )
+
             from girlframe.services.m3_hidden_sidearm import HiddenSidearmService
 
             for sidearm in HiddenSidearmService(self.store)._tasks(connection, viewer):

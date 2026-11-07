@@ -455,6 +455,7 @@ def _resolve(
                 "recorded_handler_recovery_position",
                 "cute_uniform_actual_dressing_position",
                 "hidden_sidearm_actual_position",
+                "reign_terror_actual_position",
                 "handler_transport_arrived",
                 "leviathan_actual_arrival",
             )
@@ -882,6 +883,9 @@ def _resolve(
                 position_sha256=fingerprint(native),
                 source_sha256=source,
             )
+        from girlframe.engine.m3_actor_resources import rebel_inventory
+
+        rebel = rebel_inventory(state, ref)
         return ActorView(
             ref=ref,
             controller=pilot.controller,
@@ -889,6 +893,8 @@ def _resolve(
             alive=pilot.alive,
             rules="external_pilot",
             girl=pilot.girl,
+            heat=rebel.heat if rebel else 0,
+            identities=identities(rebel.identities) if rebel else (),
             frame=pilot.frame,
             frame_instance="initial:" + pilot.id,
             assets=assets(pilot.assets),

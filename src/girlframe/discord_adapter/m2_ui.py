@@ -487,6 +487,12 @@ def answer_values(values: dict[str, Any]) -> ChoiceAnswer:
 
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
     decision = await threaded(lambda: game.decision(viewer_from_interaction(interaction), identity))
+    if decision["kind"] == "reign_group_tag_resolution":
+        from girlframe.discord_adapter.m3_reign_terror import open_resolution
+        from girlframe.services.m3_reign_terror import ReignTerrorService
+
+        await open_resolution(interaction, ReignTerrorService(game.store), identity)
+        return
     if decision["kind"] == "sidearm_reconsider":
         from girlframe.discord_adapter.m3_hidden_sidearm import open_response
         from girlframe.services.m3_hidden_sidearm import HiddenSidearmService
@@ -722,6 +728,11 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         "Choose only your own response. Nothing is submitted until Confirm. "
         "Safety pause remains available."
     )
+    if decision["kind"] == "tag_window" and decision.get("reign_enemy_tag_ids"):
+        instructions += (
+            "\nUnderfunded Tags belong to the opposed Rebel Girl. "
+            "Use the ordinary one-Tag proposal; its controller owns repeated-mark resolution."
+        )
     if decision["kind"] == "tag_window" and any(
         tag["id"].startswith("bomb-collar:") for tag in decision.get("tags", ())
     ):

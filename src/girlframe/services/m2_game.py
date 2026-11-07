@@ -2188,7 +2188,15 @@ class GameService:
             if valid_npc_order(self, c, state, owner, channel, dict(row)):
                 return dict(row)
         source_authority = False
-        if row is not None and json.loads(row["body_json"]).get("succubus"):
+        if row is not None and json.loads(row["body_json"]).get("am_secret"):
+            from girlframe.services.m3_am_scrutinized import valid_pilot_order
+
+            source_authority = valid_pilot_order(self, c, state, dict(row))
+        if (
+            not source_authority
+            and row is not None
+            and json.loads(row["body_json"]).get("succubus")
+        ):
             from girlframe.services.m3_succubus import valid_order as valid_succubus_order
 
             source_authority = valid_succubus_order(self, c, state, dict(row))
@@ -2912,6 +2920,10 @@ class GameService:
                 and HandlerService(self.store).current(c)[1].handler_id != viewer.user_id
             ):
                 raise WorkflowError("The Handler appointment changed; staff recovery is required.")
+            if row["kind"] == "reign_group_tag_resolution":
+                from girlframe.services.m3_reign_terror import ReignTerrorService
+
+                ReignTerrorService(self.store)._access(c, viewer)
             if row["kind"] == "sidearm_reconsider":
                 from girlframe.services.m3_hidden_sidearm import HiddenSidearmService
 
@@ -3219,14 +3231,19 @@ class GameService:
                     "Only a current superior in this scene can issue a direct order."
                 )
             authority = None
+            am_secret = None
             if not higher(state, viewer.user_id, target):
-                from girlframe.services.m3_succubus import issue_authority
+                from girlframe.services.m3_am_scrutinized import pilot_order_authority
 
-                authority = issue_authority(self, c, state, viewer.user_id, target)
-                if authority is None:
-                    raise WorkflowError(
-                        "A current superior or qualifying order source is required."
-                    )
+                am_secret = pilot_order_authority(self, c, state, viewer.user_id, target)
+                if am_secret is None:
+                    from girlframe.services.m3_succubus import issue_authority
+
+                    authority = issue_authority(self, c, state, viewer.user_id, target)
+                    if authority is None:
+                        raise WorkflowError(
+                            "A current superior or qualifying order source is required."
+                        )
             lock = self.lock(c, channel)
             if lock and lock["state"] != "released":
                 raise WorkflowError("SCENE_BUSY: resolve the current action first.")
@@ -3241,7 +3258,9 @@ class GameService:
                     target_id=str(target),
                     channel_id=str(channel),
                     body_json=json.dumps(
-                        {"text": text} | ({"succubus": authority} if authority else {})
+                        {"text": text}
+                        | ({"am_secret": am_secret} if am_secret else {})
+                        | ({"succubus": authority} if authority else {})
                     ),
                     state="awaiting_response",
                 )
@@ -3862,6 +3881,19 @@ class GameService:
 
                 return SpriteService(self.store).decision(viewer, choice_id)
             action = self.action(c, row["action_id"])
+            if row["kind"] == "reign_group_tag_resolution":
+                from girlframe.services.m3_reign_terror import project_resolution
+
+                return dict(row) | dict(
+                    reign=project_resolution(
+                        self, c, load_state(c, self.store.campaign_id), dict(row)
+                    ),
+                    body=json.loads(row["body_json"]),
+                    actor=int(action["actor_id"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    result={},
+                )
             if row["kind"] == "sidearm_reconsider":
                 from girlframe.services.m3_hidden_sidearm import projection as sidearm_projection
 
@@ -4159,12 +4191,33 @@ class GameService:
                 own_data["tags"] += [
                     x.model_dump(mode="json") for x in uniform_tags(state, own.owner)
                 ]
+            from girlframe.engine.m3_actors import resolve as resolve_reign_actor
+            from girlframe.services.m3_actors import profiles as reign_profiles
+            from girlframe.services.m3_reign_terror import candidates as reign_candidates
+
+            reign_tags = (
+                reign_candidates(self, c, state, action) if row["kind"] == "tag_window" else []
+            )
+            eligible_reign = []
+            for item in reign_tags:
+                from girlframe.services.m3_reign_terror import member as reign_member
+
+                subject = reign_member(self, c, state, item.id).target
+                if (
+                    resolve_reign_actor(
+                        state, subject, reign_profiles(c, self.store.campaign_id)
+                    ).controller
+                    != viewer.user_id
+                ):
+                    eligible_reign.append(item)
+            tags += [item.model_dump(mode="json") for item in eligible_reign]
             result = dict(row) | {
                 "body": body,
                 "play": action["data"]["play"],
                 "result": action["data"]["result"],
                 "actor": actor.owner,
                 "tags": tags,
+                "reign_enemy_tag_ids": [item.id for item in eligible_reign],
                 "own": own_data,
                 "participants": action["data"]["participants"],
                 "pilots": [

@@ -1,5 +1,57 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Reign of Terror and actual player circuit operators — 2026-11-07
+
+Combined local source extends `4a70ac0`; the exact 25 changed Python files are
+frozen in ignored `var/m3-reign-pilot-checkpoint/manifest.json`. The shared Game
+module matches both completed source snapshots. M3 remains **RULES_SUBSET**.
+
+Reign acquisition spends a genuine held award. Actual NPC prisoner custody and
+original Handler execution produce one of three real outcomes: canonical Rebellion
+Low consumed by the next ordinary Strain roll; exact Rebel Group underfunding
+consumed as an ordinary one-per-roll enemy Tag; or an ordinary owned Girl Tag.
+Rebel Girls now have a finite original-controller-confirmed actual resource port;
+repeated marking really embraces/replaces an Identity or creates and completes
+an owed rejection action. Redundant underfunding preserves use history. NPC death
+never ends its human controller's Girl career. Native acquisition, inbox,
+resolution and private History routes are connected.
+
+Just Code admits another original native Pilot as the real circuit operator.
+That human confirms contact and chooses ready Code effects; the original AM owns
+the high consequence. A genuine marked-Tag completion proves high discovery.
+Source-bound secret authority permits a real lower-Status Pilot Order only toward
+that original AM while the secret is kept; actual Disobey validates the source.
+Violence selects a real Asset, waits for genuine Sprite protection work, then asks
+the injured original player how she plays now. Saved responses reopen privately.
+Original contact/high/effect proofs remain unconditional; no second Code roll,
+NPC proxy, global rank promotion or source-proof bypass is introduced.
+
+Focused evidence, reused without redundant runs:
+
+- Reign normal workflows: `pytest -q tests/rules/test_reign_terror.py -x`,
+  **2 passed / 9.17s**; prior awards `tests/rules/test_handler_advancements.py`,
+  **3 passed / 5.45s**. Console evidence retained; no repeat merely for XML.
+- Pilot Code normal workflows: `tests/rules/test_am_code_pilot_operator.py`,
+  **2 passed / 7.176s**; selected NPC high/low/mid compatibility,
+  **3 passed / 7.316s**. Exact selections and JUnit in the ignored handoff.
+- Coherent completed scopes cover **25 unique changed Python files** passing
+  Ruff/format and **23 source modules** passing mypy, including every shared
+  interface and both tests. Shared Game bytes match both scopes.
+
+Evidence: `var/m3-reign-terror-handoff.json`, its static/results artifacts, and
+`var/m3-am-code-pilot-operator-handoff.json` with final source snapshots. These
+are focused local checks, not a new full regression or remote CI approval.
+Metadata: **181 subsets / 295 unimplemented / 324 clarifications**,476 total,
+439 required core,37 deferred Ancillary,zero independent approvals. These are
+inventory counts, not completion percentages.
+
+Next bounded work: prove native-PC captive Execution as a real Reign source;
+finish Secretary's actual scene statement delivery. Other required gameplay,
+Pilot records/body and terminal Frame continuations, external/protected resource
+adapters, independent printed clarity, player review and final integrated M3
+verification remain open. Bot off; no push, deployment, live migration, environment
+publication, private-engine writes, AI/M4 or Ancillary activation.
+
 ## First-time NPC circuit operator and genuine high consequence — 2026-11-07
 
 Source extends local Hidden Sidearm checkpoint `95e25ba`; exact bytes are frozen
