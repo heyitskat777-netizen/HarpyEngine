@@ -1024,6 +1024,14 @@
           "log_or_trace": "var/m3-a-bomb-test-evidence.json; var/m3-a-bomb-compatibility.xml; var/m3-a-bomb-final-source-snapshot.json; var/m3-a-bomb-final-static.json",
           "git_commit": "e223c1adeb56401a6c1339ca9637f0f925ee7f64",
           "limitation": "Actual Armoured blast interception and quarantine-boundary breach were not exercised; no separate nuclear Doctor branch. JANUS/Core, conditional/guest/parked/unknown/external/layered/overlaid body adapters fail closed. Not a full regression or independent/player acceptance."
+        },
+        {
+          "test_name": "test_actual_armoured_ship_intercepts_blast_then_unarmoured_base_is_destroyed; test_actual_nuclear_perimeter_breach_removes_relief_and_protected_study_before_destruction",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_a_bomb.py::test_actual_armoured_ship_intercepts_blast_then_unarmoured_base_is_destroyed tests/rules/test_a_bomb.py::test_actual_nuclear_perimeter_breach_removes_relief_and_protected_study_before_destruction --junitxml=var/m3-a-bomb-world-interactions-normal.xml",
+          "actual_result": "2 new tests passed5.85s; changed test Ruff/format PASS. Production unchanged; original test/helper prefix AST matches ac91aa0, prior2 evidence reused. Focused CI selector collection23 succeeded; collection is not execution.",
+          "log_or_trace": "var/m3-a-bomb-world-interactions-evidence.json; var/m3-a-bomb-world-interactions-source-snapshot.json; var/m3-world-interactions-ci-collection.json",
+          "git_commit": "1f8806ab165f9bc126c01f55d4772eceeb054032",
+          "limitation": "Only these two added normal cases were executed; no full suite/global static/source mypy rerun. Nuclear Doctor not separately exercised; conditional body/source adapters and independent/player gates remain. Prior e223c1a evidence limitations remain historical."
         }
       ]
     }
@@ -1046,5 +1054,14 @@
       "log_or_trace": "var/m3-efficiency-pilot-focused.xml; var/m3-efficiency-pilot-final-source-snapshot.json",
       "limitation": "Focused evidence, not full regression, independent rules review, human acceptance or measured speedup."
     }
-  ]
+  ],
+  "integration_regression": {
+    "phase": "pre_marriage_baseline",
+    "required": true,
+    "status": "NOT_RUN",
+    "source_commit": "1f8806ab165f9bc126c01f55d4772eceeb054032",
+    "plan": "docs/M3_PRE_MARRIAGE_REGRESSION.md",
+    "reason": "Establish one coherent integration baseline before shared Status, pre-receipt financial chooser/wallet and allocated Punishment producer migration. Current focused/segmented evidence is not a current full regression.",
+    "milestone_completion": false
+  }
 }

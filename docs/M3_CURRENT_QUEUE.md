@@ -1,6 +1,7 @@
 # Current M3 queue
 
-Updated 2026-11-07. Gameplay checkpoint: `e223c1a`; efficiency checkpoint: `91f69a1`, local branch
+Updated 2026-11-07. Integration checkpoint: `1f8806a`; gameplay source: `e223c1a`;
+efficiency checkpoint: `91f69a1`, local branch
 `codex/integrated-repairs-20261107`. **RULES_SUBSET; bot off.** No deployment,
 environment publication, recovered-engine writes, AI/M4 or Ancillary activation.
 This is the working view; older roadmap/audit additions are historical evidence.
@@ -17,13 +18,19 @@ regression or speed benchmark.
 | Ship-Base | Nightmare agent / normal implementation verified | Actual Base occupancy/travel, destruction/recovery, threat Core/pin and three ram outcomes | Committed `aaf4a64`; retain explicit special cargo/threat adapters | Four normals passed; superseded extra veto excluded; static checks for 24 Python files and types for 22 source modules |
 | NPC Bond source move | AM agent / normal implementation verified | Genuine canonical NPC Bonds and original controller/required-Play consumers | Committed `907b166`; preserve unsupported mechanical/controller adapters | Final normal plus 3 unchanged primitive cases; waiting/privacy fixed; static checks for 6 Python files and types for 5 source modules |
 | A-Bomb ordinary source workflow | Nightmare agent + root / committed within stated scope | Genuine acquisition/device, actual blast/damage, Budget operations and real ejection/Mission/Off-Duty producers | Preserve source/body gaps; follow the untested interaction row below | `e223c1a`: 2 normals /9.01s, 8 compatibility /27.49s; static coverage of 28 Python files and types for 27 source modules |
-| A-Bomb conditional world interactions | Root / queued verification gaps | Actual Armoured Ship-Base and original quarantine boundary/protection producers | Demonstrate real armour interception and source-bound perimeter breach; retain explicit body adapters | Helpers/reused consumers exist, but neither interaction was exercised by the two blast normals |
-| Intracadre Marriage | AM agent / source contract only; implementation held | Actual shared Status representation, pre-receipt financial custody and allocated Punishment producer ports; A-Bomb overlap | Review exact producer ownership after A-Bomb integration before releasing code | Frozen 346-word source/dependency contract; no source edits or tests |
+| A-Bomb conditional world interactions | Nightmare agent + root / verified and committed | Actual Armoured Ship-Base and original quarantine boundary/protection producers | Closed ordinary interaction gap; retain conditional body/source and separate Doctor gaps | `1f8806a`: 2 new normals /5.85s; changed test Ruff/format pass; production and original test/helper prefix unchanged |
+| Pre-Marriage integration regression | Root / REQUIRED, NOT_RUN | Frozen source after active world interactions; integrated Status/financial/discipline baseline | Stop development handoff here; next run the [baseline checks](M3_PRE_MARRIAGE_REGRESSION.md) before shared-core migration | Focused and segmented evidence does not establish a current whole-suite result |
+| Intracadre Marriage | AM source contracts / implementation held | Shared Status plus seven grant paths, more than twenty direct charge/loss paths and allocated Punishment sources | After baseline regression, release exact producer ownership and complete one ordinary declared-pair flow | Frozen 346-word source contract +353-word producer addendum; no source edits or tests |
 | Remaining required core systems | Root + bounded assignments / open | Existing source inventory and actual consumers | Select the next whole dependency-ready gameplay workflow; keep unsupported branches visible | [Registry](../rules/registry.json), [remaining scope](M3_REMAINING_WORK.md), [acceptance](acceptance/m3_rules.json) |
 | Final integrated candidate | Root / blocked by required gameplay | Frozen full core candidate and complete ordinary workflows | Run final full regression and global static/migration/privacy/contract checks | Pending; focused/segmented results do not substitute |
 | Independent and human acceptance | Independent reviewer + owner/players / pending | Review-ready candidate and stated test checklist | Independent source/clarity review, Discord play-testing and owner milestone review | Not run; no inferred certification or release approval |
 
 Recent completed implementation within stated scope:
+
+- `1f8806a`: actual Armoured blast interception then unarmoured destruction;
+  original quarantine breach before protected-site destruction, actual NPC death
+  and relief/protection cleanup. Two new normals pass /5.85s; no production change.
+  Development stops at the [pre-Marriage regression boundary](M3_PRE_MARRIAGE_REGRESSION.md).
 
 - `e223c1a`: actual A-Bomb device/custody, distinct release/impact, blast deaths,
   owned damage/Core exposure, safe/unsafe ejection, source-specific Budget Mission
