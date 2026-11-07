@@ -650,6 +650,13 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_handler_pr import HandlerPRService
 
             await open_pr(interaction, HandlerPRService(self.service.store), item.identity)
+        elif item.task == "m3_npc_bond_play":
+            from girlframe.discord_adapter.m3_npc_bond_play import open_npc_bond_play
+            from girlframe.services.m3_npc_bond_play import NpcBondPlayService
+
+            await open_npc_bond_play(
+                interaction, NpcBondPlayService(self.service.store), item.identity
+            )
         elif item.task == "m3_politician_bribery":
             from girlframe.discord_adapter.m3_politician_bribery import open_bribery
             from girlframe.services.m3_politician_bribery import BriberyService

@@ -1,5 +1,57 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## NPC Bond cost to actual NPC Conversation performance — 2026-11-07
+
+Source extends local `14f6423`; six changed Python files are frozen in
+`var/m3-npc-bond-final-source-snapshot.json`. The primary source corrected the
+initial task shorthand: weakening the Bond forces the **NPC** to take a job Play,
+not a Girl roll or NPC dice. NPC Orders remain a separate authority mechanic.
+
+The original Girl spends one actual canonical NPC Bond step without needing to
+control or co-locate with the NPC. Unsupported mechanical moves are rejected
+before cost. The actual other NPC human receives a required task and authors a
+real source-defined Conversation performance for actual frozen scene recipients.
+The real source work, audit event and substantive receipt must match before
+closure. The requester outside that audience sees only own cost/status; addressed
+recipients see rendition without the private holder/cost/context. No dialogue,
+consent, M2 action, roll or mechanical healing/Tag effect is fabricated.
+
+The normal uses a genuine political Personal Bond established by an actual award
+purchase and one authored assignment, without replaying unrelated String cash-outs.
+The core ability is not gated on owning that advancement. Final normal
+**1 passed /3.935s**, including unsupported-before-cost/source/actor denial,
+post-event rollback, pause, exact request/performance retry, actual private reopen,
+late-audience exclusion and rebuild. Existing canonical migration/erasure/
+Intense-overflow compatibility: **3 passed**, retained from focused
+**4 passed /4.07s** before new-source privacy guards. No claim that service2→1 was
+separately exercised; the existing canonical `change(-1)` reducer is unchanged.
+Exact nodes/attempts are in `var/m3-npc-bond-play-handoff.json`.
+
+Root's attempted shared formatter use initially hid the requester's waiting state.
+This workflow is now an explicit exception: Bonds category, pending work for both
+parties, incoming only to its actual NPC controller. The existing advancement
+formatter was restored unchanged rather than adding generic flags. Two assertions
+in the same normal prove Waiting for the requester and You for the NPC human.
+A final projection review also removed holder/cost/context from audience-only
+views and bound the receipt to resolved source work. These were meaningful fixes;
+only the affected normal was rerun, without a role/job/controller matrix.
+
+Coherent **6 Python** Ruff/format and **5 source** mypy pass. After the queue fix,
+only the two changed Python files/one source were checked again; unchanged scope
+was reused. Existing scoped Handler notice privacy: **1 passed /1.30s**. Artifacts:
+`var/m3-npc-bond-final-static.json`, JUnit and exact source snapshot. Registry:
+186 subsets,290 unimplemented,336 clarifications;476 total,439 required core,
+37 deferred Ancillary,zero independent approvals. Counts overlap and are not
+completion percentages.
+
+Mechanical NPC moves, broader NPC-job runtimes and controller/body recovery remain
+required adapters; they are not replaced by text. Full M3 gameplay, final integrated
+regression, independent source/clarity review and human acceptance remain open.
+The next A-Bomb work was held until this active workflow could be integrated,
+preserving the owner's infrastructure sequencing. Bot off; local source only,
+no push/deployment/live migration/environment publication/private-engine writes,
+AI/M4 or Ancillary activation.
+
 ## Political contacts and Ship-Base using proven shared operations — 2026-11-07
 
 Source extends local efficiency checkpoint `91f69a1`; exact 24 Python files are

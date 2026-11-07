@@ -904,6 +904,28 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_npc_bond_play import NpcBondPlayService
+
+            for npc_play in NpcBondPlayService(self.store)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "npc-bond-play:" + npc_play["id"],
+                        "npc_bond_play",
+                        npc_play["id"],
+                        npc_play["revision"],
+                        "bonds",
+                        npc_play["label"],
+                        "Original Bondholder or actual NPC controller",
+                        "pending" if npc_play["phase"] == "pending" else "established",
+                        bool(npc_play["pending"]),
+                        False,
+                        "Review the actual Bond cost or source-owned NPC performance.",
+                        "Only the actual addressed humans receive the performance.",
+                        "Review NPC Bond Play",
+                        task="m3_npc_bond_play",
+                    )
+                )
+
             from girlframe.services.m3_politician_bribery import BriberyService
 
             for bribery in BriberyService(self.store)._tasks(connection, viewer):

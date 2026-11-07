@@ -1,8 +1,5 @@
-# Real new consumers of acquisition/proof +neutral scenario +typed Inbox pilots.
-# Four actual Ship outcomes, political cashouts, affected source/atomicity and Handler flow.
-tests/rules/test_politician_bribery.py
-tests/rules/test_ship_base.py
-tests/rules/test_strain_effects.py::test_fired_npc_retains_bonds_and_city_anarchy_does_not_create_gorgon_territory
-tests/rules/test_strain_effect_service.py::test_actual_effect_and_work_resolve_atomically_with_replay_and_no_waiver
-tests/rules/test_advancement_acquisition.py
-tests/rules/test_handler_plays.py::test_native_owned_basic_menu_and_real_effect_form
+# Genuine NPC Bond cost ->actual controller Conversation ->addressed private receipt.
+# Existing canonical relationship primitives and scoped notice privacy remain separate.
+tests/rules/test_npc_bond_play.py
+tests/rules/test_actor_bonds.py
+tests/rules/test_handler_plays.py::test_source_notice_reaches_only_affected_original_humans_without_private_npc_details

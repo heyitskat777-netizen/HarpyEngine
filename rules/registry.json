@@ -5593,6 +5593,23 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "npc-bond-requested-play-and-rendition",
+      "policy_key": "npc_bond_requested_play_and_rendition",
+      "summary": "The original Bondholder requests the actual supported NPC job move/context; the NPC's current human controller authors its real rendition. The cost does not grant permanent control or a fictional refusal veto.",
+      "source": "Rulebook PDF13/printed11 NPC Bonds; PDF188–191/printed186–189 NPC Conversation guidelines",
+      "rationale": "Forcing a specific intervention fits weakening at any time even without controlling the NPC, while actual human authorship avoids generated dialogue or account/persona aliases.",
+      "alternatives": [
+        "The NPC controller chooses any job move after cost",
+        "Give the requester temporary unilateral control over NPC dialogue"
+      ],
+      "implementation_note": "Pay one real canonical Bond step and preserve actual source/body/controller. Required work closes only with the actual addressed performance. Unaddressed requester gets cost/status, not a private transcript; recipients get rendition, not holder/cost/context. OOC pause always applies.",
+      "change_impact": "Future requested NPC Conversation Plays only; preserve original Bond/performance/history. Mechanical NPC move and changed-controller/body adapters remain unavailable before spend or explicitly recoverable gaps, not rule waivers.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -5823,7 +5840,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_actor_bonds.py"
+        "tests/rules/test_actor_bonds.py",
+        "tests/rules/test_npc_bond_play.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -19379,14 +19397,16 @@
         "heading": "Public Relations"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_npc_bond_play.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
