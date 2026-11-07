@@ -1,5 +1,51 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## First-time NPC circuit operator and genuine high consequence — 2026-11-07
+
+Source extends local Hidden Sidearm checkpoint `95e25ba`; exact bytes are frozen
+in ignored `var/m3-am-code-new-operator-freeze/manifest.json`.
+M3 remains **RULES_SUBSET**; independent/human/final review remains pending.
+
+An actual previously unaware ordinary NPC can confirm real circuit access without
+a fabricated prior discovery. Genuine final high Just Code records awareness
+against that exact action/receipt, preserves its high tier and charges only the
+original roll. The actual operator finishes its up-to2 Code effects before the
+AM chooses one applicable effective Scrutinized8-10 consequence. No second roll,
+new discovery veto or newly-aware Status penalty; already-aware high retains its
+existing Status loss. The AM consequence ownership is a recorded adjustable
+interpretation of the mixed-pronoun printed clause.
+
+The two normal endpoints complete actual operator effects, then secret/Bond to a
+real NPC-issued Order, or refuge to an actual Handler Play. Both preserve source,
+ownership, one receipt, costs, chat closure, history, privacy and replay. Mandatory
+original contact proof checks stable participants/body/knowledge, authentic human
+proposal/confirmation events and real effects. Compound proof additionally binds
+nonmissing confirmation/root/text/rank/human to canonical high birth, final Tag
+response, stored high receipt and exact Code/Discovery pointers. Forged text,
+fake or missing confirmation, and missing refuge origin are denied.
+
+An optional proof-skip proposal was rejected by automatic review before any edit
+or test, because it could weaken mandatory source-integrity proof. It was abandoned.
+The implemented private base verifier is unconditional and shared by full source
+and compound proof; no caller-selectable bypass or waiver exists. Root reviewed
+that factor and strengthened missing-pointer immutability before final checks.
+
+Compound normals **2 / 4.804s**; known-high/low/mid compatibility **3 / 7.015s**.
+Coherent **8 changed Python files** pass Ruff/format; **7 source modules** pass
+mypy, including actual native menu and exact Handler refuge admission. Existing
+five Scrutinized consumers were reused; no operator/tier matrix or full regression.
+Evidence/hashes: `var/m3-am-code-new-operator-handoff.json` and final source snapshot.
+
+Metadata: **180 subsets / 296 unimplemented / 323 clarifications**,476 total,
+439 required core,37 deferred Ancillary,zero independent approvals. Counts are
+inventory, not completion percentages. Human Pilot/Handler/Director operators,
+sexual coordination, body/career crosscases and generic knowledge inference need
+separate real adapters; high-effect dependencies must be ready before RNG.
+Remaining gameplay, Secretary statement delivery, independent printed clarity,
+player testing and final integrated M3 checks still prevent completion. Bot off;
+local commits only, no push, deployment, live migration, environment publication,
+recovered-engine write, AI/M4 or Ancillary activation.
+
 ## Hidden Sidearm actual three-choice workflow — 2026-11-07
 
 Source extends local Jailbroken checkpoint `75c69f3`; exact bytes are frozen in

@@ -1,4 +1,6 @@
-# Genuine sidearm acquisition -> three choices -> owned pause/shot/true continuation.
-# Planned prior-award compatibility; final whole-M3 regression remains separate.
-tests/rules/test_hidden_sidearm.py
-tests/rules/test_handler_advancements.py
+# Actual first-time circuits/high -> one true compound consequence -> Order/refuge consumers.
+# Existing known-high/low/mid compatibility; final whole-M3 regression remains separate.
+tests/rules/test_am_code_new_operator.py
+tests/rules/test_am_code.py::test_mid_actual_operator_native_rewrite_retains_mark_slot_body_hardware_and_finishes
+tests/rules/test_am_code.py::test_high_already_knowing_operator_causes_status_loss_and_real_selected_no_rewrite
+tests/rules/test_am_code.py::test_low_real_npc_order_has_no_disobey_and_waits_original_owned_actual_fulfillment

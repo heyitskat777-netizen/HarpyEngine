@@ -19,7 +19,11 @@ class Maintenance(Model):
     operator: ActorRef
     owner: int
     controller: int
-    discovery: str
+    discovery: str = Field(default="", exclude_if=lambda value: not value)
+    new_operator: bool = Field(default=False, exclude_if=lambda value: not value)
+    operator_lower: bool = Field(default=False, exclude_if=lambda value: not value)
+    operator_human: bool = Field(default=True, exclude_if=lambda value: value)
+    new_discovery: str | None = Field(default=None, exclude_if=lambda value: value is None)
     cast: SceneCast
     registry: str
     proposed_event: str

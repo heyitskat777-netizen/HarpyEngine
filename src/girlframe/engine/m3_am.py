@@ -23,6 +23,7 @@ OPTIONS = ("blackmail", "secret", "unbelieved", "violence", "refuge")
 
 
 class Discovery(Model):
+    code_origin: str | None = Field(default=None, exclude_if=lambda value: value is None)
     id: str
     actor: ActorRef
     discoverer: ActorRef

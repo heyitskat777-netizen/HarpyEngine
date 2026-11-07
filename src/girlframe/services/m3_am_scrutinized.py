@@ -55,6 +55,10 @@ def _history(game: GameService, c: Connection, event: str) -> GameState:
 
 def source(game: GameService, c: Connection, state: GameState, identity: str) -> rules.Discovery:
     value = rules.discovery(state, identity)
+    if value.code_origin:
+        from girlframe.services.m3_am_code import prove_code_discovery
+
+        return prove_code_discovery(game, c, state, game.action(c, value.action or ""))
     original = rules.discovery(_history(game, c, value.proposed_event), identity)
     stable = (
         "id",
@@ -284,7 +288,12 @@ def _finish(game: GameService, c: Connection, state: GameState, action: dict[str
     value = rules.discovery(state, action["data"]["am_scrutinized"]["discovery"])
     if value.phase not in ("limited", "reset"):
         rules.put(state, value.model_copy(update={"phase": "complete"}))
-    ChoiceEngine(game).finish(c, state, action)
+    if value.code_origin:
+        from girlframe.services.m3_am_code import finish
+
+        finish(game, c, state, action, action["data"]["response_event"])
+    else:
+        ChoiceEngine(game).finish(c, state, action)
     game.save_action(c, action)
 
 
@@ -368,7 +377,7 @@ def apply(
             "Complete the actual owned Handler response; no acknowledgment substitutes"
         )
     options = allowed(game, c, state, value)
-    if action["data"]["result"]["tier"] == "high":
+    if not value.code_origin and action["data"]["result"]["tier"] == "high":
         options = tuple(x for x in options if x in meta.get("handler_options", ()))
     if len(answer.options) != 1 or answer.options[0] not in options or answer.fields:
         raise WorkflowError(
@@ -458,7 +467,11 @@ def projection(
 ) -> dict[str, Any]:
     value = rules.discovery(state, action["data"]["am_scrutinized"]["discovery"])
     options = allowed(game, c, state, value)
-    if request["kind"] == "am_select" and action["data"]["result"]["tier"] == "high":
+    if (
+        request["kind"] == "am_select"
+        and not value.code_origin
+        and action["data"]["result"]["tier"] == "high"
+    ):
         options = tuple(
             x for x in options if x in action["data"]["am_scrutinized"].get("handler_options", ())
         )
@@ -551,6 +564,10 @@ def _prove_effect(game: GameService, c: Connection, value: rules.Discovery) -> N
         raise WorkflowError("This source has no actual rolled outcome")
     original = rules.discovery(_history(game, c, value.effect_event), value.id)
     action = game.action(c, value.action)
+    if value.code_origin:
+        from girlframe.services.m3_am_code import prove_code_discovery
+
+        prove_code_discovery(game, c, _history(game, c, value.effect_event), action)
     receipt = c.scalar(
         sa.select(t.m2["m2_receipts"].c.body_json).where(
             t.m2["m2_receipts"].c.campaign_id == game.store.campaign_id,
@@ -564,7 +581,7 @@ def _prove_effect(game: GameService, c: Connection, value: rules.Discovery) -> N
         or original.action != value.action
         or receipt is None
         or json.loads(receipt) != action["data"].get("receipt")
-        or action["data"].get("play") != rules.PLAY
+        or action["data"].get("play") != ("am_just_code" if value.code_origin else rules.PLAY)
         or action["data"].get("am_scrutinized", {}).get("discovery") != value.id
     ):
         raise WorkflowError("Recover the actual original Scrutinized outcome and receipt")

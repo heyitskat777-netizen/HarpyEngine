@@ -48,8 +48,8 @@ async def open_am(
 
     try:
         code = await asyncio.to_thread(CodeService(service.game).menu, viewer, channel)
-        if code["known"] or code["sessions"]:
-            options.append(("code", "Actual circuit maintenance and saved AM sources"))
+        if code["known"] or code["sessions"] or code.get("operators"):
+            options.append(("code", "Actual circuit maintenance"))
     except (ValueError, WorkflowError):
         pass
     try:

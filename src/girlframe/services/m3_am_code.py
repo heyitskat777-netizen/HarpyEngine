@@ -30,7 +30,10 @@ def access(game: GameService, c: Connection, viewer: GuildViewer) -> None:
     actual.registry.require_available(rules.RULE)
 
 
-def source(game: GameService, c: Connection, state: GameState, identity: str) -> rules.Maintenance:
+def _prove_maintenance(
+    game: GameService, c: Connection, state: GameState, identity: str
+) -> rules.Maintenance:
+    """Unconditional original contact, knowledge, event and actual effect proofs."""
     from girlframe.services.m3_am_scrutinized import (
         _history,
         _prove_effect,
@@ -58,13 +61,22 @@ def source(game: GameService, c: Connection, state: GameState, identity: str) ->
         "cell",
         "order_scope",
         "records_access",
+        "new_operator",
     )
     if any(getattr(value, x) != getattr(old, x) for x in stable):
         raise WorkflowError("Recover the actual original maintenance participants/body source")
-    known = discovery_source(game, c, state, value.discovery)
-    _prove_effect(game, c, known)
-    if known.actor != value.actor or known.discoverer != value.operator or not known.effect_event:
-        raise WorkflowError("Use only this actual operator's already-proved adjustment knowledge")
+    if value.new_operator:
+        if value.discovery:
+            raise WorkflowError("Preserve the actual first-time circuit source")
+    else:
+        known = discovery_source(game, c, state, value.discovery)
+        _prove_effect(game, c, known)
+        if (
+            known.actor != value.actor
+            or known.discoverer != value.operator
+            or not known.effect_event
+        ):
+            raise WorkflowError("Use only this actual operator's proved adjustment knowledge")
     events = t.events
     for event, kind, human in (
         (value.proposed_event, "m3.am_code_proposed", value.owner),
@@ -81,7 +93,12 @@ def source(game: GameService, c: Connection, state: GameState, identity: str) ->
             raise WorkflowError("Only the original real human source answers establish contact")
     if value.confirmed_event:
         confirmed = rules.session(_history(game, c, value.confirmed_event), identity)
-        if confirmed.root != value.root or confirmed.confirmation != value.confirmation:
+        if (
+            confirmed.root != value.root
+            or confirmed.confirmation != value.confirmation
+            or confirmed.operator_lower != value.operator_lower
+            or confirmed.operator_human != value.operator_human
+        ):
             raise WorkflowError("Keep the original actually confirmed circuit access/source root")
     if value.order:
         if not value.order_event:
@@ -126,7 +143,23 @@ def source(game: GameService, c: Connection, state: GameState, identity: str) ->
     return value
 
 
+def source(game: GameService, c: Connection, state: GameState, identity: str) -> rules.Maintenance:
+    value = _prove_maintenance(game, c, state, identity)
+    if value.new_discovery:
+        prove_code_discovery(game, c, state, game.action(c, value.action or ""))
+    return value
+
+
 def actual(game: GameService, c: Connection, state: GameState, value: rules.Maintenance) -> None:
+    if value.new_operator:
+        access_source = Access(game.store)
+        assert access_source.registry is not None
+        access_source.registry.require_available(scrutiny.RULE)
+        if not value.new_discovery and any(
+            x.actor == value.actor and x.discoverer == value.operator and x.phase != "declined"
+            for x in scrutiny.discoveries(state)
+        ):
+            raise WorkflowError("KNOWLEDGE_CHANGED: refresh the actual operator's prior source")
     bound = profiles(c, game.store.campaign_id)
     actor, operator = resolve(state, value.actor, bound), resolve(state, value.operator, bound)
     sheet = state.sheets[value.actor.entity]
@@ -240,7 +273,52 @@ def results(game: GameService, c: Connection, state: GameState, action: dict[str
     value = rules.session(state, action["data"]["am_code"]["maintenance"])
     tier = action["data"]["result"]["tier"]
     if tier == "high":
-        shift_status(state, value.owner, -1)
+        if value.new_operator:
+            from girlframe.engine.m3_handler_consequences import active_handler
+
+            event = action["data"]["response_event"]
+            assert state.handler is not None
+            identity = str(uuid4())
+            discovered = scrutiny.Discovery(
+                id=identity,
+                code_origin=value.id,
+                actor=value.actor,
+                discoverer=value.operator,
+                controller=value.controller,
+                caster=value.owner,
+                cast=value.cast,
+                registry=value.registry,
+                proposed_event=event,
+                proposal="Actual final high Just Code reveals the adjustment",
+                confirmed_event=event,
+                confirmation=value.confirmation,
+                phase="active",
+                lower_status=value.operator_lower,
+                human=value.operator_human,
+                handler=active_handler(state),
+                handler_controller=state.handler,
+                action=action["id"],
+                root_action=value.root,
+            )
+            scrutiny.put(state, discovered)
+            value = value.model_copy(update=dict(new_discovery=identity))
+            rules.put(state, value)
+            action["data"]["am_scrutinized"] = dict(
+                discovery=identity,
+                actor=value.actor.model_dump(mode="json"),
+                target=value.operator.model_dump(mode="json"),
+                caster=value.owner,
+                discoverer_controller=value.controller,
+                handler_controller=state.handler,
+                cast=value.cast.model_dump(mode="json"),
+                cast_sha256=fingerprint(value.cast),
+                table=sorted({x.controller for x in value.cast.roles} | {value.controller}),
+                phase="code_effects",
+                followups=[],
+                code_origin=value.id,
+            )
+        else:
+            shift_status(state, value.owner, -1)
     game.request(
         c,
         action,
@@ -274,6 +352,14 @@ def finish(
         raise WorkflowError("The selected body option requires its actual physical effect")
     if "branch" in value.selected_options and not value.branch:
         raise WorkflowError("The selected branch requires its actual independent NPC and vessel")
+    if value.new_discovery:
+        discovery = scrutiny.discovery(state, value.new_discovery)
+        if discovery.phase != "complete":
+            rules.put(state, value.model_copy(update=dict(phase="active")))
+            if discovery.outcome is None:
+                game.request(c, action, value.owner, "am_select")
+                action["data"]["am_scrutinized"]["phase"] = "choosing"
+            return
     rules.put(
         state,
         value.model_copy(update=dict(phase="complete", effect_event=value.effect_event or event)),
@@ -511,6 +597,138 @@ def projection(
     )
 
 
+def unknown_operators(
+    game: GameService, c: Connection, state: GameState, viewer: GuildViewer, channel: int
+) -> list[dict[str, Any]]:
+    from girlframe.engine.m3_actor_bonds import current_ref
+
+    sheet = state.sheets.get(str(viewer.user_id))
+    if sheet is None or sheet.girl != "AM" or state.world is None:
+        return []
+    registry = Access(game.store).registry
+    assert registry is not None
+    try:
+        registry.require_available(scrutiny.RULE)
+    except ValueError:
+        return []
+    actor = current_ref(state, viewer.user_id)
+    own = resolve(state, actor, profiles(c, game.store.campaign_id))
+    cast = _cast(game, c, state, channel)
+    if cast.adjudicator or any(x.active for x in state.director_contexts) or own.cell is None:
+        return []
+    result = []
+    for role in cast.roles:
+        npc = role.actor
+        if npc.kind != "npc" or role.controller != state.handler:
+            continue
+        if any(
+            x.actor == actor and x.discoverer == npc and x.phase != "declined"
+            for x in scrutiny.discoveries(state)
+        ):
+            continue
+        other = resolve(state, npc, ())
+        if (
+            other.rules == "npc"
+            and other.alive
+            and other.cell == own.cell
+            and other.custody in (None, "free")
+            and own.inside_frame is False
+            and own.custody in (None, "free")
+        ):
+            result.append(dict(id=npc.token, ref=npc.model_dump(mode="json"), label=other.label))
+    return result
+
+
+def prove_code_discovery(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any]
+) -> scrutiny.Discovery:
+    """Exact source proof for effective Scrutinized8-10 from an actual Code high."""
+    from girlframe.services.m3_am_scrutinized import _history
+
+    meta = action["data"].get("am_scrutinized", {})
+    value = scrutiny.discovery(state, meta.get("discovery", ""))
+    maintenance = _prove_maintenance(game, c, state, value.code_origin or "")
+    born_state = _history(game, c, value.proposed_event)
+    born = scrutiny.discovery(born_state, value.id)
+    created = rules.session(born_state, maintenance.id)
+    proposed = rules.session(_history(game, c, maintenance.proposed_event), maintenance.id)
+    stable = (
+        "id",
+        "code_origin",
+        "actor",
+        "discoverer",
+        "controller",
+        "caster",
+        "cast",
+        "registry",
+        "proposed_event",
+        "proposal",
+        "confirmed_event",
+        "confirmation",
+        "lower_status",
+        "human",
+        "handler",
+        "handler_controller",
+        "action",
+        "root_action",
+    )
+    receipt = c.scalar(
+        sa.select(t.m2["m2_receipts"].c.body_json).where(
+            t.m2["m2_receipts"].c.campaign_id == game.store.campaign_id,
+            t.m2["m2_receipts"].c.action_id == action["id"],
+        )
+    )
+    choices, responses = t.m2["m2_choices"], t.m2["m2_responses"]
+    final_response = c.scalar(
+        sa.select(responses.c.event_id)
+        .join(
+            choices,
+            sa.and_(
+                choices.c.campaign_id == responses.c.campaign_id,
+                choices.c.id == responses.c.choice_id,
+            ),
+        )
+        .where(
+            responses.c.campaign_id == game.store.campaign_id,
+            responses.c.event_id == value.proposed_event,
+            choices.c.action_id == action["id"],
+            choices.c.kind == "tag_window",
+        )
+    )
+    if (
+        not proposed.new_operator
+        or proposed.discovery
+        or not maintenance.new_operator
+        or maintenance.new_discovery != value.id
+        or created.new_discovery != value.id
+        or maintenance.confirmed_event is None
+        or maintenance.confirmed_event != created.confirmed_event
+        or maintenance.root != created.root
+        or maintenance.root != value.root_action
+        or maintenance.confirmation != created.confirmation
+        or maintenance.confirmation != value.confirmation
+        or maintenance.operator_lower != value.lower_status
+        or maintenance.operator_human != value.human
+        or action["data"].get("play") != rules.PLAY
+        or action["data"].get("result", {}).get("tier") != "high"
+        or action["data"].get("am_code", {}).get("maintenance") != maintenance.id
+        or meta.get("code_origin") != maintenance.id
+        or value.action != action["id"]
+        or value.actor != maintenance.actor
+        or value.discoverer != maintenance.operator
+        or value.controller != maintenance.controller
+        or value.caster != maintenance.owner
+        or final_response is None
+        or receipt is None
+        or json.loads(receipt) != action["data"].get("receipt")
+        or any(getattr(value, key) != getattr(born, key) for key in stable)
+    ):
+        raise WorkflowError(
+            "Recover the actual new-operator high Code receipt and discovery source"
+        )
+    return value
+
+
 class CodeService:
     def __init__(self, game: GameService):
         self.game, self.store = game, game.store
@@ -630,6 +848,8 @@ class CodeService:
         records_document: str | None = None,
         records_reference: str | None = None,
         records_complete: bool = False,
+        operator_lower: bool | None = None,
+        operator_human: bool | None = None,
     ) -> dict[str, Any]:
         if not account.strip() or len(account) > 1200:
             raise WorkflowError(
@@ -650,6 +870,14 @@ class CodeService:
                 raise WorkflowError(
                     "Only the original real operator confirms actual circuit access"
                 )
+            if value.new_operator:
+                if type(operator_lower) is not bool or type(operator_human) is not bool:
+                    raise WorkflowError("Record this actual operator's rank and human-body facts")
+                value = value.model_copy(
+                    update=dict(operator_lower=operator_lower, operator_human=operator_human)
+                )
+            elif operator_lower is not None or operator_human is not None:
+                raise WorkflowError("Preserve the original known operator's actual source")
             event, identity_root = str(uuid4()), str(uuid4())
             if value.records_access:
                 from girlframe.services.m3_am_records import prepare as prepare_records
@@ -760,6 +988,11 @@ class CodeService:
             "m3.am_code_confirmed",
             dict(id=identity, expected=expected, account=account)
             | (
+                dict(operator_lower=operator_lower, operator_human=operator_human)
+                if operator_lower is not None or operator_human is not None
+                else {}
+            )
+            | (
                 dict(
                     records_document=records_document,
                     records_reference=records_reference,
@@ -823,6 +1056,7 @@ class CodeService:
                     phase=x.phase,
                     owner=x.owner,
                     controller=x.controller,
+                    new_operator=x.new_operator,
                     proposal=x.proposal,
                     root=x.root,
                     records=x.records_access,
@@ -861,9 +1095,99 @@ class CodeService:
             ]
             return dict(
                 revision=state.revision,
+                operators=unknown_operators(self.game, c, state, viewer, channel),
                 known=known,
                 sessions=values,
                 subjects=subjects(self.game, c, state),
                 documents=documents,
                 backups=saved_backups,
             )
+
+    def propose_operator(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        channel: int,
+        npc: ActorRef,
+        expected: int,
+        account: str,
+        *,
+        records_subject: ActorRef | None = None,
+    ) -> dict[str, Any]:
+        if not account.strip() or len(account) > 1200:
+            raise WorkflowError("Describe actual first-time circuit access")
+
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            state = load_state(c, self.store.campaign_id)
+            if (
+                state.revision != expected
+                or self.game.pending_actions(c)
+                or npc.model_dump(mode="json")
+                not in [x["ref"] for x in unknown_operators(self.game, c, state, viewer, channel)]
+            ):
+                raise WorkflowError("Use the actual co-present first-time ordinary NPC operator")
+            from girlframe.engine.m3_actor_bonds import current_ref
+
+            actor = current_ref(state, viewer.user_id)
+            own = resolve(state, actor, profiles(c, self.store.campaign_id))
+            operator = resolve(state, npc, ())
+            cast = _cast(self.game, c, state, channel)
+            assert self.store.policy.m3_approval is not None
+            assert (
+                own.position_sha256
+                and own.vessel_id
+                and own.frame_instance
+                and own.cell is not None
+            )
+            event, identity = str(uuid4()), str(uuid4())
+            value = rules.Maintenance(
+                id=identity,
+                actor=actor,
+                operator=npc,
+                owner=viewer.user_id,
+                controller=operator.controller,
+                new_operator=True,
+                cast=cast,
+                registry=self.store.policy.m3_approval.registry_sha256,
+                proposed_event=event,
+                proposal=account,
+                position=own.position_sha256,
+                vessel=own.vessel_id,
+                frame=own.frame_instance,
+                cell=own.cell,
+            )
+            actual(self.game, c, state, value)
+            if records_subject is not None:
+                from girlframe.services.m3_am_records import request as request_records
+
+                pointer = request_records(self.game, c, state, value, records_subject, event)
+                value = value.model_copy(update=dict(records_access=pointer, selected_options=()))
+            rules.put(state, value)
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.am_code_proposed",
+                state,
+                event_id=event,
+                maintenance=identity,
+            )
+            return dict(id=identity)
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.am_code_new_operator_proposed",
+            dict(
+                channel=channel, npc=npc.model_dump(mode="json"), expected=expected, account=account
+            )
+            | (
+                dict(records_subject=records_subject.model_dump(mode="json"))
+                if records_subject
+                else {}
+            ),
+            operation,
+            authorize=lambda c: access(self.game, c, viewer),
+            auto_audit=False,
+        )

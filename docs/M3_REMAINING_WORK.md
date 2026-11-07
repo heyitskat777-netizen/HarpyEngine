@@ -1,5 +1,13 @@
 # M3 remaining work — verified development snapshot
 
+Newest bounded addition: **first-time ordinary NPC Just Code and real high-result
+awareness/Scrutinized consequence**, with actual secret/Order and refuge/Handler
+consumers and unconditional original-source proof. See
+[M3 acceptance](../reports/M3_ACCEPTANCE.md). Reign of Terror includes the required
+ordinary external-rebel Tag/Identity port; other required source/actor/playbook/
+Strain/world/lifecycle adapters and final independent/player gates remain open.
+Bot off; RULES_SUBSET.
+
 Newest bounded addition: **Hidden Sidearm actual Helplessness, immediate death and
 owned pause/withdraw/ordinary-shot continuation**, with exact original action,
 resources and private History. See [M3 acceptance](../reports/M3_ACCEPTANCE.md).

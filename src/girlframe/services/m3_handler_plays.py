@@ -213,10 +213,23 @@ def request_from_play(
             and action["data"].get("result", {}).get("tier") == "low"
             and targets == (ActorRef.model_validate(meta["actor"]),)
         )
-    elif source_play == "am_scrutinized":
+    elif source_play in ("am_scrutinized", "am_just_code"):
         meta = action["data"].get("am_scrutinized", {})
+        code_source = True
+        if source_play == "am_just_code":
+            from girlframe.services.m3_am_code import prove_code_discovery
+
+            discovered = prove_code_discovery(game, c, state, action)
+            code_source = (
+                bool(discovered.code_origin)
+                and discovered.handler_controller == chooser
+                and discovered.caster == int(action["actor_id"])
+                and targets == (discovered.actor,)
+                and ActorRef.model_validate(meta["actor"]) == discovered.actor
+            )
         valid = (
-            clause == "am_scrutinized.refuge"
+            code_source
+            and clause == "am_scrutinized.refuge"
             and row is not None
             and row["kind"] == "am_handler"
             and row["actor_id"] == str(chooser)

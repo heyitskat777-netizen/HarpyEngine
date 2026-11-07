@@ -31,6 +31,9 @@ async def open_code(
     data = await asyncio.to_thread(service.menu, viewer, channel)
     options = [("propose:" + x["id"], "Maintain with " + x["label"]) for x in data["known"]]
     options += [
+        ("operator:" + x["id"], "First-time circuits: " + x["label"]) for x in data["operators"]
+    ]
+    options += [
         ("confirm:" + x["id"], "Confirm actual circuit access")
         for x in data["sessions"]
         if x["phase"] == "proposed" and x["controller"] == viewer.user_id
@@ -106,7 +109,7 @@ async def open_code(
         source_fields = [
             Field("account", "Your actual maintenance or factual circuit access", paragraph=True)
         ]
-        if operation == "propose":
+        if operation in ("propose", "operator"):
             source_fields.insert(
                 0,
                 Field(
@@ -133,8 +136,45 @@ async def open_code(
                 ]
             )
 
+        if session and session["new_operator"] and operation == "confirm":
+            source_fields += [
+                Field(
+                    "operator_lower",
+                    "Actual operator has lower Status than this AM",
+                    (("yes", "Yes"), ("no", "No")),
+                ),
+                Field(
+                    "operator_human",
+                    "Actual operator is a human being",
+                    (("yes", "Yes"), ("no", "No")),
+                ),
+            ]
+
         async def submit(actual: discord.Interaction, answer: dict[str, Any]) -> str:
             human = viewer_from_interaction(actual)
+            if operation == "operator":
+                target = next(x for x in data["operators"] if x["id"] == identity)
+                await asyncio.to_thread(
+                    service.propose_operator,
+                    human,
+                    str(actual.id),
+                    channel,
+                    ActorRef.model_validate(target["ref"]),
+                    data["revision"],
+                    answer["account"],
+                    records_subject=next(
+                        (
+                            ActorRef.model_validate(x["ref"])
+                            for x in data["subjects"]
+                            if x["token"] == answer["records_subject"][0]
+                        ),
+                        None,
+                    ),
+                )
+                return (
+                    "Actual first-time circuit source saved; "
+                    "the real operator confirms physical access."
+                )
             if operation == "propose":
                 await asyncio.to_thread(
                     service.propose,
@@ -166,6 +206,14 @@ async def open_code(
                 records_document=answer.get("document"),
                 records_reference=answer.get("reference"),
                 records_complete=answer.get("complete") == ("yes",),
+                **(
+                    dict(
+                        operator_lower=answer["operator_lower"] == ("yes",),
+                        operator_human=answer["operator_human"] == ("yes",),
+                    )
+                    if session and session["new_operator"]
+                    else {}
+                ),
             )
             return (
                 "Actual circuit access confirmed; "
@@ -198,9 +246,9 @@ async def open_code(
     form = NativeForm(
         viewer.user_id,
         "AM Identity/memory circuit maintenance",
-        f"Original scene <#{channel}>. Only the actual already-knowing NPC can operate. "
+        f"Original scene <#{channel}>. The actual NPC circuit operator owns her response. "
         "Actual prepared bodies, hooked return and branching are available. "
-        "New operator knowledge remains unavailable.",
+        "A first-time high result creates its actual new Scrutinized consequence.",
         [Field("source", "Actual source or owned response", tuple(options))],
         choose,
     )
