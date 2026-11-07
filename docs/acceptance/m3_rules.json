@@ -1113,6 +1113,32 @@
           "limitation": "Ordinary rivalNPC death source only; nonfatal/native/Director/other death producer, body/office inheritance and known-body actual transport remain adapters. No separate regional A-Bomb/lifecycle matrix/full regression/independent/player approval. Five interpretations require source clarity review."
         }
       ]
+    },
+    {
+      "id": "M3B-DOSE-UP-NORMAL-001",
+      "title": "Actual native Dose Up choices, source DrugTags and scene expiry",
+      "expected": "True followed self-Order/source contact, original Heat/receipt, all result tiers, low recipient real-dose/Punishment choice, real drug/selfmark/repeat and participated-scene expiry with private history.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_dose_up.py"
+      ],
+      "related_cases": [
+        "M3-ADD-006",
+        "M3-ADD-007"
+      ],
+      "evidence": [
+        {
+          "test_name": "Four distinct Dose Up outcome nodes plus affected actual Alpha low Punishment",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_dose_up.py --junitxml=var/m3-dose-up-registry-final.xml",
+          "actual_result": "Final normal4/6.45s; preceding coherent5/8.38s, rootold7/6.55s+basegates3/1.88s separately. Coherent12Python11source static, registry/repository, offline SDK registration and17caseCIcollection passed.",
+          "log_or_trace": "var/m3-dose-up-handoff.json; var/m3-dose-up-final-focused.xml; var/m3-dose-up-registry-final.xml; var/m3-dose-up-root-evidence.json; var/m3-dose-up-union-static.json; var/m3-dose-up-union-source-snapshot.json",
+          "git_commit": "99865b05e7d6942d17b738c2c9c738f3d4c09726",
+          "limitation": "Native stable bodies and source DoseUp intoxication only; other Stim/Malleable facets, external/NPC/Handler/clone/changed-body/ending adapters remain required gaps. No full regression, remoteCI run, independent/human acceptance or deployment. Four rulings need printed clarity review."
+        }
+      ]
     }
   ],
   "enabled_modules": [
