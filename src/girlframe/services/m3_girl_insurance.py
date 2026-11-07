@@ -106,6 +106,9 @@ def prepare(
         budget_before=previous.strain.levels["budget"],
     )
     rules.put(state, value)
+    from girlframe.engine.m3_a_bomb_budget import record_write
+
+    record_write(state, source="insurance:" + value.id, event=event, value="low")
     state.strain = strain_copy(state.strain, levels=state.strain.levels | {"budget": "low"})
 
 

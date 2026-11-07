@@ -95,6 +95,9 @@ def trigger(state: GameState, archive: CareerArchive, purchase: FrameRuleReceipt
     existing = next((x for x in episodes(state) if x.id == identity), None)
     if existing:
         return existing
+    from girlframe.engine.m3_a_bomb_budget import record_write
+
+    record_write(state, source="martyr:" + identity, event=archive.source_event, value="low")
     state.strain = strain_copy(
         state.strain, levels=state.strain.levels | {"budget": "low", "rebellion": "low"}
     )

@@ -1,5 +1,76 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## A-Bomb actual device, blast outcomes and shared source consumers — 2026-11-07
+
+Source extends local `907b166`; exact 28 changed Python files are frozen in
+`var/m3-a-bomb-final-source-snapshot.json`. The proven acquisition helper and
+neutral real award scenario are reused. No acquisition framework, generic routing
+registry, rules DSL or broad fixture rewrite was added. The scoped initial test
+factory creates real ordinary Frame profiles/drafts before campaign history; it
+never relabels an existing Frame or erases a JANUS Core.
+
+Actual native acquisition spends a genuine held award. A factual carried object,
+proved nuclear capability, original Handler appointment/current release cell and
+human-authored delivery precede consumption at the real impact. The blast has
+exactly two printed options and an immutable roster. Actual Sprite/NPC deaths,
+outside-Girl death, Gorgon/Harpy Core exposure, real owned Asset losses and genuine
+Defeat/ejection/death work apply. Ordinary exposed-Core guards remain unchanged.
+The radiation hook excludes only the exact proved currently applied Defeat child
+from generic ending cleanup, allowing its existing completion to close it.
+
+A small source-specific Budget ledger records actual writer operations, including
+High→High/Low→Low. Successful causal Mission resolution waives only its bomb's
+printed direct raise; independent operations, triggers and prices survive. The
+four existing writer ports retain their real effects and audit sources. Actual
+next Off-Duty expires only temporary fallout. Native Mission/perimeter choices use
+dropdowns. Public fallout exposes cells/active status without device/Handler
+provenance. Inbox keeps waiting distinct from another human's actionable task;
+source-owner Finish uses the same actual readiness predicate as the service.
+The shared formatter docstring now states its narrower pending/actionable contract.
+
+Final module: **2 passed /9.01s**, one process, covering the four options and
+normal/default consequences. Primary includes wrong-owner/stale denial,
+interruption after actual canonical blast/effect staging, full rollback, same-key
+success/retry/replay, actual private History and canonical rebuild. Conditional
+normal covers successful direct waiver, independent High→High retention, failed
+Mission no-waiver and real temporary/permanent fallout expiry. Exact commands and
+prior failed attempts: `var/m3-a-bomb-test-evidence.json`. The unsafe-ejection
+ordering failure was a real source fix. Other failed attempts were fixture/API
+corrections; the Mission helper now respects genuinely bundled failure/Dog work.
+
+Affected compatibility: **8 passed /27.49s**, existing Award module, retained
+Martyr, Girl Insurance, political Budget relief, Strain preparation and actual
+passenger subsumption/extraction. Exact selection: `var/m3-a-bomb-compatibility.xml`
+and checkpoint manifest. The isolated ignored second-award support recipe passed
+**1 /2.27s** using real Void6 cascades/claim/proof with the original award intact;
+it retains unrelated required work and was not used by the final blast normals.
+
+Coherent static covers **28 Python** Ruff/format and **27 source** mypy. Initial
+mypy27 passed. Four files needed only static corrections: three retain identical
+AST; Game changes only independent local import order. Changed4 Ruff/format then
+passed; unchanged24 checks and type evidence were reused. Artifacts:
+`var/m3-a-bomb-final-static.json`, `var/m3-a-bomb-static-corrections.json`.
+No gameplay rerun or test-speed improvement is claimed for formatting.
+
+Limits remain explicit. Impacted JANUS/Core, AM/subsumed/guest bodies,
+unknown/parked Frames, layered Gorgons, unported external/non-Harpy or detached
+bodies, and NPC physical overlays fail closed. Armoured Ship-Base interception
+reuses unchanged actual collateral/destruction but was **not exercised** by the
+final two normals. Actual quarantine boundary/breach cleanup is implemented but
+**not demonstrated** there. Existing Doctor prevention is retained through the
+real ending API; no separate nuclear Doctor branch is claimed. These interactions
+and broader source/body adapters remain verification or implementation gaps.
+
+Four delegated interpretations are recorded with source, alternatives and future
+change impact in the campaign rulings and registry; independent printed clarity
+review remains pending. Registry inventory: 187 subsets, 289 unimplemented, 340 clarifications; 476 total entries, 439 required core, 37 deferred Ancillary, zero independent approvals. Inventory entries and overlapping
+acceptance cases are not percentages or equal-sized tasks.
+
+M3 remains **RULES_SUBSET**. Final integrated full regression, independent
+source/clarity review and actual owner/player acceptance remain open. This local
+checkpoint introduces no live migration, push, deployment, restart or environment
+publication. Bot off; recovered-engine writes, AI/M4 and Ancillary stay deferred.
+
 ## NPC Bond cost to actual NPC Conversation performance — 2026-11-07
 
 Source extends local `14f6423`; six changed Python files are frozen in

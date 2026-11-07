@@ -5610,6 +5610,70 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "a-bomb-existing-asset-losses",
+      "policy_key": "a_bomb_existing_asset_losses",
+      "summary": "Damage up to two existing undamaged resources, automatic zero if none.",
+      "source": "Rulebook PDF158/156: damage 2 Assets",
+      "rationale": "Existing Asset damage has real owned resources; no imaginary slot or additional damage acknowledgment.",
+      "alternatives": [
+        "Block a blast whenever a target has fewer than two intact resources."
+      ],
+      "implementation_note": "Preserve actual source, original people/resources, mandatory proof and canonical receipts. No new generic waiver or actor alias.",
+      "change_impact": "All actual available losses apply once; no invented resource/cost. Future clarification must preserve original effects/history; requires printed-rule clarity review.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "a-bomb-direct-budget-exception",
+      "policy_key": "a_bomb_direct_budget_exception",
+      "summary": "Waive only this bomb direct raise after genuine causal successful Mission.",
+      "source": "Rulebook PDF158/156: conditional Budget option",
+      "rationale": "The option modifies the printed direct increase; independent physical-loss Strain triggers remain real. Explicit source/ordinal operations retain even same-value writes.",
+      "alternatives": [
+        "Also waive every ordinary collateral/death/repair trigger from this bomb."
+      ],
+      "implementation_note": "Preserve actual source, original people/resources, mandatory proof and canonical receipts. No new generic waiver or actor alias.",
+      "change_impact": "Existing later Budget operations and prior prices persist; next natural Strain can still rise from independent canonical triggers. Future clarification must preserve original effects/history; requires printed-rule clarity review.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "a-bomb-distinct-release-and-impact",
+      "policy_key": "a_bomb_distinct_release_and_impact",
+      "summary": "Separate proved current release position from factual impact/delivery.",
+      "source": "Rulebook PDF158/156: actual drop into a 3x3 area",
+      "rationale": "A released physical device travels; source grants neither body movement nor a range quota.",
+      "alternatives": [
+        "Require the Handler body at impact centre."
+      ],
+      "implementation_note": "Preserve actual source, original people/resources, mandatory proof and canonical receipts. No new generic waiver or actor alias.",
+      "change_impact": "No teleport, weapon actor, vehicle framework, invented charge or dice. Future clarification must preserve original effects/history; requires printed-rule clarity review.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "a-bomb-actual-quarantine-breach",
+      "policy_key": "a_bomb_actual_quarantine_breach",
+      "summary": "Only a real blast crossing an original zone boundary with recorded physical containment breach removes protection.",
+      "source": "Rulebook A-Bomb structure destruction plus Contaminant quarantine protection",
+      "rationale": "A factual source breach replaces no body-at-cell requirement with an imaginary actor.",
+      "alternatives": [
+        "Treat any area overlap as automatic protection cancellation."
+      ],
+      "implementation_note": "Preserve actual source, original people/resources, mandatory proof and canonical receipts. No new generic waiver or actor alias. Implemented source-bound helper is not demonstrated by the final two blast normals; retain that verification gap.",
+      "change_impact": "Actual original perimeter/source proof is mandatory; shared cleanup removes relief/protection while permanent outcomes persist. Future clarification must preserve original effects/history; requires printed-rule clarity review.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -17045,14 +17109,16 @@
         "heading": "A-Bomb"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_a_bomb.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

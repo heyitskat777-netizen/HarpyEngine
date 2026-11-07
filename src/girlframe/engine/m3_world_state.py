@@ -97,17 +97,26 @@ class ShipPin(Model):
     release_action: str | None = None
 
 
+class Fallout(Model):
+    id: str
+    cells: tuple[Cell, ...]
+    event: str
+    temporary: bool
+    expired_event: str | None = None
+
+
 class Location(PlacedEntity):
     kind: Literal["base", "city", "important"]
     allegiance: Literal["foundation", "rebel", "independent"] = "foundation"
     condition: Literal["intact", "damaged", "destroyed"] = "intact"
     blocked_by: tuple[str, ...] = ()
+    fallout_sources: tuple[str, ...] = Field(default=(), exclude_if=lambda x: not x)
     protection_sources: tuple[str, ...] = Field(default=(), exclude_if=lambda x: not x)
     ship: ShipHull | None = Field(default=None, exclude_if=lambda x: x is None)
 
     @property
     def operational(self) -> bool:
-        return self.condition != "destroyed" and not self.blocked_by
+        return self.condition != "destroyed" and not self.blocked_by and not self.fallout_sources
 
 
 class Asset(Model):
@@ -334,6 +343,7 @@ class AreaFeature(Model):
 
 
 class World(Model):
+    fallout: tuple[Fallout, ...] = Field(default=(), exclude_if=lambda x: not x)
     board: Board
     features: tuple[AreaFeature, ...] = Field(default=(), exclude_if=lambda x: not x)
     ship_pins: tuple[ShipPin, ...] = Field(default=(), exclude_if=lambda x: not x)
@@ -353,6 +363,16 @@ class World(Model):
 
     @model_validator(mode="after")
     def references(self) -> "World":
+        if any(not self.board.contains(cell) for zone in self.fallout for cell in zone.cells):
+            raise ValueError("Actual fallout occupies on-board cells")
+        if any(
+            site.condition != "destroyed" and zone.id not in site.fallout_sources
+            for zone in self.fallout
+            if zone.expired_event is None
+            for site in self.locations
+            if site.cell in zone.cells
+        ):
+            raise ValueError("An uncleared blast area cannot become an operational site")
         entities = (*self.locations, *self.npcs, *self.gorgons, *self.pilots, *self.factions)
         if len({x.id for x in entities}) != len(entities):
             raise ValueError("World entity IDs are globally distinct within a campaign")

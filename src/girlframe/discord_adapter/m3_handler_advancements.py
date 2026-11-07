@@ -87,6 +87,12 @@ async def open_advancement(
 
         await open_ship(interaction, ShipBaseService(service.store), data["acquisition"])
         return
+    if data.get("acquired_rule") == "handler-advancement.handler-advancement.a-bomb":
+        from girlframe.discord_adapter.m3_a_bomb import open_bomb
+        from girlframe.services.m3_a_bomb import ABombService
+
+        await open_bomb(interaction, ABombService(service.store), data["acquisition"])
+        return
     if data.get("acquired_rule"):
         await reply(
             interaction,
@@ -200,6 +206,11 @@ async def open_advancement(
         ],
         select,
     )
+    # This recipient selector has one field, so these two navigation buttons are idle.
+    # Leave the shared NativeForm and all rule-specific acquisition callbacks intact.
+    if len(form.fields) == 1:
+        form.remove_item(form.previous)
+        form.remove_item(form.next)
     form.add_item(AcquireSupplyDrop(form, service))
     form.add_item(AcquireCuteUniforms(form, service))
     form.add_item(AcquireGirlInsurance(form, service))
@@ -214,6 +225,7 @@ async def open_advancement(
     form.add_item(AcquireContaminantZone(form, service, identity))
     form.add_item(AcquireBribery(form, service, identity))
     form.add_item(AcquireShipBase(form, service, identity))
+    form.add_item(AcquireABomb(form, service, identity))
     await form.present(interaction)
 
 
@@ -460,3 +472,17 @@ class AcquireShipBase(discord.ui.Button[NativeForm]):
         from girlframe.services.m3_ship_base import ShipBaseService
 
         await open_ship(interaction, ShipBaseService(self.service.store), self.identity)
+
+
+class AcquireABomb(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService, identity: str):
+        super().__init__(label="Acquire A-Bomb instead", row=1)
+        self.form, self.service, self.identity = form, service, identity
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_a_bomb import open_bomb
+        from girlframe.services.m3_a_bomb import ABombService
+
+        await open_bomb(interaction, ABombService(self.service.store), self.identity)

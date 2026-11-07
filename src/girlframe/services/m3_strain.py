@@ -6,6 +6,7 @@ no generic resolver for the resulting event/endgame work or period start gate.
 
 import json
 from typing import Any
+from uuid import uuid4
 
 import sqlalchemy as sa
 from sqlalchemy import Connection
@@ -268,6 +269,15 @@ class StrainService:
 
             prove_relief(self.game, c, state)
             state.strain = rules.start(state.strain, period_id, facts)
+            from girlframe.engine.m3_a_bomb_budget import record_write
+
+            budget_event = str(uuid4())
+            record_write(
+                state,
+                source="strain:" + period_id,
+                event=budget_event,
+                value=state.strain.levels["budget"],
+            )
             scrapped = []
             if state.strain.levels["budget"] == "high":
                 for uid, sheet in state.sheets.items():
@@ -282,6 +292,7 @@ class StrainService:
                 key,
                 "m3.strain_start_prepared",
                 state,
+                event_id=budget_event,
                 period_id=period_id,
                 levels=dict(state.strain.levels),
                 martyr_budget_deaths=martyr_deaths,

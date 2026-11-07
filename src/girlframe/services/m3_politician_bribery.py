@@ -674,6 +674,9 @@ class BriberyService:
             if kind == "budget":
                 if target is not None or label is not None or state.strain is None:
                     raise WorkflowError("Use actual Budget Strain without unrelated target choices")
+                from girlframe.engine.m3_a_bomb_budget import record_write
+
+                record_write(state, source="bribery:" + identity, event=event, value="low")
                 state.strain = strain_rules.copy(
                     state.strain,
                     levels=state.strain.levels | {"budget": "low"},

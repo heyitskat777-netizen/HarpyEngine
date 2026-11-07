@@ -144,6 +144,10 @@ class GameService:
                     if str(actor) == str(human):
                         principal = (human, appointment)
             previous_state = load_state(c, self.store.campaign_id)
+            if any(x.get("kind") == "a_bomb_drop" for x in (*previous_state.facts, *state.facts)):
+                from girlframe.services.m3_a_bomb import prepare_ejections
+
+                prepare_ejections(self, c, previous_state, state, event)
             if any(x.frame == "DOCTORDOCTOR MK. II" for x in previous_state.sheets.values()):
                 from girlframe.services.m3_doctor_lifecycle import prepare as doctor_lifecycle
 
@@ -251,6 +255,12 @@ class GameService:
                 from girlframe.services.m3_martyr import synchronize as sync_martyr
 
                 sync_martyr(self, c, state, event)
+        if state is not None and any(
+            x.get("kind") == "a_bomb_radiation" and x.get("event") == event for x in state.facts
+        ):
+            from girlframe.services.m3_a_bomb import synchronize_ejections
+
+            synchronize_ejections(self, c, state, event, metadata.get("action_id"))
         if state is not None and any(
             fact.get("kind") == "compliance_virus_purge" for fact in state.facts
         ):
@@ -1244,6 +1254,11 @@ class GameService:
             sheet = state.sheets.get(str(viewer.user_id))
             if sheet is None or sheet.revision != sheet_revision:
                 raise WorkflowError("STALE_SHEET: refresh the Play wizard.")
+            if any(x.get("kind") == "a_bomb_drop" for x in state.facts):
+                from girlframe.engine.m3_actor_bonds import current_ref as blast_actor
+                from girlframe.services.m3_a_bomb import require_damage_cleared
+
+                require_damage_cleared(self, c, state, blast_actor(state, viewer.user_id))
             if any(x.get("kind") == "alpha_sex_session" for x in state.facts):
                 from girlframe.engine.m3_actor_bonds import current_ref as sleeping_original
                 from girlframe.engine.m3_alpha_sex import require_awake

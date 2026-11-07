@@ -372,6 +372,9 @@ class OffDutyService:
 
             source_event = str(uuid4())
             changed |= rearm(state, period.id, source_event)
+            from girlframe.services.m3_a_bomb import expire_fallout
+
+            changed |= expire_fallout(self.game, c, state, source_event)
             event = self.game.event(
                 c,
                 viewer.user_id,

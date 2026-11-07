@@ -416,3 +416,8 @@ def move_prisoner(
         ).model_dump_json()
     )
     return update(world, pilots=tuple(changed if x.id == identity else x for x in world.pilots))
+
+
+def require_usable(world: World, cell: Cell) -> None:
+    if any(x.expired_event is None and cell in x.cells for x in world.fallout):
+        raise ValueError("This actual blast area remains unusable until its real fallout expires")

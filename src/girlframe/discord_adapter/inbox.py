@@ -657,6 +657,11 @@ class InboxView(discord.ui.View):
             await open_npc_bond_play(
                 interaction, NpcBondPlayService(self.service.store), item.identity
             )
+        elif item.task == "m3_a_bomb":
+            from girlframe.discord_adapter.m3_a_bomb import open_bomb
+            from girlframe.services.m3_a_bomb import ABombService
+
+            await open_bomb(interaction, ABombService(self.service.store), item.identity)
         elif item.task == "m3_politician_bribery":
             from girlframe.discord_adapter.m3_politician_bribery import open_bribery
             from girlframe.services.m3_politician_bribery import BriberyService

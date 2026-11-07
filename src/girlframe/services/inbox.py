@@ -39,7 +39,11 @@ def _playbook_task(
     primary: str,
     task: str,
 ) -> InboxItem:
-    """Format an already authorized row; its rule service owns visibility and urgency."""
+    """Format an authorized row whose pending state also means this viewer must act.
+
+    The rule service owns visibility and urgency. Workflows with separate waiting
+    and actionable states need an explicit projection instead.
+    """
     pending = bool(row["pending"])
     return InboxItem(
         prefix + row["id"],
@@ -923,6 +927,28 @@ class InboxService:
                         "Only the actual addressed humans receive the performance.",
                         "Review NPC Bond Play",
                         task="m3_npc_bond_play",
+                    )
+                )
+
+            from girlframe.services.m3_a_bomb import ABombService
+
+            for bomb in ABombService(self.store)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "a-bomb:" + bomb["id"],
+                        "a_bomb",
+                        bomb["id"],
+                        bomb["revision"],
+                        "playbook",
+                        bomb["label"],
+                        "Original Handler or actual affected body/resource owner",
+                        "pending" if bomb["phase"] == "effects" else "established",
+                        bool(bomb["pending"]),
+                        False,
+                        "Review the actual device, blast effects or source-owned history.",
+                        "Actual people, damage and conditional outcomes stay source-bound.",
+                        "Review A-Bomb",
+                        task="m3_a_bomb",
                     )
                 )
 

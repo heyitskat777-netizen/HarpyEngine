@@ -676,3 +676,43 @@ class ContaminantZoneService:
             for x in rules.zones(state)
             if x.handler.entity == str(viewer.user_id)
         ]
+
+
+def break_by_blast(
+    game: GameService, c: Connection, state: GameState, drop: str, identity: str, event: str
+) -> None:
+    from girlframe.services.m3_a_bomb import prove_drop
+
+    source = prove_drop(game, c, state, drop)
+    zone = zone_proof(game, c, state, identity)
+    account = source.breaches.get(identity)
+    crossing = next(
+        (
+            cell
+            for cell in zone.cells
+            if cell in source.cells
+            and any(
+                (cell[0] + dx, cell[1] + dy) not in zone.cells
+                and (cell[0] + dx, cell[1] + dy) in source.cells
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+            )
+        ),
+        None,
+    )
+    if not account or crossing is None or zone.broken_event is not None:
+        raise WorkflowError(
+            "Prove actual nuclear crossing and physical breach of the recorded quarantine perimeter"
+        )
+    changed = rules.break_by_blast(state, identity, event, crossing, account)
+    for field in GameState.model_fields:
+        setattr(state, field, getattr(changed, field))
+    state.facts.append(
+        dict(
+            kind="a_bomb_perimeter_breach",
+            drop=drop,
+            zone=identity,
+            event=event,
+            perimeter=zone.perimeter,
+            account=account,
+        )
+    )

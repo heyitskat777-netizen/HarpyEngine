@@ -710,6 +710,9 @@ class MissionService:
 
         event_id = str(uuid4())
         state = mission_ended(state, mission.id, event_id)
+        from girlframe.services.m3_a_bomb import finish_mission
+
+        finish_mission(self.game, c, state, mission, success, event_id)
         from girlframe.services.m3_debts import bind_mission, synchronize_mission
 
         bind_mission(state, plan.mission)

@@ -3,6 +3,11 @@
 Current assignments and next actions: [M3 current queue](M3_CURRENT_QUEUE.md).
 Older checkpoint additions below are historical, not the active work list.
 
+## Historical checkpoint notes
+
+The following additions retain their original checkpoint context. References to
+“latest” or “next” below do not override the current queue above.
+
 Latest local addition proves **actual captive player Execution as a Reign source**
 and **explicit Secretary addressed-statement Requests/History delivery**, preserving
 private legacy records. Evidence and finite scope are in

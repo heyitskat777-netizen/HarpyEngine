@@ -268,6 +268,18 @@ def _leave(state: GameState, placement: Placement, source_event: str, account: s
             else x
             for x in state.passengers
         ]
+    if occupied is not None and cell is not None:
+        from girlframe.engine.m3_a_bomb import exit_fact
+
+        exit_fact(
+            state,
+            placement.actor,
+            placement.vessel_id,
+            occupied[1],
+            occupied[0],
+            cell,
+            source_event,
+        )
     return placement.model_copy(
         update=dict(
             mode="outside_frame",

@@ -317,6 +317,14 @@ def break_zone(
     zone = next((x for x in zones(state) if x.id == identity and x.broken_event is None), None)
     if zone is None or state.world is None or cell not in zone.cells or not account.strip():
         raise ValueError("Record the actual breach of this still-intact quarantine")
+    return _finish_breach(state, zone, event, actor, cell, account)
+
+
+def _finish_breach(
+    state: GameState, zone: Zone, event: str, actor: ActorRef | None, cell: Cell, account: str
+) -> GameState:
+    identity = zone.id
+    assert state.world is not None
     put(
         state,
         zone.model_copy(
@@ -353,3 +361,14 @@ def break_zone(
 
 def warp_identity(grant: str) -> str:
     return "contaminant-feature:" + str(uuid5(NAMESPACE_URL, grant))
+
+
+def break_by_blast(
+    original: GameState, identity: str, event: str, cell: Cell, account: str
+) -> GameState:
+    """Trusted source service proves the actual nuclear crossing/perimeter destruction first."""
+    state = GameState.model_validate_json(original.model_dump_json())
+    zone = next((x for x in zones(state) if x.id == identity and x.broken_event is None), None)
+    if zone is None or cell not in zone.cells or not account.strip():
+        raise ValueError("Prove a real intact perimeter and actual blast breach")
+    return _finish_breach(state, zone, event, None, cell, account)

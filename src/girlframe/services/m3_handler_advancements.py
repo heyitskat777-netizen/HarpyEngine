@@ -182,6 +182,10 @@ class HandlerAdvancementService:
                     from girlframe.engine.m3_ship_base import acquisitions as ship_acquisitions
 
                     receipts = ship_acquisitions(spent)
+                elif value.acquired_rule == "handler-advancement.handler-advancement.a-bomb":
+                    from girlframe.engine.m3_a_bomb import acquisitions as bomb_acquisitions
+
+                    receipts = bomb_acquisitions(spent)
                 elif value.acquired_rule == "handler-advancement.handler-advancement.secretary":
                     from girlframe.engine.m3_secretary import acquisitions as secretary_acquisitions
 

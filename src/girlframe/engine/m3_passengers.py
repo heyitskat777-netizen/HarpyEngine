@@ -329,6 +329,11 @@ def leave(
             for x in state.frame_locks
         ]
     if value.actor.kind == "pilot":
+        from girlframe.engine.m3_a_bomb import exit_fact
+
+        prior = next(x for x in state.placements if x.actor == value.actor)
+        if cell is not None:
+            exit_fact(state, value.actor, prior.vessel_id, value.frame, value.carrier, cell, event)
         state.placements = [
             x.model_copy(
                 update=dict(

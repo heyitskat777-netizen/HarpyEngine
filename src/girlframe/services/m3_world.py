@@ -177,7 +177,7 @@ class WorldService:
                 "world": {
                     "board": world.board.model_dump(mode="json"),
                     "locations": [
-                        x.model_dump(mode="json", exclude={"blocked_by", "ship"})
+                        x.model_dump(mode="json", exclude={"blocked_by", "ship", "fallout_sources"})
                         | {"operational": x.operational}
                         | (
                             {
@@ -206,6 +206,19 @@ class WorldService:
                         if x.revealed
                     ],
                     "territory": [list(x) for x in sorted(world.territory)],
+                    **(
+                        {
+                            "fallout": [
+                                {
+                                    "cells": [list(cell) for cell in zone.cells],
+                                    "active": zone.expired_event is None,
+                                }
+                                for zone in world.fallout
+                            ]
+                        }
+                        if world.fallout
+                        else {}
+                    ),
                     **(
                         {
                             "features": [

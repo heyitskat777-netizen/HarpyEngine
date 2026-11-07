@@ -1533,6 +1533,18 @@ def damage_actor(
         from girlframe.services.m3_handler_plays import validate_damage_source
 
         validate_damage_source(c, game, state, grant.id, target, actor, chooser_controller, event)
+    elif source_work and source_work.startswith("a-bomb-drop:"):
+        from girlframe.services.m3_a_bomb import prove_drop
+
+        blast = prove_drop(game, c, state, source_work)
+        resource = next((x for x in blast.resources if x.actor == target and x.event is None), None)
+        if (
+            resource is None
+            or asset_id not in resource.assets
+            or actor != blast.handler
+            or chooser_controller != resource.controller
+        ):
+            raise WorkflowError("Only actual outstanding nuclear source damage uses this port")
     elif actor is not None:
         frozen_original = False
         if source_action and actor.kind == "pilot" and rules.original_ended(state, actor):
@@ -2012,6 +2024,16 @@ def damage_prerequisites(game: "GameService", c: Connection, row: dict[str, Any]
     from girlframe.services.m3_collateral import latest
 
     body = json.loads(row["body_json"])
+    if str(body.get("source_work", "")).startswith("a-bomb-drop:"):
+        from girlframe.services.m3_a_bomb import prove_drop
+
+        source_state = load_state(c, game.store.campaign_id)
+        source = prove_drop(game, c, source_state, body["source_work"])
+        if not any(
+            row["id"] in x.work and x.actor.model_dump(mode="json") == body.get("owner")
+            for x in source.resources
+        ):
+            raise WorkflowError("Recover the exact original nuclear damage requirement")
     aggressive = body.get("requirement", {}).get("details", {}).get("aggressive")
     if aggressive:
         other = latest(game, c, aggressive)
@@ -2984,3 +3006,101 @@ class BattleService:
             auto_audit=False,
             authorize=lambda c: authorize(self.game, c, viewer),
         )
+
+
+def damage_blast_resource(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    *,
+    drop: str,
+    target: ActorRef,
+    asset: str,
+    event: str,
+    occurrence: str,
+) -> tuple[GameState, tuple[str, ...]]:
+    """Mandatory actual nuclear source proof; a physical Frame is never a proxy actor."""
+    from girlframe.services.m3_a_bomb import prove_drop
+
+    source = prove_drop(game, c, state, drop)
+    resource = next((x for x in source.resources if x.actor == target and x.event is None), None)
+    if resource is None or asset not in resource.assets:
+        raise WorkflowError("Prove the original blast resource and actual outstanding damage")
+    if target.kind != "pilot":
+        return damage_actor(
+            game,
+            c,
+            state,
+            target=target,
+            asset_id=asset,
+            source_action=None,
+            source_work=drop,
+            event=event,
+            actor=source.handler,
+            chooser_controller=resource.controller,
+            occurrence="a_bomb:" + occurrence,
+            physical_blow=False,
+            indirect=True,
+        )
+    body = next((x for x in state.placements if x.actor == target), None)
+    sheet = state.sheets.get(target.entity)
+    if (
+        body is None
+        or sheet is None
+        or sheet.character_id != target.incarnation
+        or body.vessel_id != resource.vessel
+        or body.frame_instance != resource.frame
+        or body.frame_cell != resource.cell
+    ):
+        raise WorkflowError("Never damage a successor body or replacement Frame")
+    if body.mode != "outside_frame":
+        return damage_actor(
+            game,
+            c,
+            state,
+            target=target,
+            asset_id=asset,
+            source_action=None,
+            source_work=drop,
+            event=event,
+            actor=source.handler,
+            chooser_controller=resource.controller,
+            occurrence="a_bomb:" + occurrence,
+            physical_blow=False,
+            indirect=True,
+        )
+    selected = next(
+        (x for x in sheet.assets if x.id == asset and x.family == "frame" and not x.damaged), None
+    )
+    if selected is None:
+        raise WorkflowError("Damage a real intact Asset of this independently placed Frame")
+    changed = GameState.model_validate_json(state.model_dump_json())
+    for actual in changed.sheets[target.entity].assets:
+        if actual.id == asset:
+            actual.damaged = True
+    changed.sheets[target.entity].revision += 1
+    changed.facts.append(
+        dict(
+            kind="a_bomb_vacant_frame_damage",
+            drop=drop,
+            event=event,
+            target=target.model_dump_json(),
+            frame=resource.frame or "",
+            asset=asset,
+        )
+    )
+    from girlframe.engine.m3_appearance_matrix import record_damage
+
+    record_damage(
+        state,
+        changed,
+        damager=source.handler,
+        target=target,
+        identity=asset,
+        scene=None,
+        event=event,
+        action=None,
+        work=drop,
+        occurrence=occurrence,
+    )
+    return changed, ()

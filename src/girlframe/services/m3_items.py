@@ -114,6 +114,17 @@ def prove_item(c: Connection, game: GameService, state: GameState, item_id: str)
             raise WorkflowError(
                 "SOURCE_ITEM_FACT_MISSING: recover the actual factual confirmation."
             )
+    if item.state_event is not None:
+        transition_kind = c.scalar(
+            sa.select(t.events.c.kind).where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.id == item.state_event,
+            )
+        )
+        if transition_kind == "m3.a_bomb_dropped":
+            from girlframe.services.m3_a_bomb import prove_consumed_item
+
+            prove_consumed_item(game, c, state, item)
     latest = _snapshot(c, game, item.state_event or item.transferred_event or item.source_event)
     saved = next((x for x in latest.held_items if x.id == item.id), None) if latest else None
     if saved != item:
