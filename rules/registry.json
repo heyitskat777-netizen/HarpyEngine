@@ -5513,6 +5513,86 @@
       "clarity_review": true,
       "revision": 1,
       "implementation_note": "Source-bound effective_levels feeds actual Strain start and Harpy conversion severity; breach removes only the surviving relief/protection sources. Actual Class/resources, terrain/organization history and existing awakening consumers remain canonical."
+    },
+    {
+      "id": "bribery-owned-spheres-and-bonds",
+      "policy_key": "bribery_owned_spheres_and_bonds",
+      "summary": "Name at least six actual politicians, at least one per current City; assign one sphere each until all six are covered, allowing repeats. Actual Cadre authors create only their own Personal NPC Bonds and feelings, preserving stronger edges.",
+      "source": "Rulebook PDF156/printed154 Politician Bribery Fund; PDF13/printed11 NPC Bonds",
+      "rationale": "A single sphere per politician and all six covered need six contacts; repeats permit larger City rosters. Authored actual ties avoid fabricating every Girl's feelings or extra universal Bonds.",
+      "alternatives": [
+        "Automatic all-Girl/all-politician mechanical ties or a new unanimity quota."
+      ],
+      "implementation_note": "Source actors and controllers, actual jurisdictions and body positions remain distinct. The NPC-creation adapter requires known positions; it never invents a City coordinate.",
+      "change_impact": "Future contact/setup behavior only. Preserve original assignments/Bonds/history. Generic NPC-Bond forced-Play mechanics and roster/body changes remain required source adapters.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "bribery-personal-string-costs",
+      "policy_key": "bribery_personal_string_costs",
+      "summary": "Budget relief costs three Strings on the same politician; each unpriced cash-out costs one String on that politician.",
+      "source": "Rulebook PDF156/printed154 Politician Bribery Fund",
+      "rationale": "Strings are on the named person; the text prices Budget at three but does not price the other two. One is the smallest actual spend.",
+      "alternatives": [
+        "Pool Strings across people, variable unquoted prices or cost-free unpriced cash-outs."
+      ],
+      "implementation_note": "Actual source-adjudicated aid earns unique Strings; reservation blocks double use and actual effect spends atomically. Other consequence types require real adapters, never a generic work waiver.",
+      "change_impact": "Adjust future costs/access with printed clarity review; never retroactively change earned/spent Strings or original consequence records.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "ship-off-duty-period-rearm",
+      "policy_key": "ship_off_duty_period_rearm",
+      "summary": "Armoured returns at the genuine next Off-Duty period start, not a menu acknowledgment, with at most one refill per actual period.",
+      "source": "Rulebook PDF159/printed157 Ship-Base; actual Off-Duty period lifecycle",
+      "rationale": "The committed period start begins Go Off-Duty preparation. Waiting for final activation delays the printed repair; repeated views are not another period.",
+      "alternatives": [
+        "Rearm on opening UI or on every individual Girl roll; delay until all recovery completes."
+      ],
+      "implementation_note": "Use actual m3.off_duty_preparing event/period source. An owed low effect still blocks new flight/ram; no extra global veto may forbid legitimate Go Off-Duty as that effect.",
+      "change_impact": "Future rearm timing only; preserve prior period and damage history. Source-specific effects remain required, not acknowledged away.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "ship-ram-armour-order",
+      "policy_key": "ship_ram_armour_order",
+      "summary": "The +4 ram spends Armoured before RNG. A high then destroys an already-unarmoured Base; a high with armour remaining loses it. Low while already unarmoured adds no unprinted destruction and still owes the real Handler Play.",
+      "source": "Rulebook PDF159/printed157 Ship-Base",
+      "rationale": "The modifier explicitly requires damaging Armoured, and the high result separately requires damaging it or destroying the ship. The low clause does not state an extra death rule.",
+      "alternatives": [
+        "Treat +4 as free or reuse one armour spend for both clauses; invent destruction on every unarmoured low."
+      ],
+      "implementation_note": "Persist actual faces, modifier choice, cost and source opening once. Required low uses the procedural GM appointment, actual frozen Cadre and real effects/followups, never a Base/Gorgon proxy chooser.",
+      "change_impact": "Future ram/cost handling only. Preserve actual receipts, intervening damage and choices; non-Engage opportunities and special threats remain adapters.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "ship-destruction-no-extra-occupant-harm",
+      "policy_key": "ship_destruction_no_extra_occupant_harm",
+      "summary": "Ship destruction adds no unprinted automatic occupant death, healing or escape. Preserve actual body/Frame/NPC conditions at the real wreck while applying genuine destruction and any separate printed harm sources.",
+      "source": "Rulebook PDF159/printed157 Ship-Base; canonical world destruction",
+      "rationale": "The ship result destroys the Base without specifying an extra occupant result. A map cell alone is not boarding, and a wreck is not proof of death or travel.",
+      "alternatives": [
+        "Automatically kill or evacuate everyone in the square, restore damaged bodies, or treat the vehicle as a person."
+      ],
+      "implementation_note": "Only controller-authored true boarding manifests carry original bodies/Frames. Armoured interception creates no false destruction/Budget marker; actual wreck destruction uses canonical source effects.",
+      "change_impact": "Future transport/destruction only. Preserve genuine other-source harm and original people/resources; special cargo/body/occupant-harm adapters remain explicit gaps.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -16816,14 +16896,16 @@
         "heading": "Politician Bribery Fund"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_politician_bribery.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -17141,14 +17223,16 @@
         "heading": "Ship-Base"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_ship_base.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

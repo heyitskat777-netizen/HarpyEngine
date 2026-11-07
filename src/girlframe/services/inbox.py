@@ -904,6 +904,42 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_politician_bribery import BriberyService
+
+            for bribery in BriberyService(self.store)._tasks(connection, viewer):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, bribery),
+                        prefix="m3_politician_bribery:",
+                        source="m3_politician_bribery",
+                        counterpart="Original source owner or explicitly addressed controller",
+                        effect=(
+                            "Review actual assignments, aid, Strings and source-bound cash-outs."
+                        ),
+                        details="Actual people, effects and private source history remain bound.",
+                        primary="Review Politician Bribery Fund",
+                        task="m3_politician_bribery",
+                    )
+                )
+
+            from girlframe.services.m3_ship_base import ShipBaseService
+
+            for ship in ShipBaseService(self.store)._tasks(connection, viewer):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, ship),
+                        prefix="m3_ship_base:",
+                        source="m3_ship_base",
+                        counterpart="Original source owner or explicitly addressed controller",
+                        effect=(
+                            "Review actual boarding, flight, armour and source-owned ram history."
+                        ),
+                        details="Actual people, effects and private source history remain bound.",
+                        primary="Review Ship-Base",
+                        task="m3_ship_base",
+                    )
+                )
+
             from girlframe.services.m3_tracker_implants import TrackerService
 
             for tracker in TrackerService(self.store)._tasks(connection, viewer):

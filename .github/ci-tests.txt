@@ -1,8 +1,8 @@
-# Bounded acquisition/proof, neutral real scenario and matching inbox projection pilots.
-# Actual affected old/new workflows; final integrated full suite remains separate.
+# Real new consumers of acquisition/proof +neutral scenario +typed Inbox pilots.
+# Four actual Ship outcomes, political cashouts, affected source/atomicity and Handler flow.
+tests/rules/test_politician_bribery.py
+tests/rules/test_ship_base.py
+tests/rules/test_strain_effects.py::test_fired_npc_retains_bonds_and_city_anarchy_does_not_create_gorgon_territory
+tests/rules/test_strain_effect_service.py::test_actual_effect_and_work_resolve_atomically_with_replay_and_no_waiver
 tests/rules/test_advancement_acquisition.py
-tests/rules/test_secretary.py
-tests/rules/test_deep_brain_spikes.py
-tests/rules/test_tracker_implants.py
-tests/rules/test_contaminant_zone.py
-tests/rules/test_reign_terror.py::test_actual_enemy_owned_rejection_is_real_external_action_with_lock_and_history
+tests/rules/test_handler_plays.py::test_native_owned_basic_menu_and_real_effect_form

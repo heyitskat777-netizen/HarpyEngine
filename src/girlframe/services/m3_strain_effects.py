@@ -327,9 +327,14 @@ class EffectService:
                 from girlframe.services.m3_battle_director import bind_legacy_context_bodies
 
                 state = bind_legacy_context_bodies(self.game, c, state)
+            effective_choice = choice
+            if choice.rule_id == "strain.budget.low.6.2":
+                from girlframe.services.m3_politician_bribery import redirect
+
+                effective_choice = redirect(self.game, c, state, row, choice, event_id)
             updated = rules.apply(
                 state,
-                choice,
+                effective_choice,
                 identity,
                 period_id=row["off_duty_id"],
                 supply=supply,

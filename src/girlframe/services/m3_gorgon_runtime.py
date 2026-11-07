@@ -230,17 +230,41 @@ def _collateral_effect(
             handler=active_handler(state),
             gorgon_cause=True,
         )
-        changed, loss = perform(
-            state,
-            source,
-            Selection(
-                structures=(item["structure"],), account=item["account"], reach=item["account"]
-            ),
-            _event(action),
+        assert state.world is not None
+        structure = next(x for x in state.world.locations if x.id == item["structure"])
+        pinned_wreck = structure.condition == "destroyed" and any(
+            x.ship == structure.id
+            and x.threat == _ref(meta["actor"]).entity
+            and x.released_event is None
+            for x in state.world.ship_pins
         )
-        _copy(state, changed)
-        if loss is not None:
-            meta.setdefault("losses", []).append(loss.id)
+        if pinned_wreck:
+            state.facts.append(
+                dict(
+                    kind="ship_wreck_dealt_with",
+                    ship=structure.id,
+                    actor=_ref(meta["actor"]).model_dump_json(),
+                    event=_event(action),
+                    action=action["id"],
+                    choice=choice,
+                    account=item["account"],
+                )
+            )
+        else:
+            changed, loss = perform(
+                state,
+                source,
+                Selection(
+                    structures=(item["structure"],), account=item["account"], reach=item["account"]
+                ),
+                _event(action),
+            )
+            _copy(state, changed)
+            if loss is not None:
+                meta.setdefault("losses", []).append(loss.id)
+        from girlframe.engine.m3_ship_base import release_pin
+
+        release_pin(state, _ref(meta["actor"]).entity, structure.id, _event(action), action["id"])
     elif kind == "civilians":
         if state.world is None:
             raise WorkflowError("Recover actual threatened civilians in this source World.")
@@ -389,7 +413,16 @@ def apply(
                     (
                         x
                         for x in state.world.locations
-                        if x.id == answer.fields.get("structure") and x.condition != "destroyed"
+                        if x.id == answer.fields.get("structure")
+                        and (
+                            x.condition != "destroyed"
+                            or any(
+                                p.ship == x.id
+                                and p.threat == _ref(meta["actor"]).entity
+                                and p.released_event is None
+                                for p in state.world.ship_pins
+                            )
+                        )
                     ),
                     None,
                 )
@@ -669,6 +702,10 @@ def projection(
                 dict(id=x.id, label=x.name)
                 for x in state.world.locations
                 if x.condition != "destroyed"
+                or any(
+                    p.ship == x.id and p.threat == actual.ref.entity and p.released_event is None
+                    for p in state.world.ship_pins
+                )
             ],
             civilians=[
                 dict(id=x.id, label=x.name)

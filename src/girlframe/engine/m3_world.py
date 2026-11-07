@@ -170,6 +170,19 @@ def destroy(world: World, identity: str, *, gorgon_cause: bool) -> Result:
         )
     if target.protection_sources:
         raise ValueError("Break the actual quarantine before harming its protected field site")
+    if target.ship is not None and target.ship.armoured:
+        hull = target.ship.model_copy(
+            update=dict(armoured=False, damage_count=target.ship.damage_count + 1)
+        )
+        return Result(
+            world=update(
+                world,
+                locations=tuple(
+                    x.model_copy(update=dict(ship=hull)) if x.id == identity else x
+                    for x in world.locations
+                ),
+            )
+        )
     territory = world.territory
     if gorgon_cause:
         territory |= frozenset(
@@ -179,7 +192,16 @@ def destroy(world: World, identity: str, *, gorgon_cause: bool) -> Result:
         world,
         territory=territory,
         locations=tuple(
-            x.model_copy(update={"condition": "destroyed"}) if x.id == identity else x
+            x.model_copy(
+                update={
+                    "condition": "destroyed",
+                    "ship": x.ship.model_copy(update=dict(airborne=False))
+                    if x.ship is not None
+                    else None,
+                }
+            )
+            if x.id == identity
+            else x
             for x in world.locations
         ),
     )
@@ -243,6 +265,13 @@ def end_off_duty(
     updated = world
     followups: list[Followup] = []
     for movement in movements:
+        if any(
+            x.threat == movement.gorgon
+            and x.released_event is None
+            and movement.destination != directed[movement.gorgon].cell
+            for x in world.ship_pins
+        ):
+            raise ValueError("Deal with the actual pinning ship or wreck before departing")
         original = directed[movement.gorgon]
         if movement.destination not in directed_steps(updated, original):
             raise ValueError(

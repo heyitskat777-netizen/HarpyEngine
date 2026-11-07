@@ -169,6 +169,19 @@ class HandlerAdvancementService:
                     )
 
                     receipts = zone_acquisitions(spent)
+                elif (
+                    value.acquired_rule
+                    == "handler-advancement.handler-advancement.politician-bribery-fund"
+                ):
+                    from girlframe.engine.m3_politician_bribery import (
+                        acquisitions as bribery_acquisitions,
+                    )
+
+                    receipts = bribery_acquisitions(spent)
+                elif value.acquired_rule == "handler-advancement.handler-advancement.ship-base":
+                    from girlframe.engine.m3_ship_base import acquisitions as ship_acquisitions
+
+                    receipts = ship_acquisitions(spent)
                 elif value.acquired_rule == "handler-advancement.handler-advancement.secretary":
                     from girlframe.engine.m3_secretary import acquisitions as secretary_acquisitions
 

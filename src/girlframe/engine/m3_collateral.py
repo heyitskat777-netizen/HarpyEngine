@@ -191,6 +191,8 @@ def perform(
     for identity in choice.structures:
         assert state.world is not None
         state.world = destroy(state.world, identity, gorgon_cause=source.gorgon_cause).world
+        if not any(x.id == identity and x.condition == "destroyed" for x in state.world.locations):
+            continue  # Real Armoured interception is not destruction or a Budget trigger.
         stamp = str(uuid5(NAMESPACE_URL, "actual-structure:" + identity + ":" + event))
         state.facts.append(
             dict(

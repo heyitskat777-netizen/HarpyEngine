@@ -177,8 +177,18 @@ class WorldService:
                 "world": {
                     "board": world.board.model_dump(mode="json"),
                     "locations": [
-                        x.model_dump(mode="json", exclude={"blocked_by"})
+                        x.model_dump(mode="json", exclude={"blocked_by", "ship"})
                         | {"operational": x.operational}
+                        | (
+                            {
+                                "ship": {
+                                    "armoured": x.ship.armoured,
+                                    "airborne": x.ship.airborne,
+                                }
+                            }
+                            if x.ship is not None
+                            else {}
+                        )
                         for x in world.locations
                     ],
                     "gorgons": [

@@ -1,5 +1,68 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Political contacts and Ship-Base using proven shared operations — 2026-11-07
+
+Source extends local efficiency checkpoint `91f69a1`; exact 24 Python files are
+frozen in `var/m3-bribery-ship-source-snapshot.json`. Existing acquisition/proof,
+neutral real award scenario and matching typed inbox adapter were reused without
+another infrastructure refactor. Two agents owned Bribery6 and Ship9 modules;
+root owned9 explicit shared ports. **M3 remains RULES_SUBSET.**
+
+Bribery now creates actual political contacts by City jurisdiction, six actual
+Cadre-owned sphere assignments and canonical NPC Bonds. Private feelings remain
+visible only to their original author. Real performed aid and source-human factual
+benefit adjudication earn Strings. Three supported cash-outs change actual Budget,
+inflict a real NPC Tag, or redirect a genuinely action-caused pending job loss to
+the politician. Real effect/work closure and String spend are atomic; the original
+NPC, work and source survive. Controller IDs cannot impersonate a Girl's actual
+NPC/Clone action. Cities do not imply physical positions: unknown NPC position
+fails before purchase instead of inventing coordinates. Other consequence and
+generic NPC-Bond forced-Play adapters remain open.
+
+Bribery final normal **1 passed /14.236s** after its actor-identity guard. Three
+affected existing cases passed in prior focused **4 passed /16.14s**: NPC job-loss
+rules, actual atomic Strain effect/replay, and real shared acquisition rollback.
+Those existing paths did not change with the final new-source actor guard. The
+normal includes genuine event-stage interruption/rollback, exact completion retry,
+overspend/duplicate/source denial, private reopen and rebuild. Artifacts and exact
+nodes are in `var/m3-politician-bribery-fund-handoff.json`.
+
+Ship-Base acquisition preserves a real Base. Actual controller-authored boarding
+carries only the original contained bodies/Frames/NPCs; same-square bystanders do
+not travel. Flight updates real physical sources. Armoured intercepts destruction
+without false destruction/Budget records, and actual Off-Duty period start rearms.
+Four ram traces cover low/real GM Handler effect, +2 real Engage opening/Core/pin,
+high armour loss and +4 high actual Base/wreck destruction. Real Gorgon action
+against the ship/wreck releases its pin; a vehicle never becomes an ActorRef.
+Root's required-effect completion preserves original source, owner and child work.
+Public map output exposes hull status, not source/boarding metadata.
+
+Ship normal **4 passed /11.40s**. A later extra global low/Off-Duty veto was rejected
+and removed because it would strand the legitimate Go Off-Duty Handler choice.
+Its targeted **1 passed /3.30s** is explicitly **superseded, not acceptance evidence**.
+The original four gameplay paths were restored; later changes only narrowed read
+notices to the already-authorized owner/GM and removed an unused test import.
+New flight/ram still cannot bypass an owed actual effect. The original mixed
+3-pass/1-fail test expectation (later Gorgon retaliation really destroys the
+unarmoured Base) is retained with the corrected final evidence in the Ship handoff.
+
+Coherent static: **24 Python** Ruff/format and **22 source modules** mypy pass.
+After the veto restoration, only the two changed Python files/one source were
+checked again; unchanged evidence reused. Fresh affected old native Handler flow:
+**1 passed /1.19s**. No broad regression or gameplay rerun solely for formatting.
+`var/m3-bribery-ship-static.json` records exact scopes/deltas. Initial two root inbox
+long literals were wrapped with identical AST/text before final static.
+
+Metadata:185 subsets,291 unimplemented,335 clarifications;476 total,439 required
+core,37 deferred Ancillary,zero independent approvals. These overlapping inventory
+entries are not equal-sized tasks or progress percentages. Finite ordinary
+original actors/threats are supported; other source/body/cargo/consequence adapters
+and required remaining gameplay still block completion. Current queue and scoped
+acceptance distinguish implementation evidence from final full regression,
+independent printed-rule review and human/player acceptance. Bot off, local only;
+no push/deployment/live migration/environment publication/private-engine writes,
+AI/M4 or Ancillary activation.
+
 ## Bounded efficiency pilots after active gameplay integration — 2026-11-07
 
 The owner requested assessment against current work, not historical `4096705`.

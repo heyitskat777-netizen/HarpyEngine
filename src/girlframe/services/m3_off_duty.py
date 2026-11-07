@@ -368,12 +368,17 @@ class OffDutyService:
                 normalized = bind_identity_slots(original)
                 changed |= normalized != original
                 state.sheets[str(uid)] = normalized
+            from girlframe.engine.m3_ship_base import rearm
+
+            source_event = str(uuid4())
+            changed |= rearm(state, period.id, source_event)
             event = self.game.event(
                 c,
                 viewer.user_id,
                 key,
                 "m3.off_duty_preparing",
                 state if changed else None,
+                event_id=source_event,
                 period_id=period.id,
             )
             self._save(c, period, event)

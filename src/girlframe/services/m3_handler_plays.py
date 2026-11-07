@@ -460,6 +460,10 @@ def _source(c: Connection, game: "GameService", identity: str) -> tuple[GameStat
         from girlframe.services.m3_contaminant_zone import prove_warp
 
         prove_warp(game, c, state, grant)
+    if grant.clause == "ship_base.low":
+        from girlframe.services.m3_ship_base import prove_low_grant
+
+        prove_low_grant(game, c, state, grant)
     if grant.source == "battle_counter":
         answer = c.scalar(
             sa.select(t.m2["m2_responses"].c.answer_json).where(
@@ -542,6 +546,10 @@ def _authority(c: Connection, game: "GameService", state: GameState, grant: Hand
         from girlframe.services.m3_contaminant_zone import prove_warp
 
         prove_warp(game, c, state, grant)
+    if grant.clause == "ship_base.low":
+        from girlframe.services.m3_ship_base import prove_low_grant
+
+        prove_low_grant(game, c, state, grant)
     if grant.source in ("ordinary", "required"):
         if grant.source == "required" and grant.clause == "doctor_support.low":
             from girlframe.services.m3_battle import _scene_judge
@@ -712,6 +720,18 @@ def _continuation(c: Connection, game: "GameService", event: str) -> tuple[str, 
     return str(source.actor_id), str(source.command_key), int(last or 0) + 1
 
 
+def _complete(
+    game: "GameService", c: Connection, state: GameState, identity: str, event: str
+) -> GameState:
+    updated = rules.complete(state, identity, event)
+    grant = rules.record(updated, identity)
+    if grant.clause == "ship_base.low":
+        from girlframe.services.m3_ship_base import complete_low
+
+        complete_low(game, c, updated, grant, event)
+    return updated
+
+
 def complete_role_case(
     c: Connection, game: "GameService", case: "RolePunishment", event: str
 ) -> None:
@@ -720,7 +740,7 @@ def complete_role_case(
         raise WorkflowError("Complete the actual punishment and all source followups first.")
     if grant.state == "complete":
         return
-    updated = rules.complete(state, grant.id, event)
+    updated = _complete(game, c, state, grant.id, event)
     actor, key, index = _continuation(c, game, event)
     completed = game.event(
         c,
@@ -778,7 +798,7 @@ def complete_damage(
         raise WorkflowError(
             "Finish the actual source damage consequences and owned followups first."
         )
-    state = rules.complete(state, grant.id, event)
+    state = _complete(game, c, state, grant.id, event)
     actor, command, index = _continuation(c, game, event)
     saved = game.event(
         c,
@@ -849,7 +869,7 @@ def synchronize_off_duty(c: Connection, game: "GameService", period: "Period", e
                 raise WorkflowError(
                     "The actual Handler scene and performance review must finish first."
                 )
-            state = rules.complete(state, grant.id, event)
+            state = _complete(game, c, state, grant.id, event)
             completed.append(grant.id)
     if completed:
         actor, key, index = _continuation(c, game, event)
@@ -883,6 +903,11 @@ def finish_callback(
         and grant.declined_event
     ):
         raise WorkflowError("The Handler Play's actual effect and followups must finish first.")
+    if grant.clause == "ship_base.low":
+        from girlframe.services.m3_ship_base import prove_low_grant
+
+        prove_low_grant(game, c, load_state(c, game.store.campaign_id), grant)
+        return
     if grant.source == "required":
         assert grant.source_action is not None and grant.source_choice is not None
         action = game.action(c, grant.source_action)
@@ -1439,7 +1464,7 @@ class HandlerPlayService:
                 from girlframe.services.m3_tracker_implants import apply_play
 
                 state = apply_play(self.game, c, state, grant, effect)
-                state = rules.complete(state, identity, event)
+                state = _complete(self.game, c, state, identity, event)
             elif effect.kind == "contaminant_warp":
                 from girlframe.services.m3_contaminant_zone import apply_warp, prove_warp
 
@@ -1465,7 +1490,7 @@ class HandlerPlayService:
                     grant=identity,
                     scene=grant.scope.scene_id,
                 )
-                state = rules.complete(state, identity, event)
+                state = _complete(self.game, c, state, identity, event)
             elif effect.kind == "off_duty":
                 assert effect.off_duty is not None
                 _off_duty(c, self.game, grant, effect.off_duty)
@@ -1510,7 +1535,9 @@ class HandlerPlayService:
                     state,
                     target=effect.target,
                     asset_id=effect.asset,
-                    source_action=grant.source_action,
+                    source_action=(
+                        None if grant.clause == "ship_base.low" else grant.source_action
+                    ),
                     source_work=grant.id,
                     event=event,
                     actor=grant.chooser_actor,
@@ -1522,10 +1549,10 @@ class HandlerPlayService:
                     state, rules.record(state, identity).model_copy(update=dict(followups=required))
                 )
                 if not required:
-                    state = rules.complete(state, identity, event)
+                    state = _complete(self.game, c, state, identity, event)
             else:
                 state = rules.direct(state, identity, event)
-                state = rules.complete(state, identity, event)
+                state = _complete(self.game, c, state, identity, event)
             self.game.event(
                 c,
                 viewer.user_id,

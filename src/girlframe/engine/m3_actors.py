@@ -457,6 +457,7 @@ def _resolve(
                 "hidden_sidearm_actual_position",
                 "reign_terror_actual_position",
                 "tracker_initial_handler_position",
+                "ship_base_actual_position",
                 "handler_transport_arrived",
                 "leviathan_actual_arrival",
             )

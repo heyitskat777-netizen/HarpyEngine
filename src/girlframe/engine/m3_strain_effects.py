@@ -586,7 +586,35 @@ def apply(
         world = world_rules.update(world, rooms=choice.rooms)
     elif rule == "strain.budget.low.6.2":
         fields(choice, {"target", "npc_jobs"})
-        npc = next((x for x in world.npcs if x.id == choice.target and x.alive and x.bonds), None)
+        from girlframe.engine.m3_actor_bonds import current_ref
+        from girlframe.engine.m3_actor_bonds import depth as bond_depth
+        from girlframe.engine.m3_actor_state import ActorRef
+        from girlframe.engine.m3_handler_consequences import active_handler
+
+        people = [
+            current_ref(state, uid)
+            for uid in state.order
+            if state.sheets[str(uid)].character_id is not None
+        ]
+        handler = active_handler(state)
+        if handler is not None:
+            people.append(handler)
+        npc = next(
+            (
+                x
+                for x in world.npcs
+                if x.id == choice.target
+                and x.alive
+                and (
+                    x.bonds
+                    or any(
+                        bond_depth(state, ActorRef(kind="npc", entity=x.id), person) > 0
+                        for person in people
+                    )
+                )
+            ),
+            None,
+        )
         if npc is None or not choice.npc_jobs or choice.npc_jobs == npc.jobs:
             raise ValueError(
                 "Select an actual living NPC Bond and its changed post-firing playbook"

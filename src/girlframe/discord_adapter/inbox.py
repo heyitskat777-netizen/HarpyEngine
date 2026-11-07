@@ -650,6 +650,16 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_handler_pr import HandlerPRService
 
             await open_pr(interaction, HandlerPRService(self.service.store), item.identity)
+        elif item.task == "m3_politician_bribery":
+            from girlframe.discord_adapter.m3_politician_bribery import open_bribery
+            from girlframe.services.m3_politician_bribery import BriberyService
+
+            await open_bribery(interaction, BriberyService(self.service.store), item.identity)
+        elif item.task == "m3_ship_base":
+            from girlframe.discord_adapter.m3_ship_base import open_ship
+            from girlframe.services.m3_ship_base import ShipBaseService
+
+            await open_ship(interaction, ShipBaseService(self.service.store), item.identity)
         elif item.task == "m3_tracker_implants":
             from girlframe.discord_adapter.m3_tracker_implants import open_tracker
             from girlframe.services.m3_tracker_implants import TrackerService

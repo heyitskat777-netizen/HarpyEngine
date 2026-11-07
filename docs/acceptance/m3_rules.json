@@ -926,5 +926,15 @@
   ],
   "pending_owner_rulings": [],
   "working_queue": "docs/M3_CURRENT_QUEUE.md",
-  "evidence_note": "Scoped automated cases overlap broader acceptance gates and are not equal-sized tasks. Historical evidence is preserved; IN_PROGRESS and independent/human gates remain open."
+  "evidence_note": "Scoped automated cases overlap broader acceptance gates and are not equal-sized tasks. Historical evidence is preserved; IN_PROGRESS and independent/human gates remain open.",
+  "maintenance_evidence": [
+    {
+      "scope": "bounded acquisition/proof, matching inbox entry and neutral real scenario pilots; no rule coverage increase",
+      "git_commit": "91f69a18ecb2dc209d92b7e8efc6f70ed45d0c00",
+      "executed_command": ".venv/bin/pytest -q tests/rules/test_advancement_acquisition.py tests/rules/test_secretary.py::test_actual_promoted_secretary_all_plays_withdraw_child_continuation_history tests/rules/test_secretary.py::test_actual_new_secretary_is_real_npc_not_extra_pc_or_free_assets tests/rules/test_deep_brain_spikes.py::test_real_memory_context_current_play_relevance_and_discrepancy_return_keep_present tests/rules/test_tracker_implants.py tests/rules/test_contaminant_zone.py tests/rules/test_reign_terror.py::test_actual_enemy_owned_rejection_is_real_external_action_with_lock_and_history --junitxml=var/m3-efficiency-pilot-focused.xml",
+      "actual_result": "8 passed in29.757s; Ruff/format10Python and mypy5source passed; registry/repository checks passed",
+      "log_or_trace": "var/m3-efficiency-pilot-focused.xml; var/m3-efficiency-pilot-final-source-snapshot.json",
+      "limitation": "Focused evidence, not full regression, independent rules review, human acceptance or measured speedup."
+    }
+  ]
 }

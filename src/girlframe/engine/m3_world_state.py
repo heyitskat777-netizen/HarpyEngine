@@ -71,12 +71,39 @@ class PlacedEntity(Entity):
     cell: Cell
 
 
+class ShipHull(Model):
+    acquisition: str = Field(min_length=1)
+    source_event: str = Field(min_length=1)
+    armoured: bool = True
+    airborne: bool = False
+    damage_count: int = Field(default=0, ge=0)
+    rearm_period: str | None = None
+    rearm_event: str | None = None
+
+
+class ShipAuthority(Model):
+    acquisition: str = Field(min_length=1)
+    base: str = Field(min_length=1)
+    source_event: str = Field(min_length=1)
+
+
+class ShipPin(Model):
+    id: str = Field(min_length=1)
+    ship: str = Field(min_length=1)
+    threat: str = Field(min_length=1)
+    ram: str = Field(min_length=1)
+    source_event: str = Field(min_length=1)
+    released_event: str | None = None
+    release_action: str | None = None
+
+
 class Location(PlacedEntity):
     kind: Literal["base", "city", "important"]
     allegiance: Literal["foundation", "rebel", "independent"] = "foundation"
     condition: Literal["intact", "damaged", "destroyed"] = "intact"
     blocked_by: tuple[str, ...] = ()
     protection_sources: tuple[str, ...] = Field(default=(), exclude_if=lambda x: not x)
+    ship: ShipHull | None = Field(default=None, exclude_if=lambda x: x is None)
 
     @property
     def operational(self) -> bool:
@@ -309,6 +336,8 @@ class AreaFeature(Model):
 class World(Model):
     board: Board
     features: tuple[AreaFeature, ...] = Field(default=(), exclude_if=lambda x: not x)
+    ship_pins: tuple[ShipPin, ...] = Field(default=(), exclude_if=lambda x: not x)
+    ship_sources: tuple[ShipAuthority, ...] = Field(default=(), exclude_if=lambda x: not x)
     field_studies: tuple[FieldStudy, ...] = Field(default=(), exclude_if=lambda x: not x)
     locations: tuple[Location, ...]
     npcs: tuple[Npc, ...] = ()
@@ -334,7 +363,12 @@ class World(Model):
             raise ValueError("Pending NPC role offers reserve distinct actual entity IDs")
         if any(not self.board.contains(x.cell) for x in candidates):
             raise ValueError("An offered NPC still requires an actual map square")
-        if len({x.cell for x in self.locations}) != len(self.locations):
+        ground = [
+            x
+            for x in self.locations
+            if x.ship is None or not (x.ship.airborne or x.condition == "destroyed")
+        ]
+        if len({x.cell for x in ground}) != len(ground):
             raise ValueError("Each major location occupies its own square")
         if any(
             not self.board.contains(x.cell) for x in (*self.locations, *self.npcs, *self.pilots)
@@ -342,6 +376,30 @@ class World(Model):
             raise ValueError("Entities must occupy squares on the current map")
         factions, npcs = {x.id for x in self.factions}, {x.id for x in self.npcs}
         sites = {x.id: x for x in self.locations}
+        if (
+            len({x.acquisition for x in self.ship_sources}) != len(self.ship_sources)
+            or any(x.base not in sites for x in self.ship_sources)
+            or any(
+                not any(
+                    a.acquisition == x.ship.acquisition
+                    and a.base == x.id
+                    and a.source_event == x.ship.source_event
+                    for a in self.ship_sources
+                )
+                for x in self.locations
+                if x.ship is not None
+            )
+        ):
+            raise ValueError("A flying Base requires its actual existing source-bound authority")
+        if any(x.ship is not None and x.kind != "base" for x in self.locations):
+            raise ValueError("A Ship-Base preserves its actual existing Base identity")
+        if len({x.id for x in self.ship_pins}) != len(self.ship_pins) or any(
+            x.ship not in sites
+            or sites[x.ship].ship is None
+            or not any(g.id == x.threat for g in self.gorgons)
+            for x in self.ship_pins
+        ):
+            raise ValueError("A real ship pin retains its actual Base, threat and source")
         if (
             len({x.id for x in self.features}) != len(self.features)
             or any(not self.board.contains(x.cell) for x in self.features)

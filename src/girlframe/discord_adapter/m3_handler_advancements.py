@@ -72,6 +72,21 @@ async def open_advancement(
 
         await open_zone(interaction, ContaminantZoneService(service.store), data["acquisition"])
         return
+    if (
+        data.get("acquired_rule")
+        == "handler-advancement.handler-advancement.politician-bribery-fund"
+    ):
+        from girlframe.discord_adapter.m3_politician_bribery import open_bribery
+        from girlframe.services.m3_politician_bribery import BriberyService
+
+        await open_bribery(interaction, BriberyService(service.store), data["acquisition"])
+        return
+    if data.get("acquired_rule") == "handler-advancement.handler-advancement.ship-base":
+        from girlframe.discord_adapter.m3_ship_base import open_ship
+        from girlframe.services.m3_ship_base import ShipBaseService
+
+        await open_ship(interaction, ShipBaseService(service.store), data["acquisition"])
+        return
     if data.get("acquired_rule"):
         await reply(
             interaction,
@@ -197,6 +212,8 @@ async def open_advancement(
     form.add_item(AcquireReignTerror(form, service))
     form.add_item(AcquireTracker(form, service, identity))
     form.add_item(AcquireContaminantZone(form, service, identity))
+    form.add_item(AcquireBribery(form, service, identity))
+    form.add_item(AcquireShipBase(form, service, identity))
     await form.present(interaction)
 
 
@@ -415,3 +432,31 @@ class AcquireContaminantZone(discord.ui.Button[NativeForm]):
         from girlframe.services.m3_contaminant_zone import ContaminantZoneService
 
         await open_zone(interaction, ContaminantZoneService(self.service.store), self.identity)
+
+
+class AcquireBribery(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService, identity: str):
+        super().__init__(label="Acquire Politician Bribery Fund", row=1)
+        self.form, self.service, self.identity = form, service, identity
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_politician_bribery import open_bribery
+        from girlframe.services.m3_politician_bribery import BriberyService
+
+        await open_bribery(interaction, BriberyService(self.service.store), self.identity)
+
+
+class AcquireShipBase(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService, identity: str):
+        super().__init__(label="Acquire Ship-Base instead", row=1)
+        self.form, self.service, self.identity = form, service, identity
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_ship_base import open_ship
+        from girlframe.services.m3_ship_base import ShipBaseService
+
+        await open_ship(interaction, ShipBaseService(self.service.store), self.identity)
