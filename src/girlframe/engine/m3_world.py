@@ -207,10 +207,16 @@ def destroy(world: World, identity: str, *, gorgon_cause: bool) -> Result:
     )
     followups = [Followup(kind="budget_structure_destroyed", entity=identity, source_pdf=150)]
     if any(
-        x.kind == "base" and x.allegiance == "foundation" and x.condition != "destroyed"
+        x.kind == "base"
+        and x.allegiance == "foundation"
+        and x.condition != "destroyed"
+        and (world.quadrant12 is None or world.quadrant12.contains(x.cell))
         for x in world.locations
     ) and not any(
-        x.kind == "base" and x.allegiance == "foundation" and x.condition != "destroyed"
+        x.kind == "base"
+        and x.allegiance == "foundation"
+        and x.condition != "destroyed"
+        and (world.quadrant12 is None or world.quadrant12.contains(x.cell))
         for x in updated.locations
     ):
         followups.append(

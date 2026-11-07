@@ -5,6 +5,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from girlframe.engine.identity import Snowflake
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_janus_link_state import BatteryAsset
 
 Coordinate = Annotated[int, Field(ge=-100_000, le=100_000)]
@@ -342,7 +343,39 @@ class AreaFeature(Model):
     grant: str = Field(min_length=1)
 
 
+class Region(Model):
+    """One unlocked neighbouring map in the same canonical geographical World."""
+
+    id: Literal["quadrant13"] = "quadrant13"
+    name: str = "Quadrant 13"
+    bounds: Board
+    acquisition: str
+    source_event: str
+    rival: ActorRef
+    responsible: ActorRef | None = None
+    takeover_event: str | None = None
+    boons: tuple[str, ...]
+    threats: tuple[str, ...]
+    location_ids: tuple[str, ...]
+    staff_ids: tuple[str, ...]
+
+    @model_validator(mode="after")
+    def real_office(self) -> "Region":
+        if (
+            self.rival.kind != "npc"
+            or len(set(self.boons)) != 3
+            or len(set(self.threats)) != 2
+            or (self.responsible is None) != (self.takeover_event is None)
+            or self.responsible is not None
+            and self.responsible.kind != "handler"
+        ):
+            raise ValueError("Retain the actual regional office, three boons and two threats")
+        return self
+
+
 class World(Model):
+    quadrant12: Board | None = Field(default=None, exclude_if=lambda x: x is None)
+    regions: tuple[Region, ...] = Field(default=(), exclude_if=lambda x: not x)
     fallout: tuple[Fallout, ...] = Field(default=(), exclude_if=lambda x: not x)
     board: Board
     features: tuple[AreaFeature, ...] = Field(default=(), exclude_if=lambda x: not x)
@@ -363,6 +396,24 @@ class World(Model):
 
     @model_validator(mode="after")
     def references(self) -> "World":
+        if self.regions:
+            if self.quadrant12 is None or len(self.regions) != 1:
+                raise ValueError("Preserve the original Quadrant12 and one actual unlocked map")
+            for region in self.regions:
+                if (
+                    not self.board.contains(region.bounds.minimum)
+                    or not self.board.contains(region.bounds.maximum)
+                    or any(
+                        region.bounds.contains(cell)
+                        for cell in (self.quadrant12.minimum, self.quadrant12.maximum)
+                    )
+                    or not any(
+                        x.id == region.rival.entity and "handler" in x.jobs for x in self.npcs
+                    )
+                    or not set(region.location_ids) <= {x.id for x in self.locations}
+                    or not set(region.staff_ids) <= {x.id for x in self.npcs}
+                ):
+                    raise ValueError("An unlocked region retains its real map, office and contents")
         if any(not self.board.contains(cell) for zone in self.fallout for cell in zone.cells):
             raise ValueError("Actual fallout occupies on-board cells")
         if any(
@@ -484,3 +535,16 @@ class World(Model):
         if len(set(self.completed_off_duty)) != len(self.completed_off_duty):
             raise ValueError("World end-of-period effects cannot repeat")
         return self
+
+
+def region_for(world: World, cell: Cell) -> Region | None:
+    return next((x for x in world.regions if x.bounds.contains(cell)), None)
+
+
+def base_responsible(world: World, cell: Cell, handler: ActorRef) -> bool:
+    region = region_for(world, cell)
+    return region is None or region.responsible == handler and region.takeover_event is not None
+
+
+def quadrant12_contains(world: World, cell: Cell) -> bool:
+    return (world.quadrant12 or world.board).contains(cell)

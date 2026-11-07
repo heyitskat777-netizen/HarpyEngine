@@ -120,6 +120,8 @@ def pose(state: GameState, value: Order) -> Placement:
 
 
 def empty_at_base(state: GameState, value: Order) -> Placement:
+    from girlframe.engine.m3_world_state import base_responsible
+
     actual = pose(state, value)
     base = (
         next((x for x in state.world.locations if x.id == value.base), None)
@@ -132,6 +134,8 @@ def empty_at_base(state: GameState, value: Order) -> Placement:
         or base.allegiance != "foundation"
         or base.condition == "destroyed"
         or base.cell != value.cell
+        or state.world is not None
+        and not base_responsible(state.world, base.cell, value.handler)
         or actual.frame_cell != value.cell
         or any(occupied_frame(x) == (value.owner, value.frame) for x in state.placements)
         or any(
@@ -161,6 +165,8 @@ def create(
     appointment: str,
     account: str,
 ) -> GameState:
+    from girlframe.engine.m3_world_state import base_responsible
+
     handler = active_handler(state)
     superior = ActorRef(kind="npc", entity=npc)
     body = next((x for x in state.world.npcs if x.id == npc), None) if state.world else None
@@ -182,6 +188,8 @@ def create(
         or site.kind != "base"
         or site.allegiance != "foundation"
         or site.condition == "destroyed"
+        or state.world is not None
+        and not base_responsible(state.world, site.cell, handler)
         or any(x.source_work == work for x in orders(state))
     ):
         raise ValueError(

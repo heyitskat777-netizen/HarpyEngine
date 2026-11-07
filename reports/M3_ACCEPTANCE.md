@@ -1,5 +1,64 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Promotional Opportunity ordinary workflow — 2026-11-07
+
+Feature extends `a3ebf6f`. Coherent19 Python/18 source files pass Ruff, format and
+mypy without drift; exact paths/hashes/commands are in
+`var/m3-promotional-union-source-snapshot.json` and
+`var/m3-promotional-union-static.json`. Concurrent Dose Up worker files remain
+separate/unaccepted; its shared root integration has not begun.
+
+A genuine native Award → More acquisition creates the selected three boons and
+two threats in one real World. Across main and alternatives, all five boons and
+five threats create actual places, garrison/personnel, cities, factions, Gorgons,
+eight territory cells or a genuine active Harpy. Its birth reaches the existing
+Harpy runtime consumer through mandatory source proof. Original map objects,
+character sheets, saved12 bounds and physical positions are preserved; no player
+Assets, invented modifiers, automatic travel or instant Mission success are given.
+
+The original owner actually arranges the ordinary rival NPC's harm/death through
+an existing Handler Play, then proves and takes regional responsibility. Actual
+Budget6.1 source, genuine first UNKNOWN physical reviews, an empty original Frame
+and real storage at the new Base demonstrate the ownership consumer. Actual
+Off-Duty choices, mandatory Strain effects, recovery, Status and world advancement
+complete before the private original-source Inbox reopens. Known positions are
+not overwritten to simulate movement.
+
+Regional intake and selected own-site/entry-frontier Strain decisions require real
+responsibility; source122 original12 last-Base work cannot be suppressed by a
+foreign Base. Public projection whitelists map/known office/responsibility labels;
+raw setup/accounts/controllers/source provenance remain private. Source-specific
+A-Bomb eligibility retains its printed12 boundary. Storage receipt/action now
+re-proves regional authority from actual canonical history, as Strain mutation
+does; mutable World labels alone cannot authorize it.
+
+| Executed focused evidence | Actual result |
+|---|---|
+| Native acquisition → actual rival death → takeover → real storage → actual Off-Duty/world end | 1 passed /7.09s, `var/m3-promotional-primary.xml`; exact command in `var/m3-promotional-opportunity-contract.json` |
+| Real alternate sites/rebels/erratic and actual Harpy consumer | 2 passed /3.87s (1 deselected), `.venv/bin/pytest -q tests/rules/test_promotional_opportunity.py -k alternate --junitxml=var/m3-promotional-alternates.xml` |
+| Existing last-Base, five Gorgon placement outcomes, Rebel city/Base, Anarchy, contraband and native selector checks | 11 passed /5.12s; exact command in `var/m3-promotional-root-static.json`, JUnit `var/m3-promotional-root-compat.xml` |
+| Final registry + added storage history authority guard | 1 passed /6.11s; `.venv/bin/pytest -q tests/rules/test_promotional_opportunity.py::test_native_actual_map_rival_downfall_takeover_physical_storage_and_world --junitxml=var/m3-promotional-registry-final.xml` |
+| Final coherent static | Ruff/format19, mypy18 source pass; final union artifacts above |
+
+Runtime registry validation passed (476 entries,190 subsets,286 unimplemented,439 required,0 independently verified). Repository check passed with1,193 publishable files including unaccepted concurrent Dose source,40 original manifest entries,0 findings.
+
+The three initial selections and final delta are separate runs. Production source used by the passing
+alternatives was retained; subsequent fixture changes resolved the primary's real
+both-table Strain cascade. Earlier bad fixture book substitution, strict native
+JSON boundary and repeated low sixes were corrected without bypassing creation,
+source, custody or mandatory-work guards. They are not accepted pass evidence.
+The extra final storage-history proof is covered by the final registry main check
+recorded at this handoff; previous source checks are not silently relabelled.
+
+Limits: nonfatal or other arranged-downfall producers, native-player/Director
+rivals, body/office inheritance, known-position transport and additional regional
+A-Bomb/Strain combinations. Existing known-body movement remains required; the
+normal uses genuine initial unknown-position review. Five interpretations are
+recorded for source clarity review. Full regression, independent source review and
+human acceptance remain pending. **RULES_SUBSET; bot off**. No deployment,
+environment publication, migration or private-engine write was performed.
+
+
 ## Intracadre Marriage ordinary workflow — 2026-11-07
 
 Source extends `87eff90`; the exact coherent70 Python/69 source snapshot is

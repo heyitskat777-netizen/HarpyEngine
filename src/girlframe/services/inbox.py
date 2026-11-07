@@ -930,6 +930,22 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_promotional_opportunity import PromotionalOpportunityService
+
+            for opportunity in PromotionalOpportunityService(self.store)._tasks(connection, viewer):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, opportunity),
+                        prefix="promotional-opportunity:",
+                        source="promotional_opportunity",
+                        counterpart="Original purchasing Handler",
+                        effect="Review the unlocked map or source-proved regional responsibility.",
+                        details="Downfall and custody keep their original sources.",
+                        primary="Review opportunity",
+                        task="m3_promotional_opportunity",
+                    )
+                )
+
             from girlframe.services.m3_intracadre_marriage import MarriageService
 
             for marriage in MarriageService(self.store)._tasks(connection, viewer):

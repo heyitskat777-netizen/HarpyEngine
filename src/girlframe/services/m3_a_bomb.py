@@ -22,7 +22,7 @@ from girlframe.engine.m3_item_state import HeldItem
 from girlframe.engine.m3_missions import Mission
 from girlframe.engine.m3_strain import copy as strain_copy
 from girlframe.engine.m3_world import update
-from girlframe.engine.m3_world_state import Cell, Fallout
+from girlframe.engine.m3_world_state import Cell, Fallout, quadrant12_contains
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -243,6 +243,8 @@ def prove_drop(game: GameService, c: Connection, state: GameState, identity: str
     ):
         raise WorkflowError("Preserve the real footprint and exactly two printed choices")
     before = _before(game, c, value.event)
+    if before.world is None or any(not quadrant12_contains(before.world, x) for x in value.cells):
+        raise WorkflowError("The printed nuclear drop occupies actual Quadrant12 squares")
     from girlframe.services.m3_items import prove_item
 
     prior_item = prove_item(c, game, before, value.device)
@@ -761,7 +763,7 @@ class ABombService:
             if (
                 state.world is None
                 or state.strain is None
-                or any(not state.world.board.contains(x) for x in cells)
+                or any(not quadrant12_contains(state.world, x) for x in cells)
                 or len(set(options)) != 2
                 or not set(options) <= set(rules.OPTIONS)
                 or not delivery.strip()

@@ -221,6 +221,15 @@ class HandlerAdvancementService:
                     )
 
                     receipts = marriage_acquisitions(spent)
+                elif (
+                    value.acquired_rule
+                    == "handler-advancement.handler-advancement.promotional-opportunity"
+                ):
+                    from girlframe.engine.m3_promotional_opportunity import (
+                        acquisitions as opportunity_acquisitions,
+                    )
+
+                    receipts = opportunity_acquisitions(spent)
                 elif value.acquired_rule == "handler-advancement.handler-advancement.secretary":
                     from girlframe.engine.m3_secretary import acquisitions as secretary_acquisitions
 

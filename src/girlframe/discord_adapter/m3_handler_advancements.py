@@ -110,6 +110,17 @@ async def open_advancement(
 
         await open_marriage(interaction, MarriageService(service.store), data["acquisition"])
         return
+    if (
+        data.get("acquired_rule")
+        == "handler-advancement.handler-advancement.promotional-opportunity"
+    ):
+        from girlframe.discord_adapter.m3_promotional_opportunity import open_opportunity
+        from girlframe.services.m3_promotional_opportunity import PromotionalOpportunityService
+
+        await open_opportunity(
+            interaction, PromotionalOpportunityService(service.store), data["acquisition"]
+        )
+        return
     if data.get("acquired_rule"):
         await reply(
             interaction,
@@ -516,6 +527,16 @@ class AcquireMore(discord.ui.Button[NativeForm]):
             return
 
         async def choose(current: discord.Interaction, values: dict[str, Any]) -> None:
+            if values["advancement"][0] == "opportunity":
+                from girlframe.discord_adapter.m3_promotional_opportunity import open_opportunity
+                from girlframe.services.m3_promotional_opportunity import (
+                    PromotionalOpportunityService,
+                )
+
+                await open_opportunity(
+                    current, PromotionalOpportunityService(self.service.store), self.identity
+                )
+                return
             if values["advancement"][0] == "marriage":
                 from girlframe.discord_adapter.m3_intracadre_marriage import open_marriage
                 from girlframe.services.m3_intracadre_marriage import MarriageService
@@ -537,7 +558,11 @@ class AcquireMore(discord.ui.Button[NativeForm]):
                 Field(
                     "advancement",
                     "Advancement",
-                    (("gender", "Gender Designation Request"), ("marriage", "Intracadre Marriage")),
+                    (
+                        ("gender", "Gender Designation Request"),
+                        ("marriage", "Intracadre Marriage"),
+                        ("opportunity", "Promotional Opportunity"),
+                    ),
                 )
             ],
             choose,

@@ -123,6 +123,8 @@ def apply(
     world = state.world
     if world is None or state.handler is None:
         raise ValueError("Initialize the actual world and appointed Handler first")
+    from girlframe.engine.m3_promotional_opportunity import in_responsibility, responsibility_edge
+
     rule = choice.rule_id
     if rule == "strain.rebellion.low.2.2":
         fields(choice, {"target"})
@@ -133,6 +135,10 @@ def apply(
             or contraband.base != choice.target
             or contraband.source_event != source_event
             or contraband.taken is not None
+            or bool(world.regions)
+            and not any(
+                x.id == choice.target and in_responsibility(state, x.cell) for x in world.locations
+            )
             or any(x.id == source_work for x in state.contraband_finds)
         ):
             raise ValueError("Record one actual private contraband draw and its source period")
@@ -345,18 +351,23 @@ def apply(
         incoming = choice.gorgon
         if incoming is None or incoming.cell is None:
             raise ValueError("Choose the actual Gorgon, its Assets, Core conditions and map square")
-        bases = [x for x in world.locations if x.kind == "base" and x.condition != "destroyed"]
-        cities = [x for x in world.locations if x.kind == "city" and x.condition != "destroyed"]
+        bases = [
+            x
+            for x in world.locations
+            if x.kind == "base" and x.condition != "destroyed" and in_responsibility(state, x.cell)
+        ]
+        cities = [
+            x
+            for x in world.locations
+            if x.kind == "city" and x.condition != "destroyed" and in_responsibility(state, x.cell)
+        ]
         if rule == "strain.void.low.1.1":
             if (
                 incoming.gorgon_class != "directed"
                 or incoming.goal is None
                 or incoming.goal.kind != "location"
                 or incoming.goal.entity_id not in {x.id for x in cities}
-                or not any(
-                    incoming.cell[i] in (world.board.minimum[i], world.board.maximum[i])
-                    for i in (0, 1)
-                )
+                or not responsibility_edge(state, incoming.cell)
             ):
                 raise ValueError(
                     "This Directed Gorgon enters at a map edge and targets a real city"
@@ -512,7 +523,10 @@ def apply(
             (
                 x
                 for x in world.locations
-                if x.id == choice.target and x.kind == "city" and x.condition != "destroyed"
+                if x.id == choice.target
+                and x.kind == "city"
+                and x.condition != "destroyed"
+                and in_responsibility(state, x.cell)
             ),
             None,
         )
@@ -544,6 +558,7 @@ def apply(
             or location.kind != "base"
             or location.allegiance != "rebel"
             or location.condition != "intact"
+            or not in_responsibility(state, location.cell)
             or faction.kind != "rebel"
             or not faction.active
             or faction.cells != (location.cell,)
@@ -716,7 +731,10 @@ def apply(
             (
                 x
                 for x in world.locations
-                if x.id == choice.target and x.kind == "city" and x.condition != "destroyed"
+                if x.id == choice.target
+                and x.kind == "city"
+                and x.condition != "destroyed"
+                and in_responsibility(state, x.cell)
             ),
             None,
         )

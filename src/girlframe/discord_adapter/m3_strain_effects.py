@@ -104,6 +104,11 @@ async def open_effect(
         raise WorkflowError("STALE_STATE: reopen this changed event.")
     handler = state.handler
     rule = data["rule_id"]
+    from girlframe.engine.m3_promotional_opportunity import in_responsibility, responsibility_edge
+
+    regional_locations = [
+        x for x in world["locations"] if in_responsibility(state, (x["cell"][0], x["cell"][1]))
+    ]
     if rule in ("strain.budget.low.1.2", "strain.budget.low.2.1") and not any(
         x["alive"] and "patron" in x["jobs"] for x in world["npcs"]
     ):
@@ -171,6 +176,7 @@ async def open_effect(
                             x
                             for x in world["locations"]
                             if x["kind"] == "base"
+                            and in_responsibility(state, (x["cell"][0], x["cell"][1]))
                             and x["allegiance"] == "foundation"
                             and x["condition"] != "destroyed"
                         ]
@@ -238,7 +244,9 @@ async def open_effect(
                             [
                                 x
                                 for x in world["locations"]
-                                if x["kind"] == "city" and x["condition"] != "destroyed"
+                                if x["kind"] == "city"
+                                and x["condition"] != "destroyed"
+                                and in_responsibility(state, (x["cell"][0], x["cell"][1]))
                             ]
                         ),
                     )
@@ -254,23 +262,19 @@ async def open_effect(
             bases = [
                 x["cell"]
                 for x in world["locations"]
-                if x["kind"] == "base" and x["condition"] != "destroyed"
+                if x["kind"] == "base"
+                and x["condition"] != "destroyed"
+                and in_responsibility(state, (x["cell"][0], x["cell"][1]))
             ]
             cities = [
                 tuple(x["cell"])
                 for x in world["locations"]
-                if x["kind"] == "city" and x["condition"] != "destroyed"
+                if x["kind"] == "city"
+                and x["condition"] != "destroyed"
+                and in_responsibility(state, (x["cell"][0], x["cell"][1]))
             ]
             if selected_class == "directed":
-                cells = tuple(
-                    x
-                    for x in cells
-                    if any(
-                        coordinates(x[0])[i]
-                        in (world["board"]["minimum"][i], world["board"]["maximum"][i])
-                        for i in (0, 1)
-                    )
-                )
+                cells = tuple(x for x in cells if responsibility_edge(state, coordinates(x[0])))
             elif selected_class in ("dormant", "erratic"):
                 cells = tuple(
                     x
@@ -344,7 +348,7 @@ async def open_effect(
             fields.append(Field("name", "New faction name"))
             if rule == "strain.rebellion.low.1.1":
                 fields.append(
-                    Field("target", "Which city?", options(world["locations"], kind="city"))
+                    Field("target", "Which city?", options(regional_locations, kind="city"))
                 )
             elif rule == "strain.rebellion.low.6.1":
                 occupied = {tuple(x["cell"]) for x in world["locations"]}
@@ -354,7 +358,10 @@ async def open_effect(
                         "cell",
                         "Choose its distant empty square",
                         tuple(
-                            x for x in squares(world["board"]) if coordinates(x[0]) not in occupied
+                            x
+                            for x in squares(world["board"])
+                            if coordinates(x[0]) not in occupied
+                            and in_responsibility(state, coordinates(x[0]))
                         )
                         or WAIT,
                     ),
@@ -588,7 +595,9 @@ async def open_effect(
                         [
                             x
                             for x in world["locations"]
-                            if x["kind"] == "city" and x["condition"] != "destroyed"
+                            if x["kind"] == "city"
+                            and x["condition"] != "destroyed"
+                            and in_responsibility(state, (x["cell"][0], x["cell"][1]))
                         ]
                     ),
                 )

@@ -5850,6 +5850,86 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "promotional-authored-adjoining-geography",
+      "policy_key": "promotional_authored_adjoining_geography",
+      "summary": "Unlock one authored adjoining Quadrant13 footprint in the same World, preserving original Quadrant12 bounds, map objects and physical positions. The known rival office is deliberately revealed by this source setup; private purposes, accounts, controllers and source IDs stay private.",
+      "source": "Rulebook PDF157/printed155 Promotional Opportunity; PDF122/printed120 Handler job; relevant Strain/world sources",
+      "rationale": "No official Quadrant13 geometry was supplied. Typed human-authored geography supplies the printed map without claiming an official layout or completing travel.",
+      "alternatives": [
+        "Separate-map transport or automatic relocation of the Cadre."
+      ],
+      "implementation_note": "Keep omitted defaults for legacy Worlds; public region projection exposes map/known office labels and actual responsibility only.",
+      "change_impact": "Version future interpretation changes explicitly; retain original people, geography, authority, effects and immutable history.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "promotional-genuine-rival-death-downfall",
+      "policy_key": "promotional_genuine_rival_death_downfall",
+      "summary": "A rival ordinary NPC Handler's actual death, causally arranged through the original purchaser's genuine Handler damage source, qualifies as downfall for takeover.",
+      "source": "Rulebook PDF157/printed155 Promotional Opportunity; PDF122/printed120 Handler job; relevant Strain/world sources",
+      "rationale": "The text permits arranging downfall; actual source-proved death is a concrete finite case. Injury, an unfinished work item or a bare checkbox does not establish it.",
+      "alternatives": [
+        "Require an explicit nonfatal institutional removal producer for every downfall."
+      ],
+      "implementation_note": "Preserve original rival/controller and canonical harm/death/work lineage. Other nonfatal, native-player or Director producers remain required adapters, not equivalent acknowledgements.",
+      "change_impact": "Version future interpretation changes explicitly; retain original people, geography, authority, effects and immutable history.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "promotional-responsibility-real-consumers",
+      "policy_key": "promotional_responsibility_real_consumers",
+      "summary": "A proved takeover makes the region the original Handler's responsibility. Real Base storage intake and selected own-site Strain choices then include that region; untaken rival sites are excluded. Source-time frontier follows the actual responsibility footprint.",
+      "source": "Rulebook PDF157/printed155 Promotional Opportunity; PDF122/printed120 Handler job; relevant Strain/world sources",
+      "rationale": "Responsibility needs a real consumer. It does not confer ownership before takeover or impose the campaign's own-facility events on an unrelated rival.",
+      "alternatives": [
+        "Use every map site globally regardless of responsibility, or grant storage access merely on acquisition."
+      ],
+      "implementation_note": "Require canonical source/takeover proof at Strain mutation and storage receipt/action, preserve actual body/Frame/custody, and require genuine physical delivery. No reservations, teleport, identity substitution or waived source costs.",
+      "change_impact": "Version future interpretation changes explicitly; retain original people, geography, authority, effects and immutable history.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "promotional-original-quadrant12-employment",
+      "policy_key": "promotional_original_quadrant12_employment",
+      "summary": "The printed Quadrant12 last-Base job-loss source remains scoped to its saved original map. A foreign Base cannot prevent its real loss condition after expansion.",
+      "source": "Rulebook PDF157/printed155 Promotional Opportunity; PDF122/printed120 Handler job; relevant Strain/world sources",
+      "rationale": "Rulebook PDF122/printed120 explicitly assigns the Quadrant12 job; adding another region cannot silently erase its established institutional consequence.",
+      "alternatives": [
+        "Count every Foundation Base in the enlarged World for that original job."
+      ],
+      "implementation_note": "Keep the existing owned consequence/work and all legacy no-region behavior; do not automatically fire a Handler or invent another region's removal outcome.",
+      "change_impact": "Version future interpretation changes explicitly; retain original people, geography, authority, effects and immutable history.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "promotional-boons-no-invented-player-bonuses",
+      "policy_key": "promotional_boons_no_invented_player_bonuses",
+      "summary": "The five boons and five threats create actual source-owned places, garrison/personnel, factions, Gorgons, territory or an active Harpy. They grant no invented player Assets, numeric bonus, automatic damage or Mission success.",
+      "source": "Rulebook PDF157/printed155 Promotional Opportunity; PDF122/printed120 Handler job; relevant Strain/world sources",
+      "rationale": "The printed benefits name fictional/world resources, not those extra mechanical awards. The Harpy needs genuine birth/runtime proof and existing consumers.",
+      "alternatives": [
+        "Represent the choices as labels alone, or give an arbitrary combat/Permission reward."
+      ],
+      "implementation_note": "Use actual typed constructors and canonical acquisition birth; preserve the A-Bomb's printed Quadrant12 impact scope after map expansion. Ordinary source/body/lifecycle adapters stay explicit.",
+      "change_impact": "Version future interpretation changes explicitly; retain original people, geography, authority, effects and immutable history.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -17242,14 +17322,18 @@
         "heading": "Promotional Opportunity"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
-      "dependencies": [],
-      "test_evidence": [],
+      "dependencies": [
+        "source.handler-advancement-triggers"
+      ],
+      "test_evidence": [
+        "tests/rules/test_promotional_opportunity.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

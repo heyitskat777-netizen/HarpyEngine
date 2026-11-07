@@ -104,6 +104,12 @@ class EffectService:
             row = self._row(c, identity)
             self.strain._check(c, viewer, row, revision)
             state = self.strain._state(c, game_revision)
+            from girlframe.engine.m3_promotional_opportunity import in_responsibility
+
+            if state.world is not None and state.world.regions:
+                from girlframe.services.m3_promotional_opportunity import prove_responsibility
+
+                prove_responsibility(self.game, c, state)
             if json.loads(row["body_json"])["rule_id"] != choice.rule_id:
                 raise WorkflowError(
                     "The selected effect does not match this actual saved Strain event."
@@ -224,6 +230,7 @@ class EffectService:
                             and x.kind == "base"
                             and x.allegiance == "foundation"
                             and x.condition != "destroyed"
+                            and in_responsibility(state, x.cell)
                         ),
                         None,
                     )

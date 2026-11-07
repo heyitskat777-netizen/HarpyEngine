@@ -42,6 +42,10 @@ class StorageService:
         ]
 
     def _proof(self, c: Connection, state: GameState, identity: str) -> rules.Order:
+        if state.world is not None and state.world.regions:
+            from girlframe.services.m3_promotional_opportunity import prove_responsibility
+
+            prove_responsibility(self.game, c, state)
         value = rules.get(state, identity)
         source = next((x for x in self._history(c) if x["id"] == value.source_event), None)
         if source is None:

@@ -176,6 +176,44 @@ class WorldService:
                 "game_revision": state.revision,
                 "world": {
                     "board": world.board.model_dump(mode="json"),
+                    **(
+                        {
+                            "regions": [
+                                {
+                                    "id": region.id,
+                                    "name": region.name,
+                                    "bounds": region.bounds.model_dump(mode="json"),
+                                    "responsible": "Handler"
+                                    if region.responsible is not None
+                                    else None,
+                                    **(
+                                        {
+                                            "rival": {
+                                                "name": npc.name,
+                                                "job": "handler",
+                                                "alive": npc.alive,
+                                            }
+                                        }
+                                        if (
+                                            npc := next(
+                                                (
+                                                    x
+                                                    for x in world.npcs
+                                                    if x.id == region.rival.entity and x.revealed
+                                                ),
+                                                None,
+                                            )
+                                        )
+                                        is not None
+                                        else {}
+                                    ),
+                                }
+                                for region in world.regions
+                            ]
+                        }
+                        if world.regions
+                        else {}
+                    ),
                     "locations": [
                         x.model_dump(mode="json", exclude={"blocked_by", "ship", "fallout_sources"})
                         | {"operational": x.operational}

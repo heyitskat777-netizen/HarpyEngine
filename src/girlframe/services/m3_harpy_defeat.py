@@ -658,6 +658,12 @@ class HarpyDefeatService:
                     t.events.c.id == body.source_event,
                 )
             )
+            if origin_kind == "m3.handler_advancement_spent":
+                from girlframe.services.m3_promotional_opportunity import (
+                    prove_harpy as prove_opportunity_harpy,
+                )
+
+                return prove_opportunity_harpy(self.game, c, state, actor)
             if origin_kind == "m3.contaminant_quarantined":
                 from girlframe.services.m3_contaminant_zone import prove_harpy
 
