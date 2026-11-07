@@ -3377,3 +3377,14 @@ and adjustment impact are recorded in `rules/registry.json`.
   replacement/rearming remains a source-adapter gap. Generic survival assertions,
   automatic damage and silent hardware restoration are rejected. This delegated
   interpretation needs printed clarity review and preserves known source history.
+
+
+- `am_jailbroken_inherent_body_occupancy` (PDF55/53; distinguish56/54): actual
+  self-directed occupancy needs appropriate empty hardware, not a fabricated Code
+  Play, discovery, operator approval, cost or hookup. The same ability can occupy
+  parked original hardware again while preserving each body's actual damage and
+  the mind's current resources. Projection adds no mathematics system or bonus;
+  actual expression restrictions remain. Code-only mobility, duplicated hardware
+  and interpreting the finite local adapter as a geographic rule are rejected.
+  Delegated clarity review remains pending; future adapters must preserve source,
+  hardware history and human choices.

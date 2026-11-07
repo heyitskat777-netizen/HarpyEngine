@@ -122,7 +122,16 @@ def current_body(state: GameState, ref: ActorRef) -> Body:
     value = branch(state, ref)
     if value is None:
         raise ValueError("Use the actual branch person")
-    body = next((x for x in bodies(state) if x.vessel == value.vessel), None)
+    vessel = value.vessel
+    if ref.kind == "pilot":
+        from girlframe.engine.m3_am_jailbroken import history
+
+        if history(state, ref):
+            pose = next((x for x in state.placements if x.actor == ref), None)
+            if pose is None:
+                raise ValueError("Recover the branch mind's current occupied vessel")
+            vessel = pose.vessel_id
+    body = next((x for x in bodies(state) if x.vessel == vessel), None)
     if body is None or body.occupant != ref or body.actor != ref:
         raise ValueError("Recover the same branch's actual occupied hardware")
     if ref.kind == "pilot":

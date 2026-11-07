@@ -312,6 +312,11 @@ def transfer(state: GameState, value: Maintenance, preparation: str, event: str)
 
 
 def current(state: GameState, actor: ActorRef) -> Body | None:
+    from girlframe.engine.m3_am_jailbroken import current as self_occupied
+
+    actual = self_occupied(state, actor)
+    if actual is not None:
+        return actual
     history = [x for x in swaps(state) if x.actor == actor]
     active = [x for x in history if not x.returned_event]
     if len(active) > 1:

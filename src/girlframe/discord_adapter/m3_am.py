@@ -13,6 +13,7 @@ from girlframe.engine.m2 import ChoiceAnswer
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_am_scrutinized import ScrutinyService
+from girlframe.services.onboarding import WorkflowError
 
 LABELS = {
     "blackmail": "Find blackmail and write its actual Tag",
@@ -28,15 +29,32 @@ async def open_am(
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     channel = channel if channel is not None else int(interaction.channel_id or 0)
-    data = await asyncio.to_thread(service.menu, viewer, channel)
+    from girlframe.services.m3_am_jailbroken import JailbrokenService
+
+    mobility = JailbrokenService(service.game)
+    try:
+        data = await asyncio.to_thread(service.menu, viewer, channel)
+    except (ValueError, WorkflowError) as discovery_error:
+        try:
+            await asyncio.to_thread(mobility.view, viewer)
+        except (ValueError, WorkflowError):
+            raise discovery_error from None
+        from girlframe.discord_adapter.m3_am_jailbroken import open_jailbroken
+
+        await open_jailbroken(interaction, mobility)
+        return
     options = [("propose", "Establish an actual new discovery")] if data["targets"] else []
     from girlframe.services.m3_am_code import CodeService
-    from girlframe.services.onboarding import WorkflowError
 
     try:
         code = await asyncio.to_thread(CodeService(service.game).menu, viewer, channel)
         if code["known"] or code["sessions"]:
-            options.append(("code", "Actual identity-only circuit maintenance"))
+            options.append(("code", "Actual circuit maintenance and saved AM sources"))
+    except (ValueError, WorkflowError):
+        pass
+    try:
+        await asyncio.to_thread(mobility.view, viewer)
+        options.append(("jailbroken", "Your self-directed body occupancy"))
     except (ValueError, WorkflowError):
         pass
     if data["native"]:
@@ -72,12 +90,17 @@ async def open_am(
         await reply(
             interaction,
             "No current supported original AM source task. "
-            "Unimplemented body/backup/reset ports remain unavailable.",
+            "Use your actual source controls or establish a supported source.",
         )
         return
 
     async def choose(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         action = values["action"][0]
+        if action == "jailbroken":
+            from girlframe.discord_adapter.m3_am_jailbroken import open_jailbroken
+
+            await open_jailbroken(current, mobility)
+            return None
         if action == "code":
             from girlframe.discord_adapter.m3_am_code import open_code
 

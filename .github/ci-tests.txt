@@ -1,49 +1,6 @@
-# Actual collars/Tag marks -> completed Dive or real Keep survival/death -> original History.
-# Planned previous-award compatibility; final whole-M3 regression remains separate.
-tests/rules/test_bomb_collar.py
-tests/rules/test_handler_advancements.py
-
-# Actual NPC branch -> NPC Guard -> irreversible takeover -> current Girl Keep/Inbox.
-# Planned Code/body/career/Guard compatibility; final M3 regression remains separate.
-tests/rules/test_am_branch.py
-tests/rules/test_am_code.py::test_mid_actual_operator_native_rewrite_retains_mark_slot_body_hardware_and_finishes
+# Self-directed AM occupancy -> real new-body damage -> free moveback/private Inbox.
+# Planned Body/branch/current-actor compatibility; final full M3 check remains separate.
+tests/rules/test_am_jailbroken.py
 tests/rules/test_am_body.py::test_real_code_body_swap_new_asset_damage_and_private_hooked_return
-tests/rules/test_career_service.py::test_fresh_draft_has_new_incarnation_empty_creation_and_keeps_original_sql_receipt_identity
-tests/rules/test_alpha_brutalize.py::test_guard_low_actual_weapon_review_native_counter_then_optional_unarmed_kill
-# Ordinary Frame consent and source-admitted JANUS Core controller cockpit responses.
-tests/rules/test_cockpit_service.py
-# Integrated regression repairs: shared fixture consumers, original source and privacy.
-tests/rules/test_core.py
-tests/rules/test_physical_service.py
-tests/rules/test_world_service.py
-tests/rules/test_handler_play_routes.py
-tests/rules/test_harpy_core.py
-tests/rules/test_harpy_director_dive_native.py
-tests/rules/test_dive_handler_void.py
-tests/rules/test_role_world_tags.py
-tests/rules/test_strain_effects.py
-tests/rules/test_budget_photoshoot.py
-tests/rules/test_strain_effect_service.py
-tests/rules/test_strain_effect_ui.py
-tests/test_m2_game.py::test_disobey_requires_recorded_superior_order_and_low_halts
-tests/rules/test_succubus.py::test_native_scoped_pilot_order_actual_refusal_and_source_restore
-tests/rules/test_retained_succubus.py::test_retained_succubus_real_scoped_order_refusal_source_suspension_and_immutable_chain
-tests/test_native_form_confirmation.py
-tests/rules/test_secretary_statement.py
-tests/rules/test_secretary.py
-tests/rules/test_dampener.py
-tests/rules/test_janus_core.py
-tests/rules/test_janus_core_service.py
-# Adjacent native confirmation, source-owned Dive, Heat and fixture compatibility.
-tests/test_m2_ui.py
-tests/rules/test_location_build.py
-tests/rules/test_mission_ui.py::test_native_offer_response_requires_owner_confirmation_and_handler_dispatch
-tests/rules/test_dive.py::test_nearby_npcs_exact_actual_cell_only_handler_chooses_each_manifestation
-tests/rules/test_dive.py::test_real_cast_copresence_proves_npc_target_and_one_human_with_two_roles_counts_once
-tests/rules/test_dive.py::test_no_unknown_or_empty_npc_targets_and_same_account_replacement_cannot_answer_original_table
-tests/rules/test_harpy_dive.py::test_high_harpy_table_replaces_identity_and_real_director_manifests_nearby_npc_void
-tests/rules/test_actor_bonds.py::test_intense_heat_goes_to_actual_two_actors_not_npc_controller
-tests/rules/test_role_punishments.py::test_actual_npc_tag_and_executor_bond_then_actual_selected_bond_reduction
-tests/rules/test_void_keep.py::test_standalone_physical_entry_failed_keep_holds_its_own_chat_without_an_invented_parent
-tests/rules/test_void_service.py::test_actual_entry_into_already_corrupt_frame_creates_source_bound_real_resistance_work
-tests/rules/test_handler_ordinary.py
+tests/rules/test_am_branch.py::test_actual_branch_npc_counter_then_owned_takeover_and_current_girl_play
+tests/rules/test_actor_service.py::test_owned_role_selector_distinguishes_same_human_roles_and_knowledge_is_actor_scoped

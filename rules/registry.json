@@ -5345,6 +5345,24 @@
       "revision": 1,
       "implementation_note": "Finish the actual canonical Dive and consequences, or actual Keep traits plus enough ruling. Insufficient detonation escape follows real archive/prevention rules. Collar Tags never embrace, reject, convert or remove through ordinary Tag effects. Detonated hardware becomes unavailable; the acquisition remains original. Replacement/rearming requires a real source adapter and is not silently granted.",
       "change_impact": "Changes future trigger resolution and physical collar availability; never rerolls known outcomes or rewrites original acquisition/mark/trigger/death history. Other survival/body/rearming adapters and independent clarity review remain pending."
+    },
+    {
+      "id": "am-jailbroken-inherent-body-occupancy",
+      "summary": "AM inherent occupancy uses real appropriate hardware without a Just Code/operator roll, currency, hookup or discovery gate; actual physical condition stays with each body.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF55/printed53 Jailbroken; distinguish PDF56/printed54 Just Code operator/body option",
+      "authority": "delegated_recommendation",
+      "rationale": "The intrinsic ability is printed separately from the four limited freedoms and the operator-mediated Just Code option. Requiring that separate Play or permanent hookup would add a rule.",
+      "alternatives": [
+        "Require Just Code, discovery, operator permission or a hookup for every self-directed move",
+        "Duplicate hardware or restore old whole-sheet resources",
+        "Treat the finite local-puppet adapter as a printed geographic restriction"
+      ],
+      "policy_key": "am_jailbroken_inherent_body_occupancy",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Source factual owner preparation establishes empty available processing-capable hardware and actual Asset/medical condition. Preserve same mind/ActorRef/current Frame/resources; park actual hardware and occupy it again using the same ability. Capability projection adds no automated mathematics or bonus; expression honors real software restrictions.",
+      "change_impact": "Affects future self-directed occupancy and actual-body projection. Never rewrites Code/branch origin, history, damage or human choices. Remote/Frame/occupied/conditional/hardware-handover adapters remain required gaps."
     }
   ],
   "entries": [
@@ -7765,14 +7783,16 @@
         "heading": "Jailbroken"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_am_jailbroken.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

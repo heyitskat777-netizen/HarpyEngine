@@ -1,5 +1,40 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Jailbroken self-directed occupancy — 2026-11-07
+
+Source extends local `3ba77754c377679d4bce6e0f7d4dfeeac00b6dd0`, including
+integrated regression repairs. Exact bytes are frozen in ignored
+`var/m3-am-jailbroken-freeze/manifest.json`. M3 remains **RULES_SUBSET**.
+
+The original AM can prepare actual available empty processing-capable hardware,
+occupy it using her inherent ability and later occupy the parked original again.
+No discovery, operator, Just Code roll, currency or hookup is fabricated. The
+canonical body/Asset/medical state changes; mind, ActorRef, software restrictions,
+recall, Bonds/Tags, current resources and real Frame remain current. Each body
+retains actual damage after leaving. Original Code/branch history stays immutable.
+Capability projection respects expression restrictions without inventing bonuses
+or an automated mathematics system.
+
+The authentic native AM entry works with only Jailbroken approved and Scrutinized
+unavailable. Normal preparation/occupancy, actual new-body counter-damage, moveback,
+private Inbox current/damaged parked hardware, wrong-human denial, privacy/replay
+and rebuild pass **1 / 3.075s**, `var/m3-am-jailbroken-normal.xml`.
+Agreed Body/branch/current-actor compatibility passes **3 / 9.057s**,
+`var/m3-am-jailbroken-compat.xml`. All **9 changed Python files** pass Ruff/format;
+**8 source modules** pass mypy. Only the new Inbox-reopen assertion required the
+final normal rerun; prior 219-test integration evidence was reused. A formatting-
+only UI-length fix reused passing gameplay/types/format and refreshed Ruff.
+Exact commands/hashes: `var/m3-am-jailbroken-handoff.json` and final source snapshot.
+
+Metadata: **179 subsets / 297 unimplemented / 321 clarifications**,476 total,
+439 required core,37 deferred Ancillary,zero independent approvals. Counts are
+inventory, not completion percentages. Local outside-puppet hardware is the
+finite adapter, not a locality rule; remote/Frame/occupied/conditional hardware,
+handover and broader lifecycle adapters remain missing. Other M3 gameplay,
+independent source/clarity review, human testing and final integrated verification
+remain required. Bot off; no push, deployment, live migration, environment
+publication, recovered-engine write, AI/M4 or Ancillary activation.
+
 ## Bomb Collar integration after regression repairs — 2026-11-07
 
 Reconciled the preserved workflow onto repair commit

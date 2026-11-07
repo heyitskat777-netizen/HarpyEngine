@@ -1403,6 +1403,29 @@ class InboxService:
                         task="m3_am_source",
                     )
                 )
+            from girlframe.services.m3_am_jailbroken import JailbrokenService
+
+            for occupancy in JailbrokenService(GameService(self.store))._tasks(connection, viewer):
+                pending_occupancy = bool(occupancy["pending"])
+                items.append(
+                    InboxItem(
+                        "am-jailbroken:" + occupancy["id"],
+                        "am_jailbroken",
+                        occupancy["id"],
+                        occupancy["revision"],
+                        "playbook",
+                        occupancy["label"],
+                        "Original AM owner",
+                        "pending" if pending_occupancy else "established",
+                        pending_occupancy,
+                        False,
+                        "Review current/parked bodies or choose self-directed occupancy.",
+                        "Hardware condition stays with each body; mind and resources remain yours.",
+                        "Review AM occupancy",
+                        task="m3_am_jailbroken",
+                    )
+                )
+
             from girlframe.services.m3_am_branch import BranchService
 
             for branch in BranchService(GameService(self.store))._tasks(connection, viewer):

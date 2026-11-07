@@ -1,5 +1,13 @@
 # M3 remaining work — verified development snapshot
 
+Newest bounded addition: **self-directed Jailbroken occupancy and actual moveback**,
+without Code/operator/discovery/cost/hookup gates, with preserved physical damage
+and private Inbox recovery. See [M3 acceptance](../reports/M3_ACCEPTANCE.md).
+Hidden Sidearm is active; first-time NPC circuit operators are next source-contract
+work. Required body/source/playbook/Strain/world/lifecycle systems, Secretary
+statement delivery, printed-rule review and final integrated/player checks still
+prevent M3 completion. Bot off; RULES_SUBSET.
+
 Newest bounded addition: **Bomb Collar acquisition, actual non-rejectable Tag
 use and real Dive/Keep survival or death**, with canonical work/archives and
 private History. Evidence is at the top of
