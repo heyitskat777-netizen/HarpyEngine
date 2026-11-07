@@ -10,12 +10,13 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef
-from girlframe.engine.m3_economy import RepairQuote, quoted_repair
+from girlframe.engine.m3_economy import RepairQuote, quoted_repair_in_state
 from girlframe.engine.m3_modular import Replacement, replace_repaired
 from girlframe.engine.m3_repair_state import Quote
 from girlframe.engine.m3_repairs import active
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
+from girlframe.services.m3_intracadre_marriage import prepare_payment
 from girlframe.services.m3_off_duty import OffDutyService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
@@ -315,8 +316,19 @@ class RepairService:
                     if entitlement(self.game, c, state, quote.owner) is None:
                         raise WorkflowError("Restore your actual Modular repair entitlement")
                 before = state.sheets[quote.owner.entity].model_copy(deep=True)
-                result = quoted_repair(
-                    state.sheets[quote.owner.entity],
+                prepare_payment(
+                    self.game,
+                    c,
+                    state,
+                    viewer,
+                    quote.owner,
+                    "extra_asset_repair",
+                    quote.cost,
+                    quote.id,
+                )
+                result = quoted_repair_in_state(
+                    state,
+                    quote.owner,
                     RepairQuote(
                         id=quote.id,
                         handler_id=quote.handler,
@@ -328,6 +340,8 @@ class RepairService:
                     ),
                     current_handler=int(state.handler) if state.handler else 0,
                     expected_quote_revision=quote_revision,
+                    event=event,
+                    source=quote.id,
                 )
                 state.sheets[quote.owner.entity] = result.sheet
                 if replacement is not None:

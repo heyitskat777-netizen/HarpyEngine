@@ -22,6 +22,7 @@ from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_frame_rewards import eligibility
+from girlframe.services.m3_intracadre_marriage import prepare_payment
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_off_duty import OffDutyService
 from girlframe.services.m3_privileges import purchase_proof
@@ -350,6 +351,9 @@ class PersonalFirearmService(RequisitionService):
             registry = self.registry or Access(self.store).registry
             assert registry is not None
             identity, grant, source = str(uuid4()), str(uuid4()), str(uuid4())
+            prepare_payment(
+                self.game, c, state, viewer, actor, rules.RULE, 2 if kind == "ability_unlock" else 3
+            )
             updated = rules.purchase(
                 state,
                 actor,

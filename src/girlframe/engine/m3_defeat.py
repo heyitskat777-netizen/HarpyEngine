@@ -72,11 +72,13 @@ def amnesia(state: GameState, owner: str, slot: int | None, source: str) -> None
 
 
 def alternative(state: GameState, actor: ActorRef, offer: Alternative, source: str) -> None:
+    from girlframe.engine.m3_intracadre_marriage import available, defeat_loss
+
     offer = Alternative.model_validate_json(offer.model_dump_json())
     sheet = state.sheets[actor.entity]
     if (
         not offer.account.strip()
-        or offer.permissions_lost > sheet.permissions
+        or offer.permissions_lost > available(state, actor)
         or len(set(offer.assets_removed)) != len(offer.assets_removed)
         or len(set(offer.identities_removed)) != len(offer.identities_removed)
     ):
@@ -123,7 +125,10 @@ def alternative(state: GameState, actor: ActorRef, offer: Alternative, source: s
         resolve(state, offer.helpless_foe, bindings, require_current_profile=False)
     elif offer.helpless_foe is not None:
         raise ValueError("Helplessness requires the last usable Girl Asset loss outside her Frame")
-    sheet.permissions -= offer.permissions_lost
+    if offer.permissions_lost:
+        defeat_loss(
+            state, actor, offer.permissions_lost, event=source, source="defeat-loss:" + source
+        )
     sheet.assets = [x for x in sheet.assets if x.id not in offer.assets_removed]
     sheet.identities = [x for x in sheet.identities if x.id not in offer.identities_removed]
     sheet.sedation_locked = tuple(

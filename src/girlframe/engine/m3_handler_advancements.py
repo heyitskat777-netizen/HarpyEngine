@@ -72,6 +72,7 @@ class Award(Model):
             "handler-advancement.handler-advancement.ship-base",
             "handler-advancement.handler-advancement.a-bomb",
             "handler-advancement.handler-advancement.gender-designation-request",
+            "handler-advancement.handler-advancement.intracadre-marriage",
         ]
         | None
     ) = Field(default=None, exclude_if=lambda value: value is None)
@@ -180,7 +181,9 @@ def spend(
             "Select a nonempty group of distinct original Girls and actual grant account"
         )
     effects = []
-    for choice in grants:
+    from girlframe.engine.m3_intracadre_marriage import credit
+
+    for index, choice in enumerate(grants):
         if (
             choice.actor.kind != "pilot"
             or int(choice.actor.entity) not in state.order
@@ -188,16 +191,15 @@ def spend(
         ):
             raise ValueError("Permissions belong to selected original Girls, never replacements")
         sheet = state.sheets[choice.actor.entity]
-        before = sheet.permissions
-        sheet.permissions += choice.amount
+        flow = credit(state, choice.actor, choice.amount, event=event, source="award:" + str(index))
         sheet.revision += 1
         effects.append(
             PermissionEffect(
                 actor=choice.actor,
                 amount=choice.amount,
                 label=sheet.callsign,
-                before=before,
-                after=sheet.permissions,
+                before=flow.before,
+                after=flow.after,
             )
         )
     changed = Award.model_validate_json(

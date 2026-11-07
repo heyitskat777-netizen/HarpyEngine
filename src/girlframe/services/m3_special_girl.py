@@ -15,12 +15,14 @@ from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_assets import can_replace_at_limit, counts_toward_limit
 from girlframe.engine.m3_handler_consequences import active_handler, same_handler_body
+from girlframe.engine.m3_intracadre_marriage import available, debit
 from girlframe.engine.m3_janus_storage import ids as stored_ids
 from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
+from girlframe.services.m3_intracadre_marriage import prepare_payment
 from girlframe.services.m3_requisitions import RequisitionService
 from girlframe.services.m3_work import related
 from girlframe.services.onboarding import WorkflowError
@@ -429,7 +431,7 @@ class SpecialGirlService:
                 owned=paid is not None,
                 suspended=any(suspended(state, identity) for identity in chain),
                 request=paid.id if paid else None,
-                permissions=sheet.permissions,
+                permissions=available(state, actor),
             )
 
     def buy(
@@ -458,7 +460,7 @@ class SpecialGirlService:
                 state, actor, rules.RULE, donor_frame
             )
             handler = active_handler(state)
-            if current != frame or sheet.permissions < price or handler is None:
+            if current != frame or available(state, actor) < price or handler is None:
                 raise WorkflowError(
                     "Recover the actual Frame, living Handler and available Permissions"
                 )
@@ -482,7 +484,8 @@ class SpecialGirlService:
                 source_event=event,
                 event=event,
             )
-            sheet.permissions -= price
+            payment = prepare_payment(self.game, c, state, viewer, actor, rules.RULE, price, donor)
+            debit(state, actor, price, event=event, source=identity, payment=payment)
             sheet.revision += 1
             state.requisitions.append(
                 FrameRuleReceipt(

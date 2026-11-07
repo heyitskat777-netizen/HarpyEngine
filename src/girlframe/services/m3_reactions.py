@@ -243,14 +243,23 @@ class ReactionService:
             ):
                 raise WorkflowError("Resolve all three current Princess standards before review.")
             rulings = self.store.policy.owner_m3_rulings
+            event_id = str(uuid4())
             updated = rules.princess_mission_end(
                 state,
                 sheet.owner,
                 upheld=upheld,
                 ace_check=rulings.princess_ace_check if rulings else None,
+                event=event_id,
+                source=identity,
             )
             event = self.game.event(
-                c, viewer.user_id, key, "m3.princess_standards_reviewed", updated, work_id=identity
+                c,
+                viewer.user_id,
+                key,
+                "m3.princess_standards_reviewed",
+                updated,
+                work_id=identity,
+                event_id=event_id,
             )
             self._save(
                 c,

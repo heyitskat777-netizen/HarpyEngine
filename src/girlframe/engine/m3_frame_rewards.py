@@ -26,6 +26,19 @@ def incarnation(sheet: PilotSheet) -> str:
     return sheet.frame_runtime.id if sheet.frame_runtime else "initial"
 
 
+def _credit(state: GameState, owner: int, source: str, event: str | None) -> None:
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.engine.m3_intracadre_marriage import acquisitions, credit, marriage_for
+
+    ref = current_ref(state, owner) if acquisitions(state) else None
+    if ref is not None and marriage_for(state, ref) is not None:
+        if event is None:
+            raise ValueError("Retain this actual Frame grant's canonical event")
+        credit(state, ref, 1, event=event, source="frame-reward:" + source)
+    else:
+        state.sheets[str(owner)].permissions += 1
+
+
 def queen(sheet: PilotSheet) -> int:
     if official(sheet.frame) != "THE RED QUEEN":
         raise ValueError("The Queen choice needs its actual Red Queen Frame")
@@ -109,6 +122,7 @@ def review(
     handler_interested: bool | None = None,
     character_id: str | None = None,
     source_rule: str | None = None,
+    event: str | None = None,
 ) -> GameState:
     claim = Claim.model_validate_json(claim.model_dump_json())
     facts = eligibility if eligibility is not None else state
@@ -227,7 +241,7 @@ def review(
     updated = GameState.model_validate_json(state.model_dump_json())
     qualified = claim.fulfilled and (frame != "WYVERN 0.4" or handler_interested is True)
     if qualified:
-        updated.sheets[str(owner)].permissions += 1
+        _credit(updated, owner, source, event)
         updated.sheets[str(owner)].revision += 1
     receipt = {
         "kind": "frame_permission_trigger",
@@ -251,6 +265,7 @@ def queen_award(
     source: str,
     *,
     eligibility: GameState | None = None,
+    event: str | None = None,
 ) -> GameState:
     frame = (eligibility if eligibility is not None else state).sheets.get(str(frame_owner))
     if (
@@ -263,7 +278,9 @@ def queen_award(
         raise ValueError("Only the actual Queen AM holder chooses this reward")
     if recipient not in state.order or str(recipient) not in state.sheets:
         raise ValueError("Choose an actual current Girl who served your purposes best")
-    if recipient == actor and state.order[-1] == recipient:
+    from girlframe.engine.m3_intracadre_marriage import is_dog
+
+    if recipient == actor and is_dog(state, recipient):
         raise ValueError("The Queen holder cannot award itself while it is the Dog")
     if not source.strip() or any(
         x.get("source_work") == source and x.get("kind") == "frame_permission_trigger"
@@ -271,7 +288,7 @@ def queen_award(
     ):
         raise ValueError("Resume this actual source reward instead of granting it again")
     updated = GameState.model_validate_json(state.model_dump_json())
-    updated.sheets[str(recipient)].permissions += 1
+    _credit(updated, recipient, source, event)
     updated.sheets[str(recipient)].revision += 1
     updated.facts.append(
         {

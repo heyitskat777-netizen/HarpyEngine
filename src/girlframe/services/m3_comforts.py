@@ -23,6 +23,7 @@ from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import ActorService, profiles
 from girlframe.services.m3_cast import CastService
 from girlframe.services.m3_frame_rewards import eligibility
+from girlframe.services.m3_intracadre_marriage import prepare_payment
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.m3_off_duty import OffDutyService
 from girlframe.services.m3_requisitions import RequisitionService
@@ -263,6 +264,7 @@ class ComfortService(RequisitionService):
             state = load_state(c, self.store.campaign_id)
             self._safe(c, state, viewer.user_id)
             identity, source = str(uuid4()), str(uuid4())
+            prepare_payment(self.game, c, state, viewer, actor, "creature_comforts", 1)
             state = rules.purchase(
                 state,
                 actor,
@@ -330,6 +332,9 @@ class ComfortService(RequisitionService):
             return result
 
     def _paid_source(self, c: Connection, viewer: GuildViewer, purchase: ComfortReceipt) -> None:
+        from girlframe.services.m3_privileges import purchase_proof
+
+        purchase_proof(c, self.store, purchase)
         source = (
             c.execute(
                 sa.select(t.events).where(

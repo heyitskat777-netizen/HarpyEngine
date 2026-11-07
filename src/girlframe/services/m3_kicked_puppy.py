@@ -11,11 +11,13 @@ from girlframe.engine.m2 import FLIRT_QUESTIONS, GameState, PlayInput, TagState
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_intracadre_marriage import available, debit
 from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_intracadre_marriage import prepare_payment
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -163,7 +165,7 @@ class KickedPuppyService:
                 revision=state.revision,
                 actor=actor.model_dump(mode="json"),
                 frame=frame,
-                permissions=sheet.permissions,
+                permissions=available(state, actor),
                 kind=kind,
                 price=price,
                 donors=list(grafts.donors(rules.RULE)) if kind == "frame_grafting" else [],
@@ -213,7 +215,7 @@ class KickedPuppyService:
             sheet, current_frame, kind, price, donor = grafts.acquisition(
                 state, actor, rules.RULE, donor_frame
             )
-            if frame != current_frame or sheet.permissions < price:
+            if frame != current_frame or available(state, actor) < price:
                 raise WorkflowError("Use the original actual Frame and available Permissions")
             if any(
                 isinstance(x, FrameRuleReceipt)
@@ -224,7 +226,8 @@ class KickedPuppyService:
             ):
                 raise WorkflowError("Restore the original entitlement instead of buying twice")
             identity, event = str(uuid4()), str(uuid4())
-            sheet.permissions -= price
+            payment = prepare_payment(self.game, c, state, viewer, actor, rules.RULE, price, donor)
+            debit(state, actor, price, event=event, source=identity, payment=payment)
             sheet.revision += 1
             state.requisitions.append(
                 FrameRuleReceipt(

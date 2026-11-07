@@ -666,6 +666,11 @@ def _stage_no(
         punishment=identity + ":punishment",
     )
     rules.put(state, value)
+    from girlframe.services.m3_intracadre_marriage import allocate_punishment
+
+    allocate_punishment(
+        game, c, state, speaker, source_event=event, source_id=value.id, work_id=value.punishment
+    )
     return value
 
 
@@ -727,19 +732,26 @@ def _materialize_no(
         )
     ):
         return
+    from girlframe.engine import m3_intracadre_marriage as marriage
+
+    allocation = next(
+        (x for x in marriage.records(state, marriage.Allocation) if x.source_id == value.id), None
+    )
+    subject = allocation.subject if allocation else value.speaker
     related(
         c,
         game.store,
         dict(campaign_id=game.store.campaign_id, scene_id=value.scene),
         value.punishment,
         int(value.handler.entity),
-        int(value.speaker.entity),
+        int(subject.entity),
         "punishment",
         dict(
             reason="gender_woman_no",
             speech=value.id,
             source_event=value.event,
-            character=value.speaker.incarnation,
+            character=subject.incarnation,
+            **marriage.allocation_fields(state, value.id),
             original_handler=value.handler.model_dump(mode="json"),
             immediate=True,
             source_pdf=154,
@@ -793,11 +805,15 @@ def validate_punishment_work(
     if body.get("reason") != "gender_woman_no":
         return
     value = speech(game, c, state, body["speech"])
+    from girlframe.services.m3_intracadre_marriage import original_offender
+
+    subject = ActorRef(kind="pilot", entity=row["subject_id"], incarnation=body["character"])
+    offender = original_offender(game, c, state, value.id, value.event, subject)
     if (
         row["id"] != value.punishment
-        or row["subject_id"] != value.speaker.entity
+        or offender != value.speaker
         or body.get("source_event") != value.event
-        or body.get("character") != value.speaker.incarnation
+        or body.get("character") != subject.incarnation
         or body.get("original_handler") != value.handler.model_dump(mode="json")
     ):
         raise WorkflowError("Recover the actual source-owned Woman's Punishment")

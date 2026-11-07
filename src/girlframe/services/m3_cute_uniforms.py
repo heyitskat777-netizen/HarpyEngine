@@ -298,6 +298,17 @@ def reject_tag(
             )
         ),
     )
+    from girlframe.services.m3_intracadre_marriage import allocate_punishment
+
+    allocate_punishment(
+        game,
+        c,
+        state,
+        value.target,
+        source_event=event,
+        source_id=value.id,
+        work_id=value.id + ":punishment",
+    )
     action["data"]["cute_uniform_rejection"] = dict(uniform=value.id, event=event)
     return True
 
@@ -342,20 +353,27 @@ def synchronize_rejection(
         return
     if value.rejection_event != event:
         raise WorkflowError("Recover the original performed rejection event before creating work")
+    from girlframe.engine import m3_intracadre_marriage as marriage
+
+    allocation = next(
+        (x for x in marriage.records(state, marriage.Allocation) if x.source_id == value.id), None
+    )
+    recipient = allocation.subject if allocation else value.target
     related(
         c,
         game.store,
         dict(campaign_id=game.store.campaign_id, scene_id=action["scene_id"]),
         value.punishment,
         int(value.handler.entity),
-        int(value.target.entity),
+        int(recipient.entity),
         "punishment",
         dict(
             reason="cute_uniform_rejection",
             uniform=value.id,
             rejection_action=action["id"],
             source_event=event,
-            character=value.target.incarnation,
+            character=recipient.incarnation,
+            **marriage.allocation_fields(state, value.id),
             original_handler=value.handler.model_dump(mode="json"),
             source_pdf=154,
             immediate=True,
@@ -372,6 +390,10 @@ def _validate_original_punishment(
         return
     value = source(game, c, state, body["uniform"])
     action = game.action(c, body["rejection_action"])
+    from girlframe.services.m3_intracadre_marriage import original_offender
+
+    recipient = ActorRef(kind="pilot", entity=row["subject_id"], incarnation=body["character"])
+    offender = original_offender(game, c, state, value.id, body["source_event"], recipient)
     born = next(
         (x for x in rules.uniforms(_history(c, game, body["source_event"])) if x.id == value.id),
         None,
@@ -381,7 +403,7 @@ def _validate_original_punishment(
         or born.phase != "rejected"
         or born.rejection_event != body["source_event"]
         or value.punishment != row["id"]
-        or row["subject_id"] != value.target.entity
+        or offender != value.target
         or body["original_handler"] != value.handler.model_dump(mode="json")
         or not same_handler_body(state, value.handler)
         or current_ref(state, int(value.target.entity)) != value.target

@@ -9,6 +9,7 @@ from girlframe.engine.m3_actor_bonds import change, depth
 from girlframe.engine.m3_actor_state import ActorRef, Model, ProfileBinding
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_handler_consequences import active_handler
+from girlframe.engine.m3_intracadre_marriage import available, debit, payment_for
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 from girlframe.engine.playbooks import canonical_frame
 from girlframe.engine.rules_registry import Registry
@@ -299,12 +300,19 @@ def purchase(
         raise ValueError("This actual paid acquisition was already recorded")
     price: Literal[2, 3] = 2 if kind == "ability_unlock" else 3
     sheet = state.sheets[actor.entity]
-    if sheet.permissions < price:
+    if available(state, actor) < price:
         raise ValueError("This acquisition needs its actual available Permissions")
     counterpart = active_handler(state) if rule == MASTER else None
     if rule == MASTER and counterpart is None:
         raise ValueError("Master's Dog requires the actual fictional Handler, not a staff account")
-    sheet.permissions -= price
+    debit(
+        state,
+        actor,
+        price,
+        event=event,
+        source=identity,
+        payment=payment_for(state, actor, rule, price),
+    )
     sheet.revision += 1
     if sheet.frame_runtime is not None:
         sheet.frame_runtime = sheet.frame_runtime.model_copy(

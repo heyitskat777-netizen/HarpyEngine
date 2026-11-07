@@ -657,6 +657,11 @@ class InboxView(discord.ui.View):
             await open_npc_bond_play(
                 interaction, NpcBondPlayService(self.service.store), item.identity
             )
+        elif item.task == "m3_intracadre_marriage":
+            from girlframe.discord_adapter.m3_intracadre_marriage import open_marriage
+            from girlframe.services.m3_intracadre_marriage import MarriageService
+
+            await open_marriage(interaction, MarriageService(self.service.store), item.identity)
         elif item.task == "m3_gender_designation":
             from girlframe.discord_adapter.m3_gender_designation import open_designation
             from girlframe.services.m3_gender_designation import GenderDesignationService

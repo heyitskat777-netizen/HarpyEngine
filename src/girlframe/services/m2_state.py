@@ -59,8 +59,15 @@ def public_sheet(sheet: PilotSheet, state: GameState) -> dict[str, Any]:
             if not x.concealed
         ]
     if sheet.owner in state.order:
-        i = state.order.index(sheet.owner)
-        result["rank"] = "Ace" if i == 0 else "Dog" if i == len(state.order) - 1 else "Wings"
+        from girlframe.engine.m3_intracadre_marriage import is_ace, is_dog
+
+        result["rank"] = (
+            "Ace"
+            if is_ace(state, sheet.owner)
+            else "Dog"
+            if is_dog(state, sheet.owner)
+            else "Wings"
+        )
     if sheet.character_id is not None:
         from girlframe.engine.m3_actor_state import ActorRef
         from girlframe.engine.m3_gender_designation import presentation

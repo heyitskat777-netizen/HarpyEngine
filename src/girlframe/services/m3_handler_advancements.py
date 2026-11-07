@@ -95,11 +95,28 @@ class HandlerAdvancementService:
                 and any(
                     effect.actor.entity not in spent.sheets
                     or spent.sheets[effect.actor.entity].character_id != effect.actor.incarnation
-                    or spent.sheets[effect.actor.entity].permissions != effect.after
                     for effect in value.effects
                 )
             ):
                 raise WorkflowError("Recover this actual consumed advancement and group effects")
+            from girlframe.services.m3_intracadre_marriage import prove_flow
+
+            for index, effect in enumerate(value.effects):
+                flow = prove_flow(
+                    self.game,
+                    c,
+                    spent,
+                    spent,
+                    effect.actor,
+                    value.spend_event,
+                    "award:" + str(index),
+                    effect.amount,
+                )
+                if flow is None:
+                    if spent.sheets[effect.actor.entity].permissions != effect.after:
+                        raise WorkflowError("Recover the actual original Permission grant")
+                elif (flow.before, flow.after, flow.kind) != (effect.before, effect.after, "grant"):
+                    raise WorkflowError("Recover the actual conserved shared Permission grant")
             if value.location_rebuild is not None:
                 from girlframe.services.m3_location_rebuild import prove_effect
 
@@ -195,6 +212,15 @@ class HandlerAdvancementService:
                     )
 
                     receipts = gender_acquisitions(spent)
+                elif (
+                    value.acquired_rule
+                    == "handler-advancement.handler-advancement.intracadre-marriage"
+                ):
+                    from girlframe.engine.m3_intracadre_marriage import (
+                        acquisitions as marriage_acquisitions,
+                    )
+
+                    receipts = marriage_acquisitions(spent)
                 elif value.acquired_rule == "handler-advancement.handler-advancement.secretary":
                     from girlframe.engine.m3_secretary import acquisitions as secretary_acquisitions
 

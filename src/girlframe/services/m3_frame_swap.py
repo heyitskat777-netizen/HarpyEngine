@@ -20,6 +20,7 @@ from girlframe.engine.rules_registry import Registry
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_intracadre_marriage import prepare_payment
 from girlframe.services.m3_personal_firearm import PersonalFirearmService
 from girlframe.services.m3_work import related
 from girlframe.services.onboarding import WorkflowError
@@ -453,6 +454,7 @@ class FrameSwapService(PersonalFirearmService):
                     state.sheets[actor.entity].model_dump_json()
                 )
                 purchase_id = str(uuid4())
+                prepare_payment(self.game, c, state, viewer, actor, "frame_swap", 4, row["id"])
                 state = rules.purchase(
                     state,
                     actor,

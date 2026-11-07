@@ -169,12 +169,23 @@ class RegulationService:
                 mission = self.missions._mission(c, due.removeprefix("mission:"))
                 if mission.handler != updated.handler:
                     raise WorkflowError("Recover the changed mission Handler first.")
+                from girlframe.engine import m3_intracadre_marriage as marriage
+
+                allocation = next(
+                    (
+                        x
+                        for x in marriage.records(updated, marriage.Allocation)
+                        if x.source_id == obligation_id
+                    ),
+                    None,
+                )
+                recipient = allocation.subject if allocation else rule.subject
                 self.missions._work(
                     c,
                     mission,
-                    str(uuid4()),
+                    allocation.work_id if allocation else str(uuid4()),
                     viewer.user_id,
-                    subject,
+                    int(recipient.entity),
                     "punishment",
                     {
                         "reason": "strict_regulations",
@@ -182,6 +193,8 @@ class RegulationService:
                         "obligation_id": obligation_id,
                         "source_action": event,
                         "regulation": identity,
+                        "character": recipient.incarnation,
+                        **marriage.allocation_fields(updated, obligation_id),
                     },
                     event,
                 )

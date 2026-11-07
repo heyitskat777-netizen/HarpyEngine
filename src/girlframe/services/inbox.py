@@ -930,6 +930,28 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_intracadre_marriage import MarriageService
+
+            for marriage in MarriageService(self.store)._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "marriage:" + marriage["id"],
+                        "intracadre_marriage",
+                        marriage["id"],
+                        marriage["revision"],
+                        "playbook",
+                        marriage["label"],
+                        "Original pair or declaring Handler",
+                        "pending" if marriage["phase"] == "pending" else "established",
+                        bool(marriage["pending"]),
+                        False,
+                        "Review roles, shared budget or an exact payment approval.",
+                        "Only the addressed humans can open these saved decisions.",
+                        "Review Marriage",
+                        task="m3_intracadre_marriage",
+                    )
+                )
+
             from girlframe.services.m3_gender_designation import GenderDesignationService
 
             for designation in GenderDesignationService(self.store)._tasks(connection, viewer):

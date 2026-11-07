@@ -12,6 +12,7 @@ from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_careers import end_in_transaction, synchronize_end
+from girlframe.services.m3_intracadre_marriage import prepare_payment
 from girlframe.services.m3_privileges import purchase_proof
 from girlframe.services.m3_requisitions import RequisitionService
 from girlframe.services.onboarding import WorkflowError
@@ -54,6 +55,7 @@ class RetirementService(RequisitionService):
                     "Resolve actual custody, extraction or medical care before Retirement."
                 )
             identity, archive, source = str(uuid4()), str(uuid4()), str(uuid4())
+            prepare_payment(self.game, c, state, viewer, actor, "retirement", 20)
             paid = rules.pay(
                 state,
                 actor,

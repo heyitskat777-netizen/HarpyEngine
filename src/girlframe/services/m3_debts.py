@@ -8,6 +8,7 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine.m2 import GameState
+from girlframe.engine.m3_intracadre_marriage import Allocation, allocation_fields, records
 from girlframe.engine.m3_missions import Mission
 from girlframe.engine.m3_off_duty import Period
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
@@ -232,6 +233,13 @@ def synchronize(c: Connection, store: OnboardingStore, state: GameState, event: 
         identity = period.id + ":m2-punishment:" + debt.id
         if _already_bound(c, store, state, debt.id, debt.owner, identity):
             continue
+        allocation = next((x for x in records(state, Allocation) if x.source_id == debt.id), None)
+        subject = int(allocation.subject.entity) if allocation else debt.owner
+        actual_character = (
+            allocation.subject.incarnation
+            if allocation
+            else character or state.sheets[str(debt.owner)].character_id
+        )
         c.execute(
             work.insert().values(
                 campaign_id=store.campaign_id,
@@ -240,7 +248,7 @@ def synchronize(c: Connection, store: OnboardingStore, state: GameState, event: 
                 mission_id=None,
                 off_duty_id=period.id,
                 owner_id=str(period.handler),
-                subject_id=str(debt.owner),
+                subject_id=str(subject),
                 kind="punishment",
                 state="pending",
                 event_id=event,
@@ -252,7 +260,8 @@ def synchronize(c: Connection, store: OnboardingStore, state: GameState, event: 
                         "source_pdf": int(debt.details.get("source_pdf", "27")),
                         "cause": debt.details.get("cause", "m2_play"),
                         "due_stage": "active",
-                        "character": character or state.sheets[str(debt.owner)].character_id,
+                        "character": actual_character,
+                        **allocation_fields(state, debt.id),
                     },
                     sort_keys=True,
                 ),
@@ -331,20 +340,26 @@ def synchronize_mission(
         identity = mission.id + ":defeat-punishment:" + debt.id
         if _already_bound(c, store, state, debt.id, debt.owner, identity):
             continue
+        allocation = next((x for x in records(state, Allocation) if x.source_id == debt.id), None)
+        subject = int(allocation.subject.entity) if allocation else debt.owner
+        actual_character = (
+            allocation.subject.incarnation if allocation else debt.details["character_id"]
+        )
         related(
             c,
             store,
             dict(campaign_id=store.campaign_id, mission_id=mission.id),
             identity,
             mission.handler,
-            debt.owner,
+            subject,
             "punishment",
             dict(
                 reason="defeat_post_mission",
                 obligation_id=debt.id,
                 source_action=debt.action,
                 source_pdf=29,
-                character=debt.details["character_id"],
+                character=actual_character,
+                **allocation_fields(state, debt.id),
             ),
             event,
         )

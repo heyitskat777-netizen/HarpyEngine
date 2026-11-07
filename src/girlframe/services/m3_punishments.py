@@ -76,6 +76,9 @@ class PunishmentService:
             from girlframe.services.m3_gender_designation import validate_punishment_work
 
             validate_punishment_work(self.game, c, load_state(c, self.store.campaign_id), dict(row))
+        from girlframe.services.m3_intracadre_marriage import prove_allocation
+
+        prove_allocation(self.game, c, load_state(c, self.store.campaign_id), dict(row))
         return dict(row)
 
     def _body(self, row: dict[str, Any]) -> dict[str, Any]:
@@ -224,8 +227,18 @@ class PunishmentService:
             .values(**values)
         )
 
+    def _offender(self, row: dict[str, Any]) -> tuple[str, str | None]:
+        body = self._body(row)
+        original = body.get("marriage_offender")
+        return (
+            (original["entity"], original["incarnation"])
+            if original
+            else (row["subject_id"], body.get("character"))
+        )
+
     def _bundle(self, c: Connection, row: dict[str, Any]) -> list[dict[str, Any]]:
         if self._body(row).get("reason") in (
+            "marriage_caught",
             "strict_regulations",
             "put_someone_beneath_you",
             "cute_uniform_rejection",
@@ -247,6 +260,7 @@ class PunishmentService:
                     for item in OffDutyService(self.missions)._pending(c, row["off_duty_id"])
                     if item["kind"] == "punishment"
                     and item["subject_id"] == row["subject_id"]
+                    and self._offender(item) == self._offender(row)
                     and item["owner_id"] == row["owner_id"]
                     and self._body(item).get("reason") in ("mission_failure", "dog_mission_end")
                     and self._body(item).get("original_mission") == source["original_mission"]
@@ -273,6 +287,7 @@ class PunishmentService:
             for x in self.missions._pending(c, row["mission_id"])
             if x["kind"] == "punishment"
             and x["subject_id"] == row["subject_id"]
+            and self._offender(x) == self._offender(row)
             and self._body(x).get("reason") in ("mission_failure", "dog_mission_end")
         ]
         if not result or any(x["owner_id"] != row["owner_id"] for x in result):
@@ -641,7 +656,7 @@ class PunishmentService:
                             x
                             for x in state.obligations
                             if x.id == source
-                            and x.owner == int(row["subject_id"])
+                            and x.owner == int(self._offender(item)[0])
                             and x.kind == "punishment"
                             and x.state == "pending"
                         ),

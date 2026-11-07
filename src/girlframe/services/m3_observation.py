@@ -89,6 +89,19 @@ def settle(period: Period, state: GameState) -> None:
 def discipline_applied(
     period: Period, state: GameState, subject: int, identity: str, event: str
 ) -> Period:
+    from girlframe.engine.m3_intracadre_marriage import Allocation, records
+
+    allocation = next((x for x in records(state, Allocation) if x.work_id == identity), None)
+    if allocation is not None:
+        if (
+            allocation.source_id != identity
+            or allocation.subject.entity != str(subject)
+            or allocation.original.kind != "pilot"
+            or period.character_ids.get(allocation.original.entity)
+            != allocation.original.incarnation
+        ):
+            raise WorkflowError("Recover the exact original Observation and allocated discipline")
+        subject = int(allocation.original.entity)
     selected = rules.outcome(period, subject, identity)
     if selected.kind != "moderate_punishment":
         raise WorkflowError("This discipline does not match its actual Observation consequence.")
@@ -320,11 +333,33 @@ class ObservationService:
                     )
                     else outcome.chooser
                 )
+                actual_subject = subject
+                allocation_fields: dict[str, Any] = {}
+                if outcome.kind == "moderate_punishment":
+                    from girlframe.engine import m3_intracadre_marriage as marriage
+                    from girlframe.engine.m3_actor_bonds import current_ref
+                    from girlframe.services.m3_intracadre_marriage import allocate_punishment
+
+                    original = current_ref(state, subject)
+                    allocation = allocate_punishment(
+                        self.game,
+                        c,
+                        state,
+                        original,
+                        source_event=event,
+                        source_id=outcome.id,
+                        work_id=outcome.id,
+                    )
+                    actual = allocation.subject if allocation else original
+                    actual_subject = int(actual.entity)
+                    allocation_fields = dict(
+                        character=actual.incarnation
+                    ) | marriage.allocation_fields(state, outcome.id)
                 additions.append(
                     {
                         "id": outcome.id,
                         "owner": owner,
-                        "subject": subject,
+                        "subject": actual_subject,
                         "kind": "punishment"
                         if outcome.kind == "moderate_punishment"
                         else "observation_effect",
@@ -335,7 +370,8 @@ class ObservationService:
                             "origin_outcome": outcome.id,
                             "consequence": outcome.kind,
                             "due_stage": "active",
-                        },
+                        }
+                        | allocation_fields,
                     }
                 )
             return updated, state, [row], additions

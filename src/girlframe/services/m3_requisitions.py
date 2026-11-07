@@ -15,11 +15,13 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, ActorView
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_assets import frame_capacity
+from girlframe.engine.m3_intracadre_marriage import available
 from girlframe.engine.m3_requisition_state import Installation, Receipt
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_intracadre_marriage import prepare_payment
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -40,6 +42,9 @@ class RequisitionService:
             raise WorkflowError(str(error)) from None
 
     def _installation(self, c: Connection, viewer: GuildViewer, receipt: Receipt) -> dict[str, Any]:
+        from girlframe.services.m3_privileges import purchase_proof
+
+        purchase_proof(c, self.store, receipt)
         source = (
             c.execute(
                 sa.select(t.events).where(
@@ -146,7 +151,7 @@ class RequisitionService:
                 "source_sha256": actor.source_sha256,
                 "frame_instance": actor.frame_instance,
                 "frame_capacity": frame_capacity(state.sheets[actor.ref.entity], state),
-                "permissions": state.sheets[actor.ref.entity].permissions,
+                "permissions": available(state, actor.ref),
                 "frame_assets": [
                     x.model_dump(mode="json") for x in actor.assets if x.family == "frame"
                 ],
@@ -209,6 +214,7 @@ class RequisitionService:
             if current.ref != actor:
                 raise WorkflowError("STALE_REQUISITION: recover the original character first.")
             identity, source = str(uuid4()), str(uuid4())
+            prepare_payment(self.game, c, state, viewer, actor, "asset_installment", 1)
             state = rules.purchase(
                 state,
                 actor,
@@ -233,7 +239,7 @@ class RequisitionService:
             return {
                 "id": identity,
                 "asset_id": receipt.asset_id,
-                "permissions": state.sheets[actor.entity].permissions,
+                "permissions": available(state, actor),
             }
 
         try:

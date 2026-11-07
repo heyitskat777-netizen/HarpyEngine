@@ -536,6 +536,17 @@ def apply(
             ),
         )
         if followup.kind == "punishment":
+            from girlframe.services.m3_intracadre_marriage import allocate_punishment
+
+            allocate_punishment(
+                game,
+                c,
+                state,
+                followup.target,
+                source_event=action["data"]["response_event"],
+                source_id=work_id,
+                work_id=work_id,
+            )
             pending = next(
                 x for x in game.pending(c, action["id"]) if x["kind"] == "beneath_punishment"
             )
@@ -563,19 +574,28 @@ def synchronize(game: "GameService", c: Connection, action: dict[str, Any], even
         .limit(1)
     ):
         return
+    from girlframe.engine import m3_intracadre_marriage as marriage
+
+    state = load_state(c, game.store.campaign_id)
+    allocation = next(
+        (x for x in marriage.records(state, marriage.Allocation) if x.source_id == meta["id"]), None
+    )
+    recipient = allocation.subject if allocation else ActorRef.model_validate(meta["target"])
     related(
         c,
         game.store,
         dict(campaign_id=game.store.campaign_id, scene_id=action["scene_id"]),
         meta["id"],
         int(meta["owner"]["entity"]),
-        int(meta["target"]["entity"]),
+        int(recipient.entity),
         "punishment",
         dict(
             reason=rules.PLAY,
             source_action=action["id"],
             source_choice=meta["source_choice"],
             continuation=meta["request"],
+            character=recipient.incarnation,
+            **marriage.allocation_fields(state, meta["id"]),
             source_pdf=92 if meta.get("special_girl") else 22,
             immediate=True,
             discipline_owner_character=meta["owner"]["incarnation"],

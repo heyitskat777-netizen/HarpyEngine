@@ -7,6 +7,7 @@ from girlframe.engine.m3_acquisition_state import FirearmIssue, PersonalFirearmG
 from girlframe.engine.m3_actor_state import ActorRef, ProfileBinding
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_core import install
+from girlframe.engine.m3_intracadre_marriage import available, debit, payment_for
 from girlframe.engine.m3_janus_storage import ids as stored_ids
 from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
@@ -130,9 +131,16 @@ def purchase(
         raise ValueError("This actual acquisition purchase source is already recorded")
     price: Literal[2, 3] = 2 if kind == "ability_unlock" else 3
     sheet = state.sheets[actor.entity]
-    if sheet.permissions < price:
+    if available(state, actor) < price:
         raise ValueError("This acquisition needs its actual available Permissions")
-    sheet.permissions -= price
+    debit(
+        state,
+        actor,
+        price,
+        event=source,
+        source=identity,
+        payment=payment_for(state, actor, RULE, price),
+    )
     sheet.revision += 1
     state = grant(
         state,

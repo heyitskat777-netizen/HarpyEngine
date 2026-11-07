@@ -5,6 +5,7 @@ from girlframe.engine.m2 import AssetState, GameState
 from girlframe.engine.m3_actor_state import ActorRef, ProfileBinding
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_core import install
+from girlframe.engine.m3_intracadre_marriage import available, debit, payment_for
 from girlframe.engine.m3_requisition_state import Installation, Receipt
 
 
@@ -49,7 +50,7 @@ def purchase(
     if any(x.id == identity or x.source_event == source_event for x in state.requisitions):
         raise ValueError("This actual purchase source has already been applied")
     sheet = state.sheets[actor.entity]
-    if sheet.permissions < 1:
+    if available(state, actor) < 1:
         raise ValueError("This Asset Installment costs one available Permission")
     asset = AssetState(
         id="requisition:" + identity,
@@ -60,8 +61,15 @@ def purchase(
     result = install(
         sheet, asset, replace=choice.replace, effective_void=stored_ids(state, actor), state=state
     )
-    result.sheet.permissions -= 1
     state.sheets[actor.entity] = result.sheet
+    debit(
+        state,
+        actor,
+        1,
+        event=source_event,
+        source=identity,
+        payment=payment_for(state, actor, "asset_installment", 1),
+    )
     assert view.frame_instance is not None
     state.requisitions.append(
         Receipt(

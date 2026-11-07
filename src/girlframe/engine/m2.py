@@ -448,16 +448,20 @@ def tier(total: int) -> Literal["low", "mid", "high"]:
 
 
 def shift_status(state: GameState, owner: int, delta: int) -> None:
-    order = list(state.order)
-    if owner not in order or delta not in (-1, 1):
+    from girlframe.engine.m3_intracadre_marriage import status_groups
+
+    groups = list(status_groups(state))
+    if owner not in state.order or delta not in (-1, 1):
         raise ValueError("Invalid Status shift")
-    before = order[-1]
-    old = order.index(owner)
-    new = min(max(old - delta, 0), len(order) - 1)
-    order[old], order[new] = order[new], order[old]
-    state.order = tuple(order)
-    if before != order[-1] and str(before) in state.sheets:
-        state.sheets[str(before)].status_marked = False
+    before = groups[-1]
+    old = next(i for i, group in enumerate(groups) if owner in group)
+    new = min(max(old - delta, 0), len(groups) - 1)
+    groups[old], groups[new] = groups[new], groups[old]
+    state.order = tuple(member for group in groups for member in group)
+    if before != groups[-1]:
+        for member in before:
+            if str(member) in state.sheets:
+                state.sheets[str(member)].status_marked = False
 
 
 def higher(state: GameState, first: int, second: int) -> bool:
@@ -496,7 +500,9 @@ def higher(state: GameState, first: int, second: int) -> bool:
         return True
     if first not in state.order or second not in state.order:
         raise ValueError("Status is unresolved")
-    return state.order.index(first) < state.order.index(second)
+    from girlframe.engine.m3_intracadre_marriage import rank
+
+    return rank(state, first) < rank(state, second)
 
 
 def mark_identity(

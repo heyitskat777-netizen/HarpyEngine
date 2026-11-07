@@ -44,6 +44,8 @@ def princess_mission_end(
     *,
     upheld: bool,
     ace_check: AceCheck | None,
+    event: str | None = None,
+    source: str | None = None,
 ) -> GameState:
     if type(upheld) is not bool:
         raise ValueError("Record whether the standards were upheld")
@@ -61,9 +63,18 @@ def princess_mission_end(
         raise ValueError(
             "UNRESOLVED_RULING: the Princess Permission timing needs a campaign ruling"
         )
-    was_ace = state.order[0] == owner
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.engine.m3_intracadre_marriage import acquisitions, credit, is_ace, marriage_for
+
+    was_ace = is_ace(state, owner)
     shift_status(state, owner, 1)
-    if was_ace or (ace_check == "after_promotion" and state.order[0] == owner):
-        sheet.permissions += 1
+    if was_ace or (ace_check == "after_promotion" and is_ace(state, owner)):
+        beneficiary = current_ref(state, owner) if acquisitions(state) else None
+        if beneficiary is not None and marriage_for(state, beneficiary) is not None:
+            if event is None or source is None:
+                raise ValueError("Retain the actual Princess grant event and standards work source")
+            credit(state, beneficiary, 1, event=event, source="princess-mission-end:" + source)
+        else:
+            sheet.permissions += 1
     sheet.revision += 1
     return state

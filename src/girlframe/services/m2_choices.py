@@ -28,6 +28,7 @@ from girlframe.engine.m3_girl_runtime_state import (
     mentor_tag,
     relation_current,
 )
+from girlframe.engine.m3_intracadre_marriage import is_dog
 from girlframe.services.onboarding import WorkflowError
 
 if TYPE_CHECKING:
@@ -914,7 +915,7 @@ class ChoiceEngine:
             owner == actor
             and has_rule(sheet, "girl.alpha.nothing-more-than-a-hound", "ALPHA")
             and state.order
-            and state.order[-1] == actor
+            and is_dog(state, actor)
             and not sheet.status_marked
         ):
             require(
@@ -978,6 +979,17 @@ class ChoiceEngine:
                 assert entry[2].actor is not None and selected[2].actor is not None
                 if higher(state, int(entry[2].actor.entity), int(selected[2].actor.entity)):
                     selected = entry
+        if selected and len(proposals) > 1 and not (discussion and discussion.get("ready")):
+            assert selected[2].actor is not None
+            tied = [
+                entry
+                for entry in proposals
+                if entry[2].actor is not None
+                and not higher(state, int(selected[2].actor.entity), int(entry[2].actor.entity))
+            ]
+            if len({entry[2].actor for entry in tied}) > 1:
+                markers.begin_discussion(self.game, c, action, tied)
+                return
         if selected:
             person, answer, marker = selected
             if answer.options == ("gender_man",):

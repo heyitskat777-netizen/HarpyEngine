@@ -239,8 +239,10 @@ def ordinary_roll(
         for x in state.obligations
     ):
         raise ValueError("Void Observation replaces the ordinary Off-Duty Play")
+    from girlframe.engine.m3_intracadre_marriage import is_ace, is_dog
+
     status: Literal["Ace", "Wings", "Dog"] = (
-        "Ace" if state.order[0] == actor else "Dog" if state.order[-1] == actor else "Wings"
+        "Ace" if is_ace(state, actor) else "Dog" if is_dog(state, actor) else "Wings"
     )
     modifier = off_duty_modifier(status)
     if adjudication is not None and (
@@ -366,6 +368,8 @@ def doctor_credit(
     state: GameState,
     recipient: int | None,
     account: str,
+    *,
+    event: str | None = None,
 ) -> tuple[Period, GameState]:
     """A player's factual credit declaration, never an invented absent-player answer."""
     current(period, expected, active=period.phase == "active")
@@ -389,7 +393,24 @@ def doctor_credit(
     result.credit_recorded += (actor,)
     result.revision += 1
     if recipient is not None:
-        updated.sheets[str(recipient)].permissions += 1
+        from girlframe.engine.m3_actor_bonds import current_ref
+        from girlframe.engine.m3_intracadre_marriage import acquisitions, credit, marriage_for
+
+        beneficiary = current_ref(updated, recipient) if acquisitions(updated) else None
+        if beneficiary is not None and marriage_for(updated, beneficiary) is not None:
+            if event is None:
+                raise ValueError(
+                    "Retain the actual Doctor credit event before granting shared funds"
+                )
+            credit(
+                updated,
+                beneficiary,
+                1,
+                event=event,
+                source="doctor-credit:" + period.id + ":" + str(actor),
+            )
+        else:
+            updated.sheets[str(recipient)].permissions += 1
         updated.sheets[str(recipient)].revision += 1
     return result, updated
 

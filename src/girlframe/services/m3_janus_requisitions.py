@@ -14,12 +14,15 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_intracadre_marriage import available as shared_permissions
+from girlframe.engine.m3_intracadre_marriage import debit
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 from girlframe.engine.playbooks import canonical_frame
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_intracadre_marriage import prepare_payment
 from girlframe.services.m3_janus import prove_core
 from girlframe.services.m3_privileges import purchase_proof
 from girlframe.services.m3_requisitions import RequisitionService
@@ -139,10 +142,11 @@ class JanusRequisitionService(RequisitionService):
             )
             price: Literal[2, 3] = 2 if kind == "ability_unlock" else 3
             sheet = state.sheets[actor.entity]
-            if sheet.permissions < price:
+            if shared_permissions(state, actor) < price:
                 raise WorkflowError("This actual acquisition needs its available Permissions")
             identity, event = str(uuid4()), str(uuid4())
-            sheet.permissions -= price
+            payment = prepare_payment(self.game, c, state, viewer, actor, rule, price, "JANUS")
+            debit(state, actor, price, event=event, source=identity, payment=payment)
             sheet.revision += 1
             state.requisitions.append(
                 FrameRuleReceipt(
@@ -304,6 +308,19 @@ class JanusRequisitionService(RequisitionService):
             )
             if not cores.core(changed, cores.ref(value)).tags:
                 changed = cores.free_core(changed, cores.ref(value), event)
+            work = None
+            subject = actor
+            if trained is None or not cores.core(changed, cores.ref(value)).tags:
+                from girlframe.services.m3_intracadre_marriage import allocate_punishment
+
+                if state.handler is None:
+                    raise WorkflowError("Recover the actual current source Handler")
+                work = str(uuid4())
+                allocated = allocate_punishment(
+                    self.game, c, changed, actor, source_event=event, source_id=work, work_id=work
+                )
+                if allocated is not None:
+                    subject = allocated.subject
             self.game.event(
                 c,
                 viewer.user_id,
@@ -316,28 +333,28 @@ class JanusRequisitionService(RequisitionService):
                 trained=trained is not None,
                 account=account,
             )
-            work = None
-            if trained is None or not cores.core(changed, cores.ref(value)).tags:
-                if state.handler is None:
-                    raise WorkflowError("Recover the actual current source Handler")
-                work = str(uuid4())
+            if work is not None:
+                from girlframe.engine.m3_intracadre_marriage import allocation_fields
+
+                assert state.handler is not None
                 related(
                     c,
                     self.store,
                     dict(campaign_id=self.store.campaign_id, campaign_context=True),
                     work,
                     state.handler,
-                    viewer.user_id,
+                    int(subject.entity),
                     "punishment",
                     dict(
                         reason="janus_core_tag_removal",
                         owner=actor.model_dump(mode="json"),
-                        character=actor.incarnation,
+                        character=subject.incarnation,
                         core=cores.ref(value).model_dump(mode="json"),
                         removed_tag=identity,
                         source_event=event,
                         source_pdf=68,
                         immediate=True,
+                        **allocation_fields(changed, work),
                     ),
                     event,
                 )
@@ -383,11 +400,14 @@ def prove_tag_removal(c: Connection, game: GameService, row: dict[str, Any]) -> 
     core = ActorRef.model_validate(body["core"])
     value = prove_core(c, game, state, core)
     data = json.loads(event["payload_json"])
+    from girlframe.services.m3_intracadre_marriage import original_offender
+
+    subject = ActorRef(kind="pilot", entity=row["subject_id"], incarnation=body["character"])
+    offender = original_offender(game, c, state, row["id"], body["source_event"], subject)
     if (
         event["kind"] != "m3.janus_core_tag_removed"
         or event["actor_id"] != actor.entity
-        or actor.incarnation != body["character"]
-        or row["subject_id"] != actor.entity
+        or offender != actor
         or value.frame_owner != actor
         or data.get("tag") != body["removed_tag"]
         or data.get("core") != core.model_dump(mode="json")
@@ -399,6 +419,9 @@ def prove_tag_removal(c: Connection, game: GameService, row: dict[str, Any]) -> 
 
 
 def validate_role_case(c: Connection, game: GameService, state: GameState, case: Any) -> None:
+    from girlframe.services.m3_intracadre_marriage import original_offender
+
+    offender = original_offender(game, c, state, case.id, case.source_event, case.subject)
     if case.source_kind != "janus_training" or case.action is not None or case.source_work is None:
         raise WorkflowError("Use the actual owned Obedience Training consequence source")
     event = (
@@ -431,7 +454,7 @@ def validate_role_case(c: Connection, game: GameService, state: GameState, case:
         or case.chooser_controller != case.executor_controller
     ):
         raise WorkflowError("Prove this actual original Pilot's paid Core Training authority")
-    core = prove_core(c, game, state, case.subject)
+    core = prove_core(c, game, state, offender)
     if (
         core.frame_owner != case.executor
         or core.frame_instance != case.executor_frame

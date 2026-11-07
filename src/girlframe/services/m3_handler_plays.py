@@ -675,6 +675,9 @@ def _authority(c: Connection, game: "GameService", state: GameState, grant: Hand
 def validate_role_case(
     c: Connection, game: "GameService", state: GameState, case: "RolePunishment"
 ) -> None:
+    from girlframe.services.m3_intracadre_marriage import original_offender
+
+    offender = original_offender(game, c, state, case.id, case.source_event, case.subject)
     _, grant = _source(c, game, case.source_work or "")
     _authority(c, game, state, grant)
     if (
@@ -692,8 +695,8 @@ def validate_role_case(
         or case.chooser != grant.chooser_actor
         or case.executor != grant.effect.executor
         or case.chooser_controller != grant.chooser_controller
-        or case.subject != grant.effect.target
-        or case.subject not in grant.targets
+        or offender != grant.effect.target
+        or offender not in grant.targets
     ):
         raise WorkflowError("This exact Handler Play cannot authorize another Punishment or body.")
 

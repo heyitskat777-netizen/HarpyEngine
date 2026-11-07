@@ -17,6 +17,7 @@ from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_intracadre_marriage import prepare_payment
 from girlframe.services.m3_privileges import purchase_proof
 from girlframe.services.m3_requisitions import RequisitionService
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
@@ -246,6 +247,9 @@ class EnforcerRequisitionService(RequisitionService):
             identity, grant, event = str(uuid4()), str(uuid4()), str(uuid4())
             registry = self.registry or Access(self.store).registry
             assert registry is not None
+            prepare_payment(
+                self.game, c, state, viewer, actor, rule, 2 if kind == "ability_unlock" else 3
+            )
             changed = rules.purchase(
                 state,
                 actor,

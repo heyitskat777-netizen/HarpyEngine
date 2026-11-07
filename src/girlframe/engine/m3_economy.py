@@ -4,7 +4,8 @@ from typing import Literal
 
 from pydantic import Field
 
-from girlframe.engine.m2 import Model, PilotSheet
+from girlframe.engine.m2 import GameState, Model, PilotSheet
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_core import clone, owned_asset
 
 StandardItem = Literal[
@@ -65,22 +66,66 @@ def charge_standard(sheet: PilotSheet, item: StandardItem) -> Charge:
     )
 
 
-def quoted_repair(
+def _validate_quote(
     sheet: PilotSheet, quote: RepairQuote, *, current_handler: int, expected_quote_revision: int
-) -> Charge:
+) -> None:
     if quote.handler_id != current_handler or quote.owner_id != sheet.owner:
         raise ValueError("A repair quote must come from the current Handler for this owner")
     if quote.sheet_revision != sheet.revision or quote.quote_revision != expected_quote_revision:
         raise ValueError("STALE_QUOTE: review the current repair price before confirming")
-    updated = clone(sheet)
-    asset = owned_asset(updated, quote.asset_id)
+    asset = owned_asset(sheet, quote.asset_id)
     if not asset.damaged:
         raise ValueError("A paid extra repair requires a damaged Asset")
+
+
+def quoted_repair(
+    sheet: PilotSheet, quote: RepairQuote, *, current_handler: int, expected_quote_revision: int
+) -> Charge:
+    _validate_quote(
+        sheet,
+        quote,
+        current_handler=current_handler,
+        expected_quote_revision=expected_quote_revision,
+    )
+    updated = clone(sheet)
+    asset = owned_asset(updated, quote.asset_id)
     if updated.permissions < quote.cost:
         raise ValueError("Insufficient Permissions; the quoted repair was not applied")
     asset.damaged = False
     updated.permissions -= quote.cost
     updated.revision += 1
+    return Charge(
+        sheet=updated, item="extra_asset_repair", cost=quote.cost, provenance="handler_quote"
+    )
+
+
+def quoted_repair_in_state(
+    state: GameState,
+    actor: ActorRef,
+    quote: RepairQuote,
+    *,
+    current_handler: int,
+    expected_quote_revision: int,
+    event: str,
+    source: str,
+) -> Charge:
+    from girlframe.engine.m3_intracadre_marriage import debit, payment_for
+
+    sheet = state.sheets[actor.entity]
+    if actor.incarnation != sheet.character_id:
+        raise ValueError("Use the original quoted body's actual current incarnation")
+    _validate_quote(
+        sheet,
+        quote,
+        current_handler=current_handler,
+        expected_quote_revision=expected_quote_revision,
+    )
+    payment = payment_for(state, actor, "extra_asset_repair", quote.cost, quote.id)
+    debit(state, actor, quote.cost, event=event, source=source, payment=payment)
+    updated = clone(state.sheets[actor.entity])
+    owned_asset(updated, quote.asset_id).damaged = False
+    updated.revision += 1
+    state.sheets[actor.entity] = updated
     return Charge(
         sheet=updated, item="extra_asset_repair", cost=quote.cost, provenance="handler_quote"
     )

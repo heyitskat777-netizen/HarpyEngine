@@ -14,12 +14,14 @@ from girlframe.engine import m3_home_objects as hardware
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref, depth
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_intracadre_marriage import available, debit
 from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 from girlframe.services.m2_choices import ChoiceEngine
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_intracadre_marriage import prepare_payment
 from girlframe.services.m3_privileges import purchase_proof
 from girlframe.services.m3_requisitions import RequisitionService
 from girlframe.services.m3_tag_permissions import PermissionService
@@ -190,7 +192,7 @@ class HomeService:
                 kind=kind,
                 price=price,
                 donors=list(grafts.donors(rules.RULE)) if kind == "frame_grafting" else [],
-                permissions=sheet.permissions,
+                permissions=available(state, actor),
                 owned=receipt is not None,
                 suspended=any(suspended(state, identity) for identity in chain),
                 items=list(installation.items) if installation else [],
@@ -231,7 +233,7 @@ class HomeService:
             sheet, current, kind, price, donor = grafts.acquisition(
                 state, actor, rules.RULE, donor_frame
             )
-            if current != frame or sheet.permissions < price:
+            if current != frame or available(state, actor) < price:
                 raise WorkflowError("Use the actual current Frame and available Permissions")
             if any(
                 isinstance(x, FrameRuleReceipt)
@@ -247,7 +249,8 @@ class HomeService:
             installation = rules.Installation(
                 purchase=identity, actor=actor, frame=frame, items=items, event=event
             )
-            sheet.permissions -= price
+            payment = prepare_payment(self.game, c, state, viewer, actor, rules.RULE, price, donor)
+            debit(state, actor, price, event=event, source=identity, payment=payment)
             sheet.revision += 1
             state.requisitions.append(
                 FrameRuleReceipt(

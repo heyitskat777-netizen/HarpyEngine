@@ -19,6 +19,7 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_careers import can_pilot, original_sheet
 from girlframe.engine.m3_core import Recovery
+from girlframe.engine.m3_intracadre_marriage import status_groups
 from girlframe.engine.m3_strain_state import TRACKS, Trigger
 from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_choices import ChoiceEngine
@@ -156,7 +157,7 @@ class CycleService:
         kind: str,
         payload: dict[str, Any],
         change: Callable[
-            [Connection, rules.Period, GameState],
+            [Connection, rules.Period, GameState, str],
             tuple[rules.Period, GameState, list[dict[str, Any]], dict[str, Any]],
         ],
         *,
@@ -166,11 +167,51 @@ class CycleService:
             period, state = self._current(c, viewer, identity, game_revision)
             if period.revision != expected:
                 raise WorkflowError("STALE_OFF_DUTY: reopen the period.")
-            updated, state, resolved, proof = change(c, period, state)
+            before = GameState.model_validate_json(state.model_dump_json())
+            event_id = str(uuid4())
+            updated, state, resolved, proof = change(c, period, state, event_id)
             from girlframe.services.m3_observation import settle, synchronize
 
             settle(updated, state)
-            event = self.game.event(c, viewer.user_id, key, kind, state, period_id=identity)
+            from girlframe.engine import m3_intracadre_marriage as marriage
+            from girlframe.engine.m3_actor_bonds import current_ref
+            from girlframe.services.m3_intracadre_marriage import allocate_punishment, prove_flow
+
+            punishment_subject = updated.handler_recipient
+            punishment_body: dict[str, Any] = dict(
+                reason="off_duty_handler", source_pdf=118, due_stage="active"
+            )
+            if updated.handler_work is not None and period.handler_work is None:
+                assert updated.handler_recipient is not None
+                original = current_ref(state, updated.handler_recipient)
+                allocation = allocate_punishment(
+                    self.game,
+                    c,
+                    state,
+                    original,
+                    source_event=event_id,
+                    source_id=updated.handler_work,
+                    work_id=updated.handler_work,
+                )
+                subject = allocation.subject if allocation else original
+                punishment_subject = int(subject.entity)
+                punishment_body.update(character=subject.incarnation)
+                punishment_body.update(marriage.allocation_fields(state, updated.handler_work))
+            event = self.game.event(
+                c, viewer.user_id, key, kind, state, event_id=event_id, period_id=identity
+            )
+            for flow in marriage.records(state, marriage.PermissionFlow):
+                if flow.event == event and flow.kind == "grant":
+                    prove_flow(
+                        self.game,
+                        c,
+                        before,
+                        state,
+                        flow.beneficiary,
+                        event,
+                        flow.source,
+                        flow.amount,
+                    )
             self.periods._save(c, updated, event)
             synchronize(c, self.store, updated, event)
             self._resolve(c, resolved, event, proof)
@@ -178,6 +219,7 @@ class CycleService:
                 from girlframe.services.m3_work import related
 
                 assert updated.handler_recipient is not None
+                assert punishment_subject is not None
                 anchor = next(
                     x
                     for x in self.periods._pending(c, identity)
@@ -189,9 +231,9 @@ class CycleService:
                     anchor,
                     updated.handler_work,
                     period.handler,
-                    updated.handler_recipient,
+                    punishment_subject,
                     "punishment",
-                    {"reason": "off_duty_handler", "source_pdf": 118, "due_stage": "active"},
+                    punishment_body,
                     event,
                 )
             return {"id": identity, "revision": updated.revision, "phase": updated.phase}
@@ -211,7 +253,7 @@ class CycleService:
     def activate(
         self, viewer: GuildViewer, key: str, identity: str, expected: int, game_revision: int
     ) -> dict[str, Any]:
-        def change(c: Connection, period: rules.Period, state: GameState) -> Outcome:
+        def change(c: Connection, period: rules.Period, state: GameState, event_id: str) -> Outcome:
             self.missions._handler(c, viewer)
             self.missions.access.authorize(c, viewer, "strain")
             self.missions.access.authorize(c, viewer, "world")
@@ -300,7 +342,7 @@ class CycleService:
         participants: tuple[int, ...],
         summary: str,
     ) -> dict[str, Any]:
-        def change(c: Connection, period: rules.Period, state: GameState) -> Outcome:
+        def change(c: Connection, period: rules.Period, state: GameState, event_id: str) -> Outcome:
             self._original(c, period, state, viewer.user_id)
             progress = period.progress.get(str(viewer.user_id))
             if progress is not None and progress.observation is not None:
@@ -362,7 +404,7 @@ class CycleService:
         game_revision: int,
         scene_owner: int | None,
     ) -> dict[str, Any]:
-        def change(c: Connection, period: rules.Period, state: GameState) -> Outcome:
+        def change(c: Connection, period: rules.Period, state: GameState, event_id: str) -> Outcome:
             actual_scene = (
                 period.handler_scene
                 if scene_owner is None
@@ -447,7 +489,16 @@ class CycleService:
                         if recipient is None or recipient not in scene.participants:
                             raise WorkflowError("The actual award recipient must be in this scene.")
                         sheet = state.sheets[str(recipient)]
-                        sheet.permissions += 1
+                        from girlframe.engine.m3_actor_bonds import current_ref
+                        from girlframe.engine.m3_intracadre_marriage import credit
+
+                        credit(
+                            state,
+                            current_ref(state, recipient),
+                            1,
+                            event=event_id,
+                            source=f"handler-scene-permission:{period.id}:{recipient}",
+                        )
                         sheet.revision += 1
                     resolved = [
                         x
@@ -492,7 +543,7 @@ class CycleService:
     ) -> dict[str, Any]:
         choice = rules.RecoveryChoice.model_validate_json(choice.model_dump_json())
 
-        def change(c: Connection, period: rules.Period, state: GameState) -> Outcome:
+        def change(c: Connection, period: rules.Period, state: GameState, event_id: str) -> Outcome:
             self._original(c, period, state, viewer.user_id)
             pending = frozenset(
                 x["id"]
@@ -595,7 +646,7 @@ class CycleService:
         if context is not None:
             context = rules.HandlerContext.model_validate_json(context.model_dump_json())
 
-        def change(c: Connection, period: rules.Period, state: GameState) -> Outcome:
+        def change(c: Connection, period: rules.Period, state: GameState, event_id: str) -> Outcome:
             self.missions._handler(c, viewer)
             if kind not in rules.HANDLER_SCENES:
                 raise WorkflowError("Choose a printed Handler scene.")
@@ -662,7 +713,7 @@ class CycleService:
         order: tuple[int, ...],
         account: str,
     ) -> dict[str, Any]:
-        def change(c: Connection, period: rules.Period, state: GameState) -> Outcome:
+        def change(c: Connection, period: rules.Period, state: GameState, event_id: str) -> Outcome:
             self.missions._handler(c, viewer)
             rules.current(period, expected)
             pending = self.periods._pending(c, identity)
@@ -689,9 +740,15 @@ class CycleService:
             updated.status_review = order
             updated.status_review_game_revision = state.revision + 1
             updated.revision += 1
-            former_dog = state.order[-1] if state.order else None
+            groups = status_groups(state)
+            for group in groups:
+                positions = sorted(order.index(uid) for uid in group)
+                if positions != list(range(positions[0], positions[0] + len(group))):
+                    raise WorkflowError("Review each actual married Status group together")
+            former_dogs = set(groups[-1]) if groups else set()
             state.order = order
-            if former_dog is not None and former_dog != order[-1]:
+            current_dogs = set(status_groups(state)[-1]) if state.order else set()
+            for former_dog in former_dogs - current_dogs:
                 # Hound's actual mark ends when this Girl is no longer The Dog.
                 state.sheets[str(former_dog)].status_marked = False
             return (
@@ -769,6 +826,7 @@ class CycleService:
                 "participants": tuple(
                     (str(uid), state.sheets[str(uid)].callsign) for uid in state.order
                 ),
+                "status_groups": status_groups(state),
                 "original_participants": tuple(
                     (
                         str(uid),

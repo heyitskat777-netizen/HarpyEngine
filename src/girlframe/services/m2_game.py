@@ -218,6 +218,9 @@ class GameService:
                 from girlframe.services.m3_tracker_implants import prepare as prepare_trackers
 
                 prepare_trackers(self, c, previous_state, state, event)
+            from girlframe.services.m3_intracadre_marriage import prepare_punishments
+
+            prepare_punishments(self, c, previous_state, state, event)
             body = GameState.model_validate_json(state.model_dump_json()).model_dump_json()
             c.execute(
                 t.m2["m2_state_history"]
@@ -2095,6 +2098,24 @@ class GameService:
                 from girlframe.engine.m3_appearance_matrix import reset_at_start
 
                 appearance_reset = reset_at_start(state, acting_ref, m3["period_id"], identity)
+            marriage_cast_saved = False
+            if prepared.play == "flirt" and data.get("actor_basic") is None:
+                from girlframe.engine.m3_intracadre_marriage import marriage_for
+                from girlframe.services.m3_intracadre_marriage import prove as prove_marriage
+
+                marriage = marriage_for(state, acting_ref)
+                if marriage is not None:
+                    prove_marriage(self, c, state, marriage.id)
+                    from girlframe.services.m3_actors import ActorService
+                    from girlframe.services.m3_cast import CastService
+                    from girlframe.services.m3_missions import MissionService
+
+                    source_cast, legacy_cast = CastService(
+                        ActorService(MissionService(self.store))
+                    )._current(c, state, channel)
+                    if legacy_cast:
+                        state.scene_casts.append(source_cast)
+                        marriage_cast_saved = True
             secretary_event = str(uuid4()) if secretary_response is not None else None
             if secretary_response is not None:
                 from girlframe.services.m3_secretary import link_response
@@ -2135,6 +2156,7 @@ class GameService:
                     or am_scrutinized is not None
                     or am_code is not None
                     or appearance_reset
+                    or marriage_cast_saved
                     or secretary_response is not None
                 )
                 else None,

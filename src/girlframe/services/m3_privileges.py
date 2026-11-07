@@ -54,6 +54,14 @@ def purchase_proof(c: Connection, store: OnboardingStore, receipt: Requisition) 
         or saved != receipt
     ):
         raise WorkflowError("SOURCE_REQUISITION_MISSING: recover the actual paid Requisition.")
+    from girlframe.services.m3_asset_loss import snapshots
+    from girlframe.services.m3_intracadre_marriage import prove_flow
+
+    game = GameService(store)
+    before, after = snapshots(game, c, receipt.source_event)
+    prove_flow(
+        game, c, before, after, receipt.actor, receipt.source_event, receipt.id, receipt.price
+    )
 
 
 def choices(

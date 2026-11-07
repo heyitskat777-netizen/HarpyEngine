@@ -7,6 +7,7 @@ from pydantic import Field, model_validator
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, CastRole, Model, ProfileBinding, SceneCast
 from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_intracadre_marriage import available, debit, payment_for
 from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import SceneReceipt
 
@@ -162,11 +163,18 @@ def purchase(
         source_event=event,
     )
     sheet = state.sheets[actor.entity]
-    if sheet.permissions < receipt.price:
+    if available(state, actor) < receipt.price:
         raise ValueError(
             "This Requisition needs its printed or campaign-priced available Permissions"
         )
-    sheet.permissions -= receipt.price
+    debit(
+        state,
+        actor,
+        receipt.price,
+        event=event,
+        source=identity,
+        payment=payment_for(state, actor, kind, receipt.price),
+    )
     sheet.revision += 1
     state.requisitions.append(receipt)
     return state

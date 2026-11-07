@@ -23,6 +23,7 @@ from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_comforts import ComfortService
 from girlframe.services.m3_frame_rewards import eligibility
+from girlframe.services.m3_intracadre_marriage import prepare_payment
 from girlframe.services.m3_privileges import purchase_proof
 from girlframe.services.m3_work import related
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
@@ -418,6 +419,7 @@ class SceneRequisitionService(ComfortService):
             state = load_state(c, self.store.campaign_id)
             self._safe(c, state, viewer.user_id)
             identity, source = str(uuid4()), str(uuid4())
+            prepare_payment(self.game, c, state, viewer, actor, kind, 1 if kind == "privacy" else 2)
             updated = rules.purchase(
                 state,
                 actor,

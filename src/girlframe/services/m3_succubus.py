@@ -16,6 +16,7 @@ from girlframe.engine.m3_actor_bonds import current_ref, depth
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_handler_consequences import active_handler
+from girlframe.engine.m3_intracadre_marriage import available, debit
 from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 from girlframe.services.handler_setup import HandlerService
@@ -23,6 +24,7 @@ from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access, digest
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_enforcement_initiative import _cast
+from girlframe.services.m3_intracadre_marriage import prepare_payment
 from girlframe.services.m3_requisitions import RequisitionService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
@@ -185,6 +187,9 @@ def _source(
 def validate_role_case(
     c: Connection, game: "GameService", state: GameState, case: "RolePunishment"
 ) -> None:
+    from girlframe.services.m3_intracadre_marriage import original_offender
+
+    offender = original_offender(game, c, state, case.id, case.source_event, case.subject)
     if case.action is None:
         raise WorkflowError("Recover the actual NPC refusal action")
     action = game.action(c, case.action)
@@ -192,7 +197,7 @@ def validate_role_case(
     review = action["data"].get("handler_review", {})
     if (
         case.source_kind != "succubus_npc_disobey"
-        or case.subject != value.target
+        or offender != value.target
         or case.executor != value.handler
         or case.chooser != value.handler
         or case.chooser_controller != int(value.handler.entity)
@@ -283,7 +288,7 @@ class SuccubusService:
                 frame=frame,
                 kind=kind,
                 price=price,
-                permissions=sheet.permissions,
+                permissions=available(state, actor),
                 donors=list(grafts.donors(rules.RULE)) if kind == "frame_grafting" else [],
                 owned=paid is not None,
                 suspended=any(suspended(state, identity) for identity in chain),
@@ -315,7 +320,7 @@ class SuccubusService:
             sheet, current, kind, price, donor = grafts.acquisition(
                 state, actor, rules.RULE, donor_frame
             )
-            if current != frame or sheet.permissions < price:
+            if current != frame or available(state, actor) < price:
                 raise WorkflowError("Use the actual current Frame and available Permissions")
             if any(
                 isinstance(x, FrameRuleReceipt)
@@ -326,7 +331,8 @@ class SuccubusService:
             ):
                 raise WorkflowError("Restore the original Succubus source instead of buying twice")
             identity, event = str(uuid4()), str(uuid4())
-            sheet.permissions -= price
+            payment = prepare_payment(self.game, c, state, viewer, actor, rules.RULE, price, donor)
+            debit(state, actor, price, event=event, source=identity, payment=payment)
             sheet.revision += 1
             state.requisitions.append(
                 FrameRuleReceipt(

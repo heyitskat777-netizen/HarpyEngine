@@ -557,15 +557,19 @@ def validate_role_case(c: Connection, game: GameService, state: GameState, case:
         raise WorkflowError("Use the actual rolled Alpha opportunity")
     action = game.action(c, case.action)
     value = prove(game, c, state, case.source_work or "")
+    from girlframe.services.m3_intracadre_marriage import original_offender
+
+    offender = original_offender(game, c, state, case.id, case.source_event, case.subject)
     if (
         value.action != case.action
         or value.case != case.id
         or case.executor != value.target
         or case.chooser != value.target
-        or case.subject != value.actor
+        or offender != value.actor
         or case.chooser_controller != value.counterpart
         or case.executor_controller != value.counterpart
-        or case.subject_controller != value.caster
+        or offender == case.subject
+        and case.subject_controller != value.caster
         or action["data"]["result"]["tier"] != "low"
         or action["data"]["alpha_sex"].get("case") != case.id
     ):

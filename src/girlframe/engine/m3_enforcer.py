@@ -4,6 +4,7 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, ProfileBinding
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_enforcer_state import Accusation, Grasp, RankFact
+from girlframe.engine.m3_intracadre_marriage import is_dog
 
 OBEDIENCE = "frame.enforcer.obedience-conditioning"
 INITIATIVE = "frame.enforcer.enforcement-initiative"
@@ -149,7 +150,7 @@ def conditioning(state: GameState, actor: ActorRef) -> bool:
             or sheet.frame_runtime is not None
             and OBEDIENCE in sheet.frame_runtime.acquired_rules
         )
-        and (len(state.order) < 2 or state.order[-1] != int(actor.entity))
+        and (len(state.order) < 2 or not is_dog(state, int(actor.entity)))
     )
 
 

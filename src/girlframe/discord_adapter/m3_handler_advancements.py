@@ -104,6 +104,12 @@ async def open_advancement(
             interaction, GenderDesignationService(service.store), data["acquisition"]
         )
         return
+    if data.get("acquired_rule") == "handler-advancement.handler-advancement.intracadre-marriage":
+        from girlframe.discord_adapter.m3_intracadre_marriage import open_marriage
+        from girlframe.services.m3_intracadre_marriage import MarriageService
+
+        await open_marriage(interaction, MarriageService(service.store), data["acquisition"])
+        return
     if data.get("acquired_rule"):
         await reply(
             interaction,
@@ -510,6 +516,12 @@ class AcquireMore(discord.ui.Button[NativeForm]):
             return
 
         async def choose(current: discord.Interaction, values: dict[str, Any]) -> None:
+            if values["advancement"][0] == "marriage":
+                from girlframe.discord_adapter.m3_intracadre_marriage import open_marriage
+                from girlframe.services.m3_intracadre_marriage import MarriageService
+
+                await open_marriage(current, MarriageService(self.service.store), self.identity)
+                return
             from girlframe.discord_adapter.m3_gender_designation import open_designation
             from girlframe.services.m3_gender_designation import GenderDesignationService
 
@@ -521,6 +533,12 @@ class AcquireMore(discord.ui.Button[NativeForm]):
             interaction.user.id,
             "Choose an advancement",
             "Select the advancement to acquire with this held award.",
-            [Field("advancement", "Advancement", (("gender", "Gender Designation Request"),))],
+            [
+                Field(
+                    "advancement",
+                    "Advancement",
+                    (("gender", "Gender Designation Request"), ("marriage", "Intracadre Marriage")),
+                )
+            ],
             choose,
         ).present(interaction)

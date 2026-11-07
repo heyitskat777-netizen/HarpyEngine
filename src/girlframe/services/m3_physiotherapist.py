@@ -13,6 +13,7 @@ from girlframe.engine.frame_classes import frame_class
 from girlframe.engine.m2 import GameState, TagState
 from girlframe.engine.m3_actor_bonds import current_ref, depth, set_depth
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_intracadre_marriage import available, debit
 from girlframe.engine.m3_janus_storage import active as stored_points
 from girlframe.engine.m3_nightmare import DONORS, current
 from girlframe.engine.m3_off_duty import Period
@@ -22,6 +23,7 @@ from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import ActorService, profiles
 from girlframe.services.m3_cast import CastService
+from girlframe.services.m3_intracadre_marriage import prepare_payment
 from girlframe.services.m3_privileges import purchase_proof
 from girlframe.services.m3_requisitions import RequisitionService
 from girlframe.services.m3_work import related
@@ -279,7 +281,7 @@ class PhysiotherapistService:
             if (
                 state.revision != revision
                 or target is None
-                or sheet.permissions < price
+                or available(state, actor) < price
                 or not account.strip()
                 or len(account) > 1200
             ):
@@ -310,7 +312,8 @@ class PhysiotherapistService:
                 event=event,
                 relationship=account,
             )
-            sheet.permissions -= price
+            payment = prepare_payment(self.game, c, state, viewer, actor, rules.RULE, price, donor)
+            debit(state, actor, price, event=event, source=identity, payment=payment)
             sheet.revision += 1
             state.requisitions.append(
                 FrameRuleReceipt(

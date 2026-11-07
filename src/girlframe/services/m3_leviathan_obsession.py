@@ -17,6 +17,7 @@ from girlframe.engine.m2 import ChoiceAnswer, GameState, tier
 from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
 from girlframe.engine.m3_handler_consequences import active_handler
+from girlframe.engine.m3_intracadre_marriage import is_dog
 from girlframe.engine.m3_leviathan_roll_state import Declaration, FactualIdentities
 from girlframe.engine.m3_policy import RULESET
 from girlframe.services.m2_game import GameService
@@ -1272,7 +1273,7 @@ class ObsessionService:
                 if (
                     owner != meta["controller"]
                     or sheet is None
-                    or state.order[-1] != owner
+                    or not is_dog(state, owner)
                     or sheet.status_marked
                     or not has_rule(sheet, "girl.alpha.nothing-more-than-a-hound", "ALPHA")
                     or answer.fields["status"] not in ("-1", "1")
@@ -1596,7 +1597,7 @@ class ObsessionService:
             detail["can_status"] = bool(
                 sheet
                 and viewer.user_id == meta["controller"]
-                and state.order[-1] == viewer.user_id
+                and is_dog(state, viewer.user_id)
                 and not sheet.status_marked
                 and has_rule(sheet, "girl.alpha.nothing-more-than-a-hound", "ALPHA")
             )

@@ -92,11 +92,13 @@ def prepare(
         amount = None
     if viewer.user_id not in state.order:
         raise WorkflowError("A current canonical Status position is required.")
+    from girlframe.engine.m3_intracadre_marriage import is_ace, is_dog
+
     status: Literal["Ace", "Wings", "Dog"] = (
         "Ace"
-        if state.order[0] == viewer.user_id
+        if is_ace(state, viewer.user_id)
         else "Dog"
-        if state.order[-1] == viewer.user_id
+        if is_dog(state, viewer.user_id)
         else "Wings"
     )
     approval = game.store.policy.m3_approval
@@ -152,11 +154,13 @@ def pre_roll(
         or progress.roll is not None
     ):
         raise WorkflowError("Resume the current period's actual reserved Play.")
+    from girlframe.engine.m3_intracadre_marriage import is_ace, is_dog
+
     status = (
         "Ace"
-        if state.order[0] == viewer.user_id
+        if is_ace(state, viewer.user_id)
         else "Dog"
-        if state.order[-1] == viewer.user_id
+        if is_dog(state, viewer.user_id)
         else "Wings"
     )
     if status != meta["status"] or state.handler != period.handler:

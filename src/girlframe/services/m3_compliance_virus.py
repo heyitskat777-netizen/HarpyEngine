@@ -271,6 +271,9 @@ def role_scope(c: Connection, game: "GameService", case: RolePunishment) -> Work
 def validate_role_case(
     c: Connection, game: "GameService", state: GameState, case: RolePunishment
 ) -> None:
+    from girlframe.services.m3_intracadre_marriage import original_offender
+
+    offender = original_offender(game, c, state, case.id, case.source_event, case.subject)
     _, value = source(c, game, case.source_work or "")
     if case.ended_event is not None:
         from girlframe.services.m3_harpy_defeat import ended_actor_source
@@ -301,8 +304,9 @@ def validate_role_case(
         or case.action is not None
         or case.executor != value.punishment_executor
         or case.executor_frame != value.punishment_executor_frame
-        or case.subject != bond_ref(state, value.target)
-        or case.subject_controller != value.target_controller
+        or offender != bond_ref(state, value.target)
+        or (case.subject_controller if offender == case.subject else int(offender.entity))
+        != value.target_controller
         or case.chooser != value.judge
         or case.chooser_controller != value.judge_controller
         or case.source_event != value.effect_event

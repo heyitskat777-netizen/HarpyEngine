@@ -14,6 +14,7 @@ from girlframe.engine.m3_actor_bonds import depth
 from girlframe.engine.m3_actor_state import ActorRef, ProfileBinding
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_handler_consequences import active_handler
+from girlframe.engine.m3_intracadre_marriage import allocation_fields
 from girlframe.engine.m3_punishments import Details, validate
 from girlframe.engine.m3_role_punishment_state import Instruction, RolePunishment
 from girlframe.services.handler_setup import HandlerService
@@ -97,6 +98,19 @@ def open_case(
     changed = GameState.model_validate_json(state.model_dump_json())
     executor = rules.view(changed, actor, bindings)
     subject = rules.view(changed, target, bindings)
+    from girlframe.engine.m3_intracadre_marriage import allocate
+
+    work_id = (
+        source_work
+        if source_kind == "obedience_volunteer"
+        else str(uuid5(NAMESPACE_URL, "girlframe:role-punishment:" + identity))
+    )
+    allocation = allocate(
+        changed, target, source_event=source_event, source_id=identity, work_id=work_id or identity
+    )
+    if allocation is not None:
+        target = allocation.subject
+        subject = rules.view(changed, target, bindings)
     if source_kind in ("handler_play", "compliance_virus", "janus_training"):
         if chooser_controller is None or source_work is None:
             raise WorkflowError("Use the actual scoped Handler Play grant and chooser controller.")
@@ -189,6 +203,9 @@ def case_proof(c: Connection, game: GameService, identity: str) -> RolePunishmen
         raise WorkflowError(
             "SOURCE_ROLE_PUNISHMENT_MISSING: recover the actual original consequence."
         )
+    from girlframe.services.m3_intracadre_marriage import original_offender
+
+    original_offender(game, c, state, case.id, case.source_event, case.subject)
     if case.instruction_event:
         event = (
             c.execute(
@@ -354,8 +371,11 @@ def _harpy_case(c: Connection, game: GameService, state: GameState, case: RolePu
         raise WorkflowError("Recover this actual Harpy's original Initiative action.")
     actual = game.action(c, case.action)
     meta = actual["data"].get("enforcement", {})
+    from girlframe.services.m3_intracadre_marriage import original_offender
+
+    offender = original_offender(game, c, state, case.id, case.source_event, case.subject)
     if (
-        (_refs(actual)[0], rules.bond_ref(state, _refs(actual)[1])) != (case.executor, case.subject)
+        (_refs(actual)[0], rules.bond_ref(state, _refs(actual)[1])) != (case.executor, offender)
         or meta.get("punishment") != case.id
         or rules.view(state, case.executor, profiles(c, game.store.campaign_id)).frame_instance
         != case.executor_frame
@@ -565,6 +585,7 @@ def synchronize(
                     character=case.subject.incarnation,
                     source_action=case.action,
                     immediate=True,
+                    **allocation_fields(state, case.id),
                 ),
                 case.source_event,
             )

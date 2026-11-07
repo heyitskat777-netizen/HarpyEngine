@@ -685,6 +685,12 @@ class MissionService:
         rulings = self.store.policy.owner_m3_rulings
         if rulings is None:
             raise WorkflowError("M3 campaign rulings are missing.")
+        from girlframe.engine import m3_intracadre_marriage as marriage
+        from girlframe.engine.m3_actor_bonds import current_ref
+        from girlframe.services.m3_intracadre_marriage import allocate_punishment, prove_flow
+
+        before = GameState.model_validate_json(state.model_dump_json())
+        event_id = str(uuid4())
         plan = rules.end(
             mission,
             viewer.user_id,
@@ -694,6 +700,7 @@ class MissionService:
             status_order=state.order,
             ace_policy=rulings.ace_bonus,
             ended_participants=self._departed(c, mission, state),
+            grouped_status=marriage.status_groups(state),
         )
         changed = set()
         for grant in plan.grants:
@@ -702,13 +709,37 @@ class MissionService:
                 raise WorkflowError(
                     "A reward recipient has no current sheet; resolve the roster first."
                 )
-            sheet.permissions += grant.amount
+            if marriage.acquisitions(state):
+                marriage.credit(
+                    state,
+                    current_ref(state, grant.owner),
+                    grant.amount,
+                    event=event_id,
+                    source=f"mission-reward:{mission.id}:{grant.reason}:{grant.owner}",
+                )
+            else:
+                sheet.permissions += grant.amount
             changed.add(str(grant.owner))
         for uid in changed:
             state.sheets[uid].revision += 1
         from girlframe.engine.m3_repairs import mission_ended
 
-        event_id = str(uuid4())
+        staged = []
+        for work in plan.consequences:
+            original = current_ref(state, work.owner)
+            allocation = allocate_punishment(
+                self.game,
+                c,
+                state,
+                original,
+                source_event=event_id,
+                source_id=work.id,
+                work_id=work.id,
+            )
+            subject = allocation.subject if allocation else original
+            body = work.model_dump(mode="json") | dict(character=subject.incarnation)
+            body.update(marriage.allocation_fields(state, work.id))
+            staged.append((work, int(subject.entity), body))
         state = mission_ended(state, mission.id, event_id)
         from girlframe.services.m3_a_bomb import finish_mission
 
@@ -726,22 +757,29 @@ class MissionService:
             mission_id=mission.id,
             revision=plan.mission.revision,
         )
+        for grant in plan.grants:
+            if marriage.acquisitions(before):
+                prove_flow(
+                    self.game,
+                    c,
+                    before,
+                    state,
+                    current_ref(before, grant.owner),
+                    event,
+                    f"mission-reward:{mission.id}:{grant.reason}:{grant.owner}",
+                    grant.amount,
+                )
         self._save(c, plan.mission, event)
         synchronize_mission(c, self.store, state, plan.mission, event)
-        for work in plan.consequences:
+        for work, subject_id, body in staged:
             self._work(
                 c,
                 plan.mission,
                 work.id,
                 work.decision_owner,
-                work.owner,
+                subject_id,
                 "punishment",
-                work.model_dump(mode="json")
-                | dict(
-                    character=self.game.character_binding(
-                        c, state, work.owner, require_current_profile=False
-                    )
-                ),
+                body,
                 event,
             )
         return {

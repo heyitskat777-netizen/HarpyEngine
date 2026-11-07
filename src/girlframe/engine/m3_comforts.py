@@ -4,6 +4,7 @@ from girlframe.engine.m2 import AssetState, GameState
 from girlframe.engine.m3_actor_state import ActorRef, ProfileBinding, SceneCast
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_core import install
+from girlframe.engine.m3_intracadre_marriage import available, debit, payment_for
 from girlframe.engine.m3_requisition_state import (
     ComfortBenefit,
     ComfortReceipt,
@@ -30,9 +31,16 @@ def purchase(
     ):
         raise ValueError("Record one new paid Creature Comforts source and its owned request")
     sheet = state.sheets[actor.entity]
-    if sheet.permissions < 1:
+    if available(state, actor) < 1:
         raise ValueError("Creature Comforts costs one available Permission")
-    sheet.permissions -= 1
+    debit(
+        state,
+        actor,
+        1,
+        event=event,
+        source=identity,
+        payment=payment_for(state, actor, "creature_comforts", 1),
+    )
     sheet.revision += 1
     state.requisitions.append(
         ComfortReceipt(id=identity, actor=actor, source_event=event, account=account.strip())

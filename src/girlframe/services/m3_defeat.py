@@ -10,8 +10,10 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_defeat as rules
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput, TagState
+from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_defeat_state import Alternative, Decision, NewVoidAsset
+from girlframe.engine.m3_intracadre_marriage import available
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
@@ -177,7 +179,7 @@ def projection(
                 dict(id=x.id, name=x.name) for x in sheet.assets if not x.void and not x.intrinsic
             ],
             identities=[dict(id=x.id, name=x.name) for x in sheet.identities if not x.protected],
-            permissions=sheet.permissions,
+            permissions=available(state, current_ref(state, int(action["actor_id"]))),
             foes=foes(game, c, state, action),
         )
     if data["offer"] is not None:
@@ -406,7 +408,7 @@ def apply(
             outside_frame=(context == "outside") if context != "unspecified" else None,
         )
         test = GameState.model_validate_json(state.model_dump_json())
-        rules.alternative(test, actor, proposed_offer, action["id"])
+        rules.alternative(test, actor, proposed_offer, action["data"]["response_event"])
         action["data"]["defeat_offer"] = proposed_offer.model_dump(mode="json")
         game.request(c, action, int(actor.entity), "defeat_accept_alternative")
         return

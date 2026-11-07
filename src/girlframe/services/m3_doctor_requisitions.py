@@ -9,10 +9,12 @@ from girlframe.engine import m3_doctor as rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_intracadre_marriage import available, debit
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_doctor import owned
+from girlframe.services.m3_intracadre_marriage import prepare_payment
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -66,7 +68,7 @@ class DoctorRequisitionService:
                 or not account.strip()
                 or self.game.pending_actions(c)
                 or self.game.immediate_work(c, viewer.user_id)
-                or sheet.permissions < 2
+                or available(state, actor) < 2
             ):
                 raise WorkflowError("Refresh the actual Doctor acquisition and its two Permissions")
             frame = rules.frame_id(state, actor)
@@ -79,7 +81,8 @@ class DoctorRequisitionService:
             ):
                 raise WorkflowError("Restore the original entitlement instead of buying twice")
             identity, event = str(uuid4()), str(uuid4())
-            sheet.permissions -= 2
+            payment = prepare_payment(self.game, c, state, viewer, actor, rule, 2, rules.BOOK)
+            debit(state, actor, 2, event=event, source=identity, payment=payment)
             sheet.revision += 1
             state.requisitions.append(
                 FrameRuleReceipt(

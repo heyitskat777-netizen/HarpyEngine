@@ -497,8 +497,9 @@ class OffDutyService:
             ]
             if len(rows) != 1:
                 raise WorkflowError("Resume your own pending DoctorDoctor credit record.")
+            event_id = str(uuid4())
             updated_period, updated_state = doctor_credit(
-                period, expected, viewer.user_id, state, recipient, account
+                period, expected, viewer.user_id, state, recipient, account, event=event_id
             )
             event = self.game.event(
                 c,
@@ -506,6 +507,7 @@ class OffDutyService:
                 key,
                 "m3.off_duty_credit_recorded",
                 updated_state,
+                event_id=event_id,
                 period_id=identity,
                 recipient_id=recipient,
             )

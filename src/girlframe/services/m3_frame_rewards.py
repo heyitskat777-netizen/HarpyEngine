@@ -2,7 +2,7 @@
 
 import json
 from typing import Any
-from uuid import NAMESPACE_URL, uuid5
+from uuid import NAMESPACE_URL, uuid4, uuid5
 
 import sqlalchemy as sa
 from sqlalchemy import Connection
@@ -10,6 +10,7 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_frame_rewards as rules
 from girlframe.engine.m2 import GameState
+from girlframe.engine.m3_intracadre_marriage import is_dog
 from girlframe.engine.m3_off_duty import Period
 from girlframe.engine.m3_world_state import AdversaryPilot
 from girlframe.services.handler_setup import HandlerService
@@ -316,6 +317,33 @@ class RewardService:
         self.periods, self.missions = periods, periods.missions
         self.store, self.game = periods.store, periods.game
 
+    def _permission_proof(self, c: Connection, row: dict[str, Any]) -> None:
+        body = json.loads(row["body_json"])
+        if row["state"] != "resolved" or not body.get("reward_granted"):
+            return
+        from girlframe.engine.m3_actor_bonds import current_ref
+        from girlframe.engine.m3_intracadre_marriage import acquisitions
+        from girlframe.services.m3_asset_loss import snapshots
+        from girlframe.services.m3_intracadre_marriage import prove_flow
+
+        before, after = snapshots(self.game, c, body["applied_event"])
+        if not acquisitions(before):
+            return
+        beneficiary = (
+            int(body["review"]["recipient"]) if body["mode"] == "queen" else int(row["subject_id"])
+        )
+        source = body.get("root_id", row["id"])
+        prove_flow(
+            self.game,
+            c,
+            before,
+            after,
+            current_ref(before, beneficiary),
+            body["applied_event"],
+            "frame-reward:" + source,
+            1,
+        )
+
     def _row(self, c: Connection, identity: str) -> dict[str, Any]:
         table = t.m3["m3_required_work"]
         row = (
@@ -497,6 +525,7 @@ class RewardService:
         with self.store.engine.connect() as c:
             row = self._row(c, identity)
             self._view(c, viewer, row)
+            self._permission_proof(c, row)
             state = load_state(c, self.store.campaign_id)
             body = json.loads(row["body_json"])
             result = {
@@ -531,9 +560,7 @@ class RewardService:
             result["pilots"] = tuple(
                 (str(uid), state.sheets[str(uid)].callsign)
                 for uid in state.order
-                if not (
-                    body["mode"] == "queen" and uid == viewer.user_id and uid == state.order[-1]
-                )
+                if not (body["mode"] == "queen" and uid == viewer.user_id and is_dog(state, uid))
             )
             if body["mode"] == "queen":
                 return result
@@ -612,6 +639,7 @@ class RewardService:
             row = self._row(c, identity)
             state, period, spec = self._check(c, viewer, row, expected, game_revision)
             facts, _ = eligibility(c, self.store, state, period, int(row["subject_id"]))
+            event_id = str(uuid4())
             if spec["body"]["mode"] == "queen":
                 if (
                     claim is not None
@@ -629,6 +657,7 @@ class RewardService:
                     recipient,
                     identity,
                     eligibility=facts,
+                    event=event_id,
                 )
                 details = {"recipient": recipient, "account": account.strip()}
                 granted = True
@@ -703,6 +732,7 @@ class RewardService:
                     eligibility=facts,
                     character_id=period.character_ids[row["subject_id"]],
                     source_rule=spec["body"].get("source_rule"),
+                    event=event_id,
                 )
                 details = claim.model_dump(mode="json")
                 granted = claim.fulfilled
@@ -712,6 +742,7 @@ class RewardService:
                 key,
                 "m3.frame_reward_reviewed",
                 updated,
+                event_id=event_id,
                 work_id=identity,
                 reward_granted=granted,
             )
@@ -789,6 +820,7 @@ class RewardService:
             ):
                 raise WorkflowError("The offering's actual Handler/Frame binding changed.")
             claim = rules.Claim.model_validate_json(json.dumps(body["claim"]))
+            event_id = str(uuid4())
             updated = rules.review(
                 state,
                 int(parent["subject_id"]),
@@ -797,6 +829,7 @@ class RewardService:
                 eligibility=facts,
                 handler_interested=interested,
                 character_id=period.character_ids[parent["subject_id"]],
+                event=event_id,
             )
             event = self.game.event(
                 c,
@@ -804,6 +837,7 @@ class RewardService:
                 key,
                 "m3.frame_reward_reviewed",
                 updated,
+                event_id=event_id,
                 work_id=parent["id"],
                 interest_id=identity,
                 reward_granted=interested,

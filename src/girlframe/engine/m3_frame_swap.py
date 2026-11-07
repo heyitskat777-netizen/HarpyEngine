@@ -8,6 +8,7 @@ from girlframe.engine.m3_actor_state import ActorRef, ProfileBinding
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_frame_state import FrameRuntime
 from girlframe.engine.m3_frame_swap_state import Selection, SwapReceipt
+from girlframe.engine.m3_intracadre_marriage import available, debit, payment_for
 from girlframe.engine.m3_personal_firearm import RULE, held, retain
 from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.playbooks import FRAME_TYPES, canonical_frame
@@ -177,8 +178,16 @@ def purchase(
     if any(x.id == identity or x.source_event == event for x in state.requisitions):
         raise ValueError("Use one new actual paid Frame Swap source")
     sheet = state.sheets[actor.entity]
-    if sheet.permissions < 4:
+    if available(state, actor) < 4:
         raise ValueError("Frame Swap costs four available Permissions")
+    debit(
+        state,
+        actor,
+        4,
+        event=event,
+        source=identity,
+        payment=payment_for(state, actor, "frame_swap", 4, plan),
+    )
     old_frame = actual.frame_instance
     assert old_frame is not None
     kept = next(x for x in sheet.assets if x.id == selection.retained_asset)
@@ -249,7 +258,6 @@ def purchase(
             for i, name in enumerate(selection.fanbase.additional_identities)
         )
     sheet.frame, sheet.frame_runtime, sheet.obsolescence_marked = frame, runtime, 0
-    sheet.permissions -= 4
     sheet.revision += 1
     if grant is not None:
         state = retain(state, actor, bindings, grant.id, runtime.id, event)

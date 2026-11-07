@@ -134,6 +134,7 @@ def end(
     status_order: tuple[Snowflake, ...],
     ace_policy: AcePolicy | None,
     ended_participants: dict[str, str] | None = None,
+    grouped_status: tuple[tuple[Snowflake, ...], ...] | None = None,
 ) -> EndPlan:
     revision(mission, expected)
     handler(mission, actor, current_handler)
@@ -153,11 +154,21 @@ def end(
     living = tuple(uid for uid in mission.participants if str(uid) not in departed)
     if not set(living) <= set(status_order):
         raise ValueError("Mission roster changes require explicit resolution before rewards")
-    ace, dog = (status_order[0], status_order[-1]) if status_order else (None, None)
-    if ace is not None and ace_policy is None and ace not in living:
+    groups = grouped_status if grouped_status is not None else tuple((x,) for x in status_order)
+    flattened = tuple(x for group in groups for x in group)
+    if (
+        any(not group for group in groups)
+        or len(set(flattened)) != len(flattened)
+        or set(flattened) != set(status_order)
+    ):
+        raise ValueError("Use the actual complete partition of current Status groups")
+    ace_group, dog_group = (groups[0], groups[-1]) if groups else ((), ())
+    ace = next((uid for uid in ace_group if uid in living), ace_group[0] if ace_group else None)
+    dog = dog_group[0] if dog_group else None
+    if ace is not None and ace_policy is None and not set(ace_group) & set(living):
         raise ValueError("UNRESOLVED_RULING: absent Ace bonus policy is required")
     grants = [PermissionGrant(owner=uid, amount=1, reason="mission_completed") for uid in living]
-    if ace is not None and (ace in living or ace_policy == "current_ace"):
+    if ace is not None and (set(ace_group) & set(living) or ace_policy == "current_ace"):
         grants.append(PermissionGrant(owner=ace, amount=1, reason="ace_bonus"))
     consequences = (
         [

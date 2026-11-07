@@ -1,5 +1,76 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Intracadre Marriage ordinary workflow — 2026-11-07
+
+Source extends `87eff90`; the exact coherent70 Python/69 source snapshot is
+`var/m3-marriage-union-source-snapshot.json`. Ruff70, format70 and mypy69 pass
+without source drift (`var/m3-marriage-union-static.json`). No migration, runtime,
+Discord login, deployment, environment publication or private-engine write ran.
+
+The actual native Award → More → Marriage declaration preserves the original
+people/appointment and deepens their Bond. Shared Status moves as one group;
+real mission completion grants and one Ace bonus reach the financial partner's
+wallet with original beneficiaries retained. A source-priced other-body purchase
+needs that partner's exact approval; the original body owner still purchases the
+actual Asset. Real source-ordered flows conserve funds and consume approval once.
+All existing direct charge/loss/receipt and relevant grant ports preserve their
+source-specific eligibility and original receipts. Mandatory losses do not acquire
+a voluntary approval veto.
+
+Actual punishment allocation precedes the source/work. Separate offenders remain
+separate even when one partner receives their effects; original debt closes only
+through an actual application. Mission/Cycle, role/debt, Observation, JANUS,
+regulation, uniform, social and spoken-No producers retain their original causes.
+A completed native outsider Flirt is not automatically caught. An original-party
+human explicitly reports a real historically co-present observation; its real
+Punishment applies to the assigned original partner and saved private history
+reopens from another channel. Original-party reporting is the finite supported
+adapter, not a printed prohibition on other witnesses.
+
+Married native Flirt captures the genuine existing legacy cast before RNG through
+the same play-confirmed history, retaining original scene-joined provenance.
+Subsequent role changes use the existing `/mission cast` controls. No new person,
+teleport, inferred observation, player dialogue or intimacy consent is fabricated.
+The test uses three genuine initial creation/review/activation profiles; it does
+not bypass the existing restriction on adding a new native member mid-campaign.
+
+| Executed scoped checks | Actual result / artifact |
+|---|---|
+| Whole Marriage normal + actual old Asset purchase, quoted repair, retained Class and alternative Defeat | 5 passed /9.70s; exact command in `var/m3-marriage-handoff.json`, JUnit `var/m3-marriage-focused.xml` |
+| Root affected Gender/Award/role, consultation/owned Heat, single/mixed Tag, uniform/social/regulation checks | 27 passed across five selections; `var/m3-marriage-root-checks.json` references exact JUnit artifacts |
+| Producer Mission/Cycle/Frame/Princess/Doctor normals + actual moderate Observation | 7 passed /9.10s plus1 /2.45s; `var/m3-marriage-producers-handoff.json` |
+| Final runtime-registry normal after metadata | 1 passed /4.94s; `.venv/bin/pytest -q tests/rules/test_intracadre_marriage.py --junitxml=var/m3-marriage-registry-final.xml` |
+| Coherent frozen static commands | `.venv/bin/ruff check <70 paths>`, `.venv/bin/ruff format --check <70 paths>`, `.venv/bin/mypy --follow-imports=silent <69 source paths>`; all pass; exact lists in union artifacts |
+
+Focused evidence includes the actual M3 approval boundary, wrong-owner/no-approval
+purchase denial without state change, correct Waiting/incoming inbox semantics,
+actual purchase and report retries, fresh-key reuse denial, missing mandatory Flow
+proof denial, outsider record/report denial and private saved-history reopening.
+Earlier unsuccessful setup/proof attempts exposed the central advancement event
+kind, native legacy cast and actual ProfileBinding dependencies; the same normal
+was corrected without weakening those guards. Stimulant grants printed7 Heat;
+a new test's incorrect5 expectation was fixed without changing the engine.
+Post-pass native sentence wrapping and a missing existing Defeat projection import
+were statically checked; this is not a claim that every new financial/lifecycle
+combination was played.
+
+Limits: original Girl endings/replacement, changed Handler/roster and overlapping
+Marriage recovery; nonparty/remote/unknown-position witness discovery; separately
+played married Permission-loss Defeat and additional Class/body combinations.
+Current recovery fails closed and retains source/history. Shared Dog representative
+and equal-rank Tag discussion have source/static integration, not a separately
+played married branch claim here. Six delegated interpretations are versioned in
+registry/rulings; independent clarity review remains pending.
+
+Runtime registry check passed (476 entries,189 subsets,287 unimplemented,439 required,0 independently verified). Repository check passed (1,187 publishable files,40 original manifest entries,0 findings).
+
+The whole milestone remains **RULES_SUBSET**. Forty scoped checks across separate
+runs do not constitute a full regression. The failed pre-Marriage full baseline
+and its targeted repairs remain separate evidence. A new full integrated candidate
+regression, global checks, independent source review and human play-testing remain
+required; no focused green checks remove those gates.
+
+
 ## Gender Designation Request whole ordinary workflow — 2026-11-07
 
 Source extends local `08960c7`; feature-scoped19 Python/18 source files are frozen
