@@ -534,6 +534,11 @@ def answer_values(values: dict[str, Any]) -> ChoiceAnswer:
 
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
     decision = await threaded(lambda: game.decision(viewer_from_interaction(interaction), identity))
+    if decision["kind"] in ("dose_up_components", "dose_up_target_low"):
+        from girlframe.discord_adapter.m3_dose_up import open_choice as open_dose_choice
+
+        await open_dose_choice(interaction, game, decision)
+        return
     if decision["kind"] == "reign_group_tag_resolution":
         from girlframe.discord_adapter.m3_reign_terror import open_resolution
         from girlframe.services.m3_reign_terror import ReignTerrorService
@@ -976,6 +981,7 @@ async def open_play(
             "alpha_sex",
             "am_scrutinized",
             "am_just_code",
+            "dose_up",
         )
     )
     if parent and parent["kind"] == "am_code_prepare":
@@ -1860,14 +1866,41 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
             await reply(interaction, str(error))
 
     @campaign.command(
+        name="dose", description="Owned Dose Up cocktail choices and saved drug history"
+    )
+    async def dose_controls(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_dose_up import open_dose_up
+        from girlframe.services.m3_dose_up import DoseUpService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_dose_up(interaction, DoseUpService(game.store, game))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @campaign.command(
         name="order", description="Record a source-authorized direct order in this scene"
+    )
+    @app_commands.choices(
+        purpose=[
+            app_commands.Choice(name="Ordinary order", value="ordinary"),
+            app_commands.Choice(name="Dose Up (typed cocktail order)", value="dose_up"),
+        ]
     )
     async def order(
         interaction: discord.Interaction,
         member: discord.Member,
         instruction: str,
         as_npc: bool = False,
+        purpose: app_commands.Choice[str] | None = None,
     ) -> None:
+        typed_dose = purpose is not None and purpose.value == "dose_up"
+        if as_npc and typed_dose:
+            await reply(
+                interaction,
+                "UNSUPPORTED_RULE: typed Dose Up Orders currently use original native issuers.",
+            )
+            return
         if as_npc:
             from girlframe.discord_adapter.m3_npc_orders import open_order
             from girlframe.services.m3_npc_orders import NpcOrderService
@@ -1888,6 +1921,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
                     interaction.channel_id or 0,
                     member.id,
                     instruction,
+                    dose_up=typed_dose,
                 )["action_id"]
                 + "`."
             ),

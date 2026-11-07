@@ -930,6 +930,22 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_dose_up import DoseUpService
+
+            for dose in DoseUpService(self.store)._tasks(connection, viewer):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, dose),
+                        prefix="dose-up:",
+                        source="dose_up",
+                        counterpart="Actual operator, recipient or source Handler",
+                        effect="Review your real cocktail Tags and source-owned history.",
+                        details="Expiry follows actual participated scene closures.",
+                        primary="Review Dose Up",
+                        task="m3_dose_up",
+                    )
+                )
+
             from girlframe.services.m3_promotional_opportunity import PromotionalOpportunityService
 
             for opportunity in PromotionalOpportunityService(self.store)._tasks(connection, viewer):

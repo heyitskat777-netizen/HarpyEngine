@@ -22,6 +22,7 @@ class RolePunishment(Model):
         "compliance_virus",
         "janus_training",
         "alpha_sex",
+        "dose_up",
         "succubus_npc_disobey",
     ]
     action: str | None = None

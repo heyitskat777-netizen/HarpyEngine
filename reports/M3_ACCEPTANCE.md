@@ -1,5 +1,63 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Dose Up / cocktail Tag lifecycle — 2026-11-07
+
+Feature extends `42e0426`. Coherent12 Python/11 source files pass Ruff, format and
+mypy without source drift (`var/m3-dose-up-union-source-snapshot.json`,
+`var/m3-dose-up-union-static.json`). Four new modules/test plus two real Role
+source files and six shared root ports are included. This is native ordinary
+Dose Up and the source-proved Malleable self-mark facet, not the whole playbook.
+
+`/campaign dose` provides native source choices/history. `/campaign order` gains
+an optional purpose dropdown for a typed cocktail Order; ordinary defaults,
+idempotency payloads and source authority remain. An actual followed self-Dose
+Order may delegate only the roller slots to the original issuer. Another native
+Girl needs real pre-RNG vein Contact/body/cast proof. Original Heat spending,
+known receipt, post-roll Tag window, recovery and chat lock remain authoritative.
+Mid has two chosen components; high adds the actual Handler's third; low has
+Handler one/two. A low recipient actually chooses dosing or a real Punishment
+instead. The latter applies actual effects and required work before parent/chat
+closure, including existing original-offender Marriage allocation.
+
+Six actual drug Tags carry canonical Dose/component/birth, physical giver and
+frozen table provenance. Every generic drug-Tag mark proves that source, and
+self-marking additionally proves the printed Malleable facet. Real repeated-mark
+responses/Identity embrace remain human-owned. Actual recipient-participated
+scene closure records unique history; default two-scene expiry removes only that
+Dose's live Tags and keeps other Tags, acquired Identities and receipts. Pending
+Tag rejection blocks closing; no timer discards owed work. Legacy closed casts
+are recorded from their genuine original scene joins, not current roster guesses.
+
+| Executed focused evidence | Actual result |
+|---|---|
+| Four printed normal outcomes plus existing Alpha low Punishment | 5 passed /8.38s; exact command in `var/m3-dose-up-handoff.json`, JUnit `var/m3-dose-up-final-focused.xml` |
+| Existing ordinary Orders, retained Kicked source, same-controller self-mark denial, actual Role Punishment and scene close/rebuild | 7 passed /6.55s; `var/m3-dose-up-root-compat.xml` |
+| Existing pause/replay, campaign isolation/delivery and default release gates | 3 passed /1.88s; exact command in `var/m3-dose-up-root-evidence.json`, JUnit `var/m3-dose-up-base-gate-compat.xml` |
+| Final runtime-registry normal outcomes | 4 passed /6.45s; `.venv/bin/pytest -q tests/rules/test_dose_up.py --junitxml=var/m3-dose-up-registry-final.xml` |
+| Coherent static | `.venv/bin/ruff check <12 paths>`, `.venv/bin/ruff format --check <12 paths>`, `.venv/bin/mypy --follow-imports=silent <11 source paths>`; all pass, exact scope in union artifacts |
+| Offline Discord SDK command registration | `PYTHONPATH=src .venv/bin/python /tmp/m3_dose_registration_smoke.py`: PASS; Dose command, optional ordinary/Dose Order choices and nine campaign subcommands; no login/network/commands invoked |
+
+Registry validation passed (476 entries,192 subsets,284 unimplemented,439 required,0 independently verified); repository check passed (1,195 publishable files,40 original manifest entries,0 findings). Focused CI now selects current Dose/shared provider and release/privacy/recovery checks; 17 cases collected in1.02s, not a CI execution. Earlier feature assertions/tests remain unchanged in the full suite and Git history. No speed benchmark is claimed.
+
+Normal checks include actual Order ownership, Heat/receipt, native choices,
+self-mark and actual repeated embrace, both real scene closures/private history,
+high other-body three-component effects/retry, low acceptance, and actual low
+Punishment with printed7 Heat/source completion/chat release. Earlier strict
+persisted-JSON model readers and fixture denied-trait expectations were corrected
+without relaxing validation. Root added the precise Contact source admission and
+post-response Role synchronization after the real canonical response row; no
+phantom case or generic waiver was used. Earlier partial failures are debugging
+artifacts, superseded by the final coherent five-node result.
+
+Limits: remaining Disposable Psyche, Sex and Malleable force-embrace/NPC permanence;
+other actual intoxication attribution; external/NPC/Handler/clone/changed-body and
+source-ending adapters. No general pharmacology engine, forced dialogue,
+fabricated player consent or borrowed actor alias. Four interpretations are
+versioned for clarity review. Focused green checks do not replace the final full
+regression, independent rules review or human play-testing. **RULES_SUBSET; bot
+off**. No deployment, environment publication, migration or private-engine write.
+
+
 ## Promotional Opportunity ordinary workflow — 2026-11-07
 
 Feature extends `a3ebf6f`. Coherent19 Python/18 source files pass Ruff, format and

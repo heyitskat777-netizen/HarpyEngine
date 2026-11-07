@@ -83,6 +83,10 @@ class ChoiceEngine:
         from girlframe.services.m3_bomb_collar import prove_tag as prove_collar_tag
 
         prove_collar_tag(self.game, c, state, owner, tag)
+        if tag.id.startswith("dose-up:"):
+            from girlframe.services.m3_dose_up import prove_tag as prove_drug_tag
+
+            prove_drug_tag(self.game, c, state, owner, tag)
         if tag.gm_setter_appointment is not None or tag.gm_setter_event is not None:
             from girlframe.engine.m3_actor_bonds import current_ref
             from girlframe.services.m3_tag_setters import ooc_setter
@@ -167,6 +171,14 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         sheet = state.sheets.get(str(owner))
         body = json.loads(request["body_json"])
+        if kind in ("dose_up_components", "dose_up_target_low"):
+            from girlframe.services.m3_dose_up import apply_choice as apply_dose_choice
+
+            require(
+                apply_dose_choice(self.game, c, state, action, request, answer),
+                "Recover the original Dose Up choice",
+            )
+            return
         if kind in ("gender_partner_tag_resolution", "gender_animal_tag"):
             from girlframe.services.m3_gender_designation import apply_choice
 
@@ -843,6 +855,7 @@ class ChoiceEngine:
         answer: ChoiceAnswer,
     ) -> None:
         from girlframe.services import m3_tag_markers as markers
+        from girlframe.services.m3_dose_up import self_tag as drug_self_tag
         from girlframe.services.m3_kicked_puppy import self_tag as kicked_self_tag
 
         actor = int(action["actor_id"])
@@ -904,7 +917,8 @@ class ChoiceEngine:
                     and action["data"]["play"] == "flirt"
                 )
                 or kicked_self_tag(self.game, c, state, action, owner, tag)
-                or ritual_self_tag(self.game, c, state, action, owner, tag),
+                or ritual_self_tag(self.game, c, state, action, owner, tag)
+                or drug_self_tag(self.game, c, state, action, owner, tag),
                 "Only another player or a printed self-mark exception can mark this Girl Tag.",
             )
             require(
@@ -1115,6 +1129,11 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         play = action["data"]["play"]
         level = action["data"]["result"]["tier"]
+        if action["data"].get("dose_up"):
+            from girlframe.services.m3_dose_up import results as results_dose
+
+            results_dose(self.game, c, state, action)
+            return
         if action["data"].get("am_code"):
             from girlframe.services.m3_am_code import results as results_code
 

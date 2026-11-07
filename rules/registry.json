@@ -5930,6 +5930,70 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "dose-distinct-effective-components",
+      "policy_key": "dose_distinct_effective_components",
+      "summary": "The two selected components are distinct, and the high-result Handler choice adds a distinct third component. Each creates a real source-owned cocktail Tag.",
+      "source": "Rulebook PDF38/printed36 Dose Up; PDF39/printed37 Malleable self-mark facet",
+      "rationale": "Printed two plus one is a real additional component, not a duplicate that gives fewer effective Tags.",
+      "alternatives": [
+        "Permit a repeated component to substitute for the extra high-result component."
+      ],
+      "implementation_note": "Retain the original chooser and actual native selection/source. No invented pharmacology bonus or automatic dialogue/honesty effect.",
+      "change_impact": "Version future changes explicitly; keep existing source people, original rolls, human choices, effects and historical expiry.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "dose-typed-order-chooser",
+      "policy_key": "dose_typed_order_chooser",
+      "summary": "An actual followed typed self-Dose Order lets its real issuer choose the roller's component slots. Explicit high/low Handler allocations retain their named owner.",
+      "source": "Rulebook PDF38/printed36 Dose Up; PDF39/printed37 Malleable self-mark facet",
+      "rationale": "The printed Order note changes who selects the ordered dose without silently displacing the separately named Handler choice.",
+      "alternatives": [
+        "Let the issuer override every choice, including the explicit Handler slots."
+      ],
+      "implementation_note": "Require actual original Order/body/cast/authority and a once-used Order source. Ordinary Orders keep their prior payload/behavior; free text is never parsed into this authority.",
+      "change_impact": "Version future changes explicitly; keep existing source people, original rolls, human choices, effects and historical expiry.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "dose-participated-scenes-lifetime",
+      "policy_key": "dose_participated_scenes_lifetime",
+      "summary": "Default cocktail lifetime is two real recipient-participated scene closures, including the dosing scene. Freeze duration one/two and lifetime version in each original Dose.",
+      "source": "Rulebook PDF38/printed36 Dose Up; PDF39/printed37 Malleable self-mark facet",
+      "rationale": "Printed scene or two leaves a duration interpretation. Actual closed scenes, original recipient roles and unique closure receipts provide a finite clock without elapsed-time shortcuts.",
+      "alternatives": [
+        "Use one scene for future configured doses, or count arbitrary real-time/other-channel closures."
+      ],
+      "implementation_note": "Future duration changes need explicit versioning; never retroactively change existing clocks. Remove only that Dose's live Tags; preserve acquired Identities, unrelated Tags, receipts and owed work. Pending drug-Tag rejection prevents scene closure.",
+      "change_impact": "Version future changes explicitly; keep existing source people, original rolls, human choices, effects and historical expiry.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "dose-physical-setter-and-frozen-table",
+      "policy_key": "dose_physical_setter_and_frozen_table",
+      "summary": "The actual dosing operator is the cocktail Tag setter. The frozen original Play table observes these mechanical Tags; selecting ingredients does not make the issuer or Handler the physical operator.",
+      "source": "Rulebook PDF38/printed36 Dose Up; PDF39/printed37 Malleable self-mark facet",
+      "rationale": "Preserve actual administration and existing Tag-production observation scope rather than create another body or controller alias.",
+      "alternatives": [
+        "Make the component chooser the setter, or expose Tags and private source records to the current whole server."
+      ],
+      "implementation_note": "Prove canonical DrugTag birth for every mark, plus the printed Malleable source for self-marking. Preserve exact giver/body and mutable mark/scene history. Table participation grants no fabricated in-character speech, voluntary action or OOC consent.",
+      "change_impact": "Version future changes explicitly; keep existing source people, original rolls, human choices, effects and historical expiry.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -7668,14 +7732,16 @@
         "heading": "Dose Up"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_dose_up.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -7691,14 +7757,16 @@
         "heading": "Malleable Me, Malleable You"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_dose_up.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

@@ -1078,6 +1078,7 @@ class GameService:
             doctor = None
             alpha = None
             alpha_sex = None
+            dose_up = None
             am_scrutinized = None
             am_code = None
             alpha_sex_counter_scope = None
@@ -1133,6 +1134,7 @@ class GameService:
                 and prepared.play
                 not in (
                     "alpha_sex",
+                    "dose_up",
                     "am_scrutinized",
                     "am_just_code",
                 )
@@ -1176,6 +1178,10 @@ class GameService:
                 from girlframe.services.m3_am_scrutinized import prepare as prepare_am
 
                 am_scrutinized = prepare_am(self, c, viewer, state, prepared, channel)
+            if prepared.play == "dose_up":
+                from girlframe.services.m3_dose_up import prepare as prepare_dose
+
+                dose_up = prepare_dose(self, c, viewer, state, prepared, channel)
             if prepared.play == "alpha_sex":
                 from girlframe.services.m3_alpha_sex import prepare as prepare_alpha_sex
 
@@ -1682,6 +1688,7 @@ class GameService:
                     janus,
                     alpha,
                     alpha_sex,
+                    dose_up,
                     am_scrutinized,
                     am_code,
                     doctor,
@@ -1935,6 +1942,22 @@ class GameService:
                     cast=alpha_sex["cast"],
                     cast_sha256=alpha_sex["cast_sha256"],
                 )
+            if dose_up is not None:
+                from girlframe.engine.m3_actor_state import SceneCast as DoseCast
+                from girlframe.engine.m3_actors import fingerprint as dose_fingerprint
+
+                data["dose_up"] = dose_up
+                data["participants"] = list(dose_up["table"])
+                data["tag_context"] = dict(
+                    actor=dose_up["actor"],
+                    handler=dose_up["handler"],
+                    gm_controller=dose_up["handler_controller"],
+                    table=list(dose_up["table"]),
+                    cast=dose_up["cast"],
+                    cast_sha256=dose_fingerprint(
+                        DoseCast.model_validate_json(json.dumps(dose_up["cast"]))
+                    ),
+                )
             if alpha_sex_counter_scope is not None:
                 data["alpha_sex_counter_source"] = sex_counter
                 data["participants"] = list(alpha_sex_counter_scope["table"])
@@ -2139,6 +2162,7 @@ class GameService:
                 or doctor is not None
                 or alpha is not None
                 or alpha_sex is not None
+                or dose_up is not None
                 or am_scrutinized is not None
                 or am_code is not None
                 or npc_order_scope is not None
@@ -2153,6 +2177,7 @@ class GameService:
                 if (
                     void_keep is not None
                     or alpha_sex is not None
+                    or dose_up is not None
                     or am_scrutinized is not None
                     or am_code is not None
                     or appearance_reset
@@ -2438,6 +2463,10 @@ class GameService:
 
                 enforcement_pre_roll(self, c, viewer, state, action)
                 action["data"]["enforcement"]["roll_event"] = str(uuid4())
+            if action["data"].get("dose_up"):
+                from girlframe.services.m3_dose_up import pre_roll as dose_pre_roll
+
+                dose_pre_roll(self, c, viewer, state, action)
             if action["data"].get("battle"):
                 from girlframe.services.m3_battle import pre_roll as battle_pre_roll
 
@@ -2600,6 +2629,7 @@ class GameService:
                 or action["data"].get("janus")
                 or action["data"].get("alpha")
                 or action["data"].get("alpha_sex")
+                or action["data"].get("dose_up")
                 or action["data"].get("am_scrutinized")
                 or action["data"].get("am_code")
                 or action["data"].get("npc_order")
@@ -2637,6 +2667,10 @@ class GameService:
                     else "Battery Tags",
                 )
             elif refusal_modifiers:
+                receipt.update(
+                    pre_modifiers=pre_modifiers, base_modifier=prepared.heat, modifier_source="Heat"
+                )
+            if action["data"].get("dose_up"):
                 receipt.update(
                     pre_modifiers=pre_modifiers, base_modifier=prepared.heat, modifier_source="Heat"
                 )
@@ -2704,6 +2738,7 @@ class GameService:
                 or action["data"].get("janus")
                 or action["data"].get("alpha")
                 or action["data"].get("alpha_sex")
+                or action["data"].get("dose_up")
                 or action["data"].get("am_scrutinized")
                 or action["data"].get("am_code")
                 or action["data"].get("npc_order")
@@ -3088,6 +3123,7 @@ class GameService:
                 or action["data"].get("janus")
                 or action["data"].get("alpha")
                 or action["data"].get("alpha_sex")
+                or action["data"].get("dose_up")
                 or action["data"].get("am_scrutinized")
                 or action["data"].get("am_code")
                 or action["data"].get("npc_order")
@@ -3221,6 +3257,12 @@ class GameService:
                 from girlframe.services.m3_am_scrutinized import synchronize as synchronize_am
 
                 synchronize_am(self, c, action, event)
+            if action["data"].get("dose_up"):
+                from girlframe.services.m3_role_punishments import (
+                    synchronize as synchronize_dose_role,
+                )
+
+                synchronize_dose_role(self, c, action, event)
             if action["data"].get("alpha_sex"):
                 from girlframe.services.m3_alpha_sex import synchronize as synchronize_alpha_sex
 
@@ -3264,7 +3306,14 @@ class GameService:
             raise WorkflowError(str(error)) from None
 
     def issue_order(
-        self, viewer: GuildViewer, key: str, channel: int, target: int, text: str
+        self,
+        viewer: GuildViewer,
+        key: str,
+        channel: int,
+        target: int,
+        text: str,
+        *,
+        dose_up: bool = False,
     ) -> dict[str, Any]:
         if not text.strip() or len(text) > 1200:
             raise WorkflowError("Provide a direct order in 1–1200 characters.")
@@ -3309,6 +3358,17 @@ class GameService:
             if lock and lock["state"] != "released":
                 raise WorkflowError("SCENE_BUSY: resolve the current action first.")
             identity, order_id = str(uuid4()), str(uuid4())
+            dose_order = None
+            order_event = None
+            if dose_up:
+                from girlframe.services.m3_dose_up import _access as dose_access
+                from girlframe.services.m3_dose_up import stage_order
+
+                dose_access(self, c, viewer)
+                order_event = str(uuid4())
+                dose_order = stage_order(
+                    self, c, state, viewer.user_id, target, order_id, channel, order_event
+                )
             c.execute(
                 t.m2["m2_orders"]
                 .insert()
@@ -3323,6 +3383,7 @@ class GameService:
                         | ({"am_secret": am_secret} if am_secret else {})
                         | ({"succubus": authority} if authority else {})
                         | ({"gender_designation": gender_authority} if gender_authority else {})
+                        | ({"dose_up": dose_order} if dose_order else {})
                     ),
                     state="awaiting_response",
                 )
@@ -3385,7 +3446,15 @@ class GameService:
                         campaign_id=self.store.campaign_id, channel_id=str(channel), **values
                     )
                 )
-            self.event(c, viewer.user_id, key, "m2.order_issued", action_id=identity)
+            self.event(
+                c,
+                viewer.user_id,
+                key,
+                "m2.order_issued",
+                state if dose_order else None,
+                event_id=order_event,
+                action_id=identity,
+            )
             return {"action_id": identity, "order_id": order_id}
 
         try:
@@ -3393,7 +3462,8 @@ class GameService:
                 viewer,
                 key,
                 "m2.order_issued",
-                {"channel": channel, "target": target, "text": text},
+                {"channel": channel, "target": target, "text": text}
+                | ({"dose_up": True} if dose_up else {}),
                 operation,
                 auto_audit=False,
                 authorize=lambda c: self.authorize(c, viewer),
@@ -3875,8 +3945,20 @@ class GameService:
                     else x
                     for x in state.scene_casts
                 ]
+            close_event = str(uuid4())
+            drugs_changed = False
+            if any(x.get("kind") == "dose_up_result" for x in state.facts):
+                from girlframe.services.m3_dose_up import expire_scene
+
+                drugs_changed = expire_scene(self, c, state, scene, close_event)
             self.event(
-                c, viewer.user_id, key, "m2.scene_closed", state if cast else None, channel=channel
+                c,
+                viewer.user_id,
+                key,
+                "m2.scene_closed",
+                state if cast or drugs_changed else None,
+                channel=channel,
+                event_id=close_event,
             )
             return {"channel": channel, "closed": True}
 
@@ -3943,6 +4025,22 @@ class GameService:
 
                 return SpriteService(self.store).decision(viewer, choice_id)
             action = self.action(c, row["action_id"])
+            if row["kind"] in ("dose_up_components", "dose_up_target_low"):
+                from girlframe.services.m3_dose_up import choice_projection as dose_projection
+
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    actor=int(action["actor_id"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    play=action["data"]["play"],
+                    result={
+                        k: v for k, v in action["data"]["result"].items() if k in ("tier", "total")
+                    },
+                    detail=dose_projection(
+                        self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                    ),
+                )
             if row["kind"] in ("gender_partner_tag_resolution", "gender_animal_tag"):
                 from girlframe.services.m3_gender_designation import choice_projection
 
@@ -4248,6 +4346,7 @@ class GameService:
             ):
                 from girlframe.engine.m3_girl_runtime_state import has_rule as kicked_has_rule
                 from girlframe.engine.m3_girl_runtime_state import mentor_tag as kicked_mentor_tag
+                from girlframe.services.m3_dose_up import self_tag as drug_self_tag
                 from girlframe.services.m3_kicked_puppy import self_tag as kicked_self_tag
 
                 tags = [
@@ -4256,6 +4355,7 @@ class GameService:
                     + uniform_tags(state, actor.owner)
                     + collar_tags(state, actor.owner)
                     if kicked_self_tag(self, c, state, action, viewer.user_id, x)
+                    or drug_self_tag(self, c, state, action, viewer.user_id, x)
                     or kicked_mentor_tag(actor, x, state)
                     or kicked_has_rule(actor, "girl.princess.objectively-beautiful", "PRINCESS")
                 ]
