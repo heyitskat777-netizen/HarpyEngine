@@ -1,6 +1,6 @@
 # Current M3 queue
 
-Updated 2026-11-07. Integration checkpoint: `1a259ec`; gameplay source: `e223c1a`;
+Updated 2026-11-07. Integration checkpoint: `6d80d82`; gameplay source: `6d80d82`;
 efficiency checkpoint: `91f69a1`, local branch
 `codex/integrated-repairs-20261107`. **RULES_SUBSET; bot off.** No deployment,
 environment publication, recovered-engine writes, AI/M4 or Ancillary activation.
@@ -20,8 +20,8 @@ regression or speed benchmark.
 | A-Bomb ordinary source workflow | Nightmare agent + root / committed within stated scope | Genuine acquisition/device, actual blast/damage, Budget operations and real ejection/Mission/Off-Duty producers | Preserve source/body gaps; follow the untested interaction row below | `e223c1a`: 2 normals /9.01s, 8 compatibility /27.49s; static coverage of 28 Python files and types for 27 source modules |
 | A-Bomb conditional world interactions | Nightmare agent + root / verified and committed | Actual Armoured Ship-Base and original quarantine boundary/protection producers | Closed ordinary interaction gap; retain conditional body/source and separate Doctor gaps | `1f8806a`: 2 new normals /5.85s; changed test Ruff/format pass; production and original test/helper prefix unchanged |
 | Integration regression baseline | Root / full run complete; reported failures repaired | Frozen `eb7eec5`, then two minimal source fixes | Resume bounded gameplay; preserve failed-full and green-focused evidence separately | Full2562 passed/3 failed; all3 failed nodes +4 compatibility checks pass focused; source `1a259ec`; no full rerun after repairs |
-| Gender Designation Request | Nightmare agent + root / frozen source contract, releasing implementation | Genuine acquisition; native Sex/partner Tags, relative Orders, spoken-No and actual Punishment consumers | Implement all3 printed categories with real native source effects, preserving natural Status and personal profiles | Source-only421-word contract; no gameplay acceptance yet |
-| Intracadre Marriage | AM source contracts / implementation held | Shared Status plus seven grant paths, more than twenty direct charge/loss paths and allocated Punishment sources | Release exact producer ownership and complete one ordinary declared-pair flow after current shared-port assignment | Frozen 346-word source contract +353-word producer addendum; no source edits or tests |
+| Gender Designation Request | Nightmare agent + root / committed within scope | Genuine acquisition; native Sex/partner Tags, relative Orders, spoken-No and actual Punishment | `6d80d82`; retain explicit other-source/body gaps | All3 categories normal + affected compatibility: 6 passed /12.35s; static19Python/18source; independent/player review pending |
+| Intracadre Marriage | AM + Nightmare + root / active implementation | Shared Status, source grants and payments, original-offender allocated Punishment | Finish declaration → real grant → exact partner-approved real purchase → witnessed outsider Flirt → actual allocated Punishment and saved private reopen | Root compatibility7 passed /13.68s; whole Marriage normal still pending; exact owned manifests under ignored `var/` |
 | Remaining required core systems | Root + bounded assignments / open | Existing source inventory and actual consumers | Select the next whole dependency-ready gameplay workflow; keep unsupported branches visible | [Registry](../rules/registry.json), [remaining scope](M3_REMAINING_WORK.md), [acceptance](acceptance/m3_rules.json) |
 | Final integrated candidate | Root / blocked by required gameplay | Frozen full core candidate and complete ordinary workflows | Run final full regression and global static/migration/privacy/contract checks | Pending; focused/segmented results do not substitute |
 | Independent and human acceptance | Independent reviewer + owner/players / pending | Review-ready candidate and stated test checklist | Independent source/clarity review, Discord play-testing and owner milestone review | Not run; no inferred certification or release approval |
@@ -36,7 +36,7 @@ Recent completed implementation within stated scope:
 - `1f8806a`: actual Armoured blast interception then unarmoured destruction;
   original quarantine breach before protected-site destruction, actual NPC death
   and relief/protection cleanup. Two new normals pass /5.85s; no production change.
-  Development stops at the [pre-Marriage regression boundary](M3_PRE_MARRIAGE_REGRESSION.md).
+  The owner subsequently authorized the documented baseline and continued gameplay; see [baseline evidence](M3_PRE_MARRIAGE_REGRESSION.md).
 
 - `e223c1a`: actual A-Bomb device/custody, distinct release/impact, blast deaths,
   owned damage/Core exposure, safe/unsafe ejection, source-specific Budget Mission

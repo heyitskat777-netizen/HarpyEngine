@@ -21,7 +21,7 @@
     },
     {
       "id": "M3-002",
-      "title": "Go Off-Duty Status modifiers and 7− scene",
+      "title": "Go Off-Duty Status modifiers and 7\u2212 scene",
       "expected": "Dog/Wing/Ace and on-screen harsh scene.",
       "status": "IN_PROGRESS",
       "planned_tests": [
@@ -994,7 +994,7 @@
           "actual_result": "Final normal1 passed3.935s; unchanged canonical primitive3 retained from focused4/4.07s; final6Python5source static plus changed2/1 delta passed; old scoped noticeprivacy1/1.30s passed.",
           "log_or_trace": "var/m3-npc-bond-play-handoff.json; var/m3-npc-bond-final-source-snapshot.json; var/m3-npc-bond-final-static.json",
           "git_commit": "907b16689334d89eacdcdfe4f3e47c86d3853296",
-          "limitation": "Existing nonmechanical Conversation subset only; mechanical/other job and changed-controller/body adapters remain. Service Intense2→1 not separately tested; unchanged reducer reused. No full regression, independent review or human acceptance."
+          "limitation": "Existing nonmechanical Conversation subset only; mechanical/other job and changed-controller/body adapters remain. Service Intense2\u21921 not separately tested; unchanged reducer reused. No full regression, independent review or human acceptance."
         }
       ]
     },
@@ -1032,6 +1032,32 @@
           "log_or_trace": "var/m3-a-bomb-world-interactions-evidence.json; var/m3-a-bomb-world-interactions-source-snapshot.json; var/m3-world-interactions-ci-collection.json",
           "git_commit": "1f8806ab165f9bc126c01f55d4772eceeb054032",
           "limitation": "Only these two added normal cases were executed; no full suite/global static/source mypy rerun. Nuclear Doctor not separately exercised; conditional body/source adapters and independent/player gates remain. Prior e223c1a evidence limitations remain historical."
+        }
+      ]
+    },
+    {
+      "id": "M3C-GENDER-DESIGNATION-NORMAL-001",
+      "title": "Original legal designation, native partner Tags, relative Orders and spoken No",
+      "expected": "Genuine award and original Handler legal assignment; three categories retain natural Status and human source ownership; actual native Sex Tag effect and real Punishment close with saved private history.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_gender_designation.py"
+      ],
+      "related_cases": [
+        "M3-ADD-001",
+        "M3-ADD-006"
+      ],
+      "evidence": [
+        {
+          "test_name": "test_actual_three_legal_categories_orders_partner_tag_sex_reassignment_and_punishment",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_gender_designation.py tests/rules/test_handler_advancements.py tests/rules/test_alpha_sex.py::test_mid_actual_native_source_bond_broken_and_smell_without_movement tests/rules/test_mockingbird_sex_closure.py::test_native_high_owned_asset_choice_and_patient_rewrite_preserve_one_receipt --junitxml=var/m3-gender-focused.xml",
+          "actual_result": "6 passed /12.35s; coherent Ruff/format19Python and mypy18source passed.",
+          "log_or_trace": "var/m3-gender-focused.xml; var/m3-gender-final-source-snapshot.json; var/m3-gender-final-static.json",
+          "git_commit": "6d80d82e6e9638861f2cc3fabcc47674aaea01d7",
+          "limitation": "Ordinary native Alpha/Mockingbird sources; other Sex/body providers, paired partner conversion and separate Gender Alpha low/high evidence remain explicit gaps. Focused evidence, not full regression or independent/human approval."
         }
       ]
     }
