@@ -1058,10 +1058,30 @@
   "integration_regression": {
     "phase": "pre_marriage_baseline",
     "required": true,
-    "status": "NOT_RUN",
-    "source_commit": "1f8806ab165f9bc126c01f55d4772eceeb054032",
+    "status": "FULL_RUN_FAILED_TARGETED_REPAIRS_PASS",
+    "source_commit": "eb7eec52c818b032299e9dc29e352f774e721e77",
+    "repair_commit": "1a259ec1ff1d5e7745480275f641cf83332a5f3e",
     "plan": "docs/M3_PRE_MARRIAGE_REGRESSION.md",
-    "reason": "Establish one coherent integration baseline before shared Status, pre-receipt financial chooser/wallet and allocated Punishment producer migration. Current focused/segmented evidence is not a current full regression.",
-    "milestone_completion": false
+    "full_result": "2562 passed,3 failed,0 errors/skips in1781.24s;2565 cases",
+    "full_artifact": "var/m3-pre-marriage-regression.xml",
+    "static": "Global Ruff/format1092Python and mypy643source PASS on baseline; each changed source file Ruff/format/mypy PASS after repair",
+    "auxiliary": "CLI help/health isolatedDB, registry, original planning and repository checks PASS",
+    "focused_repairs": [
+      {
+        "artifact": "var/m3-external-heat-regression-repair.xml",
+        "result": "3 passed5.05s, includes2 failures+genuineReign"
+      },
+      {
+        "artifact": "var/m3-am-backup-regression-normal.xml",
+        "result": "1 passed3.46s, failed nativeBackup"
+      },
+      {
+        "artifact": "var/m3-am-backup-regression-compat.xml",
+        "result": "3 passed7.47s, real high/low backups+bound operator"
+      }
+    ],
+    "full_rerun_after_repairs": "NOT_RUN",
+    "milestone_completion": false,
+    "reason": "All baseline failures isolated and pass targeted repairs. Continue authorized M3 gameplay; do not call failed full artifact green. Final candidate integrated regression remains required."
   }
 }
