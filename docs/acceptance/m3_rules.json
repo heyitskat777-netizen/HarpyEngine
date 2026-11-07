@@ -1060,6 +1060,33 @@
           "limitation": "Ordinary native Alpha/Mockingbird sources; other Sex/body providers, paired partner conversion and separate Gender Alpha low/high evidence remain explicit gaps. Focused evidence, not full regression or independent/human approval."
         }
       ]
+    },
+    {
+      "id": "M3C-MARRIAGE-NORMAL-001",
+      "title": "Original Marriage shared Status, exact finances and allocated actual discipline",
+      "expected": "Actual native declaration deepens Bond, shares group rank and conserves source grants/payments; recipient-owned real purchase needs exact financial approval; completed outsider Flirt requires explicit witnessed discovery and actual assigned-body Punishment/private history.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_intracadre_marriage.py"
+      ],
+      "related_cases": [
+        "M3-ADD-001",
+        "M3-ADD-006",
+        "M3-ADD-007"
+      ],
+      "evidence": [
+        {
+          "test_name": "test_actual_marriage_shared_grant_approved_other_body_purchase_caught_flirt_and_punishment",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_intracadre_marriage.py --junitxml=var/m3-marriage-registry-final.xml",
+          "actual_result": "Whole normal+4 existing consumers5 passed/9.70s; root27 and producer8 separate affected checks passed; final registry normal1/4.94s. Coherent Ruff/format70Python,mypy69source passed without drift. Registry and repository0findings pass.",
+          "log_or_trace": "var/m3-marriage-handoff.json; var/m3-marriage-focused.xml; var/m3-marriage-registry-final.xml; var/m3-marriage-union-source-snapshot.json; var/m3-marriage-union-static.json",
+          "git_commit": "fa0c9935ed6408a52b845ddf61c1328d56273813",
+          "limitation": "Ending/replacement/Handler-roster recovery; nonparty/remote/unknown-position witness; separately played married Permission-loss Defeat/sharedDog/tiedTag branches and further body/Class combinations remain visible gaps. No full regression, independent source review, human acceptance or deployment claim. Six interpretations require clarity review."
+        }
+      ]
     }
   ],
   "enabled_modules": [
