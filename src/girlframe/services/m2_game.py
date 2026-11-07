@@ -1065,6 +1065,11 @@ class GameService:
             npc_order_scope = None
             void_keep = None
             dormant_dive_source = None
+            from girlframe.services.m3_bomb_collar import (
+                prepare_survival as prepare_collar_survival,
+            )
+
+            bomb_collar_source = prepare_collar_survival(self, c, state, viewer, prepared, channel)
             from girlframe.services.m3_gorgon_play import (
                 prepare_response as prepare_gorgon_response,
             )
@@ -1082,11 +1087,19 @@ class GameService:
                 from girlframe.services.m3_defeat import prepare as prepare_defeat
 
                 defeat = prepare_defeat(self, c, viewer, prepared, state)
-            elif prepared.play == "keep_your_head" and prepared.source_work is not None:
+            elif (
+                prepared.play == "keep_your_head"
+                and prepared.source_work is not None
+                and bomb_collar_source is None
+            ):
                 from girlframe.services.m3_void_keep import prepare_keep
 
                 void_keep, state = prepare_keep(self, c, viewer, prepared, state, channel)
-            elif prepared.play == "dive_deep" and prepared.source_work is not None:
+            elif (
+                prepared.play == "dive_deep"
+                and prepared.source_work is not None
+                and bomb_collar_source is None
+            ):
                 from girlframe.services.m3_battle_dormant import prepare_dive_source
 
                 dormant_dive_source = prepare_dive_source(self, c, viewer, prepared, state, channel)
@@ -1094,10 +1107,15 @@ class GameService:
                 from girlframe.services.m3_mockingbird_plays import prepare as prepare_mockingbird
 
                 mockingbird = prepare_mockingbird(self, c, viewer, prepared, state, channel=channel)
-            elif prepared.source_work is not None and prepared.play not in (
-                "alpha_sex",
-                "am_scrutinized",
-                "am_just_code",
+            elif (
+                prepared.source_work is not None
+                and bomb_collar_source is None
+                and prepared.play
+                not in (
+                    "alpha_sex",
+                    "am_scrutinized",
+                    "am_just_code",
+                )
             ):
                 raise WorkflowError("A source work reference belongs to its actual mandatory Play.")
             if prepared.play in ("all_out_assault", "go_for_the_core"):
@@ -1236,7 +1254,14 @@ class GameService:
                     c,
                     viewer.user_id,
                     scene_id=self.scene(c, channel)["id"],
-                    excluding=frozenset({virus_order_work}) if virus_order_work else frozenset(),
+                    excluding=frozenset(
+                        x
+                        for x in (
+                            virus_order_work,
+                            bomb_collar_source["work"] if bomb_collar_source else None,
+                        )
+                        if x
+                    ),
                 )
                 and defeat is None
                 and void_keep is None
@@ -1735,6 +1760,8 @@ class GameService:
                 )
 
                 data["enforcer_keep"] = prepare_pavlov(self, c, state, acting_ref, prepared)
+            if bomb_collar_source is not None:
+                data["bomb_collar_source"] = bomb_collar_source
             if dormant_dive_source is not None:
                 data["dormant_dive_source"] = dormant_dive_source
             if m3 is not None:
@@ -3095,6 +3122,12 @@ class GameService:
                 from girlframe.services.m3_battle_dormant import complete_dive
 
                 complete_dive(self, c, current_action, event, viewer, key)
+            if current_action["state"] == "complete" and current_action["data"].get(
+                "bomb_collar_source"
+            ):
+                from girlframe.services.m3_bomb_collar import complete_action as complete_collar
+
+                complete_collar(self, c, current_action, event, key)
             c.execute(
                 t.m2["m2_responses"]
                 .insert()
@@ -4058,11 +4091,14 @@ class GameService:
             own = state.sheets.get(str(viewer.user_id))
             # Return only selectable entities needed by this decision, never another private sheet.
             body = json.loads(row["body_json"])
+            from girlframe.services.m3_bomb_collar import tags as collar_tags
             from girlframe.services.m3_cute_uniforms import tags as uniform_tags
 
             tags = [
                 x.model_dump(mode="json")
-                for x in actor.tags + uniform_tags(state, actor.owner)
+                for x in actor.tags
+                + uniform_tags(state, actor.owner)
+                + collar_tags(state, actor.owner)
                 if viewer.user_id in x.observers or viewer.user_id == actor.owner
             ]
             if (
@@ -4076,7 +4112,9 @@ class GameService:
 
                 tags = [
                     x.model_dump(mode="json")
-                    for x in actor.tags + uniform_tags(state, actor.owner)
+                    for x in actor.tags
+                    + uniform_tags(state, actor.owner)
+                    + collar_tags(state, actor.owner)
                     if kicked_self_tag(self, c, state, action, viewer.user_id, x)
                     or kicked_mentor_tag(actor, x, state)
                     or kicked_has_rule(actor, "girl.princess.objectively-beautiful", "PRINCESS")

@@ -133,6 +133,10 @@ class HandlerAdvancementService:
                     )
 
                     receipts = spike_acquisitions(spent)
+                elif value.acquired_rule == "handler-advancement.handler-advancement.bomb-collar":
+                    from girlframe.engine.m3_bomb_collar import acquisitions as collar_acquisitions
+
+                    receipts = collar_acquisitions(spent)
                 elif value.acquired_rule == "handler-advancement.handler-advancement.secretary":
                     from girlframe.engine.m3_secretary import acquisitions as secretary_acquisitions
 

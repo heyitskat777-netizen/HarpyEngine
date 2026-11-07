@@ -3366,3 +3366,14 @@ and adjustment impact are recorded in `rules/registry.json`.
   omniscience or automatic mission success. Blanket control/rank and postdice
   interruption alternatives are rejected. Delegated clarity review remains
   pending; future changes must preserve actual events and human decisions.
+
+
+- `bomb_collar_genuine_survival_and_spent_hardware` (PDF154/152,21/19,24/22):
+  complete the genuine Dive and all consequences without an invented tier gate,
+  or use actual Keep traits and the Handler’s normal sufficiency ruling. Lethal
+  insufficiency follows actual death/prevention rules. Collar Tags never embrace,
+  reject, convert or disappear through ordinary Tag effects. Detonated hardware
+  becomes unavailable without losing the permanent original acquisition; actual
+  replacement/rearming remains a source-adapter gap. Generic survival assertions,
+  automatic damage and silent hardware restoration are rejected. This delegated
+  interpretation needs printed clarity review and preserves known source history.

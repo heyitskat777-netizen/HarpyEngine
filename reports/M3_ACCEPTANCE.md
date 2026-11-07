@@ -1,5 +1,17 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Bomb Collar integration after regression repairs — 2026-11-07
+
+Reconciled the preserved workflow onto repair commit
+`1df864426b3d77facc9d77c038cdd44a99df2fc9`. Of its thirteen Python files, only
+the Dive service differs from the original frozen feature: the reviewed Director
+privacy projection was added without altering Bomb source dispatch. The fresh
+**219-test** integration run includes both Bomb flows and three prior-award cases;
+all pass. Its coherent **37-Python Ruff/format and 22-source mypy** scope also
+covers every Bomb/shared file. Reused this passing evidence without another run.
+RULES_SUBSET and the documented body/rearming/other-survival gates remain open.
+No bot restart, live mutation, push or environment publication.
+
 ## Local integration of verified repair package — 2026-11-07
 
 Local branch `codex/integrated-repairs-20261107`, based on
@@ -39,6 +51,46 @@ beyond-Intense world-Heat printed-rule clarity, unfinished gameplay, independent
 rules review, human play-testing and release approval remain open. No new ruling,
 push, merge, deployment, bot restart, environment publication, private import,
 AI/M4 work or Ancillary activation. The bot stays off.
+
+## Bomb Collar actual Tag and survival workflows — 2026-11-06 UTC
+
+Source extends `409670549db925e3a3740fc29ee79ae514c08ec1`; sanitized bytes are
+frozen in ignored `var/m3-bomb-collar-freeze/manifest.json`. M3 remains
+**RULES_SUBSET**; final regression and independent/player review remain pending.
+
+A genuine held advancement supplies collars to all current supported native
+Cadre bodies, with no bought weapon Asset, extra fee or dressing-confirmation
+veto. Unsupported current-body acquisition fails closed atomically. Body-bound
+collars participate in actual Tag selection/marking, once per scene; repeated
+marks never offer embrace, rejection, Paired conversion or ordinary Tag removal.
+Original Handler triggering creates real immediate survival work owned by the
+actual Girl, blocking unrelated continuation while permitting its legal response.
+
+The normal finishes actual Dive with a real Void-Asset effect and resolves its
+survival work only after canonical completion. Other actual Keep attempts use
+ordinary traits and Handler sufficiency: one survives; an insufficient detonation
+escape causes genuine original death/archive and body/Status removal, followed
+by private Inbox History. Trusted death/prevention interfaces remain in use;
+no automatic shot, Helplessness, invented Dive tier or generic survival assertion.
+Detonated hardware becomes unavailable; permanent acquisition history remains.
+Replacement/rearming and other survival/body adapters remain explicit gaps.
+
+Normal flows **2 passed / 8.14s**, command
+`.venv/bin/pytest -q tests/rules/test_bomb_collar.py -x`; planned prior-award
+compatibility **3 passed / 8.23s**. Coherent **13 changed Python files** pass
+Ruff/format; **12 source modules** pass mypy, including all shared Game/Choice/Dive
+and native/Inbox hooks. Exact source hashes/evidence are in ignored
+`var/m3-bomb-collar-handoff.json`. No TagMarkers/AM file changes, broad matrix,
+full regression or repeated installation.
+
+Metadata: **178 subsets / 298 unimplemented / 320 adjustable clarifications**,
+476 total,439 required core,37 deferred Ancillary,zero independent approvals.
+Counts are inventory, not a completion percentage. External/AM/generation body
+transitions, replacement collars, other survival traits and unported transfer or
+removal paths remain required. Jailbroken occupancy, remaining advancements and
+broader source/playbook/Strain/world/shared/lifecycle work still block M3.
+Bot stays off; no deployment, migration, environment publication, recovered-engine
+write, AI/M4 or Ancillary activation.
 
 ## Integrated regression repair candidate — 2026-11-07 UTC
 

@@ -1,3 +1,8 @@
+# Actual collars/Tag marks -> completed Dive or real Keep survival/death -> original History.
+# Planned previous-award compatibility; final whole-M3 regression remains separate.
+tests/rules/test_bomb_collar.py
+tests/rules/test_handler_advancements.py
+
 # Actual NPC branch -> NPC Guard -> irreversible takeover -> current Girl Keep/Inbox.
 # Planned Code/body/career/Guard compatibility; final M3 regression remains separate.
 tests/rules/test_am_branch.py

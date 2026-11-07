@@ -1,5 +1,12 @@
 # M3 remaining work — verified development snapshot
 
+Newest bounded addition: **Bomb Collar acquisition, actual non-rejectable Tag
+use and real Dive/Keep survival or death**, with canonical work/archives and
+private History. Evidence is at the top of
+[M3 acceptance](../reports/M3_ACCEPTANCE.md). Jailbroken occupancy is active;
+Hidden Sidearm is source-contract work. Required body/rearming/other systems and
+final integrated verification still prevent M3 completion. Bot off; RULES_SUBSET.
+
 Newest bounded addition: **actual independent AM NPC branch, real NPC action and
 owned Girl takeover terminating the original**, with preserved software/recall,
 exact existing hardware and actual current-Girl Play/Inbox history. Evidence is at

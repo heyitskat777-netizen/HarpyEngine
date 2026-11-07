@@ -865,6 +865,29 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_bomb_collar import BombCollarService
+
+            for collar in BombCollarService(self.store)._tasks(connection, viewer):
+                pending_collar = bool(collar["pending"])
+                items.append(
+                    InboxItem(
+                        "bomb-collar:" + collar["id"],
+                        "bomb_collar",
+                        collar["id"],
+                        collar["revision"],
+                        "playbook",
+                        collar["label"],
+                        "Original Handler or affected Girl",
+                        "pending" if pending_collar else "established",
+                        pending_collar,
+                        False,
+                        "Resolve actual collar survival or review its original outcome.",
+                        "A collar can be marked as a Tag but never embraced or rejected.",
+                        "Review bomb collar",
+                        task="m3_bomb_collar",
+                    )
+                )
+
             from girlframe.services.m3_secretary import SecretaryService
 
             for secretary in SecretaryService(self.store)._tasks(connection, viewer):

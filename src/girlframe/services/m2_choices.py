@@ -79,6 +79,9 @@ class ChoiceEngine:
         from girlframe.services.m3_cute_uniforms import prove_tag
 
         prove_tag(self.game, c, state, owner, tag)
+        from girlframe.services.m3_bomb_collar import prove_tag as prove_collar_tag
+
+        prove_collar_tag(self.game, c, state, owner, tag)
         if tag.gm_setter_appointment is not None or tag.gm_setter_event is not None:
             from girlframe.engine.m3_actor_bonds import current_ref
             from girlframe.services.m3_tag_setters import ooc_setter
@@ -322,6 +325,10 @@ class ChoiceEngine:
             return
         acting = state.sheets[str(actor)]
         if kind == "tag_resolution":
+            require(
+                not str(body["tag"]).startswith("bomb-collar:"),
+                "A bomb collar cannot be embraced or rejected",
+            )
             from girlframe.services.m3_cute_uniforms import resolve_choice
 
             if resolve_choice(self.game, c, state, action, body, answer):
@@ -818,11 +825,17 @@ class ChoiceEngine:
 
         actor = int(action["actor_id"])
         sheet = state.sheets[str(actor)]
+        from girlframe.services.m3_bomb_collar import tags as collar_tags
         from girlframe.services.m3_control_ritual import candidates
         from girlframe.services.m3_control_ritual import self_tag as ritual_self_tag
         from girlframe.services.m3_cute_uniforms import tags as uniform_tags
 
-        available_tags = sheet.tags + candidates(state, action, owner) + uniform_tags(state, actor)
+        available_tags = (
+            sheet.tags
+            + candidates(state, action, owner)
+            + uniform_tags(state, actor)
+            + collar_tags(state, actor)
+        )
         picks(answer.options, {"pass", "tag"}, 1)
         require(
             set(answer.fields) <= {"status", "marker"}, "Choose only supported source-role fields."
@@ -936,13 +949,23 @@ class ChoiceEngine:
         if selected:
             person, answer, marker = selected
             from girlframe.engine.m3_control_ritual import save_tag
+            from girlframe.services.m3_bomb_collar import (
+                prove_tag as prove_collar_tag,
+            )
+            from girlframe.services.m3_bomb_collar import (
+                save_tag as save_collar_tag,
+            )
+            from girlframe.services.m3_bomb_collar import tags as collar_tags
             from girlframe.services.m3_control_ritual import candidates
             from girlframe.services.m3_control_ritual import self_tag as ritual_self_tag
             from girlframe.services.m3_cute_uniforms import tags as uniform_tags
 
             tag = next(
                 x
-                for x in sheet.tags + candidates(state, action, actor) + uniform_tags(state, actor)
+                for x in sheet.tags
+                + candidates(state, action, actor)
+                + uniform_tags(state, actor)
+                + collar_tags(state, actor)
                 if x.id == answer.denied[0]
             )
             from girlframe.services.m3_cute_uniforms import (
@@ -953,6 +976,7 @@ class ChoiceEngine:
             )
 
             uniform = prove_uniform_tag(self.game, c, state, actor, tag)
+            collar = prove_collar_tag(self.game, c, state, actor, tag)
             if uniform:
                 action["data"].setdefault("cute_uniform_tags", []).append(tag.id)
             ritual = ritual_self_tag(self.game, c, state, action, person, tag)
@@ -969,6 +993,7 @@ class ChoiceEngine:
             sheet.revision += 1
             save_tag(state, actor, tag)
             save_uniform_tag(state, actor, tag)
+            save_collar_tag(state, actor, tag)
             amount = modifier(
                 state, markers.roller(state, action), marker, 1 if answer.number == 1 else -1
             )
@@ -988,6 +1013,9 @@ class ChoiceEngine:
                 }
             )
             self.set_total(action)
+            if collar:
+                self.results(c, state, action)
+                return
             if (
                 has_rule(sheet, "girl.bonded.bonded-pair", "BONDED")
                 and relation_current(sheet, "pair", state)

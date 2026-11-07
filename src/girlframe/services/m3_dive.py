@@ -136,9 +136,14 @@ def prepare(
             "Dive Deep uses your actual link and Heat, without a target or Off-Duty context."
         )
     if prepared.source_work:
-        from girlframe.services.m3_battle_dormant import prepare_dive_source
+        if prepared.source_work.startswith("bomb-trigger:"):
+            from girlframe.services.m3_bomb_collar import prepare_survival
 
-        prepare_dive_source(game, c, viewer, prepared, state, channel)
+            prepare_survival(game, c, state, viewer, prepared, channel)
+        else:
+            from girlframe.services.m3_battle_dormant import prepare_dive_source
+
+            prepare_dive_source(game, c, viewer, prepared, state, channel)
     actor = ActorRef(
         kind="pilot",
         entity=str(viewer.user_id),
@@ -925,6 +930,10 @@ def complete_void_continuation(
         from girlframe.services.m3_battle_dormant import complete_dive
 
         complete_dive(game, c, action, completed_event, viewer, key)
+    if action["state"] == "complete" and action["data"].get("bomb_collar_source"):
+        from girlframe.services.m3_bomb_collar import complete_action
+
+        complete_action(game, c, action, completed_event, key)
 
 
 def prove_void_source(

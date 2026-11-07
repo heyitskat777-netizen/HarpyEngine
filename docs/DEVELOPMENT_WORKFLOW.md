@@ -40,8 +40,8 @@ a required M3 rule complete; required gaps stay in the milestone backlog.
 | Order | Assignment | Completion boundary |
 |---|---|---|
 | 1, parallel | Jailbroken occupancy | AM branch handed off. Freeze self-directed appropriate-body movement without a fabricated Just Code/operator roll; preserve actual hardware, same mind/resources and genuine consumer. |
-| 1, parallel | Bomb Collar | Secretary handed off. Freeze genuine acquisition -> body-bound Tag-like collar without embrace/reject -> actual trigger -> real Dive/other survival or actual death/history. |
-| 1, root | Source/CI integration | Freeze AM branch integration, coordinate Bomb Collar native/source hooks and assign Jailbroken ports after its contract. No third implementation unit. |
+| 1, parallel | Hidden Sidearm | Bomb Collar handed off. Freeze genuine acquisition -> actual concealed sidearm reveal -> each printed effect and owned pause/reconsider/shoot continuation -> real actor/history. |
+| 1, root | Source/CI integration | Freeze Bomb Collar integration and wire independent Jailbroken native/source access; assign Hidden Sidearm hooks after its contract. No third implementation unit. |
 | 2 | Remaining required gameplay systems | Select the next dependency-ready whole workflow from M3_REMAINING_WORK.md and M3_COMPLETION_AUDIT.md. Freeze its contract, reuse implemented dependencies and complete it before opening unrelated work. |
 | 3 | M3 review candidate | Account for required core scope, complete expected gameplay flows and final integrated checks; provide a concise player-test checklist and stop for owner review. |
 

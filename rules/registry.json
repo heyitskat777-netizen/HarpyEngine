@@ -5327,6 +5327,24 @@
       "revision": 1,
       "implementation_note": "Preserve the promoted NPC controller and actual body. Orders name NPC speaker and exact Handler principal. Optional pre-roll hold uses a genuine ordinary carried firearm fact without extra purchase/Asset fee; actual attacker response controls the same action. Appearance moves only Secretary; competence delivers genuine source-supported work without omniscience or automatic mission success.",
       "change_impact": "Affects future delegated authority and tactical continuation. Preserve original appointments, actual rolls/resources/positions, deliveries and human responses; broader unsupported mechanical outcomes remain required ports."
+    },
+    {
+      "id": "bomb-collar-genuine-survival-and-spent-hardware",
+      "summary": "A completed genuine Dive Deep satisfies the printed collar alternative; an actual Keep uses its ordinary Handler sufficiency ruling, with lethal insufficiency respecting real death prevention.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF154/printed152 Bomb Collar; PDF21/printed19 Keep Your Head; PDF24/printed22 Dive Deep",
+      "authority": "delegated_recommendation",
+      "rationale": "The source requires Dive Deep or another way to survive, without a required Dive tier, extra roll, automatic collar removal, repeat quota or rearming procedure.",
+      "alternatives": [
+        "Demand an invented Dive tier or apply automatic shot/Helplessness",
+        "Accept a generic survival acknowledgment without a real response",
+        "Treat detonation as loss of the permanent advancement or silently restore spent hardware"
+      ],
+      "policy_key": "bomb_collar_genuine_survival_and_spent_hardware",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Finish the actual canonical Dive and consequences, or actual Keep traits plus enough ruling. Insufficient detonation escape follows real archive/prevention rules. Collar Tags never embrace, reject, convert or remove through ordinary Tag effects. Detonated hardware becomes unavailable; the acquisition remains original. Replacement/rearming requires a real source adapter and is not silently granted.",
+      "change_impact": "Changes future trigger resolution and physical collar availability; never rerolls known outcomes or rewrites original acquisition/mark/trigger/death history. Other survival/body/rearming adapters and independent clarity review remain pending."
     }
   ],
   "entries": [
@@ -16422,14 +16440,18 @@
         "heading": "Bomb Collar"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
-      "dependencies": [],
-      "test_evidence": [],
+      "dependencies": [
+        "source.handler-advancement-triggers"
+      ],
+      "test_evidence": [
+        "tests/rules/test_bomb_collar.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

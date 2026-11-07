@@ -42,6 +42,12 @@ async def open_advancement(
 
         await open_secretary(interaction, SecretaryService(service.store), data["acquisition"])
         return
+    if data.get("acquired_rule") == "handler-advancement.handler-advancement.bomb-collar":
+        from girlframe.discord_adapter.m3_bomb_collar import open_collar
+        from girlframe.services.m3_bomb_collar import BombCollarService
+
+        await open_collar(interaction, BombCollarService(service.store), data["acquisition"])
+        return
     if data.get("acquired_rule"):
         await reply(
             interaction,
@@ -162,6 +168,7 @@ async def open_advancement(
     form.add_item(BuildLocation(form, service))
     form.add_item(AcquireDeepBrainSpikes(form, service))
     form.add_item(AcquireSecretary(form, service))
+    form.add_item(AcquireBombCollar(form, service))
     await form.present(interaction)
 
 
@@ -310,3 +317,17 @@ class AcquireSecretary(discord.ui.Button[NativeForm]):
         from girlframe.services.m3_secretary import SecretaryService
 
         await open_secretary(interaction, SecretaryService(self.service.store))
+
+
+class AcquireBombCollar(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService):
+        super().__init__(label="Acquire Bomb Collars instead", row=4)
+        self.form, self.service = form, service
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_bomb_collar import open_collar
+        from girlframe.services.m3_bomb_collar import BombCollarService
+
+        await open_collar(interaction, BombCollarService(self.service.store))

@@ -716,6 +716,10 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         "Choose only your own response. Nothing is submitted until Confirm. "
         "Safety pause remains available."
     )
+    if decision["kind"] == "tag_window" and any(
+        tag["id"].startswith("bomb-collar:") for tag in decision.get("tags", ())
+    ):
+        instructions += "\nA bomb collar can be marked as a Tag but cannot be embraced or rejected."
     if decision.get("beneath") and decision["kind"] == "beneath_select":
         instructions += (
             "\nEffects apply to "
