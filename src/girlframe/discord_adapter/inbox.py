@@ -650,6 +650,11 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_handler_pr import HandlerPRService
 
             await open_pr(interaction, HandlerPRService(self.service.store), item.identity)
+        elif item.task == "m3_hidden_sidearm":
+            from girlframe.discord_adapter.m3_hidden_sidearm import open_sidearm
+            from girlframe.services.m3_hidden_sidearm import HiddenSidearmService
+
+            await open_sidearm(interaction, HiddenSidearmService(self.service.store), item.identity)
         elif item.task == "m3_bomb_collar":
             from girlframe.discord_adapter.m3_bomb_collar import open_collar
             from girlframe.services.m3_bomb_collar import BombCollarService

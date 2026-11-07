@@ -1,5 +1,41 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Hidden Sidearm actual three-choice workflow — 2026-11-07
+
+Source extends local Jailbroken checkpoint `75c69f3`; exact bytes are frozen in
+ignored `var/m3-hidden-sidearm-freeze/manifest.json`. M3 remains **RULES_SUBSET**.
+
+Genuine award acquisition creates/proves an actual ordinary concealed firearm,
+not a bought weapon Asset or free mechanical resource. Original Handler presence,
+source/cast/body/reach and truthful conceal/reveal state are checked. Turn-tables
+applies canonical Helplessness with the real Handler foe and ordinary recovery.
+The separate explicit kill follows actual death/archive/prevention interfaces.
+
+Pause holds the same unrolled native Engage. An owned withdrawal completes it
+without RNG/resource spend. Continuing performs the real target-owned ordinary
+Girl Asset shot, then resumes the same original action only if capable. A last
+Girl Asset shot causes actual Helplessness and terminal original-action outcome
+without rolling. Replay cannot repeat damage, cancellation or acquisition spend.
+Third-shot ordinary damage is the recorded delegated interpretation, not a claim
+that the text explicitly supplies a number; the explicit immediate-kill choice
+remains distinct. Genuine outcomes and private History survive reopening.
+
+Normal **2 passed / 6.49s**; planned prior-award compatibility **3 / 6.23s**.
+Coherent **14 changed Python files** pass Ruff/format; **13 source modules** pass
+mypy, including actual Game/Choice/item/Handler-position and native/Inbox ports.
+Evidence: `var/m3-hidden-sidearm-handoff.json`, test results and static artifact;
+no broad matrix, full regression or repeated installation.
+
+Metadata: **180 subsets / 296 unimplemented / 323 clarifications**,476 total,
+439 required core,37 deferred Ancillary,zero independent approvals. Clarifications
+also record pending new-operator policy, not implementation. Counts are inventory,
+not progress percentages. Finite targets are original native non-AM Girls outside
+Frames; other actors/protected occupants, Core/AM generation and extra-protection
+damage continuations require real adapters and fail closed. Remaining gameplay,
+Secretary statement delivery, clarity/independent/player review and final M3
+verification remain open. Bot off; local commits only, no push, deployment, live
+migration, environment publication, recovered-engine write, AI/M4 or Ancillary.
+
 ## Jailbroken self-directed occupancy — 2026-11-07
 
 Source extends local `3ba77754c377679d4bce6e0f7d4dfeeac00b6dd0`, including

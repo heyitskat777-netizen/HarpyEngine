@@ -1,5 +1,13 @@
 # M3 remaining work — verified development snapshot
 
+Newest bounded addition: **Hidden Sidearm actual Helplessness, immediate death and
+owned pause/withdraw/ordinary-shot continuation**, with exact original action,
+resources and private History. See [M3 acceptance](../reports/M3_ACCEPTANCE.md).
+First-time NPC circuits are active; Reign of Terror is source-contract work.
+Other required gameplay/body/source adapters, Secretary statement delivery and
+final independent/integrated/player gates still prevent M3 completion. Bot off;
+RULES_SUBSET, no completion percentage.
+
 Newest bounded addition: **self-directed Jailbroken occupancy and actual moveback**,
 without Code/operator/discovery/cost/hookup gates, with preserved physical damage
 and private Inbox recovery. See [M3 acceptance](../reports/M3_ACCEPTANCE.md).

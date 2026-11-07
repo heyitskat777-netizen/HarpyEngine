@@ -454,6 +454,7 @@ def _resolve(
             in (
                 "recorded_handler_recovery_position",
                 "cute_uniform_actual_dressing_position",
+                "hidden_sidearm_actual_position",
                 "handler_transport_arrived",
                 "leviathan_actual_arrival",
             )

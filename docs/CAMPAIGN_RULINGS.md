@@ -3388,3 +3388,23 @@ and adjustment impact are recorded in `rules/registry.json`.
   and interpreting the finite local adapter as a geographic rule are rejected.
   Delegated clarity review remains pending; future adapters must preserve source,
   hardware history and human choices.
+
+
+- `hidden_sidearm_pause_shot_ordinary_damage` (PDF158/156,15/13): after the
+  owned chance to reconsider, the third bullet’s shot deals one ordinary Girl
+  Asset damage with actual last-Asset Helplessness against the shooter. The
+  separate second bullet explicitly kills. The affected player chooses the real
+  Asset; no additional attack roll or narrative-only follow-through is invented.
+  Reading both shots as automatically lethal is the alternative. This delegated
+  interpretation needs printed clarity review and affects future shots only,
+  preserving known outcomes, resources and human choices.
+
+
+- `am_new_operator_high_consequence_owner` (PDF56/54,55/53): the AM chooses one
+  applicable Scrutinized8-10 consequence against a genuinely newly-aware NPC
+  after high Just Code, while the operator retains the separate up-to2 Code
+  choices. Keep the actual high receipt without a second roll; finish operator
+  effects first so violence cannot strand work. Existing already-aware high still
+  lowers Status. Operator-owned AM consequence and an extra roll are alternatives
+  rejected under the delegated interpretation. Printed clarity review remains
+  pending; future changes preserve actual knowledge, receipts and human choices.

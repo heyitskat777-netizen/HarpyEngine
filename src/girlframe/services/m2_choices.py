@@ -166,6 +166,11 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         sheet = state.sheets.get(str(owner))
         body = json.loads(request["body_json"])
+        if kind == "sidearm_reconsider":
+            from girlframe.services.m3_hidden_sidearm import apply_response as apply_sidearm
+
+            apply_sidearm(self.game, c, state, action, request, answer)
+            return
         if kind in ("secretary_gunpoint", "secretary_gunpoint_resolution"):
             from girlframe.services.m3_secretary import apply_response, refresh_after_response
 

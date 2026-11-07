@@ -62,7 +62,11 @@ def prove_item(c: Connection, game: GameService, state: GameState, item_id: str)
     )
     if first is None or any(getattr(first, k) != getattr(item, k) for k in stable):
         raise WorkflowError("SOURCE_ITEM_MISSING: recover the immutable original possession proof.")
-    if item.source_owner.kind == "handler" and item.confirmed_event and item.origin_asset_json:
+    if item.id.startswith("hidden-sidearm:"):
+        from girlframe.services.m3_hidden_sidearm import prove_gun
+
+        prove_gun(game, c, state, item)
+    elif item.source_owner.kind == "handler" and item.confirmed_event and item.origin_asset_json:
         from girlframe.services.m3_handler_girl_void import prove_handler_item
 
         prove_handler_item(c, game, state, item)

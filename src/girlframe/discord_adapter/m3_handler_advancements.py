@@ -48,6 +48,12 @@ async def open_advancement(
 
         await open_collar(interaction, BombCollarService(service.store), data["acquisition"])
         return
+    if data.get("acquired_rule") == "handler-advancement.handler-advancement.hidden-sidearm":
+        from girlframe.discord_adapter.m3_hidden_sidearm import open_sidearm
+        from girlframe.services.m3_hidden_sidearm import HiddenSidearmService
+
+        await open_sidearm(interaction, HiddenSidearmService(service.store), data["acquisition"])
+        return
     if data.get("acquired_rule"):
         await reply(
             interaction,
@@ -169,6 +175,7 @@ async def open_advancement(
     form.add_item(AcquireDeepBrainSpikes(form, service))
     form.add_item(AcquireSecretary(form, service))
     form.add_item(AcquireBombCollar(form, service))
+    form.add_item(AcquireHiddenSidearm(form, service))
     await form.present(interaction)
 
 
@@ -331,3 +338,17 @@ class AcquireBombCollar(discord.ui.Button[NativeForm]):
         from girlframe.services.m3_bomb_collar import BombCollarService
 
         await open_collar(interaction, BombCollarService(self.service.store))
+
+
+class AcquireHiddenSidearm(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService):
+        super().__init__(label="Acquire Hidden Sidearm instead", row=4)
+        self.form, self.service = form, service
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_hidden_sidearm import open_sidearm
+        from girlframe.services.m3_hidden_sidearm import HiddenSidearmService
+
+        await open_sidearm(interaction, HiddenSidearmService(self.service.store))

@@ -1,6 +1,4 @@
-# Self-directed AM occupancy -> real new-body damage -> free moveback/private Inbox.
-# Planned Body/branch/current-actor compatibility; final full M3 check remains separate.
-tests/rules/test_am_jailbroken.py
-tests/rules/test_am_body.py::test_real_code_body_swap_new_asset_damage_and_private_hooked_return
-tests/rules/test_am_branch.py::test_actual_branch_npc_counter_then_owned_takeover_and_current_girl_play
-tests/rules/test_actor_service.py::test_owned_role_selector_distinguishes_same_human_roles_and_knowledge_is_actor_scoped
+# Genuine sidearm acquisition -> three choices -> owned pause/shot/true continuation.
+# Planned prior-award compatibility; final whole-M3 regression remains separate.
+tests/rules/test_hidden_sidearm.py
+tests/rules/test_handler_advancements.py

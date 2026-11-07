@@ -2304,6 +2304,10 @@ class GameService:
             if action["data"].get("gorgon_play", {}).get("started"):
                 return {"action_id": identity, "receipt": None}
             self.unpaused(c)
+            if action["data"].get("hidden_sidearm"):
+                from girlframe.services.m3_hidden_sidearm import require_clear as sidearm_clear
+
+                sidearm_clear(self, c, load_state(c, self.store.campaign_id), action)
             if action["data"].get("secretary_gunpoint"):
                 from girlframe.services.m3_secretary import require_clear as secretary_clear
 
@@ -2908,6 +2912,10 @@ class GameService:
                 and HandlerService(self.store).current(c)[1].handler_id != viewer.user_id
             ):
                 raise WorkflowError("The Handler appointment changed; staff recovery is required.")
+            if row["kind"] == "sidearm_reconsider":
+                from girlframe.services.m3_hidden_sidearm import HiddenSidearmService
+
+                HiddenSidearmService(self.store)._access(c, viewer)
             if row["kind"] in (
                 "secretary_gunpoint",
                 "secretary_response_play",
@@ -3854,6 +3862,20 @@ class GameService:
 
                 return SpriteService(self.store).decision(viewer, choice_id)
             action = self.action(c, row["action_id"])
+            if row["kind"] == "sidearm_reconsider":
+                from girlframe.services.m3_hidden_sidearm import projection as sidearm_projection
+
+                return dict(row) | dict(
+                    sidearm=sidearm_projection(
+                        self, c, load_state(c, self.store.campaign_id), action
+                    ),
+                    body=json.loads(row["body_json"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    actor=int(action["actor_id"]),
+                    play=action["data"]["play"],
+                    result={},
+                )
             if row["kind"] in (
                 "secretary_gunpoint",
                 "secretary_response_play",

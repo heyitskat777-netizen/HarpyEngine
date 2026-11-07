@@ -487,6 +487,12 @@ def answer_values(values: dict[str, Any]) -> ChoiceAnswer:
 
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
     decision = await threaded(lambda: game.decision(viewer_from_interaction(interaction), identity))
+    if decision["kind"] == "sidearm_reconsider":
+        from girlframe.discord_adapter.m3_hidden_sidearm import open_response
+        from girlframe.services.m3_hidden_sidearm import HiddenSidearmService
+
+        await open_response(interaction, HiddenSidearmService(game.store), identity)
+        return
     if decision["kind"] in (
         "secretary_gunpoint",
         "secretary_response_play",

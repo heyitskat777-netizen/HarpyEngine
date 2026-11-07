@@ -865,6 +865,29 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_hidden_sidearm import HiddenSidearmService
+
+            for sidearm in HiddenSidearmService(self.store)._tasks(connection, viewer):
+                pending_sidearm = bool(sidearm["pending"])
+                items.append(
+                    InboxItem(
+                        "hidden-sidearm:" + sidearm["id"],
+                        "hidden_sidearm",
+                        sidearm["id"],
+                        sidearm["revision"],
+                        "playbook",
+                        sidearm["label"],
+                        "Original Handler or affected person",
+                        "pending" if pending_sidearm else "established",
+                        pending_sidearm,
+                        False,
+                        "Review the real concealed sidearm or its source-owned outcome.",
+                        "Pausing an action preserves its original actor, choices and resources.",
+                        "Review Hidden Sidearm",
+                        task="m3_hidden_sidearm",
+                    )
+                )
+
             from girlframe.services.m3_bomb_collar import BombCollarService
 
             for collar in BombCollarService(self.store)._tasks(connection, viewer):

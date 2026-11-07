@@ -137,6 +137,14 @@ class HandlerAdvancementService:
                     from girlframe.engine.m3_bomb_collar import acquisitions as collar_acquisitions
 
                     receipts = collar_acquisitions(spent)
+                elif (
+                    value.acquired_rule == "handler-advancement.handler-advancement.hidden-sidearm"
+                ):
+                    from girlframe.engine.m3_hidden_sidearm import (
+                        acquisitions as sidearm_acquisitions,
+                    )
+
+                    receipts = sidearm_acquisitions(spent)
                 elif value.acquired_rule == "handler-advancement.handler-advancement.secretary":
                     from girlframe.engine.m3_secretary import acquisitions as secretary_acquisitions
 

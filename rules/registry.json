@@ -5363,6 +5363,41 @@
       "revision": 1,
       "implementation_note": "Source factual owner preparation establishes empty available processing-capable hardware and actual Asset/medical condition. Preserve same mind/ActorRef/current Frame/resources; park actual hardware and occupy it again using the same ability. Capability projection adds no automated mathematics or bonus; expression honors real software restrictions.",
       "change_impact": "Affects future self-directed occupancy and actual-body projection. Never rewrites Code/branch origin, history, damage or human choices. Remote/Frame/occupied/conditional/hardware-handover adapters remain required gaps."
+    },
+    {
+      "id": "hidden-sidearm-pause-shot-ordinary-damage",
+      "summary": "Hidden Sidearm’s pause follow-through inflicts one ordinary Girl Asset damage with actual last-Asset Helplessness; the separate explicit immediate-kill choice remains lethal.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF158/printed156 Hidden Sidearm; PDF15/printed13 Assets and ordinary outside-Frame injury",
+      "authority": "delegated_recommendation",
+      "rationale": "The second bullet explicitly says killing them; the third says shoot them without repeating lethality or a numerical damage value. Preserve the distinction using the existing ordinary shot consumer.",
+      "alternatives": [
+        "Make both shots automatically lethal",
+        "Add an unprinted attack roll or treat the follow-through as only narrative"
+      ],
+      "policy_key": "hidden_sidearm_pause_shot_ordinary_damage",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Target owns actual Girl Asset choice through existing damage routing; last usable Girl Asset causes genuine Helplessness against shooter and blocks incapable continuation. No duplicate damage, fake acknowledgment, Frame Core kill or extra roll.",
+      "change_impact": "Affects future pause follow-through only; preserves explicit immediate death/prevention, original source and known rolls/resources. Reinterpreting must not rewrite saved shots or human choices; independent printed clarity review pending."
+    },
+    {
+      "id": "am-new-operator-high-consequence-owner",
+      "summary": "On first-time NPC high Just Code, the AM chooses one applicable Scrutinized8-10 consequence, retaining the real high Code receipt and separate operator-owned Code effects.",
+      "provenance": "owner_approved_campaign_ruling",
+      "source": "Rulebook PDF56/printed54 Just Code high; PDF55/printed53 Scrutinized8-10",
+      "authority": "delegated_recommendation",
+      "rationale": "The mixed-pronoun high clause uses an implied imperative and references AM-directed actions against the newly-aware operator; existing Scrutinized8-10 ownership belongs to that AM.",
+      "alternatives": [
+        "Operator chooses the AM-directed consequence, including their own death or forced refuge",
+        "Invent a second Scrutinized roll or charge",
+        "Lower Status for new awareness as though the operator already knew"
+      ],
+      "policy_key": "am_new_operator_high_consequence_owner",
+      "clarity_review": true,
+      "revision": 1,
+      "implementation_note": "Actual operator retains up-to2 Code selections. Finish their actual effects before AM consequence so violence cannot strand work. Record awareness at genuine high receipt; existing already-aware high still lowers Status. Applicable source/physical/refuge dependencies must be real before RNG.",
+      "change_impact": "Affects future first-time high compound consequence ownership/order only. Never rewrites original knowledge, actual receipt/tier/resources or completed Code/Scrutinized choices. Human/Director operator adapters and independent printed clarity remain pending."
     }
   ],
   "entries": [
@@ -16870,14 +16905,16 @@
         "heading": "Hidden Sidearm"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_hidden_sidearm.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
