@@ -1,6 +1,6 @@
 # Current M3 queue
 
-Updated 2026-11-07. Gameplay checkpoint: `37c8d6b`; efficiency checkpoint: `91f69a1`, local branch
+Updated 2026-11-07. Gameplay checkpoint: `aaf4a64`; efficiency checkpoint: `91f69a1`, local branch
 `codex/integrated-repairs-20261107`. **RULES_SUBSET; bot off.** No deployment,
 environment publication, recovered-engine writes, AI/M4 or Ancillary activation.
 This is the working view; older roadmap/audit additions are historical evidence.
@@ -15,11 +15,18 @@ regression or speed benchmark.
 | Typed inbox-entry pilot | Root / implemented within scope | Tracker, Contaminant and Reign matching visible-row shape | Apply only when the actual shape matches; keep routing/visibility explicit | Actual private Inbox flows in coordinated8 checks; no generic routing framework |
 | Politician Bribery Fund | AM agent / normal implementation verified | Actual cities/NPC Bonds, player-owned sphere assignment, real Strings and consequence consumers | Integrate frozen source, rulings and evidence; keep other consequence/NPC-Bond adapters visible | Finalnormal1 +unchangedcompat3, real rollback/retry/privacy; scoped source snapshot |
 | Ship-Base | Nightmare agent / normal implementation verified | Actual Base occupancy/travel, destruction/recovery, threat Core/pin and three ram outcomes | Integrate actual transport/ram evidence; retain explicit special cargo/threat adapters | Four normals passed; superseded extra veto excluded; final24Python/22source static |
+| NPC Bond source move | AM agent / source review active | Genuine canonical NPC Bonds and original controller/required-Play consumers | Read exact printed weakening rule; freeze cost, actual source task/Play/effect closure before code | Source contract pending; no NPC Order/PC alias substitute |
+| A-Bomb | Nightmare agent / source review active | Proven acquisition, world/collateral/career/Strain operations | Freeze every printed outcome and smallest actual missing producers before code | Source contract pending; no blast label or queued unsupported completion |
 | Remaining required core systems | Root + bounded assignments / open | Existing source inventory and actual consumers | Select the next whole dependency-ready gameplay workflow; keep unsupported branches visible | [Registry](../rules/registry.json), [remaining scope](M3_REMAINING_WORK.md), [acceptance](acceptance/m3_rules.json) |
 | Final integrated candidate | Root / blocked by required gameplay | Frozen full core candidate and complete ordinary workflows | Run final full regression and global static/migration/privacy/contract checks | Pending; focused/segmented results do not substitute |
 | Independent and human acceptance | Independent reviewer + owner/players / pending | Review-ready candidate and stated test checklist | Independent source/clarity review, Discord play-testing and owner milestone review | Not run; no inferred certification or release approval |
 
 Recent completed implementation within stated scope:
+
+- `aaf4a64`: political contacts/Bonds/aid/Strings and three real supported cash-outs;
+  actual Ship-Base boarding/flight/armour and all ram outcomes. Bribery normal1
+  +unchangedcompat3; Ship4 normals; oldHandler1; final24Python/22source static.
+  Explicit source/body/threat gaps and superseded test attempts are in the report.
 
 - `37c8d6b`: Tracker hardware/location, both source Plays, real removal/site alerts;
   Contaminant four effects, actual breach and native warp. Static30 Python/28source

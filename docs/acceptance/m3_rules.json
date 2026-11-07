@@ -916,6 +916,61 @@
           "limitation": "No single final two-normal process claimed. Partial-footprint/conditional actor/source adapters, independent/player review and full regression remain pending."
         }
       ]
+    },
+    {
+      "id": "M3C-POLITICAL-CONTACTS-NORMAL-001",
+      "title": "Actual political aid, owned NPC Bonds, Strings and three cash-outs",
+      "expected": "Real current Cities/contacts, original Cadre-authored spheres/private Bonds, source-proved benefit and atomic actual Budget/Tag/job-loss outcomes.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_politician_bribery.py"
+      ],
+      "related_cases": [
+        "M3-ADD-001",
+        "M3-ADD-006",
+        "M3-ADD-007",
+        "M3G-WORLD-001"
+      ],
+      "evidence": [
+        {
+          "test_name": "test_actual_cadre_political_aid_budget_tag_and_causal_job_loss_with_saved_history",
+          "executed_command": "Final Bribery normal; exact compatibility selectors and commands in recorded handoff",
+          "actual_result": "Final normal1 passed14.236s; three unchanged compatibility cases retained from focused4 passed16.14s; final unionstatic24Python22source passed",
+          "log_or_trace": "var/m3-politician-bribery-fund-handoff.json; var/m3-politician-bribery-normal.xml; var/m3-bribery-ship-source-snapshot.json",
+          "git_commit": "aaf4a64ec75921ca672ae23e9081a146417e7f37",
+          "limitation": "Known-position NPC construction only; generic NPC-Bond forced Play and other causal consequence producers remain open. No full regression or independent/player approval."
+        }
+      ]
+    },
+    {
+      "id": "M3G-SHIP-BASE-NORMAL-001",
+      "title": "Source-proved actual Ship-Base transport, armour and ram branches",
+      "expected": "Only actual boarded original bodies/Frames/NPCs move; genuine armour/rearm, real costs/dice/Core/pin, actual low GM effect and Base destruction/history.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_ship_base.py"
+      ],
+      "related_cases": [
+        "M3-ADD-001",
+        "M3-ADD-006",
+        "M3G-WORLD-001"
+      ],
+      "evidence": [
+        {
+          "test_name": "Four expected ram/transport source traces in tests/rules/test_ship_base.py",
+          "executed_command": "Ship four-normal module; exact commands/attempts in var/m3-ship-base-test-results.json",
+          "actual_result": "4 passed11.40s, final source restored. Superseded extra-veto1/3.30s excluded; final unionstatic24Python22source plus exact restored2Python1source delta checks pass; affected old native Handler1/1.19s pass.",
+          "log_or_trace": "var/m3-ship-base-normal.xml; var/m3-ship-base-handoff.json; var/m3-bribery-ship-static.json",
+          "git_commit": "aaf4a64ec75921ca672ae23e9081a146417e7f37",
+          "limitation": "Ordinary native cargo/Gorgon threat scope; conditional/AM/Harpy/nested cargo/special Core and other opening producers remain adapters. Canonical last-Base work preserved, unrelated endpoint not claimed tested. Not full regression or independent/player approval."
+        }
+      ]
     }
   ],
   "enabled_modules": [
