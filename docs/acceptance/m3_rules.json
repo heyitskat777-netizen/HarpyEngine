@@ -1139,6 +1139,58 @@
           "limitation": "Native stable bodies and source DoseUp intoxication only; other Stim/Malleable facets, external/NPC/Handler/clone/changed-body/ending adapters remain required gaps. No full regression, remoteCI run, independent/human acceptance or deployment. Four rulings need printed clarity review."
         }
       ]
+    },
+    {
+      "id": "M3C-PRINCESS-SEX-NORMAL-001",
+      "title": "Actual native Princess source, printed outcomes and real counterpart child",
+      "expected": "Separate voluntary source confirmation; actual low Bond/Tag, mid owned favour/refusal and optional Tag, high counterpart Keep with fixed actor/resources and true Princess author; Handler choices retained, genuine Gender effects, private resume and retry.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_princess_sex.py"
+      ],
+      "related_cases": [
+        "M3-ADD-006",
+        "M3-ADD-007"
+      ],
+      "evidence": [
+        {
+          "test_name": "Whole native source workflow plus affected old consumers",
+          "executed_command": "See exact argv in var/m3-princess-psyche-root-evidence.json",
+          "actual_result": "Integration: 23 passed in 34.55s before the final two-file Disposable proof change; the two affected checks then passed in 6.04s. Coherent static checks for 19 Python files and types for 17 source modules, registry/repository and offline SDK passed; 18 CI cases collected only.",
+          "log_or_trace": "var/m3-princess-psyche-root-evidence.json; var/m3-princess-psyche-final-focused.xml; var/m3-princess-psyche-disposal-proof-final.xml; var/m3-princess-psyche-union-static.json; var/m3-princess-psyche-union-source-snapshot.json",
+          "git_commit": "0f4659f8ae577e0f1d1fcec56305ed5c5ca46115",
+          "limitation": "Other child Plays, Kicked/Dampener and conditional body/controller sources remain required adapters. Necessary decision fields only; no full counterpart profile or consent fabrication. Focused/segmented checks only; final full regression, independent/human review and deployment not performed."
+        }
+      ]
+    },
+    {
+      "id": "M3C-DISPOSABLE-PSYCHE-NORMAL-001",
+      "title": "Actual Disposable Psyche mark/removal and mandatory Off-Duty conversion",
+      "expected": "Real additional 3/4 Heat plus ordinary gain and removal of that Identity, immutable receipt/source proof; mandatory conversion of 1\u20134 actual Tags with capacity replacements, then real recovery/period closure and private history/retry.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_disposable_psyche.py"
+      ],
+      "related_cases": [
+        "M3-ADD-006",
+        "M3-ADD-007"
+      ],
+      "evidence": [
+        {
+          "test_name": "Whole native source workflow plus affected old consumers",
+          "executed_command": "See exact argv in var/m3-princess-psyche-root-evidence.json",
+          "actual_result": "Integration: 23 passed in 34.55s before the final two-file Disposable proof change; the two affected checks then passed in 6.04s. Coherent static checks for 19 Python files and types for 17 source modules, registry/repository and offline SDK passed; 18 CI cases collected only.",
+          "log_or_trace": "var/m3-princess-psyche-root-evidence.json; var/m3-princess-psyche-final-focused.xml; var/m3-princess-psyche-disposal-proof-final.xml; var/m3-princess-psyche-union-static.json; var/m3-princess-psyche-union-source-snapshot.json",
+          "git_commit": "0f4659f8ae577e0f1d1fcec56305ed5c5ca46115",
+          "limitation": "Protected/Paired/Limiter/Clone-extra, forced/other marking sources, non-Heat bases and genuine Ankou Feedback remain required adapters; zero Tags is an explicit applicability ruling, not missing implementation relief. Focused/segmented checks only; final full regression, independent/human review and deployment not performed."
+        }
+      ]
     }
   ],
   "enabled_modules": [
