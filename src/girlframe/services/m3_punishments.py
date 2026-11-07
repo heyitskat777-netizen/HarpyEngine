@@ -69,6 +69,13 @@ class PunishmentService:
             from girlframe.services.m3_cute_uniforms import validate_punishment_work
 
             validate_punishment_work(self.game, c, load_state(c, self.store.campaign_id), dict(row))
+        if (
+            row["kind"] == "punishment"
+            and json.loads(row["body_json"]).get("reason") == "gender_woman_no"
+        ):
+            from girlframe.services.m3_gender_designation import validate_punishment_work
+
+            validate_punishment_work(self.game, c, load_state(c, self.store.campaign_id), dict(row))
         return dict(row)
 
     def _body(self, row: dict[str, Any]) -> dict[str, Any]:
@@ -222,6 +229,7 @@ class PunishmentService:
             "strict_regulations",
             "put_someone_beneath_you",
             "cute_uniform_rejection",
+            "gender_woman_no",
             "privacy_death",
             "janus_core_tag_removal",
             "defeat_post_mission",
@@ -581,7 +589,11 @@ class PunishmentService:
                                 body=self._body(consultation)
                                 | {"approved": False, "superseded": True},
                             )
-                    if body.get("reason") in ("put_someone_beneath_you", "cute_uniform_rejection"):
+                    if body.get("reason") in (
+                        "put_someone_beneath_you",
+                        "cute_uniform_rejection",
+                        "gender_woman_no",
+                    ):
                         body["discipline_owner_character"] = self.game.character_binding(
                             c, state, target, require_current_profile=False
                         )
@@ -746,6 +758,10 @@ class PunishmentService:
                 self._save(c, item, event, state="resolved", body=body)
                 if body.get("reason") == "cute_uniform_rejection":
                     from girlframe.services.m3_cute_uniforms import complete_punishment
+
+                    complete_punishment(self.game, c, item, event)
+                if body.get("reason") == "gender_woman_no":
+                    from girlframe.services.m3_gender_designation import complete_punishment
 
                     complete_punishment(self.game, c, item, event)
                 consultation_id = body.get("consult_id")

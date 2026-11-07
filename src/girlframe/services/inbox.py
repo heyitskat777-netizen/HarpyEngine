@@ -930,6 +930,27 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_gender_designation import GenderDesignationService
+
+            for designation in GenderDesignationService(self.store)._tasks(connection, viewer):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, designation),
+                        prefix="gender-designation:",
+                        source="gender_designation",
+                        counterpart="Original source Handler or actual addressed person",
+                        effect=(
+                            "Review your legal designation or actual source-owned speech history."
+                        ),
+                        details=(
+                            "Natural Status, personal identity and private records "
+                            "retain their own authority."
+                        ),
+                        primary="Review designation",
+                        task="m3_gender_designation",
+                    )
+                )
+
             from girlframe.services.m3_a_bomb import ABombService
 
             for bomb in ABombService(self.store)._tasks(connection, viewer):

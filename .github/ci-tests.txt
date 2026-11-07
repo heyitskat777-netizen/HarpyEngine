@@ -17,3 +17,7 @@ tests/rules/test_role_world_tags.py::test_actual_world_tags_and_intense_bond_use
 tests/rules/test_reign_terror.py::test_actual_enemy_owned_rejection_is_real_external_action_with_lock_and_history
 tests/rules/test_am_backup.py
 tests/rules/test_am_code_new_operator.py::test_new_operator_high_secret_real_bond_then_actual_npc_order
+# Actual legal designation effects and compatible native Sex source consumers.
+tests/rules/test_gender_designation.py
+tests/rules/test_alpha_sex.py::test_mid_actual_native_source_bond_broken_and_smell_without_movement
+tests/rules/test_mockingbird_sex_closure.py::test_native_high_owned_asset_choice_and_patient_rewrite_preserve_one_receipt

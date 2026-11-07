@@ -93,6 +93,17 @@ async def open_advancement(
 
         await open_bomb(interaction, ABombService(service.store), data["acquisition"])
         return
+    if (
+        data.get("acquired_rule")
+        == "handler-advancement.handler-advancement.gender-designation-request"
+    ):
+        from girlframe.discord_adapter.m3_gender_designation import open_designation
+        from girlframe.services.m3_gender_designation import GenderDesignationService
+
+        await open_designation(
+            interaction, GenderDesignationService(service.store), data["acquisition"]
+        )
+        return
     if data.get("acquired_rule"):
         await reply(
             interaction,
@@ -226,6 +237,7 @@ async def open_advancement(
     form.add_item(AcquireBribery(form, service, identity))
     form.add_item(AcquireShipBase(form, service, identity))
     form.add_item(AcquireABomb(form, service, identity))
+    form.add_item(AcquireMore(form, service, identity))
     await form.present(interaction)
 
 
@@ -486,3 +498,29 @@ class AcquireABomb(discord.ui.Button[NativeForm]):
         from girlframe.services.m3_a_bomb import ABombService
 
         await open_bomb(interaction, ABombService(self.service.store), self.identity)
+
+
+class AcquireMore(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService, identity: str):
+        super().__init__(label="More advancements", row=1)
+        self.form, self.service, self.identity = form, service, identity
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+
+        async def choose(current: discord.Interaction, values: dict[str, Any]) -> None:
+            from girlframe.discord_adapter.m3_gender_designation import open_designation
+            from girlframe.services.m3_gender_designation import GenderDesignationService
+
+            await open_designation(
+                current, GenderDesignationService(self.service.store), self.identity
+            )
+
+        await NativeForm(
+            interaction.user.id,
+            "Choose an advancement",
+            "Select the advancement to acquire with this held award.",
+            [Field("advancement", "Advancement", (("gender", "Gender Designation Request"),))],
+            choose,
+        ).present(interaction)

@@ -2222,6 +2222,10 @@ class GameService:
             from girlframe.services.m3_succubus import valid_order as valid_succubus_order
 
             source_authority = valid_succubus_order(self, c, state, dict(row))
+        if row is not None and json.loads(row["body_json"]).get("gender_designation"):
+            from girlframe.services.m3_gender_designation import valid_order as valid_gender_order
+
+            source_authority = valid_gender_order(self, c, state, dict(row)) or source_authority
         if row is None or (
             not source_authority and not higher(state, int(row["issuer_id"]), owner)
         ):
@@ -3072,6 +3076,10 @@ class GameService:
                 action_id=action["id"],
                 choice_id=choice_id,
             )
+            if row["kind"] == "order_response":
+                from girlframe.services.m3_gender_designation import synchronize_no
+
+                synchronize_no(self, c, action, event)
             if action["data"].get("cute_uniform_rejection"):
                 from girlframe.services.m3_cute_uniforms import synchronize_rejection
 
@@ -3254,7 +3262,16 @@ class GameService:
                 )
             authority = None
             am_secret = None
-            if not higher(state, viewer.user_id, target):
+            from girlframe.services.m3_gender_designation import (
+                order_authority as gender_order_authority,
+            )
+
+            gender_authority = (
+                gender_order_authority(self, c, state, viewer.user_id, target)
+                if str(viewer.user_id) in state.sheets
+                else None
+            )
+            if not higher(state, viewer.user_id, target) and gender_authority is None:
                 from girlframe.services.m3_am_scrutinized import pilot_order_authority
 
                 am_secret = pilot_order_authority(self, c, state, viewer.user_id, target)
@@ -3283,6 +3300,7 @@ class GameService:
                         {"text": text}
                         | ({"am_secret": am_secret} if am_secret else {})
                         | ({"succubus": authority} if authority else {})
+                        | ({"gender_designation": gender_authority} if gender_authority else {})
                     ),
                     state="awaiting_response",
                 )
@@ -3903,6 +3921,30 @@ class GameService:
 
                 return SpriteService(self.store).decision(viewer, choice_id)
             action = self.action(c, row["action_id"])
+            if row["kind"] in ("gender_partner_tag_resolution", "gender_animal_tag"):
+                from girlframe.services.m3_gender_designation import choice_projection
+
+                projected = choice_projection(
+                    self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                )
+                if projected is None:
+                    raise WorkflowError("Recover the original designation response source")
+                current_state = load_state(c, self.store.campaign_id)
+                own = current_state.sheets.get(str(viewer.user_id))
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    actor=int(action["actor_id"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    play=action["data"]["play"],
+                    result={
+                        key: value
+                        for key, value in action["data"]["result"].items()
+                        if key in ("tier", "total")
+                    },
+                    own=own.model_dump(mode="json") if own is not None else None,
+                    gender=projected,
+                )
             if row["kind"] == "reign_group_tag_resolution":
                 from girlframe.services.m3_reign_terror import project_resolution
 
@@ -4342,6 +4384,10 @@ class GameService:
 
                 result["alpha_remove_broken"] = removable_broken(self, c, state, action) is not None
             if row["kind"] == "tag_window":
+                from girlframe.services.m3_gender_designation import man_tag_options
+
+                result["gender_man_tags"] = man_tag_options(self, c, state, action, viewer.user_id)
+            if row["kind"] == "tag_window":
                 from girlframe.services.m3_tag_markers import projection as marker_projection
 
                 result["tag_markers"] = marker_projection(self, c, state, action, viewer.user_id)
@@ -4382,6 +4428,26 @@ class GameService:
                 ]
             from girlframe.engine.m3_beneath import rejection_blocked
 
+            if row["kind"] == "order_response":
+                from girlframe.engine.m3_actor_bonds import current_ref as gender_ref
+                from girlframe.engine.m3_gender_designation import current as designation
+
+                order_table = t.m2["m2_orders"]
+                gender_issuer = c.scalar(
+                    sa.select(order_table.c.issuer_id).where(
+                        order_table.c.campaign_id == self.store.campaign_id,
+                        order_table.c.id == action["data"].get("order_id"),
+                    )
+                )
+                if gender_issuer is not None and str(gender_issuer) in state.sheets:
+                    speaker = designation(state, gender_ref(state, viewer.user_id))
+                    addressee = designation(state, gender_ref(state, int(gender_issuer)))
+                    result["gender_spoken_no"] = bool(
+                        speaker is not None
+                        and speaker.gender == "woman"
+                        and addressee is not None
+                        and addressee.gender == "man"
+                    )
             result["rejection_blocked"] = bool(
                 row["kind"] == "tag_resolution"
                 and rejection_blocked(state, int(action["actor_id"]), body["tag"])

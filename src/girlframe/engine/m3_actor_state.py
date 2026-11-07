@@ -122,6 +122,10 @@ class ActorView(Model):
     girl: str | None = None
     frame: str | None = None
     frame_instance: str | None = None
+    legal_gender: Literal["man", "woman", "animal"] | None = Field(
+        default=None, exclude_if=lambda x: x is None
+    )
+    legal_pronouns: str | None = Field(default=None, exclude_if=lambda x: x is None)
     frame_scrapped: bool | None = None
     frame_shutdown: bool | None = None
     heat: int | None = Field(default=None, ge=0)

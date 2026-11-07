@@ -81,6 +81,11 @@ def results(game: "GameService", c: Connection, state: GameState, action: dict[s
     meta = action["data"]["mockingbird"]
     if meta.get("sex_started"):
         raise WorkflowError("Resume this actual source's existing intimacy decisions")
+    from girlframe.services.m3_gender_designation import offer_animal_tags
+
+    if offer_animal_tags(game, c, state, action):
+        action["data"]["gender_sex_deferred"] = True
+        return
     meta["sex_started"] = True
     if level == "low":
         _copy(

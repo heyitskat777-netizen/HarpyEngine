@@ -134,6 +134,11 @@ class DiscoveryService:
         expected_tier = {"low_tag": "low", "teaching": "mid", "both_risk": "high"}[exposure.kind]
         actual_receipt = json.loads(receipt)
         total = actual_receipt["pre_total"] + sum(x["amount"] for x in action["data"]["modifiers"])
+        from girlframe.services.m3_gender_designation import prove_man_result
+
+        minimum = prove_man_result(self.game, c, proof, action)
+        if minimum is not None:
+            total = max(total, minimum)
         from girlframe.engine.m2 import tier
 
         if tier(total) != expected_tier:

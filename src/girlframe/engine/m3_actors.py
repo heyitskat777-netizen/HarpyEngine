@@ -351,6 +351,20 @@ def resolve(
                 ).hexdigest(),
             }
         )
+    if ref.kind == "pilot":
+        from girlframe.engine.m3_gender_designation import current as legal_designation
+        from girlframe.engine.m3_gender_designation import presentation
+
+        designation = legal_designation(state, ref)
+        if designation is not None:
+            actual = actual.model_copy(
+                update=presentation(state, ref)
+                | {
+                    "source_sha256": hashlib.sha256(
+                        (actual.source_sha256 + fingerprint(designation)).encode()
+                    ).hexdigest()
+                }
+            )
     travel = offstage_travel(state, ref)
     if travel is None:
         return actual

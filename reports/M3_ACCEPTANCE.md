@@ -1,5 +1,62 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Gender Designation Request whole ordinary workflow — 2026-11-07
+
+Source extends local `08960c7`; feature-scoped19 Python/18 source files are frozen
+in `var/m3-gender-final-source-snapshot.json`. Concurrent Marriage work is separate
+and is not accepted by this checkpoint. Seven actual worker files plus twelve
+root interfaces changed; assigned but unnecessary Sex engine edits were avoided.
+
+A genuine held Award uses the existing acquisition/proof path. The original
+Handler assigns/reassigns all three legal categories without replacing original
+people, profiles, natural Status or cosmetics. Derived Man/Woman legal pronouns
+appear in actual actor/public sheet views; Animal adds no invented override.
+Native More advancements chooser accommodates the next acquisitions without
+changing old acquisition callbacks or the shared NativeForm.
+
+Animal relative authority reaches genuine Orders/Disobey only. Man's real native
+Sex can propose an observed partner Tag after dice in the same single-Tag
+arbitration; actual partner scene-use/marked state and original owner repeated-
+mark choices apply. The selected source raises final total to at least11 without
+altering faces/base receipt or adding a second numeric bonus. A narrow actual
+Discovery reader now proves that selected source before reconstructing its final
+tier. It cannot infer high from a source flag or disguise the effect as +6.
+
+Animal authors a real ordinary Tag before the same Sex aftermath resumes, so
+later consequences cannot erase the original giver. A legal Woman records an
+actual directed No through owned native speech or explicit in-character Order
+response. Real scene/cast/source is frozen, including legacy canonical scenes;
+OOC refusal/silence is not speech. Real required Handler Punishment and actual
+application/delegation prove closure; private History remains readable afterward.
+
+Final focused selection **6 passed /12.35s**: one all-category native normal,
+existing Award3, native Alpha mid and Mockingbird high closure. Exact command,
+case times, failed attempts and gaps: `var/m3-gender-designation-handoff.json`;
+JUnit `var/m3-gender-focused.xml`. The normal reaches actual relative Order,
+Disobey, post-dice mark/floor, partner Identity replacement, Animal Tag, same
+receipt/native Sex effects, reassignment, actual No, real Punishment and saved
+private History. Earlier failures exposed legacy scene handling and the real
+Discovery tier-reader dependency; other stops were fixture pending-result and
+Markdown handling. Assertions/source proof were preserved, not weakened.
+
+Coherent **19 Python Ruff/format** and **18 source mypy** pass:
+`var/m3-gender-final-static.json`. Root's initial import/line wrapping and a local
+issuer variable name collision were corrected before the final handoff. This is
+scoped evidence, not a new full regression or independent approval.
+
+Limits: other Sex/non-native/conditional-body providers require exact adapters;
+paired/BONDED partner-Tag conversion fails closed. Gender-specific Alpha low/high
+branches were not separately demonstrated; ordinary native Alpha compatibility
+passed. Five delegated choices have source, rationale, alternatives and change
+impact in the registry/rulings; printed clarity review is still pending. Registry
+implementation labels remain partial; inventory is not a completion percentage.
+
+M3 remains RULES_SUBSET. Marriage's shared Status/financial/discipline work remains
+active under separate ownership, with no acceptance inferred from these tests.
+Final integrated verification and independent/player gates remain required. Bot
+off; local source only, no push/deploy/live migration/environment/private-engine
+writes/AI/Ancillary.
+
 ## Full integration baseline and two minimal repairs — 2026-11-07
 
 Owner instruction now authorizes continuing through play-test readiness; the

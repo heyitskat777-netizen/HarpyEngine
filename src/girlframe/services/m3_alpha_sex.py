@@ -298,6 +298,11 @@ def results(game: GameService, c: Connection, state: GameState, action: dict[str
         raise WorkflowError("Resume this original source result")
     event = action["data"]["response_event"]
     level = action["data"]["result"]["tier"]
+    from girlframe.services.m3_gender_designation import offer_animal_tags
+
+    if offer_animal_tags(game, c, state, action):
+        action["data"]["gender_sex_deferred"] = True
+        return
     value = value.model_copy(update={"effect_event": event})
     if level == "low":
         value = value.model_copy(update={"sleep_event": event, "phase": "sleeping"})

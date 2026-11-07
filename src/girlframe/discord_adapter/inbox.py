@@ -657,6 +657,13 @@ class InboxView(discord.ui.View):
             await open_npc_bond_play(
                 interaction, NpcBondPlayService(self.service.store), item.identity
             )
+        elif item.task == "m3_gender_designation":
+            from girlframe.discord_adapter.m3_gender_designation import open_designation
+            from girlframe.services.m3_gender_designation import GenderDesignationService
+
+            await open_designation(
+                interaction, GenderDesignationService(self.service.store), item.identity
+            )
         elif item.task == "m3_a_bomb":
             from girlframe.discord_adapter.m3_a_bomb import open_bomb
             from girlframe.services.m3_a_bomb import ABombService

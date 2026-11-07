@@ -112,13 +112,32 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
 
     fields = []
     if kind == "tag_window":
+        partner_tags = decision.get("gender_man_tags", ())
+        options = ("pass", "tag", "gender_man") if partner_tags else ("pass", "tag")
+        visible_tags = list(decision["tags"]) + [
+            dict(id="gender-partner:" + x["id"], name="Partner: " + x["label"])
+            for x in partner_tags
+        ]
         fields = [
-            menu("options", "Pass or propose one Tag", ("pass", "tag")),
+            menu("options", "Pass or propose one Tag", options),
             entities(
-                "denied", "Relevant observed Tag (for Tag proposal)", decision["tags"], 0, 1, False
+                "denied", "Relevant observed Tag (for Tag proposal)", visible_tags, 0, 1, False
             ),
-            menu("number", "Tag direction", ("-1", "1"), required=False),
-            text("text", "Why is the Tag relevant?", False),
+            menu(
+                "number",
+                "Ordinary Tag direction (empty for partner rule)"
+                if partner_tags
+                else "Tag direction",
+                ("-1", "1"),
+                required=False,
+            ),
+            text(
+                "text",
+                "Ordinary Tag relevance (empty for partner rule)"
+                if partner_tags
+                else "Why is the Tag relevant?",
+                False,
+            ),
         ]
         if (
             own
@@ -164,6 +183,20 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
                 required=False,
             ),
         ]
+    elif kind == "gender_partner_tag_resolution":
+        fields = [
+            menu("options", "Resolve your repeated marked Tag", ("embrace", "reject")),
+            entities(
+                "denied",
+                "Identity replaced only at capacity",
+                [x for x in own["identities"] if not x["protected"]],
+                0,
+                1,
+                False,
+            ),
+        ]
+    elif kind == "gender_animal_tag":
+        fields = [text("text", "Give the non-Animal partner an ordinary Tag")]
     elif kind == "tag_resolution":
         fields = [
             menu("options", "Resolve the repeated marked Tag", ("embrace", "reject")),
@@ -351,6 +384,20 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
                 ),
             )
         ]
+        if decision.get("gender_spoken_no"):
+            fields.extend(
+                [
+                    Field(
+                        "fields.spoken_no",
+                        "Did you actually say No in character?",
+                        YES,
+                        0,
+                        1,
+                        required=False,
+                    ),
+                    text("text", "Your actual spoken words (if recording No)", False),
+                ]
+            )
     elif kind == "followthrough_confirm":
         fields = [
             flags("Did this fulfill what you requested?"),
@@ -709,13 +756,20 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         from girlframe.discord_adapter.m3_tag_markers import bind_answer
 
+        submitted = answer_values(values)
+        if submitted.options == ("gender_man",):
+            submitted = submitted.model_copy(
+                update={
+                    "denied": tuple(x.removeprefix("gender-partner:") for x in submitted.denied)
+                }
+            )
         result = await threaded(
             lambda: game.respond(
                 viewer_from_interaction(current),
                 str(current.id),
                 identity,
                 decision["revision"],
-                bind_answer(decision, answer_values(values)),
+                bind_answer(decision, submitted),
             )
         )
         return (
@@ -728,6 +782,11 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         "Choose only your own response. Nothing is submitted until Confirm. "
         "Safety pause remains available."
     )
+    if decision["kind"] == "tag_window" and decision.get("gender_man_tags"):
+        instructions += (
+            "\nThe partner-Tag option uses this roll's one Tag proposal "
+            "and can raise its final Sex result to 11+."
+        )
     if decision["kind"] == "tag_window" and decision.get("reign_enemy_tag_ids"):
         instructions += (
             "\nUnderfunded Tags belong to the opposed Rebel Girl. "
@@ -1801,7 +1860,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
             await reply(interaction, str(error))
 
     @campaign.command(
-        name="order", description="Record a direct order for a lower-status Pilot in this scene"
+        name="order", description="Record a source-authorized direct order in this scene"
     )
     async def order(
         interaction: discord.Interaction,

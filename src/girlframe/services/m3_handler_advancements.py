@@ -186,6 +186,15 @@ class HandlerAdvancementService:
                     from girlframe.engine.m3_a_bomb import acquisitions as bomb_acquisitions
 
                     receipts = bomb_acquisitions(spent)
+                elif (
+                    value.acquired_rule
+                    == "handler-advancement.handler-advancement.gender-designation-request"
+                ):
+                    from girlframe.engine.m3_gender_designation import (
+                        acquisitions as gender_acquisitions,
+                    )
+
+                    receipts = gender_acquisitions(spent)
                 elif value.acquired_rule == "handler-advancement.handler-advancement.secretary":
                     from girlframe.engine.m3_secretary import acquisitions as secretary_acquisitions
 

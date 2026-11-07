@@ -5674,6 +5674,86 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "gender-legal-derived-presentation",
+      "policy_key": "gender_legal_derived_presentation",
+      "summary": "Legal designation and the printed Man/Woman pronouns are derived character presentation; preserve personal profiles, identities, original actors and owned cosmetics. Animal adds no invented pronoun override.",
+      "source": "Rulebook PDF154/printed152 Gender Designation Request; PDF11/printed9 Tags; PDF22–23/printed20–21 Orders",
+      "rationale": "The advancement assigns a legal category, not a replacement person or player-authored profile.",
+      "alternatives": [
+        "Rewrite personal identity/cosmetic fields or invent Animal pronouns."
+      ],
+      "implementation_note": "Native views derive only the current canonical legal assignment; source hashes reflect it.",
+      "change_impact": "Future presentation only; preserve prior assignments and real profile/history.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "gender-animal-relative-order-authority",
+      "policy_key": "gender_animal_relative_order_authority",
+      "summary": "A current legally non-Animal Girl can issue an otherwise source-valid direct Order to a current Animal even when natural rank would not admit it; use that relative superiority only for Orders/Disobey.",
+      "source": "Rulebook PDF154/printed152 Gender Designation Request; PDF11/printed9 Tags; PDF22–23/printed20–21 Orders",
+      "rationale": "The printed relative rank must have a genuine Order consumer; a global rank rewrite would affect unrelated Plays.",
+      "alternatives": [
+        "Restrict the exception to already-valid superior Orders, or change global Status."
+      ],
+      "implementation_note": "Actual original actors/designations and order source remain proved; compulsion, scene locks and ordinary authority paths remain.",
+      "change_impact": "Future relative Order eligibility only; natural Status/resources stay intact.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "gender-man-observed-partner-tag-floor",
+      "policy_key": "gender_man_observed_partner_tag_floor",
+      "summary": "Man may propose one observed actual partner Tag in the ordinary post-dice Sex Tag window. Preserve scene use, single-Tag arbitration and the partner human repeated-mark response; selected source gives final minimum11 without an extra additive bonus.",
+      "source": "Rulebook PDF154/printed152 Gender Designation Request; PDF11/printed9 Tags; PDF22–23/printed20–21 Orders",
+      "rationale": "Always marking supplies the specific source exception without creating a second Tag budget or knowledge of unseen private Tags.",
+      "alternatives": [
+        "Ignore scene/arbitration/observation limits or stack an additional numeric bonus."
+      ],
+      "implementation_note": "Prove actual native Sex, legal Man, partner, canonical selected response, marked Tag/history and unchanged receipt; paired conversion fails closed.",
+      "change_impact": "Future known native source marks only; preserve actual prior marks/receipts and leave further providers explicit.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "gender-animal-tag-before-sex-aftermath",
+      "policy_key": "gender_animal_tag_before_sex_aftermath",
+      "summary": "Resolve the actual Animal-owned ordinary Tag before continuing that same native Sex aftermath.",
+      "source": "Rulebook PDF154/printed152 Gender Designation Request; PDF11/printed9 Tags; PDF22–23/printed20–21 Orders",
+      "rationale": "Actual Sex already occurred; a later transformation/ending must not erase the original giver before its printed Tag exists.",
+      "alternatives": [
+        "Apply aftermath first and silently lose the Tag if its giver becomes unavailable."
+      ],
+      "implementation_note": "One original Sex source/gift; actual human label, original giver/subject and normal setter/lifecycle rules; defer/resume once without another roll or consent.",
+      "change_impact": "Future ordering only; prior source effects remain immutable.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "gender-woman-actual-no-and-consequence-owner",
+      "policy_key": "gender_woman_actual_no_and_consequence_owner",
+      "summary": "Woman No uses explicit speaker-owned actual in-character directed speech; silence, OOC decline, withdrawal and bare Disobey do not fabricate it. The current original Handler owns the required Punishment and may use existing genuine delegation.",
+      "source": "Rulebook PDF154/printed152 Gender Designation Request; PDF11/printed9 Tags; PDF22–23/printed20–21 Orders",
+      "rationale": "A speech-triggered consequence needs an actual source and an executor; the text does not assign an automatic Man-player punishment privilege.",
+      "alternatives": [
+        "Infer speech from UI refusal/failed compliance, or automatically make the addressed Man executor."
+      ],
+      "implementation_note": "Freeze canonical scene/cast and original assignments; source work closes only through actual Punishment effects, with inflictor-owned details and OOC safety preserved.",
+      "change_impact": "Future actual speech/owner routing only; independent clarity review may adjust ownership without rewriting known speech/effects.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -16859,14 +16939,16 @@
         "heading": "Gender Designation Request"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_gender_designation.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

@@ -61,4 +61,12 @@ def public_sheet(sheet: PilotSheet, state: GameState) -> dict[str, Any]:
     if sheet.owner in state.order:
         i = state.order.index(sheet.owner)
         result["rank"] = "Ace" if i == 0 else "Dog" if i == len(state.order) - 1 else "Wings"
+    if sheet.character_id is not None:
+        from girlframe.engine.m3_actor_state import ActorRef
+        from girlframe.engine.m3_gender_designation import presentation
+
+        legal = presentation(
+            state, ActorRef(kind="pilot", entity=str(sheet.owner), incarnation=sheet.character_id)
+        )
+        result.update({key: value for key, value in legal.items() if value is not None})
     return result

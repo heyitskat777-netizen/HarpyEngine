@@ -166,6 +166,14 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         sheet = state.sheets.get(str(owner))
         body = json.loads(request["body_json"])
+        if kind in ("gender_partner_tag_resolution", "gender_animal_tag"):
+            from girlframe.services.m3_gender_designation import apply_choice
+
+            require(
+                apply_choice(self.game, c, state, action, request, answer),
+                "Recover the original designation response",
+            )
+            return
         if kind == "reign_group_tag_resolution":
             from girlframe.services.m3_reign_terror import resolution as resolve_reign_tag
 
@@ -788,6 +796,9 @@ class ChoiceEngine:
             self.finish(c, state, action)
             return
         if kind == "order_response":
+            from girlframe.services.m3_gender_designation import order_no
+
+            order_no(self.game, c, state, action, answer)
             if answer.options == ("disobey",):
                 from girlframe.engine.m3_actor_bonds import current_ref as am_original
                 from girlframe.engine.m3_am import require_freedom
@@ -850,7 +861,7 @@ class ChoiceEngine:
         from girlframe.services.m3_reign_terror import propose as propose_reign
 
         available_tags += reign_candidates(self.game, c, state, action)
-        picks(answer.options, {"pass", "tag"}, 1)
+        picks(answer.options, {"pass", "tag", "gender_man"}, 1)
         require(
             set(answer.fields) <= {"status", "marker"}, "Choose only supported source-role fields."
         )
@@ -864,6 +875,10 @@ class ChoiceEngine:
                 not answer.denied and set(answer.fields) <= {"status", "marker"},
                 "A pass does not modify a Tag.",
             )
+        elif answer.options == ("gender_man",):
+            from girlframe.services.m3_gender_designation import propose_man_tag
+
+            propose_man_tag(self.game, c, state, action, owner, answer)
         else:
             picks(
                 answer.denied,
@@ -931,7 +946,7 @@ class ChoiceEngine:
         proposals = []
         for person in action["data"]["participants"]:
             answer = self.answered(action, "tag_window", person)
-            if answer.options == ("tag",):
+            if answer.options in (("tag",), ("gender_man",)):
                 try:
                     marker = markers.saved(self.game, c, state, action, person)
                 except WorkflowError:
@@ -965,6 +980,16 @@ class ChoiceEngine:
                     selected = entry
         if selected:
             person, answer, marker = selected
+            if answer.options == ("gender_man",):
+                from girlframe.services.m3_gender_designation import apply_man_tag
+
+                require(
+                    apply_man_tag(self.game, c, state, action, person, marker, answer),
+                    "Recover the actual partner Tag source",
+                )
+                if not self.game.pending(c, action["id"]):
+                    self.results(c, state, action)
+                return
             from girlframe.services.m3_reign_terror import mark as mark_reign
 
             if mark_reign(self.game, c, state, action, answer.denied[0], person, marker, answer):
@@ -1057,6 +1082,11 @@ class ChoiceEngine:
         total = action["data"]["receipt"]["pre_total"] + sum(
             x["amount"] for x in action["data"]["modifiers"]
         )
+        from girlframe.engine.m3_gender_designation import man_floor
+
+        minimum = man_floor(action)
+        if minimum is not None:
+            total = max(total, minimum)
         action["data"]["result"].update(total=total, tier=tier(total))
 
     def results(self, c: Connection, state: GameState, action: dict[str, Any]) -> None:
