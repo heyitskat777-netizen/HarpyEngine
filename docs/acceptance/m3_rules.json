@@ -1290,6 +1290,28 @@
           "limitation": "Oldgen Sex and conditional/non-native adapters remain required. New Off-Duty maxim token is connected but not directly scenario-tested here. Focused checks only; full/independent/human gates pending."
         }
       ]
+    },
+    {
+      "id": "M3C-OLDGEN-SEX-NORMAL-001",
+      "title": "Oldgen Sex all printed normal choices and real source effects",
+      "expected": "Actual voluntary source, Heat/roll and low base-maxim rewrite, mid effects, high yes/no real counterpart choice and reciprocal/additional effects, independent physiological inability and actual recovery.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_oldgen_sex.py"
+      ],
+      "evidence": [
+        {
+          "test_name": "Four printed normal paths plus affected current consumers",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_oldgen_sex.py tests/rules/test_oldgen.py tests/rules/test_stim_sex.py::test_mid_real_lower_status_order_drug_tag_consumer_expiry_and_private_saved_source tests/rules/test_gender_designation.py tests/test_m2_game.py::test_helpless_requires_explicit_recovery_and_no_silent_timeout tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng --maxfail=1 --junitxml=var/m3-oldgen-sex-integrated.xml",
+          "actual_result": "12 passed in19.20s; static14 Python/13 source passed without drift; registry/repository and offlineSDK16 commands passed;14 CI cases collected only.",
+          "log_or_trace": "var/m3-oldgen-sex-integrated.xml; var/m3-oldgen-sex-union-static.json; var/m3-oldgen-sex-union-source-snapshot.json; var/m3-oldgen-sex-handoff.json",
+          "git_commit": "3e8ef8bd71f88cdc2b3700f8af49f4eb11777713",
+          "limitation": "Temporary advice-maxim rewrite and non-native/conditional-body adapters remain required. Active Doll edits excluded. Focused only; full/independent/human gates pending."
+        }
+      ]
     }
   ],
   "enabled_modules": [

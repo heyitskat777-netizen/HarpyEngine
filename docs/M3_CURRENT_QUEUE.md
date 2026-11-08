@@ -1,6 +1,6 @@
 # Current M3 queue
 
-Updated 2026-11-08. Gameplay integration source: `b9c3f13`; local branch
+Updated 2026-11-08. Gameplay integration source: `3e8ef8b`; local branch
 `codex/integrated-repairs-20261107`. **RULES_SUBSET; bot off.** No deployment,
 environment publication, recovered-engine writes, AI/M4 or Ancillary activation.
 This working list separates upcoming work from completed scoped checkpoints.
@@ -10,7 +10,7 @@ Registry entries and workflows overlap and differ in size; counts are not percen
 
 | Workflow | Owner / state | Dependency | Next concrete action | Completion evidence |
 |---|---|---|---|---|
-| Oldgen Sex Play | Oldgen agent + root / active bounded implementation | Actual maxims plus genuine Sex receipt/choices and reciprocal effects | Implement all printed tiers and original-owner maxim rewrite | Prior maxims committed; new source contract next |
+| Princess Show Dog | Oldgen agent + root / bounded source implementation | Actual Go-OffDuty source, NPC/Bond/message effects and genuine risk discipline | Hook required period work and both independent printed choices; preserve existing standards work | Relevant source reconciled; no existing Show Dog consumer found; contract/API frozen next |
 | Successor | Root / lifecycle dependency queued | Proven singleton Handler, unranked Girl and actual link-removal gaps | Assign source-bound concurrent junior/full Handler lifecycle and actual threshold consumers; avoid a Gold-Star-only placeholder | Frozen346-word source/dependency contract,12 inspected dependency hashes; no code or acceptance |
 | Vatgrown Unassuming Doll | AM agent + root / active bounded implementation | Real departure/notice effects and owned low consequence | Integrate actual scene exit/re-entry, source effects and all printed normal tiers | Frozen source/dependency contract; no implementation acceptance yet |
 | Remaining required core systems | Root + bounded assignments / open | Existing source inventory and actual consumers | Select the next whole dependency-ready gameplay workflow; keep unsupported branches visible | [Registry](../rules/registry.json), [remaining scope](M3_REMAINING_WORK.md), [acceptance](acceptance/m3_rules.json) |
@@ -39,6 +39,7 @@ These are implementation evidence, not independent certification or milestone si
 
 | Workflow | Owner / state | Dependency | Next concrete action | Completion evidence |
 |---|---|---|---|---|
+| Oldgen Sex Play | Oldgen agent + root / committed within scope | Actual source/receipt/choices, current maxim text and independent recovery | `3e8ef8b`; temporary maxim rewrite/body adapters stay visible | Integrated12 passed /19.20s; coherent static14 Python/13 source; offlineSDK16 commands;14 CI cases collected only |
 | Oldgen maxim/advice | Oldgen agent + root / committed within scope | Genuine source Heat/Tag, ordinary unmark grants and actual listening | `b9c3f13`; Oldgen Sex/other body adapters stay explicit | Integrated8 passed /9.56s; coherent static12 Python/11 source; offlineSDK15 commands;10 CI cases collected only |
 | Acquisition/proof pilot | AM agent / implemented within scope | Frozen Secretary, Deep-Brain-Spikes and new Tracker source | Reuse the proven core in the next matching acquisition; retain explicit exceptions | Coordinated 8 checks passed; source proof/rollback/retry/private receipt, exact ten-file snapshot |
 | Malleable force-embrace / NPC protection | Malleable agent + root / committed within scope | Genuine altered-at-birth proof, forced replacement and actual NPC procedure | `01c8cfe`; keep specialised source/body consumers visible | Integrated10 passed /19.81s; static12 Python/11 source; offlineSDK14 commands;13 CI cases collected only |
