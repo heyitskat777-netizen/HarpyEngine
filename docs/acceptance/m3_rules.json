@@ -1348,6 +1348,28 @@
           "limitation": "Other meaningful actual-act, NPC/body adapters and other Vatgrown rules remain required. Source exit is scene-bound, no global stealth/travel. Active Show Dog edits excluded. Focused evidence only; final full/independent/human gates pending."
         }
       ]
+    },
+    {
+      "id": "M3C-TRAINEE-NORMAL-001",
+      "title": "Trainee actual teaching, three choices and real mentor duty consequences",
+      "expected": "Original assigned Mentor source, actual erasure/mandatory Tag embrace, actual performed source for1\u20133Heat, real immediate Mentor Punishment or actual report/finding and Handler Punishment of Mentor, private source/report separation.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_trainee.py"
+      ],
+      "evidence": [
+        {
+          "test_name": "Initial integrated selection and final affected source/privacy checks",
+          "executed_command": "Exact selectors/artifacts in reports/M3_ACCEPTANCE.md and var/m3-trainee-handoff.json",
+          "actual_result": "Initial integrated9 passed9.35s; final report/privacy1 passed2.05s; final ordinary/Ankou erase2 passed3.45s, overlapping selections. Final static10 Python/9 source passed without drift. OfflineSDK18 commands, registry/repository passed;12 CI cases collected only.",
+          "log_or_trace": "var/m3-trainee-integrated.xml; var/m3-trainee-handler-privacy.xml; var/m3-trainee-erase-frames.xml; var/m3-trainee-union-static.json; var/m3-trainee-union-source-snapshot.json",
+          "git_commit": "1d0031ae43abad60ac22fadc0b7f747b1abdb4a8",
+          "limitation": "No final combined or full rerun; broader actor/body/Identity/Tag and multiple-Mentor sources remain required. Mentor daily scene/name code excluded; independent/human gates pending."
+        }
+      ]
     }
   ],
   "enabled_modules": [
