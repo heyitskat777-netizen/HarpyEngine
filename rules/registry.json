@@ -6956,7 +6956,7 @@
         "Automatically carry every physical possession when the mind changes bodies.",
         "Remove or duplicate the object across the active sheet and parked hardware."
       ],
-      "implementation_note": "Positive exact genuine HeldItem/Asset and source proof, actual transition/conveyance account and original source author. Preserve IDs, damage/Void and actual custody; do not duplicate in parked hardware. Default empty fields omit as before. Battery/Storage connection lifetimes and other custody sources keep their own guards.",
+      "implementation_note": "Positive exact genuine HeldItem/Asset and source proof, actual transition/conveyance account and original source author. Preserve IDs, damage/Void and actual custody; do not duplicate in parked hardware. Default empty fields omit as before. Battery/Storage connection lifetimes and other custody sources keep their own guards. Actual spinal endpoints now preserve physical vessel identity; supported body transfer uses genuine unplug/reviewed replug. SOURCE_NEURAL_ROUTE_REQUIRED is an implementation boundary for continuous relay, not a printed universal unplug rule. Parked relay and Girl Storage projection remain separate required ports.",
       "change_impact": "Keep original possession, body, source and conveyance history. Later adjustments cannot silently recreate objects, end neural links or change another source lifetime.",
       "provenance": "owner_approved_campaign_ruling",
       "authority": "delegated_recommendation",
@@ -7025,6 +7025,22 @@
       ],
       "implementation_note": "Prove canonical same-NPC controller-only before/after claim and same live BrainRef. Old human withdraws stale OOC casting; new human explicitly joins original source role. Then current controller authors pending choices through existing service. Private current-role tasks/readback follow actual authority. No new String, invented human-NPC reciprocal choice, fake viewer or old record rewrite. FactoryReset actor continuity remains a separate port.",
       "change_impact": "Preserve old questions, String spending, source controllers and canonical answer-event author. Future handover policy changes never rewrite prior answers.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "changeling-canonical-reset-brain-continuity",
+      "summary": "Canonical AM FactoryReset can preserve a brain-bound String and owed choice through proved original/reset hardware; fresh NPC uses retain only current NPC eligibility.",
+      "source": "Rulebook PDF82/printed80 Psych Strings/Fingers; canonical AM FactoryReset and original/reset BodyFact sources",
+      "rationale": "Brain-bound effects follow positively preserved physical brain identity, rather than an account alias. Reset changes current role authority without rewriting past effect eligibility or granting a new String.",
+      "policy_key": "changeling_canonical_reset_brain_continuity",
+      "alternatives": [
+        "Require a source-specific printed clarification before continuing through reset while preserving owed work."
+      ],
+      "implementation_note": "Prove unique canonical FactoryReset/archive and original/reset BodyFacts, same brain ID/vessel and use-time lineage. Preserve original String spending, questions, controllers and previously owed reciprocal rights; actual new NPC controller authors current choices. New use has current other-kind NPC rights, no Girl physiology or extra Strings. Pure same_brain stays strict. Unknown hardware, other conversions and live pre-reset Whip/remote-Sex retargeting remain explicit separate sources.",
+      "change_impact": "Keep all original facts, receipts, authors and prior eligibility. Future clarifications apply prospectively; no retroactive new grants, rewritten answers or brain aliases.",
       "provenance": "owner_approved_campaign_ruling",
       "authority": "delegated_recommendation",
       "clarity_review": true,
@@ -11960,7 +11976,8 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_changeling.py",
-        "tests/rules/test_body_facts.py"
+        "tests/rules/test_body_facts.py",
+        "tests/rules/test_changeling_continuity.py"
       ],
       "m2_play_id": null,
       "module": "core",

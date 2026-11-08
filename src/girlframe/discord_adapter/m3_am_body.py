@@ -10,12 +10,47 @@ from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m2 import AssetState, ChoiceAnswer
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_am_body import BodySpec
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_am_body import BodyService
 from girlframe.services.onboarding import WorkflowError
 
 YES = (("yes", "Yes, these are actual physical facts"), ("no", "Not confirmed"))
+
+
+async def open_spinal_controls(
+    interaction: discord.Interaction, service: BodyService, actor: ActorRef
+) -> None:
+    from girlframe.discord_adapter.m3_frame_control import open_connection
+    from girlframe.services.m3_frame_control import FrameControlService
+
+    data = await asyncio.to_thread(
+        service.neural_controls, viewer_from_interaction(interaction), actor
+    )
+    links = data["connections"]
+    if not links:
+        await reply(interaction, "No actual spinal contact belongs to this original AM.")
+        return
+    instructions = (
+        "These are actual spinal cables, separate from the hookup between AM bodies. "
+        "Opening a card changes nothing; an actual participant must perform the unplug."
+    )
+    errors = list(dict.fromkeys(x["error"] for x in links if x["error"]))
+    if errors:
+        instructions += "\n" + "\n".join(errors)
+
+    async def choose(current: discord.Interaction, values: dict[str, Any]) -> None:
+        await open_connection(current, FrameControlService(service.game), values["source"][0])
+
+    form = NativeForm(
+        interaction.user.id,
+        "Your actual spinal connections",
+        instructions,
+        [Field("source", "Actual own source", tuple((x["id"], x["label"]) for x in links))],
+        choose,
+    )
+    await reply(interaction, form.text(), form)
 
 
 async def open_prepare(
@@ -262,13 +297,19 @@ async def open_body(
             if data["controller"] and not data["swap"]["returned_event"]
             else []
         )
+        + ([("spinal", "Open your actual spinal connections")] if data["owner"] else [])
     )
     if not options:
         await reply(interaction, instructions)
         return
 
-    async def act(current: discord.Interaction, values: dict[str, Any]) -> str:
+    async def act(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         operation = values["operation"][0]
+        if operation == "spinal":
+            await open_spinal_controls(
+                current, service, ActorRef.model_validate(data["swap"]["actor"])
+            )
+            return None
         if operation == "return":
             await asyncio.to_thread(
                 service.return_body,

@@ -496,3 +496,233 @@ def test_actual_carried_tool_conveyance_swap_new_body_effect_and_owned_return(
         assert prove_item(c, game, final, item.id) == item
         assert prove_conveyance(game, c, final, returned.returned_event).controller == 2
     assert len(service.view(PLAYER, swap.id)["conveyances"]) == 2
+
+
+def test_actual_spinal_unplug_body_move_return_and_reviewed_replug(ledger, tmp_path, monkeypatch):
+    import test_requisition_service
+    from test_enforcer_requisitions import approved
+    from test_frame_control import exposed_core
+    from test_janus_battery import start as start_battery
+    from test_m2_game import Gateway, start
+    from test_mission_service import service as campaign
+    from test_world import initial
+
+    from girlframe.delivery.m2_worker import GameWorker
+    from girlframe.discord_adapter.m3_am_body import open_spinal_controls
+    from girlframe.discord_adapter.m3_am_jailbroken import open_jailbroken
+    from girlframe.discord_adapter.m3_am_jailbroken import open_prepare as prepare_jailbroken
+    from girlframe.engine import m3_am_jailbroken as occupancy
+    from girlframe.engine import m3_janus_storage as storage
+    from girlframe.engine.m2 import AssetState
+    from girlframe.engine.m3_janus import BATTERY, CORE
+    from girlframe.engine.m3_janus_requisitions import STORAGE
+    from girlframe.services.m3_am_jailbroken import JailbrokenService
+    from girlframe.services.m3_frame_control import (
+        FrameControlService,
+        connection_endpoints,
+    )
+    from girlframe.services.m3_frame_control import (
+        prove as prove_contact,
+    )
+    from girlframe.services.m3_janus_requisitions import JanusRequisitionService
+    from girlframe.services.m3_janus_storage import StorageService
+
+    # Genuine initial AM creation, followed by the existing actual Core request/review.
+    monkeypatch.setattr(
+        test_requisition_service,
+        "service",
+        lambda store, frame: campaign(store, girl="AM", frame=frame),
+    )
+    game, actor, core = exposed_core(ledger, tmp_path, monkeypatch)
+    approved(ledger, game, tmp_path, monkeypatch, extra=(CORE, BATTERY, STORAGE, occupancy.RULE))
+    with ledger.transaction() as c:
+        original = state(game)
+        original.world = initial()
+        original = place(original, 2, mode="outside_frame")
+        game.event(c, 1, str(uuid4()), "synthetic.actual_am_original_body_position", original)
+    pose = next(x for x in state(game).placements if x.actor == actor)
+    source = FrameControlService(game)
+
+    def connect():
+        identity = source.propose(
+            PLAYER,
+            str(uuid4()),
+            900,
+            actor,
+            core,
+            "My original physical neural jack actually reaches this exposed Core's spine",
+        )["id"]
+        source.decide(
+            ADMIN,
+            str(uuid4()),
+            identity,
+            state(game).revision,
+            True,
+            "I review the actual jack, original vessels, spinal access and real reach",
+        )
+        return identity
+
+    contact = connect()
+    original_contact = next(x for x in state(game).neural_connections if x.id == contact)
+    assert original_contact.caster_vessel == pose.vessel_id
+    assert original_contact.battery_vessel
+    service = JailbrokenService(game)
+    before = state(game).model_dump_json()
+    spec = bodies.BodySpec(
+        vessel="actual-spinal-test-spare",
+        label="Actual supplied spare puppet",
+        source="Actual human-authored empty local processing-capable hardware",
+        processing_confirmed=True,
+        unoccupied_confirmed=True,
+        medical="fit",
+        assets=(
+            AssetState(
+                id="actual-spinal-test-spare:physical:0",
+                family="girl",
+                name="Actual spare arm",
+                description="Supplied mechanical arm",
+            ),
+        ),
+    )
+    # Even a connection without any temporary mental Asset requires an actual route/unplug.
+    with pytest.raises((ValueError, WorkflowError), match="SOURCE_NEURAL_ROUTE_REQUIRED"):
+        service.prepare(PLAYER, str(uuid4()), actor, state(game).revision, spec)
+    assert state(game).model_dump_json() == before
+    with pytest.raises(WorkflowError):
+        BodyService(game).neural_controls(OTHER, actor)
+
+    acquisitions = JanusRequisitionService(game)
+    menu = acquisitions.menu(PLAYER)
+    acquisitions.buy_rule(
+        PLAYER, str(uuid4()), menu["source_sha256"], STORAGE, "Actual owned Void Storage"
+    )
+    worker, gateway = GameWorker(game), Gateway()
+
+    def battery():
+        game.dice.faces = (2, 2)
+        identity = start_battery(game, core)
+        tick(worker, gateway, 3)
+        assert game.inspect(PLAYER, identity)["receipt"]  # genuine worker progression
+        pass_tags(game)
+        answer(game, PLAYER, "janus_select", options=("cognition", "offset"))
+        tick(worker, gateway, 4)
+        assert game.inspect(PLAYER, identity)["state"] == "complete"
+        return next(x for x in state(game).battery_links if x.source_action == identity)
+
+    first = battery()
+    temporary = {x.source.asset_id for x in first.borrowed}
+    assert len(temporary) == 2
+    frame_asset = next(x for x in state(game).sheets["2"].assets if x.family == "frame")
+    game.dice.faces = (4, 5)
+    dive = start(game, play="dive_deep")
+    tick(worker, gateway, 3)
+    assert game.inspect(PLAYER, dive)["receipt"]
+    pass_tags(game)
+    answer(game, PLAYER, "dive_select", options=("void_and_unmark_all",), text="Actual communion")
+    answer(
+        game,
+        PLAYER,
+        "dive_effect",
+        fields={"asset": frame_asset.id, "storage": "yes"},
+        text="Store this actual same-current-Frame Void point through this real Core",
+    )
+    tick(worker, gateway, 4)
+    (point,) = storage.points(state(game))
+    assert StorageService(game).view(PLAYER)["points"][0]["active"]
+    connected = state(game)
+
+    async def unplug():
+        own = current(2, 984001)
+        await own.response.defer(ephemeral=True)
+        await open_spinal_controls(own, BodyService(game), actor)
+        menu = own.edit_original_response.call_args.kwargs["view"]
+        assert not await menu.interaction_check(current(3))
+        menu.values.update(source=(contact,))
+        select = current(2, 984002)
+        await menu.confirm.callback(select)
+        form = select.edit_original_response.call_args.kwargs["view"]
+        form.values.update(account="I physically remove my own jack from the original Core")
+        confirmation = current(2, 984003)
+        await form.confirm.callback(confirmation)
+        assert form.completed, str(confirmation.edit_original_response.call_args)
+
+    asyncio.run(unplug())
+    unplugged = state(game)
+    assert not temporary & {x.id for x in unplugged.sheets["2"].assets}
+    assert storage.points(unplugged) == (point,)
+    assert not StorageService(game).view(PLAYER)["points"][0]["active"]
+    assert (
+        source.unplug(
+            PLAYER,
+            "984003",
+            contact,
+            connected.revision,
+            "I physically remove my own jack from the original Core",
+        )["phase"]
+        == "unplugged"
+    )
+    with ledger.engine.connect() as c:
+        ended = prove_contact(game, c, unplugged, contact)
+        assert connection_endpoints(game, c, ended) == (
+            original_contact.caster_vessel,
+            original_contact.battery_vessel,
+        )
+        forged = unplugged.model_copy(deep=True)
+        forged.neural_connections = [
+            x.model_copy(update=dict(caster_vessel="unproved-new-endpoint"))
+            if x.id == contact
+            else x
+            for x in forged.neural_connections
+        ]
+        with pytest.raises(WorkflowError, match="original bodies"):
+            prove_contact(game, c, forged, contact)
+
+    async def actual_move_and_return():
+        own = current(2, 984004)
+        await own.response.defer(ephemeral=True)
+        await prepare_jailbroken(own, service)
+        form = own.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            vessel=spec.vessel,
+            label=spec.label,
+            source=spec.source,
+            processing=("yes",),
+            empty=("yes",),
+            medical=("fit",),
+            assets="Actual spare arm | Supplied mechanical arm | intact | clear",
+        )
+        confirmation = current(2, 984005)
+        await form.confirm.callback(confirmation)
+        assert form.completed, str(confirmation.edit_original_response.call_args)
+        for number, vessel in ((984006, spec.vessel), (984008, pose.vessel_id)):
+            own = current(2, number)
+            await own.response.defer(ephemeral=True)
+            await open_jailbroken(own, service)
+            form = own.edit_original_response.call_args.kwargs["view"]
+            form.values.update(operation=("occupy:" + vessel,))
+            confirmation = current(2, number + 1)
+            await form.confirm.callback(confirmation)
+            assert form.completed, str(confirmation.edit_original_response.call_args)
+            with ledger.engine.connect() as c:
+                actual = resolve(state(game), actor, profiles(c, ledger.campaign_id))
+                assert actual.vessel_id == vessel and actual.ref == actor
+                if vessel == spec.vessel:
+                    assert any(x.name == "Actual spare arm" for x in actual.assets)
+            assert not bodies.spinal_links(state(game), actor)
+            assert storage.points(state(game)) == (point,)
+            assert not StorageService(game).view(PLAYER)["points"][0]["active"]
+
+    calls = game.dice.calls
+    asyncio.run(actual_move_and_return())
+    assert len(occupancy.history(state(game), actor)) == 2 and game.dice.calls == calls
+    replacement = connect()
+    assert replacement != contact
+    second = battery()
+    assert second.connection == replacement and second.id != first.id
+    assert not temporary & {x.id for x in state(game).sheets["2"].assets}
+    assert storage.points(state(game)) == (point,)
+    assert StorageService(game).view(PLAYER)["points"][0]["active"]
+    readback = BodyService(game).neural_controls(PLAYER, actor)
+    assert {x["phase"] for x in readback["connections"]} == {"unplugged", "connected"}
+    assert next(x for x in readback["connections"] if x["id"] == replacement)["error"] is None
+    assert next(x for x in state(game).neural_connections if x.id == contact).ended_event

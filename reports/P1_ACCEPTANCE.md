@@ -839,3 +839,29 @@ verified; repository working-source scan1407 files/40 preserved manifest/0
 findings, including the separately active AM files. Packet whitespace passed.
 Exact selected hashes/checks retained in `var/p1-dose-controller-*`; this is not
 a full-regression snapshot or independent rules review.
+
+### Actual spinal endpoints and canonical reset brain continuity
+
+Preceding published acc56c807aadb3375d20694eb77f10ffec7dcdba has
+[focused CI42525093965](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42525093965)
+PASS; full regression skipped.
+
+- `pytest -q tests/rules/test_am_body.py::test_actual_spinal_unplug_body_move_return_and_reviewed_replug`: first **1passed/7.23s**. Real AM+JANUS/Core, Battery/Storage, owned native unplug, intrinsic Jailbroken transfer/return and genuinely reviewed new spinal contact. Actual endpoint fields omit legacy defaults; old physical connections never move or expire by inference. Continuous relay/Girl Storage projection remain required unsupported ports, with a visible implementation guard.
+- `pytest -q tests/rules/test_changeling_continuity.py::test_actual_am_fourth_limiter_reset_preserves_original_strings_question_and_counter`: first1failed/1.26s, new fixture attempted creation choices inconsistent with saved public frame. Added two neutral helper keywords, preserving defaults/revisions: initial seed frame and creation-review other_frame. Retry1failed/10.18s exposed a real historical-brain proof consulting current profiles after the AM ended. Extracted the existing neural birth-profile loop into snapshot_profiles(c,campaign,state), reused in factual brain resolution for caller-verified canonical state; current viewer authorization stays separate. Same-node retry **1passed/10.64s**. Real separately reviewed characters, actual starting/deepen Strings, four actual discoveries/Limiters/reset, positive same physical brain, native original owed answer/counter Tag and once-only remaining String. Pure same_brain remains strict; new NPC use grants no Girl eligibility.
+- Because the shared extraction changed neural birth proof after its initial pass, reran that single affected AM node: **1passed/6.08s**. No other old success, compatibility sweep or role/lifecycle matrix rerun. Timings are separate runs, not a speed comparison.
+
+The shared helper has exactly two demonstrated current consumers, preserves
+original neural binding behavior and adds no authority or generic rules framework.
+Worker AM6 Ruff/format+mypy5 and reset5 Ruff/format+mypy4 passed; reset body-only
+repair Ruff/format/mypy1 passed. Root helper/FrameControl delta Ruff/format+mypy2,
+Jailbroken native Ruff/format/mypy1 and two neutral test helpers Ruff/format passed.
+Source ownership/failures/hashes remain in ignored worker handoffs and minimum logs.
+Fuel-shortage NEW4/shared integration remains active and is not staged here.
+Full regression/global migrations/privacy/restore, independent and human acceptance
+remain pending; bot OFF, RULES_SUBSET.
+
+Publication scope21 paths/15 Python/11 source, using disjoint static scopes
+above. Registry477/272 subset/205 unimplemented/440 required/0 independently
+verified. Working-source privacy scan1413 files/40 preserved manifest/0 findings
+(includes separate active Fuel files); packet whitespace passed. Exact selected
+hashes/checks retained under `var/p1-spinal-reset-*`. No final-candidate claim.

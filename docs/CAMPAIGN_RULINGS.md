@@ -3935,3 +3935,19 @@ human joins the original role before answering. Private tasks follow actual
 current authority. No new String, NPC Girl reciprocal right or automatic answer
 is granted. FactoryReset actor lineage remains separate. This delegated
 interpretation requires clarity review; future changes preserve earlier events.
+
+### Canonical reset and the same physical brain
+
+`changeling-canonical-reset-brain-continuity` (PDF82/printed80): continue original
+brain-bound Strings and owed choices only through the genuine AM FactoryReset,
+archive and original/reset BodyFacts proving the same brain ID and vessel. Keep
+original sources, authors, spending and already-owed reciprocal eligibility.
+The actual current NPC controller answers; fresh uses receive current NPC rights,
+not Girl physiology or another String. Unknown replacement hardware and other
+conversions remain unsupported until proved. This delegated interpretation needs
+printed-rule clarity review; preserve prior events when adjusting future policy.
+
+AM spinal endpoints now require genuine known birth vessels. The supported body
+transfer path uses actual unplug and reviewed replug; the continuous-relay guard
+is an implementation boundary, not a printed universal unplug rule. Parked relay
+and Girl Storage endpoint projection remain explicit required source ports.

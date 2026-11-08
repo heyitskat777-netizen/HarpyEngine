@@ -23,6 +23,7 @@ from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_changeling_lineage import current_subject, prove_string_subject
 from girlframe.services.m3_dose_up import _cast, _roll_source
 from girlframe.services.m3_handler_advancements import _history
 from girlframe.services.m3_intracadre_marriage import prepare_payment
@@ -300,13 +301,9 @@ def prove_fingers(
         if getattr(value, field) != getattr(born, field):
             raise WorkflowError("Preserve the actual original consumed String and chosen source")
     node = prove_node(game, c, state, value.node)
-    if (
-        node.actor != value.actor
-        or not rules.same_brain(node.subject, value.subject)
-        or node.spent_by != value.id
-        or node.spent_event != value.event
-    ):
+    if node.actor != value.actor or node.spent_by != value.id or node.spent_event != value.event:
         raise WorkflowError("The actual original String must be consumed by exactly this source")
+    prove_string_subject(game, c, state, node, value.subject, value.event)
     return value
 
 
@@ -452,10 +449,7 @@ def _owed(game: GameService, c: Connection, work: tuple[str, ...]) -> bool:
 def _live(
     game: GameService, c: Connection, state: GameState, expected: rules.BrainRef
 ) -> rules.BrainRef:
-    actual = _brain(game, c, state, expected.actor)
-    if not rules.same_brain(actual, expected):
-        raise WorkflowError("Use the actual original brain; a shared controller is not continuity")
-    return actual
+    return current_subject(game, c, state, expected)
 
 
 def _choice_controller(
@@ -466,7 +460,13 @@ def _choice_controller(
     Historical BrainRefs and event authors stay immutable. This accepts neither
     another actor nor a new brain merely because a human account is shared.
     """
-    if expected.actor.kind != "npc" or state.world is None:
+    if expected.actor.kind != "npc":
+        from girlframe.engine.m3_am_reset import records as resets
+
+        if any(x.original == expected.actor for x in resets(state)):
+            return _live(game, c, state, expected).controller
+        return expected.controller
+    if state.world is None:
         return expected.controller
     npc = next((x for x in state.world.npcs if x.id == expected.actor.entity), None)
     if npc is None or not npc.alive or npc.controller == expected.controller:
@@ -526,12 +526,12 @@ def _owned_brain_choice(
     scene: SceneCast,
 ) -> None:
     controller = _choice_controller(game, c, state, brain)
-    _owned(game, c, state, viewer, brain.actor, controller)
-    _live(game, c, state, brain)
-    if controller != brain.controller:
+    actual = _live(game, c, state, brain)
+    _owned(game, c, state, viewer, actual.actor, controller)
+    if controller != brain.controller or actual.actor != brain.actor:
         current = next((x for x in state.scene_casts if x.id == scene.id and x.open), None)
         if current is None or not any(
-            role.actor == brain.actor and role.controller == controller for role in current.roles
+            role.actor == actual.actor and role.controller == controller for role in current.roles
         ):
             raise WorkflowError("Join this actual NPC role in the original source scene first")
 
@@ -1138,11 +1138,17 @@ def stage_assault(
 
 
 def require_answers(game: GameService, c: Connection, state: GameState, actor: ActorRef) -> None:
-    for value in rules.unanswered(state, actor):
+    from girlframe.engine.m3_am_reset import records as resets
+
+    originals = {x.original for x in resets(state) if x.actor == actor}
+    for value in rules.records(state, rules.Question):
+        if value.answer_event or value.answerer.actor not in ({actor} | originals):
+            continue
         prove_fingers(game, c, state, value.source)
-        raise WorkflowError(
-            "REQUIRED_FOLLOWUP: answer the actual source-owned mental question first"
-        )
+        if _live(game, c, state, value.answerer).actor == actor:
+            raise WorkflowError(
+                "REQUIRED_FOLLOWUP: answer the actual source-owned mental question first"
+            )
 
 
 def validate_pending_fingers(
@@ -1156,10 +1162,10 @@ def validate_pending_fingers(
         or use.frame != rules.frame(state, use.actor)
         or node.spent_by != use.id
         or node.spent_event != event
-        or not rules.same_brain(node.subject, use.subject)
         or use.target != use.subject.actor
     ):
         raise WorkflowError("Stage the exact real consumed original String before its effect")
+    prove_string_subject(game, c, state, node, use.subject)
     _live(game, c, state, use.brain)
     _live(game, c, state, use.subject)
     require_rule(game, c, state, use.actor, rules.FINGERS)
@@ -1220,6 +1226,8 @@ def _question(
     text: str,
     event: str,
     branch: str,
+    *,
+    asker_controller: int | None = None,
 ) -> str:
     identity = rules.identity("question", use.id, branch)
     rules.put(
@@ -1229,7 +1237,9 @@ def _question(
             source=use.id,
             asker=asker,
             answerer=answerer,
-            asker_controller=use.controllers[asker.token],
+            asker_controller=(
+                use.controllers[asker.token] if asker_controller is None else asker_controller
+            ),
             question=_text(text),
             event=event,
         ),
@@ -1553,9 +1563,17 @@ class ChangelingService:
             update: dict[str, Any] = dict(
                 counter=kind, counter_event=event, counter_closed_event=event
             )
+            subject = _live(self.game, c, state, use.subject)
             if kind == "question":
                 update["counter_question"] = _question(
-                    state, use, use.target, use.brain, text, event, "reciprocal"
+                    state,
+                    use,
+                    subject.actor,
+                    use.brain,
+                    text,
+                    event,
+                    "reciprocal",
+                    asker_controller=viewer.user_id,
                 )
             elif kind == "tag":
                 _copy(
@@ -1564,11 +1582,11 @@ class ChangelingService:
                         state,
                         profiles(c, self.store.campaign_id),
                         use.actor,
-                        use.target,
+                        subject.actor,
                         _text(text, 120),
                         event,
                         event,
-                        tuple(use.controllers.values()),
+                        (use.controllers[use.actor.token], viewer.user_id),
                     ),
                 )
                 update["counter_tag"] = event
@@ -2628,12 +2646,13 @@ class ChangelingService:
                 for node in rules.records(state, rules.String):
                     if node.actor == role.actor and node.spent_event is None:
                         prove_node(self.game, c, state, node.id)
+                        subject = _live(self.game, c, state, node.subject)
                         result["nodes"].append(
                             dict(
                                 id=node.id,
-                                label=node.subject.actor.kind + ":" + node.subject.actor.entity,
+                                label=subject.actor.kind + ":" + subject.actor.entity,
                                 actor=role.actor.model_dump(mode="json"),
-                                target=node.subject.actor.model_dump(mode="json"),
+                                target=subject.actor.model_dump(mode="json"),
                             )
                         )
                 result["accesses"].extend(
@@ -2700,6 +2719,9 @@ class ChangelingService:
                         "Only the actual addressed humans read this private question"
                     )
                 prove_fingers(self.game, c, state, value.source)
+                result["current_subject"] = _live(
+                    self.game, c, state, value.answerer
+                ).actor.model_dump(mode="json")
                 result["actionable"] = value.answer_event is None and viewer.user_id == answerer
             elif isinstance(value, rules.Fingers):
                 subject_controller = _choice_controller(self.game, c, state, value.subject)
@@ -2710,6 +2732,9 @@ class ChangelingService:
                 ) and not (value.kind == "fry" and viewer.user_id == value.handler_controller):
                     raise WorkflowError("Only actual source humans read this private use")
                 prove_fingers(self.game, c, state, value.id)
+                result["current_subject"] = _live(
+                    self.game, c, state, value.subject
+                ).actor.model_dump(mode="json")
                 result["effect"] = support.effect_detail(self.game, c, state, value)
                 result["observe"] = (
                     value.kind == "sight"

@@ -333,6 +333,60 @@ class BodyService:
     def __init__(self, game: GameService):
         self.game, self.store = game, game.store
 
+    def neural_controls(self, viewer: GuildViewer, actor: ActorRef) -> dict[str, Any]:
+        """Original AM's own spinal sources, independently of any Code/body hookup."""
+        from girlframe.engine.m3_actor_bonds import current_ref
+        from girlframe.engine.m3_actors import resolve
+        from girlframe.services.m3_actors import profiles
+        from girlframe.services.m3_frame_control import (
+            FrameControlService,
+            _bodies,
+            connection_endpoints,
+        )
+        from girlframe.services.m3_frame_control import (
+            prove as prove_connection,
+        )
+
+        with self.store.engine.connect() as c:
+            FrameControlService(self.game)._access(c, viewer)
+            state = load_state(c, self.store.campaign_id)
+            if (
+                actor.kind != "pilot"
+                or actor.entity != str(viewer.user_id)
+                or actor != current_ref(state, viewer.user_id)
+            ):
+                raise WorkflowError("Open the original current AM's own spinal controls")
+            self.game.character_binding(c, state, viewer.user_id)
+            actual = resolve(state, actor, profiles(c, self.store.campaign_id))
+            if actual.controller != viewer.user_id or actual.girl != "AM" or not actual.alive:
+                raise WorkflowError("Only the actual living AM owns these spinal controls")
+            connections = []
+            for value in state.neural_connections:
+                if actor not in (value.caster, value.battery):
+                    continue
+                prove_connection(self.game, c, state, value.id)
+                endpoints = connection_endpoints(self.game, c, value)
+                error = None
+                if value.phase in ("target", "review", "connected"):
+                    try:
+                        _bodies(self.game, c, state, value)
+                    except (WorkflowError, ValueError) as problem:
+                        error = str(problem)
+                connections.append(
+                    dict(
+                        id=value.id,
+                        phase=value.phase,
+                        label="Actual spinal source: " + value.phase,
+                        current_endpoints=endpoints,
+                        error=error,
+                    )
+                )
+            return dict(
+                actor=actor.model_dump(mode="json"),
+                revision=state.revision,
+                connections=connections,
+            )
+
     def prepare(
         self, viewer: GuildViewer, key: str, maintenance: str, expected: int, spec: rules.BodySpec
     ) -> dict[str, Any]:

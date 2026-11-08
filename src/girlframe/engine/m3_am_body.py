@@ -222,6 +222,15 @@ def record_conveyance(
     put(state, "am_body_conveyance", event, value)
 
 
+def spinal_links(state: GameState, actor: ActorRef) -> tuple[str, ...]:
+    """Actual connected spinal sources; a mind move is not a physical unplug."""
+    return tuple(
+        x.id
+        for x in state.neural_connections
+        if x.phase == "connected" and actor in (x.caster, x.battery)
+    )
+
+
 def _ordinary(
     state: GameState,
     actor: ActorRef,
@@ -229,6 +238,11 @@ def _ordinary(
     *,
     carried_items: tuple[str, ...] = (),
 ) -> None:
+    if spinal_links(state, actor):
+        raise ValueError(
+            "SOURCE_NEURAL_ROUTE_REQUIRED: actually unplug before this supported body move; "
+            "continuous physical relay needs its own proven source route"
+        )
     if (
         any(x.family != "girl" or x.battery_asset is not None or x.intrinsic for x in assets)
         or any(not x.id.strip() or not x.name.strip() for x in assets)

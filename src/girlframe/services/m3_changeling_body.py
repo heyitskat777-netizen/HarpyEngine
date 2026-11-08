@@ -11,7 +11,7 @@ from girlframe.engine import m3_changeling as rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, ActorView, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
-from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_actor_history import snapshot_profiles
 from girlframe.services.m3_handler_advancements import _history
 from girlframe.services.onboarding import WorkflowError
 
@@ -20,7 +20,12 @@ if TYPE_CHECKING:
 
 
 def _actual(game: "GameService", c: Connection, state: GameState, actor: ActorRef) -> ActorView:
-    return resolve(state, actor, profiles(c, game.store.campaign_id), require_current_profile=False)
+    return resolve(
+        state,
+        actor,
+        snapshot_profiles(c, game.store.campaign_id, state),
+        require_current_profile=False,
+    )
 
 
 def _fact(game: "GameService", c: Connection, state: GameState, actor: ActorRef) -> rules.BodyFact:
@@ -85,6 +90,23 @@ def _fact(game: "GameService", c: Connection, state: GameState, actor: ActorRef)
             raise WorkflowError(
                 "Prove the canonical reset body and original physical brain reference"
             )
+    return value
+
+
+def prove_original_brain(
+    game: "GameService", c: Connection, state: GameState, expected: rules.BrainRef
+) -> rules.BodyFact:
+    """Prove a historical original factual brain without resolving its ended actor now."""
+    born = _history(c, game, expected.source)
+    value = _fact(game, c, born, expected.actor)
+    if (
+        value not in rules.records(state, rules.BodyFact)
+        or value.brain != expected.id
+        or value.vessel != expected.vessel
+        or value.event != expected.source
+        or value.kind != expected.kind
+    ):
+        raise WorkflowError("Preserve the original canonical brain and body factual source")
     return value
 
 

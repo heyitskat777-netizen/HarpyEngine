@@ -1,9 +1,9 @@
 {
   "status": "P1_IMPLEMENTATION_AUTHORIZED_TESTING_PENDING",
-  "published_source": "c12534dbc78d6242b949f7d0e4a88bdfe1f181f3",
+  "published_source": "acc56c807aadb3375d20694eb77f10ffec7dcdba",
   "main_merge": "c4550ecbd89bbf84363537e7bdf763c2177a998f",
   "scope": "10Girl labels;10Frame labels representing9official Frame rulesets; JANUS-B uses JANUS",
-  "evidence_note": "Published c12534d focused CI42519739188 passed, full skipped. Local native Ankou-required self-Dose1/4.53s and same-NPC control handover1/3.39s are scoped minimum evidence. AM endpoint implementation separate and not staged in this packet. All final P1 regression/global/independent/player gates remain pending.",
+  "evidence_note": "Published acc56c8 focused CI42525093965 passed, full skipped. Local AM endpoints/unplug/body transfer/replug passed1/7.23s then affected shared-history consumer1/6.08s; actual CHANGELING reset lineage1/10.64s. Fuel source integration separate and excluded. Final full/global/independent/player gates pending.",
   "rows": [
     {
       "category": "Girl",
@@ -984,8 +984,8 @@
       "type": "AM",
       "registry_prefix": "girl.am.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Existing Jailbroken, Scrutinized and Just Code/body/backup/records paths retained. New no-additional-roll Sex source readback and native circuit routing: actual Alpha→AM smoke1 passed2.15s. Genuine both-AM no-roll delegated encounter passed native/pause/private completion; original Pair outside scene/audience and no extra Action/dice/resources. Shared native completed readback +old policy consumer2 passed3.54s. Local exact physically conveyed held Item/Asset source now supports Code swap, actual new-body damage and owned hooked return; native normal passed1/5.90s after a test-only expected-exception fix. Same IDs/condition/custody, no duplicate parked hardware; Jailbroken native selectors also wired/static checked but that variant not run.",
-      "missing_before_AI": "Concrete ordinary guards: body transfer/Jailbroken still require real Battery and active Storage lifetime adapters; exact physically conveyed owned held-object source is now implemented; local prepared-puppet entry does not admit additional real vessel/Frame sources; terminal/all-Void new-body consequences remain blocked; real Pilot circuit operators lack body/branch/records choices. Conditional other-Frame branch reassignment remains source-specific. Existing identity/memory/backup/records, local body/return, AM Sex and branch normals are implemented and awaiting final verification.",
+      "ordinary_workflows_with_evidence": "Existing Jailbroken, Scrutinized and Just Code/body/backup/records paths retained. New no-additional-roll Sex source readback and native circuit routing: actual Alpha→AM smoke1 passed2.15s. Genuine both-AM no-roll delegated encounter passed native/pause/private completion; original Pair outside scene/audience and no extra Action/dice/resources. Shared native completed readback +old policy consumer2 passed3.54s. Local exact physically conveyed held Item/Asset source now supports Code swap, actual new-body damage and owned hooked return; native normal passed1/5.90s after a test-only expected-exception fix. Same IDs/condition/custody, no duplicate parked hardware; Jailbroken native selectors also wired/static checked but that variant not run. Local real spinal contact binds birth vessel endpoints with historical-profile recovery; actual native unplug, intrinsic body transfer/return and reviewed Battery/Storage replug passed1/7.23s; affected historical binding extraction recheck1/6.08s. No automatic link expiry/copy.",
+      "missing_before_AI": "Continuous parked-jack processing relay and Girl Storage exact-vessel projection remain required; supported transfer currently uses actual unplug/replug, an implementation boundary rather than printed universal law. Further genuine vessel/terminal-body/Pilot-operator ports and final authored regression/review remain. Held-object conveyance and proved physical spinal endpoints are implemented.",
       "later_candidates": "Exceptional simultaneous branch/body/career transitions after ordinary AM play works.",
       "code": [
         "src/girlframe/services/m3_am_body.py",
@@ -2798,8 +2798,8 @@
       "type": "CHANGELING",
       "registry_prefix": "frame.changeling.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Core Blank Slate/String/owned-question normal passed; actual remote Oldgen source also passed. Code includes Fingers, Clay and paid sources; other normals remain unrun. Local shared body setup and eligible-subject starting repair implemented; real original Pilot import1/2.93s and original NPC evidence-to-String1/3.51s passed. Local same-NPC canonical control claim now transfers an owed question to the actual new controller after real role withdrawal/join; native answer/private replay1/3.39s. Original BrainRef/controller/authorship remains immutable.",
-      "missing_before_AI": "Genuine FactoryReset same-brain actor lineage remains required for old Strings and owed choices. Same-NPC current-author continuation is implemented. Preserve starting body/import routes; finish source-specific ordinary dependencies and deferred normals/regression/independent review.",
+      "ordinary_workflows_with_evidence": "Core Blank Slate/String/owned-question normal passed; actual remote Oldgen source also passed. Code includes Fingers, Clay and paid sources; other normals remain unrun. Local shared body setup and eligible-subject starting repair implemented; real original Pilot import1/2.93s and original NPC evidence-to-String1/3.51s passed. Local same-NPC canonical control claim now transfers an owed question to the actual new controller after real role withdrawal/join; native answer/private replay1/3.39s. Original BrainRef/controller/authorship remains immutable. Local genuine fourth-Limiter FactoryReset preserves original Strings/owed question/counter through positively proved same brain; native current-NPC answer/real counter Tag and remaining original String passed1/10.64s, no fresh NPC Girl rights.",
+      "missing_before_AI": "Same-NPC controller and canonical FactoryReset String/owed mental-choice continuity now implemented. Live pre-reset physical Whip/remote-Sex child retargeting, other explicitly sourced ordinary effects and unknown hardware/conversion boundaries need separate classification/support. Final authored normal regression and independent/player review remain; no blanket type deferral.",
       "later_candidates": "No named ordinary rule approved for deferral; AI narration cannot substitute for mechanics.",
       "code": [
         "src/girlframe/engine/frame_setup.py",
@@ -2807,7 +2807,8 @@
         "src/girlframe/engine/m3_changeling.py",
         "src/girlframe/services/m3_changeling.py",
         "src/girlframe/services/m3_changeling_sex.py",
-        "src/girlframe/discord_adapter/m3_changeling.py"
+        "src/girlframe/discord_adapter/m3_changeling.py",
+        "src/girlframe/services/m3_changeling_lineage.py"
       ],
       "tests": [
         "tests/rules/test_frame_rewards.py",
@@ -2935,7 +2936,8 @@
           ],
           "local_test_references": [
             "tests/rules/test_changeling.py",
-            "tests/rules/test_body_facts.py"
+            "tests/rules/test_body_facts.py",
+            "tests/rules/test_changeling_continuity.py"
           ]
         },
         {

@@ -157,14 +157,24 @@ async def open_jailbroken(
         )
     if saved:
         instructions += "\n" + "\n".join(saved)
-    options = (("prepare", "Record actual available hardware"),) + tuple(
-        ("occupy:" + x["vessel"], "Occupy: " + x["label"][:70]) for x in data["available"]
+    options = (
+        (("prepare", "Record actual available hardware"),)
+        + tuple(("occupy:" + x["vessel"], "Occupy: " + x["label"][:70]) for x in data["available"])
+        + (("spinal", "Review actual spinal connection / unplug"),)
     )
 
     async def choose(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         selected = values["operation"][0]
         if selected == "prepare":
             await open_prepare(current, service)
+            return None
+        if selected == "spinal":
+            from girlframe.discord_adapter.m3_am_body import open_spinal_controls
+            from girlframe.services.m3_am_body import BodyService
+
+            await open_spinal_controls(
+                current, BodyService(service.game), ActorRef.model_validate(data["actor"])
+            )
             return None
         result = await asyncio.to_thread(
             service.occupy,

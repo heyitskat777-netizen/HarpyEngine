@@ -205,6 +205,9 @@ async def _saved(
     shown = await asyncio.to_thread(service.view, viewer_from_interaction(interaction), identity)
     body, kind = shown["body"], shown["kind"]
     lines = [kind.removeprefix("changeling_").replace("_", " ").title()]
+    if shown.get("current_subject"):
+        actual = ActorRef.model_validate(shown["current_subject"])
+        lines.append("Current actual subject: " + actual.kind + ":" + actual.entity)
     lines.append(
         "Completed" if body.get("completed_event") or body.get("replaced_event") else "Saved source"
     )

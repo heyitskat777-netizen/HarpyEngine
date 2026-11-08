@@ -15,6 +15,7 @@ from girlframe.engine.m3_frame_control_state import NeuralConnection
 from girlframe.engine.m3_janus import find as find_core
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
+from girlframe.services.m3_actor_history import snapshot_profiles
 from girlframe.services.m3_actors import profiles
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
@@ -70,6 +71,32 @@ def _event(
         )
 
 
+def _birth_endpoints(
+    game: "GameService", c: Connection, value: NeuralConnection
+) -> tuple[str, str]:
+    born = _history(game, c, value.proposed_event)
+    original = snapshot_profiles(c, game.store.campaign_id, born)
+    views = [
+        resolve(born, actor, original, require_current_profile=False)
+        for actor in (value.caster, value.battery)
+    ]
+    vessels = tuple(x.vessel_id for x in views)
+    if any(x is None or not x.strip() for x in vessels):
+        raise WorkflowError("SOURCE_NEURAL_ENDPOINT_REQUIRED: recover the actual birth vessels")
+    assert vessels[0] is not None and vessels[1] is not None
+    return vessels[0], vessels[1]
+
+
+def connection_endpoints(
+    game: "GameService", c: Connection, value: NeuralConnection
+) -> tuple[str, str]:
+    """Legacy recovery is historical evidence, never the person's current substitute body."""
+    expected = _birth_endpoints(game, c, value)
+    if value.caster_vessel is not None and expected != (value.caster_vessel, value.battery_vessel):
+        raise WorkflowError("Preserve both genuine original neural vessel endpoints")
+    return expected
+
+
 def prove(game: "GameService", c: Connection, state: GameState, identity: str) -> NeuralConnection:
     value = rules.connection(state, identity)
     source = rules.connection(_history(game, c, value.proposed_event), identity)
@@ -79,6 +106,8 @@ def prove(game: "GameService", c: Connection, state: GameState, identity: str) -
         "caster_controller",
         "battery",
         "battery_controller",
+        "caster_vessel",
+        "battery_vessel",
         "frame_owner",
         "frame_instance",
         "cast",
@@ -103,6 +132,8 @@ def prove(game: "GameService", c: Connection, state: GameState, identity: str) -
         "m3.neural_contact_proposed",
         identity,
     )
+    if value.caster_vessel is not None:
+        connection_endpoints(game, c, value)
     if value.connected_event:
         accepted = rules.connection(_history(game, c, value.connected_event), identity)
         if (
@@ -133,10 +164,25 @@ def prove(game: "GameService", c: Connection, state: GameState, identity: str) -
             consent = rules.connection(_history(game, c, value.target_event), identity)
             if consent.phase != "review":
                 raise WorkflowError("Use actual accepted contact, never a refusal")
+    if value.phase == "unplugged":
+        author = (
+            value.caster_controller
+            if value.ended_by == value.caster
+            else value.battery_controller
+            if value.ended_by == value.battery
+            else None
+        )
+        if author is None or value.ended_event is None:
+            raise WorkflowError("Recover the actual original participant's unplug")
+        _event(game, c, value.ended_event, author, "m3.neural_unplugged", identity)
+        if rules.connection(_history(game, c, value.ended_event), identity) != value:
+            raise WorkflowError("Recover the actual canonical physical unplug")
     return value
 
 
-def _bodies(game: "GameService", c: Connection, state: GameState, value: NeuralConnection) -> None:
+def _people(
+    game: "GameService", c: Connection, state: GameState, value: NeuralConnection
+) -> tuple[Any, Any]:
     bound = profiles(c, game.store.campaign_id)
     caster = resolve(state, value.caster, bound, require_current_profile=False)
     battery = resolve(state, value.battery, bound, require_current_profile=False)
@@ -146,8 +192,21 @@ def _bodies(game: "GameService", c: Connection, state: GameState, value: NeuralC
         or caster.controller != value.caster_controller
         or battery.controller != value.battery_controller
     ):
+        raise WorkflowError("No successor substitutes for either original neural participant")
+    return caster, battery
+
+
+def _new_bodies(
+    game: "GameService", c: Connection, state: GameState, value: NeuralConnection
+) -> None:
+    caster, battery = _people(game, c, state, value)
+    if (
+        value.caster_vessel is None
+        or value.battery_vessel is None
+        or (caster.vessel_id, battery.vessel_id) != (value.caster_vessel, value.battery_vessel)
+    ):
         raise WorkflowError(
-            "No successor or controller account substitutes for these actual original bodies"
+            "STALE_NEURAL_ENDPOINT: review actual contact with these current vessels"
         )
     if caster.offstage_source or battery.offstage_source:
         raise WorkflowError("Recover actual physical reach before a spinal connection")
@@ -174,6 +233,37 @@ def _bodies(game: "GameService", c: Connection, state: GameState, value: NeuralC
         )
         if condition is None:
             raise WorkflowError("Recover the actual original opposing-person force source")
+
+
+def _bodies(game: "GameService", c: Connection, state: GameState, value: NeuralConnection) -> None:
+    caster, battery = connection_endpoints(game, c, value)
+    _new_bodies(
+        game,
+        c,
+        state,
+        value.model_copy(update={"caster_vessel": caster, "battery_vessel": battery}),
+    )
+
+
+def _unplug_body(
+    game: "GameService", c: Connection, state: GameState, value: NeuralConnection, actor: ActorRef
+) -> None:
+    endpoints = connection_endpoints(game, c, value)
+    actual = resolve(
+        state, actor, profiles(c, game.store.campaign_id), require_current_profile=False
+    )
+    expected = (
+        endpoints[0] if actor == value.caster else endpoints[1] if actor == value.battery else None
+    )
+    controller = value.caster_controller if actor == value.caster else value.battery_controller
+    if (
+        expected is None
+        or actual.controller != controller
+        or not actual.alive
+        or actual.vessel_id != expected
+        or actual.offstage_source
+    ):
+        raise WorkflowError("Use your actual original physical endpoint to perform this unplug")
 
 
 def prepare_battery(
@@ -499,6 +589,8 @@ class FrameControlService:
                 caster_controller=viewer.user_id,
                 battery=battery,
                 battery_controller=target.controller,
+                caster_vessel=actual.vessel_id,
+                battery_vessel=target.vessel_id,
                 frame_owner=frame_owner,
                 frame_instance=actual.frame_instance,
                 cast=cast,
@@ -513,7 +605,7 @@ class FrameControlService:
                 port_source=port_source,
                 phase="review" if access != "consensual" else "target",
             )
-            _bodies(self.game, c, state, value)
+            _new_bodies(self.game, c, state, value)
             state.neural_connections.append(value)
             self.game.event(
                 c,
@@ -572,7 +664,10 @@ class FrameControlService:
                 raise WorkflowError(
                     "Only the actual other body or frozen source judge owns this question"
                 )
-            _bodies(self.game, c, state, value)
+            if allowed:
+                _bodies(self.game, c, state, value)
+            else:
+                _people(self.game, c, state, value)
             cast, _ = ActorPlayService(self.game).actors(c, state, value.cast.channel)
             if (
                 fingerprint(cast) != fingerprint(value.cast)
@@ -644,7 +739,7 @@ class FrameControlService:
                 self.game, c, state, identity, actor
             ):
                 raise WorkflowError("Resolve the actual immediate Play before ordinary unplugging")
-            _bodies(self.game, c, state, value)
+            _unplug_body(self.game, c, state, value, actor)
             if value.access == "core_port" and actor == value.battery:
                 from girlframe.engine.m3_janus import has_tag
 
@@ -805,9 +900,23 @@ class FrameControlService:
                 )
                 and self._can_act(c, viewer)
             )
+            endpoint_error = None
+            endpoints = None
+            try:
+                endpoints = connection_endpoints(self.game, c, value)
+                if can_unplug:
+                    original_actor = (
+                        value.caster if viewer.user_id == value.caster_controller else value.battery
+                    )
+                    _unplug_body(self.game, c, state, value, original_actor)
+            except (WorkflowError, ValueError) as error:
+                endpoint_error = str(error)
+                can_unplug = False
             return dict(
                 id=identity,
                 revision=state.revision,
+                endpoints=endpoints,
+                endpoint_error=endpoint_error,
                 connection=value.model_dump(mode="json"),
                 can_act=viewer.user_id == expected and self._can_act(c, viewer),
                 can_unplug=can_unplug,

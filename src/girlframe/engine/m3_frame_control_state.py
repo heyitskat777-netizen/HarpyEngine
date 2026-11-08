@@ -13,6 +13,12 @@ class NeuralConnection(Model):
     caster_controller: int = Field(gt=0)
     battery: ActorRef
     battery_controller: int = Field(gt=0)
+    caster_vessel: str | None = Field(
+        default=None, min_length=1, exclude_if=lambda value: value is None
+    )
+    battery_vessel: str | None = Field(
+        default=None, min_length=1, exclude_if=lambda value: value is None
+    )
     frame_owner: ActorRef
     frame_instance: str = Field(min_length=1)
     cast: SceneCast
@@ -36,6 +42,10 @@ class NeuralConnection(Model):
 
     @model_validator(mode="after")
     def actual(self) -> "NeuralConnection":
+        if (self.caster_vessel is None) != (self.battery_vessel is None):
+            raise ValueError("Actual neural endpoints are recorded together")
+        if self.phase == "connected" and self.ended_event is not None:
+            raise ValueError("An ended physical connection cannot regain its old connected phase")
         if self.caster == self.battery:
             raise ValueError("An actual spinal connection has two distinct original bodies")
         if self.phase == "connected" and self.connected_event is None:
