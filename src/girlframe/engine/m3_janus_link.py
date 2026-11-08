@@ -39,10 +39,12 @@ def active(value: BatteryLink) -> bool:
 
 
 def has_mental_channel(state: GameState, first: ActorRef, second: ActorRef) -> bool:
+    from girlframe.engine.m3_frame_control import neural_contact_live
     from girlframe.engine.m3_items import same_holder
 
     return any(
         active(x)
+        and (x.connection is None or neural_contact_live(state, x.connection))
         and "question" in x.selected
         and (
             (same_holder(state, x.caster, first) and same_holder(state, x.battery, second))

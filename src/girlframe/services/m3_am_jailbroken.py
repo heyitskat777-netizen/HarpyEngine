@@ -73,6 +73,18 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
     for body in hardware.bodies(state):
         if body.actor == value.actor and body not in hardware.bodies(_history(game, c, body.event)):
             raise WorkflowError("Recover actual saved hardware conditions without healing")
+    if value.neural_route is not None:
+        from girlframe.services.m3_am_neural_route import prove_route
+
+        route = prove_route(game, c, state, value.neural_route)
+        if not any(
+            x.occupancy == value.id
+            and x.event == value.event
+            and x.previous == value.previous
+            and x.vessel == value.vessel
+            for x in route.moves
+        ):
+            raise WorkflowError("Preserve the actual occupancy's canonical continuous route")
     if value.carried_items:
         from girlframe.services.m3_am_body import prove_conveyance
 
@@ -118,13 +130,17 @@ class JailbrokenService:
             body = hardware.current(state, actor)
             pose = hardware._pose(state, actor)
             girls = [x for x in state.sheets[actor.entity].assets if x.family == "girl"]
-            from girlframe.services.m3_am_body import carried_options, prove_conveyance
+            from girlframe.services.m3_am_body import (
+                carried_options,
+                project_hardware,
+                prove_conveyance,
+            )
 
             return dict(
                 revision=state.revision,
                 actor=actor.model_dump(mode="json"),
                 capabilities=rules.capabilities(state, actor),
-                current=body.model_dump(mode="json")
+                current=project_hardware(state, body)
                 if body
                 else dict(
                     vessel=pose.vessel_id,
@@ -150,7 +166,7 @@ class JailbrokenService:
                 ],
                 history=[x.model_dump(mode="json") for x in rules.history(state, actor)],
                 bodies=[
-                    x.model_dump(mode="json") for x in hardware.bodies(state) if x.actor == actor
+                    project_hardware(state, x) for x in hardware.bodies(state) if x.actor == actor
                 ],
             )
 
@@ -205,6 +221,7 @@ class JailbrokenService:
         *,
         carried_items: tuple[str, ...] = (),
         carry_account: str | None = None,
+        neural_route: str | None = None,
     ) -> dict[str, Any]:
         from girlframe.services.m3_requisitions import RequisitionService
 
@@ -218,6 +235,10 @@ class JailbrokenService:
             target = next((x for x in rules.preparations(state) if x.spec.vessel == vessel), None)
             if target:
                 prove_preparation(self.game, c, state, target.id)
+            if neural_route is not None:
+                from girlframe.services.m3_am_neural_route import require_move
+
+                require_move(self.game, c, state, viewer, actor, vessel, neural_route)
             event = str(uuid4())
             from girlframe.services.m3_am_body import _prove_items
 
@@ -229,6 +250,16 @@ class JailbrokenService:
                 event,
                 carried_items=carried_items,
                 carry_account=carry_account,
+                neural_route=neural_route,
+            )
+            if neural_route is not None:
+                from girlframe.engine.m3_am_neural_route import stage_move
+
+                stage_move(
+                    state, neural_route, actor, value.previous, value.vessel, value.id, event
+                )
+            audit: dict[str, Any] = (
+                {"neural_route": neural_route} if neural_route is not None else {}
             )
             self.game.event(
                 c,
@@ -238,6 +269,7 @@ class JailbrokenService:
                 state,
                 event_id=event,
                 occupancy=value.id,
+                **audit,
             )
             return dict(id=value.id, vessel=value.vessel)
 
@@ -249,6 +281,7 @@ class JailbrokenService:
                 actor=actor.model_dump(mode="json"),
                 expected=expected,
                 vessel=vessel,
+                **({"neural_route": neural_route} if neural_route is not None else {}),
                 **(
                     dict(carried_items=carried_items, carry_account=carry_account)
                     if carried_items or carry_account is not None

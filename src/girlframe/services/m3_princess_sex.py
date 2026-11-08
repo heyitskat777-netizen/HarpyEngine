@@ -470,7 +470,7 @@ def apply(
             )
         _strict(answer.model_copy(update={"fields": {}}), answer.options, text=True)
         selected = answer.options[0]
-        if selected not in BASIC_PLAYS:
+        if selected not in BASIC_PLAYS and selected != "dose_up":
             raise WorkflowError("This required Play needs its own real source-recipe adapter")
         target = None
         if answer.fields.get("target"):
@@ -575,7 +575,7 @@ def _prerequisites(
     target: ActorRef | None,
     order_id: str | None,
 ) -> None:
-    if play not in BASIC_PLAYS:
+    if play not in BASIC_PLAYS and play != "dose_up":
         raise WorkflowError("This directive needs a separate actual source-recipe adapter")
     _contact(
         game,
@@ -593,6 +593,25 @@ def _prerequisites(
     performer = resolve(state, session.target, profiles(c, game.store.campaign_id))
     if not performer.alive or performer.ref != current_ref(state, session.counterpart):
         raise WorkflowError("Use the original living counterpart, never an account replacement")
+    if play == "dose_up":
+        from girlframe.engine.m3_dose_up import RULE as dose_rule
+        from girlframe.services.m3_dose_up import _operator
+
+        sheet = state.sheets.get(session.target.entity)
+        if (
+            target is not None
+            or order_id is not None
+            or sheet is None
+            or sheet.girl != "STIM-BLISSED"
+            or not has_rule(sheet, dose_rule, "STIM-BLISSED")
+        ):
+            raise WorkflowError("Direct only the actual native Stim's owned self-Dose")
+        _operator(game, c, state, session.target)
+        gate = Access(game.store).registry
+        if gate is None:
+            raise WorkflowError("Recover the actual reviewed Dose Up source")
+        gate.require_available(dose_rule)
+        return
     targeted = play in ("flirt", "engage", "all_out_assault", "put_someone_beneath_you")
     if targeted != (target is not None) or target == session.target:
         raise WorkflowError("Choose this actual basic Play's distinct real target")
@@ -686,6 +705,12 @@ def directive_options(
             or any(play in x["plays"] for x in targets)
         ):
             plays.append(dict(id=play, label=label))
+    try:
+        _prerequisites(game, c, state, session, "dose_up", None, None)
+    except (ValueError, WorkflowError):
+        pass
+    else:
+        plays.append(dict(id="dose_up", label="Own native Stim self-Dose Up"))
     return dict(plays=plays, targets=targets, orders=orders)
 
 
@@ -989,6 +1014,41 @@ def child_source(
     )
 
 
+def controlled_dose(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    viewer: GuildViewer,
+    prepared: PlayInput,
+    channel: int,
+    *,
+    action: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Positive original directive, not a proxy viewer or new Dose entitlement."""
+    if prepared.play != "dose_up" or not prepared.source_work:
+        return None
+    candidate = next((x for x in rules.directions(state) if x.id == prepared.source_work), None)
+    if candidate is None:
+        return None
+    if candidate.play != "dose_up":
+        raise WorkflowError("Use the actual selected self-Dose directive")
+    if action is None:
+        return child_source(game, c, viewer, state, prepared, channel)
+    value = _bound(game, c, state, action)
+    if (
+        value is None
+        or value.id != candidate.id
+        or value.completed_event
+        or viewer.user_id != value.author_controller
+        or channel != rules.get(state, value.session).cast.channel
+        or prepared.model_dump()
+        != PlayInput.model_validate_json(json.dumps(action["data"]["prepared"])).model_dump()
+    ):
+        raise WorkflowError("Reopen the exact actual bound self-Dose and original Princess author")
+    pre_roll_child(game, c, state, action)
+    return dict(action["data"]["princess_child"])
+
+
 def bind_child(
     game: GameService, c: Connection, state: GameState, action: dict[str, Any], event: str
 ) -> None:
@@ -1060,6 +1120,10 @@ def child_author(
 def _performer_row(value: rules.HighDirection, action: dict[str, Any], row: dict[str, Any]) -> bool:
     if row["actor_id"] != value.actor.entity:
         return False
+    if row["kind"] == "dose_up_components" and action["data"].get("dose_up", {}).get(
+        "princess_direction"
+    ):
+        return bool(json.loads(row["body_json"]).get("dose_role") == "roller")
     if row["kind"].startswith("npc_flirt_"):
         return bool(action["data"].get("npc_flirt")) and json.loads(row["body_json"]).get(
             "subject"
@@ -1116,6 +1180,10 @@ def complete_child(
         raise WorkflowError(
             "Complete the actual original counterpart's rolled child, not an acknowledgment"
         )
+    if value.play == "dose_up" and not value.completed_event:
+        from girlframe.services.m3_dose_up import validate_pending_controlled_dose
+
+        validate_pending_controlled_dose(game, c, state, child, event)
     if value.completed_event:
         if value.completed_event != event:
             raise WorkflowError("This single child was already completed")

@@ -41,11 +41,28 @@ async def open_choice(
         interaction.user.id,
         "Dose Up: your choice",
         "The recipient's low-result Punishment replaces dosing. Cocktail components become "
-        "actual temporary Tags. OOC pause remains available.",
+        "actual temporary Tags. OOC pause remains available. "
+        + (
+            "Controlled native Stim self-Dose; each printed chooser keeps their role."
+            if detail.get("princess_direction")
+            else ""
+        ),
         [field],
         submit,
     )
     await reply(interaction, form.text(), form)
+
+
+async def open_controlled_dose(
+    interaction: discord.Interaction, service: DoseUpService, direction: str
+) -> None:
+    """Use the actual Princess parent controls with original Stim resources."""
+    data = await asyncio.to_thread(
+        service.controlled, viewer_from_interaction(interaction), direction
+    )
+    from girlframe.discord_adapter.m3_princess_sex import open_choice as princess_choice
+
+    await princess_choice(interaction, service.game, data["choice"], _dose_resources=True)
 
 
 async def open_dose_up(

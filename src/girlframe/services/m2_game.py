@@ -2399,7 +2399,11 @@ class GameService:
             prepare_disposal(self, c, state, sheet.owner, prepared)
             if prepared.disposable_heat and (
                 (m3 is not None and prepared.play not in ("go_off_duty", "void_observation"))
-                or (janus is not None and janus.get("mode") != "pandora")
+                or (
+                    janus is not None
+                    and janus.get("mode") != "pandora"
+                    and prepared.play != "living_battery"
+                )
             ):
                 raise WorkflowError(
                     "UNSUPPORTED_RULE: disposal needs this non-Heat Play's source adapter."

@@ -537,6 +537,14 @@ class InboxView(discord.ui.View):
             await open_jailbroken(
                 interaction, JailbrokenService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_am_neural_route":
+            from girlframe.discord_adapter.m3_am_neural_route import open_neural_route
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_am_neural_route import RouteService
+
+            await open_neural_route(
+                interaction, RouteService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_am_branch":
             from girlframe.discord_adapter.m3_am_branch import open_branch
             from girlframe.services.m2_game import GameService

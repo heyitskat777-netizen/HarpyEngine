@@ -179,7 +179,13 @@ async def open_princess(
     )
 
 
-async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
+async def open_choice(
+    interaction: discord.Interaction,
+    game: GameService,
+    identity: str,
+    *,
+    _dose_resources: bool = False,
+) -> None:
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(game.decision, viewer, identity)
     kind, detail = data["kind"], data["princess_sex"]
@@ -187,6 +193,14 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
     source = await asyncio.to_thread(service.view, viewer, detail["session"])
     if kind == "princess_sex_child":
         child = source["child"]
+        if child["play"] == "dose_up" and not _dose_resources:
+            from girlframe.discord_adapter.m3_dose_up import open_controlled_dose
+            from girlframe.services.m3_dose_up import DoseUpService
+
+            await open_controlled_dose(
+                interaction, DoseUpService(game.store, game), child["direction"]
+            )
+            return
         if child["child"]:
             from girlframe.discord_adapter.m2_ui import open_pending
 
@@ -370,8 +384,17 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
 
     await NativeForm(
         viewer.user_id,
-        "Princess: " + kind.removeprefix("princess_sex_"),
-        "Actual original participants and one scoped child only. " + (detail["favour"] or ""),
+        "Controlled native Stim self-Dose"
+        if kind == "princess_sex_child" and child["play"] == "dose_up"
+        else "Princess: " + kind.removeprefix("princess_sex_"),
+        "Actual original participants and one scoped child only. "
+        + (detail["favour"] or "")
+        + (
+            " These are the original Stim counterpart's own Heat and Identities; "
+            "your source grants its actor choices for this one actual Play."
+            if kind == "princess_sex_child" and child["play"] == "dose_up"
+            else ""
+        ),
         fields,
         submit,
     ).present(interaction)

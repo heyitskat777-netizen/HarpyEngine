@@ -435,3 +435,103 @@ def test_actual_paid_non_heat_basis_disposal_keeps_source_modifier_and_receipt(
     assert (disposal.extra, disposal.spent) == (3, 0)
     assert game.roll(PLAYER, str(uuid4()), action)["receipt"] == receipt
     assert game.dice.calls == 1
+
+
+def test_actual_native_battery_disposal_preserves_tag_modifier_and_owned_effects(
+    ledger, tmp_path, monkeypatch
+):
+    from test_janus_core import facts
+    from test_janus_core_service import cast_core, change
+
+    from girlframe.discord_adapter.m3_janus_play import open_battery
+    from girlframe.engine import m3_janus as janus
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.services.m3_frame_control import FrameControlService
+    from girlframe.services.m3_janus import JanusService
+
+    _, game = service(ledger, girl="STIM-BLISSED", frame="JANUS-B")
+    approved(ledger, game, tmp_path, monkeypatch, extra=(rules.RULE, janus.CORE, janus.BATTERY))
+    approval = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "m3_approval": approval.model_copy(
+                update={"subsystems": approval.subsystems | {"playbooks"}}
+            )
+        }
+    )
+    with ledger.transaction() as c:
+        actual = state(game)
+        actual.world = initial()
+        actual = place(place(actual, 2), 3)
+        game.event(c, 1, str(uuid4()), "synthetic.actual_prior_stim_janus_body_world", actual)
+    source = JanusService(game)
+    request = source.request(PLAYER, "actual-stim-core-request", 3)["id"]
+    change(source, OTHER, request, facts=facts())
+    change(source, ADMIN, request, approve=True, account="Actual original Core and neural access")
+    core = janus.ref(state(game).janus_cores[0])
+    cast_core(source, game, core)
+    contact = FrameControlService(game)
+    link = contact.propose(
+        PLAYER,
+        "actual-stim-jack",
+        900,
+        current_ref(state(game), 2),
+        core,
+        "Actual jack reaches the reviewed original Core spinal cord",
+    )["id"]
+    contact.decide(
+        ADMIN,
+        "actual-stim-jack-review",
+        link,
+        state(game).revision,
+        True,
+        "The actual source neural contact is performed and physically accessible",
+    )
+    before = state(game)
+    identity = before.sheets["2"].identities[0]
+
+    async def prepare():
+        own = current(2, 98961)
+        own.channel_id = 900
+        await own.response.defer(ephemeral=True)
+        await open_battery(own, game, core)
+        form = own.edit_original_response.call_args.kwargs["view"]
+        assert any(x.key == "disposable_heat" for x in form.fields)
+        form.values.update(
+            account="I remove this original Identity while using the actual connected Core",
+            identity=(identity.id,),
+            gain=("1",),
+            disposable_heat=("3",),
+        )
+        response = current(2, 98962)
+        response.channel_id = 900
+        await form.confirm.callback(response)
+        assert form.completed, response.edit_original_response.call_args_list
+
+    asyncio.run(prepare())
+    assert state(game).sheets["2"] == before.sheets["2"]
+    with ledger.engine.connect() as c:
+        action = game.lock(c, 900)["action_id"]
+    game.dice.faces = (2, 2)
+    worker, gateway = GameWorker(game), Gateway()
+    tick(worker, gateway, 3)
+    receipt = game.inspect(PLAYER, action)["receipt"]
+    assert receipt["modifier_source"] == "Battery Tags" and receipt["pre_total"] == 8
+    assert receipt["heat"] == 0 and receipt["base_modifier"] == 0
+    assert receipt["pre_modifiers"] == [{"source": "battery_tags", "amount": 4}]
+    assert state(game).sheets["2"].heat == before.sheets["2"].heat + 4
+    assert identity.id not in {x.id for x in state(game).sheets["2"].identities}
+    with ledger.engine.connect() as c:
+        disposal = prove_disposal(game, c, state(game), action)
+    assert disposal.identity == identity and disposal.spent == 0
+    assert game.roll(PLAYER, str(uuid4()), action)["receipt"] == receipt
+    pass_tags(game)
+    answer(game, PLAYER, "janus_select", options=("cognition", "offset"))
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    assert len([x for x in state(game).sheets["2"].assets if x.battery_asset]) == 2
+    assert state(game).neural_connections[-1].phase == "connected"
+    assert game.dice.calls == 1
+    controls = PsycheService(ledger, game)
+    assert controls.view(PLAYER, action)["extra"] == 3
+    with pytest.raises(WorkflowError):
+        controls.view(OTHER, action)

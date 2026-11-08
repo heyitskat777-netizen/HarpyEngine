@@ -237,26 +237,41 @@ def _ordinary(
     assets: tuple[AssetState, ...],
     *,
     carried_items: tuple[str, ...] = (),
+    neural_route: str | None = None,
+    destination: str | None = None,
 ) -> None:
-    if spinal_links(state, actor):
+    retained: tuple[AssetState, ...] = ()
+    if neural_route is not None:
+        from girlframe.engine.m3_am_neural_route import retained_mental_assets, validate_move
+
+        if destination is None:
+            raise ValueError("Select the actual continuous route's prepared destination")
+        validate_move(state, actor, destination, neural_route)
+        retained = retained_mental_assets(state, actor, neural_route)
+    if spinal_links(state, actor) and neural_route is None:
         raise ValueError(
             "SOURCE_NEURAL_ROUTE_REQUIRED: actually unplug before this supported body move; "
             "continuous physical relay needs its own proven source route"
         )
     if (
-        any(x.family != "girl" or x.battery_asset is not None or x.intrinsic for x in assets)
+        any(
+            x.family != "girl" or (x.battery_asset is not None and x not in retained) or x.intrinsic
+            for x in assets
+        )
         or any(not x.id.strip() or not x.name.strip() for x in assets)
         or len({x.id for x in assets}) != len(assets)
-        or len(assets) > 5
+        or len([x for x in assets if x.battery_asset is None]) > 5
     ):
         raise ValueError("Use actual distinct ordinary Girl Assets within the printed capacity")
     if not assets or not any(not x.damaged for x in assets) or all(x.void for x in assets):
         raise ValueError("SOURCE_BODY_CONSEQUENCE_REQUIRED: actual full-Void/last-usable body port")
-    if any(x.battery_asset is not None for x in state.sheets[actor.entity].assets):
+    if any(
+        x.battery_asset is not None and x not in retained for x in state.sheets[actor.entity].assets
+    ):
         raise ValueError("SOURCE_BODY_CLASSIFICATION_REQUIRED: preserve temporary mental sources")
     from girlframe.engine.m3_janus_storage import active
 
-    if active(state, actor):
+    if active(state, actor) and neural_route is None:
         raise ValueError("SOURCE_BODY_CLASSIFICATION_REQUIRED: preserve actual stored Void sources")
     portable = carried_assets(state, actor, carried_items)
     if any(x not in assets for x in portable):
@@ -332,7 +347,9 @@ def _body(
         actor=actor,
         label=label,
         cell=pose.girl_cell,
-        assets=tuple(x for x in state.sheets[actor.entity].assets if x.id in ids),
+        assets=tuple(
+            x for x in state.sheets[actor.entity].assets if x.id in ids and x.battery_asset is None
+        ),
         medical=state.sheets[actor.entity].medical_state,
         occupant=occupant,
         origin_event=origin,

@@ -161,12 +161,19 @@ async def open_jailbroken(
         (("prepare", "Record actual available hardware"),)
         + tuple(("occupy:" + x["vessel"], "Occupy: " + x["label"][:70]) for x in data["available"])
         + (("spinal", "Review actual spinal connection / unplug"),)
+        + (("route", "Keep actual powered spinal interface during occupancy"),)
     )
 
     async def choose(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         selected = values["operation"][0]
         if selected == "prepare":
             await open_prepare(current, service)
+            return None
+        if selected == "route":
+            from girlframe.discord_adapter.m3_am_neural_route import open_neural_route
+            from girlframe.services.m3_am_neural_route import RouteService
+
+            await open_neural_route(current, RouteService(service.game))
             return None
         if selected == "spinal":
             from girlframe.discord_adapter.m3_am_body import open_spinal_controls

@@ -15,6 +15,27 @@ def connection(state: GameState, identity: str) -> NeuralConnection:
     return value
 
 
+def neural_contact_live(state: GameState, identity: str) -> bool:
+    """A moved native mind needs its actual live route to the fixed physical jack."""
+    value = connection(state, identity)
+    if value.phase != "connected":
+        return False
+    from girlframe.engine.m3_am_neural_route import route_endpoint
+
+    for actor, vessel in (
+        (value.caster, value.caster_vessel),
+        (value.battery, value.battery_vessel),
+    ):
+        if actor.kind != "pilot" or vessel is None:
+            continue
+        pose = next((x for x in state.placements if x.actor == actor), None)
+        if pose is not None and pose.vessel_id != vessel:
+            endpoint = route_endpoint(state, actor, value.id)
+            if endpoint is None or endpoint.vessel != vessel:
+                return False
+    return True
+
+
 def frame_address(state: GameState, owner: ActorRef, instance: str) -> tuple[ActorRef, str]:
     """An actual rebirth may keep a physical Frame, never its human's replacement."""
     from girlframe.engine.m3_am_branch import frame_owner_alias

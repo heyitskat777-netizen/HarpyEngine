@@ -96,9 +96,9 @@ def prepare(
         prove_core(c, game, state, target)
     if (
         prepared.heat
-        or prepared.identity
-        or prepared.gain
-        or prepared.pair_share
+        or (prepared.identity and not prepared.disposable_heat)
+        or (prepared.gain and not prepared.disposable_heat)
+        or (prepared.pair_share and not prepared.disposable_heat)
         or prepared.target is not None
         or prepared.parent
         or prepared.off_duty_id
@@ -699,6 +699,27 @@ def preview(
                 ),
                 None,
             )
+            disposal_identities = []
+            from girlframe.engine.m3_disposable_psyche import RULE as disposal_rule
+            from girlframe.engine.m3_disposable_psyche import removable
+            from girlframe.engine.m3_girl_runtime_state import has_rule
+
+            if has_rule(sheet, disposal_rule, "STIM-BLISSED"):
+                registry = Access(game.store).registry
+                try:
+                    if registry is None:
+                        raise ValueError("Disposable Psyche needs its own release")
+                    registry.require_available(disposal_rule)
+                    for identity in sheet.identities:
+                        if identity.marked:
+                            continue
+                        try:
+                            removable(sheet, identity)
+                        except ValueError:
+                            continue
+                        disposal_identities.append(dict(id=identity.id, label=identity.name))
+                except ValueError:
+                    pass
             return dict(
                 available=True,
                 actor=actor.model_dump(mode="json"),
@@ -708,6 +729,7 @@ def preview(
                 rolled=linked is not None,
                 sheet_revision=sheet.revision,
                 link=linked.id if linked else None,
+                **({"disposal_identities": disposal_identities} if disposal_identities else {}),
             )
     except (ValueError, WorkflowError):
         return dict(available=False)
@@ -739,6 +761,9 @@ class BatteryService:
                 try:
                     assert value.connection is not None
                     actual = prove_contact(self.game, c, state, value.connection)
+                    from girlframe.services.m3_frame_control import _bodies
+
+                    _bodies(self.game, c, state, actual)
                     can_send = actual.phase == "connected"
                 except WorkflowError:
                     can_send = False
@@ -785,6 +810,9 @@ class BatteryService:
             contact = prove_contact(self.game, c, state, value.connection)
             if contact.phase != "connected":
                 raise WorkflowError("An ended neural connection carries no new brain messages")
+            from girlframe.services.m3_frame_control import _bodies
+
+            _bodies(self.game, c, state, contact)
             allowed = {
                 ref
                 for ref, owner in (

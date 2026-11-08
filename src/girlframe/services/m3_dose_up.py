@@ -15,6 +15,7 @@ from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_girl_runtime_state import has_rule
 from girlframe.engine.m3_handler_consequences import active_handler
+from girlframe.engine.m3_princess_sex import HighDirection
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -250,9 +251,18 @@ def prepare(
     state: GameState,
     prepared: PlayInput,
     channel: int,
+    *,
+    action: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     _access(game, c, viewer)
-    actor = current_ref(state, viewer.user_id)
+    from girlframe.services.m3_princess_sex import controlled_dose
+
+    directed = controlled_dose(game, c, state, viewer, prepared, channel, action=action)
+    actor = (
+        ActorRef.model_validate(directed["actor"])
+        if directed
+        else current_ref(state, viewer.user_id)
+    )
     actual = _operator(game, c, state, actor)
     cast = _cast(game, c, state, channel)
     if not any(x.id == cast.id for x in state.scene_casts):
@@ -261,10 +271,10 @@ def prepare(
     if (
         handler is None
         or cast.facilitator != state.handler
-        or prepared.parent
+        or (prepared.parent and directed is None)
         or prepared.off_duty_id
         or prepared.target is not None
-        or not any(x.actor == actor and x.controller == viewer.user_id for x in cast.roles)
+        or not any(x.actor == actor and x.controller == actual.controller for x in cast.roles)
     ):
         raise WorkflowError("Use the original available Dose Up actor and ordinary source scene")
     target = prepared.target_actor or actor
@@ -279,6 +289,9 @@ def prepare(
             raise WorkflowError("Re-establish actual vein contact after the scene roles change")
         if prepared.order_id:
             raise WorkflowError("The printed Order component override is for self-dosing")
+    elif directed is not None:
+        if prepared.order_id or prepared.target_actor is not None:
+            raise WorkflowError("The actual controlled Dose is self-only without an Order")
     elif prepared.source_work:
         from girlframe.services.m3_required_plays import self_dose_for_play
 
@@ -311,12 +324,14 @@ def prepare(
         table=sorted({x.controller for x in cast.roles} | {cast.facilitator}),
         contact=reach.id if reach else None,
         order=source_order.id if source_order else None,
-        chooser=source_order.controller if source_order else viewer.user_id,
+        chooser=source_order.controller if source_order else actual.controller,
         phase="unrolled",
         selections=[],
     )
     if required_recipe is not None:
         result["required_recipe"] = required_recipe.id
+    if directed is not None:
+        result["princess_direction"] = directed["direction"]
     return result
 
 
@@ -324,7 +339,7 @@ def pre_roll(
     game: GameService, c: Connection, viewer: GuildViewer, state: GameState, action: dict[str, Any]
 ) -> None:
     prepared = PlayInput.model_validate(action["data"]["prepared"])
-    expected = prepare(game, c, viewer, state, prepared, int(action["channel_id"]))
+    expected = prepare(game, c, viewer, state, prepared, int(action["channel_id"]), action=action)
     meta = action["data"]["dose_up"]
     if any(
         meta.get(key) != expected.get(key)
@@ -341,6 +356,7 @@ def pre_roll(
             "order",
             "chooser",
             "required_recipe",
+            "princess_direction",
         )
     ):
         raise WorkflowError("Recover the unchanged actual Dose Up source before spending or RNG")
@@ -370,11 +386,21 @@ def _roll_source(game: GameService, c: Connection, action: dict[str, Any]) -> tu
     )
     if receipt is None or json.loads(receipt["body_json"]) != action["data"].get("receipt"):
         raise WorkflowError("Recover the real original Dose Up roll receipt")
+    author = int(action["actor_id"])
+    if action["data"].get("dose_up", {}).get("princess_direction"):
+        from girlframe.services.m3_princess_sex import child_author
+
+        source_state = load_state(c, game.store.campaign_id)
+        _controlled_source(game, c, source_state, action)
+        actual_author = child_author(game, c, source_state, action)
+        if actual_author is None:
+            raise WorkflowError("Recover the genuine scoped self-Dose roll author")
+        author = actual_author
     event = c.scalar(
         sa.select(t.events.c.id).where(
             t.events.c.campaign_id == game.store.campaign_id,
             t.events.c.kind.in_(("m2.rolled", "m3.rolled")),
-            t.events.c.actor_id == str(action["actor_id"]),
+            t.events.c.actor_id == str(author),
             sa.func.json_extract(t.events.c.payload_json, "$.action_id") == action["id"],
             sa.func.json_extract(t.events.c.payload_json, "$.receipt_id") == receipt["id"],
         )
@@ -480,6 +506,13 @@ def _quota(action: dict[str, Any]) -> tuple[str, int, int, int]:
     return "handler", int(meta["handler_controller"]), 1, 1
 
 
+def _request_components(game: GameService, c: Connection, action: dict[str, Any]) -> str:
+    role, owner, _, _ = _quota(action)
+    if action["data"]["dose_up"].get("princess_direction"):
+        return game.request(c, action, owner, "dose_up_components", dict(dose_role=role))
+    return game.request(c, action, owner, "dose_up_components")
+
+
 def results(game: GameService, c: Connection, state: GameState, action: dict[str, Any]) -> None:
     meta = action["data"]["dose_up"]
     if meta["phase"] != "unrolled":
@@ -490,7 +523,7 @@ def results(game: GameService, c: Connection, state: GameState, action: dict[str
         meta["phase"] = "target_low"
         game.request(c, action, int(meta["target_controller"]), "dose_up_target_low")
     else:
-        game.request(c, action, _quota(action)[1], "dose_up_components")
+        _request_components(game, c, action)
 
 
 def _finish(game: GameService, c: Connection, state: GameState, action: dict[str, Any]) -> None:
@@ -569,7 +602,7 @@ def apply_choice(
         meta["recipient_event"] = action["data"]["response_event"]
         if answer.options == ("dose",):
             meta["phase"] = "choosing"
-            game.request(c, action, meta["handler_controller"], "dose_up_components")
+            _request_components(game, c, action)
         else:
             from girlframe.services.m3_role_punishments import open_case
 
@@ -614,7 +647,7 @@ def apply_choice(
     )
     meta["selections"].append(selection.model_dump(mode="json"))
     if action["data"]["result"]["total"] >= 11 and len(meta["selections"]) == 1:
-        game.request(c, action, meta["handler_controller"], "dose_up_components")
+        _request_components(game, c, action)
         return True
     value = _outcome(game, c, state, action)
     sheet = state.sheets[value.target.entity]
@@ -661,7 +694,7 @@ def choice_projection(
     if int(row["actor_id"]) != chooser:
         raise WorkflowError("Use the actual original component chooser")
     used = {x for part in meta["selections"] for x in part["components"]}
-    return dict(
+    result = dict(
         role=role,
         minimum=minimum,
         maximum=maximum,
@@ -671,6 +704,12 @@ def choice_projection(
             if x not in used
         ),
     )
+    direction = _controlled_source(game, c, state, action)
+    if direction is not None:
+        result["princess_direction"] = direction.id
+        result["actor"] = direction.actor.model_dump(mode="json")
+        result["author"] = direction.author_controller
+    return result
 
 
 def _response(
@@ -708,6 +747,199 @@ def _response(
     ):
         raise WorkflowError("Recover the real original human's owned Dose Up response")
     return ChoiceAnswer.model_validate_json(answer["answer_json"])
+
+
+def _controlled_source(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any]
+) -> HighDirection | None:
+    meta = action["data"].get("dose_up", {})
+    if not meta.get("princess_direction"):
+        return None
+    from girlframe.services.m3_princess_sex import _bound
+
+    value = _bound(game, c, state, action)
+    if (
+        value is None
+        or value.play != rules.PLAY
+        or value.id != meta["princess_direction"]
+        or meta["actor"] != value.actor.model_dump(mode="json")
+        or meta["target"] != meta["actor"]
+        or meta["caster"] != value.actor_controller
+        or meta["target_controller"] != value.actor_controller
+        or meta["chooser"] != value.actor_controller
+        or meta["contact"] is not None
+        or meta["order"] is not None
+        or meta.get("required_recipe") is not None
+    ):
+        raise WorkflowError("Prove the original native Stim's actual controlled self-Dose")
+    return value
+
+
+def _dose_response(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    actual: dict[str, Any],
+    action: str,
+    choice: str,
+    event: str,
+    owner: int,
+    kind: str,
+    role: str | None = None,
+) -> ChoiceAnswer:
+    direction = _controlled_source(game, c, state, actual)
+    if direction is None:
+        return _response(game, c, action, choice, event, owner, kind)
+    from girlframe.services.m3_princess_sex import prove_response_author
+
+    request = (
+        c.execute(
+            sa.select(t.m2["m2_choices"]).where(
+                t.m2["m2_choices"].c.campaign_id == game.store.campaign_id,
+                t.m2["m2_choices"].c.id == choice,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if (
+        request is None
+        or kind != "dose_up_components"
+        or role not in ("roller", "handler")
+        or json.loads(request["body_json"]).get("dose_role") != role
+    ):
+        raise WorkflowError("Prove the actual printed controlled-Dose choice role")
+    if role == "handler":
+        return _response(game, c, action, choice, event, owner, kind)
+    if owner != direction.actor_controller:
+        raise WorkflowError("Only the actual Stim actor row belongs to this decision grant")
+    answer = (
+        c.execute(
+            sa.select(t.m2["m2_responses"]).where(
+                t.m2["m2_responses"].c.campaign_id == game.store.campaign_id,
+                t.m2["m2_responses"].c.choice_id == choice,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if (
+        request is None
+        or answer is None
+        or request["action_id"] != action
+        or request["kind"] != kind
+        or request["actor_id"] != str(owner)
+        or answer["event_id"] != event
+    ):
+        raise WorkflowError("Recover the actual directed actor row and genuine human response")
+    author = prove_response_author(game, c, state, actual, dict(request), event)
+    if author != direction.author_controller or answer["actor_id"] != str(author):
+        raise WorkflowError("Preserve the Princess author without inventing a Stim answer")
+    return ChoiceAnswer.model_validate_json(answer["answer_json"])
+
+
+def validate_pending_controlled_dose(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any], event: str
+) -> rules.Dose:
+    """Positive current-response effects, without reading that event before it exists."""
+    direction = _controlled_source(game, c, state, action)
+    if direction is None:
+        raise WorkflowError("Use the actual controlled self-Dose source")
+    value = _record(state, rules.Dose, action["id"])
+    meta = action["data"]["dose_up"]
+    rolled, total = _roll_source(game, c, action)
+    expected = (
+        [("handler", meta["handler_controller"], 1, 2)]
+        if total <= 7
+        else [("roller", direction.actor_controller, 2, 2)]
+        + ([("handler", meta["handler_controller"], 1, 1)] if total >= 11 else [])
+    )
+    if (
+        value.actor != direction.actor
+        or value.target != direction.actor
+        or value.caster != direction.actor_controller
+        or value.target_controller != value.caster
+        or value.event != event
+        or meta["phase"] != "complete"
+        or action["data"].get("response_event") != event
+        or value.roll_event != rolled
+        or value.total != total
+        or value.heat != action["data"]["prepared"]["heat"]
+        or value.cast != SceneCast.model_validate_json(json.dumps(meta["cast"]))
+        or value.contact is not None
+        or value.order is not None
+        or value.punishment is not None
+        or [x.model_dump(mode="json") for x in value.selections] != meta["selections"]
+        or len(value.selections) != len(expected)
+        or game.pending(c, action["id"])
+    ):
+        raise WorkflowError(
+            "Complete the actual staged self-Dose, receipt and every printed choice"
+        )
+    seen: set[str] = set()
+    for selection, (role, owner, minimum, maximum) in zip(value.selections, expected, strict=True):
+        if (
+            selection.role != role
+            or selection.chooser != owner
+            or not minimum <= len(selection.components) <= maximum
+            or len(set(selection.components)) != len(selection.components)
+            or set(selection.components) & seen
+        ):
+            raise WorkflowError(
+                "Preserve each real cocktail chooser and distinct actual components"
+            )
+        if selection.event != event:
+            _dose_response(
+                game,
+                c,
+                state,
+                action,
+                value.id,
+                selection.choice,
+                selection.event,
+                owner,
+                "dose_up_components",
+                selection.role,
+            )
+        else:
+            row = (
+                c.execute(
+                    sa.select(t.m2["m2_choices"]).where(
+                        t.m2["m2_choices"].c.campaign_id == game.store.campaign_id,
+                        t.m2["m2_choices"].c.id == selection.choice,
+                    )
+                )
+                .mappings()
+                .first()
+            )
+            if (
+                row is None
+                or row["action_id"] != action["id"]
+                or row["kind"] != "dose_up_components"
+                or row["actor_id"] != str(owner)
+                or row["state"] != "answered"
+            ):
+                raise WorkflowError(
+                    "Prove the actual current response row before canonical completion"
+                )
+        for component in selection.components:
+            source = _record(state, rules.DrugTag, "dose-up:" + value.id + ":" + component)
+            actual = next(
+                (x for x in state.sheets[direction.actor.entity].tags if x.id == source.id), None
+            )
+            if (
+                source.dose != value.id
+                or source.target != direction.actor
+                or source.component != component
+                or source.event != event
+                or actual != source.tag
+                or actual is None
+                or actual.label != rules.LABELS[component]
+                or actual.giver_actor != direction.actor
+            ):
+                raise WorkflowError("Apply real native Stim drug Tags before closing the direction")
+        seen.update(selection.components)
+    return value
 
 
 def _scene_ends(game: GameService, c: Connection, state: GameState, value: rules.Dose) -> None:
@@ -772,6 +1004,7 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         or value.order != meta["order"]
     ):
         raise WorkflowError("Recover the actual original Dose Up actor, receipt and source context")
+    _controlled_source(game, c, state, action)
     if meta.get("required_recipe"):
         from girlframe.services.m3_required_plays import self_dose_for_play
 
@@ -805,9 +1038,11 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
     if total <= 7 and value.target != actor:
         if value.recipient_choice is None or value.recipient_event is None:
             raise WorkflowError("Recover the actual low recipient's original choice")
-        answer = _response(
+        answer = _dose_response(
             game,
             c,
+            state,
+            action,
             identity,
             value.recipient_choice,
             value.recipient_event,
@@ -836,8 +1071,17 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         raise WorkflowError("Recover every printed original cocktail chooser")
     seen: set[str] = set()
     for selection, (role, human, minimum, maximum) in zip(value.selections, expected, strict=True):
-        answer = _response(
-            game, c, identity, selection.choice, selection.event, human, "dose_up_components"
+        answer = _dose_response(
+            game,
+            c,
+            state,
+            action,
+            identity,
+            selection.choice,
+            selection.event,
+            human,
+            "dose_up_components",
+            role,
         )
         if (
             selection.role != role
@@ -1019,6 +1263,33 @@ class DoseUpService:
         self.store = store
         self.game = game or GameService(store)
 
+    def controlled(self, viewer: GuildViewer, direction: str) -> dict[str, Any]:
+        """Private real performer resources, scoped solely to the existing directive."""
+        with self.store.engine.connect() as c:
+            _access(self.game, c, viewer)
+            state = load_state(c, self.store.campaign_id)
+            from girlframe.engine import m3_princess_sex as princess
+            from girlframe.services.m3_princess_sex import (
+                _direction,
+                _prerequisites,
+                child_projection,
+            )
+
+            value = _direction(self.game, c, state, direction)
+            if (
+                value.play != rules.PLAY
+                or value.author_controller != viewer.user_id
+                or value.child
+                or value.completed_event
+            ):
+                raise WorkflowError("Only the original Princess prepares this unbound self-Dose")
+            session = princess.get(state, value.session)
+            _prerequisites(self.game, c, state, session, rules.PLAY, None, None)
+            result = child_projection(self.game, c, state, direction)
+            if result["choice"] is None:
+                raise WorkflowError("Recover the actual parent's pending controlled-Dose choice")
+            return result
+
     def record_contact(
         self,
         viewer: GuildViewer,
@@ -1157,11 +1428,11 @@ class DoseUpService:
             self.game.authorize(c, viewer, game=False)
             state = load_state(c, self.store.campaign_id)
             value = prove(self.game, c, state, identity)
-            if viewer.user_id not in (
-                value.caster,
-                value.target_controller,
-                value.handler_controller,
-            ):
+            direction = _controlled_source(self.game, c, state, self.game.action(c, identity))
+            audience = {value.caster, value.target_controller, value.handler_controller}
+            if direction is not None:
+                audience.add(direction.author_controller)
+            if viewer.user_id not in audience:
                 raise WorkflowError(
                     "Only the original dosing participants may read this private source"
                 )
@@ -1190,6 +1461,12 @@ class DoseUpService:
                 else "active",
             )
 
+    def _directed_reader(
+        self, c: Connection, state: GameState, viewer: GuildViewer, identity: str
+    ) -> bool:
+        direction = _controlled_source(self.game, c, state, self.game.action(c, identity))
+        return direction is not None and direction.author_controller == viewer.user_id
+
     def _tasks(self, c: Connection, viewer: GuildViewer) -> list[dict[str, Any]]:
         state = load_state(c, self.store.campaign_id)
         return [
@@ -1206,4 +1483,5 @@ class DoseUpService:
             )
             for x in rules.records(state, rules.Dose)
             if viewer.user_id in (x.caster, x.target_controller, x.handler_controller)
+            or self._directed_reader(c, state, viewer, x.id)
         ]

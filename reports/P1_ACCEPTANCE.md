@@ -998,3 +998,89 @@ repository1414 publishable files/40 original manifest entries/0 findings. Exact
 selected hashes/checks retained in `var/p1-nominations-outcomes-*`. These are local
 scoped checks; new focused CI evidence follows publication. Full regression,
 global migration/privacy/restore, independent review and human acceptance pending.
+
+### Native Living Battery Identity disposal
+
+Published preceding e3705cf97e476fd728a3fcf83713b6d9274c8faa has
+[focused CI42531742214](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42531742214)
+PASS; full regression skipped. The actual native Stim-Blissed owner may discard an
+eligible original Identity during Living Battery, retaining the real Tag modifier
+and zero Heat spending. Other playbooks receive no new general mark entitlement;
+default prepared metadata/events remain unchanged.
+
+`pytest -q tests/rules/test_disposable_psyche.py::test_actual_native_battery_disposal_preserves_tag_modifier_and_owned_effects`:
+initial1failed/1.66s because the fixture lacked known mapped physical endpoints.
+Added actual initial body/map facts before proposing contact; same-node retry
+**1passed/3.03s**. Actual separately controlled Core facts/Handler review, physical
+contact, native mark/removal/+Heat, Tag-based raw receipt, two real borrowed Assets,
+private disposal proof and known-roll retry. Source3 types passed. Broader normals
+remain deferred; this does not replace final regression.
+
+### Continuous intrinsic AM occupancy and bodily Void Storage
+
+NEW4 binds original actual powered interface, full fixed born endpoint set and
+genuine prepared hardware to actual same-event Jailbroken Occupancy. Root ports
+preserve source-derived temporary Battery Assets separately from permanent mind
+classification, exclude them from parked physical hardware, and prove each actual
+canonical occupancy/route chain. Physical self-unplug still requires returning to
+its real endpoint. Mental communication now checks the same live route, including
+actual service proof before sending. Stored Void uses its immutable actual
+component ID in current/parked hardware; no point/component is copied, healed or
+retargeted. Frame points remain on the actual Frame.
+
+Private effective-hardware projection is shared by the existing Body and
+Jailbroken readbacks. Existing typed inbox projection is reused for the unchanged
+Jailbroken entry and new owned route entry; visibility/pending meaning stays in
+the services. Native Jailbroken opens the real route workflow; actual carried
+objects still require their own performed conveyance. No generic rules framework
+or speculative body-kind system was introduced. Terminal hardware is already
+representable through real processing/components; the named-terminal demonstration
+remains unverified. Actual no-usable/all-Void terminal consequences, Pilot Code
+body/branch/records and connected Code swaps remain separate concrete source
+adapters, rather than whole-AM or automatic P3 deferrals.
+
+`pytest -q tests/rules/test_am_neural_route.py::test_actual_continuous_route_preserves_mental_ids_parked_void_and_physical_unplug`:
+initial1failed/1.25s at fixture creation because Voice Box is not an AM starting
+Asset. Test-only correction to actual Perfect Affect (Doll-Joints retained);
+same-node retry **1passed/4.81s**. Actual native preparation before contact,
+Battery cognition/question and physical Girl stored point, native source/move,
+same mental ID once, exact parked Void/current Actor, real private message/retry,
+actual route return and physical own unplug/expiry/readback. No old successful
+node rerun. Worker4 Ruff/format and types3 passed (one Literal typing repair).
+Root14 source types found one audit-dict expansion annotation error; typed
+`dict[str,Any]` preserves identical metadata, repaired source1 types PASS. Final
+selected packet static recorded at publication. Full/global/independent/player
+gates remain pending; bot OFF, RULES_SUBSET.
+
+### Princess-controlled native Stim self-Dose
+
+First actual controlled own-recipe provider beyond the existing basic families.
+Positive original Direction/parent proof binds the real native Stim performer and
+resources with Princess's scoped actor-decision authorship. Actual Dose receipt,
+component responses and DrugTags retain logical performer/giver identity; canonical
+human author proof uses existing `child_author`/`prove_response_author`. Positive
+controlled component rows distinguish printed roller and Handler roles, preserving
+Handler authority even if a human has multiple roles. Default ordinary Dose
+request bodies/events remain unchanged. Actual staged completion validates the
+current answered row/effects without querying a not-yet-existing current event;
+later readback uses canonical Dose proof. No extra completion event or fake Viewer,
+Contact, Task, consent or resource is created. Existing shared Game author routing
+was sufficient; no new central authorization bypass was needed.
+
+`pytest -q tests/rules/test_princess_sex.py::test_actual_princess_controls_native_stim_self_dose_real_resources_author_and_parent_completion`:
+**1passed/4.31s**, first run. Real public-birth Princess/Stim creation, voluntary
+original source/high result, native granted Stim cost controls, actual mid child,
+Princess actor components, real DrugTags/receipt/author/performer proof, exact child
+and parent closure/private original-author and recipient history. Original Stim
+regains own ordinary authority after the one-child grant ends. Worker6 Ruff/format
+and source5 types PASS; final printed-role delta2 Ruff/types PASS (one bool typing
+repair). Other-recipient/Order/learned providers and Alpha sleeping-source recipes
+remain explicit; no extra tier/role/lifecycle matrix run. No full P1 or independent
+review claim; bot OFF.
+
+Current integrated publication preflight31 paths/25 Python/22 source: Ruff,
+format and types all selected files PASS; whitespace PASS. Registry477/273 subset/
+204 unimplemented/440 required/0 independently verified. Planning contracts PASS;
+repository1418 files/40 original manifest entries/0 findings. Exact selected
+hashes/checks retained under `var/p1-continuity-controlled-*`. Scoped local source
+and normal checks are not the final exact-candidate full regression.

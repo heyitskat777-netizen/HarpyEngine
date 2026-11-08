@@ -844,3 +844,195 @@ def test_actual_directed_stim_disposal_native_mark_preserves_performer_and_princ
     assert game.inspect(PLAYER, parent)["receipt"] == parent_receipt and game.dice.calls == 1
     with ledger.engine.connect() as c:
         assert prove_disposal(game, c, state(game), child) == disposal
+
+
+def test_actual_princess_controls_native_stim_self_dose_real_resources_author_and_parent_completion(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred: actual original native Stim creation, never a later Girl label mutation."""
+    from m3_policy_scenario import configure_m3_fixture
+    from test_creation import selected
+    from test_creation_review import ready as creation_ready
+    from test_m2_game import Gateway
+    from test_physical_operations import place
+    from test_world import initial
+
+    from girlframe.delivery.m2_worker import GameWorker
+    from girlframe.discord_adapter.m3_dose_up import open_choice as dose_choice
+    from girlframe.engine import m3_dose_up as dose
+    from girlframe.engine.m2 import ReleaseApproval
+    from girlframe.engine.m2_registry import registry_digest
+    from girlframe.services.creation_review import CreationReviewService
+    from girlframe.services.m2_game import GameService
+    from girlframe.services.m3_dose_up import DoseUpService
+    from girlframe.services.m3_dose_up import prove as prove_dose
+
+    review, creation, _ = creation_ready(
+        ledger, girl="PRINCESS", frame="THE ENFORCER", other_girl="STIM-BLISSED"
+    )
+    current_draft = creation.get(OTHER)
+    draft = selected("STIM-BLISSED", "JANUS-B").model_copy(
+        update={"shared_tokens": current_draft.draft.shared_tokens}
+    )
+    creation.save(OTHER, "actual-original-stim-build", current_draft.revision, 1, draft)
+    other_review = CreationReviewService(ledger)
+    incoming = next(x for x in other_review.get(OTHER).sheet.bonds if not x.outgoing)
+    current_draft = creation.get(OTHER)
+    other_review.select_bond(
+        OTHER,
+        "actual-stim-mutual-bond",
+        current_draft.revision,
+        1,
+        current_draft.draft,
+        incoming.id,
+    )
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "owner_intense_tag_bonus": 2,
+            "m2_approval": ReleaseApproval(
+                registry_sha256=registry_digest(),
+                reviewer="synthetic test only",
+                reference="fixture; not certification",
+            ),
+        }
+    )
+    game = GameService(ledger, dice=Dice((6, 6)))
+    for viewer in (PLAYER, OTHER):
+        saved = review.get(viewer)
+        review.save(
+            viewer,
+            "actual-self-dose-review-" + str(viewer.user_id),
+            saved.saved_revision,
+            saved.fingerprint,
+        )
+        saved = review.get(viewer)
+        assert saved.sheet.ready_for_rules_review
+        game.activate(viewer, "actual-self-dose-active-" + str(viewer.user_id), saved.fingerprint)
+    configure_m3_fixture(ledger)
+    approved(ledger, game, tmp_path, monkeypatch, extra=(rules.RULE, dose.RULE))
+    approval = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "m3_approval": approval.model_copy(
+                update={"subsystems": approval.subsystems | {"world"}}
+            )
+        }
+    )
+    with ledger.transaction() as c:
+        actual = state(game)
+        actual.world = initial()
+        actual = place(place(actual, 2, mode="outside_frame"), 3, mode="outside_frame")
+        actual.sheets["3"].heat = 3
+        game.event(c, 1, str(uuid4()), "synthetic.original_directed_stim_bodies_and_heat", actual)
+    game.bind_scene(ADMIN, "actual-controlled-self-dose-scene", 900)
+    for viewer in (PLAYER, OTHER, ADMIN):
+        game.join_scene(viewer, "actual-controlled-dose-join-" + str(viewer.user_id), 900)
+    worker, gateway, service = GameWorker(game), Gateway(), SexService(game)
+    session, parent = roll(game, worker, gateway, service, (6, 6), native=True)
+    pass_tags(game)
+    original = state(game)
+    princess, stim = current_ref(original, 2), current_ref(original, 3)
+    assert original.sheets["2"].girl == "PRINCESS"
+    assert original.sheets["3"].girl == "STIM-BLISSED"
+    assert rules.get(original, session).consent_event
+    parent_receipt = game.inspect(PLAYER, parent)["receipt"]
+    direction = _directed_native(game, session, dose.PLAY)
+    assert direction.actor == stim and direction.actor_controller == 3
+    assert direction.author == princess and direction.author_controller == 2
+    assert direction.target is None and direction.order_id is None
+    assert direction.play == dose.PLAY and direction.parent == parent
+    controls = DoseUpService(ledger, game)
+    scope = controls.controlled(PLAYER, direction.id)
+    assert scope["actor"] == stim.model_dump(mode="json") and scope["heat"] == 3
+    with pytest.raises(WorkflowError):
+        controls.controlled(OTHER, direction.id)
+    game.dice.faces = (3, 4)
+    calls = game.dice.calls
+    child = _prepare_directed_native(game, service, session, heat=("1",), gain=("0",))
+    assert child and game.dice.calls == calls
+    assert state(game).sheets["3"].heat == original.sheets["3"].heat
+    assert state(game).sheets["2"].heat == original.sheets["2"].heat
+    with ledger.engine.connect() as c:
+        prepared = game.action(c, child)
+        assert prepared["actor_id"] == "3" and prepared["parent_id"] == parent
+        assert prepared["data"]["dose_up"]["princess_direction"] == direction.id
+        assert prepared["data"]["dose_up"]["actor"] == stim.model_dump(mode="json")
+        assert prepared["data"]["dose_up"]["target"] == stim.model_dump(mode="json")
+        assert prepared["data"]["dose_up"]["caster"] == 3
+        assert prepared["data"]["dose_up"]["chooser"] == 3
+        assert prepared["data"]["dose_up"]["contact"] is None
+        assert prepared["data"]["dose_up"]["order"] is None
+        assert prepared["data"]["prepared"]["source_work"] == direction.id
+    tick(worker, gateway, 3)
+    _pass_directed_tags(game)
+    assert game.dice.calls == calls + 1
+    assert state(game).sheets["3"].heat == original.sheets["3"].heat - 1
+    assert state(game).sheets["2"].heat == original.sheets["2"].heat
+    assert state(game).sheets["2"].identities == original.sheets["2"].identities
+    assert state(game).sheets["3"].identities == original.sheets["3"].identities
+    row = next(x for x in game.choices(PLAYER) if x["kind"] == "dose_up_components")
+    with pytest.raises(WorkflowError):
+        game.decision(OTHER, row["id"])
+    with pytest.raises(WorkflowError):
+        game.respond(
+            OTHER,
+            str(uuid4()),
+            row["id"],
+            row["revision"],
+            ChoiceAnswer(options=("quick", "strong")),
+        )
+    assert game.inspect(PLAYER, parent)["state"] != "complete"
+
+    async def actual_author_chooses():
+        opened = current(2, uuid4().int % 1000000000)
+        opened.channel_id = 900
+        await opened.response.defer(ephemeral=True)
+        await dose_choice(opened, game, game.decision(PLAYER, row["id"]))
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(current(3, 83990))
+        form.values["components"] = ("quick", "strong")
+        submitted = current(2, uuid4().int % 1000000000)
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+
+    asyncio.run(actual_author_chooses())
+    actual = state(game)
+    assert game.inspect(PLAYER, child)["state"] == "complete"
+    assert game.inspect(PLAYER, parent)["state"] == "complete"
+    assert game.inspect(PLAYER, parent)["receipt"] == parent_receipt
+    assert rules.direction(actual, direction.id).completed_event
+    assert rules.get(actual, session).phase == "complete"
+    assert len(dose.records(actual, dose.Contact)) == 0
+    assert len(dose.drug_tags(actual, stim)) == 2
+    for tag in dose.drug_tags(actual, stim):
+        assert tag.target == stim and tag.tag.giver_actor == stim
+        assert tag.tag.giver == 3 and tag.tag.giver_character == stim.incarnation
+    with ledger.engine.connect() as c:
+        value = prove_dose(game, c, actual, child)
+        assert value.actor == value.target == stim and value.caster == value.target_controller == 3
+        assert value.total == 8 and value.heat == 1 and value.duration == 2
+        assert value.selections[0].chooser == 3 and value.selections[0].role == "roller"
+        assert (
+            c.scalar(sa.select(t.events.c.actor_id).where(t.events.c.id == value.roll_event)) == "2"
+        )
+        assert c.scalar(sa.select(t.events.c.actor_id).where(t.events.c.id == value.event)) == "2"
+        assert (
+            c.scalar(
+                sa.select(t.m2["m2_responses"].c.actor_id).where(
+                    t.m2["m2_responses"].c.choice_id == value.selections[0].choice
+                )
+            )
+            == "2"
+        )
+    assert controls.view(PLAYER, child)["components"] == ["Upper:Quick", "Upper:Strong"]
+    assert controls.view(OTHER, child)["components"] == ["Upper:Quick", "Upper:Strong"]
+    assert any(x["id"] == child for x in controls.menu(PLAYER, 900)["history"])
+    assert controls.menu(OTHER, 900)["can_dose"]
+    assert not controls.menu(PLAYER, 900)["can_dose"]
+    with pytest.raises(WorkflowError):
+        controls.controlled(PLAYER, direction.id)
+    assert game.dice.calls == calls + 1
+    tick(worker, gateway, 5)

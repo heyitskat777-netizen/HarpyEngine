@@ -3963,3 +3963,20 @@ effect work while the durable future Arm remains active. This finite battle
 interpretation needs clarity review; preserve earlier source events when changing
 future battle grouping. Capture/corruption remain separate required ports in this
 first slice; the rule is not declared fully automated.
+
+### Continuous AM processing with a fixed physical neural interface
+
+`am-continuous-physical-neural-route` (PDF55/printed53; PDF69–70/printed67–68):
+permit continued actual contact only through the original AM's factual powered
+interface source, genuine prepared processing hardware and canonical occupancy
+chain. The jack stays at its proved physical endpoints; Battery cognition keeps
+its same temporary IDs until actual unplug. Stored Void follows its same actual
+component in the current or parked vessel, and physical self-unplug still needs
+the original endpoint. Another actual capable participant may perform their own
+unplug. No new body, free hardware, consent, circuit or backup entitlement follows
+from this interpretation. Unknown source combinations remain explicit adapters.
+
+There is no separate printed “Girl Storage” rule: this refers to bodily Assets
+under **Void Storage**. The book does not explain the combined AM relay case; this
+delegated recommendation needs clarity review. Preserve earlier contact, gain,
+component, possession and occupancy records when adjusting future policy.

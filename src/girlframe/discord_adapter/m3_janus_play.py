@@ -2,7 +2,7 @@
 
 import asyncio
 import json
-from typing import Any
+from typing import Any, Literal, cast
 
 import discord
 
@@ -74,18 +74,47 @@ async def open_battery(
                 target_actor=ActorRef.model_validate(data["target"]),
                 context=values["account"],
                 trigger_confirmed=True,
+                identity=next(iter(values.get("identity", ())), None),
+                gain=int(next(iter(values.get("gain", ("0",))), "0")),
+                disposable_heat=cast(
+                    Literal[0, 3, 4], int(next(iter(values.get("disposable_heat", ("0",))), "0"))
+                ),
             ),
         )
         return "Living Battery prepared; actual chat lock precedes the one roll. Action " + str(
             result["action_id"]
         )
 
+    fields = [Field("account", "Actual use of your reviewed neural link", paragraph=True)]
+    if data.get("disposal_identities"):
+        fields.extend(
+            [
+                Field(
+                    "identity",
+                    "Optional actual Identity to remove",
+                    tuple((x["id"], x["label"]) for x in data["disposal_identities"]),
+                    0,
+                    1,
+                    required=False,
+                ),
+                Field(
+                    "gain",
+                    "Heat from marking, if removing an Identity",
+                    tuple((str(x), str(x)) for x in range(4)),
+                ),
+                Field(
+                    "disposable_heat",
+                    "Optional Identity disposal: additional Heat",
+                    (("0", "Do not remove an Identity"), ("3", "+3 Heat"), ("4", "+4 Heat")),
+                ),
+            ]
+        )
     form = NativeForm(
         viewer.user_id,
         "Living Battery — actual connected Core",
         "Roll 2d6 + one per actual battery Tag. This spends no Heat. "
         "Private questions remain with the two actual minds.",
-        [Field("account", "Actual use of your reviewed neural link", paragraph=True)],
+        fields,
         submit,
     )
     await reply(interaction, form.text(), form)

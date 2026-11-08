@@ -5,7 +5,7 @@ from uuid import uuid4
 from pydantic import Field
 
 from girlframe.engine import m3_am_body as hardware
-from girlframe.engine.m2 import GameState
+from girlframe.engine.m2 import AssetState, GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_am import FREEDOMS, free
 from girlframe.engine.m3_physical_state import Placement
@@ -30,6 +30,7 @@ class Occupancy(Model):
     preparation: str | None
     mind_assets: tuple[str, ...]
     carried_items: tuple[str, ...] = Field(default=(), exclude_if=lambda value: not value)
+    neural_route: str | None = Field(default=None, exclude_if=lambda value: value is None)
     previous_pose: Placement
     current_pose: Placement
     event: str
@@ -168,6 +169,7 @@ def occupy(
     *,
     carried_items: tuple[str, ...] = (),
     carry_account: str | None = None,
+    neural_route: str | None = None,
 ) -> Occupancy:
     old = hardware._pose(state, actor)
     if not event or vessel not in dict(available(state, actor)):
@@ -183,6 +185,14 @@ def occupy(
             raise ValueError("Recover the actual initial mind-linked Asset classification")
         ids = prepared.spec.mind_assets
     mind = tuple(x for x in sheet.assets if x.id in ids)
+    retained: tuple[AssetState, ...] = ()
+    if neural_route is not None:
+        from girlframe.engine.m3_am_neural_route import retained_mental_assets, validate_move
+
+        validate_move(state, actor, vessel, neural_route)
+        retained = retained_mental_assets(state, actor, neural_route)
+        if set(ids) & {x.id for x in retained}:
+            raise ValueError("Temporary Battery cognition is not permanent software classification")
     if len(mind) != len(ids):
         raise ValueError("SOURCE_BODY_CLASSIFICATION_REQUIRED: preserve changed mental resources")
     if target is None:
@@ -204,7 +214,14 @@ def occupy(
         raise ValueError("A physical object cannot be silently classified as software")
     if prepared and target.event == prepared.event and carried_items != prepared.spec.carried_items:
         raise ValueError("Select the original prepared physical objects for actual conveyance")
-    hardware._ordinary(state, actor, mind + target.assets + portable, carried_items=carried_items)
+    hardware._ordinary(
+        state,
+        actor,
+        mind + retained + target.assets + portable,
+        carried_items=carried_items,
+        neural_route=neural_route,
+        destination=vessel,
+    )
     if carried_items and (not carry_account or not carry_account.strip()):
         raise ValueError("Record actual performed object conveyance on this occupancy")
     previous = next((x for x in hardware.bodies(state) if x.vessel == old.vessel_id), None)
@@ -222,6 +239,7 @@ def occupy(
     sheet.assets = (
         [x for x in sheet.assets if x.family == "frame"]
         + list(mind)
+        + list(retained)
         + list(target.assets)
         + list(portable)
     )
@@ -253,6 +271,7 @@ def occupy(
         preparation=prepared.id if prepared else None,
         mind_assets=ids,
         carried_items=carried_items,
+        neural_route=neural_route,
         previous_pose=old,
         current_pose=pose,
         event=event,

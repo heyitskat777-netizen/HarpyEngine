@@ -107,6 +107,8 @@ def put(state: "GameState", value: StoredVoid) -> None:
 def live_link(
     state: "GameState", actor: ActorRef, core: ActorRef | None = None
 ) -> BatteryLink | None:
+    from girlframe.engine.m3_frame_control import neural_contact_live
+
     sheet = state.sheets.get(actor.entity) if actor.kind == "pilot" else None
     if sheet is None or sheet.character_id != actor.incarnation or sheet.frame_scrapped:
         return None
@@ -123,6 +125,7 @@ def live_link(
         and any(
             y.id == x.connection
             and y.phase == "connected"
+            and neural_contact_live(state, y.id)
             and y.caster == actor
             and y.battery == x.battery
             for y in state.neural_connections
@@ -131,10 +134,23 @@ def live_link(
     return links[-1] if links else None
 
 
+def _parked_components(state: "GameState", actor: ActorRef) -> tuple["AssetState", ...]:
+    from girlframe.engine.m3_am_body import bodies
+
+    return tuple(
+        asset
+        for body in bodies(state)
+        if body.actor == actor and body.occupant is None
+        for asset in body.assets
+        if asset.family == "girl" and asset.battery_asset is None
+    )
+
+
 def active(state: "GameState", actor: ActorRef) -> tuple[StoredVoid, ...]:
     sheet = state.sheets.get(actor.entity) if actor.kind == "pilot" else None
     if sheet is None or sheet.character_id != actor.incarnation:
         return ()
+    parked = _parked_components(state, actor)
     return tuple(
         x
         for x in points(state)
@@ -142,8 +158,30 @@ def active(state: "GameState", actor: ActorRef) -> tuple[StoredVoid, ...]:
         and not x.removed_event
         and x.frame
         == (sheet.frame_runtime.id if sheet.frame_runtime else "initial:" + str(actor.incarnation))
-        and any(a.id == x.asset and not a.void for a in sheet.assets)
+        and any(a.id == x.asset and not a.void for a in (*sheet.assets, *parked))
         and live_link(state, actor, x.core) is not None
+    )
+
+
+def effective_body_assets(
+    state: "GameState",
+    actor: ActorRef,
+    vessel: str,
+    *,
+    assets: tuple["AssetState", ...] | None = None,
+) -> tuple["AssetState", ...]:
+    """Same component IDs in the actual vessel; stored physical Void never follows a mind."""
+    from girlframe.engine.m3_am_body import bodies
+
+    body = next((x for x in bodies(state) if x.actor == actor and x.vessel == vessel), None)
+    if body is None:
+        raise ValueError("Select the actual saved physical AM hardware")
+    changes = {x.asset: x for x in active(state, actor)}
+    return tuple(
+        x.model_copy(update={"void": True, "description": changes[x.id].description})
+        if x.id in changes
+        else x
+        for x in (body.assets if assets is None else assets)
     )
 
 

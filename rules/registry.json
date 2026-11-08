@@ -6956,12 +6956,12 @@
         "Automatically carry every physical possession when the mind changes bodies.",
         "Remove or duplicate the object across the active sheet and parked hardware."
       ],
-      "implementation_note": "Positive exact genuine HeldItem/Asset and source proof, actual transition/conveyance account and original source author. Preserve IDs, damage/Void and actual custody; do not duplicate in parked hardware. Default empty fields omit as before. Battery/Storage connection lifetimes and other custody sources keep their own guards. Actual spinal endpoints now preserve physical vessel identity; supported body transfer uses genuine unplug/reviewed replug. SOURCE_NEURAL_ROUTE_REQUIRED is an implementation boundary for continuous relay, not a printed universal unplug rule. Parked relay and Girl Storage projection remain separate required ports.",
+      "implementation_note": "Positive exact genuine HeldItem/Asset and source proof, actual transition/conveyance account and original source author. Preserve IDs, damage/Void and actual custody; do not duplicate in parked hardware. Default empty fields omit as before. Battery/Storage connection lifetimes and other custody sources keep their own guards. Actual spinal endpoints now preserve physical vessel identity; ordinary body transfer uses actual unplug/reviewed replug or a separately proved continuous physical interface. SOURCE_NEURAL_ROUTE_REQUIRED remains the fail-closed boundary when that source is absent. Bodily Void Storage projects on its actual current/parked component; no independent Girl Storage entitlement exists.",
       "change_impact": "Keep original possession, body, source and conveyance history. Later adjustments cannot silently recreate objects, end neural links or change another source lifetime.",
       "provenance": "owner_approved_campaign_ruling",
       "authority": "delegated_recommendation",
       "clarity_review": true,
-      "revision": 1
+      "revision": 2
     },
     {
       "id": "void-next-frame-entry-source",
@@ -7057,6 +7057,23 @@
       ],
       "implementation_note": "Actual scheduling resolves original effect work while typed Arm remains durable. Require the complete pending arm set and actual adjudicator-selected affected ordinary NPC/site and account at confirmation. Real NPC death/site destruction, cast/journey changes, budget/site facts and last-Base producer use the same event. Source completion after canonical proof; true pending quadrant aftermath blocks normal Cadre Plays. Capture/corruption and special endpoints remain explicit required ports in this first slice.",
       "change_impact": "Preserve original selection/arm, actual first combat, affected snapshots, human selection, world changes and followups. Future battle grouping changes do not retroactively trigger another loss.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "am-continuous-physical-neural-route",
+      "summary": "A source-proved AM processing route can keep an actual fixed neural interface operating while the same mind occupies separately prepared hardware; no jack or physical component follows the mind by inference.",
+      "source": "Rulebook PDF55/printed53 Jailbroken; PDF69/printed67 Living Battery; PDF70/printed68 Void Storage and Universal Plug.",
+      "rationale": "The printed sources grant independent AM occupancy and mental benefits until actual unplug, but do not detail their combined physical implementation. Preserve both source lifetimes and exact component ownership with a factual, original-owner-authored continuity source.",
+      "policy_key": "am_continuous_physical_neural_route",
+      "alternatives": [
+        "Require actual unplug before every AM occupancy regardless of proved continuity.",
+        "Move every neural jack, temporary resource and bodily Void to the new vessel automatically."
+      ],
+      "implementation_note": "Require actual prior reviewed contact, full fixed endpoint set, genuine prepared processing hardware, powered original interface account and canonical occupancy chain. Keep temporary Battery IDs separately from permanent mind classification. Stored Void projects by the same actual component ID in its current or parked vessel, never by copying to a new body. Physical self-unplug still needs the original endpoint; actual return or another genuine capable original participant supplies that performance. Unknown processing/remote hardware/source combinations remain explicit adapters.",
+      "change_impact": "Preserve original contact, paid entitlement, gain/receipt, component and occupancy records. A future policy change must not silently move jacks, erase stored points or invent an unplug.",
       "provenance": "owner_approved_campaign_ruling",
       "authority": "delegated_recommendation",
       "clarity_review": true,

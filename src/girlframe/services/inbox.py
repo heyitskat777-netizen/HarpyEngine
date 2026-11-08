@@ -2069,23 +2069,34 @@ class InboxService:
             from girlframe.services.m3_am_jailbroken import JailbrokenService
 
             for occupancy in JailbrokenService(GameService(self.store))._tasks(connection, viewer):
-                pending_occupancy = bool(occupancy["pending"])
                 items.append(
-                    InboxItem(
-                        "am-jailbroken:" + occupancy["id"],
-                        "am_jailbroken",
-                        occupancy["id"],
-                        occupancy["revision"],
-                        "playbook",
-                        occupancy["label"],
-                        "Original AM owner",
-                        "pending" if pending_occupancy else "established",
-                        pending_occupancy,
-                        False,
-                        "Review current/parked bodies or choose self-directed occupancy.",
-                        "Hardware condition stays with each body; mind and resources remain yours.",
-                        "Review AM occupancy",
+                    _playbook_task(
+                        cast(_RuleTask, occupancy),
+                        prefix="am-jailbroken:",
+                        source="am_jailbroken",
+                        counterpart="Original AM owner",
+                        effect="Review current/parked bodies or choose self-directed occupancy.",
+                        details=(
+                            "Hardware condition stays with each body; "
+                            "mind and resources remain yours."
+                        ),
+                        primary="Review AM occupancy",
                         task="m3_am_jailbroken",
+                    )
+                )
+            from girlframe.services.m3_am_neural_route import RouteService
+
+            for route in RouteService(GameService(self.store))._tasks(connection, viewer):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, route),
+                        prefix="am-neural-route:",
+                        source="am_neural_route",
+                        counterpart="Original AM owner",
+                        effect="Review your actual powered interface and processing route.",
+                        details="Spinal jacks remain at their actual physical vessels.",
+                        primary="Review continuous interface",
+                        task="m3_am_neural_route",
                     )
                 )
 

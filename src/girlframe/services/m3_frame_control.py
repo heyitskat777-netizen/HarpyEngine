@@ -236,13 +236,45 @@ def _new_bodies(
 
 
 def _bodies(game: "GameService", c: Connection, state: GameState, value: NeuralConnection) -> None:
-    caster, battery = connection_endpoints(game, c, value)
-    _new_bodies(
-        game,
-        c,
-        state,
-        value.model_copy(update={"caster_vessel": caster, "battery_vessel": battery}),
-    )
+    endpoints = connection_endpoints(game, c, value)
+    people = _people(game, c, state, value)
+    if all(person.vessel_id == vessel for person, vessel in zip(people, endpoints, strict=True)):
+        _new_bodies(
+            game,
+            c,
+            state,
+            value.model_copy(
+                update={"caster_vessel": endpoints[0], "battery_vessel": endpoints[1]}
+            ),
+        )
+        return
+    from girlframe.engine.m3_am_body import bodies
+    from girlframe.services.m3_am_neural_route import require_connection_route
+
+    physical_cells = []
+    for actor, person, vessel in zip((value.caster, value.battery), people, endpoints, strict=True):
+        if person.vessel_id == vessel:
+            if person.offstage_source:
+                raise WorkflowError("Recover this actual original physical neural endpoint")
+            physical_cells.append(person.cell)
+            continue
+        route = require_connection_route(game, c, state, actor, value.id)
+        endpoint = (
+            next((x for x in route.endpoints if x.connection == value.id), None) if route else None
+        )
+        parked = next(
+            (
+                x
+                for x in bodies(state)
+                if x.actor == actor and x.vessel == vessel and x.occupant is None
+            ),
+            None,
+        )
+        if endpoint is None or endpoint.vessel != vessel or parked is None:
+            raise WorkflowError("Recover the source-owned actual parked spinal interface")
+        physical_cells.append(parked.cell)
+    if all(x is not None for x in physical_cells) and physical_cells[0] != physical_cells[1]:
+        raise WorkflowError("Actual separated spinal interfaces have no proved physical contact")
 
 
 def _unplug_body(

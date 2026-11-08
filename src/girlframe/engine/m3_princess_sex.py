@@ -74,6 +74,7 @@ class HighDirection(Model):
         "all_out_assault",
         "put_someone_beneath_you",
         "disobey_orders",
+        "dose_up",
     ]
     target: ActorRef | None = Field(default=None, exclude_if=lambda value: value is None)
     order_id: str | None = Field(default=None, exclude_if=lambda value: value is None)

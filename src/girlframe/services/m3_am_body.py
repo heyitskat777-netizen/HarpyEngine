@@ -18,6 +18,18 @@ from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
 
+def project_hardware(state: GameState, body: rules.Body) -> dict[str, Any]:
+    """Private effective condition of this same saved vessel's actual components."""
+    from girlframe.engine.m3_janus_storage import effective_body_assets
+
+    return body.model_dump(mode="json") | {
+        "assets": [
+            x.model_dump(mode="json")
+            for x in effective_body_assets(state, body.actor, body.vessel, assets=body.assets)
+        ]
+    }
+
+
 def _history(game: GameService, c: Connection, event: str) -> GameState:
     from girlframe.services.m3_am_scrutinized import _history as history
 
@@ -561,9 +573,11 @@ class BodyService:
                 swap=value.model_dump(mode="json"),
                 connection=rules.connection(state, identity).model_dump(mode="json"),
                 bodies=[
-                    x.model_dump(mode="json") for x in rules.bodies(state) if x.actor == value.actor
+                    project_hardware(state, x)
+                    for x in rules.bodies(state)
+                    if x.actor == value.actor
                 ],
-                current=occupied.model_dump(mode="json") if occupied else None,
+                current=project_hardware(state, occupied) if occupied else None,
                 owner=viewer.user_id == int(value.actor.entity),
                 controller=viewer.user_id == value.controller,
                 carried_items=carried_options(self.game, c, state, value.actor),
