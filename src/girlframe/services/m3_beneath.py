@@ -16,6 +16,7 @@ from girlframe.services.handler_setup import HandlerService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_princess_performer import acting_owner
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -45,7 +46,9 @@ def no_conflict(
         if ancestor["data"].get("beneath"):
             authorize(game, c, viewer, ancestor)
         parent = ancestor["parent_id"]
-    requested = {str(viewer.user_id)}
+    requested = {
+        str(acting_owner(game, c, viewer, prepared, load_state(c, game.store.campaign_id)))
+    }
     if prepared.target is not None:
         requested.add(str(prepared.target))
     actions = t.m2["m2_actions"]
@@ -112,21 +115,18 @@ def prepare(
     game: "GameService", c: Connection, viewer: GuildViewer, prepared: PlayInput, state: GameState
 ) -> dict[str, Any]:
     authorize(game, c, viewer)
-    if (
-        prepared.target is None
-        or prepared.target == viewer.user_id
-        or prepared.off_duty_id is not None
-    ):
+    owner = acting_owner(game, c, viewer, prepared, state)
+    if prepared.target is None or prepared.target == owner or prepared.off_duty_id is not None:
         raise WorkflowError("Choose another actual Girl in the scene for this Heat-based Play.")
     refs = tuple(
         ActorRef(
             kind="pilot",
             entity=str(uid),
             incarnation=game.character_binding(
-                c, state, uid, require_current_profile=uid == viewer.user_id
+                c, state, uid, require_current_profile=uid == owner == viewer.user_id
             ),
         )
-        for uid in (viewer.user_id, prepared.target)
+        for uid in (owner, prepared.target)
     )
     actors = tuple(
         resolve(state, ref, profiles(c, game.store.campaign_id), require_current_profile=False)

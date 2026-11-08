@@ -204,8 +204,23 @@ def proved_ended_original(
 
 
 def _context_proof(game: "GameService", c: Connection, value: Context) -> None:
+    if value.source_author is not None:
+        from girlframe.services.m3_handler_advancements import _history
+        from girlframe.services.m3_princess_sex import _direction
+
+        direction = _direction(
+            game, c, _history(c, game, value.proposed_event), value.source_work or ""
+        )
+        if (
+            direction.author_controller != value.source_author
+            or direction.actor != value.declaration.actor
+            or direction.parent != value.source_action
+            or direction.play != value.declaration.play
+            or direction.target != value.declaration.target
+        ):
+            raise WorkflowError("Preserve the actual Princess declaration author and performer")
     for event, kind, human in (
-        (value.proposed_event, "m3.battle_proposed", value.owner),
+        (value.proposed_event, "m3.battle_proposed", value.source_author or value.owner),
         (value.confirmed_event, "m3.battle_confirmed", value.adjudicator),
     ):
         row = c.execute(
@@ -270,9 +285,10 @@ def _required_battle_child(
     """Route only proven required performances; each service retains its own authority."""
     from girlframe.services.m3_ankou_feedback_sequences import prepare_child as ankou_child
     from girlframe.services.m3_changeling_effects import prepare_child as mental_child
+    from girlframe.services.m3_princess_sex import child_source as princess_child
     from girlframe.services.m3_red_queen_support import prepare_child as court_child
 
-    for source in (court_child, ankou_child, mental_child):
+    for source in (court_child, ankou_child, mental_child, princess_child):
         value = source(game, c, viewer, state, prepared, channel)
         if value is not None:
             return value
@@ -330,7 +346,7 @@ def prepare(
         raise WorkflowError("Use this actual declaration's frozen original source parent.")
     if (
         context.state != "confirmed"
-        or context.owner != viewer.user_id
+        or (context.source_author or context.owner) != viewer.user_id
         or context.scene != scene["id"]
     ):
         raise WorkflowError("Use your actual confirmed declaration in this original scene.")
@@ -367,8 +383,16 @@ def prepare(
         )
     if prepared.piloting != bool(acting.piloting):
         raise WorkflowError("Use the original body's actual piloting context for this battle.")
+    directed_author = bool(
+        required_child is not None
+        and context.source_author == viewer.user_id
+        and context.owner == acting.controller
+        and required_child.get("author") == viewer.user_id
+        and required_child["actor"] == declaration.actor.model_dump(mode="json")
+    )
     if (
         acting.controller != viewer.user_id
+        and not directed_author
         or rules.resource_sha(state, declaration.actor, bound) != declaration.actor_sha256
     ):
         raise WorkflowError("STALE_BATTLE: the original actor or resources changed.")
@@ -1219,6 +1243,10 @@ def synchronize(
         else:
             ChoiceEngine(game).finish(c, state, action)
         game.save_action(c, action)
+        if action["state"] == "complete" and action["data"].get("princess_child"):
+            from girlframe.services.m3_princess_performer import complete_battle
+
+            complete_battle(game, c, action, event)
         if action["data"].get("battle_counter_source"):
             complete_counter_play(game, c, action, event, viewer, key)
         if action["state"] == "complete" and action["data"].get("gorgon_counter_source"):
@@ -2658,7 +2686,11 @@ class BattleService:
                 None,
             )
             value = Context.model_validate_json(fact["body"]) if fact else None
-            if value is None or viewer.user_id not in (value.owner, value.adjudicator):
+            if value is None or viewer.user_id not in (
+                value.owner,
+                value.source_author,
+                value.adjudicator,
+            ):
                 raise WorkflowError(
                     "This saved battle context belongs to its actual source humans."
                 )
@@ -2668,10 +2700,21 @@ class BattleService:
                     t.m2["m2_scenes"].c.id == value.scene,
                 )
             )
+            princess_child = None
+            if value.source_work:
+                from girlframe.engine import m3_princess_sex as princess
+                from girlframe.services.m3_princess_sex import child_projection
+
+                direction = next(
+                    (x for x in princess.directions(state) if x.id == value.source_work), None
+                )
+                if direction is not None and viewer.user_id == direction.author_controller:
+                    princess_child = child_projection(self.game, c, state, direction.id)
             return dict(
                 context=value.model_dump(mode="json"),
                 channel=int(channel) if channel else None,
                 revision=state.revision,
+                princess_child=princess_child,
                 source_work=value.source_work
                 or (
                     c.scalar(
@@ -2689,7 +2732,9 @@ class BattleService:
                 ),
             )
 
-    def preview(self, viewer: GuildViewer, channel: int) -> dict[str, Any]:
+    def preview(
+        self, viewer: GuildViewer, channel: int, *, required: PlayInput | None = None
+    ) -> dict[str, Any]:
         with self.store.engine.connect() as c:
             self.game.authorize(c, viewer, game=False)
             state = load_state(c, self.store.campaign_id)
@@ -2700,14 +2745,32 @@ class BattleService:
                 and not any(x.controller == viewer.user_id for x in cast.roles)
             ):
                 raise WorkflowError("Join the actual scene cast before declaring combat.")
+            required_actor = None
+            required_controller = None
+            if required is not None:
+                source = _required_battle_child(self.game, c, viewer, state, required, channel)
+                if source is None:
+                    raise WorkflowError("Use a proved original required battle source")
+                required_actor = ActorRef.model_validate(source["actor"])
+                required_controller = resolve(
+                    state, required_actor, bound, require_current_profile=False
+                ).controller
             actors = []
             for role in cast.roles:
                 if not _visible(state, role.actor, viewer.user_id):
                     continue
+                if required_controller is not None and not _visible(
+                    state, role.actor, required_controller
+                ):
+                    continue
                 actual = resolve(state, role.actor, bound, require_current_profile=False)
                 if actual.controller != role.controller:
                     raise WorkflowError("Recover the actual scene controller assignment.")
-                owned = actual.controller == viewer.user_id
+                owned = (
+                    role.actor == required_actor
+                    if required_actor is not None
+                    else actual.controller == viewer.user_id
+                )
                 actors.append(
                     dict(
                         token=role.actor.token,
@@ -2745,7 +2808,11 @@ class BattleService:
             for fact in state.facts:
                 if fact.get("kind") == "battle_context":
                     item = Context.model_validate_json(fact["body"])
-                    if item.scene == cast.id and viewer.user_id in (item.owner, item.adjudicator):
+                    if item.scene == cast.id and viewer.user_id in (
+                        item.owner,
+                        item.source_author,
+                        item.adjudicator,
+                    ):
                         contexts[item.id] = item
             return dict(
                 revision=state.revision,
@@ -2753,6 +2820,7 @@ class BattleService:
                 scene=cast.id,
                 actors=actors,
                 contexts=[x.model_dump(mode="json") for x in contexts.values()],
+                required_actor=required_actor.model_dump(mode="json") if required_actor else None,
             )
 
     def propose(
@@ -2772,9 +2840,14 @@ class BattleService:
                 raise WorkflowError("STALE_BATTLE: reopen the actual scene declaration.")
             source_grant = None
             if source_work is not None:
+                from girlframe.engine import m3_princess_sex as princess
+
+                direction = next(
+                    (x for x in princess.directions(state) if x.id == source_work), None
+                )
                 prepared_source = PlayInput(
                     play=declaration.play,
-                    context=declaration.account,
+                    context=direction.context if direction else declaration.account,
                     trigger_confirmed=True,
                     heat=0,
                     target_actor=declaration.target,
@@ -2848,12 +2921,19 @@ class BattleService:
                 raise WorkflowError(
                     "A body in actual offstage travel cannot enter this battlefield declaration."
                 )
-            if not _visible(state, declaration.target, viewer.user_id):
+            if not _visible(state, declaration.target, actor.controller):
                 raise WorkflowError(
                     "Reveal the actual target in Conversation before declaring this attack."
                 )
+            controlled = bool(
+                source_grant is not None
+                and source_grant.get("author") == viewer.user_id
+                and source_grant.get("actor_controller") == actor.controller
+                and source_grant["actor"] == declaration.actor.model_dump(mode="json")
+            )
             if (
                 actor.controller != viewer.user_id
+                and not controlled
                 or rules.resource_sha(state, declaration.actor, bound) != declaration.actor_sha256
                 or rules.resource_sha(state, declaration.target, bound) != declaration.target_sha256
             ):
@@ -2872,7 +2952,7 @@ class BattleService:
                 asset = rules.owned_asset(
                     state, declaration.target, declaration.target_asset, bound
                 )
-                if asset.concealed and target.controller != viewer.user_id:
+                if asset.concealed and target.controller != actor.controller:
                     raise WorkflowError(
                         "The opposing Asset must actually be revealed in Conversation."
                     )
@@ -2891,7 +2971,8 @@ class BattleService:
                 id=str(uuid4()),
                 scene=cast.id,
                 declaration=declaration,
-                owner=viewer.user_id,
+                owner=actor.controller if controlled else viewer.user_id,
+                source_author=viewer.user_id if controlled else None,
                 adjudicator=handler,
                 appointment=appointment,
                 proposed_event=event,

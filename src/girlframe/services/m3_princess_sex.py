@@ -1,7 +1,7 @@
 """Real voluntary Princess source, owned outcomes and one actual counterpart child."""
 
 import json
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 import sqlalchemy as sa
@@ -464,7 +464,24 @@ def apply(
         else:
             _finish(game, c, state, action)
     elif kind == "princess_sex_direct":
-        _strict(answer, ("keep_your_head",), text=True)
+        if len(answer.options) != 1 or set(answer.fields) - {"target", "order_id"}:
+            raise WorkflowError(
+                "Choose one genuine basic directive and only its actual target/Order"
+            )
+        _strict(answer.model_copy(update={"fields": {}}), answer.options, text=True)
+        selected = answer.options[0]
+        if selected not in BASIC_PLAYS:
+            raise WorkflowError("This required Play needs its own real source-recipe adapter")
+        target = None
+        if answer.fields.get("target"):
+            target = next(
+                (x.actor for x in value.cast.roles if x.actor.token == answer.fields["target"]),
+                None,
+            )
+            if target is None:
+                raise WorkflowError("Select the actual original scene target")
+        order_id = answer.fields.get("order_id") or None
+        _prerequisites(game, c, state, value, selected, target, order_id)
         if value.tier != "high" or value.direction or value.phase != "direction":
             raise WorkflowError("Use the actual high Princess result's one legal child")
         direction = rules.HighDirection(
@@ -478,7 +495,9 @@ def apply(
             source_event=value.effect_event or "",
             selected_choice=row["id"],
             selected_event=event,
-            play="keep_your_head",
+            play=cast(Any, selected),
+            target=target,
+            order_id=order_id,
             context=answer.text.strip(),
         )
         rules.put(state, direction)
@@ -486,6 +505,275 @@ def apply(
         game.request(c, action, value.caster, "princess_sex_child", dict(direction=direction.id))
     else:
         raise WorkflowError("Use the exact original Princess source decision")
+
+
+BASIC_PLAYS = {
+    "keep_your_head": "Keep Your Head",
+    "check_sensors": "Check Your Sensors",
+    "flirt": "Flirt",
+    "engage": "Engage",
+    "all_out_assault": "All Out Assault — actual reviewed declaration",
+    "put_someone_beneath_you": "Put Someone Beneath You",
+    "disobey_orders": "Disobey an actual applicable Order",
+}
+
+
+def _applicable_order(
+    game: GameService, c: Connection, state: GameState, session: rules.Session, order_id: str | None
+) -> dict[str, Any]:
+    row = game.valid_order(c, state, session.counterpart, session.cast.channel, order_id)
+    actions = t.m2["m2_actions"]
+    sources = (
+        c.execute(
+            sa.select(actions.c.id).where(
+                actions.c.campaign_id == game.store.campaign_id,
+                sa.func.json_extract(actions.c.body_json, "$.play") == "receive_orders",
+                sa.func.json_extract(actions.c.body_json, "$.order_id") == row["id"],
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if len(sources) != 1:
+        raise WorkflowError(
+            "SOURCE_ORDER_ANCESTRY: retain the actual original Receive Orders source"
+        )
+    source = game.action(c, sources[0])
+    if (
+        source["state"] != "complete"
+        or game.pending(c, source["id"])
+        or source["channel_id"] != str(session.cast.channel)
+        or source["scene_id"] != session.cast.id
+        or source["actor_id"] != session.target.entity
+        or source["data"].get("character_ids", {}).get(session.target.entity)
+        != session.target.incarnation
+    ):
+        raise WorkflowError(
+            "SOURCE_ORDER_ANCESTRY: finish the real Receive Orders chain before this directive"
+        )
+    birth = c.execute(
+        sa.select(t.events.c.actor_id, t.events.c.payload_json).where(
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.kind == "m2.order_issued",
+        )
+    ).all()
+    if not any(
+        x.actor_id == row["issuer_id"]
+        and json.loads(x.payload_json).get("action_id") == source["id"]
+        for x in birth
+    ):
+        raise WorkflowError("Recover the real canonical Order issuance before directing refusal")
+    return row
+
+
+def _prerequisites(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    session: rules.Session,
+    play: str,
+    target: ActorRef | None,
+    order_id: str | None,
+) -> None:
+    if play not in BASIC_PLAYS:
+        raise WorkflowError("This directive needs a separate actual source-recipe adapter")
+    _contact(
+        game,
+        c,
+        state,
+        session.actor,
+        session.target,
+        session.cast.channel,
+        bonded_source=session.bonded_source,
+        changeling_source=session.changeling_source,
+    )
+    current = _cast(game, c, state, session.cast.channel)
+    if fingerprint(current) != fingerprint(session.cast):
+        raise WorkflowError("STALE_CAST: retain the actual original Princess source scene")
+    performer = resolve(state, session.target, profiles(c, game.store.campaign_id))
+    if not performer.alive or performer.ref != current_ref(state, session.counterpart):
+        raise WorkflowError("Use the original living counterpart, never an account replacement")
+    targeted = play in ("flirt", "engage", "all_out_assault", "put_someone_beneath_you")
+    if targeted != (target is not None) or target == session.target:
+        raise WorkflowError("Choose this actual basic Play's distinct real target")
+    if target is not None:
+        actual = resolve(state, target, profiles(c, game.store.campaign_id))
+        if (
+            not actual.alive
+            or actual.offstage_source
+            or not any(
+                x.actor == target and x.controller == actual.controller for x in current.roles
+            )
+        ):
+            raise WorkflowError("The real target must still belong to this actual source scene")
+        if play in ("flirt", "put_someone_beneath_you") and (
+            target.kind != "pilot" or current_ref(state, int(target.entity)) != target
+        ):
+            raise WorkflowError("This basic child requires an actual native Girl target adapter")
+        if play == "all_out_assault" and not any(not x.damaged for x in actual.assets):
+            raise WorkflowError(
+                "Assault needs an actual opposing undamaged Asset and reviewed opening"
+            )
+    if play == "engage" and not any(not x.damaged for x in performer.assets):
+        raise WorkflowError("Engage requires the performer's actual usable owned Asset")
+    if play == "disobey_orders":
+        _applicable_order(game, c, state, session, order_id)
+        from girlframe.engine.m3_am import require_freedom
+
+        require_freedom(state, session.target, "refuse")
+    elif order_id is not None:
+        raise WorkflowError("Only actual Disobey uses an existing Order; no source fabrication")
+
+
+def directive_options(
+    game: GameService, c: Connection, state: GameState, session_id: str
+) -> dict[str, Any]:
+    session = prove(game, c, state, session_id)
+    targets = []
+    bound = profiles(c, game.store.campaign_id)
+    for role in session.cast.roles:
+        if role.actor == session.target:
+            continue
+        actual = resolve(state, role.actor, bound)
+        if not actual.alive or actual.offstage_source or actual.controller != role.controller:
+            continue
+        allowed = []
+        for play in ("flirt", "put_someone_beneath_you", "engage", "all_out_assault"):
+            try:
+                _prerequisites(game, c, state, session, play, role.actor, None)
+            except (WorkflowError, ValueError):
+                continue
+            allowed.append(play)
+        if allowed:
+            targets.append(
+                dict(
+                    ref=role.actor.model_dump(mode="json"),
+                    token=role.actor.token,
+                    label=actual.label,
+                    plays=allowed,
+                )
+            )
+    orders: list[dict[str, str]] = []
+    table = t.m2["m2_orders"]
+    for row in c.execute(
+        sa.select(table).where(
+            table.c.campaign_id == game.store.campaign_id,
+            table.c.channel_id == str(session.cast.channel),
+            table.c.target_id == str(session.counterpart),
+            table.c.state == "disobey",
+        )
+    ).mappings():
+        try:
+            _prerequisites(game, c, state, session, "disobey_orders", None, row["id"])
+        except (WorkflowError, ValueError):
+            continue
+        # No private Order prose is projected merely because it exists.
+        orders.append(
+            dict(id=row["id"], label="Actual already-received Order " + str(len(orders) + 1))
+        )
+    plays = []
+    for play, label in BASIC_PLAYS.items():
+        if (
+            play in ("keep_your_head", "check_sensors")
+            or (play == "disobey_orders" and orders)
+            or any(play in x["plays"] for x in targets)
+        ):
+            plays.append(dict(id=play, label=label))
+    return dict(plays=plays, targets=targets, orders=orders)
+
+
+def _prepared_target(value: rules.HighDirection, prepared: PlayInput) -> bool:
+    if value.target is None:
+        return prepared.target is None and prepared.target_actor is None
+    if value.play in ("flirt", "put_someone_beneath_you"):
+        return prepared.target == int(value.target.entity) and prepared.target_actor in (
+            None,
+            value.target,
+        )
+    return prepared.target is None and prepared.target_actor == value.target
+
+
+def child_projection(
+    game: GameService, c: Connection, state: GameState, direction_id: str
+) -> dict[str, Any]:
+    value = _direction(game, c, state, direction_id)
+    session = rules.get(state, value.session)
+    sheet = state.sheets.get(value.actor.entity)
+    if sheet is None or sheet.character_id != value.actor.incarnation:
+        raise WorkflowError("Recover this original counterpart's actual source sheet")
+    pending = next(
+        (x for x in game.pending(c, value.parent) if x["kind"] == "princess_sex_child"), None
+    )
+    from girlframe.engine.m3_clone_am import additional_identities
+    from girlframe.services.m3_clone_am import prove_additional
+    from girlframe.services.m3_nightmare import entitlement
+
+    extra = additional_identities(state, sheet.owner)
+    if extra:
+        prove_additional(game, c, state, sheet.owner)
+    actual = resolve(state, value.actor, profiles(c, game.store.campaign_id))
+    descriptor: dict[str, Any] = dict(
+        kind="princess_sex_child",
+        parent=value.parent,
+        channel=session.cast.channel,
+        actor=value.actor.model_dump(mode="json"),
+        choice=pending["id"] if pending else None,
+        body=dict(
+            actor=value.actor.model_dump(mode="json"),
+            source_work=value.id,
+            play=value.play,
+            target=value.target.model_dump(mode="json") if value.target else None,
+            order_id=value.order_id,
+            context=value.context,
+        ),
+    )
+    return dict(
+        id=value.id,
+        direction=value.id,
+        session=value.session,
+        actor=value.actor.model_dump(mode="json"),
+        actor_controller=value.actor_controller,
+        author=value.author_controller,
+        play=value.play,
+        target=descriptor["body"]["target"],
+        order_id=value.order_id,
+        parent=value.parent,
+        choice=descriptor["choice"],
+        source_work=value.id,
+        channel=session.cast.channel,
+        context=value.context,
+        sheet_revision=sheet.revision,
+        heat=sheet.heat,
+        identities=[x.model_dump(mode="json") for x in sheet.identities if not x.marked],
+        additional_identities=[x.model_dump(mode="json") for x in extra if not x.marked],
+        assets=[x.model_dump(mode="json") for x in actual.assets],
+        piloting=actual.piloting,
+        nightmare=bool(entitlement(game, c, state, value.actor)),
+        child=value.child,
+        descriptor=descriptor,
+    )
+
+
+def pre_roll_child(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any]
+) -> None:
+    value = _bound(game, c, state, action)
+    if value is None:
+        return
+    prepared = PlayInput.model_validate_json(json.dumps(action["data"]["prepared"]))
+    if (
+        prepared.play != value.play
+        or prepared.context != value.context
+        or prepared.source_work != value.id
+        or prepared.parent != value.parent
+        or prepared.order_id != value.order_id
+        or not _prepared_target(value, prepared)
+        or value.completed_event
+    ):
+        raise WorkflowError("Preserve the actual frozen directive, target and Order before dice")
+    _prerequisites(
+        game, c, state, rules.get(state, value.session), value.play, value.target, value.order_id
+    )
 
 
 def projection(
@@ -496,7 +784,7 @@ def projection(
         session=value.id,
         favour=value.favour,
         direction=value.direction,
-        plays=[dict(id="keep_your_head", label="Keep Your Head — actual legal action")],
+        **directive_options(game, c, state, value.id),
     )
 
 
@@ -560,6 +848,21 @@ def _direction(
         completed = rules.direction(_history(c, game, value.completed_event), identity)
         if completed != value or game.action(c, value.child or "")["state"] != "complete":
             raise WorkflowError("The directive expires only after its actual child completion")
+        completion_audit = (
+            c.execute(
+                sa.select(t.events).where(
+                    t.events.c.campaign_id == game.store.campaign_id,
+                    t.events.c.id == value.completed_event,
+                )
+            )
+            .mappings()
+            .one()
+        )
+        if completion_audit["kind"] == "m3.princess_directed_battle_completed":
+            from girlframe.services.m3_princess_performer import prove_battle_completion
+
+            prove_battle_completion(game, c, value, completion_audit)
+            return value
         _event(
             game,
             c,
@@ -632,10 +935,9 @@ def child_source(
         or prepared.context != value.context
         or prepared.play != value.play
         or channel != session.cast.channel
-        or prepared.order_id
+        or prepared.order_id != value.order_id
         or prepared.off_duty_id
-        or prepared.target is not None
-        or prepared.target_actor is not None
+        or not _prepared_target(value, prepared)
         or not prepared.trigger_confirmed
         or not prepared.context.strip()
         or parent["state"] == "complete"
@@ -649,16 +951,7 @@ def child_source(
             "UNSUPPORTED_RULE: this controlled child needs its actual "
             "Kicked/Dampener source adapter"
         )
-    _contact(
-        game,
-        c,
-        state,
-        session.actor,
-        session.target,
-        channel,
-        bonded_source=session.bonded_source,
-        changeling_source=session.changeling_source,
-    )
+    _prerequisites(game, c, state, session, value.play, value.target, value.order_id)
     return dict(
         direction=value.id,
         session=value.session,
@@ -666,6 +959,12 @@ def child_source(
         actor=value.actor.model_dump(mode="json"),
         actor_controller=value.actor_controller,
         author=value.author_controller,
+        target=value.target.model_dump(mode="json") if value.target else None,
+        order_id=value.order_id,
+        play=value.play,
+        context=value.context,
+        source_work=value.id,
+        channel=session.cast.channel,
         choice=pending["id"],
         cast=session.cast.model_dump(mode="json"),
         table=sorted(
@@ -702,8 +1001,15 @@ def _bound(
     if scope is None:
         return None
     value = _direction(game, c, state, scope["direction"])
+    prepared = PlayInput.model_validate_json(json.dumps(action["data"]["prepared"]))
     if (
-        value.child != action["id"]
+        prepared.source_work != value.id
+        or prepared.context != value.context
+        or prepared.order_id != value.order_id
+        or not _prepared_target(value, prepared)
+        or scope.get("target") != (value.target.model_dump(mode="json") if value.target else None)
+        or scope.get("order_id") != value.order_id
+        or value.child != action["id"]
         or action["actor_id"] != value.actor.entity
         or action["data"]["play"] != value.play
         or action.get("parent_id") != value.parent
@@ -885,7 +1191,6 @@ class SexService:
                 raise WorkflowError(
                     "Only the actual original participants may read this private interaction"
                 )
-            from girlframe.services.m3_nightmare import entitlement
 
             directive = (
                 _direction(self.game, c, state, value.direction)
@@ -906,19 +1211,8 @@ class SexService:
             return value.model_dump(mode="json", exclude={"cast", "registry"}) | dict(
                 revision=state.revision,
                 child=(
-                    dict(
-                        sheet_revision=state.sheets[value.target.entity].revision,
-                        heat=state.sheets[value.target.entity].heat,
-                        context=directive.context,
-                        nightmare=bool(entitlement(self.game, c, state, value.target)),
-                        actor=value.target.model_dump(mode="json"),
-                        identities=[
-                            dict(id=x.id, name=x.name)
-                            for x in state.sheets[value.target.entity].identities
-                            if not x.marked
-                        ],
-                    )
-                    if directive is not None and directive.child is None
+                    child_projection(self.game, c, state, directive.id)
+                    if directive is not None
                     else None
                 ),
             )

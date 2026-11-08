@@ -2,6 +2,7 @@
 
 import json
 from typing import TYPE_CHECKING, Any
+from uuid import uuid4
 
 import sqlalchemy as sa
 from pydantic import ValidationError
@@ -288,6 +289,7 @@ class RecoveryService:
                 raise WorkflowError("Recover the actual original Handler appointment first.")
             choices = t.m2["m2_choices"]
             released_learning = False
+            recovery_event = str(uuid4())
             for node in snapshot.nodes:
                 action = self.game.action(c, node)
                 data = dict(action["data"])
@@ -429,6 +431,11 @@ class RecoveryService:
                     release_changeling_child(self.game, c, state, action)
                     released_learning = True
                 if cancel and action["data"].get("ankou_effect_child"):
+                    from girlframe.services.m3_required_plays import (
+                        release_unrolled as release_required_play,
+                    )
+
+                    release_required_play(self.game, c, state, action, recovery_event)
                     from girlframe.services.m3_ankou_feedback_sequences import (
                         release_child as release_ankou_effect_child,
                     )
@@ -478,6 +485,7 @@ class RecoveryService:
                 key,
                 "m3.shared_play_recovered",
                 state if released_learning else None,
+                event_id=recovery_event,
                 action_id=identity,
                 cancelled_unrolled=cancel,
                 nodes=len(snapshot.nodes),

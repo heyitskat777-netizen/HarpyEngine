@@ -213,7 +213,7 @@ async def open_casualty(
         await reply(interaction, form.text(), form)
         return
     menu = await asyncio.to_thread(service.menu, viewer, channel)
-    options = []
+    options = [("replacement", "Missing hardware: supplied replacement and installation")]
     if menu["available"]:
         options.append(("body", "Record/review actual original ideal parts"))
         if menu["identities"] and menu["assets"]:
@@ -246,6 +246,12 @@ async def open_casualty(
 
     async def select(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         kind = values["source"][0]
+        if kind == "replacement":
+            from girlframe.discord_adapter.m3_casualty_replacement import open_replacement
+            from girlframe.services.m3_casualty_replacement import ReplacementService
+
+            await open_replacement(current, ReplacementService(service.game))
+            return None
         if kind.startswith("page:"):
             await open_casualty(current, service, page=int(kind.split(":")[1]))
             return None

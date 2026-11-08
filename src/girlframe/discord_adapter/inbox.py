@@ -717,6 +717,28 @@ class InboxView(discord.ui.View):
             await open_ankou(
                 interaction, AnkouService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_casualty_replacement":
+            from girlframe.discord_adapter.m3_casualty_replacement import (
+                open_replacement as open_casualty_replacement,
+            )
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_casualty_replacement import (
+                ReplacementService as CasualtyReplacementService,
+            )
+
+            await open_casualty_replacement(
+                interaction,
+                CasualtyReplacementService(GameService(self.service.store)),
+                item.identity,
+            )
+        elif item.task == "m3_vatgrown_dna":
+            from girlframe.discord_adapter.m3_vatgrown_dna import open_vatgrown_dna
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_vatgrown_dna import VatgrownDNAService
+
+            await open_vatgrown_dna(
+                interaction, VatgrownDNAService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_body_facts":
             from girlframe.discord_adapter.m3_body_facts import open_body_facts
             from girlframe.services.m2_game import GameService

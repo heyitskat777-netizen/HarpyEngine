@@ -1310,10 +1310,13 @@ class GameService:
             from girlframe.services.m3_ankou_feedback_sequences import (
                 prepare_child as prepare_ankou_effect_child,
             )
+            from girlframe.services.m3_required_plays import for_play as required_play_source
 
-            ankou_effect_child = prepare_ankou_effect_child(
-                self, c, viewer, state, prepared, channel
-            )
+            ankou_effect_child = required_play_source(self, c, state, viewer, prepared, channel)
+            if ankou_effect_child is None:
+                ankou_effect_child = prepare_ankou_effect_child(
+                    self, c, viewer, state, prepared, channel
+                )
             from girlframe.services.p1_source_pause import require_clear as require_source_clear
 
             require_source_clear(self, c, channel, prepared=prepared)
@@ -1528,9 +1531,20 @@ class GameService:
                 and self.store.policy.m3_approval is not None
                 and "plays" in self.store.policy.m3_approval.subsystems
             ):
+                from girlframe.engine.m3_actor_state import ActorRef as EngageActor
                 from girlframe.services.m3_engage import prepare as prepare_engage
 
-                engage = prepare_engage(self, c, viewer, state, self.scene(c, channel), prepared)
+                engage = prepare_engage(
+                    self,
+                    c,
+                    viewer,
+                    state,
+                    self.scene(c, channel),
+                    prepared,
+                    actor_ref=EngageActor.model_validate(princess_child["actor"])
+                    if princess_child
+                    else None,
+                )
             if prepared.play in JANUS_ROLL_IDS:
                 from girlframe.services.m3_janus_play import prepare as prepare_janus
 
@@ -2267,6 +2281,7 @@ class GameService:
                     am_scrutinized,
                     am_code,
                     doctor,
+                    princess_child,
                 )
             ):
                 raise WorkflowError("This implemented Play does not take a fictional actor target.")
@@ -3092,6 +3107,10 @@ class GameService:
 
                 assert begin_source_event is not None
                 bind_ankou_effect_child(self, c, state, action, begin_source_event)
+            if begin_source_event is not None:
+                from girlframe.services.m3_required_plays import bind_action as bind_required_play
+
+                bind_required_play(self, c, state, action, begin_source_event)
             if red_queen_child is not None:
                 from girlframe.services.m3_red_queen_support import bind_child as bind_royal_child
 
@@ -3669,6 +3688,13 @@ class GameService:
                 from girlframe.services.m3_red_queen import pre_roll as pre_roll_red_queen
 
                 pre_roll_red_queen(self, c, viewer, state, action)
+            if action["data"].get("princess_child"):
+                from girlframe.services.m3_princess_sex import pre_roll_child as pre_roll_princess
+
+                pre_roll_princess(self, c, state, action)
+            from girlframe.services.m3_required_plays import pre_roll as pre_roll_required_play
+
+            pre_roll_required_play(self, c, state, action)
             if action["data"].get("ankou_effect_child"):
                 from girlframe.services.m3_ankou_feedback_sequences import (
                     pre_roll_child as pre_roll_ankou_effect_child,
@@ -3799,7 +3825,7 @@ class GameService:
                 mockingbird_pre_roll(self, c, state, action)
             if action["data"].get("npc_order"):
                 self.valid_order(
-                    c, state, viewer.user_id, int(action["channel_id"]), prepared.order_id
+                    c, state, int(action["actor_id"]), int(action["channel_id"]), prepared.order_id
                 )
             if action["data"].get("am_code"):
                 from girlframe.services.m3_am_code import pre_roll as pre_roll_am_code
@@ -3813,7 +3839,7 @@ class GameService:
                 from girlframe.engine.m3_actor_bonds import current_ref as am_original
                 from girlframe.engine.m3_am import require_freedom
 
-                require_freedom(state, am_original(state, viewer.user_id), "refuse")
+                require_freedom(state, am_original(state, int(action["actor_id"])), "refuse")
             if action["data"].get("alpha_sex"):
                 from girlframe.services.m3_alpha_sex import pre_roll as pre_roll_alpha_sex
 
@@ -5152,6 +5178,9 @@ class GameService:
                 from girlframe.services.m3_alpha_sex import synchronize as synchronize_alpha_sex
 
                 synchronize_alpha_sex(self, c, action, event)
+            from girlframe.services.m3_required_plays import synchronize as sync_required_play
+
+            sync_required_play(self, c, self.action(c, action["id"]), event)
             if action["data"].get("alpha"):
                 from girlframe.services.m3_alpha import synchronize as synchronize_alpha
 

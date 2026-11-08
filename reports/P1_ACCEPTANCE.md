@@ -205,3 +205,127 @@ Unknown NPC original-body continuity remains a named source gap; its explicit
 factual evidence adapter is the next bounded body task. Required Ankou nomination
 → own Alpha source is a separate bounded dependency with both IDs preserved.
 No whole-P1 or human acceptance is inferred.
+
+### Source checkpoint and original NPC evidence minimum
+
+Published **a9cb78321d1b5cbc66b096d91e4f949fe5490920**;
+[focused CI42481950881](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42481950881)
+passed. This is not the final P1 regression.
+
+The subsequent three-file NPC body-evidence extension records an explicit actual
+Handler factual source for a genuine introduced/linked starting NPC and existing
+brain/body. It does not grant a String or infer old continuity; known contradictory
+physical/reset evidence rejects. Original-owner import is the separate consumer.
+The delegated factual-evidence policy is recorded as
+`starting-npc-original-body-evidence` with clarity review pending.
+Only its actual Handler/NPC normal ran: **1 passed in3.51s**, evidence
+`var/p1-npc-original-body-minimum.xml` and matching log. It includes genuine
+introduction/control claim, original role link, current body record, explicit
+evidence, private readback and actual once-only NPC String/question. Worker
+Ruff passed3 paths and mypy passed2 source paths; other body normals were not
+repeated. Exact source hashes/gaps remain in the private NPC-body handoff.
+
+Required Ankou→own Alpha source integration is in progress, including known-roll
+proof and cancel/retry without trapping an unperformed invitation. Wider required
+Play families, remaining ordinary type/mission consumers, final exact-commit
+regression/global checks and independent/player review remain pending. Bot OFF.
+
+### Required Ankou Play → own Alpha source pilot
+
+The bounded pilot keeps Task ID and accepted Alpha invitation ID separate. The
+original actor's actual consent/source, resources, choices, receipt and source
+completion remain authoritative. Native controls reuse the existing resource
+form. A canonical unrolled cancellation retires only that link generation and
+returns the original accepted reservation with consent intact; real known dice
+cannot be cancelled or refunded. A new generation can use the genuinely eligible
+source again. Both completion audits keep the actual triggering human author.
+
+Only the authored native normal ran: actual nomination → invitation/real
+counterpart consent → link → unrolled cancel/relink → actual mid results → Task
+completion and pause restoration. Initial run failed in4.17s on a malformed
+source-lookup probe missing required PlayInput fields after cancellation. The
+production guard stayed intact; only the fixture probe was corrected. Reran only
+that node: **1 passed in5.63s**. Logs/XML:
+`var/p1-required-plays-minimum*`. Worker Ruff/format passed7 paths and mypy6; root
+Ruff/format/mypy passed the three changed shared services after one import-layout
+fix. Exact frozen worker hashes are in the private required-Play handoff; its
+test hash predates the root fixture correction.
+
+This is one genuine required source consumer, not all Princess/Alpha/Ankou source
+families. Controlled Princess directives are the next bounded contract. Vatgrown
+DNA comparison has its own source assignment; its new narrow registry entry
+remains unimplemented until that source is frozen. Full regression/global gates,
+independent review and actual player acceptance remain pending. Bot OFF.
+
+### Directed basic-family integration and DNA minimums
+
+Princess source/native extension preserves the existing Keep path and adds frozen
+actual targets/Orders for the supported shared families. The actual counterpart
+remains performer/resource owner; the Princess authors only the choices assigned
+to her by the source. Battle Context retains original performer ownership and
+adds an omitted-by-default source-author field with positive directive proof.
+Source-scoped resource lookup is reused by social/Frame consumers; it does not
+grant generic impersonation. Actual target visibility and concealed resources
+remain limited to the performer. Genuine Order ancestry is mandatory.
+
+Minimum run selected only native directed Flirt and actual Assault declaration/
+review/damage. Initial result **1 passed,1 failed in7.26s**; Flirt was not repeated.
+The failed Assault fixture used the actor digest instead of the battle-resource
+digest. Later failed-node retries exposed real distinct-author ownership gates
+and postcanonical Battle completion losing its local directive state. Repairs
+preserve model resource ownership, add proved author scope and persist one exact
+`m3.princess_directed_battle_completed` event with actual triggering human and
+positive actual child-choice or resolved Battle-work cause. Existing social/Keep
+completion remains unchanged. Only the failed Assault node was rerun: final
+**1 passed in5.49s**. All prior attempts/logs/XML remain under
+`var/p1-princess-families-minimum*` and `var/p1-princess-assault-minimum-attempt*`.
+Four other new family normals and existing successes remain deferred. Subsequent
+visibility tightening and typing/format changes are not separate runtime evidence.
+
+Vatgrown's narrow new DNA-comparison registry entry is subset; its aggregate
+playbook heading remains unimplemented. One original-character/campaign opportunity
+belongs to the actual comparer; optional addressed DNA disclosure is separate
+and supplies no veto. Canonical private basis/hash stays hidden from unaddressed
+viewers. Ran only the give parameter of the authored normal: **1 passed in2.37s**,
+`var/p1-vatgrown-dna-minimum.xml` and matching log. It verifies actual comparison,
+private disclosure/readback, real giver/Tag and no renewed opportunity. The explicit
+decline parameter is authored **NOTRUN**. Worker scoped Ruff/format5 and mypy4
+passed; final full regression/source review remains pending.
+
+Casualty replacement is the next active source package with exact finance product
+and native/Inbox ports. Existing Marriage approval/Flow conventions remain intact
+(including quoted0), rather than introducing a broader zero-purchase exception.
+No new global regression, independent review, human acceptance, bot start or deploy.
+
+### Supplied replacement hardware minimum
+
+The Handler supplies and explicitly quotes one identified non-Brain component;
+the actual original body owner confirms installation. Real source-priced payment
+is atomic, the old missing component history remains, and actual Link capability
+allows a separate genuine cockpit re-entry. No automatic repilot, person/Frame/
+Asset creation, stock inference, Brain resurrection or change to printed1P broken
+repair. Native Casualty controls and private Inbox route the source; Waiting
+projection now respects the rule service's explicit waiting flag. The exact
+Marriage product uses source quote proof at financial request, not a raw amount.
+
+Ran only the new Link normal. Initial failure in1.84s was a fixture passing Game
+to PhysicalService instead of its store. Corrected that one constructor, reran
+only the failed node: **1 passed in3.59s**. Logs/XML:
+`var/p1-casualty-replacement-minimum*`. Actual quoted installation2P, replay/private
+proof, preserved removal history, cockpit re-entry and completed Keep are in that
+normal. Worker Ruff/format6 and mypy5 passed; root finance/native/Inbox static
+integration is part of the checkpoint checks. Other body/finance/zero-price and
+source-ending cases remain unrun; no full-regression claim. Bot remains OFF.
+
+### Source checkpoint static scope
+
+At the frozen checkpoint, Ruff/format covered42 changed Python files and types
+covered37 changed source files. Initial scoped checks found import ordering, one
+format layout and a native Inbox class-name collision with the existing Frame
+ReplacementService; corrected those exact files and reran only failed paths.
+Final target checks passed. Registry:477 entries,270 subset/207 unimplemented,
+440 required,0 independently verified. Planning contract check passed its
+34 files/86 planned cases; it is planning evidence only. Repository check:
+1375 publishable files,40 manifest entries,0 findings. These static/contract
+checks are not full gameplay regression. Initial check logs are retained under
+`var/p1-source-checkpoint-*`; target rerun scope is stored separately.

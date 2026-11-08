@@ -187,7 +187,22 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
     source = await asyncio.to_thread(service.view, viewer, detail["session"])
     if kind == "princess_sex_child":
         child = source["child"]
-        nightmare = {"owned": True} if child["nightmare"] else None
+        if child["child"]:
+            from girlframe.discord_adapter.m2_ui import open_pending
+
+            await open_pending(interaction, game)
+            return
+        if child["play"] == "all_out_assault":
+            from girlframe.discord_adapter.m3_battle import open_declaration
+            from girlframe.services.m3_battle import BattleService
+
+            await open_declaration(
+                interaction, BattleService(game.store), parent=child["descriptor"]
+            )
+            return
+        nightmare = (
+            {"owned": True} if child["nightmare"] and child["play"] == "keep_your_head" else None
+        )
         fields = [
             Field(
                 "heat",
@@ -199,21 +214,59 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             Field(
                 "identity",
                 "Optional actual Identity to mark",
-                tuple((x["id"], x["name"]) for x in child["identities"]),
+                tuple(
+                    (x["id"], x["name"])
+                    for x in child["identities"] + child["additional_identities"]
+                ),
                 minimum=0,
                 required=False,
             ),
             Field("gain", "Actual Identity Heat gained", tuple((str(n), str(n)) for n in range(6))),
+            Field(
+                "pair_share",
+                "Only Paired: actual Heat given to the Pair",
+                tuple((str(n), str(n)) for n in range(6)),
+                minimum=0,
+                required=False,
+            ),
         ]
+        if child["play"] == "disobey_orders":
+            fields.append(
+                Field(
+                    "witnessed",
+                    "Actual Foundation witness to this refusal",
+                    (("yes", "Actually witnessed"), ("no", "Not witnessed")),
+                )
+            )
     elif kind == "princess_sex_direct":
         fields = [
             Field(
                 "play",
                 "Immediately required supported Play",
-                (("keep_your_head", "Keep Your Head"),),
+                tuple((x["id"], x["label"]) for x in detail["plays"]),
             ),
-            Field("text", "Actual immediate pressure and action", paragraph=True),
+            Field("text", "Actual legal trigger and immediate action", paragraph=True),
         ]
+        if detail["targets"]:
+            fields.append(
+                Field(
+                    "target",
+                    "If this Play needs a target: actual original scene actor",
+                    tuple((x["token"], x["label"]) for x in detail["targets"]),
+                    minimum=0,
+                    required=False,
+                )
+            )
+        if detail["orders"]:
+            fields.append(
+                Field(
+                    "order_id",
+                    "Disobey only: actual already-received Order",
+                    tuple((x["id"], x["label"]) for x in detail["orders"]),
+                    minimum=0,
+                    required=False,
+                )
+            )
     elif kind == "princess_sex_favour_reply":
         fields = [
             Field(
@@ -250,9 +303,19 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
                 data["channel"],
                 child["sheet_revision"],
                 PlayInput(
-                    play="keep_your_head",
-                    parent=source["action"],
-                    source_work=source["direction"],
+                    play=child["play"],
+                    parent=child["parent"],
+                    source_work=child["source_work"],
+                    target=int(child["target"]["entity"])
+                    if child["target"] and child["play"] in ("flirt", "put_someone_beneath_you")
+                    else None,
+                    target_actor=ActorRef.model_validate(child["target"])
+                    if child["target"] and child["play"] == "engage"
+                    else None,
+                    order_id=child["order_id"],
+                    piloting=bool(child["piloting"]),
+                    witnessed=values.get("witnessed", ("no",))[0] == "yes",
+                    pair_share=int(next(iter(values.get("pair_share", ())), "0")),
                     context=child["context"],
                     heat=int(values["heat"][0]),
                     identity=next(iter(values.get("identity", ())), None),
@@ -275,7 +338,13 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             str(current.id),
             identity,
             data["revision"],
-            ChoiceAnswer(options=options, text=text),
+            ChoiceAnswer(
+                options=options,
+                text=text,
+                fields={key: values[key][0] for key in ("target", "order_id") if values.get(key)}
+                if kind == "princess_sex_direct"
+                else {},
+            ),
         )
         return "Actual owned source decision saved."
 

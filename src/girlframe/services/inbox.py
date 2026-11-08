@@ -1309,11 +1309,13 @@ class InboxService:
             from girlframe.services.m3_ankou import AnkouService
             from girlframe.services.m3_body_facts import BodyFactsService
             from girlframe.services.m3_bonded import BondedService
+            from girlframe.services.m3_casualty_replacement import ReplacementService
             from girlframe.services.m3_changeling import ChangelingService
             from girlframe.services.m3_changeling_sex import ChangelingSexService
             from girlframe.services.m3_consume import _tasks as consume_tasks
             from girlframe.services.m3_prince import PrinceService
             from girlframe.services.m3_red_queen import RedQueenService
+            from girlframe.services.m3_vatgrown_dna import VatgrownDNAService
             from girlframe.services.m3_wyvern import _tasks as wyvern_tasks
             from girlframe.services.m3_wyvern_combat import WyvernCombatService
 
@@ -1325,6 +1327,8 @@ class InboxService:
                 ("changeling", ChangelingService(frame_game)._tasks(connection, viewer)),
                 ("changeling_sex", ChangelingSexService(frame_game)._tasks(connection, viewer)),
                 ("red_queen", RedQueenService(frame_game)._tasks(connection, viewer)),
+                ("vatgrown_dna", VatgrownDNAService(frame_game)._tasks(connection, viewer)),
+                ("casualty_replacement", ReplacementService(frame_game)._tasks(connection, viewer)),
                 ("bonded", BondedService(frame_game)._tasks(connection, viewer)),
                 ("prince", PrinceService(frame_game)._tasks(connection, viewer)),
                 ("consume", consume_tasks(frame_game, connection, frame_state, viewer)),
@@ -1337,7 +1341,7 @@ class InboxService:
                         "pending"
                         if actionable
                         else "waiting"
-                        if row["phase"] == "pending"
+                        if row.get("waiting", False) or row["phase"] == "pending"
                         else "established"
                     )
                     items.append(
@@ -1354,7 +1358,7 @@ class InboxService:
                             False,
                             "Resolve the original source-owned choice.",
                             "Private details remain with the actual owners.",
-                            "Open private Frame record",
+                            "Open private record",
                             task="m3_" + book,
                         )
                     )

@@ -43,8 +43,22 @@ def prepare(
     if target is None or target == actor_ref:
         raise WorkflowError("Choose the actual opposing battlefield actor for Engage")
     acting, opposing = (resolve(state, ref, bound) for ref in (actor_ref, target))
-    if acting.controller != viewer.user_id or not (
-        acting.ref.kind == "pilot" or acting.ref.kind == "external_pilot" and acting.girl == "harpy"
+    controlled = False
+    if acting.controller != viewer.user_id:
+        from girlframe.services.m3_princess_sex import child_source
+
+        controlled_source = child_source(game, c, viewer, state, prepared, int(scene["channel_id"]))
+        controlled = bool(
+            controlled_source and controlled_source["actor"] == actor_ref.model_dump(mode="json")
+        )
+    if (
+        acting.controller != viewer.user_id
+        and not controlled
+        or not (
+            acting.ref.kind == "pilot"
+            or acting.ref.kind == "external_pilot"
+            and acting.girl == "harpy"
+        )
     ):
         raise WorkflowError("Use this actual Pilot or Harpy's own battlefield resources")
     if not all(any(role.actor == ref for role in cast.roles) for ref in (actor_ref, target)):

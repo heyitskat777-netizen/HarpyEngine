@@ -2374,7 +2374,9 @@ def flirt_modifier(
 ) -> dict[str, Any] | None:
     if prepared.play != "flirt" or not _released(game, rules.POWER):
         return None
-    actor = current_ref(state, viewer.user_id)
+    from girlframe.services.m3_princess_performer import acting_owner
+
+    actor = current_ref(state, acting_owner(game, c, viewer, prepared, state))
     grant = held(game, c, state, actor, rules.POWER)
     if grant is None:
         return None

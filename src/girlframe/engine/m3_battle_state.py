@@ -70,6 +70,7 @@ class Context(Model):
     source_action: str | None = None
     source_choice: str | None = None
     source_work: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    source_author: Snowflake | None = Field(default=None, exclude_if=lambda value: value is None)
     dormant_awakened: bool = False
     dormant_close: bool = False
     judge_actor: ActorRef | None = None
@@ -99,6 +100,12 @@ class Context(Model):
             )
         if (self.source_action is None) != (self.source_choice is None):
             raise ValueError("A counter preserves its actual parent and source choice together")
+        if self.source_author is not None and not (
+            self.source_action and self.source_choice and self.source_work
+        ):
+            raise ValueError(
+                "A directed declaration retains its complete original authority source"
+            )
         if self.declaration.actor.kind == "pilot" and self.owner != int(
             self.declaration.actor.entity
         ):

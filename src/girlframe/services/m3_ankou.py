@@ -961,18 +961,8 @@ class AnkouService:
                     "emotion",
                 )
             elif task.kind == "nominate":
-                if choice not in (
-                    "pass",
-                    "keep_your_head",
-                    "check_sensors",
-                    "flirt",
-                    "all_out_assault",
-                    "engage",
-                    "put_someone_beneath_you",
-                ):
-                    raise WorkflowError(
-                        "Choose a genuine supported Play, not an unperformed mechanical effect"
-                    )
+                if choice not in nomination_options(self.game, c, state, task):
+                    raise WorkflowError("Choose an actual offered own-source Play, or pass")
             elif task.kind == "death_identity":
                 if not identity_to_erase:
                     raise WorkflowError(
@@ -1595,6 +1585,9 @@ class AnkouService:
                     data.update(
                         can_choose=viewer.user_id == value.controller and not value.completed_event
                     )
+                    if value.kind == "nominate" and viewer.user_id == value.controller:
+                        data["nomination_options"] = nomination_options(self.game, c, state, value)
+
                     if viewer.user_id == value.controller:
                         if value.kind == "company":
                             data["company_options"] = [
@@ -2921,3 +2914,22 @@ def require_free(
             raise WorkflowError(
                 "Complete the actual original Feedback sequence before a new unrelated Play"
             )
+
+
+def nomination_options(
+    game: GameService, c: Connection, state: GameState, task: rules.Task
+) -> tuple[str, ...]:
+    basic = (
+        "pass",
+        "keep_your_head",
+        "check_sensors",
+        "flirt",
+        "all_out_assault",
+        "engage",
+        "put_someone_beneath_you",
+    )
+    if task.kind != "nominate" or task.target is None:
+        return basic
+    from girlframe.services.m3_required_plays import nomination_options as source_options
+
+    return (*basic, *source_options(game, c, state, task.target))

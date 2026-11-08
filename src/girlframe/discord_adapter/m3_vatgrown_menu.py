@@ -16,6 +16,11 @@ async def open_vatgrown_menu(interaction: discord.Interaction, game: GameService
             from girlframe.services.m3_vatgrown import DollService
 
             await open_vatgrown(current, DollService(game))
+        elif values["area"][0] == "dna":
+            from girlframe.discord_adapter.m3_vatgrown_dna import open_vatgrown_dna
+            from girlframe.services.m3_vatgrown_dna import VatgrownDNAService
+
+            await open_vatgrown_dna(current, VatgrownDNAService(game))
         else:
             from girlframe.discord_adapter.m3_vatgrown_plays import open_vatgrown_plays
             from girlframe.services.m3_vatgrown_plays import VatgrownPlaysService
@@ -34,6 +39,7 @@ async def open_vatgrown_menu(interaction: discord.Interaction, game: GameService
                 (
                     ("doll", "Unassuming Doll"),
                     ("investors", "Investors, learning and program rules"),
+                    ("dna", "DNA basis and actual first comparison"),
                 ),
             )
         ],

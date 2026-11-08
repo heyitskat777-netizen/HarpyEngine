@@ -1,0 +1,582 @@
+"""A finite required-context adapter; Alpha keeps its own source, costs and consent."""
+
+import json
+from typing import Any
+from uuid import uuid4
+
+import sqlalchemy as sa
+from sqlalchemy import Connection
+
+from girlframe.database import tables as t
+from girlframe.engine import m3_alpha_sex as alpha
+from girlframe.engine import m3_ankou as ankou
+from girlframe.engine import m3_required_plays as rules
+from girlframe.engine.m2 import GameState, PlayInput
+from girlframe.engine.m3_actor_bonds import current_ref, depth
+from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_actors import fingerprint, resolve
+from girlframe.engine.m3_girl_runtime_state import has_rule
+from girlframe.services.m2_game import GameService
+from girlframe.services.m2_state import load_state
+from girlframe.services.m3_access import Access
+from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_handler_advancements import _history
+from girlframe.services.onboarding import WorkflowError
+from girlframe.services.read_only_bot import GuildViewer
+
+
+def _access(game: GameService, c: Connection, viewer: GuildViewer) -> None:
+    Access(game.store).authorize(c, viewer, "plays")
+
+
+def nomination_options(
+    game: GameService, c: Connection, state: GameState, nominee: ActorRef
+) -> tuple[str, ...]:
+    """One additional actual own source, no copied entitlement or phantom person."""
+    sheet = state.sheets.get(nominee.entity) if nominee.kind == "pilot" else None
+    registry = Access(game.store).registry
+    if sheet is None or sheet.character_id != nominee.incarnation or registry is None:
+        return ()
+    if not has_rule(sheet, alpha.RULE, "ALPHA"):
+        return ()
+    try:
+        registry.require_available(alpha.RULE)
+    except ValueError:
+        return ()
+    return (alpha.PLAY,)
+
+
+def _task(game: GameService, c: Connection, state: GameState, source: str) -> ankou.Task:
+    from girlframe.services.m3_ankou import prove_relay, prove_task
+
+    value = prove_task(game, c, state, source)
+    if value.kind != "perform" or value.actor.kind != "pilot":
+        raise WorkflowError("Use an actual standalone Ankou nominated performance")
+    relay = prove_relay(game, c, state, value.source)
+    if relay.consequence != "nominees" or value.actor != relay.actor or value.cast != relay.cast:
+        raise WorkflowError("Preserve the actual Handler consequence and original nominated actor")
+    born = _history(c, game, value.event)
+    peers = [
+        x
+        for x in ankou.records(born, ankou.Task)
+        if x.source == value.source and x.kind == "nominate"
+    ]
+    choices = []
+    for peer in peers:
+        proved = prove_task(game, c, born, peer.id)
+        if not proved.completed_event or proved.selected_event != proved.completed_event:
+            raise WorkflowError("Preserve every actual original nominator's own completed choice")
+        origin = _history(c, game, proved.event)
+        if depth(origin, value.actor, proved.actor) != 2:
+            raise WorkflowError(
+                "Nomination requires the original actual Intense Bond, not a virtual cost"
+            )
+        if proved.choice and proved.choice != "pass":
+            choices.append(proved.choice)
+    if (
+        not peers
+        or value.options != tuple(dict.fromkeys(choices))
+        or alpha.PLAY not in value.options
+    ):
+        raise WorkflowError("Use only the actual printed nominees' supported offered Play")
+    return value
+
+
+def _birth(game: GameService, c: Connection, state: GameState, identity: str) -> rules.RequiredLink:
+    value = rules.get(state, identity)
+    born = rules.get(_history(c, game, value.event), identity)
+    audit = c.execute(
+        sa.select(t.events.c.kind, t.events.c.actor_id, t.events.c.payload_json).where(
+            t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == value.event
+        )
+    ).first()
+    if (
+        born.action is not None
+        or born.bound_event is not None
+        or born.completed_event is not None
+        or bool(born.releases)
+        or born.retired_event is not None
+        or value.id != rules.identity(value.source, value.recipe, value.event)
+        or value.model_dump(
+            exclude={"action", "bound_event", "completed_event", "releases", "retired_event"}
+        )
+        != born.model_dump(
+            exclude={"action", "bound_event", "completed_event", "releases", "retired_event"}
+        )
+        or audit is None
+        or audit.kind != "m3.required_play_linked"
+        or audit.actor_id != value.actor.entity
+    ):
+        raise WorkflowError("Preserve the canonical original source/recipe/actor link")
+    payload = json.loads(audit.payload_json)
+    if payload.get("source") != value.source or payload.get("recipe") != value.recipe:
+        raise WorkflowError("Recover the exact original human-selected required recipe")
+    for release in value.releases:
+        source = rules.get(_history(c, game, release.bound_event), identity)
+        released = rules.get(_history(c, game, release.event), identity)
+        audit = c.execute(
+            sa.select(t.events.c.kind, t.events.c.actor_id, t.events.c.payload_json).where(
+                t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == release.event
+            )
+        ).first()
+        payload = json.loads(audit.payload_json) if audit else {}
+        if (
+            source.action != release.action
+            or source.bound_event != release.bound_event
+            or release not in released.releases
+            or released.action is not None
+            or released.bound_event is not None
+            or released.retired_event != release.event
+            or audit is None
+            or audit.kind != "m3.shared_play_recovered"
+            or audit.actor_id != value.actor.entity
+            or payload.get("action_id") != release.action
+            or payload.get("cancelled_unrolled") is not True
+        ):
+            raise WorkflowError(
+                "Preserve the actual unrolled cancellation and original linked reservation"
+            )
+        released_recipe = alpha.get(_history(c, game, release.event), value.recipe)
+        original_recipe = alpha.get(_history(c, game, value.event), value.recipe)
+        if (
+            released_recipe.phase != "accepted"
+            or released_recipe.action is not None
+            or released_recipe.consent_event != original_recipe.consent_event
+        ):
+            raise WorkflowError(
+                "Cancellation preserves the original accepted source without performed effects"
+            )
+    if value.retired_event and (
+        not value.releases
+        or value.releases[-1].event != value.retired_event
+        or value.action is not None
+        or value.bound_event is not None
+        or value.completed_event is not None
+    ):
+        raise WorkflowError("Retire only an actually cancelled unrolled linked source")
+    if value.releases and not value.retired_event:
+        raise WorkflowError("Preserve the actual canonical cancellation of this link generation")
+    return value
+
+
+def _active(game: GameService, c: Connection, state: GameState) -> tuple[rules.RequiredLink, ...]:
+    # A forged retirement flag must never remove required-source authority.
+    values = rules.records(state)
+    for value in values:
+        if value.retired_event:
+            _birth(game, c, state, value.id)
+    return tuple(x for x in values if x.retired_event is None)
+
+
+def prove(game: GameService, c: Connection, state: GameState, identity: str) -> rules.RequiredLink:
+    from girlframe.services.m3_alpha_sex import prove as prove_alpha
+
+    value = _birth(game, c, state, identity)
+    task = _task(game, c, state, value.source)
+    recipe = prove_alpha(game, c, state, value.recipe)
+    if (
+        value.actor != task.actor
+        or value.cast != task.cast
+        or recipe.actor != value.actor
+        or recipe.target != value.target
+        or fingerprint(recipe.cast) != fingerprint(value.cast)
+        or recipe.bonded_source is not None
+        or recipe.changeling_source is not None
+    ):
+        raise WorkflowError(
+            "Use this actual actor's own Alpha source; no borrowed or psychic authority"
+        )
+    if value.bound_event:
+        bound = rules.get(_history(c, game, value.bound_event), identity)
+        if (
+            bound.action != value.action
+            or bound.bound_event != value.bound_event
+            or recipe.action != value.action
+            or task.child != value.action
+        ):
+            raise WorkflowError("Preserve the exact single real bound recipe Action")
+        actual = game.action(c, value.action or "")
+        _action(value, actual)
+    elif value.action is not None:
+        raise WorkflowError("A bound required recipe needs its canonical actual source event")
+    if value.completed_event:
+        completed = rules.get(_history(c, game, value.completed_event), identity)
+        if completed != value or not task.completed_event:
+            raise WorkflowError("The required source closes only after genuine child completion")
+    return value
+
+
+def link_for_play(
+    game: GameService, c: Connection, state: GameState, prepared: PlayInput
+) -> rules.RequiredLink | None:
+    candidates = [x for x in _active(game, c, state) if x.recipe == prepared.source_work]
+    if not candidates:
+        return None
+    if len(candidates) != 1 or prepared.play != alpha.PLAY:
+        raise WorkflowError("Use the exact linked Alpha recipe and required context")
+    return prove(game, c, state, candidates[0].id)
+
+
+def source_for_play(
+    game: GameService, c: Connection, state: GameState, prepared: PlayInput
+) -> str | None:
+    """Positive lookup for source-pause admission; no for_play/require_ready recursion."""
+    value = link_for_play(game, c, state, prepared)
+    return value.source if value else None
+
+
+def for_play(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    viewer: GuildViewer,
+    prepared: PlayInput,
+    channel: int,
+) -> dict[str, Any] | None:
+    source = source_for_play(game, c, state, prepared)
+    if source is None:
+        return None
+    _access(game, c, viewer)
+    value = link_for_play(game, c, state, prepared)
+    assert value is not None
+    task = _task(game, c, state, source)
+    if (
+        value.action
+        or value.completed_event
+        or task.completed_event
+        or viewer.user_id != int(value.actor.entity)
+        or current_ref(state, viewer.user_id) != value.actor
+    ):
+        raise WorkflowError("Only the original actual actor performs this unbound required source")
+    from girlframe.services.m3_alpha_sex import prepare as prepare_alpha
+
+    prepare_alpha(game, c, viewer, state, prepared, channel)
+    from girlframe.services.m3_ankou_feedback_sequences import prepare_child
+
+    meta = prepare_child(game, c, viewer, state, prepared, channel)
+    if meta is None or meta["id"] != source or meta["parent"] is not None:
+        raise WorkflowError("Preserve the actual standalone required context")
+    return meta | dict(
+        required_link=value.id,
+        recipe=value.recipe,
+        target=value.target.model_dump(mode="json"),
+        source_work=value.recipe,
+        required_source=source,
+    )
+
+
+def _action(value: rules.RequiredLink, action: dict[str, Any]) -> None:
+    from girlframe.services.m3_ankou_support import actual_action_actor
+
+    meta = action["data"].get("ankou_effect_child", {})
+    if (
+        action["id"] != value.action
+        or action.get("parent_id") is not None
+        or action["data"]["play"] != alpha.PLAY
+        or actual_action_actor(action) != value.actor
+        or action["data"].get("prepared", {}).get("source_work") != value.recipe
+        or action["data"].get("alpha_sex", {}).get("session") != value.recipe
+        or meta.get("id") != value.source
+        or meta.get("required_link") != value.id
+        or meta.get("recipe") != value.recipe
+    ):
+        raise WorkflowError("Preserve both exact original required context and actual Alpha recipe")
+
+
+def bind_action(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any], event: str
+) -> None:
+    meta = action["data"].get("ankou_effect_child", {})
+    key = meta.get("required_link")
+    candidates = [
+        x
+        for x in _active(game, c, state)
+        if x.recipe == action["data"].get("prepared", {}).get("source_work")
+    ]
+    if not candidates:
+        if key:
+            raise WorkflowError("Recover the actual required recipe link")
+        return
+    if len(candidates) != 1 or key != candidates[0].id:
+        raise WorkflowError("Do not omit this recipe's genuine required context")
+    value = _birth(game, c, state, key)
+    task = _task(game, c, state, value.source)
+    if value.action or task.child not in (None, action["id"]):
+        raise WorkflowError("Bind only one actual child to the original required slot")
+    changed = value.model_copy(update={"action": action["id"], "bound_event": event})
+    _action(changed, action)
+    rules.put(state, changed)
+
+
+def pre_roll(game: GameService, c: Connection, state: GameState, action: dict[str, Any]) -> None:
+    candidates = [x for x in rules.records(state) if x.action == action["id"]]
+    if not candidates:
+        if action["data"].get("ankou_effect_child", {}).get("required_link"):
+            raise WorkflowError("Recover the actual canonical bound required link")
+        return
+    value = prove(game, c, state, candidates[0].id)
+    _action(value, action)
+    task = _task(game, c, state, value.source)
+    if task.completed_event or value.completed_event:
+        raise WorkflowError("This required source already completed its real performance")
+    from girlframe.services.p1_source_pause import require_ready
+
+    require_ready(game, c, state, task.id)
+
+
+def completion_ready(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any]
+) -> bool:
+    candidates = [x for x in rules.records(state) if x.action == action["id"]]
+    if not candidates:
+        if action["data"].get("ankou_effect_child", {}).get("required_link"):
+            raise WorkflowError("Recover the actual bound required source")
+        return True
+    value = prove(game, c, state, candidates[0].id)
+    recipe = alpha.get(state, value.recipe)
+    return bool(
+        recipe.phase == "complete"
+        and action["state"] == "complete"
+        and action["data"].get("receipt")
+        and not game.pending(c, action["id"])
+    )
+
+
+def synchronize(game: GameService, c: Connection, action: dict[str, Any], event: str) -> None:
+    state = load_state(c, game.store.campaign_id)
+    ancestors = set()
+    current = action
+    while current["id"] not in ancestors:
+        ancestors.add(current["id"])
+        if not current.get("parent_id"):
+            break
+        current = game.action(c, current["parent_id"])
+    for link in rules.records(state):
+        if link.retired_event or link.completed_event or link.action not in ancestors:
+            continue
+        child = game.action(c, link.action or "")
+        if not completion_ready(game, c, state, child):
+            continue
+        from girlframe.services.m3_ankou_feedback_sequences import complete_child
+
+        complete_child(game, c, state, child, event)
+        state = load_state(c, game.store.campaign_id)
+        task = _task(game, c, state, link.source)
+        if not task.completed_event:
+            raise WorkflowError("The actual required Task still awaits its true completion")
+        final = str(uuid4())
+        rules.put(state, rules.get(state, link.id).model_copy(update={"completed_event": final}))
+        author = c.scalar(
+            sa.select(t.events.c.actor_id).where(
+                t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == event
+            )
+        )
+        if not isinstance(author, str) or not author.isdecimal():
+            raise WorkflowError(
+                "Recover the actual triggering human source author before closing this requirement"
+            )
+        game.event(
+            c,
+            int(author),
+            final,
+            "m3.required_play_completed",
+            state,
+            event_id=final,
+            source=link.source,
+            recipe=link.recipe,
+            action_id=child["id"],
+            source_completion=task.completed_event,
+            subject_actor=link.actor.model_dump(mode="json"),
+        )
+
+
+class RequiredPlayService:
+    def __init__(self, game: GameService):
+        self.game, self.store = game, game.store
+
+    def _owner(
+        self, c: Connection, viewer: GuildViewer, state: GameState, source: str
+    ) -> ankou.Task:
+        _access(self.game, c, viewer)
+        task = _task(self.game, c, state, source)
+        if task.controller != viewer.user_id or current_ref(state, viewer.user_id) != task.actor:
+            raise WorkflowError("Only the actual original nominated actor controls this source")
+        return task
+
+    def link(
+        self, viewer: GuildViewer, key: str, source: str, recipe: str, revision: int
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            state = load_state(c, self.store.campaign_id)
+            task = self._owner(c, viewer, state, source)
+            if state.revision != revision:
+                raise WorkflowError("STALE_REQUIRED_PLAY: reopen the actual source and recipe")
+            if (
+                task.completed_event
+                or task.child
+                or any(
+                    x.source == source or x.recipe == recipe for x in _active(self.game, c, state)
+                )
+            ):
+                raise WorkflowError(
+                    "Preserve the exact one pending required slot and actual selected recipe"
+                )
+            from girlframe.services.m3_alpha_sex import _contact
+            from girlframe.services.m3_alpha_sex import prove as prove_alpha
+
+            own = prove_alpha(self.game, c, state, recipe)
+            if (
+                own.phase != "accepted"
+                or own.action
+                or own.actor != task.actor
+                or own.bonded_source is not None
+                or own.changeling_source is not None
+                or fingerprint(own.cast) != fingerprint(task.cast)
+            ):
+                raise WorkflowError(
+                    "Select an accepted unperformed actual OWN Alpha source in this original scene"
+                )
+            _contact(self.game, c, state, own.actor, own.target, own.cast.channel)
+            from girlframe.services.p1_source_pause import require_ready
+
+            require_ready(self.game, c, state, task.id)
+            event = str(uuid4())
+            value = rules.RequiredLink(
+                id=rules.identity(source, recipe, event),
+                source=source,
+                recipe=recipe,
+                actor=own.actor,
+                target=own.target,
+                cast=own.cast,
+                event=event,
+            )
+            rules.put(state, value)
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.required_play_linked",
+                state,
+                event_id=event,
+                source=source,
+                recipe=recipe,
+                link=value.id,
+            )
+            return dict(id=value.id, source=source, recipe=recipe, revision=state.revision)
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.required_play_linked",
+            dict(source=source, recipe=recipe, revision=revision),
+            operation,
+            auto_audit=False,
+            authorize=lambda c: _access(self.game, c, viewer),
+        )
+
+    def menu(self, viewer: GuildViewer, source: str) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            state = load_state(c, self.store.campaign_id)
+            task = self._owner(c, viewer, state, source)
+            links = [x for x in _active(self.game, c, state) if x.source == source]
+            if len(links) > 1:
+                raise WorkflowError("Recover the one actual selected recipe")
+            link = prove(self.game, c, state, links[0].id) if links else None
+            from girlframe.services.m3_alpha_sex import prove as prove_alpha
+
+            accepted = []
+            invitations = []
+            for recipe in alpha.sessions(state):
+                if (
+                    recipe.actor != task.actor
+                    or recipe.cast.id != task.cast.id
+                    or recipe.bonded_source
+                    or recipe.changeling_source
+                ):
+                    continue
+                if recipe.phase == "accepted" and recipe.action is None:
+                    prove_alpha(self.game, c, state, recipe.id)
+                    accepted.append(
+                        dict(
+                            id=recipe.id,
+                            label="Alpha with "
+                            + resolve(
+                                state, recipe.target, profiles(c, self.store.campaign_id)
+                            ).label,
+                            target=recipe.target.model_dump(mode="json"),
+                        )
+                    )
+                elif recipe.phase == "invited":
+                    invitations.append(
+                        dict(id=recipe.id, label="Await actual counterpart confirmation")
+                    )
+            from girlframe.services.p1_source_pause import projection as pause
+
+            return dict(
+                source=source,
+                revision=state.revision,
+                actor=task.actor.model_dump(mode="json"),
+                channel=task.cast.channel,
+                completed=bool(task.completed_event),
+                accepted=accepted,
+                invitations=invitations,
+                cancelled=[
+                    x.id for x in rules.records(state) if x.source == source and x.retired_event
+                ],
+                link=link.model_dump(mode="json") if link else None,
+                pause=pause(self.game, c, source),
+            )
+
+    def view(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            state = load_state(c, self.store.campaign_id)
+            link = prove(self.game, c, state, identity)
+        return self.menu(viewer, link.source)
+
+
+def release_unrolled(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any], event: str
+) -> bool:
+    candidates = [x for x in rules.records(state) if x.action == action["id"]]
+    if not candidates:
+        if action["data"].get("ankou_effect_child", {}).get("required_link"):
+            raise WorkflowError(
+                "Recover the actual original linked reservation before cancellation"
+            )
+        return False
+    value = prove(game, c, state, candidates[0].id)
+    receipt = c.scalar(
+        sa.select(t.m2["m2_receipts"].c.action_id).where(
+            t.m2["m2_receipts"].c.campaign_id == game.store.campaign_id,
+            t.m2["m2_receipts"].c.action_id == action["id"],
+        )
+    )
+    recipe = alpha.get(state, value.recipe)
+    if (
+        not event
+        or value.completed_event
+        or action["data"].get("receipt")
+        or receipt is not None
+        or not value.bound_event
+        or recipe.phase != "active"
+        or recipe.action != action["id"]
+        or recipe.effect_event is not None
+    ):
+        raise WorkflowError(
+            "Cancel only this genuine unrolled source; preserve every known receipt and effect"
+        )
+    release = rules.Release(action=action["id"], bound_event=value.bound_event, event=event)
+    alpha.put(state, recipe.model_copy(update={"action": None, "phase": "accepted"}))
+    rules.put(
+        state,
+        value.model_copy(
+            update={
+                "action": None,
+                "bound_event": None,
+                "releases": (*value.releases, release),
+                "retired_event": event,
+            }
+        ),
+    )
+    return True

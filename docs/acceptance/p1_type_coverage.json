@@ -10,8 +10,8 @@
       "type": "Princess",
       "registry_prefix": "girl.princess.",
       "status": "Published scoped implementation",
-      "ordinary_workflows_with_evidence": "Standards and mission consequences; three-tier Sex with actual counterpart child; Show Dog NPC/Bond/message choices.",
-      "missing_before_AI": "Legal counterpart child Plays beyond the current Keep adapter; reconcile remaining ordinary base/source consumers.",
+      "ordinary_workflows_with_evidence": "Standards and mission consequences; three-tier Sex with actual counterpart child; Show Dog NPC/Bond/message choices. Local seven-family directed basic Play source extension; native directed Flirt passed and actual Assault/declaration/damage/completion passed1/5.49s. Four other new family normals are unrun.",
+      "missing_before_AI": "Own-recipe directive bridge and remaining controlled-resource/NPC/body source adapters; final authored family regression and independent review. Actual Order ancestry remains mandatory; no invented Order or parent.",
       "later_candidates": "Exceptional retained-rule or changed-body combinations only after ordinary children work.",
       "code": [
         "src/girlframe/services/m3_princess_sex.py",
@@ -494,15 +494,17 @@
       "type": "Casualty",
       "registry_prefix": "girl.casualty.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Published scoped: parts/repair, push, No One Better, Helpless/finder, genuine Void resistance, Brain ending and native Sex tiers;11 distinct normals passed separately.",
-      "missing_before_AI": "Destroyed/removed hardware replacement and remaining ordinary resistance/part/body consequences. Published segmented normals remain separate from final integrated regression.",
+      "ordinary_workflows_with_evidence": "Published scoped: parts/repair, push, No One Better, Helpless/finder, genuine Void resistance, Brain ending and native Sex tiers;11 distinct normals passed separately. Local supplied Link replacement/installation/payment/repilot normal passed1/3.59s, keeping original person, lost hardware history and terminal Brain ending.",
+      "missing_before_AI": "Remaining ordinary resistance/part/body/source consequences and final integrated regression/review. Supplied non-Brain hardware replacement is implemented with one passing normal; wider body/finance variants are unrun.",
       "later_candidates": "Exceptional AM/Clone/retained-rule carriers with already-pending costs, after ordinary body paths.",
       "code": [
         "src/girlframe/services/m3_casualty.py",
-        "src/girlframe/services/m3_casualty_support.py"
+        "src/girlframe/services/m3_casualty_support.py",
+        "src/girlframe/services/m3_casualty_replacement.py"
       ],
       "tests": [
-        "tests/rules/test_casualty.py"
+        "tests/rules/test_casualty.py",
+        "tests/rules/test_casualty_replacement.py"
       ],
       "rule_inventory": [
         {
@@ -593,7 +595,8 @@
             "tests/rules/test_casualty.py"
           ],
           "local_test_references": [
-            "tests/rules/test_casualty.py"
+            "tests/rules/test_casualty.py",
+            "tests/rules/test_casualty_replacement.py"
           ]
         }
       ]
@@ -713,17 +716,19 @@
       "type": "Vatgrown",
       "registry_prefix": "girl.vatgrown.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Published scoped Doll and Experiment/Prime/Sex, real learned Brutalize once, original Investor/payment and Comfort gift;8 source normals passed separately.",
-      "missing_before_AI": "DNA first-comparison Tag, actual chaperone travel, ordinary leave/Disobey and learning/favour adapters, distinct fresh Vatgrown creation after genuine death. Home/Retirement/departure authored tests and integrated regression remain pending.",
+      "ordinary_workflows_with_evidence": "Published scoped Doll and Experiment/Prime/Sex, real learned Brutalize once, original Investor/payment and Comfort gift;8 source normals passed separately. Local actual first DNA-comparison/Tag/private disclosure normal passed1/2.37s; explicit decline authored but unrun.",
+      "missing_before_AI": "actual chaperone travel, ordinary leave/Disobey and learning/favour adapters, distinct fresh Vatgrown creation after genuine death. Home/Retirement/departure authored tests and integrated regression remain pending.",
       "later_candidates": "Compound existing Investor/acquisition obligations during exceptional carrier transitions; ordinary death continuity stays BEFORE AI.",
       "code": [
         "src/girlframe/services/m3_vatgrown.py",
         "src/girlframe/services/m3_vatgrown_plays.py",
-        "src/girlframe/services/m3_offered_girl_requisitions.py"
+        "src/girlframe/services/m3_offered_girl_requisitions.py",
+        "src/girlframe/services/m3_vatgrown_dna.py"
       ],
       "tests": [
         "tests/rules/test_vatgrown.py",
-        "tests/rules/test_vatgrown_plays.py"
+        "tests/rules/test_vatgrown_plays.py",
+        "tests/rules/test_vatgrown_dna.py"
       ],
       "rule_inventory": [
         {
@@ -821,6 +826,23 @@
           ],
           "local_test_references": [
             "tests/rules/test_vatgrown.py"
+          ]
+        },
+        {
+          "id": "girl.vatgrown.dna-comparison",
+          "title": "DNA basis: first comparison Tag",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 48,
+            "printed_page": 46,
+            "heading": "Bonds"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": [
+            "tests/rules/test_vatgrown_dna.py"
           ]
         }
       ]
@@ -2751,8 +2773,8 @@
       "type": "CHANGELING",
       "registry_prefix": "frame.changeling.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Core Blank Slate/String/owned-question normal passed; actual remote Oldgen source also passed. Code includes Fingers, Clay and paid sources; other normals remain unrun.",
-      "missing_before_AI": "Shared native body-fact setup/legacy starting-String reconciliation; ordinary counterpart and source-family continuations, named body/group/lineage adapters; final regression and review.",
+      "ordinary_workflows_with_evidence": "Core Blank Slate/String/owned-question normal passed; actual remote Oldgen source also passed. Code includes Fingers, Clay and paid sources; other normals remain unrun. Local shared body setup and eligible-subject starting repair implemented; real original Pilot import1/2.93s and original NPC evidence-to-String1/3.51s passed.",
+      "missing_before_AI": "Remaining ordinary counterpart/source families and named body/group/lineage consumers; final authored normal regression and independent review. Shared body setup and original native/NPC starting repair have scoped normal evidence; unknown historical or advanced lineage remains an explicit source gap.",
       "later_candidates": "No named ordinary rule approved for deferral; AI narration cannot substitute for mechanics.",
       "code": [
         "src/girlframe/engine/frame_setup.py",
@@ -2766,7 +2788,8 @@
         "tests/rules/test_frame_rewards.py",
         "tests/rules/test_frame_reward_service.py",
         "tests/rules/test_changeling.py",
-        "tests/rules/test_changeling_sex.py"
+        "tests/rules/test_changeling_sex.py",
+        "tests/rules/test_body_facts.py"
       ],
       "rule_inventory": [
         {
@@ -2884,7 +2907,8 @@
             "tests/rules/test_changeling.py"
           ],
           "local_test_references": [
-            "tests/rules/test_changeling.py"
+            "tests/rules/test_changeling.py",
+            "tests/rules/test_body_facts.py"
           ]
         },
         {

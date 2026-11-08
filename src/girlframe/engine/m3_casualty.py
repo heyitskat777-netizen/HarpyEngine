@@ -29,6 +29,7 @@ Condition = Literal["intact", "broken", "destroyed", "removed"]
 class Part(Model):
     id: Literal["legs", "hands", "eyes", "ears", "head", "face", "vital_organs", "link", "brain"]
     condition: Condition = "intact"
+    component: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class Body(Model):
@@ -49,7 +50,14 @@ class PartChange(Model):
     after: Condition
     event: str
     reason: Literal[
-        "push_roll", "resist_void", "helpless", "sex", "punishment", "repair", "source_destroy"
+        "push_roll",
+        "resist_void",
+        "helpless",
+        "sex",
+        "punishment",
+        "repair",
+        "source_destroy",
+        "replacement",
     ]
     source_action: str | None = None
     source_work: str | None = None
@@ -263,6 +271,8 @@ def change_part(
     choice: str | None = None,
     step: int = 0,
 ) -> PartChange:
+    if reason == "replacement":
+        raise ValueError("Use the actual supplied-component installation source for replacement")
     value = body(state, actor)
     old = next((x for x in value.parts if x.id == part), None) if value else None
     if value is None or old is None or not event or not account.strip() or len(account) > 1200:

@@ -26,17 +26,32 @@ async def open_body_facts(
         async def read(current: discord.Interaction) -> None:
             await asyncio.to_thread(service.view, viewer_from_interaction(current), identity)
 
-        text = "\n".join(
-            (
-                "**Your saved factual body account**",
-                "Actual role: " + clean(fact["actor"]),
-                "Kind: " + clean(fact["kind"]),
-                "Original vessel: " + clean(fact["vessel"]),
-                "Original brain: " + clean(fact["brain"]),
-                "Actual account: " + clean(fact["account"]),
-                "Saved source: " + clean(fact["event"]),
+        if shown.get("kind") == "npc_original_body":
+            text = "\n".join(
+                (
+                    "**Original starting NPC body evidence**",
+                    "Original person: " + clean(fact["subject"]),
+                    "Original Frame: " + clean(fact["frame"]),
+                    "Starting role: " + str(fact["slot"]),
+                    "Original source: " + clean(fact["start_event"]),
+                    "Existing vessel: " + clean(fact["vessel"]),
+                    "Existing brain: " + clean(fact["brain"]),
+                    "Actual Handler's positive account: " + clean(fact["account"]),
+                    "Saved factual source: " + clean(fact["event"]),
+                )
             )
-        )
+        else:
+            text = "\n".join(
+                (
+                    "**Your saved factual body account**",
+                    "Actual role: " + clean(fact["actor"]),
+                    "Kind: " + clean(fact["kind"]),
+                    "Original vessel: " + clean(fact["vessel"]),
+                    "Original brain: " + clean(fact["brain"]),
+                    "Actual account: " + clean(fact["account"]),
+                    "Saved source: " + clean(fact["event"]),
+                )
+            )
         history = MemoryHistory(viewer.user_id, text, read)
         await reply(interaction, history.text(), history)
         return
@@ -53,6 +68,11 @@ async def open_body_facts(
         for index, row in enumerate(menu["imports"])
         if row.get("pending") and row.get("ready")
     )
+    options.extend(
+        ("npc-original:" + str(index), "Establish original NPC body: " + row["label"])
+        for index, row in enumerate(menu["npc_originals"])
+        if not row["gap"]
+    )
     if any(not row["joined"] and not row["proved"] for row in menu["actors"]):
         options.append(("cast", "Choose your actual scene role"))
     gaps = [row["gap"] for row in menu["imports"] if row.get("gap")]
@@ -62,6 +82,7 @@ async def open_body_facts(
         for subject in row.get("subjects", ())
         if subject.get("gap")
     )
+    gaps.extend(row["gap"] for row in menu["npc_originals"] if row["gap"])
     instructions = (
         "Record factual game evidence for an existing actual body. "
         "This does not create a body or consent."
@@ -92,6 +113,45 @@ async def open_body_facts(
             from girlframe.services.m3_missions import MissionService
 
             await open_cast(current, CastService(ActorService(MissionService(service.store))))
+            return None
+        if token.startswith("npc-original:"):
+            row = menu["npc_originals"][int(token.removeprefix("npc-original:"))]
+
+            async def establish(response: discord.Interaction, answers: dict[str, Any]) -> str:
+                await asyncio.to_thread(
+                    service.establish_npc_original,
+                    viewer_from_interaction(response),
+                    str(response.id),
+                    menu["revision"],
+                    channel,
+                    ActorRef.model_validate(row["owner"]),
+                    row["slot"],
+                    answers["account"],
+                )
+                return (
+                    "The positive original-body evidence is saved. "
+                    "The original Frame owner can now review and import "
+                    "the verified starting source."
+                )
+
+            form = MemoryForm(
+                viewer.user_id,
+                "Original starting NPC body",
+                "Actual NPC: "
+                + row["label"]
+                + "\nOriginal Frame: "
+                + row["frame"]
+                + "\nOriginal starting source: "
+                + row["start_event"]
+                + "\nRecord positive factual evidence that this exact existing brain/body "
+                "belongs to the original saved starting-role person at that Frame start "
+                "and actual introduction. If this is unknown, leave it unresolved. "
+                "This records neither consent nor a String grant.",
+                [Field("account", "Actual Handler's original-body evidence", paragraph=True)],
+                establish,
+                authorize=access,
+            )
+            await reply(current, form.text(), form)
             return None
         if token.startswith("import:"):
             row = menu["imports"][int(token.removeprefix("import:"))]

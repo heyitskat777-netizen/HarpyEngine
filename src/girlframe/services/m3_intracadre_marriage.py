@@ -97,6 +97,10 @@ def _price(state: GameState, actor: ActorRef, product: str, detail: str) -> int:
         if part_state(state, actor, detail) != "broken":
             raise WorkflowError("Quote one actual broken Casualty part at its printed repair price")
         return 1
+    if product == "casualty.part-replacement":
+        from girlframe.engine.m3_casualty_replacement import price
+
+        return price(state, actor, detail)
     if product == "vatgrown_investor":
         from girlframe.engine.m3_vatgrown_plays import Investor, records
 
@@ -1080,7 +1084,12 @@ class MarriageService:
                 or actor == source.financial
             ):
                 raise WorkflowError("Reopen your actual cross-partner payment request")
-            price = _price(state, actor, product, detail)
+            if product == "casualty.part-replacement":
+                from girlframe.services.m3_casualty_replacement import quote_price
+
+                price = quote_price(self.game, c, state, actor, detail)
+            else:
+                price = _price(state, actor, product, detail)
             identity, event = str(uuid4()), str(uuid4())
             value = rules.PaymentQuote(
                 id=identity,

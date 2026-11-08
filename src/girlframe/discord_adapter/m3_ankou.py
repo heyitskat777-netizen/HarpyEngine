@@ -605,15 +605,7 @@ async def _record(
                 if task_kind == "fight_fawn"
                 else ("seen", "not_seen")
                 if task_kind == "missed_obsession"
-                else (
-                    "pass",
-                    "keep_your_head",
-                    "check_sensors",
-                    "flirt",
-                    "all_out_assault",
-                    "engage",
-                    "put_someone_beneath_you",
-                )
+                else tuple(data["nomination_options"])
                 if task_kind == "nominate"
                 else ("answer",)
             )
@@ -910,6 +902,10 @@ async def _child(
             ],
             choose,
         )
+    elif selected == "alpha_sex":
+        from girlframe.discord_adapter.m3_required_plays import open_required
+
+        await open_required(interaction, game, parent["body"]["source_work"])
     elif selected == "all_out_assault":
         from girlframe.discord_adapter.m3_battle import open_declaration
         from girlframe.services.m3_battle import BattleService

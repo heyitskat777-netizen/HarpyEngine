@@ -281,6 +281,7 @@ def prove_parts(game: GameService, c: Connection, state: GameState, actor: Actor
     ):
         raise WorkflowError("Recover the original printed Casualty body source")
     expected = {x.id: x.condition for x in value.initial_parts}
+    components = {x.id: x.component for x in value.initial_parts}
     if set(expected) != set(rules.PARTS) or len(expected) != 9:
         raise WorkflowError("Preserve exactly the nine original printed parts")
     changes = [x for x in rules.records(state, rules.PartChange) if x.actor == actor]
@@ -333,6 +334,22 @@ def prove_parts(game: GameService, c: Connection, state: GameState, actor: Actor
                 choice["kind"] != "casualty_high_part" or answer.options != (item.part,)
             ):
                 raise WorkflowError("Recover the actual counterpart's body-part damage choice")
+        elif item.reason == "replacement":
+            from girlframe.engine import m3_casualty_replacement as replacement
+            from girlframe.services.m3_casualty_replacement import prove_replacement
+
+            installed = next(
+                (
+                    x
+                    for x in replacement.records(original, replacement.Installation)
+                    if x.change == item.id
+                ),
+                None,
+            )
+            if installed is None:
+                raise WorkflowError("Recover the actual sourced replacement component installation")
+            prove_replacement(game, c, state, installed.id)
+            components[item.part] = installed.component
         elif item.reason == "repair":
             repair = next(
                 (x for x in rules.records(original, rules.Repair) if x.change == item.id), None
@@ -390,7 +407,9 @@ def prove_parts(game: GameService, c: Connection, state: GameState, actor: Actor
             if work is None or work["kind"] != "punishment" or work["subject_id"] != actor.entity:
                 raise WorkflowError("Recover the actual original source discipline effect")
         expected[item.part] = item.after
-    if {x.id: x.condition for x in value.parts} != expected:
+    if {x.id: x.condition for x in value.parts} != expected or {
+        x.id: x.component for x in value.parts
+    } != components:
         raise WorkflowError("Do not reset or relabel actual broken/destroyed original hardware")
     return value
 

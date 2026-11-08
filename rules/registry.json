@@ -6762,6 +6762,57 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "starting-npc-original-body-evidence",
+      "summary": "An actual Handler may record positive original NPC body evidence for the exact saved starting role and Frame source; explicit owner import separately consumes proved entitlement.",
+      "source": "CHANGELING rulebook PDF81–82/printed79–80; actual reviewed starting NPC role and canonical introduction/link/body sources",
+      "rationale": "Ordinary NPC setup records introduction and present body facts separately. Persist positive human factual continuity with exact original source references instead of inferring it from a current Bond or missing replacement records.",
+      "policy_key": "starting_npc_original_body_evidence",
+      "alternatives": [
+        "Leave ordinary NPC starting Strings unreachable after setup.",
+        "Infer old brain continuity from current controller, labels, Bond depth or absence of a replacement."
+      ],
+      "implementation_note": "Bounded original NPC factual evidence adapter. Reject positive reset/replacement/brain-loss contradictions; no direct String, person, body, relationship, consent or dice creation. Unknown historical evidence stays a visible source gap.",
+      "change_impact": "Adjust this factual evidence policy through a new version; preserve original private authorship, canonical sources and prior earned/spent Strings.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "vatgrown-first-comparison-original-person",
+      "summary": "One optional DNA-comparison Tag opportunity per campaign and original Vatgrown character; actual comparer authors comparison and Tag or decline. Addressed DNA disclosure is optional and private.",
+      "source": "Rulebook PDF48/printed46 Vatgrown Bonds",
+      "rationale": "The first time during the campaign applies to the original person, rather than each comparer or baseline epoch. Saved free-text DNA basis denotes a fictional person and does not create a proxy actor. Positive human factual comparison is separate from private owner disclosure.",
+      "policy_key": "vatgrown_first_comparison_original_person",
+      "alternatives": [
+        "New Tag opportunity for every comparer or DNA/book epoch.",
+        "Mandatory owner approval or public disclosure before a real comparison can count."
+      ],
+      "implementation_note": "Scoped native baseline adapter in progress; original person identity survives book/basis changes, while genuine replacement incarnation is distinct. Keep canonical basis text/hash private absent addressed owner disclosure; do not infer comparison from chat or names.",
+      "change_impact": "Version future interpretation changes; preserve original factual accounts, once-only opportunities, Tag provenance, private audiences and prior use/decline history.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "casualty-supplied-replacement-component",
+      "summary": "A missing non-Brain part needs actual supplied replacement hardware, an explicit Handler procurement/package quote and original-owner installation into the same body. Broken repair remains1 Permission.",
+      "source": "Rulebook PDF44/printed42 Wounded God; destroyed/removed replacement hardware and prices are unspecified",
+      "rationale": "Repair of a broken original part does not recreate removed hardware. The factual supplied component and installation need distinct provenance, while Brain ending remains terminal.",
+      "policy_key": "casualty_supplied_replacement_component",
+      "alternatives": [
+        "Treat ordinary1Permission repair as resurrection of destroyed/removed hardware.",
+        "Invent default stock, a default replacement price or a new original person."
+      ],
+      "implementation_note": "Explicit quoted price>=0 with genuine supply account; normal financial partner payment and Flow proof remain in force, including existing approval convention for quoted0. No automatic repilot or unrelated resource reset.",
+      "change_impact": "Version future pricing/source changes; preserve exact quotes, source authors, component consumption, old loss history and original bodies.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -8815,7 +8866,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_casualty.py"
+        "tests/rules/test_casualty.py",
+        "tests/rules/test_casualty_replacement.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -8963,6 +9015,31 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [],
+      "m2_play_id": null,
+      "module": "core"
+    },
+    {
+      "id": "girl.vatgrown.dna-comparison",
+      "title": "DNA basis: first comparison Tag",
+      "scope": "girl",
+      "kind": "mechanic",
+      "source": {
+        "document": "rulebook",
+        "pdf_page": 48,
+        "printed_page": 46,
+        "heading": "Bonds"
+      },
+      "required": true,
+      "implementation": "subset",
+      "source_audit": "inventoried",
+      "independent_review": "pending",
+      "reviewer": null,
+      "review_reference": null,
+      "contract": null,
+      "dependencies": [],
+      "test_evidence": [
+        "tests/rules/test_vatgrown_dna.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -9193,7 +9270,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_alpha_sex.py"
+        "tests/rules/test_alpha_sex.py",
+        "tests/rules/test_required_plays.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -11655,7 +11733,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_changeling.py"
+        "tests/rules/test_changeling.py",
+        "tests/rules/test_body_facts.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -11881,7 +11960,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_ankou.py"
+        "tests/rules/test_ankou.py",
+        "tests/rules/test_required_plays.py"
       ],
       "m2_play_id": null,
       "module": "core",

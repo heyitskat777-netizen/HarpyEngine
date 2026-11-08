@@ -1769,6 +1769,9 @@ class ChoiceEngine:
         if action["data"].get("consume_child"):
             # Its actual source is completed after this canonical child event exists.
             return
+        if action["data"].get("princess_child") and action["data"].get("battle"):
+            # Battle finishes after the response event; persist its directed source separately.
+            return
         if action["data"].get("vatgrown_leaving") and action["data"]["result"].get("can_disobey"):
             from girlframe.services.m3_vatgrown_support import finish_departure
 

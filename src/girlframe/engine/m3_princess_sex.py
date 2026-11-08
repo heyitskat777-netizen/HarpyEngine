@@ -66,7 +66,17 @@ class HighDirection(Model):
     source_event: str
     selected_choice: str
     selected_event: str
-    play: Literal["keep_your_head"]
+    play: Literal[
+        "keep_your_head",
+        "check_sensors",
+        "flirt",
+        "engage",
+        "all_out_assault",
+        "put_someone_beneath_you",
+        "disobey_orders",
+    ]
+    target: ActorRef | None = Field(default=None, exclude_if=lambda value: value is None)
+    order_id: str | None = Field(default=None, exclude_if=lambda value: value is None)
     context: str = Field(min_length=1, max_length=1200)
     child: str | None = None
     bound_event: str | None = None

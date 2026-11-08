@@ -199,6 +199,12 @@ def require_clear(
                 if prepared
                 else (action or {}).get("data", {}).get("ankou_effect_child", {}).get("id")
             )
+            if prepared is not None:
+                from girlframe.services.m3_required_plays import source_for_play
+
+                linked_source = source_for_play(game, c, state, prepared)
+                if linked_source is not None:
+                    source_id = linked_source
             if source_id is None and action:
                 source_id = action["data"].get("prepared", {}).get("source_work")
             if row["state"] != "held" or not active(state, row["id"]):

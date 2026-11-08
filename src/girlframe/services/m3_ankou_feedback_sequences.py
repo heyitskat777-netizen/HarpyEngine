@@ -458,7 +458,10 @@ def prepare_child(
     prepared: PlayInput,
     channel: int,
 ) -> dict[str, Any] | None:
-    source = prepared.source_work
+    from girlframe.services.m3_required_plays import link_for_play
+
+    required = link_for_play(game, c, state, prepared)
+    source = required.source if required else prepared.source_work
     if source is None:
         return None
     value = next((x for x in rules.records(state, rules.FeedbackStep) if x.id == source), None)
@@ -534,7 +537,7 @@ def prepare_child(
     if handler is None:
         raise WorkflowError("Recover the actual source Handler appointment")
     handler_controller = resolve(state, handler, profiles(c, game.store.campaign_id)).controller
-    return dict(
+    result = dict(
         id=source,
         actor=actor.model_dump(mode="json"),
         target=target.model_dump(mode="json") if target else None,
@@ -555,6 +558,16 @@ def prepare_child(
         source_work=source,
         phase="prepared",
     )
+
+    if required:
+        result.update(
+            required_link=required.id,
+            recipe=required.recipe,
+            required_source=required.source,
+            source_work=required.recipe,
+            target=required.target.model_dump(mode="json"),
+        )
+    return result
 
 
 def bind_child(
@@ -613,6 +626,10 @@ def complete_child(
         or not action["data"].get("receipt")
         or game.pending(c, action["id"])
     ):
+        return
+    from girlframe.services.m3_required_plays import completion_ready
+
+    if not completion_ready(game, c, state, action):
         return
     from uuid import uuid4
 
@@ -679,9 +696,20 @@ def complete_child(
                 game.save_action(c, incoming)
             else:
                 game.save_action(c, incoming, state="ready_to_roll")
+    author = int(action["actor_id"])
+    if meta.get("required_link"):
+        actual_author = c.scalar(
+            sa.select(t.events.c.actor_id).where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.id == event,
+            )
+        )
+        if not isinstance(actual_author, str) or not actual_author.isdecimal():
+            raise WorkflowError("Recover the actual human author of this linked source completion")
+        author = int(actual_author)
     game.event(
         c,
-        int(action["actor_id"]),
+        author,
         completion_event,
         "m3.ankou_child_completed",
         state,

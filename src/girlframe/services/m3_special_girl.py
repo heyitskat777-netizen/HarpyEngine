@@ -70,7 +70,10 @@ def prepare(
 
     if prepared.play != "put_someone_beneath_you":
         return None
-    actor = current_ref(state, viewer.user_id)
+    from girlframe.services.m3_princess_performer import acting_owner
+
+    owner = acting_owner(game, c, viewer, prepared, state)
+    actor = current_ref(state, owner)
     receipt = entitlement(game, c, state, actor)
     if receipt is None:
         return None
@@ -86,7 +89,7 @@ def prepare(
         target=target.model_dump(mode="json"),
         frame=binding(state, receipt)[0],
         handler=handler.model_dump(mode="json"),
-        bonus=int(higher(state, viewer.user_id, prepared.target)),
+        bonus=int(higher(state, owner, prepared.target)),
     )
 
 

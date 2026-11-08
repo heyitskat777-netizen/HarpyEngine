@@ -109,8 +109,10 @@ def pre_roll(
         )
     actor = ActorRef(
         kind="pilot",
-        entity=str(viewer.user_id),
-        incarnation=game.character_binding(c, state, viewer.user_id, require_current_profile=False),
+        entity=action["actor_id"],
+        incarnation=game.character_binding(
+            c, state, int(action["actor_id"]), require_current_profile=False
+        ),
     )
     state.refusal_bonuses = rules.consume(
         state.refusal_bonuses, state.handler, expected, actor, action["id"]

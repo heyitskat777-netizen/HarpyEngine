@@ -25,6 +25,21 @@ LABELS = {
 }
 
 
+def _princess_prepared(parent: dict[str, Any] | None) -> PlayInput | None:
+    if parent is None or parent["kind"] != "princess_sex_child":
+        return None
+    body = parent["body"]
+    return PlayInput(
+        play=body["play"],
+        source_work=body["source_work"],
+        parent=parent["parent"],
+        target_actor=ActorRef.model_validate(body["target"]),
+        context=body["context"],
+        trigger_confirmed=True,
+        heat=0,
+    )
+
+
 async def open_declaration(
     interaction: discord.Interaction,
     service: BattleService,
@@ -32,7 +47,12 @@ async def open_declaration(
     parent: dict[str, Any] | None = None,
 ) -> None:
     channel = int(parent["channel"]) if parent else int(interaction.channel_id or 0)
-    data = await asyncio.to_thread(service.preview, viewer_from_interaction(interaction), channel)
+    data = await asyncio.to_thread(
+        service.preview,
+        viewer_from_interaction(interaction),
+        channel,
+        required=_princess_prepared(parent),
+    )
     own = [
         x
         for x in data["actors"]
@@ -45,6 +65,9 @@ async def open_declaration(
         )
     ]
     targets = [x for x in data["actors"] if x["ref"]["kind"] != "pilot" or not x["owned"]]
+    if data.get("required_actor"):
+        own = [x for x in own if x["ref"] == data["required_actor"]]
+        targets = [x for x in data["actors"] if x["ref"] != data["required_actor"]]
     if parent is not None:
         if parent["body"].get("actor"):
             own = [x for x in own if x["ref"] == parent["body"]["actor"]]
@@ -85,6 +108,7 @@ async def open_declaration(
                     and parent["kind"]
                     in (
                         "red_queen_child",
+                        "princess_sex_child",
                         "ankou_effect_child",
                         "changeling_interrupt",
                         "changeling_pause",
@@ -138,7 +162,7 @@ async def open_declaration(
                 "play",
                 "Choose your Play",
                 (("all_out_assault", "Required All Out Assault"),)
-                if parent and parent["kind"] == "red_queen_child"
+                if parent and parent["kind"] in ("red_queen_child", "princess_sex_child")
                 else (
                     ("all_out_assault", "All Out Assault"),
                     ("go_for_the_core", "Go For the Core"),
@@ -166,8 +190,16 @@ async def open_context(
             "Declare combat in a current joined scene.",
         )
         return
+    if (source.get("princess_child") or {}).get("child"):
+        from girlframe.discord_adapter.m2_ui import open_pending
+
+        await open_pending(interaction, service.game)
+        return
     data = await asyncio.to_thread(
-        service.preview, viewer_from_interaction(interaction), source["channel"]
+        service.preview,
+        viewer_from_interaction(interaction),
+        source["channel"],
+        required=_princess_prepared((source.get("princess_child") or {}).get("descriptor")),
     )
     value = next((x for x in data["contexts"] if x["id"] == identity), None)
     if value is None:
@@ -176,7 +208,7 @@ async def open_context(
         )
         return
     if value["state"] == "confirmed":
-        if value["owner"] != interaction.user.id:
+        if (value.get("source_author") or value["owner"]) != interaction.user.id:
             await reply(
                 interaction, "Opening and reach are confirmed for the original actor's owner."
             )
@@ -184,7 +216,17 @@ async def open_context(
         actor = next(x for x in data["actors"] if x["ref"] == value["declaration"]["actor"])
         role_service = None
         role_data = None
-        if actor["ref"]["kind"] == "external_pilot":
+        princess_child = source.get("princess_child")
+        if princess_child:
+            resources = dict(
+                heat=princess_child["heat"],
+                identities=[
+                    *princess_child["identities"],
+                    *princess_child["additional_identities"],
+                ],
+                revision=princess_child["sheet_revision"],
+            )
+        elif actor["ref"]["kind"] == "external_pilot":
             from girlframe.services.m3_actor_plays import ActorPlayService
 
             role_service = ActorPlayService(service.game)
@@ -204,15 +246,21 @@ async def open_context(
         from girlframe.discord_adapter.m3_dampener import modifier as dampener_modifier
         from girlframe.services.m3_dampener import DampenerService
 
-        dampener_controls = await dampener_fields(
-            interaction, DampenerService(service.game), ActorRef.model_validate(actor["ref"])
+        dampener_controls = (
+            []
+            if princess_child
+            else await dampener_fields(
+                interaction, DampenerService(service.game), ActorRef.model_validate(actor["ref"])
+            )
         )
 
         from girlframe.discord_adapter.m3_ankou_controls import pulse_fields, selected_pulse
 
         pulse_controls = (
             await pulse_fields(interaction, service.game)
-            if actor["ref"]["kind"] == "pilot" and value["declaration"]["play"] == "all_out_assault"
+            if not princess_child
+            and actor["ref"]["kind"] == "pilot"
+            and value["declaration"]["play"] == "all_out_assault"
             else []
         )
 
@@ -231,7 +279,7 @@ async def open_context(
                 attacking_asset=declared["attacking_asset"],
                 target_asset=declared["target_asset"],
                 battle_context=identity,
-                context=declared["account"],
+                context=princess_child["context"] if princess_child else declared["account"],
                 trigger_confirmed=True,
                 piloting=bool(actor["piloting"]),
                 parent=value["source_action"],

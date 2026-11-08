@@ -23,7 +23,7 @@ from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_physical_state import InitialPlacement
 from girlframe.engine.m3_world_state import Npc
 from girlframe.services.m3_actors import ActorService
-from girlframe.services.m3_body_facts import BodyFactsService
+from girlframe.services.m3_body_facts import BodyFactsService, npc_originals, prove_npc_original
 from girlframe.services.m3_cast import CastService
 from girlframe.services.m3_changeling import ChangelingService, prove_node
 from girlframe.services.m3_physical import PhysicalService
@@ -188,16 +188,21 @@ def test_actual_handler_without_girl_and_witnessed_npc_setup_preserve_private_au
         "handler",
         "My actual original Handler body has its original brain",
     )
+    original_role = state(game).sheets["2"].review.creation.npc_bonds[0]
     npc = Npc(
         id="actual-body-witness",
-        name="Actual witness",
+        name=original_role.name or "Actual starting person",
         jobs=("civilian",),
-        controller=3,
+        controller=1,
         cell=(0, 0),
         revealed=True,
-        detail="Ordinary existing civilian",
+        detail="Ordinary existing civilian from the actual saved starting role",
     )
     world.npc(ADMIN, str(uuid4()), state(game).revision, npc)
+    world.claim_npc(OTHER, str(uuid4()), state(game).revision, npc.id)
+    world.import_starting_npc(
+        PLAYER, str(uuid4()), state(game).revision, original_role.slot, npc.id
+    )
     target = ActorRef(kind="npc", entity=npc.id)
     view = casts.view(OTHER, 900)
     casts.change(
@@ -222,6 +227,83 @@ def test_actual_handler_without_girl_and_witnessed_npc_setup_preserve_private_au
             OTHER, str(uuid4()), state(game).revision, 900, target, "human_npc", "No proxy"
         )
     assert state(game).model_dump_json() == before and game.dice.calls == 0
+    owner = current_ref(state(game), 2)
+    record(game, bodies, PLAYER)
+    before_source = state(game)
+    candidate = next(
+        row
+        for row in bodies.menu(ADMIN, 900)["npc_originals"]
+        if row["slot"] == original_role.slot and row["owner"] == owner.model_dump(mode="json")
+    )
+    assert not candidate["gap"]
+    assert not rules.records(before_source, rules.String)
+    account = (
+        "I positively witness this exact original brain/body from the saved starting role."
+        "\n  PRIVATE_ORIGINAL_NPC_EVIDENCE"
+    )
+    source_request = (
+        ADMIN,
+        "actual-original-npc-body",
+        state(game).revision,
+        900,
+        owner,
+        original_role.slot,
+        account,
+    )
+    before_positive = state(game).model_dump_json()
+    with pytest.raises(WorkflowError):
+        bodies.establish_npc_original(
+            OTHER, str(uuid4()), state(game).revision, 900, owner, original_role.slot, account
+        )
+    assert state(game).model_dump_json() == before_positive
+    established = bodies.establish_npc_original(*source_request)
+    assert bodies.establish_npc_original(*source_request) == established
+    assert not rules.records(state(game), rules.String)  # Evidence alone never imports a grant.
+    factual = next(value for value in npc_originals(state(game)) if value.id == established["id"])
+    assert (
+        factual.subject == target
+        and factual.brain == bodies.view(OTHER, witnessed["id"])["fact"]["brain"]
+    )
+    with ledger.engine.connect() as c:
+        assert prove_npc_original(game, c, state(game), factual) == factual
+    saved_history = native_history(monkeypatch, bodies, PLAYER, factual.id)
+    assert native.clean(account) in "".join(page.body for page in saved_history.pages)
+    offered = bodies.menu(PLAYER, 999)["imports"][0]
+    verified_npc = next(
+        row for row in offered["subjects"] if row["actor"] == target.model_dump(mode="json")
+    )
+    assert not verified_npc["gap"] and not verified_npc["imported"]
+    imported = bodies.import_starting(
+        PLAYER, "import-actual-original-npc", state(game).revision, owner, offered["source_event"]
+    )
+    assert imported["imported"] == 1
+    node = next(
+        value
+        for value in rules.records(state(game), rules.String)
+        if value.subject.actor == target and value.origin == "start"
+    )
+    controls = ChangelingService(game)
+    used = controls.fingers(
+        PLAYER,
+        str(uuid4()),
+        state(game).revision,
+        900,
+        node.id,
+        "question",
+        "Use my actual original NPC starting String",
+        question="What matters to you?",
+    )
+    question = rules.get(state(game), used["id"]).question
+    controls.answer(
+        OTHER,
+        str(uuid4()),
+        state(game).revision,
+        question,
+        "The actual human authors this character's answer",
+    )
+    assert rules.get(state(game), used["id"]).completed_event
+    assert rules.record(state(game), rules.String, node.id).spent_by == used["id"]
+    assert game.dice.calls == 0
 
 
 def test_legacy_reviewed_starting_source_repairs_once_and_never_refreshes_spent_string(

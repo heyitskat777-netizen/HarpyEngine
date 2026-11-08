@@ -3699,3 +3699,48 @@ die receipt or Bonded source. Reset-body brain facts require the actual proved
 hardware/vessel and an authorized factual author; a software label alone creates no
 brain. These source interpretations require clarity review. Existing conditional
 body, group and lineage adapters remain explicitly incomplete.
+
+### Original NPC body evidence for a saved starting role
+
+`starting-npc-original-body-evidence`: a genuine Handler may explicitly record
+positive factual continuity between an existing NPC brain/body and the exact
+immutable starting NPC role and Frame source. The existing canonical introduction,
+owner-authored role link and body record are prerequisites; introduction alone is
+not treated as literal NPC birth. The account cannot override known reset,
+replacement, missing-brain or conflicting-body evidence. It records evidence,
+with the original private audience, and creates no person, body, Bond, String,
+consent or receipt. The actual original owner separately imports the independently
+proved starting entitlement. Unknown histories remain visible source gaps.
+
+Source: CHANGELING PDF81–82/printed79–80 and original reviewed NPC starting roles.
+This finite factual-evidence protocol is a delegated recommendation requiring
+clarity review; it avoids blocking independently proved people or inferring old
+brains from current Bond/controller labels. Future adjustment must preserve the
+original factual author and earned/spent history.
+
+### Vatgrown first DNA comparison
+
+`vatgrown-first-comparison-original-person` (PDF48/printed46): one optional Tag
+opportunity belongs to the first actual comparer of this original Vatgrown and
+the saved DNA-basis person during the campaign. Giving or explicitly declining
+consumes that opportunity; a later comparer or baseline/basis epoch does not
+refresh it. A genuine new original incarnation has its own source. The actual
+comparer controls the factual comparison and their optional Tag. An addressed
+owner disclosure is a private convenience, not an extra fictional veto; menus,
+errors and unaddressed history do not disclose the canonical private DNA basis.
+The saved description does not create or identify a donor ActorRef through name
+matching. This delegated interpretation requires clarity review; future changes
+must preserve original people, sources, private audiences and Tag/use history.
+
+### Supplied Casualty replacement hardware
+
+`casualty-supplied-replacement-component`: replacing a destroyed/removed non-Brain
+part requires an actually identified supplied component, explicit Handler
+procurement/package price and original-owner installation into the same body.
+There is no default stock or replacement price. The printed broken-part repair
+remains1 Permission (PDF44/printed42); replacing hardware does not revive a dead
+Brain/person, reset other resources or automatically repilot a Frame. A quote of0
+is explicit, not inferred free supply. Existing Marriage payment/Flow conventions
+stay in force, including their actual financial approval at quoted0. This is an
+adjustable delegated recommendation requiring clarity review; preserve original
+quotes, loss/component history, human authorship and once-only payment/installation.
