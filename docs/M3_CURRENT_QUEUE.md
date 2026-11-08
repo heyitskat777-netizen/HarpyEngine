@@ -1,6 +1,6 @@
 # Current M3 queue
 
-Updated 2026-11-08. Gameplay integration source: `1d0031a`; local branch
+Updated 2026-11-08. Gameplay integration source: `d038bba`; local branch
 `codex/integrated-repairs-20261107`. **RULES_SUBSET; bot off.** No deployment,
 environment publication, recovered-engine writes, AI/M4 or Ancillary activation.
 This working list separates upcoming work from completed scoped checkpoints.
@@ -10,7 +10,8 @@ Registry entries and workflows overlap and differ in size; counts are not percen
 
 | Workflow | Owner / state | Dependency | Next concrete action | Completion evidence |
 |---|---|---|---|---|
-| Newgirl Mentor daily workflow | Oldgen agent + root / bounded implementation | Shared original-person mentor proof, actual companion invitations and canonical name producer | Require actual Newgirl attendance in Mentor Off-Duty scenes and Mentor-authored callsign; preserve owned cosmetics | Existing M2 rank/Tags/setup verified as reused; new source contract frozen, no acceptance yet |
+| Newgirl Sex and active Mentor membership | AM agent + root / implementation | Source-owned group participation and shared current Mentor consumers | Implement true multi-partner consent/results, source-owned Mentor sets and discovery Tags | Frozen source contract; no acceptance yet |
+| Newgirl Easy Target | Malleable agent + root / implementation | Actual per-person reactions, supported child performances and real harm/discipline | Integrate source-owned reaction choices, child actions, cohort support and protection failure | Final NEW4 API frozen; no acceptance yet |
 | Successor | Root / lifecycle dependency queued | Proven singleton Handler, unranked Girl and actual link-removal gaps | Assign source-bound concurrent junior/full Handler lifecycle and actual threshold consumers; avoid a Gold-Star-only placeholder | Frozen346-word source/dependency contract,12 inspected dependency hashes; no code or acceptance |
 | Remaining required core systems | Root + bounded assignments / open | Existing source inventory and actual consumers | Select the next whole dependency-ready gameplay workflow; keep unsupported branches visible | [Registry](../rules/registry.json), [remaining scope](M3_REMAINING_WORK.md), [acceptance](acceptance/m3_rules.json) |
 | Final integrated candidate | Root / blocked by required gameplay | Frozen full core candidate and complete ordinary workflows | Run final full regression and global static/migration/privacy/contract checks | Pending; focused/segmented results do not substitute |
@@ -38,6 +39,7 @@ These are implementation evidence, not independent certification or milestone si
 
 | Workflow | Owner / state | Dependency | Next concrete action | Completion evidence |
 |---|---|---|---|---|
+| Newgirl Mentor daily workflow | Oldgen agent + root / committed within scope | Actual source-owned naming and real Mentor/Newgirl scene participation | `d038bba`; retain multiple-Mentor and other body/role adapters | Integrated6 passed /9.84s; static8 Python/7 source; offlineSDK19 commands;9 CI cases collected only |
 | Newgirl Trainee | AM agent + root / committed within scope | Actual teaching/Identity/Tag/Heat, genuine unrolled duty and neutral original-mentor proof | `1d0031a`; broader source/body and mentoring causes stay visible | Initial integrated9 /9.35s; final privacy1 /2.05s; affected ordinary/Ankou erase2 /3.45s; final static10 Python/9 source; no final combined rerun |
 | Princess Show Dog | Oldgen agent + root / committed within scope | Actual Go-OffDuty source, both choice lists, NPC/Bond/message and real risk discipline | `f2cbc4f`; keep broader role/body adapters visible | Integrated9 passed /13.27s; static12 Python/11 source after annotation/local rename only; offline native imports,11 CI cases collected only |
 | Unassuming Doll | AM agent + root / committed within scope | Actual source effects, information, real RolePunishment and source cast exit/return | `c619b73`; remaining Vatgrown and other actual-act/body adapters stay visible | Integrated11 passed /15.73s; coherent static14 Python/13 source; offlineSDK17 commands;13 CI cases collected only |

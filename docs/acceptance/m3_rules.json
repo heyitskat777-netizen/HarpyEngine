@@ -1370,6 +1370,28 @@
           "limitation": "No final combined or full rerun; broader actor/body/Identity/Tag and multiple-Mentor sources remain required. Mentor daily scene/name code excluded; independent/human gates pending."
         }
       ]
+    },
+    {
+      "id": "M3C-MENTOR-DAILY-NORMAL-001",
+      "title": "Mentor actual Off-Duty companions and canonical fictional callsign",
+      "expected": "Actual original Mentor participation requires the original Newgirl companion, and that Mentor can rename the canonical Girl without resource reset or forced platform cosmetics.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_mentor.py"
+      ],
+      "evidence": [
+        {
+          "test_name": "Mentor normal flow and actual Off-Duty/Trainee compatibility",
+          "executed_command": "Exact selection in reports/M3_ACCEPTANCE.md and var/m3-mentor-handoff.json",
+          "actual_result": "Integrated6 passed9.84s; coherent static8 Python/7 source passed without drift. OfflineSDK19 commands;9 CI cases collected only.",
+          "log_or_trace": "var/m3-mentor-integrated.xml; var/m3-mentor-union-static.json; var/m3-mentor-union-source-snapshot.json",
+          "git_commit": "d038bba24e16c57e6b71dc911ea713687861987d",
+          "limitation": "Observation connected but no new direct companion Observation scenario. Multiple-Mentor, other body/role and generic mentoring discipline sources remain required. No full regression, independent review or human acceptance."
+        }
+      ]
     }
   ],
   "enabled_modules": [
