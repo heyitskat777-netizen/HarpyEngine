@@ -81,12 +81,15 @@ def prepare(
     from girlframe.services.m3_learned_plays import available
 
     owns = sheet.girl == "NEWGIRL" and has_rule(sheet, rules.RULE, "NEWGIRL")
+    from girlframe.services.m3_required_plays import direct_nomination
+
+    nominated = direct_nomination(game, c, state, actor, prepared, channel)
     if (
         not (owns or available(game, c, state, actor, rules.RULE, action_id) is not None)
         or not others
         or handler is None
         or prepared.parent
-        or prepared.source_work
+        or (prepared.source_work and not nominated)
         or prepared.off_duty_id
         or prepared.target is not None
         or prepared.target_actor is not None

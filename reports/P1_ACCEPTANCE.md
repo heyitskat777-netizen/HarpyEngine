@@ -896,3 +896,105 @@ scopes above. Registry477/273 subset/204 unimplemented/440 required/0 verified.
 Repository1413 files/40 preserved manifest/0 findings; whitespace passed.
 Exact selected hashes/checks in `var/p1-fuel-learning-*`. Authored broader tests,
 full regression/global checks and independent/player review remain deferred.
+
+### Native learned Easy Target and non-Heat Identity disposal
+
+Preceding published31963072c53991d243165c26db5754a3257a5f10 has
+[focused CI42528955365](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42528955365)
+PASS; its full-regression step was skipped.
+
+`pytest -q tests/rules/test_vatgrown_plays.py::test_actual_newgirl_teacher_learned_easy_target_native_request_real_keep_and_judgment tests/rules/test_disposable_psyche.py::test_native_off_duty_disposal_keeps_status_roll_and_actual_heat_receipt --junitxml=var/p1-learning-off-duty-minimum.xml`:
+**2passed/7.26s**, first run. Actual original Newgirl/Vatgrown coordinated
+creation/lesson, native Easy Target, true Keep child/receipt, original requester
+judgment/Status and private replay. Neutral birth helpers retain omitted defaults;
+no post-activation playbook/relationship substitution. Off-Duty uses an actual
+active period and source-native form, original Identity removal/+Heat, unchanged
+Status-based dice, no Heat spend, actual private disposal proof and known-roll
+retry. Void Observation uses the same period/source admission but its extra
+normal remains deferred.
+
+Existing Nightmare Core Keep and Kicked Puppy Flirt also retain their own actual
+modifier and zero Heat spending while using the existing printed Identity mark/
+disposal source. Source-specific paid eligibility and modifiers are unchanged;
+two positive receipt normals authored **NOT RUN**. Living Battery remains a
+separate explicit adapter, as do protected/retained identities and other sources.
+No old successful gameplay node rerun. Local Ruff/format root14 and mypy source13
+passed before the final guard narrowing; final selected static recorded at freeze.
+
+The managed environment briefly restarted; existing files and assignments were
+reconciled before resuming. Fuel alternatives and learned Person remain separately
+active until their frozen source integration. These minimums are not full P1
+regression, independent source review or player acceptance. Bot OFF.
+
+### Direct actual Ankou nominees with existing own Play recipes
+
+A small positive `direct_nomination` helper shares canonical Task/nomination,
+original performer/cast and bound-child validation across existing Brutalize,
+Old Dog New Pups and Easy Target preparations. Their own eligibility, targets,
+costs, results and source completion stay in their existing services. No extra
+accepted-recipe record or virtual source is created. Existing separately accepted
+Alpha and self-Dose bridges remain unchanged. Native advice now reads its actual
+chosen Pilot target. Princess own-recipe directions, Alpha own-recipe counters,
+other nominees and actual NPC performances remain named source adapters.
+
+`pytest -q tests/rules/test_required_plays.py::test_actual_ankou_nomination_native_own_advice_and_real_listening_complete_source`:
+initial1failed/1.49s because the fixture placed bodies before initializing its map;
+retry1failed/1.69s because the new test called nonexistent `answer_task` rather than
+existing `choose_task`. Test-only corrections; same-node retry **1passed/3.32s**.
+Real initial original-person relationship, other-owned nomination, native advice,
+actual Heat/receipt, owned maxim and recipient listening, Task completion and
+scene-pause restore; known-roll retry keeps dice. Source5 mypy and root7 Ruff/
+format passed. No unrelated successful gameplay rerun; other two own-family
+nomination variants remain deferred to final P1 regression.
+
+### Learned Mockingbird conversation
+
+One additional genuine lesson consumer: `girl.mockingbird.bad-at-being-a-person`
+through the existing conversation trigger/native capability and interlocutor Tag
+paths. Optional None-omitted source fields preserve old records. Actual original
+trigger birth binds one available lesson; held post-roll outcomes prove the exact
+consumed lesson and actual receipt through the existing source-effects callback.
+No Mockingbird body, passive restriction or teacher resource is granted.
+
+`pytest -q tests/rules/test_vatgrown_plays.py::test_actual_mockingbird_teacher_learned_person_native_trigger_cancel_receipt_tag_and_end --junitxml=var/p1-learned-person-minimum.xml`:
+**1passed/4.90s**, first run. Real lesson, native conversation declaration, unrolled
+cancel/withdraw/fresh proposal, learner costs/receipt, selected capabilities,
+actual interlocutor Tag, private native source readback and actual conversation
+end; existing replay/ownership retained. Worker5 Ruff/format and source4 types
+passed. Root source-effects seam is included in final selected preflight. Other
+conditional/body/Sex lesson families stay named; this is no whole-Vatgrown claim.
+
+### Fuel capture/corruption and actual site availability
+
+Existing first-battle loss supports genuine Gorgon custody of the same living
+NPC, printed NPC Void Tag with actual Handler-chosen manifestation, and separate
+captured/corrupted site control. The finite saved Handler choice permits another
+actual adjudicator to consume its exact proved choice. Default omitted fields
+preserve original death/destruction records/events. Site allegiance, condition,
+buildings and historical travel remain separate; actual Foundation supply/new
+custody consumers reject lost control. Public map omits private control source,
+threat and account. NPC controllers/Bonds/jobs remain unchanged, with no automatic
+Foundation discovery/surgery or blanket job ban. Shared NPC Void Tag construction
+preserves the existing Mockingbird producer's IDs/giver/events; Fuel adds its own
+source/proof and present-Tag filtering, not a borrowed producer record.
+
+`pytest -q tests/rules/test_fuel_shortage.py::test_actual_fuel_npc_void_and_captured_site_keep_handler_choice_and_tag_provenance`:
+first1failed/2.17s: fixture attempted printed Directed introduction away from a map
+edge. Test-only correction uses actual Low Void5.1 Sprite-at-base introduction;
+retry1failed/2.23s because that printed source also requires a real captured NPC.
+Added a separate actually introduced NPC as that source's victim, preserving the
+intended Fuel NPC. Same-node retry **1passed/2.90s**. Genuine actual Sprite/source,
+saved native Handler manifestation, unavoidable first battle, NPC Void/current
+source proof, actual site control/public privacy, no fictitious destruction or
+last-Base failure. The distinct capture-NPC/corrupt-site normal is authored
+**NOT RUN**. Source3 unchanged by fixture repairs. Worker source4 Ruff/format and
+mypy3 passed; root integrated selected static below. No role/tier matrix or old
+successful Fuel node rerun. Further special bodies/Ship endpoints remain explicit.
+
+Integrated publication preflight:36 selected paths/32 Python/26 source. Ruff and
+format all32, mypy all26, packet whitespace PASS. Registry477/273 subset/
+204 unimplemented/440 required/0 independently verified. Planning contracts PASS;
+repository1414 publishable files/40 original manifest entries/0 findings. Exact
+selected hashes/checks retained in `var/p1-nominations-outcomes-*`. These are local
+scoped checks; new focused CI evidence follows publication. Full regression,
+global migration/privacy/restore, independent review and human acceptance pending.

@@ -1489,7 +1489,7 @@ async def open_play(
             and parent["kind"] == "red_queen_child"
             and parent["body"]["target"]["kind"] == "pilot"
             else int(one(values, "target"))
-            if play in ("flirt", "put_someone_beneath_you")
+            if play in ("flirt", "put_someone_beneath_you", "old_dog_new_pups")
             and one(values, "target")
             and one(values, "target") not in npc_flirt_targets
             else None,

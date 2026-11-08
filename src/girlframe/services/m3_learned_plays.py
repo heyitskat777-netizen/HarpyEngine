@@ -21,6 +21,7 @@ SUPPORTED = {
     "girl.stim-blissed.dose-up": ("dose_up", "STIM-BLISSED"),
     "girl.oldgen.old-dog-new-pups": ("old_dog_new_pups", "OLDGEN"),
     "girl.newgirl.easy-target": ("easy_target", "NEWGIRL"),
+    "girl.mockingbird.bad-at-being-a-person": ("mockingbird_person", "MOCKINGBIRD"),
 }
 
 

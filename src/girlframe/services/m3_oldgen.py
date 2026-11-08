@@ -105,12 +105,15 @@ def prepare(
     _access(game, c, viewer, rules.ADVICE)
     actor = current_ref(state, viewer.user_id)
     _oldgen(game, c, state, actor, rules.ADVICE, action_id=action_id)
+    from girlframe.services.m3_required_plays import direct_nomination
+
+    nominated = direct_nomination(game, c, state, actor, prepared, channel)
     if (
         prepared.target is None
         or prepared.target == viewer.user_id
         or prepared.parent
         or prepared.off_duty_id
-        or prepared.source_work
+        or (prepared.source_work and not nominated)
     ):
         raise WorkflowError("Give actual advice to another native Girl in the ordinary scene")
     target = current_ref(state, prepared.target)

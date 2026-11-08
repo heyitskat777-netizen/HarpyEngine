@@ -12,6 +12,7 @@ from girlframe.engine import m3_mockingbird as rules
 from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import fingerprint, resolve
+from girlframe.engine.m3_learned_play_state import LearnedPlayUse
 from girlframe.engine.m3_mockingbird_state import (
     CAPABILITIES,
     PERSON,
@@ -204,7 +205,10 @@ def prepare(
         or event["actor_id"] != str(viewer.user_id)
         or source is None
         or not any(
-            x.id == value.id and x.actor == actor and x.bonded_source == value.bonded_source
+            x.id == value.id
+            and x.actor == actor
+            and x.bonded_source == value.bonded_source
+            and x.learned_source == value.learned_source
             for x in source.mockingbird.triggers
         )
     ):
@@ -274,6 +278,7 @@ def prepare(
             appointment=appointment,
             followups=[],
         )
+        | ({"learned_source": value.learned_source} if value.learned_source is not None else {})
         | ({"bonded_source": value.bonded_source} if value.bonded_source is not None else {})
         | (
             {"changeling_source": value.changeling_source}
@@ -294,7 +299,7 @@ def pre_roll(game: "GameService", c: Connection, state: GameState, action: dict[
         value.state != "ready"
         or value.actor != ref
         or fingerprint(current) != meta["cast_sha256"]
-        or not _owned_trigger_rule(game, c, state, value)
+        or not _owned_trigger_rule(game, c, state, value, action)
     ):
         raise WorkflowError("STALE_MOCKINGBIRD: recover the actual trigger, rule and original cast")
     state.mockingbird = state.mockingbird.model_copy(
@@ -709,8 +714,10 @@ class MockingbirdService:
                     "Finish the actual ongoing conversation before rolling its capabilities again"
                 )
             identity, event = str(uuid4()), str(uuid4())
+            lesson = _person_lesson(self.game, c, state, actor) if play == PERSON else None
             value = Trigger(
                 id=identity,
+                learned_source=lesson.id if lesson else None,
                 bonded_source=bonded_source,
                 changeling_source=changeling_source,
                 play=play,
@@ -918,11 +925,14 @@ class MockingbirdService:
                     load_registry().require_available(rule)
                 except ValueError:
                     continue
-                if rules.owns(state, actor, rule):
+                if _permanent_rule(state, actor, play) or (
+                    play == PERSON and _person_lesson(self.game, c, state, actor) is not None
+                ):
                     plays.append(play)
             return dict(
                 actor=actor.model_dump(mode="json"),
                 plays=plays,
+                learned_person=_person_lesson(self.game, c, state, actor) is not None,
                 sheet_revision=state.sheets[actor.entity].revision
                 if actor.kind == "pilot"
                 else None,
@@ -1219,7 +1229,9 @@ def _owned_source_rule(
     bonded_source: str | None,
 ) -> bool:
     if bonded_source is None:
-        return rules.owns(state, actor, PLAY_RULES[play])
+        return _permanent_rule(state, actor, play) or (
+            play == PERSON and _person_lesson(game, c, state, actor) is not None
+        )
     if play != SEX or len(targets) != 1:
         raise WorkflowError("Only this actual single-counterpart Sex source may be borrowed")
     from girlframe.services.m3_bonded import admit_delegation
@@ -1227,9 +1239,115 @@ def _owned_source_rule(
     return admit_delegation(game, c, state, actor, targets[0], PLAY_RULES[play], bonded_source)
 
 
-def _owned_trigger_rule(
-    game: "GameService", c: Connection, state: GameState, value: Trigger
+def _permanent_rule(state: GameState, actor: ActorRef, play: str) -> bool:
+    """Keep actual native/permanent rights distinct from a temporary lesson."""
+    if actor.kind != "pilot":
+        return rules.owns(state, actor, PLAY_RULES[play])
+    sheet = state.sheets.get(actor.entity)
+    if sheet is None or sheet.character_id != actor.incarnation:
+        return False
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+
+    runtime = sheet.girl_runtime
+    own = sheet.model_copy(
+        update={
+            "girl_runtime": runtime.model_copy(update={"learned_plays": ()}) if runtime else None
+        }
+    )
+    return has_rule(own, PLAY_RULES[play], "MOCKINGBIRD")
+
+
+def _person_lesson(
+    game: "GameService", c: Connection, state: GameState, actor: ActorRef
+) -> LearnedPlayUse | None:
+    if _permanent_rule(state, actor, PERSON):
+        return None
+    from girlframe.services.m3_learned_plays import available
+
+    return available(game, c, state, actor, rules.PERSON)
+
+
+def prove_learned_trigger(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    trigger: Trigger,
+    action: dict[str, Any] | None = None,
 ) -> bool:
+    """One real source birth and its own lesson/receipt, never generic book authority."""
+    if trigger.learned_source is None:
+        return False
+    from girlframe.services.m3_dose_up import _roll_source
+    from girlframe.services.m3_handler_advancements import _history
+    from girlframe.services.m3_learned_plays import available, prove_consumed
+
+    original = _history(c, game, trigger.source_event)
+    declared = _trigger(original, trigger.id)
+    audit = c.execute(
+        sa.select(t.events.c.kind, t.events.c.actor_id, t.events.c.payload_json).where(
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.id == trigger.source_event,
+        )
+    ).first()
+    lesson = available(game, c, original, trigger.actor, rules.PERSON)
+    if (
+        trigger.play != PERSON
+        or trigger.actor.kind != "pilot"
+        or trigger.bonded_source is not None
+        or trigger.changeling_source is not None
+        or declared.model_copy(update={"state": trigger.state, "action": trigger.action}) != trigger
+        or audit is None
+        or audit.kind != "m3.mockingbird_trigger"
+        or audit.actor_id != trigger.actor.entity
+        or json.loads(audit.payload_json).get("trigger") != trigger.id
+        or lesson is None
+        or lesson.id != trigger.learned_source
+    ):
+        raise WorkflowError("Prove the actual original conversation and exact one-use lesson")
+    if action is None:
+        current = available(game, c, state, trigger.actor, rules.PERSON)
+        if current is None or current.id != trigger.learned_source:
+            raise WorkflowError(
+                "This exact conversation lesson is spent or reserved; resume its Play"
+            )
+        return True
+    meta = action["data"].get("mockingbird", {})
+    claimed = action["data"].get("learned_play", {})
+    if (
+        str(action["actor_id"]) != trigger.actor.entity
+        or meta.get("trigger") != trigger.id
+        or meta.get("learned_source") != trigger.learned_source
+        or claimed.get("id") != trigger.learned_source
+        or claimed.get("rule_id") != rules.PERSON
+        or action["data"]["prepared"]["source_work"] != trigger.id
+        or action["data"]["prepared"]["play"] != PERSON
+        or trigger.action not in (None, action["id"])
+    ):
+        raise WorkflowError("Use the exact real conversation Action's own learning reservation")
+    if action["data"].get("receipt"):
+        event, _ = _roll_source(game, c, action)
+        if trigger.action != action["id"] or not prove_consumed(
+            game, c, state, action, rules.PERSON, event
+        ):
+            raise WorkflowError("Preserve this lesson's exact committed conversation receipt")
+    else:
+        reserved = available(game, c, state, trigger.actor, rules.PERSON, action["id"])
+        if reserved is None or reserved.id != trigger.learned_source:
+            raise WorkflowError("Recover this original conversation's own unrolled lesson")
+    return True
+
+
+def _owned_trigger_rule(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    value: Trigger,
+    action: dict[str, Any] | None = None,
+) -> bool:
+    if value.learned_source is not None:
+        return prove_learned_trigger(game, c, state, value, action)
+    if value.play == PERSON:
+        return _permanent_rule(state, value.actor, value.play)
     return _owned_source_rule(
         game,
         c,

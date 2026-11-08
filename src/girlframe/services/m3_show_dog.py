@@ -274,6 +274,7 @@ def validate_npc_introduction(
             x.kind == "base"
             and x.allegiance == "foundation"
             and x.condition != "destroyed"
+            and x.control_loss is None
             and x.cell == npc.cell == actual.cell
             for x in state.world.locations
         )
@@ -684,6 +685,7 @@ class ShowDogService:
                     for x in state.world.locations
                     if x.kind == "base"
                     and x.condition != "destroyed"
+                    and x.control_loss is None
                     and x.allegiance == "foundation"
                     and x.cell == cell
                 ]

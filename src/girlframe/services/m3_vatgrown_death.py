@@ -238,7 +238,7 @@ def stage_activation(
         or int(actor.entity) in state.order
         or state.world is None
         or not state.world.board.contains(issued.cell)
-        or not bases(state, issued.cell)
+        or not bases(state, issued.cell, available=True)
         or any(
             x.actor == actor
             or x.vessel_id == issued.body_vessel
@@ -417,7 +417,7 @@ class VatgrownDeathService:
                 or any(x.replacement == identity for x in rules.records(state, rules.Issue))
                 or state.world is None
                 or not state.world.board.contains(cell)
-                or not bases(state, cell)
+                or not bases(state, cell, available=True)
             ):
                 raise WorkflowError(
                     "Refresh the actual requested kit and record its real physical supply"

@@ -2,7 +2,7 @@
 
 import asyncio
 import json
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import discord
 
@@ -141,6 +141,24 @@ async def open_action(
                 Field("confirm", "Printed trigger", (("yes", "I am spending time at base"),)),
             ]
             fields = [x for x in fields if x.key != "identity" or x.options]
+            from girlframe.engine.m3_girl_runtime_state import has_rule
+
+            if has_rule(
+                sheet,
+                "girl.stim-blissed.disposable-psyche",
+                "STIM-BLISSED",
+            ):
+                fields.append(
+                    Field(
+                        "disposable_heat",
+                        "Optional Identity disposal: additional Heat",
+                        (
+                            ("0", "Keep marked Identity"),
+                            ("3", "Remove marked Identity; gain 3 extra Heat"),
+                            ("4", "Remove marked Identity; gain 4 extra Heat"),
+                        ),
+                    )
+                )
             observation = own is not None and own.get("observation") is not None
             title = (
                 "Void Observation — confirm your Play"
@@ -177,6 +195,9 @@ async def open_action(
                     identity=one(values, "identity"),
                     gain=int(one(values, "gain") or "0"),
                     pair_share=int(one(values, "share") or "0"),
+                    disposable_heat=cast(
+                        Literal[0, 3, 4], int(one(values, "disposable_heat") or "0")
+                    ),
                 )
                 await asyncio.to_thread(
                     service.game.begin,

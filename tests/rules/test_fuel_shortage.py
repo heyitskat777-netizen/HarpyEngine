@@ -235,3 +235,229 @@ def test_actual_armed_shortage_first_battle_native_unavoidable_loss_and_private_
     with pytest.raises(WorkflowError):
         service.view(PLAYER, identity)
     assert len(rules.records(state(game))) == 1
+
+
+def _actual_alternative(ledger, npc_outcome, site_outcome):
+    from test_world import gorgon
+
+    from girlframe.discord_adapter.m3_fuel_shortage import open_manifestation
+    from girlframe.engine.m3_actors import resolve
+    from girlframe.engine.m3_mockingbird_sex import corruption_options
+    from girlframe.engine.m3_strain_effects import Choice
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_fuel_shortage import prove_npc_void_tag
+    from girlframe.services.m3_strain_effects import EffectService
+
+    strain, game = ready(ledger, face=1)
+    approval = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            m3_approval=approval.model_copy(
+                update=dict(subsystems=approval.subsystems | {"world", "plays"}),
+            )
+        )
+    )
+    worlds = WorldService(strain.missions)
+    world = initial()
+    worlds.initialize(
+        ADMIN,
+        "alternative-map",
+        state(game).revision,
+        world.board,
+        world.locations,
+        world.gorgons[0],
+    )
+    npc = Npc(
+        id="actual-threatened-person",
+        name="Actual threatened doctor",
+        jobs=("doctor",),
+        controller=1,
+        cell=(0, 0),
+        detail="An actual existing person at the battle site",
+    )
+    worlds.npc(ADMIN, "alternative-npc", state(game).revision, npc)
+    sprite_victim = Npc(
+        id="actual-sprite-captive",
+        name="Actual initial Sprite captive",
+        jobs=("civilian",),
+        controller=1,
+        cell=(0, 0),
+        detail="Another actual person captured by the separate printed Sprite introduction",
+    )
+    worlds.npc(ADMIN, "alternative-sprite-victim", state(game).revision, sprite_victim)
+    with ledger.transaction() as c:
+        actual = place(place(state(game), 2), 3)
+        # Known initial synthetic fixture conditions, before any selected Strain source.
+        for sheet in actual.sheets.values():
+            for asset in sheet.assets:
+                asset.void = False
+        game.event(c, 1, str(uuid4()), "synthetic.actual_alternative_baseline", actual)
+    victim = ActorRef(kind="npc", entity=npc.id)
+    change_cast(CastService(ActorService(strain.missions)), ADMIN, "join", victim)
+    prepared(strain, game, high=frozenset({"budget"}))
+    request = next(x for x in state(game).strain.requests if x.track == "budget")
+    strain.roll(ADMIN, "alternative-budget-die", request.id, 1, state(game).revision)
+    strain.choose(ADMIN, "alternative-budget-column", request.id, 2, state(game).revision, 2)
+    identity = request.id + ":effect"
+    service = FuelService(game)
+    service.arm(ADMIN, "alternative-arm", identity, state(game).revision)
+    # Actual separate Strain introduction supplies the real Gorgon, not a fabricated captor.
+    spawn = next(x for x in state(game).strain.requests if x.track == "void")
+    assert spawn.severity == "low"
+    strain.dice.face = 5
+    strain.roll(ADMIN, "actual-threat-die", spawn.id, 1, state(game).revision)
+    strain.choose(ADMIN, "actual-threat-column", spawn.id, 2, state(game).revision, 1)
+    incoming = gorgon("sprite", "actual-fuel-threat", (0, 0))
+    EffectService(strain).apply(
+        ADMIN,
+        "actual-threat-introduction",
+        spawn.id + ":effect",
+        1,
+        state(game).revision,
+        Choice(
+            rule_id="strain.void.low.5.1",
+            victim=sprite_victim.id,
+            account="The actual Sprite enters this base while following the original Gorgon",
+            gorgon=incoming,
+        ),
+    )
+    assert rules.records(state(game))[0].phase == "armed"
+    threat = ActorRef(kind="gorgon", entity=incoming.id)
+    battle = BattleService(ledger)
+    preview = battle.preview(PLAYER, 900)
+    actor = next(
+        x for x in preview["actors"] if x["ref"]["kind"] == "pilot" and x["ref"]["entity"] == "2"
+    )
+    target = next(
+        x for x in preview["actors"] if x["ref"]["kind"] == "pilot" and x["ref"]["entity"] == "3"
+    )
+    declaration = Declaration.model_validate_json(
+        __import__("json").dumps(
+            dict(
+                play="all_out_assault",
+                actor=actor["ref"],
+                target=target["ref"],
+                attacking_asset=actor["assets"][0]["id"],
+                target_asset=target["assets"][0]["id"],
+                actor_sha256=actor["sha256"],
+                target_sha256=target["sha256"],
+                account="The actual Cadre arrives at this real battle after the fuel delay",
+            )
+        )
+    )
+    offered = battle.propose(PLAYER, "alternative-battle", preview["revision"], 900, declaration)
+    manifestation_id = None
+    if npc_outcome == "corrupt":
+
+        async def actual_handler_choice():
+            own = current(1, 992001)
+            await own.response.defer(ephemeral=True)
+            await open_manifestation(own, service, identity)
+            form = own.edit_original_response.call_args.kwargs["view"]
+            assert not await form.interaction_check(current(2))
+            form.values.update(context=(offered["id"],))
+            select = current(1, 992002)
+            await form.confirm.callback(select)
+            actual = select.edit_original_response.call_args.kwargs["view"]
+            actual.values.update(npc=(npc.id,), threat=(incoming.id,), manifestation=("brain",))
+            confirmation = current(1, 992003)
+            await actual.confirm.callback(confirmation)
+            assert actual.completed, str(confirmation.edit_original_response.call_args)
+
+        asyncio.run(actual_handler_choice())
+        manifestation_id = rules.manifestations(state(game))[0].id
+        assert next(x for x in state(game).world.npcs if x.id == npc.id) == npc
+    prefix = "fuel:" + identity + ":"
+    values = {
+        prefix + "npc": (npc.id,),
+        prefix + "site": ("base0",),
+        prefix + "npc_outcome": (npc_outcome,),
+        prefix + "site_outcome": (site_outcome,),
+        prefix + "threat": (incoming.id,),
+        prefix + "account": "Actual Gorgon loss before relief; no opportunity to prevent it",
+    }
+    if manifestation_id:
+        values[prefix + "manifestation_source"] = (manifestation_id,)
+    before = state(game)
+    base = next(x for x in before.world.locations if x.id == "base0")
+
+    async def actual_loss():
+        own = current(1, 992004)
+        own.channel_id = 900
+        await own.response.defer(ephemeral=True)
+        await open_context(own, battle, offered["id"])
+        form = own.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            values
+            | dict(
+                opening=("yes",),
+                reach=("yes",),
+                outside=("no",),
+                indirect=("no",),
+                evidence="Actual source battle and unavoidable loss",
+            )
+        )
+        confirmation = current(1, 992005)
+        await form.confirm.callback(confirmation)
+        assert form.completed, str(confirmation.edit_original_response.call_args)
+
+    asyncio.run(actual_loss())
+    final = state(game)
+    (saved,) = rules.records(final)
+    assert saved.phase == "complete" and saved.loss.threat == threat
+    changed_npc = next(x for x in final.world.npcs if x.id == npc.id)
+    site = next(x for x in final.world.locations if x.id == base.id)
+    assert changed_npc.alive and changed_npc.controller == npc.controller
+    assert changed_npc.bonds == npc.bonds and changed_npc.jobs == npc.jobs
+    assert changed_npc.revealed == npc.revealed and changed_npc.employment == npc.employment
+    assert site.condition == base.condition and site.allegiance == base.allegiance
+    assert not site.operational and not site.foundation_operational
+    assert site.control_loss.kind == ("captured" if site_outcome == "capture" else "corrupted")
+    assert site.control_loss.threat == threat and site.control_loss.source == identity
+    assert not any(
+        x.get("kind") in ("quadrant_loss", "structure_destroyed_source") for x in final.facts
+    )
+    public = worlds.get(PLAYER)
+    assert '"control_loss"' not in __import__("json").dumps(public)
+    with ledger.engine.connect() as c:
+        assert prove(game, c, final, identity) == saved
+        actual = resolve(final, victim, profiles(c, ledger.campaign_id))
+        if npc_outcome == "capture":
+            assert (
+                changed_npc.captive_of == incoming.id
+                and changed_npc.custody_event == saved.battle_event
+            )
+            assert actual.custody == "gorgon_captive"
+            assert not any(r.actor == victim for cast in final.scene_casts for r in cast.roles)
+        else:
+            assert changed_npc.captive_of == npc.captive_of and actual.custody is None
+            (tag_id,) = rules.npc_void_tags(final, victim)
+            tag = prove_npc_void_tag(game, c, final, victim, tag_id)
+            assert tag.label == "Void of the brain" and tag.giver_entity == threat.model_dump_json()
+            assert ("tag:" + tag.id, tag.label) in corruption_options(final, victim)
+            removed = final.model_copy(deep=True)
+            removed.world = removed.world.model_copy(
+                update=dict(
+                    npcs=tuple(
+                        x.model_copy(update=dict(tags=tuple(t for t in x.tags if t.id != tag_id)))
+                        if x.id == npc.id
+                        else x
+                        for x in removed.world.npcs
+                    )
+                )
+            )
+            assert not any(key == "tag:" + tag_id for key, _ in corruption_options(removed, victim))
+            # Pure removal suppresses the option; immutable birth proof does not require a live Tag.
+            assert prove(game, c, removed, identity) == saved
+    assert game.dice.calls == 0 and strain.dice.calls == 2
+    assert service.view(ADMIN, identity)["phase"] == "complete"
+    with pytest.raises(WorkflowError):
+        service.view(PLAYER, identity)
+
+
+def test_actual_fuel_capture_and_corrupted_site_preserve_bodies_and_operational_control(ledger):
+    _actual_alternative(ledger, "capture", "corrupt")
+
+
+def test_actual_fuel_npc_void_and_captured_site_keep_handler_choice_and_tag_provenance(ledger):
+    _actual_alternative(ledger, "corrupt", "capture")

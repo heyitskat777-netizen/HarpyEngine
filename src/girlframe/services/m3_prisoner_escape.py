@@ -138,6 +138,7 @@ def _custody(game: GameService, c: Connection, state: GameState, actor: ActorRef
             and x.kind == "base"
             and x.allegiance == "foundation"
             and x.condition != "destroyed"
+            and x.control_loss is None
             for x in state.world.locations
         )
     ):
@@ -520,6 +521,7 @@ class PrisonerEscapeService:
                         and x.kind == "base"
                         and x.allegiance == "foundation"
                         and x.condition != "destroyed"
+                        and x.control_loss is None
                         for x in state.world.locations
                     )
                 ):

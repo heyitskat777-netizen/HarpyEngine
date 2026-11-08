@@ -106,6 +106,16 @@ class Fallout(Model):
     expired_event: str | None = None
 
 
+class WorldLoss(Model):
+    """A real source's site-control loss, separate from affiliation or destruction."""
+
+    source: str = Field(min_length=1, max_length=100)
+    event: str = Field(min_length=1, max_length=100)
+    kind: Literal["captured", "corrupted"]
+    threat: ActorRef
+    account: str = Field(min_length=1, max_length=1200)
+
+
 class Location(PlacedEntity):
     kind: Literal["base", "city", "important"]
     allegiance: Literal["foundation", "rebel", "independent"] = "foundation"
@@ -113,11 +123,21 @@ class Location(PlacedEntity):
     blocked_by: tuple[str, ...] = ()
     fallout_sources: tuple[str, ...] = Field(default=(), exclude_if=lambda x: not x)
     protection_sources: tuple[str, ...] = Field(default=(), exclude_if=lambda x: not x)
+    control_loss: WorldLoss | None = Field(default=None, exclude_if=lambda x: x is None)
     ship: ShipHull | None = Field(default=None, exclude_if=lambda x: x is None)
 
     @property
     def operational(self) -> bool:
-        return self.condition != "destroyed" and not self.blocked_by and not self.fallout_sources
+        return (
+            self.condition != "destroyed"
+            and not self.blocked_by
+            and not self.fallout_sources
+            and self.control_loss is None
+        )
+
+    @property
+    def foundation_operational(self) -> bool:
+        return self.allegiance == "foundation" and self.operational
 
 
 class Asset(Model):

@@ -111,7 +111,7 @@ def put(
     state.facts.append(dict(kind=KINDS[type(value)], id=value.id, body=value.model_dump_json()))
 
 
-def bases(state: GameState, cell: tuple[int, int]) -> tuple[str, ...]:
+def bases(state: GameState, cell: tuple[int, int], *, available: bool = False) -> tuple[str, ...]:
     if state.world is None:
         raise ValueError("Use the actual mapped Foundation base endpoints")
     return tuple(
@@ -122,6 +122,7 @@ def bases(state: GameState, cell: tuple[int, int]) -> tuple[str, ...]:
             and location.kind == "base"
             and location.allegiance == "foundation"
             and location.condition != "destroyed"
+            and (not available or location.control_loss is None)
         )
     )
 

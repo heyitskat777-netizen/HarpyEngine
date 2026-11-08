@@ -49,13 +49,25 @@ from girlframe.services.shared_setup import SharedSetupService
 ledger = ledger_fixture
 
 
-def ready(store, girl="MOCKINGBIRD", frame="JANUS-B", *, other_frame="JANUS-B"):
+def ready(
+    store,
+    girl="MOCKINGBIRD",
+    frame="JANUS-B",
+    *,
+    other_frame="JANUS-B",
+    other_girl="MOCKINGBIRD",
+):
     store.policy = store.policy.model_copy(update={"owner_initial_conditions": InitialConditions()})
     seed(store)
-    if other_frame == "JANUS-B":
+    if other_frame == "JANUS-B" and other_girl == "MOCKINGBIRD":
         seed(store, OTHER)
     else:
-        seed(store, OTHER, frame=other_frame)
+        options = {}
+        if other_frame != "JANUS-B":
+            options["frame"] = other_frame
+        if other_girl != "MOCKINGBIRD":
+            options["girl"] = other_girl
+        seed(store, OTHER, **options)
     store.save_draft(
         PLAYER,
         "profile",

@@ -42,7 +42,17 @@ async def open_book(
             "play",
             "Choose your actual owned Play",
             tuple(
-                (x, "Bad at Being a Person" if x == PERSON else "Sex Play") for x in data["plays"]
+                (
+                    x,
+                    (
+                        "Bad at Being a Person — your one-use lesson"
+                        if data.get("learned_person", False)
+                        else "Bad at Being a Person"
+                    )
+                    if x == PERSON
+                    else "Sex Play",
+                )
+                for x in data["plays"]
             ),
         ),
         Field(
@@ -87,7 +97,12 @@ async def open_book(
         interaction.user.id,
         "Mockingbird Plays",
         "Use the actual owned rule and actual people. "
-        "A factual declaration never invents consent or another character's actions.",
+        "A factual declaration never invents consent or another character's actions. "
+        + (
+            "Your lesson's actual roll uses your own resources and spends its one use."
+            if data.get("learned_person", False)
+            else ""
+        ),
         fields,
         submit,
     ).present(interaction)
@@ -256,7 +271,14 @@ async def open_request(
     if data["action"]:
         await reply(
             interaction,
-            "This source already has Play " + data["action"] + ". Resume its pending decisions.",
+            (
+                "Actual learned conversation source:\n" + body["account"] + "\n"
+                if body.get("learned_source")
+                else ""
+            )
+            + "This source already has Play "
+            + data["action"]
+            + ". Resume its pending decisions.",
         )
         return
     if body["state"] == "ready" and data["owner"]:
@@ -268,6 +290,8 @@ async def open_request(
         from girlframe.services.m3_dampener import DampenerService
 
         dampener_controls = await dampener_fields(interaction, DampenerService(service.game), actor)
+        if body.get("learned_source") and not fresh.get("learned_person", False):
+            raise WorkflowError("Reopen this exact available lesson or resume its actual Play")
         fields = [
             Field(
                 "heat",

@@ -391,6 +391,7 @@ def source_trigger(
                 "cast_sha256",
                 "source_event",
                 "account",
+                "learned_source",
             )
         )
         or [(x.actor, x.controller) for x in declared.parties]
@@ -408,6 +409,11 @@ def source_trigger(
         or json.loads(audit["payload_json"]).get("trigger") != trigger.id
     ):
         raise WorkflowError("Prove original cast, actual rule and original authored trigger")
+    if trigger.learned_source is not None:
+        from girlframe.services.m3_mockingbird_plays import prove_learned_trigger
+
+        if handler_required or not prove_learned_trigger(game, c, proof, trigger, action):
+            raise WorkflowError("Prove this actual learned conversation and original receipt")
     if not handler_required:
         return caster, int(action["actor_id"])
     if meta["judge"] is None:

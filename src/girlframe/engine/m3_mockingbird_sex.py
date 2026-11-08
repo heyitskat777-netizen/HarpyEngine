@@ -507,7 +507,7 @@ def npc_void(
 ) -> GameState:
     from uuid import NAMESPACE_URL, uuid5
 
-    from girlframe.engine.m3_world_state import WorldTag
+    from girlframe.engine.m3_npc_void import npc_void_tag
 
     if manifestation not in ("brain", "bones", "flesh", "abstract") or target.kind != "npc":
         raise ValueError("The actual source Handler chooses one printed NPC manifestation")
@@ -519,10 +519,10 @@ def npc_void(
     )
     if npc is None or "director" in npc.jobs:
         raise ValueError("Normal NPC physiology only; a Director uses the real Handler source port")
-    tag = WorldTag(
-        id=str(uuid5(NAMESPACE_URL, event + ":sex-void:" + target.entity)),
-        label="Void of the " + manifestation,
-        giver_entity=giver.model_dump_json() if giver else "gm:" + str(controller) + ":" + event,
+    tag = npc_void_tag(
+        str(uuid5(NAMESPACE_URL, event + ":sex-void:" + target.entity)),
+        manifestation,
+        giver.model_dump_json() if giver else "gm:" + str(controller) + ":" + event,
     )
     assert state.world is not None
     state.world = state.world.model_copy(
@@ -553,12 +553,15 @@ def corruption_options(state: GameState, target: ActorRef) -> tuple[tuple[str, s
 
     result = [("asset:" + x.id, x.name) for x in assets(state, target) if x.void]
     if target.kind == "npc" and state.world:
+        from girlframe.engine.m3_fuel_shortage import npc_void_tags
+
         proven = {
             x["tag"]
             for x in state.facts
             if x.get("kind") == "mockingbird_npc_void"
             and x.get("actor") == target.model_dump_json()
         }
+        proven.update(npc_void_tags(state, target))
         for fact in state.facts:
             if fact.get("kind") == "dive_effect" and fact.get("option") == "nearby_npcs_gain_void":
                 if any(x.get("npc") == target.entity for x in json.loads(fact["effect"])["npcs"]):

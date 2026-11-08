@@ -2398,10 +2398,8 @@ class GameService:
 
             prepare_disposal(self, c, state, sheet.owner, prepared)
             if prepared.disposable_heat and (
-                m3 is not None
-                or nightmare_core is not None
+                (m3 is not None and prepared.play not in ("go_off_duty", "void_observation"))
                 or (janus is not None and janus.get("mode") != "pandora")
-                or prepared.kicked_puppy_basis
             ):
                 raise WorkflowError(
                     "UNSUPPORTED_RULE: disposal needs this non-Heat Play's source adapter."

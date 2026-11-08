@@ -68,15 +68,21 @@ def revision(ledger, viewer=ADMIN):
     return ledger.status(viewer)["revision"]
 
 
-def seed(ledger, viewer=PLAYER, callsign="SYNTH_A", notes="PRIVATE_CANARY", *, frame="JANUS-B"):
+def seed(
+    ledger,
+    viewer=PLAYER,
+    callsign="SYNTH_A",
+    notes="PRIVATE_CANARY",
+    *,
+    frame="JANUS-B",
+    girl="MOCKINGBIRD",
+):
     ledger.join(viewer, f"join-{viewer.user_id}")
     ledger.save_draft(
         viewer,
         f"draft-{viewer.user_id}",
         0,
-        DraftInput(
-            callsign=callsign, girl_playbook="MOCKINGBIRD", frame_playbook=frame, notes=notes
-        ),
+        DraftInput(callsign=callsign, girl_playbook=girl, frame_playbook=frame, notes=notes),
     )
 
 

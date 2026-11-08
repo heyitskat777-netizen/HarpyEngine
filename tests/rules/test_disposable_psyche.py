@@ -294,3 +294,144 @@ def test_existing_protected_identity_guards_reject_before_mutation(ledger, tmp_p
             mark_identity(sheet, selected_identity.id, 1, state=scratch, disposable_heat=3)
         assert sheet.model_dump_json() == saved
     assert state(game) == original and game.dice.calls == 0
+
+
+def test_native_off_duty_disposal_keeps_status_roll_and_actual_heat_receipt(
+    ledger, tmp_path, monkeypatch
+):
+    missions, game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch)
+    cycle, period = real_period(missions, game)
+    before = state(game)
+    identity = next(x for x in before.sheets["2"].identities if not x.marked)
+    game.dice.faces = (2, 2)
+
+    async def choose():
+        from girlframe.discord_adapter.m3_off_duty_cycle import open_action
+
+        interaction = current(2, 98931)
+        interaction.channel_id = 900
+        await interaction.response.defer(ephemeral=True)
+        await open_action(interaction, cycle, period, "play")
+        form = interaction.edit_original_response.call_args.kwargs["view"]
+        assert any(x.key == "disposable_heat" for x in form.fields)
+        form.values.update(
+            context="I mark and discard this real Identity during my time at base",
+            identity=(identity.id,),
+            gain=("1",),
+            share=("0",),
+            disposable_heat=("3",),
+            confirm=("yes",),
+        )
+        response = current(2, 98932)
+        await form.confirm.callback(response)
+        assert form.completed, response.edit_original_response.call_args_list
+        with ledger.engine.connect() as c:
+            return json.loads(
+                c.scalar(
+                    sa.select(t.m2["m2_actions"].c.body_json).where(
+                        t.m2["m2_actions"].c.campaign_id == ledger.campaign_id,
+                        t.m2["m2_actions"].c.actor_id == "2",
+                    )
+                )
+            )
+
+    prepared = asyncio.run(choose())
+    assert state(game).sheets["2"] == before.sheets["2"]
+    assert game.dice.calls == 0
+    with ledger.engine.connect() as c:
+        action = c.scalar(
+            sa.select(t.m2["m2_actions"].c.id).where(
+                t.m2["m2_actions"].c.campaign_id == ledger.campaign_id,
+                t.m2["m2_actions"].c.actor_id == "2",
+            )
+        )
+    assert prepared["prepared"]["play"] == "go_off_duty"
+    tick(worker, gateway, 3)
+    receipt = game.inspect(PLAYER, action)["receipt"]
+    assert receipt["modifier_source"] == "Status"
+    assert receipt["heat"] == 0 and receipt["pre_total"] == 8
+    assert receipt["disposable_psyche"] == action
+    actual = state(game)
+    assert actual.sheets["2"].heat == before.sheets["2"].heat + 4
+    assert identity.id not in {x.id for x in actual.sheets["2"].identities}
+    assert actual.sheets["3"] == before.sheets["3"]
+    with ledger.engine.connect() as c:
+        source = prove_disposal(game, c, actual, action)
+    assert (source.identity, source.gain, source.extra, source.spent) == (identity, 1, 3, 0)
+    assert game.roll(PLAYER, str(uuid4()), action)["receipt"] == receipt
+    assert game.dice.calls == 1
+    assert controls.view(PLAYER, action)["extra"] == 3
+    with pytest.raises(WorkflowError):
+        controls.view(OTHER, action)
+
+
+@pytest.mark.parametrize("basis", ("nightmare", "kicked_puppy"))
+def test_actual_paid_non_heat_basis_disposal_keeps_source_modifier_and_receipt(
+    ledger, tmp_path, monkeypatch, basis
+):
+    from girlframe.engine import m3_kicked_puppy as puppy
+    from girlframe.engine import m3_nightmare as nightmare
+    from girlframe.engine.m3_actor_bonds import current_ref
+    from girlframe.services.m3_kicked_puppy import KickedPuppyService
+    from girlframe.services.m3_nightmare import NightmareService
+
+    is_nightmare = basis == "nightmare"
+    frame = "CONSUME" if is_nightmare else "WYVERN 0.4"
+    _, game = service(ledger, girl="STIM-BLISSED", frame=frame)
+    source_rule = nightmare.RULE if is_nightmare else puppy.RULE
+    approved(ledger, game, tmp_path, monkeypatch, extra=(rules.RULE, source_rule))
+    with ledger.transaction() as c:
+        actual = state(game)
+        sheet = actual.sheets["2"]
+        sheet.permissions = 2
+        sheet.heat = 5
+        if is_nightmare:
+            next(x for x in sheet.assets if x.family == "girl").void = True
+        else:
+            next(x for x in sheet.assets if x.family == "girl").damaged = True
+        game.event(c, 1, str(uuid4()), "synthetic.actual_prior_modifier_resources", actual)
+    source = NightmareService(game) if is_nightmare else KickedPuppyService(game)
+    menu = source.menu(PLAYER)
+    source.buy(
+        PLAYER,
+        str(uuid4()),
+        menu["revision"],
+        current_ref(state(game), 2),
+        menu["frame"],
+        "Actual paid source with the original native Frame",
+    )
+    before = state(game)
+    identity = before.sheets["2"].identities[0]
+    action = game.begin(
+        PLAYER,
+        str(uuid4()),
+        900,
+        before.sheets["2"].revision,
+        PlayInput(
+            play="keep_your_head" if is_nightmare else "flirt",
+            target=None if is_nightmare else 3,
+            context="Actual source-based Play while discarding this original Identity",
+            trigger_confirmed=True,
+            heat=0,
+            identity=identity.id,
+            gain=1,
+            disposable_heat=3,
+            kicked_puppy_basis=not is_nightmare,
+        ),
+    )["action_id"]
+    assert state(game).sheets["2"] == before.sheets["2"]
+    game.dice.faces = (3, 3)
+    tick(GameWorker(game), Gateway(), 3)
+    actual = state(game)
+    receipt = game.inspect(PLAYER, action)["receipt"]
+    assert receipt["modifier_source"] == (
+        "Void Assets (Nightmare Core)" if is_nightmare else "Damaged Girl Assets (Kicked Puppy)"
+    )
+    assert receipt["base_modifier"] == 1 and receipt["heat"] == 0
+    assert actual.sheets["2"].heat == 9
+    assert identity.id not in {x.id for x in actual.sheets["2"].identities}
+    with ledger.engine.connect() as c:
+        disposal = prove_disposal(game, c, actual, action)
+    assert (disposal.extra, disposal.spent) == (3, 0)
+    assert game.roll(PLAYER, str(uuid4()), action)["receipt"] == receipt
+    assert game.dice.calls == 1

@@ -104,7 +104,10 @@ def prisoner(
     bases = {
         x.cell
         for x in world.locations
-        if x.kind == "base" and x.allegiance == "foundation" and x.condition != "destroyed"
+        if x.kind == "base"
+        and x.allegiance == "foundation"
+        and x.condition != "destroyed"
+        and x.control_loss is None
     }
     if not separator:
         raise ValueError("Select an actual saved prisoner")

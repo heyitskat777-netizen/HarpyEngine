@@ -132,6 +132,9 @@ def prepare(
     authorize(game, c, viewer)
     actor = current_ref(state, viewer.user_id)
     target = prepared.target_actor
+    from girlframe.services.m3_required_plays import direct_nomination
+
+    nominated = direct_nomination(game, c, state, actor, prepared, channel)
     if (
         not has_rule(state.sheets[actor.entity], rules.RULE, "ALPHA")
         or target is None
@@ -143,7 +146,7 @@ def prepare(
         )
     if (
         prepared.target is not None
-        or prepared.source_work
+        or (prepared.source_work and not nominated)
         or prepared.off_duty_id
         or prepared.order_id
     ):

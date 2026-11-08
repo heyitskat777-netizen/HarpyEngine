@@ -403,3 +403,105 @@ def test_actual_nomination_native_stim_self_dose_cancel_relink_drugs_and_pause_r
     assert {k[0] + k[1]: v for k, v in gateway.values.items()} == json.loads(
         json.dumps(gateway.original)
     )
+
+
+def test_actual_ankou_nomination_native_own_advice_and_real_listening_complete_source(
+    ledger, tmp_path, monkeypatch
+):
+    from girlframe.discord_adapter.m3_ankou import open_ankou
+    from girlframe.engine import m3_oldgen as oldgen
+    from girlframe.engine.m3_actor_bonds import set_depth
+    from girlframe.services.m3_oldgen import prove_advice
+
+    _, game = service(ledger, girl="OLDGEN", frame=ankou.FRAME)
+    approved(ledger, game, tmp_path, monkeypatch, extra=(ankou.RELAY, oldgen.ADVICE))
+    with ledger.transaction() as c:
+        actual = state(game)
+        actual.world = initial()
+        actual = place(place(actual, 2, mode="outside_frame"), 3, mode="outside_frame")
+        actual.sheets["2"].heat = 3
+        event = str(uuid4())
+        actual = set_depth(actual, current_ref(actual, 2), current_ref(actual, 3), 2, event)
+        game.event(c, 1, event, "synthetic.initial_oldgen_ankou_intense_relationship", actual)
+    controls = AnkouService(game)
+    worker, gateway = GameWorker(game), Gateway()
+    relay = controls.activate_relay(
+        PLAYER,
+        str(uuid4()),
+        900,
+        state(game).revision,
+        ("speech", "touch"),
+        "I actually activate this Emotional Relay",
+    )["id"]
+    controls.choose_consequence(
+        ADMIN,
+        str(uuid4()),
+        state(game).revision,
+        relay,
+        "nominees",
+        "Actual Intense partners nominate their own choices",
+    )
+    nomination = next(
+        x
+        for x in ankou.records(state(game), ankou.Task)
+        if x.source == relay and x.kind == "nominate"
+    )
+    assert oldgen.PLAY in controls.view(OTHER, nomination.id)["nomination_options"]
+    controls.choose_task(
+        OTHER,
+        str(uuid4()),
+        state(game).revision,
+        nomination.id,
+        oldgen.PLAY,
+        "I nominate her own advice without supplying its maxim or recipient's reply",
+    )
+    task = next(
+        x
+        for x in ankou.records(state(game), ankou.Task)
+        if x.source == relay and x.kind == "perform"
+    )
+    asyncio.run(SourcePauseWorker(game).tick(gateway))
+    form = native(lambda i: open_ankou(i, controls, task.id), operation=("child",))
+    before = state(game)
+    submit(
+        form,
+        play=(oldgen.PLAY,),
+        target=("3",),
+        heat=("1",),
+        identity=(),
+        gain=("0",),
+        pair_share=("0",),
+        piloting=("no",),
+        witnessed=("no",),
+        trigger=("yes",),
+        context="I give the original partner actual advice as nominated",
+    )
+    with ledger.engine.connect() as c:
+        action = game.lock(c, 900)["action_id"]
+        raw = game.action(c, action)
+    assert raw["data"]["prepared"]["source_work"] == task.id
+    assert raw["data"]["ankou_effect_child"]["id"] == task.id
+    assert not rules.records(state(game))  # No synthetic accepted-recipe wrapper is necessary.
+    game.dice.faces = (3, 4)
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    assert not ankou.get(state(game), ankou.Task, task.id).completed_event
+    from test_m2_game import answer
+
+    answer(game, PLAYER, "oldgen_write_maxim", text="PRIVATE_ACTUAL_NOMINATED_ADVICE")
+    answer(game, OTHER, "oldgen_listen", text="I actually listen to this advice")
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    assert ankou.get(state(game), ankou.Task, task.id).completed_event
+    assert state(game).sheets["2"].heat == before.sheets["2"].heat - 1
+    with ledger.engine.connect() as c:
+        advice = prove_advice(game, c, state(game), action)
+        assert advice.actor == current_ref(state(game), 2)
+    assert (
+        game.roll(PLAYER, str(uuid4()), action)["receipt"]
+        == game.inspect(PLAYER, action)["receipt"]
+    )
+    assert game.dice.calls == 1
+    tick(worker, gateway, 5)
+    asyncio.run(SourcePauseWorker(game).tick(gateway))
+    with ledger.engine.connect() as c:
+        assert projection(game, c, task.id)["state"] == "closed"

@@ -25,6 +25,12 @@ from girlframe.services.m3_handler_advancements import _history
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
+DIRECT_NOMINATIONS = {
+    "brutalize": ("girl.alpha.brutalize", "ALPHA"),
+    "old_dog_new_pups": ("girl.oldgen.old-dog-new-pups", "OLDGEN"),
+    "easy_target": ("girl.newgirl.easy-target", "NEWGIRL"),
+}
+
 
 def _access(game: GameService, c: Connection, viewer: GuildViewer) -> None:
     Access(game.store).authorize(c, viewer, "plays")
@@ -44,6 +50,14 @@ def nomination_options(
         (dose.RULE, dose.PLAY, "STIM-BLISSED"),
     ):
         if not has_rule(sheet, rule, girl) or (play == dose.PLAY and sheet.girl != girl):
+            continue
+        try:
+            registry.require_available(rule)
+        except ValueError:
+            continue
+        result.append(play)
+    for play, (rule, girl) in DIRECT_NOMINATIONS.items():
+        if not has_rule(sheet, rule, girl):
             continue
         try:
             registry.require_available(rule)
@@ -83,10 +97,50 @@ def _task(game: GameService, c: Connection, state: GameState, source: str) -> an
     if (
         not peers
         or value.options != tuple(dict.fromkeys(choices))
-        or not {alpha.PLAY, dose.PLAY}.intersection(value.options)
+        or not {alpha.PLAY, dose.PLAY, *DIRECT_NOMINATIONS}.intersection(value.options)
     ):
         raise WorkflowError("Use only the actual printed nominees' supported offered Play")
     return value
+
+
+def direct_nomination(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    actor: ActorRef,
+    prepared: PlayInput,
+    channel: int,
+) -> bool:
+    """Positive actual Task source for three Plays with no separate recipe ID."""
+    if not prepared.source_work or not any(
+        x.id == prepared.source_work for x in ankou.records(state, ankou.Task)
+    ):
+        return False
+    task = _task(game, c, state, prepared.source_work)
+    if (
+        prepared.play not in DIRECT_NOMINATIONS
+        or prepared.play not in task.options
+        or task.actor != actor
+        or task.controller != int(actor.entity)
+        or current_ref(state, task.controller) != actor
+        or task.completed_event
+        or prepared.parent
+        or task.cast.channel != channel
+    ):
+        raise WorkflowError("Use the original actor's genuine selected standalone nomination")
+    from girlframe.services.m3_ankou_support import cast_actor
+
+    cast_actor(game, c, state, task.cast, actor)
+    if task.child:
+        action = game.action(c, task.child)
+        if (
+            action["actor_id"] != actor.entity
+            or action["data"].get("ankou_effect_child", {}).get("id") != task.id
+            or PlayInput.model_validate_json(json.dumps(action["data"]["prepared"])) != prepared
+            or action["parent_id"] is not None
+        ):
+            raise WorkflowError("Keep this exact original already-bound nominated Play")
+    return True
 
 
 def _birth(game: GameService, c: Connection, state: GameState, identity: str) -> rules.RequiredLink:

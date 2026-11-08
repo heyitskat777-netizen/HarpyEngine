@@ -223,7 +223,10 @@ class WorldService:
                         else {}
                     ),
                     "locations": [
-                        x.model_dump(mode="json", exclude={"blocked_by", "ship", "fallout_sources"})
+                        x.model_dump(
+                            mode="json",
+                            exclude={"blocked_by", "ship", "fallout_sources", "control_loss"},
+                        )
                         | {
                             "operational": x.operational,
                             "official_allegations": _official_location_claims(state, x.kind, x.id),
@@ -359,6 +362,7 @@ class WorldService:
                     and x.kind == "base"
                     and x.allegiance == "foundation"
                     and x.condition != "destroyed"
+                    and x.control_loss is None
                     for x in state.world.locations
                 )
             ):

@@ -13,7 +13,9 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef, ProfileBinding
 from girlframe.engine.m3_battle_state import Context
+from girlframe.engine.m3_collateral import loss as quadrant_loss
 from girlframe.engine.m3_handler_consequences import active_handler, same_handler_body
+from girlframe.engine.m3_world_state import WorldTag
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -282,13 +284,30 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         or len({x.source for x in authored}) != len(authored)
     ):
         raise WorkflowError("Prove exact original human selections and actual battle-site victims")
+    if value.loss.manifestation_source:
+        prove_manifestation(game, c, before, value.loss.manifestation_source)
+    try:
+        expected = rules.bind(
+            before,
+            prior,
+            battle,
+            value.loss,
+            value.battle_event,
+            _birth_bindings(game, c, before),
+        )
+    except ValueError as error:
+        raise WorkflowError(str(error)) from None
+    assert expected.world is not None
+    if saved not in rules.records(expected):
+        raise WorkflowError("Preserve exact bound source, original endpoints and selected outcomes")
     if value.original_npc is not None:
         assert value.loss.npc is not None
         npc = value.original_npc
-        if (
-            npc not in before.world.npcs
-            or npc.model_copy(update=dict(alive=False)) not in after.world.npcs
-            or any(any(r.actor == value.loss.npc for r in cast.roles) for cast in after.scene_casts)
+        actual = next((x for x in expected.world.npcs if x.id == npc.id), None)
+        if npc not in before.world.npcs or actual not in after.world.npcs:
+            raise WorkflowError("Prove the original actual NPC and exact same-event outcome")
+        if value.loss.npc_outcome != "corrupt" and (
+            any(any(r.actor == value.loss.npc for r in cast.roles) for cast in after.scene_casts)
             or not any(
                 x.get("kind") == "battle_actor_cast_ended"
                 and x.get("actor") == value.loss.npc.model_dump_json()
@@ -296,21 +315,30 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
                 for x in after.facts
             )
         ):
-            raise WorkflowError("Prove the original actual NPC death and same-event cast ending")
+            raise WorkflowError("Prove the actual death/capture and same-event cast ending")
     if value.original_location is not None:
         site = value.original_location
-        if (
-            site not in before.world.locations
-            or site.model_copy(update=dict(condition="destroyed")) not in after.world.locations
-            or not any(
-                x.get("kind") == "structure_destroyed_source"
-                and x.get("source") == identity
-                and x.get("entity") == site.id
-                and x.get("event") == value.battle_event
-                for x in after.facts
-            )
+        actual_site = next((x for x in expected.world.locations if x.id == site.id), None)
+        if site not in before.world.locations or actual_site not in after.world.locations:
+            raise WorkflowError("Prove the original site and exact same-event loss")
+        destroyed = any(
+            x.get("kind") == "structure_destroyed_source"
+            and x.get("source") == identity
+            and x.get("entity") == site.id
+            and x.get("event") == value.battle_event
+            for x in after.facts
+        )
+        if destroyed != (value.loss.location_outcome == "destroy"):
+            raise WorkflowError("Keep real control loss separate from destruction")
+        if value.loss.location_outcome != "destroy" and any(
+            x.get("kind") == "quadrant_loss"
+            and quadrant_loss(after, x["id"]).source == identity
+            and quadrant_loss(after, x["id"]).source_event == value.battle_event
+            for x in after.facts
         ):
-            raise WorkflowError("Prove the original site and genuine same-event destruction")
+            raise WorkflowError(
+                "Intact captured/corrupted sites do not fake destroyed-Base aftermath"
+            )
     if value.completed_event:
         completed = _event(game, c, value.completed_event)
         if (
@@ -320,6 +348,63 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
             or value not in rules.records(_history(game, c, value.completed_event))
         ):
             raise WorkflowError("Prove actual canonical fuel loss completion")
+    return value
+
+
+def prove_npc_void_tag(
+    game: GameService, c: Connection, state: GameState, target: ActorRef, tag_id: str
+) -> WorldTag:
+    from girlframe.engine.m3_npc_void import npc_void_tag
+
+    value = next(
+        (
+            x
+            for x in rules.records(state)
+            if "fuel:void:" + x.id == tag_id
+            and x.loss is not None
+            and x.loss.npc == target
+            and x.loss.npc_outcome == "corrupt"
+        ),
+        None,
+    )
+    if value is None:
+        raise WorkflowError("Recover the actual bound Fuel NPC Void source")
+    prove(game, c, state, value.id)
+    assert value.loss is not None and value.loss.threat is not None
+    assert value.loss.manifestation is not None
+    expected = npc_void_tag(tag_id, value.loss.manifestation, value.loss.threat.model_dump_json())
+    npc = (
+        next((x for x in state.world.npcs if x.id == target.entity), None) if state.world else None
+    )
+    actual = next((x for x in npc.tags if x.id == tag_id), None) if npc else None
+    if actual is None or (actual.label, actual.giver_entity) != (
+        expected.label,
+        expected.giver_entity,
+    ):
+        raise WorkflowError("Use the actual present source-proved NPC Void Tag")
+    return actual
+
+
+def prove_manifestation(
+    game: GameService, c: Connection, state: GameState, identity: str
+) -> rules.ManifestationChoice:
+    value = next((x for x in rules.manifestations(state) if x.id == identity), None)
+    if value is None:
+        raise WorkflowError("Recover the actual Handler's saved NPC Void choice")
+    born = _history(game, c, value.event)
+    audit = _event(game, c, value.event)
+    context = _context(born, value.context)
+    if (
+        value not in rules.manifestations(born)
+        or active_handler(born) != value.handler
+        or audit["actor_id"] != value.handler.entity
+        or audit["kind"] != "m3.fuel_manifestation_chosen"
+        or json.loads(audit["payload_json"]).get("choice") != identity
+        or context.proposed_event != value.proposed_event
+        or context.state != "proposed"
+        or value.source not in {x.id for x in pending(game, c, born, context)}
+    ):
+        raise WorkflowError("Prove the real original Handler's canonical manifestation choice")
     return value
 
 
@@ -380,6 +465,8 @@ def bind_battle(
                 "SOURCE_FUEL_BATTLE_BINDING_REQUIRED: recover the first actual battle"
             )
         selection = next(x for x in selections if x.source == value.id)
+        if selection.manifestation_source:
+            prove_manifestation(game, c, changed, selection.manifestation_source)
         try:
             changed = rules.bind(changed, value, context, selection, event, bound)
         except ValueError as error:
@@ -552,6 +639,9 @@ class FuelService:
                 if values
                 else ((), ())
             )
+            available_threats = (
+                rules.threats(state, context, profiles(c, self.store.campaign_id)) if values else ()
+            )
             return dict(
                 id=identity,
                 required=bool(values),
@@ -568,10 +658,159 @@ class FuelService:
                             for p in npcs
                         ],
                         locations=[dict(id=p.id, label=p.name) for p in locations],
+                        threats=[
+                            dict(
+                                ref=p.model_dump(mode="json"),
+                                label=next(g.name for g in state.world.gorgons if g.id == p.entity),
+                            )
+                            for p in available_threats
+                        ]
+                        if state.world
+                        else [],
+                        handler_choice=context.adjudicator == state.handler,
+                        manifestations=[
+                            dict(
+                                id=p.id,
+                                target=p.target.model_dump(mode="json"),
+                                threat=p.threat.model_dump(mode="json"),
+                                manifestation=p.manifestation,
+                            )
+                            for p in rules.current_manifestations(state, x.id, context.id)
+                            if prove_manifestation(self.game, c, state, p.id)
+                        ],
                     )
                     for x in values
                 ],
             )
+
+    def manifestation_menu(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            self._access(c, viewer)
+            state = load_state(c, self.store.campaign_id)
+            if viewer.user_id != state.handler or active_handler(state) is None:
+                raise WorkflowError(
+                    "Only the actual current Handler chooses NPC Void manifestation"
+                )
+            value = prove(self.game, c, state, identity)
+            contexts = []
+            latest = {
+                x["id"]: Context.model_validate_json(x["body"])
+                for x in state.facts
+                if x.get("kind") == "battle_context"
+            }
+            bound = profiles(c, self.store.campaign_id)
+            for context in latest.values():
+                if context.state != "proposed" or identity not in {
+                    x.id for x in pending(self.game, c, state, context)
+                }:
+                    continue
+                people, _ = rules.candidates(state, context, bound)
+                threats = rules.threats(state, context, bound)
+                if not people or not threats:
+                    continue
+                contexts.append(
+                    dict(
+                        id=context.id,
+                        label="Actual proposed battle",
+                        npcs=[
+                            dict(
+                                ref=ActorRef(kind="npc", entity=x.id).model_dump(mode="json"),
+                                label=x.name,
+                            )
+                            for x in people
+                        ],
+                        threats=[
+                            dict(
+                                ref=x.model_dump(mode="json"),
+                                label=next(g.name for g in state.world.gorgons if g.id == x.entity),
+                            )
+                            for x in threats
+                        ]
+                        if state.world
+                        else [],
+                    )
+                )
+            return dict(id=value.id, revision=state.revision, contexts=contexts)
+
+    def choose_manifestation(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        context_id: str,
+        target: ActorRef,
+        threat: ActorRef,
+        manifestation: str,
+        expected: int,
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            state = load_state(c, self.store.campaign_id)
+            handler = active_handler(state)
+            if viewer.user_id != state.handler or handler is None or state.revision != expected:
+                raise WorkflowError("Reopen the actual current Handler's NPC Void choice")
+            context = _context(state, context_id)
+            if context.state != "proposed" or identity not in {
+                x.id for x in pending(self.game, c, state, context)
+            }:
+                raise WorkflowError("Choose a genuine still-pending battle's fuel source")
+            bound = profiles(c, self.store.campaign_id)
+            people, _ = rules.candidates(state, context, bound)
+            npc = next((x for x in people if target == ActorRef(kind="npc", entity=x.id)), None)
+            from girlframe.engine.m3_actors import resolve
+
+            if (
+                npc is None
+                or threat not in rules.threats(state, context, bound)
+                or npc.cell != resolve(state, threat, bound, require_current_profile=False).cell
+            ):
+                raise WorkflowError("Choose the actual NPC and nearby placed Gorgon threat")
+            event = str(uuid4())
+            choice = rules.ManifestationChoice.model_validate(
+                dict(
+                    id=event,
+                    source=identity,
+                    context=context_id,
+                    proposed_event=context.proposed_event,
+                    target=target,
+                    threat=threat,
+                    manifestation=manifestation,
+                    handler=handler,
+                    event=event,
+                )
+            )
+            state.facts.append(
+                dict(kind="fuel_manifestation", id=choice.id, body=choice.model_dump_json())
+            )
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.fuel_manifestation_chosen",
+                state,
+                event_id=event,
+                choice=choice.id,
+                source=identity,
+                context=context_id,
+            )
+            return dict(id=choice.id)
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.fuel_manifestation_choose",
+            dict(
+                id=identity,
+                context=context_id,
+                target=target.model_dump(mode="json"),
+                threat=threat.model_dump(mode="json"),
+                manifestation=manifestation,
+                expected=expected,
+            ),
+            operation,
+            auto_audit=False,
+            authorize=lambda c: self._access(c, viewer),
+        )
 
     def view(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
         with self.store.engine.connect() as c:
@@ -579,9 +818,20 @@ class FuelService:
             row, source = _source(self.game, c, identity)
             original = _history(self.game, c, source)
             handler = active_handler(original)
-            if handler is None or viewer.user_id != int(handler.entity):
-                raise WorkflowError("This scheduling source is private to its original Handler")
             state = load_state(c, self.store.campaign_id)
+            if handler is None or viewer.user_id != int(handler.entity):
+                if viewer.user_id == state.handler:
+                    menu = self.manifestation_menu(viewer, identity)
+                    if menu["contexts"]:
+                        return dict(
+                            id=identity,
+                            revision=state.revision,
+                            phase="handler_choice",
+                            record=None,
+                            can_arm=False,
+                            can_manifestation=True,
+                        )
+                raise WorkflowError("This scheduling source is private to its original Handler")
             value = next((x for x in rules.records(state) if x.id == identity), None)
             if value:
                 prove(self.game, c, state, identity)
@@ -591,6 +841,9 @@ class FuelService:
                 phase=value.phase if value else "select",
                 record=value.model_dump(mode="json") if value else None,
                 can_arm=value is None and row["state"] == "pending",
+                can_manifestation=value is not None
+                and value.battle is None
+                and viewer.user_id == state.handler,
             )
 
     def _tasks(self, c: Connection, viewer: GuildViewer) -> list[dict[str, Any]]:
@@ -599,7 +852,10 @@ class FuelService:
         result = []
         for value in rules.records(state):
             if value.handler.entity != str(viewer.user_id):
-                continue
+                if viewer.user_id != state.handler or value.battle is not None:
+                    continue
+                if not self.manifestation_menu(viewer, value.id)["contexts"]:
+                    continue
             prove(self.game, c, state, value.id)
             result.append(
                 dict(

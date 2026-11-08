@@ -54,6 +54,7 @@ def respond(
                 and x.kind == "base"
                 and x.allegiance == "foundation"
                 and x.condition != "destroyed"
+                and x.control_loss is None
                 for x in world.locations
             )
         ):

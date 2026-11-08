@@ -931,3 +931,545 @@ def test_actual_oldgen_teacher_learned_advice_cancel_retry_status_maxim_listen_a
     assert state(game).sheets["3"].heat == teacher.heat + 2
     assert not oldgen.base_maxims(state(game), 2)
     assert game.dice.calls == calls + 1
+
+
+def test_actual_newgirl_teacher_learned_easy_target_native_request_real_keep_and_judgment(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred: genuine Mentor/callsign and Vatgrown creation, no post-activation label swap."""
+    from m3_policy_scenario import configure_m3_fixture
+    from test_creation import selected
+    from test_creation_review import ready as creation_ready
+    from test_easy_target import child, finish_keep
+    from test_m2_game import Dice
+
+    from girlframe.discord_adapter.m3_easy_target import open_choice as target_choice
+    from girlframe.discord_adapter.m3_easy_target import open_easy_target
+    from girlframe.engine import m3_easy_target as target_rules
+    from girlframe.engine.creation_details import DesireChoice, NpcInvestor
+    from girlframe.engine.m2 import ReleaseApproval
+    from girlframe.engine.m2_registry import registry_digest
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+    from girlframe.engine.m3_mentorship import active_mentors
+    from girlframe.services.creation_coordination import CoordinationService
+    from girlframe.services.creation_review import CreationReviewService
+    from girlframe.services.m2_game import GameService
+    from girlframe.services.m3_easy_target import EasyTargetService, prove
+    from girlframe.services.m3_learned_plays import available, prove_consumed
+
+    review, creation, _ = creation_ready(
+        ledger, girl="NEWGIRL", frame="THE ENFORCER", other_girl="VATGROWN"
+    )
+    selected_learner = selected("VATGROWN", "JANUS-B")
+    coordination = CoordinationService(ledger)
+    request = coordination.propose(
+        ADMIN,
+        str(uuid4()),
+        3,
+        "vatgrown_handler",
+        coordination.prepare(ADMIN, 3, "vatgrown_handler"),
+        DesireChoice(slots=(1,)),
+    )
+    coordination.decide(OTHER, str(uuid4()), request["id"], 1, "accept")
+    current_draft = creation.get(OTHER)
+    selected_learner = selected_learner.model_copy(
+        update={
+            "shared_tokens": current_draft.draft.shared_tokens,
+            "girl_details": GirlDetails(
+                investors=tuple(
+                    NpcInvestor(npc_slot=x.slot, desires=DesireChoice(slots=(0,)))
+                    for x in selected_learner.npc_bonds
+                )
+            ),
+        }
+    )
+    creation.save(
+        OTHER, "actual-vatgrown-learner-build", current_draft.revision, 1, selected_learner
+    )
+    other_review = CreationReviewService(ledger)
+    incoming = next(x for x in other_review.get(OTHER).sheet.bonds if not x.outgoing)
+    current_draft = creation.get(OTHER)
+    other_review.select_bond(
+        OTHER,
+        "actual-vatgrown-mutual-bond",
+        current_draft.revision,
+        1,
+        current_draft.draft,
+        incoming.id,
+    )
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "owner_intense_tag_bonus": 2,
+            "m2_approval": ReleaseApproval(
+                registry_sha256=registry_digest(),
+                reviewer="synthetic test only",
+                reference="fixture; not certification",
+            ),
+        }
+    )
+    game = GameService(ledger, dice=Dice((5, 5)))
+    for viewer in (PLAYER, OTHER):
+        saved = review.get(viewer)
+        review.save(
+            viewer,
+            "actual-learning-review-" + str(viewer.user_id),
+            saved.saved_revision,
+            saved.fingerprint,
+        )
+        saved = review.get(viewer)
+        assert saved.sheet.ready_for_rules_review
+        game.activate(viewer, "actual-learning-active-" + str(viewer.user_id), saved.fingerprint)
+    teacher, learner = current_ref(state(game), 2), current_ref(state(game), 3)
+    assert state(game).sheets["2"].girl == "NEWGIRL"
+    assert state(game).sheets["2"].callsign == "MENTOR_NAME"
+    assert active_mentors(state(game), teacher) == (learner,)
+    assert state(game).sheets["3"].girl == "VATGROWN"
+    assert state(game).sheets["3"].review.creation.dna_basis
+    configure_m3_fixture(ledger)
+    acquired = approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(rules.EXPERIMENT, rules.INVESTMENT, rules.SEX, target_rules.RULE),
+    )
+    approval = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "m3_approval": approval.model_copy(
+                update={"subsystems": approval.subsystems | {"world", "playbooks"}}
+            ),
+        }
+    )
+    with ledger.transaction() as c:
+        actual = state(game)
+        actual.world = initial()
+        actual = place(place(actual, 2, mode="outside_frame"), 3, mode="outside_frame")
+        actual.sheets["3"].heat = 4
+        for sheet in actual.sheets.values():
+            for asset in sheet.assets:
+                asset.void = False
+        game.event(c, 1, str(uuid4()), "synthetic.original_learning_bodies_and_heat", actual)
+    game.bind_scene(ADMIN, "actual-easy-learning-scene", 900)
+    for viewer in (PLAYER, OTHER, ADMIN):
+        game.join_scene(viewer, "actual-easy-learning-join-" + str(viewer.user_id), 900)
+    world = WorldService(MissionService(ledger, acquired.registry))
+    investor = Npc(
+        id="actual-learner-investor",
+        name="Original learner scientist",
+        jobs=("scientist",),
+        controller=1,
+        cell=(0, 0),
+        revealed=True,
+        detail="The genuine saved starting Investor of the actual Vatgrown learner",
+    )
+    world.npc(ADMIN, str(uuid4()), state(game).revision, investor)
+    slot = state(game).sheets["3"].review.creation.npc_bonds[0].slot
+    world.import_starting_npc(OTHER, str(uuid4()), state(game).revision, slot, investor.id)
+    worker, gateway = GameWorker(game), Gateway()
+    controls = VatgrownPlaysService(game)
+    session = controls.invite(
+        OTHER,
+        str(uuid4()),
+        900,
+        teacher,
+        state(game).revision,
+        "My own actual voluntary source with this original native Newgirl teacher",
+    )["id"]
+    controls.respond(
+        PLAYER,
+        str(uuid4()),
+        session,
+        state(game).revision,
+        True,
+        "The actual original Newgirl confirms only her own voluntary source",
+    )
+    lesson_action = game.begin(
+        OTHER,
+        str(uuid4()),
+        900,
+        state(game).sheets["3"].revision,
+        PlayInput(
+            play=rules.PLAY,
+            source_work=session,
+            heat=1,
+            trigger_confirmed=True,
+            context="Our actual original confirmed Vatgrown learning source",
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    before = state(game)
+    native_choice(
+        game,
+        PLAYER,
+        "vat_sex_learn",
+        identities=(before.sheets["2"].identities[1].id,),
+        replacements=(before.sheets["3"].identities[0].id,),
+        play=(target_rules.RULE,),
+        account="The actual Newgirl teacher selects her own Easy Target for one use",
+    )
+    assert game.inspect(OTHER, lesson_action)["state"] == "complete"
+    learned = rules.records(state(game), rules.LearnedPlay)[-1]
+    assert (
+        learned.actor == learner
+        and learned.teacher == teacher
+        and learned.rule_id == target_rules.RULE
+    )
+    controls.send_away(
+        PLAYER,
+        str(uuid4()),
+        session,
+        state(game).revision,
+        "The actual counterpart ends the learner's required stay after the lesson",
+    )
+    tick(worker, gateway, 6)
+    target_controls = EasyTargetService(game)
+    teacher_before = state(game).sheets["2"].model_copy(deep=True)
+    before_play = state(game)
+    calls = game.dice.calls
+
+    def interaction(user=3, channel=900):
+        value = current(user, uuid4().int % 1000000000)
+        value.channel_id = channel
+        return value
+
+    async def native_start():
+        opened = interaction()
+        await opened.response.defer(ephemeral=True)
+        await open_easy_target(opened, target_controls)
+        menu = opened.edit_original_response.call_args.kwargs["view"]
+        menu.values["source"] = ("start",)
+        selected = interaction()
+        await menu.confirm.callback(selected)
+        form = selected.edit_original_response.call_args.kwargs["view"]
+        form.values.update(heat=("1",), context="I actually misjudge the real live-fire drill")
+        submitted = interaction()
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+
+    assert target_controls.menu(OTHER, 900)["can_start"]
+    asyncio.run(native_start())
+    with ledger.engine.connect() as c:
+        action = game.action(c, game.lock(c, 900)["action_id"])
+    assert action["data"]["learned_play"]["id"] == learned.id
+    action_id = action["id"]
+    game.dice.faces = (3, 4)
+    tick(worker, gateway, 3)
+    if game.inspect(OTHER, action_id)["receipt"] is None:
+        game.roll(OTHER, str(uuid4()), action_id)
+    pass_tags(game)
+    assert game.dice.calls == calls + 1
+    assert state(game).sheets["3"].heat == before_play.sheets["3"].heat - 1
+    assert state(game).sheets["2"].heat == teacher_before.heat
+    assert state(game).sheets["2"].identities == teacher_before.identities
+    assert state(game).sheets["2"].assets == teacher_before.assets
+
+    async def owned_choice(viewer, kind, **values):
+        row = next(x for x in game.choices(viewer) if x["kind"] == kind)
+        opened = interaction(viewer.user_id)
+        await opened.response.defer(ephemeral=True)
+        await target_choice(opened, game, game.decision(viewer, row["id"]))
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(interaction(4))
+        form.values.update(values)
+        submitted = interaction(viewer.user_id)
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+
+    asyncio.run(
+        owned_choice(
+            OTHER,
+            "easy_target_select",
+            select=(teacher.token,),
+            account="I choose this actual original other person",
+        )
+    )
+    asyncio.run(owned_choice(PLAYER, "easy_target_tag", account="Underprepared learner"))
+    actual_tag = next(x for x in state(game).sheets["3"].tags if x.label == "Underprepared learner")
+    assert actual_tag.giver_actor == teacher
+    task_context = "The actual incoming drill fire requires the learner to keep her head and evade"
+    account = "PRIVATE_LEARNED_REQUEST I request the actual live-fire evasion task"
+    asyncio.run(
+        owned_choice(
+            PLAYER,
+            "easy_target_react:" + teacher.token,
+            urge=("request",),
+            play=("keep_your_head",),
+            context=task_context,
+            account=account,
+        )
+    )
+    work_id = target_rules.identity(action_id, teacher)
+    asyncio.run(
+        owned_choice(
+            ADMIN,
+            "easy_target_validate:" + teacher.token,
+            yes=("yes",),
+            account="The actual incoming fire has a genuine Keep trigger and real source",
+        )
+    )
+    child_id = child(game, worker, gateway, work_id, viewer=OTHER)
+    finish_keep(game, viewer=OTHER)
+    assert game.inspect(OTHER, child_id)["state"] == "complete"
+    assert game.inspect(OTHER, action_id)["state"] != "complete"
+    with ledger.engine.connect() as c:
+        work = prove(game, c, state(game), work_id)
+        assert work.performance_event and work.child == child_id
+        source = target_rules.get(state(game), target_rules.Session, action_id)
+        bound = game.action(c, action_id)
+        assert source.actor == learner and source.total == 8
+        assert prove_consumed(game, c, state(game), bound, target_rules.RULE, source.roll_event)
+        assert available(game, c, state(game), learner, target_rules.RULE) is None
+    rank = state(game).order.index(3)
+    asyncio.run(
+        owned_choice(
+            PLAYER,
+            "easy_target_judge:" + teacher.token,
+            yes=("yes",),
+            account="The original requester judges the actual completed evasion task done well",
+        )
+    )
+    assert state(game).order.index(3) == max(0, rank - 1)
+    assert game.inspect(OTHER, action_id)["state"] == "complete"
+    assert not target_controls.menu(OTHER, 900)["can_start"]
+    assert state(game).sheets["3"].girl == "VATGROWN"
+    assert active_mentors(state(game), teacher) == (learner,)
+    assert has_rule(state(game).sheets["2"], target_rules.RULE, "NEWGIRL")
+    assert not has_rule(state(game).sheets["3"], target_rules.RULE, "NEWGIRL")
+    assert game.dice.calls == calls + 2
+
+    async def private_reopen():
+        opened = interaction(channel=999)
+        await opened.response.defer(ephemeral=True)
+        await open_easy_target(opened, EasyTargetService(game), work_id)
+        content = opened.edit_original_response.call_args.kwargs["content"]
+        assert "PRIVATE_LEARNED_REQUEST" in content and "well" in content
+
+    asyncio.run(private_reopen())
+    with ledger.engine.connect() as c:
+        assert prove(game, c, state(game), work_id).completed_event
+        assert (
+            len(
+                [
+                    x
+                    for x in target_rules.records(state(game), target_rules.Reaction)
+                    if x.session == action_id
+                ]
+            )
+            == 1
+        )
+
+
+def test_actual_mockingbird_teacher_learned_person_native_trigger_cancel_receipt_tag_and_end(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred: one real conversation source; no Mockingbird body or passive copied."""
+    from girlframe.discord_adapter.m3_mockingbird_plays import open_book, open_request
+    from girlframe.discord_adapter.m3_mockingbird_plays import open_choice as person_choice
+    from girlframe.engine import m3_mockingbird as mockingbird
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+    from girlframe.engine.m3_mockingbird_state import PERSON
+    from girlframe.services.m3_learned_plays import available, prove_consumed
+    from girlframe.services.m3_mockingbird_plays import MockingbirdService, prove_learned_trigger
+    from girlframe.services.m3_recovery import RecoveryService
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, teacher="MOCKINGBIRD")
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(rules.EXPERIMENT, rules.INVESTMENT, rules.SEX, mockingbird.PERSON),
+    )
+    session, source_action = sex(
+        game,
+        worker,
+        gateway,
+        controls,
+        (5, 5),
+        counterpart_account="My own original Mockingbird confirms only this voluntary source",
+    )
+    before = state(game)
+    learner, teacher = current_ref(before, 2), current_ref(before, 3)
+    native_choice(
+        game,
+        OTHER,
+        "vat_sex_learn",
+        identities=(before.sheets["3"].identities[1].id,),
+        replacements=(before.sheets["2"].identities[0].id,),
+        play=(mockingbird.PERSON,),
+        account="The actual native Mockingbird teaches her actual Person Play for one use",
+    )
+    assert game.inspect(PLAYER, source_action)["state"] == "complete"
+    learned = rules.records(state(game), rules.LearnedPlay)[-1]
+    assert learned.rule_id == mockingbird.PERSON and learned.teacher == teacher
+    controls.send_away(
+        OTHER,
+        str(uuid4()),
+        session,
+        state(game).revision,
+        "The actual counterpart ends the required stay after this real lesson",
+    )
+    tick(worker, gateway, 6)
+    person = MockingbirdService(game)
+    assert state(game).sheets["2"].girl == "VATGROWN"
+    assert state(game).sheets["3"].girl == "MOCKINGBIRD"
+    assert not has_rule(state(game).sheets["2"], mockingbird.RISK, "MOCKINGBIRD")
+    assert not has_rule(state(game).sheets["2"], mockingbird.CALL, "MOCKINGBIRD")
+    teacher_before = state(game).sheets["3"].model_copy(deep=True)
+
+    def interaction(user=2, channel=900):
+        value = current(user, uuid4().int % 1000000000)
+        value.channel_id = channel
+        return value
+
+    account = "My actual conversation attempt.\n  PRIVATE_LEARNED_PERSON_SOURCE"
+
+    async def propose_native():
+        opened = interaction()
+        await opened.response.defer(ephemeral=True)
+        await open_book(opened, game, actor_ref=learner)
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(interaction(3))
+        form.values.update(play=(PERSON,), targets=(teacher.token,), account=account)
+        submitted = interaction()
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+
+    async def prepare_native(trigger):
+        opened = interaction()
+        await opened.response.defer(ephemeral=True)
+        await open_request(opened, person, trigger.id, continue_source=True)
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values.update(heat=("1",), gain=("0",))
+        submitted = interaction()
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+
+    assert person.preview(PLAYER, 900, learner)["plays"] == [PERSON]
+    assert person.preview(PLAYER, 900, learner)["learned_person"]
+    asyncio.run(propose_native())
+    first = state(game).mockingbird.triggers[-1]
+    assert first.learned_source == learned.id and first.actor == learner
+    assert first.play == PERSON and first.state == "ready"
+    assert first.bonded_source is None and first.changeling_source is None
+    assert person.get(PLAYER, first.id)["body"]["account"] == account
+    with pytest.raises(WorkflowError):
+        person.get(ADMIN, first.id)
+    asyncio.run(prepare_native(first))
+    with ledger.engine.connect() as c:
+        abandoned = game.action(c, game.lock(c, 900)["action_id"])
+    assert abandoned["data"]["learned_play"]["id"] == learned.id
+    assert abandoned["data"]["mockingbird"]["learned_source"] == learned.id
+    calls, initial_heat = game.dice.calls, state(game).sheets["2"].heat
+    game.abort(ADMIN, str(uuid4()), abandoned["id"])
+    tick(worker, gateway, 5)
+    recovery = RecoveryService(game)
+    saved = next(x for x in recovery.saved(PLAYER) if x["id"] == abandoned["id"])
+    assert saved["cancellable"] and not saved["rolled"]
+    key = str(uuid4())
+    restored = recovery.recover(PLAYER, key, abandoned["id"], saved["revision"], cancel=True)
+    assert (
+        recovery.recover(PLAYER, key, abandoned["id"], saved["revision"], cancel=True) == restored
+    )
+    assert game.dice.calls == calls and state(game).sheets["2"].heat == initial_heat
+    assert not state(game).mockingbird.conversations
+    with ledger.engine.connect() as c:
+        original = available(game, c, state(game), learner, mockingbird.PERSON)
+        assert original and original.id == learned.id and original.claimed_action is None
+    person.withdraw(PLAYER, str(uuid4()), first.id)
+    assert person.get(PLAYER, first.id)["body"]["state"] == "withdrawn"
+    asyncio.run(propose_native())
+    current_trigger = state(game).mockingbird.triggers[-1]
+    assert current_trigger.id != first.id and current_trigger.learned_source == learned.id
+    asyncio.run(prepare_native(current_trigger))
+    with ledger.engine.connect() as c:
+        action = game.action(c, game.lock(c, 900)["action_id"])
+    action_id = action["id"]
+    game.dice.faces = (6, 6)
+    tick(worker, gateway, 3)
+    if game.inspect(PLAYER, action_id)["receipt"] is None:
+        game.roll(PLAYER, str(uuid4()), action_id)
+    pass_tags(game)
+    assert game.dice.calls == calls + 1
+    assert state(game).sheets["2"].heat == initial_heat - 1
+    assert state(game).sheets["3"].heat == teacher_before.heat
+    assert state(game).sheets["3"].assets == teacher_before.assets
+    assert state(game).sheets["3"].identities == teacher_before.identities
+    assert not person.preview(PLAYER, 900, learner)["plays"]
+
+    async def own_choice(viewer, kind, **values):
+        row = next(x for x in game.choices(viewer) if x["kind"] == kind)
+        opened = interaction(viewer.user_id)
+        await opened.response.defer(ephemeral=True)
+        await person_choice(opened, game, row["id"])
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(interaction(1))
+        form.values.update(values)
+        submitted = interaction(viewer.user_id)
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+
+    capabilities = ("words", "sentences", "eye_contact", "deception")
+    asyncio.run(own_choice(PLAYER, "mockingbird_person_capabilities", options=capabilities))
+    assert game.inspect(PLAYER, action_id)["state"] != "complete"
+    asyncio.run(own_choice(OTHER, "mockingbird_person_tag", tag="Actual frozen expression"))
+    assert game.inspect(PLAYER, action_id)["state"] == "complete"
+    conversation = state(game).mockingbird.conversations[-1]
+    assert conversation.actor == learner and conversation.action == action_id
+    assert conversation.selected == capabilities and not conversation.low
+    assert "expressions" in conversation.unavailable
+    tag = next(x for x in state(game).sheets["2"].tags if x.id == conversation.tag)
+    assert tag.label == "Actual frozen expression" and tag.giver_actor == teacher
+    with ledger.engine.connect() as c:
+        latest = next(x for x in state(game).mockingbird.triggers if x.id == current_trigger.id)
+        bound = game.action(c, action_id)
+        assert prove_learned_trigger(game, c, state(game), latest, bound)
+        runtime = state(game).sheets["2"].girl_runtime
+        spent = next(x for x in runtime.learned_plays if x.id == learned.id)
+        assert prove_consumed(game, c, state(game), bound, mockingbird.PERSON, spent.rolled_event)
+        assert available(game, c, state(game), learner, mockingbird.PERSON) is None
+    assert not has_rule(state(game).sheets["2"], mockingbird.PERSON, "MOCKINGBIRD")
+    assert has_rule(state(game).sheets["3"], mockingbird.PERSON, "MOCKINGBIRD")
+    assert state(game).sheets["2"].girl == "VATGROWN"
+    tick(worker, gateway, 5)
+
+    async def native_end_and_private_replay():
+        opened = interaction(channel=999)
+        await opened.response.defer(ephemeral=True)
+        await open_request(opened, MockingbirdService(game), current_trigger.id)
+        assert (
+            "PRIVATE_LEARNED_PERSON_SOURCE"
+            in opened.edit_original_response.call_args.kwargs["content"]
+        )
+        await open_request(opened, MockingbirdService(game), conversation.id)
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert "Human words" in form.text()
+        form.values["end"] = ("yes",)
+        submitted = interaction()
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+
+    asyncio.run(native_end_and_private_replay())
+    assert person.get(PLAYER, conversation.id)["body"]["ended_event"]
+    assert person.get(OTHER, conversation.id)["body"]["allowed"] == list(capabilities)
+    with pytest.raises(WorkflowError):
+        person.get(ADMIN, conversation.id)
+    assert game.dice.calls == calls + 1
+    assert len(state(game).mockingbird.conversations) == 1
