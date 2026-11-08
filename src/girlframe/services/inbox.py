@@ -1315,6 +1315,7 @@ class InboxService:
             from girlframe.services.m3_changeling import ChangelingService
             from girlframe.services.m3_changeling_sex import ChangelingSexService
             from girlframe.services.m3_consume import _tasks as consume_tasks
+            from girlframe.services.m3_fuel_shortage import FuelService
             from girlframe.services.m3_missions import MissionService as EntryMissions
             from girlframe.services.m3_npc_flirt import NpcFlirtService
             from girlframe.services.m3_off_duty import OffDutyService as EntryPeriods
@@ -1336,6 +1337,7 @@ class InboxService:
                 ("body_facts", BodyFactsService(frame_game)._tasks(connection, viewer)),
                 ("changeling", ChangelingService(frame_game)._tasks(connection, viewer)),
                 ("changeling_sex", ChangelingSexService(frame_game)._tasks(connection, viewer)),
+                ("fuel_shortage", FuelService(frame_game)._tasks(connection, viewer)),
                 ("red_queen", RedQueenService(frame_game)._tasks(connection, viewer)),
                 ("npc_flirt", NpcFlirtService(frame_game)._tasks(connection, viewer)),
                 ("vatgrown_dna", VatgrownDNAService(frame_game)._tasks(connection, viewer)),
@@ -3555,6 +3557,7 @@ class InboxService:
                     if json.loads(work["body_json"])["rule_id"] in SUPPORTED | {
                         "strain.void.low.1.2",
                         "strain.rebellion.low.4.2",
+                        "strain.budget.high.1.2",
                     }:
                         primary, task_name = "Apply Strain consequences", "m3_strain_effect"
                 title = {

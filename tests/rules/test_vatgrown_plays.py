@@ -21,7 +21,7 @@ from test_world import initial
 from girlframe.database import tables as t
 from girlframe.delivery.m2_worker import GameWorker
 from girlframe.engine import m3_vatgrown_plays as rules
-from girlframe.engine.creation_details import DESIRES
+from girlframe.engine.creation_details import DESIRES, GirlDetails
 from girlframe.engine.drafts import DraftInput
 from girlframe.engine.m2 import ChoiceAnswer, PlayInput
 from girlframe.engine.m3_actor_bonds import current_ref, depth
@@ -60,7 +60,10 @@ def ready(store, tmp_path, monkeypatch, *, teacher="ALPHA"):
         )
 
     def selected_actual(girl="MOCKINGBIRD", frame="JANUS-B"):
-        return original_selected(teacher if girl == "MOCKINGBIRD" else girl, frame)
+        chosen = original_selected(teacher if girl == "MOCKINGBIRD" else girl, frame)
+        if chosen.girl_playbook == "OLDGEN":
+            chosen = chosen.model_copy(update={"girl_details": GirlDetails(maxims=(0, 1))})
+        return chosen
 
     monkeypatch.setattr(creation_fixture, "seed", seed_actual)
     monkeypatch.setattr(game_fixture, "selected", selected_actual)
@@ -71,7 +74,12 @@ def ready(store, tmp_path, monkeypatch, *, teacher="ALPHA"):
         tmp_path,
         monkeypatch,
         extra=(rules.EXPERIMENT, rules.INVESTMENT, rules.SEX, rules.BRUTALIZE)
-        + (("girl.stim-blissed.dose-up",) if teacher == "STIM-BLISSED" else ()),
+        + (("girl.stim-blissed.dose-up",) if teacher == "STIM-BLISSED" else ())
+        + (
+            ("girl.oldgen.old-dog-new-pups", "girl.oldgen.just-the-way-it-is")
+            if teacher == "OLDGEN"
+            else ()
+        ),
     )
     approval = store.policy.m3_approval
     store.policy = store.policy.model_copy(
@@ -107,7 +115,7 @@ def ready(store, tmp_path, monkeypatch, *, teacher="ALPHA"):
     return game, GameWorker(game), Gateway(), VatgrownPlaysService(game)
 
 
-def sex(game, worker, gateway, controls, faces):
+def sex(game, worker, gateway, controls, faces, *, counterpart_account=None):
     target = current_ref(state(game), 3)
     identity = controls.invite(
         PLAYER,
@@ -126,7 +134,7 @@ def sex(game, worker, gateway, controls, faces):
         identity,
         state(game).revision,
         True,
-        "My actual original Alpha confirms only this source",
+        counterpart_account or "My actual original Alpha confirms only this source",
     )
     game.dice.faces = faces
     action = game.begin(
@@ -721,3 +729,205 @@ def test_actual_stim_teacher_learned_once_native_self_dose_uses_only_learner_res
             ),
         )
     assert game.dice.calls == before_rolls + 1
+
+
+def test_actual_oldgen_teacher_learned_advice_cancel_retry_status_maxim_listen_and_once_use(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred group normal: actual learning source, owned advice and real maxim consumer."""
+    from girlframe.discord_adapter.m3_oldgen import open_choice as advice_choice
+    from girlframe.discord_adapter.m3_oldgen import open_oldgen
+    from girlframe.engine import m3_oldgen as oldgen
+    from girlframe.engine.m3_actor_state import ActorRef
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+    from girlframe.services.m3_learned_plays import available, prove_consumed
+    from girlframe.services.m3_oldgen import OldgenService, prove_advice
+    from girlframe.services.m3_recovery import RecoveryService
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, teacher="OLDGEN")
+    with ledger.transaction() as c:
+        actual = state(game)
+        actual.order = (3, 2)
+        game.event(c, 1, str(uuid4()), "synthetic.original_lower_rank_learning_recipient", actual)
+    assert state(game).sheets["3"].girl == "OLDGEN"
+    assert len(oldgen.base_maxims(state(game), 3)) == 2
+    session, source_action = sex(
+        game,
+        worker,
+        gateway,
+        controls,
+        (5, 5),
+        counterpart_account="My own actual original Oldgen confirms only this voluntary source",
+    )
+    before_learning = state(game)
+    native_choice(
+        game,
+        OTHER,
+        "vat_sex_learn",
+        identities=(before_learning.sheets["3"].identities[1].id,),
+        replacements=(before_learning.sheets["2"].identities[0].id,),
+        play=(oldgen.ADVICE,),
+        account="The original Oldgen teacher chooses her actual advice Play for one use",
+    )
+    assert game.inspect(PLAYER, source_action)["state"] == "complete"
+    learned = rules.records(state(game), rules.LearnedPlay)[-1]
+    assert learned.rule_id == oldgen.ADVICE
+    assert learned.teacher == current_ref(before_learning, 3)
+    assert state(game).sheets["2"].girl == "VATGROWN"
+    assert not oldgen.base_maxims(state(game), 2)
+    assert not has_rule(state(game).sheets["2"], oldgen.RULE, "OLDGEN")
+    controls.send_away(
+        OTHER,
+        str(uuid4()),
+        session,
+        state(game).revision,
+        "The actual counterpart ends the required stay after the real lesson",
+    )
+    tick(worker, gateway, 6)
+    advice = OldgenService(game)
+    target = current_ref(state(game), 3)
+
+    def interaction(user=2, channel=900):
+        value = current(user, uuid4().int % 1000000000)
+        value.channel_id = channel
+        return value
+
+    async def prepare_native():
+        opened = interaction()
+        await opened.response.defer(ephemeral=True)
+        await open_oldgen(opened, advice)
+        menu = opened.edit_original_response.call_args.kwargs["view"]
+        menu.values["action"] = ("advice",)
+        selected = interaction()
+        await menu.confirm.callback(selected)
+        assert menu.completed, selected.edit_original_response.call_args_list
+        form = selected.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            target=(target.token,),
+            heat=("1",),
+            account="My actual learned advice to this original other Girl",
+        )
+        submitted = interaction()
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+
+    def start():
+        assert advice.menu(PLAYER, 900)["learned_advice"]
+        asyncio.run(prepare_native())
+        with ledger.engine.connect() as c:
+            action = game.action(c, game.lock(c, 900)["action_id"])
+        assert action["data"]["learned_play"]["id"] == learned.id
+        assert action["data"]["prepared"]["play"] == oldgen.PLAY
+        return action["id"]
+
+    before = state(game)
+    abandoned = start()
+    calls = game.dice.calls
+    game.abort(ADMIN, str(uuid4()), abandoned)
+    tick(worker, gateway, 5)
+    recovery = RecoveryService(game)
+    saved = next(x for x in recovery.saved(PLAYER) if x["id"] == abandoned)
+    assert saved["cancellable"] and not saved["rolled"]
+    key = str(uuid4())
+    result = recovery.recover(PLAYER, key, abandoned, saved["revision"], cancel=True)
+    assert recovery.recover(PLAYER, key, abandoned, saved["revision"], cancel=True) == result
+    assert game.dice.calls == calls and state(game).sheets["2"].heat == before.sheets["2"].heat
+    with ledger.engine.connect() as c:
+        value = available(game, c, state(game), current_ref(state(game), 2), oldgen.ADVICE)
+        assert value and value.id == learned.id and value.claimed_action is None
+    teacher = state(game).sheets["3"].model_copy(deep=True)
+    action = start()
+    game.dice.faces = (3, 4)
+    tick(worker, gateway, 3)
+    if game.inspect(PLAYER, action)["receipt"] is None:
+        game.roll(PLAYER, str(uuid4()), action)
+    pass_tags(game)
+    assert game.dice.calls == calls + 1
+    assert state(game).sheets["2"].heat == before.sheets["2"].heat - 1
+    assert state(game).order.index(2) == max(0, before.order.index(2) - 1)
+    assert state(game).sheets["3"].heat == teacher.heat
+    assert state(game).sheets["3"].assets == teacher.assets
+    assert state(game).sheets["3"].identities == teacher.identities
+    with ledger.engine.connect() as c:
+        assert available(game, c, state(game), current_ref(state(game), 2), oldgen.ADVICE) is None
+    text = "Trust the partner who actually listened.\n  PRIVATE_ONE_USE_ADVICE"
+
+    async def answer_owned(viewer, kind, account):
+        row = next(x for x in game.choices(viewer) if x["kind"] == kind)
+        opened = interaction(viewer.user_id)
+        await opened.response.defer(ephemeral=True)
+        await advice_choice(opened, game, game.decision(viewer, row["id"]))
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(interaction(1))
+        form.values["account"] = account
+        submitted = interaction(viewer.user_id)
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+
+    asyncio.run(answer_owned(PLAYER, "oldgen_write_maxim", text))
+    assert game.inspect(PLAYER, action)["state"] != "complete"
+    assert any(x["kind"] == "oldgen_listen" for x in game.choices(OTHER))
+    asyncio.run(answer_owned(OTHER, "oldgen_listen", "I actually listen to this original advice"))
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    with ledger.engine.connect() as c:
+        original = prove_advice(game, c, state(game), action)
+        bound = game.action(c, action)
+        assert original.total == 8 and original.heat == 1
+        assert prove_consumed(game, c, state(game), bound, oldgen.ADVICE, original.roll_event)
+    maxim = oldgen.get(state(game), original.maxim)
+    assert maxim.owner == current_ref(state(game), 2) and maxim.subject == target
+    assert maxim.text == text and oldgen.available(state(game), maxim)
+    assert not advice.menu(PLAYER, 900)["can_advise"]
+    with pytest.raises(WorkflowError):
+        advice.view(ADMIN, maxim.id)
+    tick(worker, gateway, 5)
+
+    async def use_maxim_native():
+        opened = interaction()
+        await opened.response.defer(ephemeral=True)
+        await open_oldgen(opened, advice, maxim.id)
+        menu = opened.edit_original_response.call_args.kwargs["view"]
+        menu.values["effect"] = ("reinforce",)
+        selected = interaction()
+        await menu.confirm.callback(selected)
+        form = selected.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            target=(target.token,), account="The actual original subject reinforces it"
+        )
+        submitted = interaction()
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+        # Completed private history survives reopening outside any bound scene.
+        reopened = interaction(channel=999)
+        await reopened.response.defer(ephemeral=True)
+        await open_oldgen(reopened, OldgenService(game), maxim.id)
+        content = reopened.edit_original_response.call_args.kwargs["content"]
+        assert "PRIVATE_ONE_USE_ADVICE" in content and content.endswith("— used.")
+
+    asyncio.run(use_maxim_native())
+    assert state(game).sheets["3"].heat == teacher.heat + 2
+    assert not oldgen.available(state(game), maxim)
+    assert len([x for x in oldgen.records(state(game), oldgen.Use) if x.maxim == maxim.id]) == 1
+    with pytest.raises((WorkflowError, ValueError)):
+        advice.use(
+            PLAYER,
+            str(uuid4()),
+            maxim.id,
+            ActorRef.model_validate(target.model_dump()),
+            "reinforce",
+            900,
+            state(game).revision,
+            "No second use of the same maxim",
+        )
+    assert state(game).sheets["3"].heat == teacher.heat + 2
+    assert not oldgen.base_maxims(state(game), 2)
+    assert game.dice.calls == calls + 1

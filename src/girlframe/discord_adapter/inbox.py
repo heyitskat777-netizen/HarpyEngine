@@ -872,6 +872,14 @@ class InboxView(discord.ui.View):
             await open_vatgrown_travel(
                 interaction, VatgrownTravelService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_fuel_shortage":
+            from girlframe.discord_adapter.m3_fuel_shortage import open_fuel_shortage
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_fuel_shortage import FuelService
+
+            await open_fuel_shortage(
+                interaction, FuelService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_prisoner_escape":
             from girlframe.discord_adapter.m3_prisoner_escape import open_prisoner_escape
             from girlframe.services.m3_missions import MissionService

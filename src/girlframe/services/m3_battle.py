@@ -23,6 +23,7 @@ from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
 if TYPE_CHECKING:
+    from girlframe.engine.m3_fuel_shortage import LossSelection
     from girlframe.engine.m3_handler_play_state import HandlerPlay
     from girlframe.services.m2_game import GameService
 
@@ -3238,6 +3239,7 @@ class BattleService:
         core_capability_confirmed: bool = False,
         actor_outside_frame: bool | None = None,
         target_outside_frame: bool | None = None,
+        fuel_losses: tuple["LossSelection", ...] | None = None,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             if dormant_close and not dormant_awakened:
@@ -3330,9 +3332,27 @@ class BattleService:
                     )
                 ).model_dump_json()
             )
+            from girlframe.services.m3_fuel_shortage import bind_battle, synchronize
+
+            fuel_bound = bind_battle(self.game, c, state, changed, event, fuel_losses or ())
+            if fuel_bound:
+                channel = c.scalar(
+                    sa.select(t.m2["m2_scenes"].c.channel_id).where(
+                        t.m2["m2_scenes"].c.campaign_id == self.store.campaign_id,
+                        t.m2["m2_scenes"].c.id == changed.scene,
+                    )
+                )
+                if channel is None:
+                    raise WorkflowError("Recover the actual fuel-shortage battle scene")
+                changed = changed.model_copy(
+                    update={"cast_revision": _cast(self.game, c, state, int(channel)).revision}
+                )
             state.facts.append(
                 dict(kind="battle_context", id=identity, body=changed.model_dump_json())
             )
+            fuel_audit: dict[str, Any] = {}
+            if fuel_bound:
+                fuel_audit["fuel_losses"] = [x.model_dump(mode="json") for x in fuel_losses or ()]
             self.game.event(
                 c,
                 viewer.user_id,
@@ -3342,7 +3362,10 @@ class BattleService:
                 event_id=event,
                 context=identity,
                 source_event=value.proposed_event,
+                **fuel_audit,
             )
+            if fuel_bound:
+                synchronize(self.game, c, event)
             return dict(id=identity, state=changed.state)
 
         return self.store._write(
@@ -3363,6 +3386,11 @@ class BattleService:
                 core_capability_confirmed=core_capability_confirmed,
                 actor_outside_frame=actor_outside_frame,
                 target_outside_frame=target_outside_frame,
+            )
+            | (
+                {"fuel_losses": [x.model_dump(mode="json") for x in fuel_losses]}
+                if fuel_losses
+                else {}
             ),
             operation,
             auto_audit=False,

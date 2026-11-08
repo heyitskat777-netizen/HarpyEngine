@@ -52,7 +52,10 @@ ledger = ledger_fixture
 def ready(store, girl="MOCKINGBIRD", frame="JANUS-B", *, other_frame="JANUS-B"):
     store.policy = store.policy.model_copy(update={"owner_initial_conditions": InitialConditions()})
     seed(store)
-    seed(store, OTHER, frame=other_frame)
+    if other_frame == "JANUS-B":
+        seed(store, OTHER)
+    else:
+        seed(store, OTHER, frame=other_frame)
     store.save_draft(
         PLAYER,
         "profile",

@@ -71,13 +71,25 @@ def _access(game: GameService, c: Connection, viewer: GuildViewer, rule: str) ->
     gate.registry.require_available(rule)
 
 
-def _oldgen(game: GameService, c: Connection, state: GameState, actor: ActorRef, rule: str) -> Any:
+def _oldgen(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    actor: ActorRef,
+    rule: str,
+    *,
+    action_id: str | None = None,
+) -> Any:
     actual = _native(game, c, state, actor)
-    if state.sheets[actor.entity].girl != "OLDGEN" or not has_rule(
+    if state.sheets[actor.entity].girl == "OLDGEN" and has_rule(
         state.sheets[actor.entity], rule, "OLDGEN"
     ):
-        raise WorkflowError("Use the actual original native Oldgen's owned rule")
-    return actual
+        return actual
+    from girlframe.services.m3_learned_plays import available
+
+    if rule == rules.ADVICE and available(game, c, state, actor, rule, action_id) is not None:
+        return actual
+    raise WorkflowError("Use an actual owned Oldgen rule or its proven one-use advice lesson")
 
 
 def prepare(
@@ -87,10 +99,12 @@ def prepare(
     state: GameState,
     prepared: PlayInput,
     channel: int,
+    *,
+    action_id: str | None = None,
 ) -> dict[str, Any]:
     _access(game, c, viewer, rules.ADVICE)
     actor = current_ref(state, viewer.user_id)
-    _oldgen(game, c, state, actor, rules.ADVICE)
+    _oldgen(game, c, state, actor, rules.ADVICE, action_id=action_id)
     if (
         prepared.target is None
         or prepared.target == viewer.user_id
@@ -139,6 +153,7 @@ def pre_roll(
         state,
         PlayInput.model_validate(action["data"]["prepared"]),
         int(action["channel_id"]),
+        action_id=action["id"],
     )
     if any(meta.get(k) != v for k, v in expected.items() if k != "phase"):
         raise WorkflowError("Reopen actual unchanged advice before spending Heat or rolling")
@@ -274,7 +289,10 @@ def prove_advice(game: GameService, c: Connection, state: GameState, identity: s
         or value.handler != meta["handler_controller"]
     ):
         raise WorkflowError("Recover actual original advice, paid Heat, roll and human source")
-    _oldgen(game, c, _history(c, game, rolled), value.actor, rules.ADVICE)
+    from girlframe.services.m3_learned_plays import prove_consumed
+
+    if not prove_consumed(game, c, state, action, rules.ADVICE, rolled):
+        _oldgen(game, c, _history(c, game, rolled), value.actor, rules.ADVICE)
     owner = value.counterpart if total <= 7 else value.caster
     answer = _response(
         game,
@@ -565,13 +583,27 @@ class OldgenService:
             values = [
                 x for sheet in state.sheets.values() for x in rules.base_maxims(state, sheet.owner)
             ] + [rules.get(state, x.id) for x in rules.records(state, rules.Maxim)]
+            from girlframe.services.m3_learned_plays import available
+
+            own = state.sheets.get(str(viewer.user_id))
+            lesson = (
+                available(self.game, c, state, current_ref(state, viewer.user_id), rules.ADVICE)
+                if own
+                and own.character_id
+                and not (own.girl == "OLDGEN" and has_rule(own, rules.ADVICE, "OLDGEN"))
+                else None
+            )
             return dict(
                 revision=state.revision,
                 scene_available=cast is not None,
                 can_advise=cast is not None
-                and str(viewer.user_id) in state.sheets
-                and state.sheets[str(viewer.user_id)].girl == "OLDGEN"
-                and has_rule(state.sheets[str(viewer.user_id)], rules.ADVICE, "OLDGEN"),
+                and own is not None
+                and (
+                    own.girl == "OLDGEN"
+                    and has_rule(own, rules.ADVICE, "OLDGEN")
+                    or lesson is not None
+                ),
+                learned_advice=lesson is not None,
                 subjects=subjects,
                 maxims=[
                     dict(

@@ -1336,6 +1336,11 @@ class GameService:
             mechanical_owner = (
                 int(princess_child["actor_controller"]) if princess_child else viewer.user_id
             )
+            if any(x.get("kind") == "fuel_shortage" for x in state.facts):
+                from girlframe.engine.m3_actor_bonds import current_ref as fuel_actor
+                from girlframe.services.m3_fuel_shortage import require_complete as fuel_complete
+
+                fuel_complete(self, c, state, fuel_actor(state, mechanical_owner))
             from girlframe.engine import m3_void_frame_entry as entry_rules
 
             void_frame_entry = None
@@ -3748,6 +3753,11 @@ class GameService:
                 raise WorkflowError("This action is diceless.")
             state = load_state(c, self.store.campaign_id)
             self.action_characters(c, action, state)
+            if any(x.get("kind") == "fuel_shortage" for x in state.facts):
+                from girlframe.services.m3_fuel_shortage import require_complete as fuel_complete
+                from girlframe.services.m3_red_queen import _acting as fuel_actor
+
+                fuel_complete(self, c, state, fuel_actor(action))
             from girlframe.services.p1_facilitator import require_scene_clear
 
             if action["data"].get("bonded_rejection_child"):

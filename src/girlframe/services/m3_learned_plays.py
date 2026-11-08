@@ -19,6 +19,8 @@ from girlframe.services.onboarding import WorkflowError
 SUPPORTED = {
     "girl.alpha.brutalize": ("brutalize", "ALPHA"),
     "girl.stim-blissed.dose-up": ("dose_up", "STIM-BLISSED"),
+    "girl.oldgen.old-dog-new-pups": ("old_dog_new_pups", "OLDGEN"),
+    "girl.newgirl.easy-target": ("easy_target", "NEWGIRL"),
 }
 
 
@@ -80,6 +82,51 @@ def _prove(
         for name in ("id", "actor", "teacher", "session", "rule_id", "event")
     ):
         raise WorkflowError("Recover the genuine original one-use learning source")
+
+
+def available(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    actor: ActorRef,
+    rule_id: str,
+    action_id: str | None = None,
+) -> LearnedPlayUse | None:
+    """Positive canonical lesson, never another person's book or reservation."""
+    if rule_id not in SUPPORTED or actor.kind != "pilot":
+        return None
+    sheet = state.sheets.get(actor.entity)
+    if sheet is None or sheet.character_id != actor.incarnation:
+        return None
+    runtime = sheet.girl_runtime
+    for value in runtime.learned_plays if runtime else ():
+        if (
+            value.actor != actor
+            or value.rule_id != rule_id
+            or value.rolled_event is not None
+            or value.claimed_action not in (None, action_id)
+        ):
+            continue
+        _prove(game, c, state, value)
+        if value.claimed_action is not None:
+            from girlframe.services.m3_handler_advancements import _history
+
+            action = game.action(c, value.claimed_action)
+            meta = action["data"].get("learned_play", {})
+            born = _history(c, game, meta.get("event", ""))
+            saved = born.sheets.get(actor.entity)
+            original = saved.girl_runtime if saved else None
+            if (
+                str(action["actor_id"]) != actor.entity
+                or action["data"]["prepared"]["play"] != SUPPORTED[rule_id][0]
+                or meta.get("id") != value.id
+                or meta.get("rule_id") != rule_id
+                or original is None
+                or value not in original.learned_plays
+            ):
+                raise WorkflowError("Recover this original lesson's own canonical reservation")
+        return value
+    return None
 
 
 def claim(

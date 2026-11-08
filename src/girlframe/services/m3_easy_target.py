@@ -68,6 +68,8 @@ def prepare(
     state: GameState,
     prepared: PlayInput,
     channel: int,
+    *,
+    action_id: str | None = None,
 ) -> dict[str, Any]:
     _access(game, c, viewer)
     actor = current_ref(state, viewer.user_id)
@@ -76,9 +78,11 @@ def prepare(
     scene = _cast(game, c, state, channel)
     handler = active_handler(state)
     others = [x for x in scene.roles if x.actor != actor]
+    from girlframe.services.m3_learned_plays import available
+
+    owns = sheet.girl == "NEWGIRL" and has_rule(sheet, rules.RULE, "NEWGIRL")
     if (
-        sheet.girl != "NEWGIRL"
-        or not has_rule(sheet, rules.RULE, "NEWGIRL")
+        not (owns or available(game, c, state, actor, rules.RULE, action_id) is not None)
         or not others
         or handler is None
         or prepared.parent
@@ -130,6 +134,7 @@ def pre_roll(
         state,
         PlayInput.model_validate(action["data"]["prepared"]),
         int(action["channel_id"]),
+        action_id=action["id"],
     )
     if action["data"]["easy_target"] != expected:
         raise WorkflowError(
@@ -154,6 +159,18 @@ def _session(
         or fingerprint(value.cast) != meta["cast_sha256"]
     ):
         raise WorkflowError("Recover the actual source roll and original scene people")
+    from girlframe.services.m3_learned_plays import prove_consumed
+
+    if not prove_consumed(game, c, state, action, rules.RULE, event):
+        born = _history(c, game, event)
+        sheet = born.sheets.get(value.actor.entity)
+        if (
+            sheet is None
+            or sheet.character_id != value.actor.incarnation
+            or sheet.girl != "NEWGIRL"
+            or not has_rule(sheet, rules.RULE, "NEWGIRL")
+        ):
+            raise WorkflowError("Prove the original native or genuinely learned Easy Target source")
     return value
 
 
@@ -1295,11 +1312,22 @@ class EasyTargetService:
             self.game.authorize(c, viewer, game=False)
             state = load_state(c, self.store.campaign_id)
             sheet = state.sheets.get(str(viewer.user_id))
+            from girlframe.services.m3_learned_plays import available
+
+            lesson = (
+                available(self.game, c, state, current_ref(state, viewer.user_id), rules.RULE)
+                if sheet and sheet.character_id
+                else None
+            )
             return dict(
                 revision=state.revision,
                 channel=channel,
                 can_start=bool(
-                    sheet and sheet.girl == "NEWGIRL" and has_rule(sheet, rules.RULE, "NEWGIRL")
+                    sheet
+                    and (
+                        (sheet.girl == "NEWGIRL" and has_rule(sheet, rules.RULE, "NEWGIRL"))
+                        or lesson is not None
+                    )
                 ),
                 tasks=self._tasks(c, viewer),
             )

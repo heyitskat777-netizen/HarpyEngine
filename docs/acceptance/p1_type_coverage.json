@@ -1,9 +1,9 @@
 {
   "status": "P1_IMPLEMENTATION_AUTHORIZED_TESTING_PENDING",
-  "published_source": "acc56c807aadb3375d20694eb77f10ffec7dcdba",
+  "published_source": "8d5e0fd9366194b54e4a203c5a2470951db22552",
   "main_merge": "c4550ecbd89bbf84363537e7bdf763c2177a998f",
   "scope": "10Girl labels;10Frame labels representing9official Frame rulesets; JANUS-B uses JANUS",
-  "evidence_note": "Published acc56c8 focused CI42525093965 passed, full skipped. Local AM endpoints/unplug/body transfer/replug passed1/7.23s then affected shared-history consumer1/6.08s; actual CHANGELING reset lineage1/10.64s. Fuel source integration separate and excluded. Final full/global/independent/player gates pending.",
+  "evidence_note": "Published8d5e0fd focused CI42527136875 passed; full skipped. Local actual Fuel loss1/2.72s and learned advice1/4.30s are minimum evidence. EasyTarget new consumer unrun; Fuel capture/corruption remains next. Final full/global/independent/player gates pending.",
   "rows": [
     {
       "category": "Girl",
@@ -375,7 +375,7 @@
       "type": "Newgirl",
       "registry_prefix": "girl.newgirl.",
       "status": "Published scoped implementation",
-      "ordinary_workflows_with_evidence": "Trainee; actual Mentor name/companions; Easy Target performance/consequences; Sex and actual Mentor changes. Static reconciliation: existing Easy Target hurt/real physical-harm/protection/failure and actual Mentor teaching/shirking discipline consumers and authored normals exist; no runtime rerun.",
+      "ordinary_workflows_with_evidence": "Trainee; actual Mentor name/companions; Easy Target performance/consequences; Sex and actual Mentor changes. Static reconciliation: existing Easy Target hurt/real physical-harm/protection/failure and actual Mentor teaching/shirking discipline consumers and authored normals exist; no runtime rerun. Positive one-use learner preparation/proof/menu for Easy Target implemented; new learned path NOT RUN, ordinary existing native paths preserved.",
       "missing_before_AI": "Precise source boundary: Easy Target prepare_child rejects a genuine non-Pilot performer; native NPC/Handler counterparts require their real source adapter. Existing Pilot harm/protection and Mentor discipline must be verified in final authored regression, rather than treated as absent code. Further ordinary sources require a specific demonstrated entry/effect before new assignment.",
       "later_candidates": "Mentor ending/replacement during an already-pending complex multi-Mentor source.",
       "code": [
@@ -420,7 +420,8 @@
             "tests/rules/test_easy_target.py"
           ],
           "local_test_references": [
-            "tests/rules/test_easy_target.py"
+            "tests/rules/test_easy_target.py",
+            "tests/rules/test_vatgrown_plays.py"
           ]
         },
         {
@@ -607,7 +608,7 @@
       "type": "Oldgen",
       "registry_prefix": "girl.oldgen.",
       "status": "Published scoped implementation",
-      "ordinary_workflows_with_evidence": "Standards, maxim/advice outcomes and actual maxim consumers; native Sex outcomes and reciprocal choices. Local native one-use advice rewrite normal passed; immutable original subject and spent state preserved.",
+      "ordinary_workflows_with_evidence": "Standards, maxim/advice outcomes and actual maxim consumers; native Sex outcomes and reciprocal choices. Local native one-use advice rewrite normal passed; immutable original subject and spent state preserved. Actual one-use Vatgrown learner can prepare advice and use its real resulting maxim without gaining Oldgen passive maxims; native normal1/4.30s.",
       "missing_before_AI": "Remaining ordinary counterparts; final affected-consumer regression and review. One-use rewrite is implemented locally with one passing normal, not independently accepted.",
       "later_candidates": "Complex retained-rule/alternate-body rewrite chains.",
       "code": [
@@ -688,7 +689,8 @@
             "tests/rules/test_oldgen.py"
           ],
           "local_test_references": [
-            "tests/rules/test_oldgen.py"
+            "tests/rules/test_oldgen.py",
+            "tests/rules/test_vatgrown_plays.py"
           ]
         },
         {
@@ -717,8 +719,8 @@
       "type": "Vatgrown",
       "registry_prefix": "girl.vatgrown.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Published scoped Doll and Experiment/Prime/Sex, real learned Brutalize once, original Investor/payment and Comfort gift;8 source normals passed separately. Local actual first DNA-comparison/Tag/private disclosure normal passed1/2.37s; explicit decline authored but unrun. Local genuine unchaperoned attempt/no-position-change/private disclosure/optional real Handler Punishment and actual source-bound movement normal passed1/2.49s; affected existing Wyvern movement normal passed in combined1failed/1passed3.86s. Local actual Stim-teacher learned Dose Up/native self-dose/consumed-grant readback passed1/3.62s. Earlier source/gift/DNA/Brutalize evidence remains. Local independently authored positive chaperoned journey now commits both actual original movements atomically; native two-PC normal passed1/2.21s, with private receipt/retry and parked Frames preserved. Local actual death now enforces a distinct Vatgrown; fresh coordinated review/Status, genuine new kit, activation and original-other authored private noticing passed1/4.57s. Original archives/resources/hardware remain separate.",
-      "missing_before_AI": "Other printed one-use learning families beyond actual Brutalize and Dose Up; genuine surviving-hardware reassignment after replacement; real additional source/body and unknown same-cell boundary cases. Joint travel is not standing supervision. Native death/fresh reviewed kit/activation/owned noticing is implemented with minimum1/4.57s. Other companion/mode/mutual cases, final integration and independent/player review remain deferred.",
+      "ordinary_workflows_with_evidence": "Published scoped Doll and Experiment/Prime/Sex, real learned Brutalize once, original Investor/payment and Comfort gift;8 source normals passed separately. Local actual first DNA-comparison/Tag/private disclosure normal passed1/2.37s; explicit decline authored but unrun. Local genuine unchaperoned attempt/no-position-change/private disclosure/optional real Handler Punishment and actual source-bound movement normal passed1/2.49s; affected existing Wyvern movement normal passed in combined1failed/1passed3.86s. Local actual Stim-teacher learned Dose Up/native self-dose/consumed-grant readback passed1/3.62s. Earlier source/gift/DNA/Brutalize evidence remains. Local independently authored positive chaperoned journey now commits both actual original movements atomically; native two-PC normal passed1/2.21s, with private receipt/retry and parked Frames preserved. Local actual death now enforces a distinct Vatgrown; fresh coordinated review/Status, genuine new kit, activation and original-other authored private noticing passed1/4.57s. Original archives/resources/hardware remain separate. Local learned Old Dog/Easy Target consumers now preserve genuine own lesson, learner resources and consumed receipts; actual native advice cancel/retry/Status/maxim/listening/once use1/4.30s. Learned Easy Target new path not run.",
+      "missing_before_AI": "Other printed one-use learning families beyond actual Brutalize, Dose Up, Old Dog and Easy Target; learned Easy Target authored normal/evidence still needed. Genuine surviving-hardware reassignment, additional source/body and unknown same-cell boundary cases remain; final deferred integration/regression/independent/player gates pending.",
       "later_candidates": "Compound existing Investor/acquisition obligations during exceptional carrier transitions; ordinary death continuity stays BEFORE AI.",
       "code": [
         "src/girlframe/services/m3_vatgrown.py",

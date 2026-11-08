@@ -865,3 +865,34 @@ above. Registry477/272 subset/205 unimplemented/440 required/0 independently
 verified. Working-source privacy scan1413 files/40 preserved manifest/0 findings
 (includes separate active Fuel files); packet whitespace passed. Exact selected
 hashes/checks retained under `var/p1-spinal-reset-*`. No final-candidate claim.
+
+### Actual first-battle fuel loss and learned social consumers
+
+Published preceding8d5e0fd9366194b54e4a203c5a2470951db22552:
+[focused CI42527136875](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42527136875)
+PASS; full regression skipped.
+
+- `pytest -q tests/rules/test_fuel_shortage.py::test_actual_armed_shortage_first_battle_native_unavoidable_loss_and_private_reopen`: **1passed/2.72s**, first run. Genuine selected source/arm/first root combat and actual adjudicator native loss; same-confirmation NPC/site/cast changes before Action or dice; private replay, ordinary unrelated defaults retained. Last-Base destruction produces actual existing quadrant work and normal-Play guards, not a fake Collateral source.
+- `pytest -q tests/rules/test_vatgrown_plays.py::test_actual_oldgen_teacher_learned_advice_cancel_retry_status_maxim_listen_and_once_use`: initial1failed/4.62s at final readback only: fixture expected 'used or marked', actual existing status correctly '— used.'. Test-only assertion correction; same-node **1passed/4.30s**. Real Oldgen teacher/lesson, native unrolled recovery/retry, learner Heat/Status, actual advice maxim/recipient listening and once-only consumer/private reopen. Easy Target positive lesson preparation/proof/menu also implemented but its new learned path is **NOT RUN**; a genuine teacher/mentor normal remains to be authored. Oldgen passives, teacher resources and invented lesson expiry are not granted.
+
+Neutral review helper now omits the new frame keyword on unchanged defaults,
+preserving existing seed adapters; explicit different-Frame creation still uses
+the genuine initial profile. Two-line helper compatibility delta Ruff/format pass.
+Worker Fuel4 Ruff/format and source3 type scopes passed after two engine narrowing
+repairs. Root shared6 Ruff/format passed; mypy6 found one audit-dict expansion type
+error. Scoped dict[str,Any] preserves identical metadata; Battle-only Ruff/format/
+mypy1 repair pass. No repeated gameplay for that type-only change. Worker learning5
+Ruff/format+mypy4 passed. Final affected-test formatting recorded at preflight.
+
+Actual capture/corruption alternatives, special bodies/Ship endpoints and other
+lesson families remain named required ports. Printed NPC Void is a Tag with one
+Handler-selected brain/bones/flesh/abstract manifestation (PDF20/printed18), not an
+invented blanket job ban; discovery/surgery must remain source-specific. These
+minimums do not complete full Strain, P1 regression or independent/player review.
+Bot OFF; no deployment, environment publication or model calls.
+
+Publication preflight22 paths/16 Python/13 source through disjoint worker/root
+scopes above. Registry477/273 subset/204 unimplemented/440 required/0 verified.
+Repository1413 files/40 preserved manifest/0 findings; whitespace passed.
+Exact selected hashes/checks in `var/p1-fuel-learning-*`. Authored broader tests,
+full regression/global checks and independent/player review remain deferred.

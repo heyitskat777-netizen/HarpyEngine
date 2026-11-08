@@ -7045,6 +7045,22 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "fuel-shortage-first-confirmed-battle",
+      "summary": "The next-battle fuel loss binds to the first genuinely proposed and confirmed root Cadre combat context after arming, with actual unavoidable loss committed before any battle roll.",
+      "source": "Rulebook PDF151/printed149 High Budget1.2; existing actual battle declarations and confirmation",
+      "rationale": "The runtime has combat contexts rather than a separate battle aggregate. Actual proposed+confirmed Cadre combat supplies a durable finite anchor; mission dispatch alone supplies no battle.",
+      "policy_key": "fuel_shortage_first_confirmed_battle",
+      "alternatives": [
+        "Add a distinct explicitly sourced battle episode aggregate if campaign play later requires it."
+      ],
+      "implementation_note": "Actual scheduling resolves original effect work while typed Arm remains durable. Require the complete pending arm set and actual adjudicator-selected affected ordinary NPC/site and account at confirmation. Real NPC death/site destruction, cast/journey changes, budget/site facts and last-Base producer use the same event. Source completion after canonical proof; true pending quadrant aftermath blocks normal Cadre Plays. Capture/corruption and special endpoints remain explicit required ports in this first slice.",
+      "change_impact": "Preserve original selection/arm, actual first combat, affected snapshots, human selection, world changes and followups. Future battle grouping changes do not retroactively trigger another loss.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -8900,7 +8916,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_easy_target.py"
+        "tests/rules/test_easy_target.py",
+        "tests/rules/test_vatgrown_plays.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -9201,7 +9218,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_oldgen.py"
+        "tests/rules/test_oldgen.py",
+        "tests/rules/test_vatgrown_plays.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -17658,14 +17676,16 @@
         "heading": "Budget high: die 1, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_fuel_shortage.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

@@ -349,6 +349,12 @@ async def open_context(
     defenses = await asyncio.to_thread(
         service.defenses, viewer_from_interaction(interaction), identity
     )
+    from girlframe.discord_adapter.m3_fuel_shortage import battle_fields, battle_losses
+    from girlframe.services.m3_fuel_shortage import FuelService
+
+    fuel = await asyncio.to_thread(
+        FuelService(service.game).for_context, viewer_from_interaction(interaction), identity
+    )
 
     async def confirm(current: discord.Interaction, values: dict[str, Any]) -> str:
         await asyncio.to_thread(
@@ -377,6 +383,7 @@ async def open_context(
             else None,
             dormant_awakened=values.get("awakened", ("no",))[0] == "yes",
             dormant_close=values.get("close", ("no",))[0] == "yes",
+            **({"fuel_losses": battle_losses(fuel, values)} if fuel["required"] else {}),
         )
         return "Actual source battle facts confirmed before dice."
 
@@ -425,6 +432,7 @@ async def open_context(
         review_fields.append(
             Field("core_capability", "Declared Asset can actually make this decisive strike", yesno)
         )
+    review_fields.extend(battle_fields(fuel))
     form = NativeForm(
         interaction.user.id,
         "Review actual battle opening",

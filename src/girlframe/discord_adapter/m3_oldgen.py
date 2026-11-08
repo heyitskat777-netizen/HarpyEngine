@@ -162,7 +162,15 @@ async def open_oldgen(
     )
     sheet = await asyncio.to_thread(service.game.sheet, viewer) if data["can_advise"] else {}
     if data["can_advise"]:
-        options.insert(0, ("advice", "Give actual advice: Old Dog, New Pups"))
+        options.insert(
+            0,
+            (
+                "advice",
+                "Use your one learned Old Dog, New Pups"
+                if data["learned_advice"]
+                else "Give actual advice: Old Dog, New Pups",
+            ),
+        )
     if not options:
         await reply(interaction, "No actual available Oldgen maxim or advice controls here.")
         return
@@ -228,7 +236,13 @@ async def open_oldgen(
             form = NativeForm(
                 current.user.id,
                 "Old Dog, New Pups",
-                "Spend actual Heat and give actual advice.",
+                "Spend your actual Heat and give actual advice. "
+                + (
+                    "This lesson is spent only on the real committed roll; no teacher resources "
+                    "or native Oldgen maxims are borrowed."
+                    if data["learned_advice"]
+                    else ""
+                ),
                 [
                     Field(
                         "target",

@@ -3951,3 +3951,15 @@ AM spinal endpoints now require genuine known birth vessels. The supported body
 transfer path uses actual unplug and reviewed replug; the continuous-relay guard
 is an implementation boundary, not a printed universal unplug rule. Parked relay
 and Girl Storage endpoint projection remain explicit required source ports.
+
+### Fuel shortage and the next actual battle
+
+`fuel-shortage-first-confirmed-battle` (PDF151/printed149): use the first genuinely
+proposed and confirmed root Cadre combat after actual arming, not mission dispatch.
+Require the complete pending-source set and actual adjudicator selection/account.
+Commit the unavoidable affected NPC/site loss and immediate cleanup before any
+battle roll, preserving real last-Base aftermath. Scheduling may close the old
+effect work while the durable future Arm remains active. This finite battle
+interpretation needs clarity review; preserve earlier source events when changing
+future battle grouping. Capture/corruption remain separate required ports in this
+first slice; the rule is not declared fully automated.
