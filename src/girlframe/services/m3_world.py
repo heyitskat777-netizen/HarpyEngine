@@ -305,9 +305,21 @@ class WorldService:
             )
             return data
 
-    def npc(self, viewer: GuildViewer, key: str, expected: int, npc: Npc) -> dict[str, Any]:
+    def npc(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        expected: int,
+        npc: Npc,
+        *,
+        show_dog: str | None = None,
+    ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             state = self._state(c, expected)
+            if show_dog is not None:
+                from girlframe.services.m3_show_dog import validate_npc_introduction
+
+                validate_npc_introduction(self.game, c, state, viewer, show_dog, npc)
             if state.world is None:
                 raise WorkflowError("Initialize the world before introducing NPCs.")
             if npc.controller != viewer.user_id:
@@ -339,8 +351,16 @@ class WorldService:
             ):
                 introduced = npc.model_copy(update={"custody_event": event})
             state.world = rules.introduce_npc(state.world, introduced)
+            npc_source: dict[str, Any] = {"source_work": show_dog} if show_dog is not None else {}
             self.game.event(
-                c, viewer.user_id, key, "m3.npc_introduced", state, entity_id=npc.id, event_id=event
+                c,
+                viewer.user_id,
+                key,
+                "m3.npc_introduced",
+                state,
+                entity_id=npc.id,
+                event_id=event,
+                **npc_source,
             )
             return {"id": npc.id, "game_revision": state.revision}
 
@@ -348,8 +368,10 @@ class WorldService:
             viewer,
             key,
             "m3.npc_introduced",
-            {"expected": expected, "npc": npc.model_dump(mode="json")},
+            {"expected": expected, "npc": npc.model_dump(mode="json")}
+            | ({"show_dog": show_dog} if show_dog is not None else {}),
             operation,
+            handler=show_dog is None,
         )
 
     def import_starting_npc(

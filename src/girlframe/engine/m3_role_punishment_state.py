@@ -24,6 +24,7 @@ class RolePunishment(Model):
         "alpha_sex",
         "dose_up",
         "vatgrown_doll",
+        "show_dog",
         "succubus_npc_disobey",
     ]
     action: str | None = None
@@ -68,6 +69,13 @@ class RolePunishment(Model):
             or self.action is None
         ):
             raise ValueError("Preserve the actual NPC refusal and original Handler execution")
+        if self.source_kind == "show_dog" and (
+            self.executor.kind != "handler"
+            or self.chooser != self.executor
+            or self.source_work is None
+            or self.action is None
+        ):
+            raise ValueError("Preserve Show Dog's actual original Handler and duty source")
         if self.source_kind == "vatgrown_doll" and self.executor.kind not in ("pilot", "handler"):
             raise ValueError("Use this actual Doll source's supported original executor")
         if self.executor.kind not in ("pilot", "npc", "handler", "external_pilot"):
@@ -85,6 +93,7 @@ class RolePunishment(Model):
             "janus_training",
             "succubus_npc_disobey",
             "vatgrown_doll",
+            "show_dog",
         ) and (self.executor.kind not in ("pilot", "external_pilot") or self.chooser is None):
             raise ValueError("Preserve the Enforcer source's original chooser and executor")
         if self.executor.kind in ("pilot", "external_pilot") and self.executor_frame is None:

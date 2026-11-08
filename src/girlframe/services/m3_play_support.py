@@ -241,6 +241,9 @@ def save_raw_roll(
     from girlframe.services.m3_frame_rewards import synchronize
 
     synchronize(c, game.store, state, updated, event)
+    from girlframe.services.m3_show_dog import synchronize as show_dog
+
+    show_dog(game, c, state, updated, event)
 
 
 def sync_finished_roll(

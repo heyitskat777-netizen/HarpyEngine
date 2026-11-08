@@ -6218,6 +6218,54 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "show-dog-appearance-fact",
+      "policy_key": "show_dog_appearance_fact",
+      "summary": "The Princess authors the printed NPC desire and actual seen-appearance account, bound to a real known NPC/controller; no additional controller approval is required.",
+      "source": "Show Dog, rulebook PDF33/printed31",
+      "rationale": "The choice belongs to the Princess. Preserve the factual trigger without inventing NPC dialogue or player consent.",
+      "alternatives": [
+        "Require a separate NPC-controller witnessed-appearance declaration."
+      ],
+      "implementation_note": "NPC motivation does not supply voluntary PC intimacy, dialogue or other consent.",
+      "change_impact": "Version future source ownership, Bond or risk changes; preserve original people, actual messages and canonical outcomes.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "show-dog-gain-bond",
+      "policy_key": "show_dog_gain_bond",
+      "summary": "Gain a Bond establishes at least Personal depth and preserves an existing deeper Bond, rather than automatically deepening or farming overflow Heat.",
+      "source": "Show Dog, rulebook PDF33/printed31",
+      "rationale": "The source says gain a Bond, while other printed rules expressly say deepen.",
+      "alternatives": [
+        "Treat a repeated gain as one depth increase."
+      ],
+      "implementation_note": "Use the actual canonical NPC/Princess edge and record before/after depth once.",
+      "change_impact": "Version future source ownership, Bond or risk changes; preserve original people, actual messages and canonical outcomes.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "show-dog-risk-review",
+      "policy_key": "show_dog_risk_review",
+      "summary": "The original Handler records actual risk adjudication; a chosen Punishment requires real instruction, performance, effects and completion.",
+      "source": "Show Dog, rulebook PDF33/printed31",
+      "rationale": "Risk is conditional, not an automatic Punishment. An original human factual decision preserves both outcomes without a fake waiver.",
+      "alternatives": [
+        "Use another source-proved inflictor where an explicit printed authority applies."
+      ],
+      "implementation_note": "Keep private message text out of the Handler risk view and preserve the actual chosen consequence.",
+      "change_impact": "Version future source ownership, Bond or risk changes; preserve original people, actual messages and canonical outcomes.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -7579,14 +7627,16 @@
         "heading": "Show Dog"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_show_dog.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

@@ -924,6 +924,55 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_show_dog import ShowDogService
+
+            dog = ShowDogService(GameService(self.store))
+            for row in dog._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "show-dog:" + row["id"],
+                        "show_dog",
+                        row["id"],
+                        row["revision"],
+                        "playbook",
+                        row["label"],
+                        "Original Princess and actual Handler",
+                        "pending" if row["phase"] == "pending" else "established",
+                        bool(row["pending"]),
+                        False,
+                        "Complete the actual appearance choices and any real risk consequence.",
+                        "Other people's private messages remain addressed to their recipients.",
+                        "Review Show Dog",
+                        task="m3_show_dog",
+                    )
+                )
+            for row in dog._messages(connection, viewer):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, row),
+                        prefix="show-dog-message:",
+                        source="show_dog_message",
+                        counterpart="Actual addressed sender and recipient",
+                        effect="Read your private addressed message.",
+                        details="Reading is OOC access.",
+                        primary="Read private message",
+                        task="m3_show_dog_message",
+                    )
+                )
+            for row in dog._interests(connection, viewer):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, row),
+                        prefix="show-dog-interest:",
+                        source="show_dog_interest",
+                        counterpart="Original Princess and actual NPC controller",
+                        effect="Read the actual source-owned NPC motivation.",
+                        details="No dialogue or player response is manufactured.",
+                        primary="Read appearance interest",
+                        task="m3_show_dog_interest",
+                    )
+                )
+
             from girlframe.services.m3_vatgrown import DollService
 
             for doll in DollService(GameService(self.store))._tasks(connection, viewer):
@@ -3143,6 +3192,7 @@ class InboxService:
                 primary, task_name = None, None
                 kind = work["kind"]
                 if kind in (
+                    "show_dog",
                     "creature_comforts",
                     "physical_initial",
                     "janus_core_setup",

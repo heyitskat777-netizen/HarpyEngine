@@ -1,5 +1,47 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Princess Show Dog: both actual Off-Duty choice lists — 2026-11-08
+
+Extends source `c619b73`. Reconciliation found Show Dog wholly missing; existing
+standards/mission benefits did not implement it. Every genuine Go-OffDuty source
+now creates original-person period work for both independent printed lists.
+Actual trend/public Tags, addressed private messages or the no-risk option combine
+with a real known NPC motivation and canonical Bond. Required work blocks recovery
+and period closure until actual choices and any chosen risk consequence complete.
+
+The original Handler records actual risk; chosen Punishment uses real source-bound
+instruction, attendance/effects and completion. The private message body stays out
+of risk review. Actual sender/recipient and NPC-controller interest views remain
+private and reopenable. Inbox work keeps You/Waiting distinct; completed messages
+and interests use private history routes rather than duplicate generic work cards.
+
+Source-funded NPC introduction reuses WorldService.npc and its actual reducer.
+Only this original Princess's pending second choice permits one ordinary
+self-controlled civilian at a real permitted base. Exact source retry preserves
+the same NPC. Ordinary world introduction retains Handler authorization and its
+old payload shape; this source creates no second inventory or general world grant.
+
+| Executed evidence | Result |
+|---|---|
+| Four normal first/second choices across real low/routine/high duty sources, plus affected world/period/Doll punishment/release checks | 9 passed /13.27s; `var/m3-show-dog-integrated.xml` |
+| Worker final normal selection | 4 passed /8.62s; overlaps the integrated run; earlier quiet fixture wrongly declined the mandatory high scene, corrected its source roll rather than waive the gate |
+| Coherent changed-file static | Ruff/format12 Python and mypy11 source pass without drift; `var/m3-show-dog-union-static.json` |
+
+After the gameplay pass, static checking found three errors: optional event kwargs
+needed an explicit payload type and an Inbox local callback name conflicted with
+a later route's inferred type. Only that annotation/local rename changed; no
+runtime behavior changed and successful gameplay checks were not repeated.
+The first static result is retained in `var/m3-show-dog-union-static-first.json`.
+
+Tests include all four motivations, actual risk Punishment/no Punishment, real
+player-owned new NPC/retry, independent choice ordering, canonical Bond, required
+recovery blocking, private message/history and stale/rollback. Broader actor,
+body, authority and special NPC introduction adapters remain explicit gaps.
+This is focused offline evidence, not a full regression, remote CI, independent
+rules review or human acceptance. Active Trainee files are excluded from the
+snapshot. Bot stays off; no deployment, publication or recovered-engine write.
+
+
 ## Unassuming Doll: actual benefits, information and scene exit — 2026-11-08
 
 Extends source `3e8ef8b`. Genuine Heat/receipt/Tag and owned choices cover mid,

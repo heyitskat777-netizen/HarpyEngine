@@ -657,6 +657,25 @@ class InboxView(discord.ui.View):
             await open_npc_bond_play(
                 interaction, NpcBondPlayService(self.service.store), item.identity
             )
+        elif item.task in ("m3_show_dog", "m3_show_dog_message", "m3_show_dog_interest"):
+            from girlframe.discord_adapter.m3_show_dog import (
+                open_interest,
+                open_message,
+                open_show_dog,
+            )
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_show_dog import ShowDogService
+
+            show_dog_operation = (
+                open_message
+                if item.task == "m3_show_dog_message"
+                else open_interest
+                if item.task == "m3_show_dog_interest"
+                else open_show_dog
+            )
+            await show_dog_operation(
+                interaction, ShowDogService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_vatgrown_doll":
             from girlframe.discord_adapter.m3_vatgrown import open_vatgrown
             from girlframe.services.m2_game import GameService

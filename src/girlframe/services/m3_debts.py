@@ -213,6 +213,10 @@ def synchronize(c: Connection, store: OnboardingStore, state: GameState, event: 
     from girlframe.services.m3_frame_rewards import synchronize as frame_rewards
 
     frame_rewards(c, store, state, period, event)
+    from girlframe.services.m2_game import GameService
+    from girlframe.services.m3_show_dog import synchronize as show_dog
+
+    show_dog(GameService(store), c, state, period, event)
     _returned_missions(c, store, state, period, event)
     work = t.m3["m3_required_work"]
     for debt in state.obligations:

@@ -1,9 +1,10 @@
-# Current Doll normal flows and affected existing source/cast/Handler consumers.
+# Current Show Dog outcomes and affected existing world/period/role consumers.
 # Final M3 mode still runs all tests.
-tests/rules/test_vatgrown.py
-tests/rules/test_dose_up.py
-tests/rules/test_handler_plays.py::test_brief_threat_expectation_are_real_owned_saved_facts_not_player_responses
-tests/rules/test_cast_service.py::test_cast_atomic_rollback_restart_rebuild_and_close_preserve_source_links
+tests/rules/test_show_dog.py
+tests/rules/test_world_service.py::test_npc_control_is_claimed_by_actual_member_and_keeps_private_records_private
+tests/rules/test_world_service.py::test_handler_cannot_introduce_a_self_controlled_director
+tests/rules/test_off_duty_cycle.py::test_actual_preparation_owned_rolls_recovery_review_and_world_end_are_resumable
+tests/rules/test_vatgrown.py::test_low_actual_observer_punishment_real_effect_then_benefit_and_parent_chat_closure
+tests/test_m2_game.py::test_live_default_gate_and_active_editor_protection
 tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng
 tests/test_m2_game.py::test_campaign_isolation_and_delivery_uncertainty_no_reroll
-tests/test_m2_game.py::test_live_default_gate_and_active_editor_protection
