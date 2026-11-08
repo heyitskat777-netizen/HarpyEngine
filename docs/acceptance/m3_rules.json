@@ -1243,6 +1243,28 @@
           "limitation": "Full Malleable, other recipient/body/controller/ending and physiological-removal adapters remain required. Focused checks, not a full regression or remote CI. Independent/human review and deployment not performed."
         }
       ]
+    },
+    {
+      "id": "M3C-MALLEABLE-NORMAL-001",
+      "title": "Birth-bound Malleable forced embrace and actual NPC deprogramming",
+      "expected": "Genuine altered-at-birth Tag proof, original giver native legal replacement, exact pending resolution without forged answers, actual protected and unprotected original Handler Foundation procedures.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_malleable.py"
+      ],
+      "evidence": [
+        {
+          "test_name": "Four focused new cases plus affected Dose and Off-Duty consumers",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_malleable.py tests/rules/test_dose_up.py tests/rules/test_off_duty_cycle.py::test_actual_preparation_owned_rolls_recovery_review_and_world_end_are_resumable tests/rules/test_off_duty_cycle.py::test_scene_is_private_to_participants_and_cannot_be_attested_for_absent_humans --maxfail=1 --junitxml=var/m3-malleable-integrated.xml",
+          "actual_result": "10 passed in19.81s; coherent static12 Python/11 source passed without drift; registry/repository and offline SDK passed;13 CI cases collected only.",
+          "log_or_trace": "var/m3-malleable-integrated.xml; var/m3-malleable-union-static.json; var/m3-malleable-union-source-snapshot.json; var/m3-malleable-handoff.json",
+          "git_commit": "01c8cfebc5a81ce39d5fe0b9ce5ab2b13a7c45d1",
+          "limitation": "Specialised source removals, conditional body/extra Identities remain required; focused evidence only, independent/human review pending."
+        }
+      ]
     }
   ],
   "enabled_modules": [

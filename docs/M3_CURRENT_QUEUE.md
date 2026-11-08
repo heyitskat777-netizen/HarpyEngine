@@ -1,6 +1,6 @@
 # Current M3 queue
 
-Updated 2026-11-08. Gameplay integration source: `213b9db`; local branch
+Updated 2026-11-08. Gameplay integration source: `01c8cfe`; local branch
 `codex/integrated-repairs-20261107`. **RULES_SUBSET; bot off.** No deployment,
 environment publication, recovered-engine writes, AI/M4 or Ancillary activation.
 This working list separates upcoming work from completed scoped checkpoints.
@@ -10,8 +10,9 @@ Registry entries and workflows overlap and differ in size; counts are not percen
 
 | Workflow | Owner / state | Dependency | Next concrete action | Completion evidence |
 |---|---|---|---|---|
-| Malleable force-embrace / NPC protection | Malleable agent + root / active bounded implementation | Real altered-at-birth eligibility, later forced Identity replacement and genuine NPC deprogramming | Root adds stamped Tag-birth hook, exact pending-resolution consumer and actual OffDuty NPC operation; run fixed PC/NPC normals | Worker NEW4 authored; tests held pending shared ports; no acceptance yet |
 | Successor | Root / lifecycle dependency queued | Proven singleton Handler, unranked Girl and actual link-removal gaps | Assign source-bound concurrent junior/full Handler lifecycle and actual threshold consumers; avoid a Gold-Star-only placeholder | Frozen346-word source/dependency contract,12 inspected dependency hashes; no code or acceptance |
+| Oldgen reinforcement and Old Dog | Oldgen agent + root / active bounded implementation | Genuine maxim ownership, source Heat Play and one-use consumers | Integrate all printed Old Dog tiers, real maxim marking/unmarking and target effects; Oldgen Sex remains separate | Source/API contract in progress; no acceptance yet |
+| Vatgrown passives | AM agent / source reconciliation | Real asset/Identity/Status consumers | Freeze a bounded normal-flow contract and implement dependency-ready effects | No acceptance yet |
 | Remaining required core systems | Root + bounded assignments / open | Existing source inventory and actual consumers | Select the next whole dependency-ready gameplay workflow; keep unsupported branches visible | [Registry](../rules/registry.json), [remaining scope](M3_REMAINING_WORK.md), [acceptance](acceptance/m3_rules.json) |
 | Final integrated candidate | Root / blocked by required gameplay | Frozen full core candidate and complete ordinary workflows | Run final full regression and global static/migration/privacy/contract checks | Pending; focused/segmented results do not substitute |
 | Independent and human acceptance | Independent reviewer + owner/players / pending | Review-ready candidate and stated test checklist | Independent source/clarity review, Discord play-testing and owner milestone review | Not run; no inferred certification or release approval |
@@ -23,6 +24,7 @@ These are implementation evidence, not independent certification or milestone si
 | Workflow | Owner / state | Dependency | Next concrete action | Completion evidence |
 |---|---|---|---|---|
 | Acquisition/proof pilot | AM agent / implemented within scope | Frozen Secretary, Deep-Brain-Spikes and new Tracker source | Reuse the proven core in the next matching acquisition; retain explicit exceptions | Coordinated 8 checks passed; source proof/rollback/retry/private receipt, exact ten-file snapshot |
+| Malleable force-embrace / NPC protection | Malleable agent + root / committed within scope | Genuine altered-at-birth proof, forced replacement and actual NPC procedure | `01c8cfe`; keep specialised source/body consumers visible | Integrated10 passed /19.81s; static12 Python/11 source; offlineSDK14 commands;13 CI cases collected only |
 | Neutral award scenario | Nightmare agent / implemented within scope | Actual Session + performed PR award setup | Reuse the neutral setup for matching upcoming workflows; preserve Secretary API | Same coordinated 8 checks, all modified callers covered; no speed claim |
 | Typed inbox-entry pilot | Root / implemented within scope | Tracker, Contaminant and Reign matching visible-row shape | Apply only when the actual shape matches; keep routing/visibility explicit | Actual private Inbox flows in coordinated8 checks; no generic routing framework |
 | Politician Bribery Fund | AM agent / normal implementation verified | Actual cities/NPC Bonds, player-owned sphere assignment, real Strings and consequence consumers | Committed `aaf4a64`; keep other consequence adapters visible | Final normal plus 3 unchanged compatibility cases, real rollback/retry/privacy; scoped source snapshot |
