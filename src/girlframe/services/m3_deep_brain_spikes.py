@@ -586,6 +586,17 @@ class DeepBrainSpikesService:
                 ],
             )
 
+    def linked_play(self, viewer: GuildViewer, identity: str, action: str) -> dict[str, Any]:
+        with self.store.engine.connect() as c:
+            self._access(c, viewer)
+            state = load_state(c, self.store.campaign_id)
+            value = source(self.game, c, state, identity)
+            self._party(c, state, viewer, value)
+            if not any(x.action == action for x in value.contributions):
+                raise WorkflowError("Select an actual completed Play linked to this memory")
+        # Memory membership does not grant another Action's private audience.
+        return self.game.inspect(viewer, action)
+
     def _tasks(self, c: Connection, viewer: GuildViewer) -> list[dict[str, Any]]:
         state = load_state(c, self.store.campaign_id)
         tasks = [

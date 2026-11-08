@@ -258,6 +258,11 @@ def prepare(
     from girlframe.services.m3_princess_sex import controlled_dose
 
     directed = controlled_dose(game, c, state, viewer, prepared, channel, action=action)
+    counter = None
+    if prepared.parent and directed is None:
+        from girlframe.services.m3_alpha_sex import self_dose_counter
+
+        counter = self_dose_counter(game, c, state, viewer, prepared, channel, action)
     actor = (
         ActorRef.model_validate(directed["actor"])
         if directed
@@ -271,7 +276,7 @@ def prepare(
     if (
         handler is None
         or cast.facilitator != state.handler
-        or (prepared.parent and directed is None)
+        or (prepared.parent and directed is None and counter is None)
         or prepared.off_duty_id
         or prepared.target is not None
         or not any(x.actor == actor and x.controller == actual.controller for x in cast.roles)

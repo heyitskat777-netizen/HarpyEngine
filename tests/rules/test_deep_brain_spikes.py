@@ -215,6 +215,60 @@ def test_real_memory_context_current_play_relevance_and_discrepancy_return_keep_
         action=action,
         account="PRIVATE My actual composure response clarifies what that memory means",
     )
+
+    async def saved_contributions_and_linked_play(number, *, active):
+        from discord import AllowedMentions
+
+        from girlframe.discord_adapter.m3_memory_pages import MemoryForm, MemoryHistory, text_units
+
+        saved = state(game)
+        data = spikes.menu(PLAYER, identity)
+        own = current(2, number)
+        await own.response.defer(ephemeral=True)
+        await open_spikes(own, spikes, identity)
+        view = own.edit_original_response.call_args.kwargs["view"]
+        assert isinstance(view, MemoryForm if active else MemoryHistory)
+        pages = view.pages() if active else view.pages
+        content = "".join(x.body for x in pages)
+        contributions = data["contributions"]
+        assert len(contributions) == 2
+        positions = [content.index(x["account"]) for x in contributions]
+        assert positions == sorted(positions)
+        assert action in content and all(text_units(x.content) <= 1000 for x in pages)
+        button = next(x for x in view.children if x.label == "Read linked Plays")
+        selected = current(2, number + 1)
+        await selected.response.defer(ephemeral=True)
+        await button.callback(selected)
+        picker = selected.edit_original_response.call_args.kwargs["view"]
+        assert action in dict(picker.fields[0].options)
+        assert not await picker.interaction_check(current(3, number + 2))
+        picker.values["action"] = (action,)
+        read = current(2, number + 3)
+        await picker.confirm.callback(read)
+        history = read.edit_original_response.call_args.kwargs["view"]
+        assert isinstance(history, MemoryHistory)
+        text = "".join(x.body for x in history.pages)
+        actual = game.inspect(PLAYER, action)
+        assert actual["receipt"]["id"] in text and "keep your head" in text
+        assert all(text_units(x.content) <= 1000 for x in history.pages)
+        assert (
+            read.edit_original_response.call_args.kwargs["allowed_mentions"].to_dict()
+            == AllowedMentions.none().to_dict()
+        )
+        assert not await history.interaction_check(current(3, number + 4))
+        back = next(x for x in history.children if x.label == "Return to memory")
+        reopened = current(2, number + 5)
+        await reopened.response.defer(ephemeral=True)
+        await back.callback(reopened)
+        assert isinstance(
+            reopened.edit_original_response.call_args.kwargs["view"],
+            MemoryForm if active else MemoryHistory,
+        )
+        with pytest.raises(WorkflowError):
+            spikes.linked_play(PLAYER, identity, "not-a-linked-play")
+        assert state(game) == saved and game.dice.calls == 1
+
+    asyncio.run(saved_contributions_and_linked_play(41100, active=True))
     after_play = state(game)
     revision = after_play.revision
     memory_native(
@@ -244,6 +298,7 @@ def test_real_memory_context_current_play_relevance_and_discrepancy_return_keep_
     assert game.scene_info(PLAYER, 900)["memory"] is None
     with ledger.engine.connect() as c:
         assert game.scene(c, 900)["id"] == present["id"]
+    asyncio.run(saved_contributions_and_linked_play(41120, active=False))
     # Second printed cause: actual discrepancies, with no mandatory roll/acknowledgment.
     second = begin_native(
         spikes, acquisition.id, subject, 41060, mode="there", period="before_game"

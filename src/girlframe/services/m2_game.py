@@ -5204,6 +5204,12 @@ class GameService:
                     event_id=event,
                 )
             )
+            if action["data"].get("alpha_sex_counter_source"):
+                from girlframe.services.m3_alpha_sex import synchronize_counters as sex_counters
+
+                # Canonical component responses must exist before proving a completed Dose.
+                sex_counters(self, c, event)
+                action = self.action(c, action["id"])
             if action["data"].get("mockingbird"):
                 from girlframe.services.m3_mockingbird_plays import (
                     post_synchronize as post_mockingbird,

@@ -12,6 +12,7 @@ from girlframe.engine import m3_am_body as rules
 from girlframe.engine import m3_am_code as code
 from girlframe.engine.m2 import ChoiceAnswer, GameState
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_handler_consequences import active_handler, same_handler_body
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.onboarding import WorkflowError
@@ -171,6 +172,76 @@ def prove_conveyance(
     return value
 
 
+def _source_handler(game: GameService, c: Connection, value: code.Maintenance) -> ActorRef:
+    original = active_handler(_history(game, c, value.proposed_event))
+    if original is None:
+        raise WorkflowError("Recover this circuit source's actual original Handler")
+    return original
+
+
+def _appointment_at(game: GameService, c: Connection, event: str, author: ActorRef) -> str:
+    from girlframe.engine.handler_setup import HandlerSetup
+
+    seq = c.scalar(
+        sa.select(t.events.c.seq).where(
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.id == event,
+        )
+    )
+    if seq is None:
+        raise WorkflowError("Recover the actual factual event before its appointment")
+    row = (
+        c.execute(
+            sa.select(t.setup_revisions)
+            .join(
+                t.events,
+                sa.and_(
+                    t.events.c.campaign_id == t.setup_revisions.c.campaign_id,
+                    t.events.c.id == t.setup_revisions.c.event_id,
+                ),
+            )
+            .where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.kind == "campaign.handler_appointed",
+                t.events.c.seq <= seq,
+            )
+            .order_by(t.setup_revisions.c.revision.desc())
+            .limit(1)
+        )
+        .mappings()
+        .first()
+    )
+    if row is None or HandlerSetup.model_validate_json(row["body_json"]).handler_id != int(
+        author.entity
+    ):
+        raise WorkflowError("Recover the actual original factual Handler appointment")
+    return str(row["event_id"])
+
+
+def _fact_uid(preparation: rules.Preparation) -> int:
+    return (
+        int(preparation.fact_author.entity) if preparation.fact_author else preparation.controller
+    )
+
+
+def _can_record_connection(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    viewer: GuildViewer,
+    preparation: rules.Preparation,
+) -> bool:
+    if viewer.user_id != _fact_uid(preparation) or state.handler != viewer.user_id:
+        return False
+    if preparation.fact_author is None:
+        return True
+    if not same_handler_body(state, preparation.fact_author):
+        return False
+    from girlframe.services.m3_medical import MedicalService
+
+    return MedicalService(game.store)._handler(c) == (viewer.user_id, preparation.fact_appointment)
+
+
 def prove_preparation(
     game: GameService, c: Connection, state: GameState, identity: str
 ) -> rules.Preparation:
@@ -183,13 +254,25 @@ def prove_preparation(
             t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == value.event
         )
     ).first()
+    maintenance = code.session(original, value.maintenance)
     if (
         value not in rules.preparations(original)
         or event is None
-        or (event.kind, event.actor_id) != ("m3.am_body_prepared", str(value.controller))
-        or original.handler != value.controller
+        or (event.kind, event.actor_id) != ("m3.am_body_prepared", str(_fact_uid(value)))
+        or original.handler != _fact_uid(value)
+        or (maintenance.actor, maintenance.operator, maintenance.controller)
+        != (value.actor, value.operator, value.controller)
     ):
         raise WorkflowError("Recover the actual human's original hardware preparation facts")
+    if value.fact_author is None:
+        if maintenance.operator.kind == "pilot":
+            raise WorkflowError("The independent Pilot needs its actual Handler factual source")
+    elif (
+        value.fact_author != _source_handler(game, c, maintenance)
+        or not same_handler_body(original, value.fact_author)
+        or _appointment_at(game, c, value.event, value.fact_author) != value.fact_appointment
+    ):
+        raise WorkflowError("Preserve the original Handler body and actual factual appointment")
     _prove_items(game, c, original, value.actor, value.spec.carried_items)
     return value
 
@@ -251,9 +334,14 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         ).first()
         if event is None or (event.kind, event.actor_id) != (
             "m3.am_body_connection",
-            str(value.controller),
+            str(_fact_uid(prep)),
         ):
             raise WorkflowError("Only the actual original factual source establishes hookup")
+        if prep.fact_author is not None and (
+            not same_handler_body(_history(game, c, link.event), prep.fact_author)
+            or _appointment_at(game, c, link.event, prep.fact_author) != prep.fact_appointment
+        ):
+            raise WorkflowError("Preserve the actual original hookup's Handler source context")
     if value.returned_event:
         event = c.execute(
             sa.select(t.events.c.kind, t.events.c.actor_id).where(
@@ -409,8 +497,15 @@ class BodyService:
             state = load_state(c, self.store.campaign_id)
             value = source(self.game, c, state, maintenance)
             actual(self.game, c, state, value)
+            author = (
+                _source_handler(self.game, c, value) if value.operator.kind == "pilot" else None
+            )
+            from girlframe.services.m3_medical import MedicalService
+
+            appointment = MedicalService(self.store)._handler(c)[1] if author else None
             if (
-                viewer.user_id != value.controller
+                viewer.user_id != (int(author.entity) if author else value.controller)
+                or (author is not None and not same_handler_body(state, author))
                 or state.handler != viewer.user_id
                 or state.revision != expected
                 or value.phase not in ("proposed", "ready", "active")
@@ -431,7 +526,9 @@ class BodyService:
                 )
             _prove_items(self.game, c, state, value.actor, spec.carried_items)
             event = str(uuid4())
-            body = rules.prepare(state, value, spec, event)
+            body = rules.prepare(
+                state, value, spec, event, fact_author=author, fact_appointment=appointment
+            )
             self.game.event(
                 c,
                 viewer.user_id,
@@ -462,7 +559,12 @@ class BodyService:
         access(self.game, c, viewer)
         state = load_state(c, self.store.campaign_id)
         value = prove(self.game, c, state, identity)
-        if viewer.user_id not in (int(value.actor.entity), value.controller):
+        preparation = prove_preparation(self.game, c, state, value.preparation)
+        if viewer.user_id not in (
+            int(value.actor.entity),
+            value.controller,
+            _fact_uid(preparation),
+        ):
             raise WorkflowError("These hardware/body records belong to their original humans")
         return state, value
 
@@ -478,8 +580,13 @@ class BodyService:
         def change(c: Connection) -> dict[str, Any]:
             self.game.unpaused(c)
             state, value = self._own(c, viewer, identity)
+            preparation = prove_preparation(self.game, c, state, value.preparation)
             if (
-                viewer.user_id != value.controller
+                viewer.user_id != _fact_uid(preparation)
+                or (
+                    preparation.fact_author is not None
+                    and not same_handler_body(state, preparation.fact_author)
+                )
                 or state.handler != viewer.user_id
                 or state.revision != expected
                 or value.returned_event
@@ -489,6 +596,14 @@ class BodyService:
                 raise WorkflowError(
                     "Only the actual original factual source records the real hookup"
                 )
+            if preparation.fact_author is not None:
+                from girlframe.services.m3_medical import MedicalService
+
+                if MedicalService(self.store)._handler(c) != (
+                    viewer.user_id,
+                    preparation.fact_appointment,
+                ):
+                    raise WorkflowError("Recover the original factual Handler appointment")
             event = str(uuid4())
             link = rules.connection(state, identity).model_copy(
                 update=dict(connected=connected, event=event)
@@ -580,6 +695,13 @@ class BodyService:
                 current=project_hardware(state, occupied) if occupied else None,
                 owner=viewer.user_id == int(value.actor.entity),
                 controller=viewer.user_id == value.controller,
+                can_record_connection=_can_record_connection(
+                    self.game,
+                    c,
+                    state,
+                    viewer,
+                    prove_preparation(self.game, c, state, value.preparation),
+                ),
                 carried_items=carried_options(self.game, c, state, value.actor),
                 conveyances=[
                     prove_conveyance(self.game, c, state, x.event).model_dump(mode="json")
@@ -608,32 +730,69 @@ class BodyService:
                         carried_items=carried_options(self.game, c, state, x.actor),
                     )
                     for x in code.sessions(state)
-                    if x.controller == viewer.user_id
+                    if (
+                        int(_source_handler(self.game, c, x).entity)
+                        if x.operator.kind == "pilot"
+                        else x.controller
+                    )
+                    == viewer.user_id
                     and x.phase in ("proposed", "ready", "active")
                     and not x.body_swap
                 ],
                 swaps=[
                     dict(id=x.id, returned=bool(x.returned_event))
                     for x in rules.swaps(state)
-                    if viewer.user_id in (int(x.actor.entity), x.controller)
+                    if viewer.user_id
+                    in (
+                        int(x.actor.entity),
+                        x.controller,
+                        _fact_uid(prove_preparation(self.game, c, state, x.preparation)),
+                    )
                 ],
             )
 
     def _tasks(self, c: Connection, viewer: GuildViewer) -> list[dict[str, Any]]:
+        self.game.authorize(c, viewer, game=False)
         state = load_state(c, self.store.campaign_id)
-        return [
-            dict(
-                id=x.id,
-                revision=state.revision,
-                phase="returned"
-                if x.returned_event
-                else "hooked"
-                if rules.connection(state, x.id).connected
-                else "disconnected",
-                pending=False,
-                label="Actual AM body and hooked return",
-                actor=x.actor.model_dump(mode="json"),
-            )
-            for x in rules.swaps(state)
-            if viewer.user_id in (int(x.actor.entity), x.controller)
-        ]
+        result = []
+        for value in code.sessions(state):
+            if (
+                value.operator.kind == "pilot"
+                and "body" in value.selected_options
+                and value.phase == "active"
+                and not value.body_swap
+                and _source_handler(self.game, c, value).entity == str(viewer.user_id)
+                and not any(x.maintenance == value.id for x in rules.preparations(state))
+            ):
+                result.append(
+                    dict(
+                        id=value.id,
+                        revision=state.revision,
+                        phase="prepare",
+                        pending=True,
+                        label="Prepare actual Pilot-operated AM hardware",
+                        actor=value.actor.model_dump(mode="json"),
+                    )
+                )
+        for swap in rules.swaps(state):
+            preparation = prove_preparation(self.game, c, state, swap.preparation)
+            if viewer.user_id in (
+                int(swap.actor.entity),
+                swap.controller,
+                _fact_uid(preparation),
+            ):
+                result.append(
+                    dict(
+                        id=swap.id,
+                        revision=state.revision,
+                        phase="returned"
+                        if swap.returned_event
+                        else "hooked"
+                        if rules.connection(state, swap.id).connected
+                        else "disconnected",
+                        pending=False,
+                        label="Actual AM body and hooked return",
+                        actor=swap.actor.model_dump(mode="json"),
+                    )
+                )
+        return result

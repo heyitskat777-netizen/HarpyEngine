@@ -1084,3 +1084,79 @@ format and types all selected files PASS; whitespace PASS. Registry477/273 subse
 repository1418 files/40 original manifest entries/0 findings. Exact selected
 hashes/checks retained under `var/p1-continuity-controlled-*`. Scoped local source
 and normal checks are not the final exact-candidate full regression.
+
+
+## Pilot body, memory readback and sleeping-counter integration
+
+Base09cbb54c412fd2fab822fc8619c790dda7203e8a is published; focused
+CI42534343870 passed, full regression skipped. Bot OFF; RULES_SUBSET and
+0 independently verified. No deployment or human acceptance implied.
+
+Actual Pilot Just Code BODY now separates original Handler hardware/hookup
+facts from the Pilot operator's choices, effect ownership and receipt. Existing
+Body proof and actual swap remain mandatory; the original AM retains hooked
+return ownership. Optional fact-author fields omit defaults, preserving existing
+records. Handler inbox projects the actual pending preparation. Records and Branch
+remain separate explicit adapters.
+
+Minimum `tests/rules/test_am_code_pilot_operator.py::test_actual_pilot_body_choice_separates_handler_facts_operator_effect_and_am_return`:
+initial1failed/3.88s exposed an obsolete Code dispatch guard after genuine body
+proof. Guard repaired only for BODY. Same-node retries failed at fixture-only
+missing existing Beneath campaign ruling (4.23s) and the test's expected blocked
+return exception type (5.45s). Corrected fixture/assertion; final retry
+**1passed/5.85s**. No successful old node rerun.
+
+Separate Deep-Brain-Spikes missing-contribution/linked-Play UI readback is now
+implemented without changing the existing lossless pagination renderer or state.
+Active and returned views show every saved contribution in order, plus actual
+completed Play links. A private selector opens existing canonical receipt/result
+readback and returns to the memory. Every page/control rechecks memory membership;
+linked Action inspection additionally retains its own original audience. Disabled
+mentions, bounded ordered pages, existing controls and no-write behavior remain.
+
+Extended existing normal
+`tests/rules/test_deep_brain_spikes.py::test_real_memory_context_current_play_relevance_and_discrepancy_return_keep_present`:
+initial1failed/3.22s on unrelated Bonded-AM inbox discovery requiring its unreviewed
+rule with no owned source. Leaf task projection now returns empty for no actual
+owned source before applying its unchanged source-specific rule gate; no owned
+access/write gate is relaxed. Same-node retry **1passed/7.46s**, covering active
+and returned saved contributions, linked actual receipt, private controls,
+disabled mentions, state/dice stability and both original return causes.
+Existing full pagination/boundary and Bonded source normals remain in final
+regression; this is not a full regression result.
+
+`docs/P1_PLAYER_TEST_PLAN.md` is preparation only: exact candidate and release
+approval remain unset. Final full regression, global static/migration/privacy/
+restore checks, independent review and real human acceptance remain separate.
+
+### Alpha sleeping self-Dose and shared integration
+
+Actual owned native Stim self-Dose is offered as a sleeping counterpart counter
+without inventing Contact, consent, source work or a second performer. Original
+Alpha stays asleep; only its actual owner answers the subsequent wake choice.
+Existing eight counter families and Princess-controlled Dose retain their guards.
+Optional unreleased NPC-target preview no longer blocks this unrelated native
+form: only explicit unsupported/module-disabled preview returns empty; actual
+selected Play authorization remains intact.
+
+Minimum `tests/rules/test_alpha_sex.py::test_actual_native_stim_self_dose_counter_keeps_sleep_parent_receipt_and_owned_wake`:
+initial1failed/3.26s found the unrelated NPC preview gate above. Same-node retries
+then found fixture-only missing required trigger (2.91s), required disposable-Heat
+choice (2.97s), and wrong child lookup through the parent-owned scene lock (3.22s).
+Those fixtures were corrected. Retry4 failed3.96s on a real ordering bug: Dose
+completion proof ran before its current component response was inserted.
+The exact current canonical response is deferred by the observer, then a positive
+Alpha-counter-only post-insert callback proves the completed source and wakes via
+the existing owned choice in the same transaction. No staged/fake response or
+extra source event introduced. Retry5 **1passed/3.91s**. Failed logs retained;
+no old successful scenario rerun. Other authored normals remain final-candidate
+checks. Scoped static and publishable results recorded with this packet; full
+regression/independent/player gates are still pending.
+
+Integrated packet preflight:19 selected paths/14 Python/11 source. Scoped Ruff,
+format and types PASS; whitespace initially detected CSV CRLF from the export,
+normalized to existing LF. Registry477/273 subset/204 unimplemented/440 required/
+0 verified; planning contracts PASS; repository1419 files/40 manifest/0 findings.
+Typed callback repair changed only the two new memory buttons to an explicit
+Button subclass; no extra gameplay rerun. Full final P1 regression remains pending.
+Exact scoped hashes and logs: `var/p1-body-memory-counter-*`.

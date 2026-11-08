@@ -594,12 +594,16 @@ class BondedAMService:
             )
 
     def _tasks(self, c: Connection, viewer: GuildViewer) -> list[dict[str, Any]]:
-        _access(self.game, c, viewer)
+        self.game.authorize(c, viewer, game=False)
         state = load_state(c, self.store.campaign_id)
+        owned_sources = [
+            x for x in rules.sources(state) if viewer.user_id in x.controllers.values()
+        ]
+        if not owned_sources:
+            return []
+        _access(self.game, c, viewer)
         result = []
-        for source in rules.sources(state):
-            if viewer.user_id not in source.controllers.values():
-                continue
+        for source in owned_sources:
             own = [
                 x
                 for x in rules.performances(state)

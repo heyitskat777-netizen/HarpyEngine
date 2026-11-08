@@ -1,6 +1,7 @@
 """Private acquired memory-scene setup, owned participation and printed return causes."""
 
 import asyncio
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 import discord
@@ -8,11 +9,96 @@ import discord
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field
+from girlframe.discord_adapter.m2_receipt_text import expression
 from girlframe.discord_adapter.m3_memory_pages import MemoryForm, MemoryHistory, Submit
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m3_deep_brain_spikes import DeepBrainSpikesService
 from girlframe.services.onboarding import WorkflowError
+
+
+class MemoryButton(discord.ui.Button[Any]):
+    def __init__(
+        self, label: str, action: Callable[[discord.Interaction], Awaitable[None]]
+    ) -> None:
+        super().__init__(label=label, row=4)
+        self.action = action
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await self.action(interaction)
+
+
+def _linked_control(
+    view: MemoryHistory | MemoryForm, service: DeepBrainSpikesService, identity: str
+) -> None:
+    async def choose(interaction: discord.Interaction) -> None:
+        if not await view.interaction_check(interaction):
+            return
+        try:
+            await open_linked_plays(interaction, service, identity)
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    view.add_item(MemoryButton("Read linked Plays", choose))
+
+
+async def open_linked_plays(
+    interaction: discord.Interaction, service: DeepBrainSpikesService, identity: str
+) -> None:
+    data = await asyncio.to_thread(service.menu, viewer_from_interaction(interaction), identity)
+    if data["kind"] != "memory":
+        raise WorkflowError("Choose an actual saved memory with completed Play links")
+    actions = tuple(dict.fromkeys(x["action"] for x in data["contributions"] if x["action"]))
+    if not actions:
+        await reply(interaction, "This memory has no linked completed Plays.")
+        return
+
+    async def inspect(current: discord.Interaction, values: dict[str, Any]) -> None:
+        action = values["action"][0]
+        result = await asyncio.to_thread(
+            service.linked_play, viewer_from_interaction(current), identity, action
+        )
+        lines = [
+            "Linked Play " + action,
+            str(result["play"]).replace("_", " ") + " · " + result["state"],
+        ]
+        if result["receipt"]:
+            receipt = result["receipt"]
+            lines.append("Receipt " + receipt["id"] + " · " + expression(receipt))
+        for key, value in (result["result"] or {}).items():
+            lines.append(str(key).replace("_", " ") + ": " + str(value))
+
+        async def access(page: discord.Interaction) -> None:
+            await asyncio.to_thread(
+                service.linked_play, viewer_from_interaction(page), identity, action
+            )
+
+        history = MemoryHistory(current.user.id, clean("\n".join(lines)), access)
+
+        async def reopen(returning: discord.Interaction) -> None:
+            if await history.interaction_check(returning):
+                await open_spikes(returning, service, identity)
+
+        history.add_item(MemoryButton("Return to memory", reopen))
+        await reply(current, history.text(), history)
+
+    async def authorize(current: discord.Interaction) -> None:
+        await asyncio.to_thread(service.menu, viewer_from_interaction(current), identity)
+
+    await MemoryForm(
+        interaction.user.id,
+        "Completed memory Plays",
+        "Read an actual linked Play with your own existing access.",
+        [
+            Field(
+                "action",
+                "Actual linked completed Play",
+                tuple((x, "Completed Play " + str(i + 1)) for i, x in enumerate(actions)),
+            )
+        ],
+        inspect,
+        authorize=authorize,
+    ).present(interaction)
 
 
 async def open_spikes(
@@ -161,6 +247,19 @@ async def open_spikes(
         + "\nCurrent circumstances: "
         + clean(data["circumstances"])
     )
+    for index, contribution in enumerate(data["contributions"], 1):
+        summary += (
+            "\nContribution "
+            + str(index)
+            + " — "
+            + str(contribution["actor"]["kind"])
+            + " "
+            + clean(str(contribution["actor"]["entity"]))
+            + ":\n"
+            + clean(contribution["account"])
+        )
+        if contribution["action"]:
+            summary += "\nCompleted Play: " + clean(contribution["action"])
     if data["phase"] == "returned":
         history = MemoryHistory(
             interaction.user.id,
@@ -171,6 +270,8 @@ async def open_spikes(
             + clean(data["return_account"] or ""),
             authorize,
         )
+        if any(x["action"] for x in data["contributions"]):
+            _linked_control(history, service, data["id"])
         await reply(interaction, history.text(), history)
         return
     operations: tuple[tuple[str, str], ...] = (
@@ -225,7 +326,7 @@ async def open_spikes(
                 required=False,
             )
         )
-    await memory_form(
+    form = memory_form(
         interaction.user.id,
         "Play the memory normally",
         summary
@@ -233,4 +334,7 @@ async def open_spikes(
         "current resources. Return when relevance is clear or discrepancies become too major.",
         fields,
         act,
-    ).present(interaction)
+    )
+    if any(x["action"] for x in data["contributions"]):
+        _linked_control(form, service, data["id"])
+    await form.present(interaction)

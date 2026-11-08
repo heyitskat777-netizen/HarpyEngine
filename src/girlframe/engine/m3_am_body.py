@@ -3,7 +3,7 @@
 from typing import Literal
 from uuid import uuid4
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from girlframe.engine.m2 import AssetState, GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model
@@ -32,6 +32,18 @@ class Preparation(Model):
     cell: tuple[int, int]
     spec: BodySpec
     event: str
+    fact_author: ActorRef | None = Field(default=None, exclude_if=lambda value: value is None)
+    fact_appointment: str | None = Field(
+        default=None, min_length=1, exclude_if=lambda value: value is None
+    )
+
+    @model_validator(mode="after")
+    def factual_source(self) -> "Preparation":
+        if (self.fact_author is None) != (self.fact_appointment is None) or (
+            self.fact_author is not None and self.fact_author.kind != "handler"
+        ):
+            raise ValueError("Record the actual original Handler and appointment together")
+        return self
 
 
 class Body(Model):
@@ -278,7 +290,15 @@ def _ordinary(
         raise ValueError("Preserve the exact current condition of the actually conveyed objects")
 
 
-def prepare(state: GameState, value: Maintenance, spec: BodySpec, event: str) -> Preparation:
+def prepare(
+    state: GameState,
+    value: Maintenance,
+    spec: BodySpec,
+    event: str,
+    *,
+    fact_author: ActorRef | None = None,
+    fact_appointment: str | None = None,
+) -> Preparation:
     pose = _pose(state, value.actor)
     sheet = state.sheets[value.actor.entity]
     if (
@@ -326,6 +346,8 @@ def prepare(state: GameState, value: Maintenance, spec: BodySpec, event: str) ->
         cell=pose.girl_cell,
         spec=spec,
         event=event,
+        fact_author=fact_author,
+        fact_appointment=fact_appointment,
     )
     put(state, "am_body_prepared", prepared.id, prepared)
     return prepared

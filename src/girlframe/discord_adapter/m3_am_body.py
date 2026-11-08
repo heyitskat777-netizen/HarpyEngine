@@ -170,7 +170,17 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
     detail = data["am_code"]
     bodies = detail["body"]["bodies"]
     if not bodies:
-        await open_prepare(interaction, BodyService(game), detail["maintenance"])
+        service = BodyService(game)
+        menu = await asyncio.to_thread(service.menu, viewer_from_interaction(interaction))
+        if any(x["id"] == detail["maintenance"] for x in menu["preparations"]):
+            await open_prepare(interaction, service, detail["maintenance"])
+        else:
+            await reply(
+                interaction,
+                "Your actual body choice is waiting for the original Handler's hardware facts. "
+                "Their private AM-body task opens that source; reopen your own choice after "
+                "genuine hardware is prepared. No one has answered or transferred for you.",
+            )
         return
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
@@ -265,6 +275,10 @@ async def open_body(
         )
         await reply(interaction, form.text(), form)
         return
+    menu = await asyncio.to_thread(service.menu, viewer)
+    if any(x["id"] == identity for x in menu["preparations"]):
+        await open_prepare(interaction, service, identity)
+        return
     data = await asyncio.to_thread(service.view, viewer, identity)
     records = []
     for body in data["bodies"]:
@@ -294,7 +308,7 @@ async def open_body(
         )
         + (
             [("connect", "Record actual hookup"), ("disconnect", "Record actual disconnection")]
-            if data["controller"] and not data["swap"]["returned_event"]
+            if data["can_record_connection"] and not data["swap"]["returned_event"]
             else []
         )
         + ([("spinal", "Open your actual spinal connections")] if data["owner"] else [])

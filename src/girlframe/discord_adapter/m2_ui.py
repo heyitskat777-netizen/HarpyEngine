@@ -1157,9 +1157,23 @@ async def open_play(
     if parent and parent["kind"] == "void_frame_entry_child":
         plays = ("dive_deep",)
     if parent and parent["kind"] == "alpha_sex_counter_play":
-        from girlframe.services.m3_alpha_sex import COUNTER_PLAYS
+        from girlframe.engine.m3_actor_bonds import current_ref
+        from girlframe.services.m2_state import load_state
+        from girlframe.services.m3_alpha_sex import counter_plays
 
-        plays = COUNTER_PLAYS
+        def actual_counter_options() -> tuple[str, ...]:
+            assert parent is not None
+            with game.store.engine.connect() as connection:
+                current_state = load_state(connection, game.store.campaign_id)
+                return counter_plays(
+                    game,
+                    connection,
+                    current_state,
+                    game.action(connection, parent["parent"]),
+                    current_ref(current_state, viewer.user_id),
+                )
+
+        plays = await threaded(actual_counter_options)
     if parent and parent["kind"] == "red_queen_child":
         plays = (parent["body"]["play"],)
     if parent and parent["kind"] == "ankou_effect_child":
@@ -1231,7 +1245,15 @@ async def open_play(
     if approval is not None and "plays" in approval.subsystems and "flirt" in plays:
         from girlframe.services.m3_npc_flirt import NpcFlirtService
 
-        rows = await threaded(lambda: NpcFlirtService(game).targets(viewer, channel))
+        def optional_npc_targets() -> list[dict[str, Any]]:
+            try:
+                return NpcFlirtService(game).targets(viewer, channel)
+            except ValueError as error:
+                if str(error).startswith(("UNSUPPORTED_RULE:", "MODULE_DISABLED:")):
+                    return []
+                raise
+
+        rows = await threaded(optional_npc_targets)
         npc_flirt_targets = {"npc:" + x["ref"]["entity"]: x for x in rows}
     fields = [
         menu("play", "Choose a Play", plays),

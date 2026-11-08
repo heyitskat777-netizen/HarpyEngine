@@ -693,10 +693,139 @@ def _close_required(game: GameService, c: Connection, action: dict[str, Any], ki
     )
 
 
+def counter_plays(
+    game: GameService, c: Connection, state: GameState, parent: dict[str, Any], actor: ActorRef
+) -> tuple[str, ...]:
+    """Preserve ordinary counters; advertise the actual native Stim's own self-Dose only."""
+    from girlframe.engine import m3_dose_up as dose
+    from girlframe.services.m3_access import load_registry
+    from girlframe.services.m3_dose_up import _operator
+
+    sheet = state.sheets.get(actor.entity) if actor.kind == "pilot" else None
+    if (
+        sheet is None
+        or sheet.character_id != actor.incarnation
+        or sheet.girl != "STIM-BLISSED"
+        or not has_rule(sheet, dose.RULE, "STIM-BLISSED")
+    ):
+        return COUNTER_PLAYS
+    try:
+        _counter_scope(game, c, state, parent, actor)
+        _operator(game, c, state, actor)
+        load_registry().require_available(dose.RULE)
+    except (ValueError, WorkflowError):
+        return COUNTER_PLAYS
+    return (*COUNTER_PLAYS, dose.PLAY)
+
+
+def _counter_scope(
+    game: GameService, c: Connection, state: GameState, parent: dict[str, Any], actor: ActorRef
+) -> dict[str, Any]:
+    actual = game.action(c, parent["id"])
+    meta = actual["data"].get("alpha_sex")
+    if meta is None:
+        raise WorkflowError("Use the actual original Alpha sleeping-source parent")
+    value = prove(game, c, state, meta["session"])
+    row = next(
+        (x for x in game.pending(c, actual["id"]) if x["kind"] == "alpha_sex_counter_play"), None
+    )
+    selection = (
+        c.execute(
+            sa.select(t.m2["m2_responses"]).where(
+                t.m2["m2_responses"].c.campaign_id == game.store.campaign_id,
+                t.m2["m2_responses"].c.choice_id == meta.get("selection_choice"),
+                t.m2["m2_responses"].c.event_id == meta.get("selection_event"),
+                t.m2["m2_responses"].c.actor_id == str(value.counterpart),
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if (
+        value.action != actual["id"]
+        or value.target != actor
+        or actor.kind != "pilot"
+        or value.target != current_ref(state, value.counterpart)
+        or meta.get("phase") != "counter"
+        or value.phase != "sleeping"
+        or not rules.asleep(state, value.actor)
+        or value.wake_event
+        or row is None
+        or row["actor_id"] != str(value.counterpart)
+        or selection is None
+        or ChoiceAnswer.model_validate_json(selection["answer_json"]).options != ("play",)
+    ):
+        raise WorkflowError("Preserve the original counterpart's actual selected sleeping counter")
+    cast = _cast(game, c, state, value.cast.channel)
+    if fingerprint(cast) != fingerprint(value.cast):
+        raise WorkflowError("Preserve the actual original counter source scene and people")
+    return dict(parent=actual["id"], choice=row["id"], actor=actor.model_dump(mode="json"))
+
+
+def self_dose_counter(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    viewer: GuildViewer,
+    prepared: PlayInput,
+    channel: int,
+    action: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """An actual self Play in the real counter slot; no separate recipe/foreign contact."""
+    from girlframe.engine import m3_dose_up as dose
+    from girlframe.services.m3_dose_up import _operator
+
+    if prepared.play != dose.PLAY or prepared.parent is None:
+        return None
+    parent = game.action(c, prepared.parent)
+    if not parent["data"].get("alpha_sex"):
+        return None
+    actor = current_ref(state, viewer.user_id)
+    scope = _counter_scope(game, c, state, parent, actor)
+    if (
+        dose.PLAY not in counter_plays(game, c, state, parent, actor)
+        or prepared.source_work is not None
+        or prepared.target is not None
+        or prepared.target_actor not in (None, actor)
+        or prepared.order_id
+        or prepared.off_duty_id
+        or is_helpless(state, actor)
+        or int(parent["channel_id"]) != channel
+    ):
+        raise WorkflowError("Use the actual native Stim's owned self-Dose in this original counter")
+    _operator(game, c, state, actor)
+    if action is not None and (
+        action["data"].get("alpha_sex_counter_source") != scope
+        or action["parent_id"] != parent["id"]
+        or action["actor_id"] != actor.entity
+        or action["data"]["prepared"] != prepared.model_dump(mode="json")
+    ):
+        raise WorkflowError("Recover this exact original self-Dose counter Action before rolling")
+    return scope
+
+
 def validate_counter_child(
     game: GameService, c: Connection, parent: dict[str, Any], actor: ActorRef, prepared: PlayInput
 ) -> dict[str, Any]:
-    value = rules.get(load_state(c, game.store.campaign_id), parent["data"]["alpha_sex"]["session"])
+    state = load_state(c, game.store.campaign_id)
+    if prepared.play == "dose_up":
+        from girlframe.engine import m3_dose_up as dose
+        from girlframe.services.m3_dose_up import _operator
+
+        scope = _counter_scope(game, c, state, parent, actor)
+        if (
+            prepared.parent != parent["id"]
+            or prepared.source_work is not None
+            or prepared.target is not None
+            or prepared.target_actor not in (None, actor)
+            or prepared.order_id
+            or prepared.off_duty_id
+            or dose.PLAY not in counter_plays(game, c, state, parent, actor)
+        ):
+            raise WorkflowError("Use the actual native Stim self-Dose counter, not another recipe")
+        _operator(game, c, state, actor)
+        return scope
+    value = rules.get(state, parent["data"]["alpha_sex"]["session"])
     row = next(
         (x for x in game.pending(c, parent["id"]) if x["kind"] == "alpha_sex_counter_play"), None
     )
@@ -742,13 +871,63 @@ def synchronize_counters(game: GameService, c: Connection, event: str) -> GameSt
                 t.m2["m2_responses"].c.actor_id == str(value.counterpart),
             )
         )
+        if child["data"]["play"] == "dose_up":
+            from girlframe.services.m3_dose_up import prove as prove_dose
+
+            # Game.event publishes the canonical choice event before respond inserts
+            # its response row. Defer only that exact current selection; the
+            # post-response callback must prove the complete actual Dose below.
+            staged = next(
+                (x for x in child["data"]["dose_up"]["selections"] if x["event"] == event),
+                None,
+            )
+            if staged is not None:
+                response = c.scalar(
+                    sa.select(t.m2["m2_responses"].c.event_id).where(
+                        t.m2["m2_responses"].c.campaign_id == game.store.campaign_id,
+                        t.m2["m2_responses"].c.choice_id == staged["choice"],
+                    )
+                )
+                if response is None:
+                    incoming = (
+                        c.execute(
+                            sa.select(t.events).where(
+                                t.events.c.campaign_id == game.store.campaign_id,
+                                t.events.c.id == event,
+                            )
+                        )
+                        .mappings()
+                        .one()
+                    )
+                    payload = json.loads(incoming["payload_json"])
+                    if (
+                        incoming["kind"] != "m3.choice_resolved"
+                        or incoming["actor_id"] != str(staged["chooser"])
+                        or payload.get("action_id") != child["id"]
+                        or payload.get("choice_id") != staged["choice"]
+                    ):
+                        raise WorkflowError("Recover the exact current Dose response event")
+                    continue
+            dose = prove_dose(game, c, state, child["id"])
+            if (
+                dose.actor != value.target
+                or dose.target != value.target
+                or dose.contact is not None
+                or dose.order is not None
+                or child["data"]["dose_up"]["phase"] != "complete"
+                or child["data"]["prepared"].get("source_work") is not None
+                or child["data"]["dose_up"].get("princess_direction") is not None
+                or child["data"]["dose_up"].get("required_recipe") is not None
+                or source != _counter_scope(game, c, state, parent, value.target)
+            ):
+                raise WorkflowError("Complete the actual original Stim's genuine self-Dose counter")
         if (
             child["parent_id"] != parent["id"]
             or parent["data"]["alpha_sex"].get("phase") != "counter"
             or selection is None
             or ChoiceAnswer.model_validate_json(selection).options != ("play",)
             or child["actor_id"] != value.target.entity
-            or child["data"]["play"] not in COUNTER_PLAYS
+            or child["data"]["play"] not in (*COUNTER_PLAYS, "dose_up")
             or child["data"]["character_ids"].get(value.target.entity) != value.target.incarnation
             or receipt is None
             or json.loads(receipt) != child["data"].get("receipt")

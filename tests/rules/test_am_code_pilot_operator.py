@@ -36,7 +36,7 @@ from girlframe.services.m3_sprite import SpriteService
 from girlframe.services.onboarding import WorkflowError
 
 
-def high(store, tmp_path, monkeypatch, *, marked=False, shield=False):
+def high(store, tmp_path, monkeypatch, *, marked=False, shield=False, body=False):
     seed = test_creation_review.seed
     selected = test_m2_game.selected
 
@@ -206,7 +206,7 @@ def high(store, tmp_path, monkeypatch, *, marked=False, shield=False):
         game.respond(
             PLAYER, str(uuid4()), row["id"], row["revision"], ChoiceAnswer(options=("backup",))
         )
-    for unsupported in ("body", "branch", "records"):
+    for unsupported in ("branch", "records"):
         with pytest.raises(WorkflowError):
             game.respond(
                 OTHER,
@@ -224,8 +224,9 @@ def high(store, tmp_path, monkeypatch, *, marked=False, shield=False):
         assert set(dict(next(x for x in form.fields if x.key == "options").options)) == {
             "identities",
             "backup",
+            "body",
         }
-        form.values.update(options=("backup",))
+        form.values.update(options=("body", "backup") if body else ("backup",))
         result = current(3, 975008)
         await form.confirm.callback(result)
         assert form.completed, str(result.edit_original_response.call_args)
@@ -455,3 +456,215 @@ def test_other_pilot_real_asset_damage_waits_sprite_work_and_original_human_resp
         assert "damaged actuator" in str(result.edit_original_response.call_args)
 
     asyncio.run(history())
+
+
+def test_actual_pilot_body_choice_separates_handler_facts_operator_effect_and_am_return(
+    ledger, tmp_path, monkeypatch
+):
+    from girlframe.discord_adapter.m3_am_body import open_body
+    from girlframe.discord_adapter.m3_am_body import open_choice as open_body_choice
+    from girlframe.engine import m3_am_body as bodies
+    from girlframe.engine.m3_actors import resolve
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_am_body import BodyService, prove, prove_preparation
+
+    game, _, _, action, _, worker, gateway = high(ledger, tmp_path, monkeypatch, body=True)
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "owner_m3_rulings": ledger.policy.owner_m3_rulings.model_copy(
+                update={"beneath_private_choices": "affected_owner"}
+            )
+        }
+    )
+    actual = state(game)
+    maintenance = next(x for x in code.sessions(actual) if x.action == action)
+    operator = current_ref(actual, 3)
+    actor = current_ref(actual, 2)
+    original_pose = next(x for x in actual.placements if x.actor == actor)
+    service = BodyService(game)
+    row = next(x for x in game.choices(OTHER) if x["kind"] == "am_code_body")
+    assert "body" in maintenance.selected_options and maintenance.controller == 3
+    with ledger.engine.connect() as c:
+        task = next(x for x in service._tasks(c, ADMIN) if x["phase"] == "prepare")
+        assert task["id"] == maintenance.id and task["pending"]
+        assert not any(x["phase"] == "prepare" for x in service._tasks(c, OTHER))
+
+    async def waiting_and_actual_handler_facts():
+        own = current(3, 995001)
+        await own.response.defer(ephemeral=True)
+        await open_body_choice(own, game, row["id"])
+        assert "waiting" in own.edit_original_response.call_args.kwargs["content"]
+        assert not own.edit_original_response.call_args.kwargs.get("view")
+        own = current(1, 995002)
+        await own.response.defer(ephemeral=True)
+        await open_body(own, service, maintenance.id)
+        form = own.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(current(3))
+        form.values.update(
+            vessel="actual-pilot-programmed-puppet",
+            label="Actual supplied replacement hardware",
+            source="PRIVATE_HANDLER_ACTUAL_LOCAL_PROCESSOR_AND_EMPTY_HARDWARE_SOURCE",
+            processing=("yes",),
+            unoccupied=("yes",),
+            medical=("fit",),
+            mind_assets=(),
+            assets=(
+                "Prepared arm | Actual supplied actuator | intact | clear\n"
+                "Prepared casing | Actual supplied casing | intact | clear"
+            ),
+        )
+        confirmation = current(1, 995003)
+        await form.confirm.callback(confirmation)
+        assert form.completed, str(confirmation.edit_original_response.call_args)
+
+    asyncio.run(waiting_and_actual_handler_facts())
+    (prepared,) = bodies.preparations(state(game))
+    assert prepared.controller == 3 and prepared.operator == operator
+    assert prepared.fact_author.entity == "1" and prepared.fact_appointment
+    with ledger.engine.connect() as c:
+        assert prove_preparation(game, c, state(game), prepared.id) == prepared
+        forged = state(game).model_copy(deep=True)
+        bodies.put(
+            forged,
+            "am_body_prepared",
+            prepared.id,
+            prepared.model_copy(update=dict(fact_author=None, fact_appointment=None)),
+        )
+        with pytest.raises(WorkflowError):
+            prove_preparation(game, c, forged, prepared.id)
+    with pytest.raises(WorkflowError):
+        game.respond(
+            ADMIN,
+            str(uuid4()),
+            row["id"],
+            row["revision"],
+            ChoiceAnswer(
+                options=(prepared.id,), text="Cannot impersonate the actual Pilot operator"
+            ),
+        )
+    calls = game.dice.calls
+
+    async def actual_operator():
+        own = current(3, 995004)
+        await own.response.defer(ephemeral=True)
+        await open_body_choice(own, game, row["id"])
+        form = own.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(current(1))
+        form.values.update(
+            body=(prepared.id,),
+            account=(
+                "My actual hands transfer this same original AM into the real prepared "
+                "processing body; "
+                "its original body remains physically hooked up"
+            ),
+        )
+        confirmation = current(3, 995005)
+        await form.confirm.callback(confirmation)
+        assert form.completed, str(confirmation.edit_original_response.call_args)
+
+    asyncio.run(actual_operator())
+    swapped = state(game)
+    (swap,) = bodies.swaps(swapped)
+    assert swap.controller == 3 and swap.operator == operator and swap.actor == actor
+    assert swap.new_vessel == prepared.spec.vessel and game.dice.calls == calls
+    with ledger.engine.connect() as c:
+        assert prove(game, c, swapped, swap.id) == swap
+        actual_body = resolve(swapped, actor, profiles(c, ledger.campaign_id))
+        assert actual_body.vessel_id == prepared.spec.vessel
+        assert {x.id for x in prepared.spec.assets} <= {x.id for x in actual_body.assets}
+        response = t.m2["m2_responses"]
+        assert (
+            c.scalar(sa.select(response.c.actor_id).where(response.c.event_id == swap.event)) == "3"
+        )
+    assert service.view(ADMIN, swap.id)["can_record_connection"]
+    assert not service.view(OTHER, swap.id)["can_record_connection"]
+    with pytest.raises(WorkflowError):
+        service.connection(
+            OTHER,
+            "operator-is-not-fact-author",
+            swap.id,
+            swapped.revision,
+            False,
+            "Not the actual original Handler's factual source",
+        )
+
+    # Close the genuine new-discovery consequence before unrelated new-body gameplay.
+    answer(
+        game,
+        PLAYER,
+        "am_select",
+        options=("secret",),
+        text="Please keep this actual circuit adjustment secret",
+    )
+    tick(worker, gateway, 5)
+    game.dice.faces = (1, 1)
+    performed = game.begin(
+        PLAYER,
+        str(uuid4()),
+        900,
+        state(game).sheets["2"].revision,
+        PlayInput(
+            play="put_someone_beneath_you",
+            target=3,
+            heat=0,
+            trigger_confirmed=True,
+            context="This actual new processing body's actuator performs the real interaction",
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    assert game.inspect(PLAYER, performed)["receipt"]
+    pass_tags(game)
+    answer(game, OTHER, "beneath_select", options=("damage",), text="Actual physical counterattack")
+    damaged = prepared.spec.assets[0]
+    answer(game, PLAYER, "beneath_details", denied=(damaged.id,))
+    tick(worker, gateway, 5)
+    assert game.inspect(PLAYER, performed)["state"] == "complete"
+    assert next(x for x in state(game).sheets["2"].assets if x.id == damaged.id).damaged
+
+    async def actual_handler_hookup():
+        for index, operation in enumerate(("disconnect", "connect")):
+            own = current(1, 995006 + 2 * index)
+            await own.response.defer(ephemeral=True)
+            await open_body(own, service, swap.id)
+            form = own.edit_original_response.call_args.kwargs["view"]
+            form.values.update(
+                operation=(operation,),
+                account=(
+                    "Actual original/new hardware connection is " + operation + "ed in this scene"
+                ),
+            )
+            confirmation = current(1, 995007 + 2 * index)
+            await form.confirm.callback(confirmation)
+            assert form.completed, str(confirmation.edit_original_response.call_args)
+            if operation == "disconnect":
+                with pytest.raises((WorkflowError, ValueError), match="hooked"):
+                    service.return_body(PLAYER, str(uuid4()), swap.id, state(game).revision)
+
+    asyncio.run(actual_handler_hookup())
+    with pytest.raises(WorkflowError):
+        service.return_body(OTHER, "operator-does-not-own-am-return", swap.id, state(game).revision)
+
+    async def original_am_returns():
+        own = current(2, 995010)
+        await own.response.defer(ephemeral=True)
+        await open_body(own, service, swap.id)
+        form = own.edit_original_response.call_args.kwargs["view"]
+        form.values.update(operation=("return",))
+        confirmation = current(2, 995011)
+        await form.confirm.callback(confirmation)
+        assert form.completed, str(confirmation.edit_original_response.call_args)
+
+    asyncio.run(original_am_returns())
+    final = state(game)
+    assert bodies.swap(final, swap.id).returned_event and current_ref(final, 2) == actor
+    assert (
+        next(x for x in final.placements if x.actor == actor).vessel_id == original_pose.vessel_id
+    )
+    parked = next(x for x in bodies.bodies(final) if x.vessel == prepared.spec.vessel)
+    assert next(x for x in parked.assets if x.id == damaged.id).damaged
+    with ledger.engine.connect() as c:
+        assert prove(game, c, final, swap.id).operator == operator
+        author = c.scalar(sa.select(t.events.c.actor_id).where(t.events.c.id == prepared.event))
+        assert author == "1"
+    assert game.dice.calls == calls + 1
+    assert service.view(ADMIN, swap.id)["swap"]["returned_event"]
