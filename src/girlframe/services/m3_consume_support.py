@@ -63,6 +63,34 @@ def prove_kill(
         ),
         None,
     )
+    if consumed is None:
+        resolution = next(
+            (
+                x
+                for x in rules.records(state, rules.ConsumptionResolution)
+                if x.session == action and x.event == event and x.option == "kill"
+            ),
+            None,
+        )
+        if resolution is not None:
+            from girlframe.services.m3_consume import consume_sprite_source
+            from girlframe.services.m3_sprite import SpriteService
+
+            _, original, _ = consume_sprite_source(game, c, state, action, resolution.work)
+            row, _ = SpriteService(game.store)._proof(c, resolution.work)
+            decisions = json.loads(row["body_json"])["decisions"]
+            if (
+                resolution.recipient != target
+                or resolution.original_target != target
+                or original.option != "kill"
+                or resolution.consumption != original.id
+                or not decisions
+                or any(x["choice"] != "pass" for x in decisions.values())
+            ):
+                raise WorkflowError(
+                    "Only real all-declined interception resumes original consumption"
+                )
+            consumed = original
     choice = (
         c.execute(
             sa.select(t.m2["m2_choices"]).where(
@@ -159,14 +187,8 @@ def context(
                 "Choose an actually known source target, not a hidden backend entity"
             )
     from girlframe.engine.m3_am import require_harm
-    from girlframe.engine.m3_sprite import candidates
 
     require_harm(state, actor, target)
-    if candidates(state, target, actor, bound):
-        raise WorkflowError(
-            "SOURCE_CONSUME_SPRITE_REQUIRED: preserve genuine interception "
-            "before biting or swallowing"
-        )
     if target.kind == "gorgon":
         from girlframe.engine.m3_leviathan import require_layers_clear
 
@@ -892,7 +914,21 @@ def forget(
     )
     if source.actor != actor or consumed is None:
         raise WorkflowError("Ontological Consumption requires the actual original killing")
-    original = _history(c, game, consumed.event)
+    resolved = next(
+        (
+            x
+            for x in rules.records(state, rules.ConsumptionResolution)
+            if x.consumption == consumed.id
+        ),
+        None,
+    )
+    if resolved is not None:
+        from girlframe.services.m3_consume import prove_resolution
+
+        prove_resolution(game, c, state, resolved.id)
+        if resolved.option != "kill" or resolved.recipient != target:
+            raise WorkflowError("An intercepted Bite did not consume the original person's memory")
+    original = _history(c, game, resolved.event if resolved else consumed.event)
     if (
         consumed not in rules.records(original, rules.Consumption)
         or resolve(
@@ -983,7 +1019,57 @@ def prove_loss_source(
             ),
             None,
         )
-        if real_eat is None or rules.hunger(original, actor) != "Quiet":
+        if real_eat is None:
+            # Deferred physical Bite has a separate canonical feeding event; the
+            # original human choice/target/event remain unchanged.
+            from girlframe.services.m3_collateral import latest
+            from girlframe.services.m3_consume import prove_resolution
+
+            resolution = next(
+                (
+                    x
+                    for x in rules.records(original, rules.ConsumptionResolution)
+                    if x.feeding_event == event and x.session == staged["action"]
+                ),
+                None,
+            )
+            if resolution is None:
+                raise WorkflowError("Only actual Eat expires this source-owned Starving Asset")
+            resolution = prove_resolution(game, c, original, resolution.id)
+            source = prove_session(game, c, original, resolution.session)
+            audit = (
+                c.execute(
+                    sa.select(t.events).where(
+                        t.events.c.campaign_id == game.store.campaign_id,
+                        t.events.c.id == event,
+                    )
+                )
+                .mappings()
+                .first()
+            )
+            payload = json.loads(audit["payload_json"]) if audit else {}
+            window = latest(game, c, resolution.work)
+            body = json.loads(window["body_json"])
+            temporary = rules.starving_asset(source.frame)
+            if (
+                audit is None
+                or audit["kind"] != "m3.consume_sprite_fed"
+                or payload.get("action_id") != source.id
+                or payload.get("resolution") != resolution.id
+                or payload.get("source_event") != window["event_id"]
+                or window["state"] != "resolved"
+                or any(latest(game, c, x)["state"] != "resolved" for x in body.get("followups", ()))
+                or source.actor != actor
+                or source.play != "consume_eat"
+                or rules.frame(before, actor) != source.frame
+                or rules.frame(original, actor) != source.frame
+                or not any(x.id == temporary for x in before.sheets[actor.entity].assets)
+                or any(x.id == temporary for x in original.sheets[actor.entity].assets)
+            ):
+                raise WorkflowError(
+                    "Prove this original Frame's actual paid Sprite feeding and expiry"
+                )
+        if rules.hunger(original, actor) != "Quiet":
             raise WorkflowError("Only actual Eat expires this source-owned Starving Asset")
     else:
         raise WorkflowError("Recover this actual implemented CONSUME loss source")

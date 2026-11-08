@@ -88,6 +88,18 @@ class Consumption(Model):
     escaped_event: str | None = None
 
 
+class ConsumptionResolution(Model):
+    id: str
+    session: str
+    consumption: str
+    original_target: ActorRef
+    recipient: ActorRef
+    option: Literal["bite", "kill"]
+    work: str
+    event: str
+    feeding_event: str | None = None
+
+
 class MouthHold(Model):
     id: str
     session: str
@@ -229,6 +241,7 @@ KINDS = {
     StarvationMark: "consume_starvation_mark",
     Session: "consume_session",
     Consumption: "consume_consumption",
+    ConsumptionResolution: "consume_resolution",
     MouthHold: "consume_mouth_hold",
     FeralEffect: "consume_feral",
     Reaffirmation: "consume_reaffirmation",
@@ -248,6 +261,7 @@ type Source = (
     | StarvationMark
     | Session
     | Consumption
+    | ConsumptionResolution
     | MouthHold
     | FeralEffect
     | Reaffirmation

@@ -364,6 +364,27 @@ async def open_consume(
             await reply(interaction, form.text(), form)
             return
         if saved["type"] == "consumption":
+            resolved = saved.get("resolution")
+            if saved.get("pending_sprite"):
+                await reply(
+                    interaction,
+                    "Saved Eat choice: "
+                    + source["option"]
+                    + ". Waiting for the Sprite's actual response.",
+                )
+                return
+            if resolved and resolved["recipient"] != resolved["original_target"]:
+                await reply(
+                    interaction,
+                    "A Sprite intercepted the damaging bite and paid with its actual Asset. "
+                    "The intended target was spared."
+                    + (
+                        " Feeding was applied after the harm resolved."
+                        if resolved["feeding_event"]
+                        else " Feeding awaits the actual consequence."
+                    ),
+                )
+                return
             if source["option"] != "swallow" or saved["vulnerable"] or source["escaped_event"]:
                 await reply(
                     interaction,

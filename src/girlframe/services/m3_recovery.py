@@ -430,6 +430,15 @@ class RecoveryService:
 
                     release_changeling_child(self.game, c, state, action)
                     released_learning = True
+                if cancel and action["data"].get("bonded_rejection_child"):
+                    from girlframe.services.m3_bonded_rejection import (
+                        release_unrolled as release_rejection,
+                    )
+
+                    released_learning = (
+                        release_rejection(self.game, c, state, action, recovery_event)
+                        or released_learning
+                    )
                 if cancel and action["data"].get("npc_flirt"):
                     from girlframe.services.m3_npc_flirt import (
                         release_unrolled as release_npc_flirt,

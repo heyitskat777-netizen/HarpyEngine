@@ -748,3 +748,121 @@ def test_actual_budget_loss_regrows_original_frame_feature_as_new_component_once
         )
         == 1
     )
+
+
+# Deferred final-P1 normal; not run during the Sprite source adapter assignment.
+def test_actual_native_eat_sprite_leap_pays_real_asset_then_feeds_once_without_retargeted_receipt(
+    ledger, tmp_path, monkeypatch
+):
+    import asyncio
+    import json
+
+    from test_mission_ui import current
+    from test_world import gorgon
+
+    from girlframe.discord_adapter.m3_consume import open_choice
+    from girlframe.discord_adapter.m3_sprite import open_sprite
+    from girlframe.engine.m3_world import update
+    from girlframe.services.m3_consume import prove_resolution
+    from girlframe.services.m3_sprite import SpriteService
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch)
+    actor, target = current_ref(state(game), 2), current_ref(state(game), 3)
+    # Existing physical-Sprite source fixture: genuine World bodies/Assets, not a
+    # public new-Sprite producer. Its visibility and own decision are real services.
+    with ledger.transaction() as c:
+        canon = state(game)
+        canon.world = update(
+            canon.world,
+            gorgons=canon.world.gorgons
+            + (gorgon("sprite", "actual-eat-interceptor", sprite_group=True),),
+        )
+        game.event(c, 1, str(uuid4()), "synthetic.actual_prior_Sprite_body", canon)
+    WorldService(MissionService(ledger)).reveal(
+        ADMIN,
+        str(uuid4()),
+        state(game).revision,
+        "actual-eat-interceptor",
+        "The actual Sprite group is physically encountered beside the target",
+    )
+    cockpit(game, "pilot")
+    before = state(game)
+    intended_asset = asset(game, 3)
+    action = roll(game, worker, gateway, target=target, piloting=True)
+    receipt = game.inspect(PLAYER, action)["receipt"]
+    heat_after_roll = state(game).sheets["2"].heat
+
+    async def bite():
+        row = next(x for x in game.choices(PLAYER) if x["kind"] == "consume_eat")
+        opened = current(2, int(uuid4().int % 1000000000))
+        opened.channel_id = 900
+        await opened.response.defer(ephemeral=True)
+        await open_choice(opened, game, game.decision(PLAYER, row["id"]))
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(current(3, 99801))
+        form.values.update(
+            option=("bite",),
+            target_asset=(intended_asset,),
+            account="I actually bite; this is still my original intended target",
+        )
+        submitted = current(2, int(uuid4().int % 1000000000))
+        submitted.channel_id = 900
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+
+    asyncio.run(bite())
+    consumed = next(x for x in rules.records(state(game), rules.Consumption) if x.session == action)
+    assert consumed.target == target and consumed.option == "bite"
+    assert controls.view(PLAYER, consumed.id)["pending_sprite"]
+    assert rules.hunger(state(game), actor) == rules.hunger(before, actor) == "Gnawing"
+    assert not next(x for x in state(game).sheets["3"].assets if x.id == intended_asset).damaged
+    svc = SpriteService(ledger)
+    row = next(x for x in game.choices(ADMIN) if x["kind"] == "battle_sprite_intercept")
+    identity = json.loads(row["body_json"])["work_id"]
+    offered = svc.get(ADMIN, identity)
+    option = offered["options"][0]
+    with pytest.raises(WorkflowError):
+        svc.get(OTHER, identity)
+
+    async def leap():
+        opened = current(1, int(uuid4().int % 1000000000))
+        opened.channel_id = 900
+        await opened.response.defer(ephemeral=True)
+        await open_sprite(opened, svc, identity)
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(current(2, 99802))
+        form.values.update(option=("0",), account="My actual Sprite leaps in to take this blow")
+        submitted = current(1, int(uuid4().int % 1000000000))
+        submitted.channel_id = 900
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        return str(submitted.id)
+
+    key = asyncio.run(leap())
+    after = state(game)
+    original_sprite = next(x for x in after.world.gorgons if x.id == "actual-eat-interceptor")
+    assert next(x for x in original_sprite.assets if x.id == option["asset"]).damaged
+    assert not next(x for x in after.sheets["3"].assets if x.id == intended_asset).damaged
+    assert rules.hunger(after, actor) == "Quiet"
+    assert after.sheets["2"].heat == heat_after_roll and game.dice.calls == 1
+    assert game.inspect(PLAYER, action)["receipt"] == receipt
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    saved = controls.view(PLAYER, consumed.id)
+    assert saved["source"]["target"] == target.model_dump(mode="json")
+    assert saved["resolution"]["recipient"] == option["actor"]
+    assert saved["resolution"]["feeding_event"] and not saved["pending_sprite"]
+    with ledger.engine.connect() as c:
+        assert prove_resolution(game, c, after, saved["resolution"]["id"]).option == "bite"
+    result = svc.respond(
+        ADMIN,
+        key,
+        identity,
+        offered["revision"],
+        offered["game_revision"],
+        ActorRef.model_validate(option["actor"]),
+        option["asset"],
+        "My actual Sprite leaps in to take this blow",
+    )
+    assert result["id"] == identity
+    assert state(game).revision == after.revision
+    tick(worker, gateway, 6)

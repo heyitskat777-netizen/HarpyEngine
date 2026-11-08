@@ -136,7 +136,12 @@ def prepare(
             "Dive Deep uses your actual link and Heat, without a target or Off-Duty context."
         )
     if prepared.source_work:
-        if prepared.source_work.startswith("bomb-trigger:"):
+        from girlframe.services.m3_bonded_rejection import prepare_child as prepare_rejection
+
+        rejection = prepare_rejection(game, c, viewer, state, prepared, channel)
+        if rejection is not None:
+            pass  # The genuine required source is proved; normal Dive validation continues below.
+        elif prepared.source_work.startswith("bomb-trigger:"):
             from girlframe.services.m3_bomb_collar import prepare_survival
 
             prepare_survival(game, c, state, viewer, prepared, channel)

@@ -512,3 +512,46 @@ verified. Publication scan1385 files/40 retained manifest entries/0 findings and
 whitespace check pass. Final evidence/index amendments affect documents and test
 references only; no gameplay rerun is needed for those amendments. Full regression
 and release/human gates remain pending.
+
+### Local coherent delivery: genuine rejection and Sprite feeding
+
+New minimums only:
+- `test_consume.py::test_actual_native_eat_sprite_leap_pays_real_asset_then_feeds_once_without_retargeted_receipt` passed in the second combined run (**1 failed/1 passed,11.10s**). No separate duration or repeated pass is claimed.
+- `test_bonded_rejection.py::test_real_keep_rejection_unrolled_retry_owned_finding_and_original_high_completion` passed **1 in58.53s** after the scoped fixes below. Its recovery/worker lifecycle is retained; no suite-speed claim.
+
+Initial combined2 failures/4.65s found missing native profile bindings in the new
+prior-Tag fixture and a real Starving-expiry proof that admitted only the original
+Eat event. The latter now admits the exact canonical Sprite feeding resolution,
+real closed work/receipt/original Frame and genuine Starving removal/Quiet. The
+second run passed Sprite and found Keep's required rejection ID misrouted into
+Void source preparation. Positive required-source routing now distinguishes it;
+Dive has the same explicit positive source proof while retaining its own ordinary
+checks. Rejection-only attempt3 failed13.23s because the synthetic gateway lacked
+the genuine fourth player; the fixture now exposes that existing actual player.
+Only the failed node was rerun; Sprite/older passes were not repeated.
+
+The rejection workflow retains actual no-roll tag handling but, once a genuine
+mandatory request exists, requires its real Play, original rejecting owner,
+immutable receipt, all relevant work/chat restoration and an explicit owned
+outcome. No automatic8+ success or extra GM veto is invented. Unrolled actual
+cancellation has its genuine canonical recovery event, followed by a new attempt.
+Successful finding consumes only that Tag and completes the existing source
+sequence; private source history is paged. Five finite normal IDs are implemented:
+Keep, Sensors, Engage, Flirt and Dive. Only Keep ran; actual Order/other source
+recipes and context-transfer/body-ending cases remain explicit adapters.
+
+CONSUME preserves original intended target/choice/receipt and records actual
+Sprite recipient separately. Actual native Sprite controller pays its real Asset;
+feeding occurs once after resolved work. The original target is spared, the
+original receipt is unchanged, and real source-owned Starving expiry completes.
+The World's initial Sprite body/Assets are explicit synthetic prior fiction;
+actual reveal and native response are genuine. This adds no public add-Sprite
+producer. All-pass fatal/decline branches and wider body/corruption cases are
+implemented but UNRUN. Private readback distinguishes pending choice from actual
+resolution. Existing central Sprite work→Consume resume path is preserved.
+
+Static source proof/import cleanup caught an ambiguous local source_for_play name
+and one long native string; only the affected modules were rechecked. New static
+publication preflight follows. Registry/coverage remains RULES_SUBSET; exact-commit
+full regression, independent clarity/code review and human acceptance are pending.
+No bot restart, deployment, environment publication, AI or private-engine writes.

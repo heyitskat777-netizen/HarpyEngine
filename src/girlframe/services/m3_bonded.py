@@ -397,6 +397,29 @@ def _man_resolution(
         previous = _before(game, c, saved)
         old = next((x for x in previous.sheets[work.partner.entity].tags if x.id == work.tag), None)
         _audit(game, c, performance.event, ("m3.bonded_man_tag_rejected",), work.controller)
+        recorded = c.scalar(
+            sa.select(t.events.c.payload_json).where(
+                t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == performance.event
+            )
+        )
+        finding_id = json.loads(recorded or "{}").get("bonded_rejection_finding")
+        if finding_id:
+            from girlframe.services.m3_bonded_rejection import prove_finding, prove_request
+
+            finding = prove_finding(game, c, state, finding_id)
+            request = prove_request(game, c, state, finding.request)
+            if (
+                finding.owner != work.partner
+                or finding.event != performance.event
+                or not finding.achieved
+                or request.source != value.id
+                or request.resolution != work.id
+                or decision is None
+                or request.decision != decision.id
+            ):
+                raise WorkflowError(
+                    "Preserve the actual completed rejection Play and owned finding"
+                )
         if (
             decision is None
             or decision.decision != "reject"
@@ -2358,6 +2381,9 @@ class BondedService:
                 raise WorkflowError(
                     "Only the actual affected partner records its real performed rejection"
                 )
+            from girlframe.services.m3_bonded_rejection import require_no_child
+
+            require_no_child(self.game, c, state, value.id)
             if requires_play:
                 raise WorkflowError(
                     "REJECTION_PLAY_ADAPTER_REQUIRED: perform the actual mandatory Play; "

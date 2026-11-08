@@ -3790,3 +3790,44 @@ Tag resolution to the actual Tag owner. Required rejection Plays, special-source
 Tags and separate rolled Man Paired integration remain explicit work. Existing
 source records and prior interpretation history are retained; neither new Bonded
 normal has run yet.
+
+Subsequent integration evidence for revision2: source-only Paired conversion and
+rolled conversion now both pass their likely native flow (combined2/10.73s). The
+broader ordinary repeated/rejection and special-source variants remain deferred
+or explicitly unfinished; this does not change the original interpretation.
+
+### Untiered AM encounters and the Man's result
+
+`untiered-am-man-result`: the Man's own Sex Play may use its printed11+ effect
+(PDF154/printed152); both-AM and Changeling-AM no-circuit encounters have no own
+result table, Action or roll (AM PDF56/printed54). No extra result, Tag-operation
+consumer or modifier on the other person's Play is invented. The other person's
+genuine rolled Sex retains its own modifiers. Bonded's explicit take7 has a real
+low/high table and keeps its existing override. Animal's mandatory Tag still
+applies to actual Sex independently of tiers. This source-limited delegated
+interpretation needs clarity review; Sex-context JustCode is separate, genuinely
+source-qualified work. The old blanket 'other no-roll Man adapters' queue entry
+is stale for these untiered no-circuit sources.
+
+### CONSUME: actual Sprite-paid bites
+
+`consume-sprite-actual-feeding` (Eat PDF66/printed64; Sprite PDF166/printed164):
+only the damaging Bite/fatal Bite uses the existing take-a-blow interception.
+An actual Sprite choice pays a real Sprite Asset. That is one Bite's feeding
+after actual work resolves; it does not invent entire Sprite consumption or kill
+the spared original target. All decline permits the original actual harm/ending.
+Swallow and nibble retain their existing bodies/custody without a new interception
+entitlement. Keep the original intended target, choice and raw receipt; store the
+resolved recipient separately. This adjustable delegated interpretation requires
+clarity review; never feed early or expire Starving from an unproved event.
+
+### A rejection action that genuinely requires a Play
+
+`bonded-play-linked-tag-rejection`: the original Tag owner records the actual
+outcome after her required real Play and its consequences finish. The account
+must fit that outcome; no generic8+ success, automatic erase or extra GM veto is
+invented. Printed Handler choices still apply. A false finding leaves the debt;
+an unrolled cancellation preserves source/history and allows a genuine new
+attempt. This extends the existing owner-authored performed rejection with real
+Play proof and requires clarity review. Actual Orders, specialised recipes and
+context/body transitions retain their own source requirements.

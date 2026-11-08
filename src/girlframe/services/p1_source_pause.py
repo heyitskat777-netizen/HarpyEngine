@@ -330,6 +330,18 @@ def require_clear(
             ):
                 continue
             raise WorkflowError("SOURCE_SCENE_PAUSED: perform the actual original Court command")
+        if row["kind"] == "bonded":
+            from girlframe.services.m3_bonded_rejection import (
+                source_for_play as rejection_source_for_play,
+            )
+
+            linked_source = rejection_source_for_play(
+                game, c, state, prepared=prepared, action=action
+            )
+            if linked_source == row["id"]:
+                if row["state"] != "held" or not active(state, row["id"]):
+                    raise WorkflowError("Wait for the original rejection source pause")
+                continue
         source_work = (
             prepared.source_work
             if prepared

@@ -1152,6 +1152,8 @@ async def open_play(
         plays = ("am_just_code",)
     if parent and parent["kind"] == "am_prepare":
         plays = ("am_scrutinized",)
+    if parent and parent["kind"] == "bonded_rejection_child":
+        plays = tuple(parent["body"]["allowed"])
     if parent and parent["kind"] == "red_queen_child":
         plays = (parent["body"]["play"],)
     if parent and parent["kind"] == "ankou_effect_child":
@@ -1391,10 +1393,13 @@ async def open_play(
         if play == "engage" and approval is not None and "plays" in approval.subsystems:
             from girlframe.engine.m3_actor_state import ActorRef
 
-            selected = one(values, "engage_target")
-            if selected is None or selected not in engage_targets:
-                raise WorkflowError("Choose the actual opposing battlefield actor for Engage.")
-            target_actor = ActorRef.model_validate(engage_targets[selected]["ref"])
+            if parent and parent["kind"] == "bonded_rejection_child":
+                target_actor = ActorRef.model_validate(parent["body"]["target_actor"])
+            else:
+                selected = one(values, "engage_target")
+                if selected is None or selected not in engage_targets:
+                    raise WorkflowError("Choose the actual opposing battlefield actor for Engage.")
+                target_actor = ActorRef.model_validate(engage_targets[selected]["ref"])
         if play == "brutalize":
             from girlframe.engine.m3_actor_state import ActorRef
 
@@ -1431,6 +1436,11 @@ async def open_play(
             from girlframe.engine.m3_actor_state import ActorRef
 
             target_actor = ActorRef.model_validate(parent["body"]["target"])
+        if parent and parent["kind"] == "bonded_rejection_child":
+            from girlframe.engine.m3_actor_state import ActorRef
+
+            bound_target = parent["body"].get("target_actor")
+            target_actor = ActorRef.model_validate(bound_target) if bound_target else None
         if parent and parent["kind"] == "red_queen_child":
             from girlframe.engine.m3_actor_state import ActorRef
 
@@ -1461,7 +1471,9 @@ async def open_play(
             gain=int(one(values, "gain")),
             pair_share=int(one(values, "pair_share")),
             disposable_heat=cast(Literal[0, 3, 4], int(one(values, "disposable_heat") or "0")),
-            target=int(parent["body"]["target"]["entity"])
+            target=(parent["body"].get("target") if play == "flirt" else None)
+            if parent and parent["kind"] == "bonded_rejection_child"
+            else int(parent["body"]["target"]["entity"])
             if parent
             and parent["kind"] == "ankou_effect_child"
             and (parent["body"].get("target") or {}).get("kind") == "pilot"
@@ -1495,6 +1507,7 @@ async def open_play(
                 in (
                     "consume_child",
                     "consume_order_child",
+                    "bonded_rejection_child",
                     "red_queen_child",
                     "changeling_interrupt",
                     "changeling_pause",
@@ -1562,6 +1575,9 @@ async def open_play(
         [x for x in fields if not (x.key in ("target", "identity") and not x.options)],
         submit,
     )
+    if parent and parent["kind"] == "bonded_rejection_child":
+        form.values["context"] = parent["body"]["context"]
+        form.values["play"] = (parent["body"]["play"],)
     form.confirm.label = "Confirm & Roll"
     await reply(interaction, form.text(), form)
 

@@ -1323,6 +1323,9 @@ class GameService:
             mechanical_owner = (
                 int(princess_child["actor_controller"]) if princess_child else viewer.user_id
             )
+            from girlframe.services.m3_bonded_rejection import prepare_child as prepare_rejection
+
+            rejection_child = prepare_rejection(self, c, viewer, state, prepared, channel)
             from girlframe.services.m3_npc_flirt import prepare as prepare_npc_flirt
 
             npc_flirt = (
@@ -1436,6 +1439,7 @@ class GameService:
                 and bonded_child is None
                 and wyvern_child is None
                 and red_queen_child is None
+                and rejection_child is None
                 and ankou_effect_child is None
                 and changeling_child is None
                 and wyvern_pin_response is None
@@ -1460,6 +1464,7 @@ class GameService:
                 and bonded_child is None
                 and wyvern_child is None
                 and red_queen_child is None
+                and rejection_child is None
                 and ankou_effect_child is None
                 and changeling_child is None
                 and wyvern_pin_response is None
@@ -1489,6 +1494,7 @@ class GameService:
                 and bonded_child is None
                 and wyvern_child is None
                 and red_queen_child is None
+                and rejection_child is None
                 and ankou_effect_child is None
                 and changeling_child is None
                 and wyvern_pin_response is None
@@ -1833,6 +1839,7 @@ class GameService:
                         gorgon_response,
                         secretary_scope,
                         npc_flirt,
+                        rejection_child,
                     )
                 )
                 and not scoped_defeat
@@ -1854,6 +1861,8 @@ class GameService:
                     source_cast, _ = CastService(ActorService(MissionService(self.store)))._current(
                         c, state, channel
                     )
+                elif rejection_child is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(rejection_child["cast"]))
                 elif npc_flirt is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(npc_flirt["cast"]))
                 elif princess_sex is not None:
@@ -2302,6 +2311,7 @@ class GameService:
                     doctor,
                     princess_child,
                     npc_flirt,
+                    rejection_child,
                 )
             ):
                 raise WorkflowError("This implemented Play does not take a fictional actor target.")
@@ -2411,6 +2421,29 @@ class GameService:
             }
             if prince_demand_attempt is not None:
                 data["prince_demand_attempt"] = prince_demand_attempt
+            if rejection_child is not None:
+                from girlframe.engine.m3_handler_consequences import (
+                    active_handler as reject_handler,
+                )
+
+                actual_handler = reject_handler(state)
+                if actual_handler is None:
+                    raise WorkflowError("Recover this actual rejection Play's Handler")
+                data["bonded_rejection_child"] = rejection_child
+                data["participants"] = list(rejection_child["table"])
+                data["character_ids"] = {
+                    role["actor"]["entity"]: role["actor"]["incarnation"]
+                    for role in rejection_child["cast"]["roles"]
+                    if role["actor"]["kind"] == "pilot"
+                }
+                data["tag_context"] = dict(
+                    actor=rejection_child["actor"],
+                    handler=actual_handler.model_dump(mode="json"),
+                    gm_controller=state.handler,
+                    table=list(rejection_child["table"]),
+                    cast=rejection_child["cast"],
+                    cast_sha256=rejection_child["cast_sha256"],
+                )
             if npc_flirt is not None:
                 from girlframe.engine.m3_handler_consequences import active_handler as flirt_handler
 
@@ -3055,6 +3088,7 @@ class GameService:
                 or casualty_sex
                 or vatgrown_sex
                 or npc_flirt
+                or rejection_child
                 or prince
                 or consume
                 or prince_demand_attempt
@@ -3154,6 +3188,12 @@ class GameService:
 
                 assert begin_source_event is not None
                 bind_ankou_effect_child(self, c, state, action, begin_source_event)
+            if rejection_child is not None:
+                from girlframe.services.m3_bonded_rejection import bind_child as bind_rejection
+
+                assert begin_source_event is not None
+                bind_rejection(self, c, state, action, begin_source_event)
+                self.save_action(c, action)
             if npc_flirt is not None:
                 from girlframe.services.m3_npc_flirt import bind as bind_npc_flirt
 
@@ -3277,6 +3317,7 @@ class GameService:
                 or casualty_sex is not None
                 or vatgrown_sex is not None
                 or npc_flirt is not None
+                or rejection_child is not None
                 or prince is not None
                 or consume is not None
                 or prince_demand_attempt is not None
@@ -3327,6 +3368,7 @@ class GameService:
                     or casualty_sex is not None
                     or vatgrown_sex is not None
                     or npc_flirt is not None
+                    or rejection_child is not None
                     or prince is not None
                     or consume is not None
                     or prince_demand_attempt is not None
@@ -3362,6 +3404,7 @@ class GameService:
                     or secretary_response is not None
                     or claimed_learned
                     or npc_flirt is not None
+                    or rejection_child is not None
                     or prince is not None
                     or consume is not None
                     or prince_demand_attempt is not None
@@ -3662,6 +3705,12 @@ class GameService:
             self.action_characters(c, action, state)
             from girlframe.services.p1_facilitator import require_scene_clear
 
+            if action["data"].get("bonded_rejection_child"):
+                from girlframe.services.m3_bonded_rejection import (
+                    pre_roll_child as pre_roll_rejection,
+                )
+
+                pre_roll_rejection(self, c, viewer, state, action)
             if action["data"].get("npc_flirt"):
                 from girlframe.services.m3_npc_flirt import pre_roll as pre_roll_npc_flirt
 
@@ -4188,6 +4237,7 @@ class GameService:
                 or action["data"].get("am_code")
                 or action["data"].get("npc_order")
                 or action["data"].get("npc_flirt")
+                or action["data"].get("bonded_rejection_child")
                 or action["data"].get("dampener")
                 or action["data"].get("kicked_puppy")
                 or action["data"].get("nightmare_core")
@@ -4418,6 +4468,7 @@ class GameService:
                 or action["data"].get("am_code")
                 or action["data"].get("npc_order")
                 or action["data"].get("npc_flirt")
+                or action["data"].get("bonded_rejection_child")
                 or action["data"].get("dampener")
                 or action["data"].get("kicked_puppy")
                 or action["data"].get("nightmare_core")
@@ -4969,6 +5020,7 @@ class GameService:
                 or action["data"].get("am_code")
                 or action["data"].get("npc_order")
                 or action["data"].get("npc_flirt")
+                or action["data"].get("bonded_rejection_child")
                 or action["data"].get("gorgon_play")
                 else "m2.choice_resolved",
                 state,

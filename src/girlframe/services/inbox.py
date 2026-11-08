@@ -1310,6 +1310,7 @@ class InboxService:
             from girlframe.services.m3_body_facts import BodyFactsService
             from girlframe.services.m3_bonded import BondedService
             from girlframe.services.m3_bonded_am import BondedAMService
+            from girlframe.services.m3_bonded_rejection import BondedRejectionService
             from girlframe.services.m3_casualty_replacement import ReplacementService
             from girlframe.services.m3_changeling import ChangelingService
             from girlframe.services.m3_changeling_sex import ChangelingSexService
@@ -1334,6 +1335,7 @@ class InboxService:
                 ("casualty_replacement", ReplacementService(frame_game)._tasks(connection, viewer)),
                 ("bonded", BondedService(frame_game)._tasks(connection, viewer)),
                 ("bonded_am", BondedAMService(frame_game)._tasks(connection, viewer)),
+                ("bonded_rejection", BondedRejectionService(frame_game)._tasks(connection, viewer)),
                 ("prince", PrinceService(frame_game)._tasks(connection, viewer)),
                 ("consume", consume_tasks(frame_game, connection, frame_state, viewer)),
                 ("wyvern", wyvern_tasks(frame_game, connection, frame_state, viewer)),

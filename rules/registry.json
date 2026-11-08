@@ -6863,6 +6863,54 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 2
+    },
+    {
+      "id": "untiered-am-man-result",
+      "summary": "Untiered no-circuit AM encounters have no own 11+ outcome for the Man effect to alter; actual counterpart rolls retain their own lawful modifiers.",
+      "source": "Man PDF154/printed152; AM Sex PDF56/printed54; Bonded Sex PDF59/printed57",
+      "rationale": "The Man changes the result of his Sex Play. Both-AM and Changeling-AM no-roll sources have no Action, total or result table. Adding a result or altering the counterpart would invent mechanics.",
+      "policy_key": "untiered_am_man_result",
+      "alternatives": [
+        "Create an invented 11+ result or transfer the Man effect onto another participant."
+      ],
+      "implementation_note": "No new adapter is needed for these untiered no-circuit encounters. Bonded explicit take7 has a real result table and retains its separately documented override. Mandatory Animal gifts remain based on actual Sex. Sex-context JustCode requires separate precise source interpretation and genuine existing eligibility.",
+      "change_impact": "Keep original rule/role/Tag and counterpart receipt history; version any future change and preserve independent mandatory effects.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "consume-sprite-actual-feeding",
+      "summary": "Sprites may intercept damaging Eat bites through their real take-a-blow move. Feeding waits for actual resolved harm; interception is one Bite, not fictional entire consumption of the Sprite or original target.",
+      "source": "Eat PDF66/printed64; Sprite PDF166/printed164",
+      "rationale": "The printed Sprite trigger is a blow. Preserve the original intended target/choice/receipt and separately prove the paid recipient; swallowing and nibbling do not gain a blanket interception or capture substitution.",
+      "policy_key": "consume_sprite_actual_feeding",
+      "alternatives": [
+        "Feed before any harm, consume the Sprite entirely without a rule, or retarget the immutable original receipt."
+      ],
+      "implementation_note": "Real Sprite Asset/controller decision and source work feed once through a separate canonical resolution. All-decline original fatal Bite uses real ending/Quiet. Actual Starving expiry proves that precise feeding cause. Swallow/nibble keep their original body/custody effects. Normal native Bite passed; fatal/decline branches deferred.",
+      "change_impact": "Preserve original choice/target/raw receipt, actual Sprite costs, feeding/corruption/ending history and original physical CONSUME Frame when adjusting.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "bonded-play-linked-tag-rejection",
+      "summary": "After a genuinely required rejection Play and its real consequences finish, the original Tag owner records whether her actual action rejected that Tag; no automatic dice threshold or extra Handler veto is added.",
+      "source": "Core Tag rejection and existing owner-authored performed rejection; source-qualified actual Play rules",
+      "rationale": "Preserve actual required mechanics and original player authorship. The generic Play result alone does not define success against every Tag meaning.",
+      "policy_key": "bonded_play_linked_tag_rejection",
+      "alternatives": [
+        "Erase the Tag on acknowledgement, automatically equate any8+ with rejection, or invent an additional GM approval."
+      ],
+      "implementation_note": "Use real owned request/actor/context/receipt/work/chat restoration and an actual outcome account consistent with the Play. False findings keep the debt. Real printed Handler choices and consequences remain required. Keep normal passed; other finite families and actual Orders/recipes remain separate gates.",
+      "change_impact": "Retain original Tag, actual attempts/raw receipts, cancellations, owned findings and source completion history; version changes without rewriting outcomes.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [

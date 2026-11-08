@@ -516,7 +516,18 @@ async def open_bonded(
             return None
         if operation == "perform_man_rejection":
 
-            async def perform(response: discord.Interaction, answer: dict[str, Any]) -> str:
+            async def perform(response: discord.Interaction, answer: dict[str, Any]) -> str | None:
+                if answer["trigger"][0] == "requires_play":
+                    from girlframe.discord_adapter.m3_bonded_rejection import open_bonded_rejection
+                    from girlframe.services.m3_bonded_rejection import BondedRejectionService
+
+                    await open_bonded_rejection(
+                        response,
+                        BondedRejectionService(service.game),
+                        identity=identity,
+                        account=answer["account"],
+                    )
+                    return None
                 await asyncio.to_thread(
                     service.perform_man_rejection,
                     viewer_from_interaction(response),
@@ -538,7 +549,7 @@ async def open_bonded(
                         "Does this action require a mandatory Play?",
                         (
                             ("no_roll", "Actually performed; no mandatory Play triggered"),
-                            ("requires_play", "Requires an actual Play; keep this source pending"),
+                            ("requires_play", "Choose the actual triggered Play"),
                         ),
                     ),
                     Field(

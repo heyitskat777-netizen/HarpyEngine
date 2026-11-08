@@ -739,6 +739,16 @@ class InboxView(discord.ui.View):
             await open_npc_flirt(
                 interaction, NpcFlirtService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_bonded_rejection":
+            from girlframe.discord_adapter.m3_bonded_rejection import open_bonded_rejection
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_bonded_rejection import BondedRejectionService
+
+            await open_bonded_rejection(
+                interaction,
+                BondedRejectionService(GameService(self.service.store)),
+                identity=item.identity,
+            )
         elif item.task == "m3_bonded_am":
             from girlframe.discord_adapter.m3_bonded_am import open_bonded_am
             from girlframe.services.m2_game import GameService

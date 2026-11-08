@@ -551,7 +551,22 @@ class SpriteService:
             _finish(self.game, c, row, body | dict(original_ended=prior), prior, viewer, key)
             return
         original_action = self.game.action(c, blow.source_action) if blow.source_action else None
-        if (
+        consume = rules.consume_effect(blow)
+        if consume == "kill" and sprite is None:
+            from girlframe.services.m3_consume import resolve_sprite
+
+            assert blow.source_action is not None
+            append(c, row, prior, body | dict(phase="applying"), "pending")
+            state, followups = resolve_sprite(
+                self.game,
+                c,
+                state,
+                action_id=blow.source_action,
+                work_id=identity,
+                recipient=blow.target,
+                event=event,
+            )
+        elif (
             blow.effect == "fatal"
             and sprite is None
             and original_action is not None
@@ -588,7 +603,9 @@ class SpriteService:
             return
         target = sprite or blow.target
         selected = asset if sprite else blow.asset
-        if engage_crush is not None:
+        if consume == "kill" and sprite is None:
+            pass  # Genuine original entire consumption already ran above.
+        elif engage_crush is not None:
             pass  # The actual whole-body effect was applied above; no second Asset hit.
         elif blow.effect == "destroy" and sprite is None:
             from girlframe.services.m3_gorgon_runtime import _destroy
@@ -646,7 +663,21 @@ class SpriteService:
                 indirect=blow.indirect,
                 allow_sprite=False,
             )
-        if sprite is not None and blow.effect == "fatal" and blow.source_action:
+        if consume is not None and not (consume == "kill" and sprite is None):
+            from girlframe.services.m3_consume import resolve_sprite
+
+            assert blow.source_action is not None
+            state, owed = resolve_sprite(
+                self.game,
+                c,
+                state,
+                action_id=blow.source_action,
+                work_id=identity,
+                recipient=target,
+                event=event,
+            )
+            followups += owed
+        if sprite is not None and blow.effect == "fatal" and blow.source_action and consume is None:
             action = self.game.action(c, blow.source_action)
             if action["data"].get("battle"):
                 action["data"]["battle"].update(
@@ -699,6 +730,10 @@ class SpriteService:
             source_event=prior,
             intercepted=sprite is not None,
         )
+        if consume is not None:
+            from girlframe.services.m3_consume_support import synchronize as sync_consume
+
+            sync_consume(self.game, c, event)
         current = latest(self.game, c, identity)
         append(c, current, event, body | dict(phase="waiting", followups=followups), "pending")
         synchronize_damage(self.game, c, event)

@@ -59,3 +59,13 @@ def candidates(
         ):
             result.append(Candidate(actor=ref, controller=body.controller, assets=owned))
     return tuple(result)
+
+
+def consume_effect(blow: Blow) -> Literal["bite", "kill"] | None:
+    """Classification only; the service must prove the real original Eat choice/work."""
+    if blow.source_action is not None:
+        if (blow.occurrence, blow.effect) == ("consume_bite", "damage"):
+            return "bite"
+        if (blow.occurrence, blow.effect) == ("consume_kill", "fatal"):
+            return "kill"
+    return None

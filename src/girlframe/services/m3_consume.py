@@ -20,6 +20,7 @@ from girlframe.engine.m3_handler_consequences import active_handler, same_handle
 from girlframe.engine.m3_intracadre_marriage import available, debit
 from girlframe.engine.m3_mockingbird import give_tag
 from girlframe.engine.m3_requisition_state import FrameRuleReceipt
+from girlframe.engine.m3_sprite import Blow
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -562,11 +563,12 @@ def apply(
         )
         _copy(state, changed)
         work += owed
-        feeding_before = GameState.model_validate_json(state.model_dump_json())
-        rules.fed(state, source.actor, event, entire=False)
-        work += support.stage_starvation_expiry(
-            game, c, feeding_before, state, source.actor, event, source.id
-        )
+        if not _sprite_work(game, c, state, work):
+            feeding_before = GameState.model_validate_json(state.model_dump_json())
+            rules.fed(state, source.actor, event, entire=False)
+            work += support.stage_starvation_expiry(
+                game, c, feeding_before, state, source.actor, event, source.id
+            )
     elif option == "kill":
         rules.put(
             state,
@@ -581,14 +583,36 @@ def apply(
                 choice=row["id"],
             ),
         )
-        changed, owed = support.kill(game, c, state, source.actor, source.target, event, source.id)
-        _copy(state, changed)
-        work += owed
-        feeding_before = GameState.model_validate_json(state.model_dump_json())
-        rules.fed(state, source.actor, event, entire=True)
-        work += support.stage_starvation_expiry(
-            game, c, feeding_before, state, source.actor, event, source.id
+        from girlframe.services.m3_sprite import defer
+
+        changed, owed = defer(
+            game,
+            c,
+            state,
+            target=source.target,
+            asset=None,
+            source_action=source.id,
+            source_work=None,
+            event=event,
+            opponent=source.actor,
+            chooser=int(source.actor.entity),
+            occurrence="consume_kill",
+            effect="fatal",
         )
+        if owed:
+            _copy(state, changed)
+            work += owed
+        else:
+            changed, owed = support.kill(
+                game, c, state, source.actor, source.target, event, source.id
+            )
+            _copy(state, changed)
+            work += owed
+            feeding_before = GameState.model_validate_json(state.model_dump_json())
+            rules.fed(state, source.actor, event, entire=True)
+            work += support.stage_starvation_expiry(
+                game, c, feeding_before, state, source.actor, event, source.id
+            )
     elif option == "swallow":
         changed, custody, owed = support.swallow(
             game, c, state, source.actor, source.target, event, source.id
@@ -639,7 +663,11 @@ def apply(
     )
     rules.put(state, source.model_copy(update={"work": tuple(dict.fromkeys(work))}))
     action["data"]["consume"]["phase"] = "effects"
-    if option == "kill" and rules.held(state, source.actor, rules.DRIVE):
+    if (
+        option == "kill"
+        and not _sprite_work(game, c, state, work)
+        and rules.held(state, source.actor, rules.DRIVE)
+    ):
         require_rule(game, c, state, source.actor, rules.DRIVE)
         game.request(c, action, int(source.actor.entity), "consume_erase")
         action["data"]["consume"]["phase"] = "erasure"
@@ -678,6 +706,18 @@ def synchronize(game: GameService, c: Connection, action: dict[str, Any], event:
     state = load_state(c, game.store.campaign_id)
     source = _source(game, c, state, action)
     if not _work_complete(game, c, source.work):
+        return
+    feeding = _feed_sprite_resolutions(game, c, state, action, event)
+    if feeding != event:
+        event = feeding
+        _copy(state, load_state(c, game.store.campaign_id))
+        current = game.action(c, action["id"])
+        action.clear()
+        action.update(current)
+        if action["state"] in ("complete", "aborted"):
+            return
+    source = rules.session(state, action["id"])
+    if not _work_complete(game, c, source.work) or game.pending(c, action["id"]):
         return
     from girlframe.services.m2_choices import ChoiceEngine
 
@@ -1963,6 +2003,17 @@ class ConsumeService:
                     type="consumption",
                     revision=state.revision,
                     source=consumed.model_dump(mode="json"),
+                    pending_sprite=_pending_sprite(
+                        game=self.game, c=c, state=state, session=consumed.session
+                    ),
+                    resolution=next(
+                        (
+                            prove_resolution(self.game, c, state, x.id).model_dump(mode="json")
+                            for x in rules.records(state, rules.ConsumptionResolution)
+                            if x.consumption == consumed.id
+                        ),
+                        None,
+                    ),
                     vulnerable=rules.session(state, consumed.session).vulnerable,
                 )
             raise WorkflowError("Recover the actual saved source-owned CONSUME history")
@@ -2042,3 +2093,392 @@ def _tasks(
         if viewer.user_id == int(value.actor.entity)
     )
     return tasks
+
+
+def _sprite_work(game: GameService, c: Connection, state: GameState, work: tuple[str, ...]) -> bool:
+    from girlframe.engine.m3_battle_state import Required
+
+    return any(
+        x.get("kind") == "battle_damage_stage"
+        and x.get("id") in work
+        and Required.model_validate_json(x["requirement"]).kind == "sprite_intercept"
+        for x in state.facts
+        if "requirement" in x
+    )
+
+
+def consume_sprite_source(
+    game: GameService, c: Connection, state: GameState, action_id: str, work_id: str
+) -> tuple[rules.Session, rules.Consumption, Blow]:
+    from girlframe.engine.m3_sprite import consume_effect
+    from girlframe.services.m3_consume_support import prove_session
+    from girlframe.services.m3_sprite import SpriteService
+
+    source = prove_session(game, c, state, action_id)
+    actual = game.action(c, action_id)
+    _raw_receipt(game, c, actual)
+    consumed = next(
+        (
+            x
+            for x in rules.records(state, rules.Consumption)
+            if x.session == action_id and x.option in ("bite", "kill")
+        ),
+        None,
+    )
+    _, blow = SpriteService(game.store)._proof(c, work_id)
+    if (
+        consumed is None
+        or source.play != "consume_eat"
+        or source.total < 8
+        or work_id not in source.work
+        or blow.source_action != action_id
+        or blow.source_event != consumed.event
+        or blow.target != source.target
+        or consumed.target != source.target
+        or consumed.actor != source.actor
+        or blow.opponent != source.actor
+        or blow.chooser != int(source.actor.entity)
+        or consume_effect(blow) != consumed.option
+        or blow.asset
+        != (
+            consumed.target_asset
+            if consumed.option == "bite" and consumed.target_asset != "source-body-consequence"
+            else None
+        )
+        or consumed not in rules.records(_history(c, game, consumed.event), rules.Consumption)
+    ):
+        raise WorkflowError("Prove the exact original Eat choice, target and real Sprite work")
+    choice = (
+        c.execute(
+            sa.select(t.m2["m2_choices"]).where(
+                t.m2["m2_choices"].c.campaign_id == game.store.campaign_id,
+                t.m2["m2_choices"].c.id == consumed.choice,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    response = (
+        c.execute(
+            sa.select(t.m2["m2_responses"]).where(
+                t.m2["m2_responses"].c.campaign_id == game.store.campaign_id,
+                t.m2["m2_responses"].c.choice_id == consumed.choice,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if (
+        choice is None
+        or response is None
+        or choice["kind"] != "consume_eat"
+        or choice["action_id"] != action_id
+        or choice["actor_id"] != source.actor.entity
+        or response["actor_id"] != source.actor.entity
+        or response["event_id"] != consumed.event
+        or ChoiceAnswer.model_validate_json(response["answer_json"]).options != (consumed.option,)
+    ):
+        raise WorkflowError(
+            "Preserve the actual original human's canonical killing/biting response"
+        )
+    return source, consumed, blow
+
+
+def _sprite_recipient(
+    game: GameService, c: Connection, state: GameState, work_id: str, blow: Blow
+) -> tuple[ActorRef, str | None]:
+    from girlframe.services.m3_sprite import SpriteService
+
+    row, _ = SpriteService(game.store)._proof(c, work_id)
+    decisions = json.loads(row["body_json"])["decisions"]
+    selected: list[tuple[ActorRef, str]] = []
+    for owner, decision in decisions.items():
+        audit = (
+            c.execute(
+                sa.select(t.events).where(
+                    t.events.c.campaign_id == game.store.campaign_id,
+                    t.events.c.id == decision["event"],
+                )
+            )
+            .mappings()
+            .first()
+        )
+        saved = _history(c, game, decision["event"])
+        fact = next(
+            (
+                x
+                for x in saved.facts
+                if x.get("kind") == "sprite_opportunity_answered"
+                and x.get("id") == work_id
+                and x.get("controller") == owner
+                and x.get("event") == decision["event"]
+            ),
+            None,
+        )
+        if (
+            audit is None
+            or audit["kind"] != "m3.sprite_opportunity_answered"
+            or audit["actor_id"] != owner
+            or fact is None
+            or json.loads(audit["payload_json"]).get("source_work") != work_id
+        ):
+            raise WorkflowError("Prove each actual Sprite controller's original optional response")
+        if decision["choice"] == "intercept":
+            ref = ActorRef.model_validate_json(fact["sprite"])
+            if not any(
+                x.actor == ref and x.controller == int(owner) and fact["asset"] in x.assets
+                for x in blow.candidates
+            ):
+                raise WorkflowError("Only the genuine originally offered Sprite pays its own Asset")
+            selected.append((ref, fact["asset"]))
+        elif decision["choice"] != "pass" or fact["sprite"] or fact["asset"]:
+            raise WorkflowError("Preserve the actual optional leap or pass")
+    if len(selected) == 1:
+        return selected[0]
+    if selected or set(decisions) != {str(x.controller) for x in blow.candidates}:
+        raise WorkflowError(
+            "Wait for the original actual controllers to decline or pay one interception"
+        )
+    return blow.target, blow.asset
+
+
+def resolve_sprite(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    *,
+    action_id: str,
+    work_id: str,
+    recipient: ActorRef | None,
+    event: str,
+) -> tuple[GameState, tuple[str, ...]]:
+    source, consumed, blow = consume_sprite_source(game, c, state, action_id, work_id)
+    expected, _ = _sprite_recipient(game, c, state, work_id, blow)
+    if recipient != expected or any(
+        x.work == work_id for x in rules.records(state, rules.ConsumptionResolution)
+    ):
+        raise WorkflowError(
+            "Resolve this actual recipient and feeding source once, without retargeting"
+        )
+    entire = consumed.option == "kill" and recipient == consumed.target
+    resolution = rules.ConsumptionResolution(
+        id=rules.identity("sprite-resolution", work_id),
+        session=source.id,
+        consumption=consumed.id,
+        original_target=consumed.target,
+        recipient=expected,
+        option="kill" if entire else "bite",
+        work=work_id,
+        event=event,
+    )
+    rules.put(state, resolution)
+    followups: tuple[str, ...] = ()
+    if entire:
+        from girlframe.services.m3_consume_support import kill
+
+        state, followups = kill(game, c, state, source.actor, consumed.target, event, action_id)
+    return state, followups
+
+
+def prove_resolution(
+    game: GameService, c: Connection, state: GameState, identity: str
+) -> rules.ConsumptionResolution:
+    from girlframe.engine.m3_battle import original_ended
+    from girlframe.engine.m3_battle_state import Required
+
+    value = next(
+        (x for x in rules.records(state, rules.ConsumptionResolution) if x.id == identity), None
+    )
+    if value is None:
+        raise WorkflowError("Recover the real original Sprite/CONSUME resolution")
+    source, consumed, blow = consume_sprite_source(game, c, state, value.session, value.work)
+    born = _history(c, game, value.event)
+    original = next(
+        (x for x in rules.records(born, rules.ConsumptionResolution) if x.id == identity), None
+    )
+    actual, asset = _sprite_recipient(game, c, born, value.work, blow)
+    result = next(
+        (
+            x
+            for x in born.facts
+            if x.get("kind") == "sprite_blow_resolved"
+            and x.get("id") == value.work
+            and x.get("event") == value.event
+        ),
+        None,
+    )
+    entire = consumed.option == "kill" and actual == consumed.target
+    audit = (
+        c.execute(
+            sa.select(t.events).where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.id == value.event,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    payload = json.loads(audit["payload_json"]) if audit else {}
+    cause = (
+        c.execute(
+            sa.select(t.events).where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.id == payload.get("source_event"),
+            )
+        )
+        .mappings()
+        .first()
+    )
+    from girlframe.services.m3_sprite import SpriteService
+
+    row, _ = SpriteService(game.store)._proof(c, value.work)
+    decisions = json.loads(row["body_json"])["decisions"]
+    if (
+        audit is None
+        or audit["kind"] != "m3.sprite_blow_resolved"
+        or payload.get("source_work") != value.work
+        or cause is None
+        or cause["kind"] != "m3.sprite_opportunity_answered"
+        or audit["actor_id"] != cause["actor_id"]
+        or payload.get("source_event") not in {x["event"] for x in decisions.values()}
+    ):
+        raise WorkflowError("Prove the actual Sprite application and real deciding human")
+    if (
+        original is None
+        or original.model_dump(exclude={"feeding_event"})
+        != value.model_dump(exclude={"feeding_event"})
+        or value.original_target != consumed.target
+        or value.recipient != actual
+        or value.consumption != consumed.id
+        or value.option != ("kill" if entire else "bite")
+        or result is None
+        or result["original"] != consumed.target.model_dump_json()
+        or result["intercepted"] != (actual.model_dump_json() if actual != consumed.target else "")
+    ):
+        raise WorkflowError("Preserve intended target, actual paid recipient and genuine outcome")
+    if entire:
+        if not original_ended(born, actual):
+            raise WorkflowError(
+                "Entire consumption must use the actual original body's genuine ending"
+            )
+    elif asset is not None:
+        actual_body = resolve(
+            born,
+            actual,
+            profiles(c, game.store.campaign_id),
+            require_alive=False,
+            require_current_profile=False,
+        )
+        if not any(x.id == asset and x.damaged for x in actual_body.assets):
+            raise WorkflowError("The actual intercepted or original Bite must pay its real Asset")
+    elif not any(
+        x.get("kind") == "battle_damage_stage"
+        and x.get("source_work") == value.work
+        and Required.model_validate_json(x["requirement"]).kind in ("npc_damage", "handler_damage")
+        and Required.model_validate_json(x["requirement"]).target == actual
+        for x in born.facts
+        if "requirement" in x
+    ):
+        raise WorkflowError("Prove the genuine original NPC/Handler body-damage consequence")
+    if value.feeding_event:
+        fed = _history(c, game, value.feeding_event)
+        event = (
+            c.execute(
+                sa.select(t.events).where(
+                    t.events.c.campaign_id == game.store.campaign_id,
+                    t.events.c.id == value.feeding_event,
+                )
+            )
+            .mappings()
+            .first()
+        )
+        saved = next(
+            (x for x in rules.records(fed, rules.ConsumptionResolution) if x.id == identity), None
+        )
+        if (
+            event is None
+            or event["kind"] != "m3.consume_sprite_fed"
+            or saved != value
+            or json.loads(event["payload_json"]).get("resolution") != identity
+        ):
+            raise WorkflowError(
+                "Prove the actual one-time feeding event, not the earlier intention"
+            )
+    return value
+
+
+def _feed_sprite_resolutions(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any], event: str
+) -> str:
+    from girlframe.services.m3_collateral import latest
+    from girlframe.services.m3_consume_support import (
+        stage_starvation_expiry,
+    )
+    from girlframe.services.m3_consume_support import (
+        synchronize as sync_effects,
+    )
+
+    for value in rules.records(state, rules.ConsumptionResolution):
+        if value.session != action["id"] or value.feeding_event:
+            continue
+        value = prove_resolution(game, c, state, value.id)
+        work = latest(game, c, value.work)
+        if work["state"] != "resolved":
+            continue
+        source = rules.session(state, action["id"])
+        if rules.frame(state, source.actor) != source.frame:
+            raise WorkflowError("Keep actual feeding bound to the original physical CONSUME Frame")
+        cause = (
+            c.execute(
+                sa.select(t.events).where(
+                    t.events.c.campaign_id == game.store.campaign_id,
+                    t.events.c.id == work["event_id"],
+                )
+            )
+            .mappings()
+            .one()
+        )
+        before = GameState.model_validate_json(state.model_dump_json())
+        fresh = str(uuid4())
+        rules.fed(state, source.actor, fresh, entire=value.option == "kill")
+        owed = stage_starvation_expiry(game, c, before, state, source.actor, fresh, source.id)
+        rules.put(
+            state, source.model_copy(update=dict(work=tuple(dict.fromkeys((*source.work, *owed)))))
+        )
+        rules.put(state, value.model_copy(update=dict(feeding_event=fresh)))
+        if value.option == "kill" and rules.held(state, source.actor, rules.DRIVE):
+            require_rule(game, c, state, source.actor, rules.DRIVE)
+            game.request(c, action, int(source.actor.entity), "consume_erase")
+            action["data"]["consume"]["phase"] = "erasure"
+            game.save_action(c, action)
+        game.event(
+            c,
+            int(cause["actor_id"]),
+            str(uuid4()),
+            "m3.consume_sprite_fed",
+            state,
+            event_id=fresh,
+            action_id=source.id,
+            resolution=value.id,
+            source_event=work["event_id"],
+        )
+        sync_effects(game, c, fresh)
+        event = fresh
+    return event
+
+
+def _pending_sprite(game: GameService, c: Connection, state: GameState, session: str) -> bool:
+    table = t.m3["m3_required_work"]
+    for identity in rules.session(state, session).work:
+        row = c.execute(
+            sa.select(table.c.kind, table.c.state)
+            .where(
+                table.c.campaign_id == game.store.campaign_id,
+                table.c.id == identity,
+            )
+            .order_by(table.c.revision.desc())
+            .limit(1)
+        ).first()
+        if row is not None and row.kind == "sprite_intercept" and row.state != "resolved":
+            return True
+    return False
