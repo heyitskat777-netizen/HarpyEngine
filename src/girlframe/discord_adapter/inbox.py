@@ -739,6 +739,16 @@ class InboxView(discord.ui.View):
             await open_npc_flirt(
                 interaction, NpcFlirtService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_bonded_am":
+            from girlframe.discord_adapter.m3_bonded_am import open_bonded_am
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_bonded_am import BondedAMService
+
+            await open_bonded_am(
+                interaction,
+                BondedAMService(GameService(self.service.store)),
+                identity=item.identity,
+            )
         elif item.task == "m3_vatgrown_dna":
             from girlframe.discord_adapter.m3_vatgrown_dna import open_vatgrown_dna
             from girlframe.services.m2_game import GameService

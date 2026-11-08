@@ -113,6 +113,133 @@ def spoken_no_native(service, man, scene, revision, account):
     return asyncio.run(run())
 
 
+def test_actual_rolled_man_marking_pair_owns_native_protected_slot_conversion(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred real roll → actual Pair-owned conversion → genuine Sex consequence."""
+    from test_bonded import actual_man_game
+    from test_intracadre_marriage import FOUR
+
+    from girlframe.discord_adapter.m2_ui import open_choice
+    from girlframe.engine import m3_bonded as bonded
+    from girlframe.engine.m3_actors import resolve
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_bonded import original_pair
+    from girlframe.services.m3_gender_designation import prove_man_paired
+
+    game, worker, gateway, _ = actual_man_game(ledger, tmp_path, monkeypatch)
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(*bonded.RULES, ordinary.RULE, rules.RULE, mockingbird.SEX),
+    )
+    gender = GenderDesignationService(ledger)
+    acquisition = rules.acquisitions(state(game))[0]
+    assign(gender, acquisition, (current_ref(state(game), 3),), "man")
+    before = state(game)
+    man, owner = current_ref(before, 3), current_ref(before, 2)
+    with ledger.engine.connect() as c:
+        assert original_pair(game, c, before, owner)[0] == man
+    # Only prior ordinary Tag context is synthetic; the law/source/dice/choice are genuine.
+    with ledger.transaction() as c:
+        event = str(uuid4())
+        actual = mockingbird.give_tag(
+            state(game),
+            profiles(c, ledger.campaign_id),
+            owner,
+            man,
+            "Actual rolled Paired meaning",
+            "rolled-man-paired-tag",
+            event,
+            (2, 3),
+        )
+        game.event(
+            c, 3, str(uuid4()), "synthetic.prior_observed_ordinary_Tag", actual, event_id=event
+        )
+    trigger = MockingbirdService(game).propose(
+        OTHER, str(uuid4()), 900, man, SEX, (owner,), "Our actual mutually performed intimacy"
+    )
+    MockingbirdService(game).attest(PLAYER, str(uuid4()), trigger["id"], owner, True)
+    game.dice = Dice((2, 3))
+    action = game.begin(
+        OTHER,
+        str(uuid4()),
+        900,
+        state(game).sheets["3"].revision,
+        PlayInput(
+            play=SEX,
+            source_work=trigger["id"],
+            heat=0,
+            context="Actual original native Sex source",
+            trigger_confirmed=True,
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    original_receipt = game.inspect(OTHER, action)["receipt"]
+    assert original_receipt["faces"] == [2, 3] and game.dice.calls == 1
+    for who in (PLAYER, FOUR, ADMIN):
+        answer(game, who, "tag_window", options=("pass",))
+    paired_before = next(
+        x.model_copy(deep=True) for x in state(game).sheets["2"].identities if x.paired
+    )
+    answer(game, OTHER, "tag_window", options=("gender_man",), denied=("rolled-man-paired-tag",))
+    choice = next(x for x in game.choices(OTHER) if x["kind"] == "gender_partner_paired")
+    with pytest.raises(WorkflowError):
+        game.respond(
+            PLAYER, str(uuid4()), choice["id"], choice["revision"], ChoiceAnswer(options=("no",))
+        )
+    assert not any(x["kind"].startswith("mockingbird_sex") for x in game.choices(OTHER))
+    with ledger.engine.connect() as c:
+        assert game.action(c, action)["data"]["result"]["total"] == 11
+
+    async def convert_native():
+        interaction_value = interaction(3, 900)
+        await interaction_value.response.defer(ephemeral=True)
+        await open_choice(interaction_value, game, choice["id"])
+        form = interaction_value.edit_original_response.call_args.kwargs["view"]
+        form.values.update(convert=("yes",))
+        response = current(3, 89500)
+        response.channel_id = 900
+        await form.confirm.callback(response)
+        assert form.completed, response.edit_original_response.call_args_list
+
+    asyncio.run(convert_native())
+    game.respond(OTHER, "89500", choice["id"], choice["revision"], ChoiceAnswer(options=("yes",)))
+    actual = state(game)
+    paired = next(x for x in actual.sheets["2"].identities if x.id == paired_before.id)
+    assert paired.name == "Actual rolled Paired meaning" and paired.slot == paired_before.slot
+    assert paired.protected == paired_before.protected and paired.paired
+    assert paired.marked == (paired.id in actual.sheets["2"].sedation_locked)
+    assert not any(x.id == "rolled-man-paired-tag" for x in actual.sheets["2"].tags)
+    work = rules.paired_works(actual)[0]
+    with ledger.engine.connect() as c:
+        proved, decision = prove_man_paired(game, c, actual, work.id)
+        assert proved.marker == man and decision and decision.convert
+    assert gender.menu(PLAYER, work.id)["phase"] == "converted"
+    with pytest.raises(WorkflowError):
+        gender.menu(ADMIN, work.id)
+    # The original high source still owes its genuine physiological consequence.
+    with ledger.engine.connect() as c:
+        asset = next(
+            x
+            for x in resolve(actual, owner, profiles(c, ledger.campaign_id)).assets
+            if x.family == "girl" and not x.void
+        )
+    answer(game, OTHER, "mockingbird_sex_infect", fields={"asset": asset.id})
+    answer(
+        game,
+        PLAYER,
+        "mockingbird_sex_rewrite",
+        text="Actual original Girl Asset rewritten by the Void",
+    )
+    tick(worker, gateway, 5)
+    assert game.inspect(OTHER, action)["state"] == "complete"
+    assert game.inspect(OTHER, action)["receipt"] == original_receipt and game.dice.calls == 1
+    assert next(x for x in state(game).sheets["2"].assets if x.id == asset.id).void
+
+
 def test_actual_three_legal_categories_orders_partner_tag_sex_reassignment_and_punishment(
     ledger, tmp_path, monkeypatch
 ):

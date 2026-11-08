@@ -57,6 +57,48 @@ class AnimalGift(Model):
     tag_event: str | None = None
 
 
+class ManPairedWork(Model):
+    id: str
+    action: str
+    marker: ActorRef
+    owner: ActorRef
+    controller: int
+    designation: str
+    relation: str
+    paired: str
+    slot: int | None
+    tag: str
+    label: str
+    already_marked: bool
+    event: str
+
+
+class ManPairedDecision(Model):
+    id: str
+    work: str
+    choice: str
+    marker: ActorRef
+    controller: int
+    convert: bool
+    event: str
+
+
+def paired_works(state: GameState) -> tuple[ManPairedWork, ...]:
+    return tuple(
+        ManPairedWork.model_validate_json(x["body"])
+        for x in state.facts
+        if x.get("kind") == "gender_man_paired_work"
+    )
+
+
+def paired_decisions(state: GameState) -> tuple[ManPairedDecision, ...]:
+    return tuple(
+        ManPairedDecision.model_validate_json(x["body"])
+        for x in state.facts
+        if x.get("kind") == "gender_man_paired_decision"
+    )
+
+
 def acquisitions(state: GameState) -> tuple[Acquisition, ...]:
     return tuple(
         Acquisition.model_validate_json(x["body"])
@@ -89,12 +131,17 @@ def gifts(state: GameState) -> tuple[AnimalGift, ...]:
     )
 
 
-def put(state: GameState, value: Acquisition | Designation | SpeechNo | AnimalGift) -> None:
+def put(
+    state: GameState,
+    value: Acquisition | Designation | SpeechNo | AnimalGift | ManPairedWork | ManPairedDecision,
+) -> None:
     kind = {
         Acquisition: "gender_designation_acquisition",
         Designation: "gender_designation",
         SpeechNo: "gender_spoken_no",
         AnimalGift: "gender_animal_gift",
+        ManPairedWork: "gender_man_paired_work",
+        ManPairedDecision: "gender_man_paired_decision",
     }[type(value)]
     if not isinstance(value, AnimalGift) and any(
         x.get("kind") == kind and x.get("id") == value.id for x in state.facts

@@ -975,21 +975,24 @@
       "type": "AM",
       "registry_prefix": "girl.am.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Existing Jailbroken, Scrutinized and Just Code/body/backup/records paths retained. New no-additional-roll Sex source readback and native circuit routing: actual Alpha→AM smoke1 passed2.15s.",
-      "missing_before_AI": "Reconcile remaining ordinary body/identity consumers and Bonded no-roll delegation; circuit path uses existing real CodeService sources. Expanded consumer regression and independent review remain pending.",
+      "ordinary_workflows_with_evidence": "Existing Jailbroken, Scrutinized and Just Code/body/backup/records paths retained. New no-additional-roll Sex source readback and native circuit routing: actual Alpha→AM smoke1 passed2.15s. Genuine both-AM no-roll delegated encounter passed native/pause/private completion; original Pair outside scene/audience and no extra Action/dice/resources. Shared native completed readback +old policy consumer2 passed3.54s.",
+      "missing_before_AI": "Reconcile remaining ordinary body/identity consumers and remaining no-roll/body/source boundaries; circuit path uses existing real CodeService sources. Expanded consumer regression and independent review remain pending.",
       "later_candidates": "Exceptional simultaneous branch/body/career transitions after ordinary AM play works.",
       "code": [
         "src/girlframe/services/m3_am_body.py",
         "src/girlframe/services/m3_am_code.py",
         "src/girlframe/services/m3_am_branch.py",
         "src/girlframe/services/m3_am_sex.py",
-        "src/girlframe/discord_adapter/m3_am_sex.py"
+        "src/girlframe/discord_adapter/m3_am_sex.py",
+        "src/girlframe/services/m3_bonded_am.py",
+        "src/girlframe/discord_adapter/m3_bonded_am.py"
       ],
       "tests": [
         "tests/rules/test_am_body.py",
         "tests/rules/test_am_code.py",
         "tests/rules/test_am_branch.py",
-        "tests/rules/test_am_sex.py"
+        "tests/rules/test_am_sex.py",
+        "tests/rules/test_bonded_am.py"
       ],
       "rule_inventory": [
         {
@@ -1106,17 +1109,20 @@
       "type": "Bonded",
       "registry_prefix": "girl.bonded.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Actual Side and Pair-owned replies, source-owned witnessed affection/children, copied Sex rules with original resources, explicit no-roll low result and durable pause. Native Side smoke1/2.56s; no-roll pause and exact permission restore1/1.89s. Local optional unmarked non-Paired Man mark on the genuine no-roll source is implemented; static4/types3 pass; authored native normal NOTRUN. Source-only Man ordinary repeated embrace/reject and marking-Pair Paired-slot conversion are implemented/static checked, two authored native normals NOTRUN.",
-      "missing_before_AI": "Final authored normal regression, mandatory rejection-Play/special-source and separate rolled Man Paired integration, remaining ordinary identity/body/lifecycle adapters and independent source review.",
+      "ordinary_workflows_with_evidence": "Actual Side and Pair-owned replies, source-owned witnessed affection/children, copied Sex rules with original resources, explicit no-roll low result and durable pause. Native Side smoke1/2.56s; no-roll pause and exact permission restore1/1.89s. Local optional unmarked non-Paired Man mark on the genuine no-roll source is implemented; static4/types3 pass; authored native normal NOTRUN. Source-only Man ordinary repeated embrace/reject and marking-Pair Paired-slot conversion are implemented/static checked, two authored native normals NOTRUN. Genuine both-AM no-roll delegated encounter passed native/pause/private completion; original Pair outside scene/audience and no extra Action/dice/resources. Shared native completed readback +old policy consumer2 passed3.54s. Rolled and source-only Paired conversion consumers passed2/10.73s with unchanged receipt and original protected slot.",
+      "missing_before_AI": "Final authored normal regression, mandatory rejection-Play/special-source adapters, remaining ordinary identity/body/lifecycle adapters and independent source review.",
       "later_candidates": "Compound retained-rule/extra-Identity/dual-cockpit cases after ordinary Pair lifecycle.",
       "code": [
         "src/girlframe/services/m3_bonded.py",
         "src/girlframe/services/m3_bonded_support.py",
         "src/girlframe/services/p1_source_pause.py",
-        "src/girlframe/discord_adapter/m3_bonded.py"
+        "src/girlframe/discord_adapter/m3_bonded.py",
+        "src/girlframe/services/m3_bonded_am.py",
+        "src/girlframe/discord_adapter/m3_bonded_am.py"
       ],
       "tests": [
-        "tests/rules/test_bonded.py"
+        "tests/rules/test_bonded.py",
+        "tests/rules/test_bonded_am.py"
       ],
       "rule_inventory": [
         {

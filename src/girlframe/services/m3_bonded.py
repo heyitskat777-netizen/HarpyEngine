@@ -57,16 +57,8 @@ def _paired_basis(
 def _paired_legal(
     state: GameState, owner: ActorRef, paired: IdentityState, label: str, duplicates: bool
 ) -> bool:
-    from girlframe.engine.m3_leviathan_obsession import require_identity_change, require_unlocked
-
-    try:
-        require_unlocked((paired,), (paired.id,))
-        require_identity_change(state, owner, (paired.id,))
-    except ValueError:
-        return False
-    return duplicates or not any(
-        x.id != paired.id and x.name.casefold() == label.casefold()
-        for x in state.sheets[owner.entity].identities
+    return rules.paired_conversion_legal(
+        state, owner, paired.id, label, duplicate_labels=duplicates
     )
 
 
@@ -2181,11 +2173,14 @@ class BondedService:
                     raise WorkflowError(
                         "Preserve actual duplicate-label, Limited and obsession restrictions"
                     )
-                paired.name = tag.label
-                paired.marked = paired.id in sheet.sedation_locked
-                sheet.tags = [x for x in sheet.tags if x.id != tag.id]
-                sheet.revision += 1
-                engine.tag_resolved(state, int(work.owner.entity), tag.id)
+                consumed_tag = rules.convert_paired_tag(
+                    state,
+                    work.owner,
+                    paired.id,
+                    tag.id,
+                    duplicate_labels=engine.duplicate_labels(),
+                )
+                engine.tag_resolved(state, int(work.owner.entity), consumed_tag)
             event = str(uuid4())
             rules.put(
                 state,
@@ -2908,6 +2903,77 @@ def prove_delegation(
         for k in ("id", "source", "session", "rule", "actor", "target", "event")
     ):
         raise WorkflowError("Recover the immutable genuine delegated source birth")
+
+
+def complete_unrolled_am(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    bonded_source: str,
+    session: str,
+    event: str,
+) -> None:
+    """Stage only the proved actual no-roll consumer; its caller persists this event."""
+    from girlframe.services.m3_bonded_am import validate_completion
+
+    value = prove(game, c, state, bonded_source)
+    if (
+        value.target is None
+        or value.route != "delegated"
+        or value.delegated_rule != "girl.am.sex-play"
+    ):
+        raise WorkflowError("Use the genuine original Pair's delegated AM source")
+    prove_delegation(
+        game, c, state, bonded_source, session, value.actor, value.target, value.delegated_rule
+    )
+    link = next(x for x in rules.records(state, rules.Delegation) if x.source == bonded_source)
+    if link.action is not None:
+        raise WorkflowError(
+            "Preserve the actual rolled consumer; never replace it with a no-roll source"
+        )
+    if link.completed_event:
+        if link.completed_event != event or value.completed_event != event:
+            raise WorkflowError("Preserve the original completed source event")
+        return
+    if value.phase != "bound":
+        raise WorkflowError("Complete only the original bound AM delegation")
+    validate_completion(game, c, state, session, event)
+    rules.put(state, link.model_copy(update=dict(completed_event=event)))
+    _complete(state, value, event)
+
+
+def withdraw_unrolled_am(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    bonded_source: str,
+    session: str,
+    event: str,
+) -> None:
+    """Retain consent and link history while withdrawing the unperformed attempt."""
+    from girlframe.services.m3_bonded_am import prove as prove_am
+
+    value = prove(game, c, state, bonded_source)
+    encounter = prove_am(game, c, state, session)
+    if (
+        not event
+        or value.target is None
+        or value.phase != "bound"
+        or value.route != "delegated"
+        or value.delegated_rule != "girl.am.sex-play"
+        or encounter.bonded_source != value.id
+        or encounter.phase != "active"
+        or encounter.effect_event
+        or encounter.completed_event
+    ):
+        raise WorkflowError("Withdraw only the original no-effect AM encounter")
+    prove_delegation(
+        game, c, state, bonded_source, session, value.actor, value.target, value.delegated_rule
+    )
+    link = next(x for x in rules.records(state, rules.Delegation) if x.source == bonded_source)
+    if link.action is not None or link.completed_event:
+        raise WorkflowError("Retain the real performed or rolled source")
+    rules.put(state, value.model_copy(update=dict(phase="declined")))
 
 
 def synchronize_delegation(

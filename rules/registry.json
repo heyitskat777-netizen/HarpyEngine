@@ -6857,7 +6857,7 @@
       "alternatives": [
         "Treat the selected 7 as fixed even when the Man marks the actual partner Tag."
       ],
-      "implementation_note": "Source-only Bonded supports actual unmarked Tags, partner-owned ordinary repeated embrace/reject and marking-Pair-owned optional conversion into the original protected Paired slot. Actual mandatory-Play rejection, special-source Tag effects and other no-roll families remain explicit required adapters; the rolled Man paired path is separate remaining work.",
+      "implementation_note": "Source-only Bonded supports actual unmarked Tags, partner-owned ordinary repeated embrace/reject and marking-Pair-owned optional conversion into the original protected Paired slot. Actual mandatory-Play rejection, special-source Tag effects and other no-roll families remain explicit required adapters; the rolled Man Paired path now uses the same pure protected-slot helper with separate real receipt/source proof.",
       "change_impact": "Preserve original source routes, optional choices, law/Tag history, scene use and actual counterpart authorship when adjusting.",
       "provenance": "owner_approved_campaign_ruling",
       "authority": "delegated_recommendation",
@@ -9455,7 +9455,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_am_sex.py"
+        "tests/rules/test_am_sex.py",
+        "tests/rules/test_bonded_am.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -9578,7 +9579,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_bonded.py"
+        "tests/rules/test_bonded.py",
+        "tests/rules/test_bonded_am.py"
       ],
       "m2_play_id": "bonded_sex",
       "module": "core"

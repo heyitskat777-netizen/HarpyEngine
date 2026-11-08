@@ -61,7 +61,14 @@ def _sources(state: GameState) -> tuple[_Source, ...]:
         for x in ankou.records(state, ankou.Task)
         if x.kind == "perform" and not x.completed_event
     )
-    return (*bonded, *commands, *openings, *sequences, *performances)
+    from girlframe.engine import m3_bonded_am as borrowed_am
+
+    am_encounters = tuple(
+        _Source(x.id, "bonded_am", x.cast.channel, x.cast.id, x.event)
+        for x in borrowed_am.sources(state)
+        if x.phase in ("active", "effects") and not x.completed_event
+    )
+    return (*bonded, *commands, *openings, *sequences, *performances, *am_encounters)
 
 
 def active(state: GameState, identity: str) -> bool:

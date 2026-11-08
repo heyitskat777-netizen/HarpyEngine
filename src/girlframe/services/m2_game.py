@@ -6396,7 +6396,11 @@ class GameService:
                         self, c, load_state(c, self.store.campaign_id), action, dict(row)
                     ),
                 )
-            if row["kind"] in ("gender_partner_tag_resolution", "gender_animal_tag"):
+            if row["kind"] in (
+                "gender_partner_tag_resolution",
+                "gender_animal_tag",
+                "gender_partner_paired",
+            ):
                 from girlframe.services.m3_gender_designation import choice_projection
 
                 projected = choice_projection(

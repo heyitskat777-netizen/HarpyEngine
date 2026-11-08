@@ -16,6 +16,52 @@ SIDE_PLAY = "bonded_side"
 SEX_PLAY = "bonded_sex"
 
 
+def paired_conversion_legal(
+    state: GameState, owner: ActorRef, paired_id: str, label: str, *, duplicate_labels: bool
+) -> bool:
+    """Validate the real slot; the service must prove the actual marking Pair."""
+    from girlframe.engine.m3_leviathan_obsession import require_identity_change, require_unlocked
+
+    sheet = state.sheets.get(owner.entity) if owner.kind == "pilot" else None
+    if sheet is None or sheet.character_id != owner.incarnation:
+        return False
+    paired = next((x for x in sheet.identities if x.id == paired_id and x.paired), None)
+    if paired is None or not label.strip():
+        return False
+    try:
+        require_unlocked((paired,), (paired.id,))
+        require_identity_change(state, owner, (paired.id,))
+    except ValueError:
+        return False
+    return duplicate_labels or not any(
+        x.id != paired.id and x.name.casefold() == label.casefold() for x in sheet.identities
+    )
+
+
+def convert_paired_tag(
+    state: GameState, owner: ActorRef, paired_id: str, tag_id: str, *, duplicate_labels: bool
+) -> str:
+    """Consume the exact marked Tag; the proved caller completes real Tag obligations."""
+    sheet = state.sheets.get(owner.entity) if owner.kind == "pilot" else None
+    tag = next((x for x in sheet.tags if x.id == tag_id), None) if sheet else None
+    if (
+        tag is None
+        or not tag.marked
+        or tag.rejection_pending
+        or not paired_conversion_legal(
+            state, owner, paired_id, tag.label, duplicate_labels=duplicate_labels
+        )
+    ):
+        raise ValueError("Preserve the actual marked Tag, protected Paired slot and source locks")
+    assert sheet is not None
+    paired = next(x for x in sheet.identities if x.id == paired_id and x.paired)
+    paired.name = tag.label
+    paired.marked = paired.id in sheet.sedation_locked
+    sheet.tags = [x for x in sheet.tags if x.id != tag.id]
+    sheet.revision += 1
+    return tag.id
+
+
 class Source(Model):
     changeling_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
     id: str

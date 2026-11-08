@@ -21,6 +21,7 @@ from girlframe.engine import m3_bonded as rules
 from girlframe.engine.m2 import ChoiceAnswer, PlayInput
 from girlframe.engine.m3_actor_bonds import current_ref, depth, is_helpless
 from girlframe.engine.m3_actors import resolve
+from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_bonded import BondedService, original_pair, prove
 from girlframe.services.onboarding import WorkflowError
 
@@ -540,7 +541,7 @@ def test_high_pair_sex_actual_promise_pair_tags_and_status_above(ledger, tmp_pat
         event = str(uuid4())
         actual = give_tag(
             actual,
-            (),
+            profiles(c, ledger.campaign_id),
             current_ref(actual, 3),
             current_ref(actual, 2),
             "Actual original Pair Tag",
@@ -782,7 +783,7 @@ def test_actual_man_optional_partner_tag_gives_source_only_high_without_dice(
         actual, event = state(game), str(uuid4())
         actual = give_tag(
             actual,
-            (),
+            profiles(c, ledger.campaign_id),
             current_ref(actual, 4),
             current_ref(actual, 2),
             "Actual observed counterpart Tag",
@@ -977,7 +978,7 @@ def test_actual_marking_pair_owns_optional_man_conversion_of_original_protected_
         actual, event = state(game), str(uuid4())
         actual = give_tag(
             actual,
-            (),
+            profiles(c, ledger.campaign_id),
             current_ref(actual, 4),
             current_ref(actual, 2),
             "Actual new Paired meaning",

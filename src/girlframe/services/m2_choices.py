@@ -419,7 +419,7 @@ class ChoiceEngine:
                 "Recover the original Dose Up choice",
             )
             return
-        if kind in ("gender_partner_tag_resolution", "gender_animal_tag"):
+        if kind in ("gender_partner_tag_resolution", "gender_animal_tag", "gender_partner_paired"):
             from girlframe.services.m3_gender_designation import apply_choice
 
             require(

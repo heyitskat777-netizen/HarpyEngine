@@ -34,6 +34,24 @@ async def open_delegated(
         revision = state.revision
     rule = source.delegated_rule
     if rule == "girl.am.sex-play":
+        from girlframe.engine import m3_bonded_am as borrowed_am
+        from girlframe.services.m3_bonded_am import BondedAMService, eligible
+
+        with game.store.engine.connect() as c:
+            current_state = load_state(c, game.store.campaign_id)
+            saved_no_roll = any(
+                x.bonded_source == source_id and link is not None and x.id == link.session
+                for x in borrowed_am.sources(current_state)
+            )
+            no_roll = saved_no_roll or eligible(game, c, current_state, source_id)
+        if no_roll:
+            from girlframe.discord_adapter.m3_bonded_am import open_bonded_am
+
+            if saved_no_roll and link is not None:
+                await open_bonded_am(interaction, BondedAMService(game), identity=link.session)
+            else:
+                await open_bonded_am(interaction, BondedAMService(game), bonded_source=source_id)
+            return
         from girlframe.discord_adapter.m3_am_sex import open_am_sex
         from girlframe.services.m3_am_sex import SexService as AM
 

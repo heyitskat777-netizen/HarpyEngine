@@ -211,6 +211,43 @@ def man_tag_options(
     return result
 
 
+def _paired_target(
+    game: GameService, c: Connection, state: GameState, owner: ActorRef, marker: ActorRef
+) -> tuple[IdentityState, str] | None:
+    from girlframe.engine.m3_girl_runtime_state import has_rule, relation_current
+    from girlframe.services.m3_bonded import original_pair
+
+    sheet = state.sheets[owner.entity]
+    paired = [x for x in sheet.identities if x.paired]
+    if not has_rule(sheet, "girl.bonded.bonded-pair", "BONDED"):
+        if paired:
+            raise WorkflowError("Recover the actual source for this protected Paired slot")
+        return None
+    if not relation_current(sheet, "pair", state):
+        raise WorkflowError("Preserve the real original Pair; never alias a replacement account")
+    actual, source = original_pair(game, c, state, owner)
+    if len(paired) != 1:
+        raise WorkflowError("Recover the actual unique Paired Identity")
+    return (paired[0], source) if actual == marker else None
+
+
+def _paired_tag_source(identity: str) -> None:
+    if identity.startswith(
+        (
+            "bomb-collar:",
+            "cute-uniform:",
+            "stim-sex-drug:",
+            "stim-sex-effect:",
+            "dose-up:",
+            "control-ritual:",
+        )
+    ):
+        raise WorkflowError(
+            "PAIRED_TAG_SOURCE_ADAPTER_REQUIRED: preserve the actual special Tag's "
+            "conversion/removal source"
+        )
+
+
 def propose_man_tag(
     game: GameService,
     c: Connection,
@@ -236,15 +273,8 @@ def propose_man_tag(
     if marker.actor != current_ref(state, owner):
         raise WorkflowError("The actual Man marks his partner's Tag")
     _, partner = _selected_partner(state, action, answer.denied[0])
-    from girlframe.engine.m3_girl_runtime_state import has_rule, relation_current
-
-    sheet = state.sheets[partner.entity]
-    if (
-        any(x.paired for x in sheet.identities)
-        or has_rule(sheet, "girl.bonded.bonded-pair", "BONDED")
-        and relation_current(sheet, "pair", state)
-    ):
-        raise WorkflowError("UNSUPPORTED_RULE: the paired partner-Tag conversion needs its adapter")
+    if _paired_target(game, c, state, partner, marker.actor) is not None:
+        _paired_tag_source(answer.denied[0])
     markers.capture(game, c, state, action, marker)
 
 
@@ -273,6 +303,9 @@ def apply_man_tag(
     engine = ChoiceEngine(game)
     engine.prove_tag_setter(c, state, int(partner.entity), tag)
     old = tag.marked
+    paired = _paired_target(game, c, state, partner, actor)
+    if paired is not None:
+        _paired_tag_source(tag.id)
     tag.marked, tag.scene_used = True, action["scene_id"]
     state.sheets[partner.entity].revision += 1
     action["data"]["gender_man"] = dict(
@@ -292,7 +325,25 @@ def apply_man_tag(
         source_actor_sha256=marker.source_actor_sha256,
     )
     engine.set_total(action)
-    if old:
+    if paired is not None:
+        work = rules.ManPairedWork(
+            id="gender-man-paired:" + action["id"],
+            action=action["id"],
+            marker=actor,
+            owner=partner,
+            controller=owner,
+            designation=value.id,
+            relation=paired[1],
+            paired=paired[0].id,
+            slot=paired[0].slot,
+            tag=tag.id,
+            label=tag.label,
+            already_marked=old,
+            event=action["data"]["response_event"],
+        )
+        rules.put(state, work)
+        game.request(c, action, owner, "gender_partner_paired", dict(work=work.id))
+    elif old:
         game.request(
             c,
             action,
@@ -405,6 +456,128 @@ def prove_man_result(
             "Recover the genuine selected Man's partner-Tag result and unchanged roll"
         )
     return 11
+
+
+def prove_man_paired(
+    game: GameService, c: Connection, state: GameState, identity: str
+) -> tuple[rules.ManPairedWork, rules.ManPairedDecision | None]:
+    from girlframe.engine.m3_bonded import paired_conversion_legal
+    from girlframe.services.m2_choices import ChoiceEngine
+    from girlframe.services.m3_dose_up import _response
+    from girlframe.services.m3_girl_insurance import _before
+
+    work = next((x for x in rules.paired_works(state) if x.id == identity), None)
+    if work is None:
+        raise WorkflowError("Recover the actual rolled Man's Paired choice")
+    birth = _history(c, game, work.event)
+    previous = _before(game, c, work.event)
+    action = game.action(c, work.action)
+    captured = action["data"].get("gender_man", {})
+    basis = _paired_target(game, c, previous, work.owner, work.marker)
+    old = next((x for x in previous.sheets[work.owner.entity].tags if x.id == work.tag), None)
+    if (
+        work not in rules.paired_works(birth)
+        or work.id != "gender-man-paired:" + action["id"]
+        or prove_man_result(game, c, state, action) != 11
+        or captured.get("actor") != work.marker.model_dump(mode="json")
+        or captured.get("partner") != work.owner.model_dump(mode="json")
+        or captured.get("tag") != work.tag
+        or captured.get("event") != work.event
+        or captured.get("designation") != work.designation
+        or work.controller != int(work.marker.entity)
+        or basis is None
+        or basis[1] != work.relation
+        or basis[0].id != work.paired
+        or basis[0].slot != work.slot
+        or old is None
+        or old.marked != work.already_marked
+        or old.label != work.label
+    ):
+        raise WorkflowError(
+            "Preserve the actual receipt, Man, Tag owner, marking Pair and source slot"
+        )
+    decisions = [x for x in rules.paired_decisions(state) if x.work == identity]
+    if len(decisions) > 1:
+        raise WorkflowError("The actual marking Pair chooses once")
+    decision = decisions[0] if decisions else None
+    if decision is not None:
+        saved = _history(c, game, decision.event)
+        before = _before(game, c, decision.event)
+        current = _paired_target(game, c, before, work.owner, work.marker)
+        answer = _response(
+            game,
+            c,
+            work.action,
+            decision.choice,
+            decision.event,
+            work.controller,
+            "gender_partner_paired",
+        )
+        row = (
+            c.execute(
+                sa.select(t.m2["m2_choices"]).where(
+                    t.m2["m2_choices"].c.campaign_id == game.store.campaign_id,
+                    t.m2["m2_choices"].c.id == decision.choice,
+                )
+            )
+            .mappings()
+            .one()
+        )
+        tag = next((x for x in before.sheets[work.owner.entity].tags if x.id == work.tag), None)
+        after_tag = next(
+            (x for x in saved.sheets[work.owner.entity].tags if x.id == work.tag), None
+        )
+        after_slot = next(
+            (x for x in saved.sheets[work.owner.entity].identities if x.id == work.paired), None
+        )
+        if (
+            decision not in rules.paired_decisions(saved)
+            or decision.id != work.id + ":decision"
+            or decision.marker != work.marker
+            or decision.controller != work.controller
+            or json.loads(row["body_json"]) != dict(work=work.id)
+            or answer.options != (("yes",) if decision.convert else ("no",))
+            or answer.denied
+            or answer.text
+            or answer.fields
+            or answer.number is not None
+            or answer.member is not None
+            or answer.flag is not None
+            or current is None
+            or current[1] != work.relation
+            or current[0].id != work.paired
+            or current[0].slot != work.slot
+            or tag is None
+            or not tag.marked
+            or tag.rejection_pending
+            or tag.scene_used != action["scene_id"]
+            or after_slot is None
+        ):
+            raise WorkflowError("Preserve the actual marking Pair's canonical yes/no response")
+        if decision.convert:
+            expected = current[0].model_copy(
+                update=dict(
+                    name=work.label,
+                    marked=work.paired in before.sheets[work.owner.entity].sedation_locked,
+                )
+            )
+            if (
+                after_tag is not None
+                or after_slot != expected
+                or not paired_conversion_legal(
+                    before,
+                    work.owner,
+                    work.paired,
+                    work.label,
+                    duplicate_labels=ChoiceEngine(game).duplicate_labels(),
+                )
+            ):
+                raise WorkflowError(
+                    "Preserve actual protected-slot conversion and exact Tag consumption"
+                )
+        elif after_tag != tag or after_slot != current[0]:
+            raise WorkflowError("Declining leaves the actual marked Tag and Paired slot intact")
+    return work, decision
 
 
 def offer_animal_tags(
@@ -549,7 +722,79 @@ def apply_choice(
     answer: ChoiceAnswer,
 ) -> bool:
     body = json.loads(row["body_json"])
-    if row["kind"] == "gender_animal_tag":
+    if row["kind"] == "gender_partner_paired":
+        work, decision = prove_man_paired(game, c, state, body["work"])
+        if (
+            decision is not None
+            or work.action != action["id"]
+            or str(row["actor_id"]) != str(work.controller)
+            or current_ref(state, work.controller) != work.marker
+            or answer.options not in (("yes",), ("no",))
+            or answer.denied
+            or answer.text
+            or answer.fields
+            or answer.number is not None
+            or answer.flag is not None
+            or answer.member is not None
+        ):
+            raise WorkflowError("Only the actual original marking Pair chooses yes or no once")
+        _native(game, c, state, work.marker)
+        _native(game, c, state, work.owner)
+        basis = _paired_target(game, c, state, work.owner, work.marker)
+        sheet = state.sheets[work.owner.entity]
+        tag = next((x for x in sheet.tags if x.id == work.tag), None)
+        if (
+            basis is None
+            or basis[1] != work.relation
+            or basis[0].id != work.paired
+            or basis[0].slot != work.slot
+            or tag is None
+            or not tag.marked
+            or tag.rejection_pending
+            or tag.scene_used != action["scene_id"]
+        ):
+            raise WorkflowError(
+                "Preserve the actual current Pair, protected slot and source-marked Tag"
+            )
+        from girlframe.engine.m3_bonded import convert_paired_tag
+        from girlframe.services.m2_choices import ChoiceEngine
+
+        engine = ChoiceEngine(game)
+        engine.prove_tag_setter(c, state, int(work.owner.entity), tag)
+        convert = answer.options == ("yes",)
+        if convert:
+            try:
+                consumed = convert_paired_tag(
+                    state,
+                    work.owner,
+                    work.paired,
+                    work.tag,
+                    duplicate_labels=engine.duplicate_labels(),
+                )
+            except ValueError as error:
+                raise WorkflowError(str(error)) from None
+            engine.tag_resolved(state, int(work.owner.entity), consumed)
+        elif work.already_marked:
+            game.request(
+                c,
+                action,
+                int(work.owner.entity),
+                "gender_partner_tag_resolution",
+                dict(tag=work.tag, partner=work.owner.model_dump(mode="json")),
+            )
+        rules.put(
+            state,
+            rules.ManPairedDecision(
+                id=work.id + ":decision",
+                work=work.id,
+                choice=row["id"],
+                marker=work.marker,
+                controller=work.controller,
+                convert=convert,
+                event=action["data"]["response_event"],
+            ),
+        )
+    elif row["kind"] == "gender_animal_tag":
         value = animal_gift(game, c, state, body["gift"])
         if (
             value is None
@@ -659,6 +904,29 @@ def choice_projection(
     game: GameService, c: Connection, state: GameState, action: dict[str, Any], row: dict[str, Any]
 ) -> dict[str, Any] | None:
     body = json.loads(row["body_json"])
+    if row["kind"] == "gender_partner_paired":
+        from girlframe.engine.m3_bonded import paired_conversion_legal
+        from girlframe.services.m2_choices import ChoiceEngine
+
+        work, decision = prove_man_paired(game, c, state, body["work"])
+        if row["action_id"] != work.action or str(row["actor_id"]) != str(work.controller):
+            raise WorkflowError("The actual marking Pair owns this exact source response")
+        return dict(
+            kind=row["kind"],
+            work=work.id,
+            owner=work.owner.model_dump(mode="json"),
+            marker=work.marker.model_dump(mode="json"),
+            label=work.label,
+            pending=decision is None,
+            converted=decision.convert if decision else None,
+            can_convert=paired_conversion_legal(
+                state,
+                work.owner,
+                work.paired,
+                work.label,
+                duplicate_labels=ChoiceEngine(game).duplicate_labels(),
+            ),
+        )
     if row["kind"] == "gender_animal_tag":
         value = next(x for x in rules.gifts(state) if x.id == body["gift"])
         return dict(
@@ -1188,6 +1456,34 @@ class GenderDesignationService:
         with self.store.engine.connect() as c:
             self._access(c, viewer)
             state = load_state(c, self.store.campaign_id)
+            paired = next((x for x in rules.paired_works(state) if x.id == identity), None)
+            if paired:
+                if str(viewer.user_id) not in (paired.marker.entity, paired.owner.entity):
+                    raise WorkflowError(
+                        "Only the original actual participants read this private Paired source"
+                    )
+                work, decision = prove_man_paired(self.game, c, state, paired.id)
+                pending = next(
+                    (
+                        x
+                        for x in self.game.pending(c, work.action)
+                        if x["kind"] == "gender_partner_paired"
+                        and json.loads(x["body_json"]) == dict(work=work.id)
+                    ),
+                    None,
+                )
+                return dict(
+                    kind="paired",
+                    id=work.id,
+                    action=work.action,
+                    label=work.label,
+                    phase="pending"
+                    if decision is None
+                    else "converted"
+                    if decision.convert
+                    else "declined",
+                    choice=pending["id"] if pending and viewer.user_id == work.controller else None,
+                )
             gift = next((x for x in rules.gifts(state) if x.id == identity), None)
             if gift:
                 gift_value = animal_gift(self.game, c, state, gift.id)
@@ -1346,4 +1642,17 @@ class GenderDesignationService:
             for x in rules.gifts(state)
             if str(viewer.user_id) in (x.animal.entity, x.target.entity)
         ]
+        for paired_value in rules.paired_works(state):
+            if str(viewer.user_id) not in (paired_value.marker.entity, paired_value.owner.entity):
+                continue
+            work, decision = prove_man_paired(self.game, c, state, paired_value.id)
+            tasks.append(
+                dict(
+                    id=work.id,
+                    revision=state.revision,
+                    label="Man: actual marking-Pair Tag choice",
+                    phase="pending" if decision is None else "resolved",
+                    pending=decision is None and viewer.user_id == work.controller,
+                )
+            )
         return tasks

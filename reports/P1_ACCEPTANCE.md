@@ -464,3 +464,51 @@ Published preceding checkpoint d32127c CI42493240071 explicitly reports focused
 gameplay success and final full-regression step skipped. All current broader
 regression/global release checks, independent review and human acceptance remain
 pending; bot OFF.
+
+### Local coherent checkpoint: paired helper and actual no-roll AM
+
+The shared pure protected-slot helper has two real source consumers: rolled Man
+marking and Bonded source-only marking. Their two previously unrun native normals
+passed **2 in10.73s** (`test_gender_designation.py::test_actual_rolled_man_marking_pair_owns_native_protected_slot_conversion`,
+`test_bonded.py::test_actual_marking_pair_owns_optional_man_conversion_of_original_protected_slot`).
+Initial2 failures/4.71s were missing native profile bindings in synthetic prior-Tag
+creation. Both failed nodes alone were rerun; a third identical known fixture
+construction was corrected without executing its test. Existing records/events
+stay; source-specific Pair/author/receipt proof remains outside the pure helper.
+
+The both-AM no-roll case is now distinct from the already-implemented rolled-
+counterpart route. A real Bonded/Pair-AM/other-AM creation and accepted encounter
+produce two separately owned factual performances, actual source pause and typed
+completion, zero Actions/dice/Heat/Asset charges, private saved history and replay.
+An unperformed/no-effect source may be withdrawn by an original participant;
+accepted consent and source/link history remain. Circuit touch grants no borrowed
+body/software/Code capability and stays at its actual existing source boundary.
+Animal gifts use the existing source-only typed helper with an explicit new source
+kind and original giver; that branch and withdrawal runtime are NOTRUN.
+
+`test_bonded_am.py::test_actual_native_bonded_am_two_owned_performances_no_roll_and_private_original_pair`
+initially failed1.54s because the new genuine three-person creation did not set
+synthetic M3 approval before the existing reviewed fixture helper. Existing exact
+policy construction was moved to neutral `m3_policy_scenario.py`, preserving its
+constructor AST and repository lookup, returning the same Registry to the old
+mission setup. It invents no actor/consent/outcome or real certification. The AM
+normal then passed1/3.15s. A concrete completed-parent native routing correction
+was added and the same normal extended to enter through the actual shared parent
+route and reopen its private completed response. That changed flow plus one old
+policy consumer `test_mission_service.py::test_current_ace_gets_bonus_even_when_absent`
+passed **2 in3.54s**. Other successes were not rerun. These timings are measured
+checks, not a claimed suite-speed improvement.
+
+Root shared static10 passed before the final readback/fixture return amendment;
+publication preflight follows on the exact integrated snapshot. Focused CI on
+preceding bef7d9c passed (42495599850); this does not certify the new working tree
+or replace final full regression, independent review or human acceptance.
+Bot OFF; no deployment, environment publication, AI or private-engine writes.
+
+Publication preflight for the integrated paired/AM checkpoint: Ruff/format22
+Python files pass after5 unused/import fixes; applicable types17 pass. Registry
+remains477 entries/270 subset/207 unimplemented/440 required/0 independently
+verified. Publication scan1385 files/40 retained manifest entries/0 findings and
+whitespace check pass. Final evidence/index amendments affect documents and test
+references only; no gameplay rerun is needed for those amendments. Full regression
+and release/human gates remain pending.

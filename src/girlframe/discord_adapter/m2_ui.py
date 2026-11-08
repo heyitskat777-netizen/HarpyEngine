@@ -561,6 +561,13 @@ def answer_values(values: dict[str, Any]) -> ChoiceAnswer:
 
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
     decision = await threaded(lambda: game.decision(viewer_from_interaction(interaction), identity))
+    if decision["kind"] == "gender_partner_paired":
+        from girlframe.discord_adapter.m3_gender_designation import (
+            open_choice as open_gender_choice,
+        )
+
+        await open_gender_choice(interaction, game, decision)
+        return
     if decision["kind"].startswith("ankou_") and not decision["kind"].startswith("ankou_feedback"):
         from girlframe.discord_adapter.m3_ankou import open_choice as open_ankou_source_choice
 

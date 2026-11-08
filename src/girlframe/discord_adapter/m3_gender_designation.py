@@ -9,14 +9,82 @@ from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
+from girlframe.engine.m2 import ChoiceAnswer
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.services.m2_game import GameService
 from girlframe.services.m3_gender_designation import GenderDesignationService
+
+
+async def open_choice(
+    interaction: discord.Interaction, game: GameService, decision: dict[str, Any]
+) -> None:
+    viewer = viewer_from_interaction(interaction)
+    current = await asyncio.to_thread(game.decision, viewer, decision["id"])
+    data = current["gender"]
+    choices = (
+        [("yes", "Yes: this Tag becomes her actual Paired Identity")] if data["can_convert"] else []
+    )
+    choices.append(("no", "No: keep her Paired Identity and marked Tag"))
+
+    async def choose(response: discord.Interaction, values: dict[str, Any]) -> str:
+        await asyncio.to_thread(
+            game.respond,
+            viewer_from_interaction(response),
+            str(response.id),
+            current["id"],
+            current["revision"],
+            ChoiceAnswer(options=values["convert"]),
+        )
+        return "Your actual marking-Pair choice is saved. Resume the original Play."
+
+    await NativeForm(
+        interaction.user.id,
+        "Your actual marking-Pair choice",
+        "You marked your Bonded partner's actual Tag: "
+        + data["label"]
+        + ". Do you want it to become her new Paired Identity?",
+        [Field("convert", "Your printed yes/no choice", tuple(choices))],
+        choose,
+    ).present(interaction)
 
 
 async def open_designation(
     interaction: discord.Interaction, service: GenderDesignationService, identity: str | None = None
 ) -> None:
     data = await asyncio.to_thread(service.menu, viewer_from_interaction(interaction), identity)
+    if data["kind"] == "paired":
+        summary = (
+            "Actual rolled Man Paired source: "
+            + data["action"]
+            + "\n"
+            + data["label"]
+            + " · "
+            + data["phase"]
+        )
+        if data["choice"]:
+
+            async def resume(response: discord.Interaction, values: dict[str, Any]) -> None:
+                actual = await asyncio.to_thread(
+                    service.game.decision, viewer_from_interaction(response), data["choice"]
+                )
+                await open_choice(response, service.game, actual)
+
+            await NativeForm(
+                interaction.user.id,
+                "Actual Paired source",
+                summary,
+                [
+                    Field(
+                        "operation",
+                        "Your real pending source",
+                        (("choose", "Choose as the actual marking Pair"),),
+                    )
+                ],
+                resume,
+            ).present(interaction)
+        else:
+            await reply(interaction, summary)
+        return
     if data["kind"] == "gift":
         await reply(
             interaction,

@@ -8,6 +8,7 @@ from sqlalchemy import Connection
 from girlframe.engine import p1_unrolled_sex as rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_bonded import Source
+from girlframe.engine.m3_bonded_am import Source as BondedAMSource
 from girlframe.engine.m3_changeling_sex import UnrolledAMSex
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_actors import profiles
@@ -21,7 +22,11 @@ if TYPE_CHECKING:
 
 
 def offer(
-    game: "GameService", c: Connection, state: GameState, source: Source | UnrolledAMSex, event: str
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    source: Source | UnrolledAMSex | BondedAMSource,
+    event: str,
 ) -> None:
     if source.kind != "sex" or source.action is not None or source.target is None:
         return
@@ -36,7 +41,11 @@ def offer(
             state,
             rules.AnimalGift(
                 id=identity,
-                source_kind="changeling_am" if isinstance(source, UnrolledAMSex) else None,
+                source_kind="bonded_am"
+                if isinstance(source, BondedAMSource)
+                else "changeling_am"
+                if isinstance(source, UnrolledAMSex)
+                else None,
                 source=source.id,
                 animal=animal,
                 target=target,
@@ -57,7 +66,7 @@ def tasks(
     game: "GameService",
     c: Connection,
     state: GameState,
-    source: Source | UnrolledAMSex,
+    source: Source | UnrolledAMSex | BondedAMSource,
     viewer: GuildViewer,
 ) -> list[dict[str, Any]]:
     if viewer.user_id not in source.controllers.values():
@@ -160,7 +169,16 @@ def give(
             raise WorkflowError("Reopen the actual current source gift")
         gift = prove(game, c, state, identity)
         source = _source(game, c, state, gift)
-        if gift.source_kind == "changeling_am":
+        if gift.source_kind == "bonded_am":
+            from girlframe.services.m3_access import Access
+
+            gate = Access(game.store)
+            gate.authorize(c, viewer, "plays", director_response=True)
+            assert gate.registry is not None
+            gate.registry.require_available("girl.am.sex-play")
+            gate.registry.require_available(SEX)
+            require_ready(game, c, state, source.id)
+        elif gift.source_kind == "changeling_am":
             from girlframe.engine.m3_changeling_sex import RULES
             from girlframe.services.m3_access import Access
 
@@ -200,7 +218,11 @@ def give(
             source_id=source.id,
             gift_id=gift.id,
         )
-        if gift.source_kind == "changeling_am":
+        if gift.source_kind == "bonded_am":
+            from girlframe.services.m3_bonded_am import synchronize
+
+            synchronize(game, c, changed, source.id, event)
+        elif gift.source_kind == "changeling_am":
             from girlframe.services.m3_changeling_sex import synchronize_am
 
             synchronize_am(game, c, changed, source.id, event)
@@ -218,7 +240,11 @@ def give(
 
 def _source(
     game: "GameService", c: Connection, state: GameState, gift: rules.AnimalGift
-) -> Source | UnrolledAMSex:
+) -> Source | UnrolledAMSex | BondedAMSource:
+    if gift.source_kind == "bonded_am":
+        from girlframe.services.m3_bonded_am import prove
+
+        return prove(game, c, state, gift.source)
     if gift.source_kind == "changeling_am":
         from girlframe.services.m3_changeling_sex import prove_am_source
 
