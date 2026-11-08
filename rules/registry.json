@@ -6458,6 +6458,118 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "casualty-body-conditions",
+      "summary": "Broken parts remain distinct from destroyed or removed parts; broken Link prevents actual piloting, and actual Brain destruction/removal causes original death.",
+      "source": "Casualty PDF44/printed42",
+      "rationale": "The source uses different physical conditions; a broken Brain push does not by itself establish destruction.",
+      "alternatives": [
+        "Treat all Brain breakage as destruction."
+      ],
+      "policy_key": "casualty_body_conditions",
+      "implementation_note": "Real printed1Permission repairs apply only to broken parts. Replacement hardware and other bodies still need their actual adapters.",
+      "change_impact": "Version future interpretations and source adapters; preserve original people, actual choices, canonical historical receipts and consumed entitlements.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "casualty-effective-push",
+      "summary": "A source-owned push raises the pending post-Tag result to at least11 before outcomes, preserving higher totals and the immutable raw receipt.",
+      "source": "Casualty PDF44/printed42",
+      "rationale": "Apply the high-result benefit before consequences rather than retroactively undoing effects.",
+      "alternatives": [
+        "Replace every total with exactly11."
+      ],
+      "policy_key": "casualty_effective_push",
+      "implementation_note": "The original player chooses an actual intact part; breaking it is atomic with the source override.",
+      "change_impact": "Version future interpretations and source adapters; preserve original people, actual choices, canonical historical receipts and consumed entitlements.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "casualty-sex-ownership",
+      "summary": "Each focused part grants each participant one optional actual Identity unmark; any hesitation grants one reciprocal Tag pair total. High beneficiaries choose their own3\u20134Heat, the Casualty chooses the partner Asset and the partner chooses the Casualty part.",
+      "source": "Casualty PDF44/printed42",
+      "rationale": "Keep independent printed choices with the original affected people and separate repeated focus benefits from the single hesitation condition.",
+      "alternatives": [
+        "Grant one Tag pair for every hesitant part or let one human choose both beneficiaries Heat."
+      ],
+      "policy_key": "casualty_sex_ownership",
+      "implementation_note": "Actual0\u20133 distinct parts and all owned consequences retain their original source events; other-body selectors remain explicit gaps.",
+      "change_impact": "Version future interpretations and source adapters; preserve original people, actual choices, canonical historical receipts and consumed entitlements.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "vatgrown-high-acquisition-choices",
+      "summary": "The high Sex counterpart chooses the first two acquisition effects; the separate stay-by-side and departure condition remains actual ongoing state.",
+      "source": "Vatgrown PDF50/printed48",
+      "rationale": "Read choice ownership in the result context without granting unspecified global control over another player.",
+      "alternatives": [
+        "Give the counterpart control over all future fictional choices until departure."
+      ],
+      "policy_key": "vatgrown_high_acquisition_choices",
+      "implementation_note": "The supported one-use Play pilot is genuine Alpha Brutalize. Other Play/body consumers need explicit adapters; actual departure requires source-bound Disobey or original counterpart release.",
+      "change_impact": "Version future interpretations and source adapters; preserve original people, actual choices, canonical historical receipts and consumed entitlements.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "vatgrown-investor-price",
+      "summary": "Adding an actual Girl Investor requires an exact positive current Handler quote and that actual payer voluntary acceptance; no default price is inferred.",
+      "source": "Vatgrown PDF49/printed47",
+      "rationale": "The printed source names a cost without providing its amount; keep real pricing authority and payment consent explicit.",
+      "alternatives": [
+        "Use an adjustable fixed1Permission price."
+      ],
+      "policy_key": "vatgrown_investor_price",
+      "implementation_note": "The immutable quote and actual Permission flow are bound to the original Investor proposal and source-priced shared-wallet approval.",
+      "change_impact": "Version future interpretations and source adapters; preserve original people, actual choices, canonical historical receipts and consumed entitlements.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "vatgrown-investor-desire-author",
+      "summary": "Later new Investor desires belong to the actual Investor controller; original NPC creation desires retain their printed Vatgrown authorship.",
+      "source": "Vatgrown PDF49/printed47; creation PDF48/printed46",
+      "rationale": "Preserve actual source-time authors and original appointment/person rather than substitute the current account.",
+      "alternatives": [
+        "Have the Vatgrown author all later NPC desires."
+      ],
+      "policy_key": "vatgrown_investor_desire_author",
+      "implementation_note": "Both genuine initial creation coordination and transition setup can prove actual Investors. Other-body role and replacement adapters remain required.",
+      "change_impact": "Version future interpretations and source adapters; preserve original people, actual choices, canonical historical receipts and consumed entitlements.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "vatgrown-chaperone-and-replacement",
+      "summary": "A chaperone requires actual accompaniment without inferred custody; Bonds alone do not establish romance. Death replacement requires a distinct new Vatgrown with fresh creation and actual other-human notice choices.",
+      "source": "Vatgrown PDF49/printed47",
+      "rationale": "Keep printed personal constraints separate from OOC control, physical imprisonment and invented answers.",
+      "alternatives": [
+        "Treat all Bonds as romance or reuse the dead incarnation and its personal edges."
+      ],
+      "policy_key": "vatgrown_chaperone_and_replacement",
+      "implementation_note": "Interpretation recorded for upcoming adapters: chaperone travel and source-specific death replacement/notice are still REQUIRED UNIMPLEMENTED work in this checkpoint.",
+      "change_impact": "Version future interpretations and source adapters; preserve original people, actual choices, canonical historical receipts and consumed entitlements.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -8428,14 +8540,16 @@
         "heading": "Barely a Girl"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_casualty.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -8451,14 +8565,16 @@
         "heading": "No One Better"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_casualty.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -8474,14 +8590,16 @@
         "heading": "Sex Play"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_casualty.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -8497,14 +8615,16 @@
         "heading": "Wounded God"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_casualty.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -8666,14 +8786,17 @@
         "heading": "Just an Experiment"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_vatgrown_plays.py",
+        "tests/rules/test_vatgrown_offers.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -8689,14 +8812,17 @@
         "heading": "Prime Investment"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_vatgrown_plays.py",
+        "tests/rules/test_vatgrown_offers.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -8712,14 +8838,17 @@
         "heading": "Sex Play"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_vatgrown_plays.py",
+        "tests/rules/test_vatgrown_offers.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

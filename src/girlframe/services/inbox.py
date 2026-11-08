@@ -1043,6 +1043,40 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_casualty import CasualtyService
+
+            for casualty in CasualtyService(GameService(self.store))._tasks(connection, viewer):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, casualty),
+                        prefix="casualty:",
+                        source="casualty",
+                        counterpart="Original source people",
+                        effect="Review your own saved source choices and effects.",
+                        details="Other people retain their own choices and privacy.",
+                        primary="Review Casualty source",
+                        task="m3_casualty",
+                    )
+                )
+
+            from girlframe.services.m3_vatgrown_plays import VatgrownPlaysService
+
+            for vatgrown_plays in VatgrownPlaysService(GameService(self.store))._tasks(
+                connection, viewer
+            ):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, vatgrown_plays),
+                        prefix="vatgrown-plays:",
+                        source="vatgrown_plays",
+                        counterpart="Original voluntary source participants",
+                        effect="Review your own saved source choices and effects.",
+                        details="Other people retain their own choices and privacy.",
+                        primary="Review Vatgrown source",
+                        task="m3_vatgrown_plays",
+                    )
+                )
+
             from girlframe.services.m3_newgirl_sex import NewgirlSexService
 
             for newgirl_sex in NewgirlSexService(GameService(self.store))._tasks(

@@ -1,6 +1,6 @@
 # Current M3 queue
 
-Updated 2026-11-07 (America/Chicago). Integration source: `933b10d`; local branch
+Updated 2026-11-08 (UTC). Published pagination source: `b5db26c`; local branch
 `codex/integrated-repairs-20261107`. **RULES_SUBSET; bot off.** No deployment,
 environment publication, recovered-engine writes, AI/M4 or Ancillary activation.
 This working list separates upcoming work from completed scoped checkpoints.
@@ -10,8 +10,9 @@ Registry entries and workflows overlap and differ in size; counts are not percen
 
 | Workflow | Owner / state | Dependency | Next concrete action | Completion evidence |
 |---|---|---|---|---|
-| Casualty remaining playbook workflows | AM agent + root / implementation | Actual body parts, native Plays, Void/Helpless/death and owned choices | Review frozen normal branches and exact root dependencies, then release isolated implementation | NEW4 drafted; root shared adapters pending; no gameplay acceptance yet |
-| Vatgrown remaining workflows | Malleable agent + root / implementation | Existing Investors, actual scenes/Requisitions, one-use Plays and source authority | Finish Just an Experiment, Prime Investment and Sex contract; preserve completed Doll source | NEW4 drafted; root shared adapters pending; no gameplay acceptance yet |
+| Casualty normal source workflows | AM agent + root / focused integration | Actual parts, native Plays, real work resistance and source callbacks | Freeze union; run coherent11 plus affected shared checks | Distinct10 normal branches pass segmented; real Dormant resistance1 passes; Punishment callback ordering repaired; final coherent check pending |
+| Vatgrown normal source workflows and offered Girl Requisitions | Malleable agent + root / focused integration | Real Investors/scenes, original acquisition choices, genuine1usePlay and gift provenance | Complete gift checks; freeze coherent union and native controls | Source8 pass segmented; actual unrolled lesson cancellation passes; gift/paid and final coherent checks pending |
+| Casualty/Vatgrown remaining adapters | Root / required follow-on | Completed ordinary sources and actual physical/career/role producers | Chaperone travel, fresh Vatgrown death replacement/notice, DNA Tag, additional body/Play/favour/resistance choosers | Explicit required gaps; playbook inventory entries remain unimplemented; no whole-playbook or whole-M3 claim |
 | Deep-Brain-Spikes contribution/linked-Play readback | Root / separate remaining UI gap | Saved authorized contribution records and actual action references | Address separately from completed text pagination; preserve private access and saved order | Service-readable; native omission not repaired by pagination |
 | Successor | Root / lifecycle dependency queued | Proven singleton Handler, unranked Girl and actual link-removal gaps | Assign source-bound concurrent junior/full Handler lifecycle and actual threshold consumers; avoid a Gold-Star-only placeholder | Frozen346-word source/dependency contract,12 inspected dependency hashes; no code or acceptance |
 | Remaining required core systems | Root + bounded assignments / open | Existing source inventory and actual consumers | Select the next whole dependency-ready gameplay workflow; keep unsupported branches visible | [Registry](../rules/registry.json), [remaining scope](M3_REMAINING_WORK.md), [acceptance](acceptance/m3_rules.json) |
@@ -40,7 +41,7 @@ These are implementation evidence, not independent certification or milestone si
 
 | Workflow | Owner / state | Dependency | Next concrete action | Completion evidence |
 |---|---|---|---|---|
-| Deep-Brain-Spikes private pagination | Root / verified committed source | Authorized native History and active controls; fixed1,000-unit rendered ceiling | `933b10d`; publish requested checkpoint, retain final integrated regression requirement | Working-tree5 /12.03s; exact committed export5 /13.90s; static3 Python/2 source; full M3/remote CI pending |
+| Deep-Brain-Spikes private pagination | Root / verified committed source | Authorized native History and active controls; fixed1,000-unit rendered ceiling | `933b10d`; publish requested checkpoint, retain final integrated regression requirement | Working-tree5 /12.03s; exact committed export5 /13.90s; CI42446937373 atb5db26c passed25 focused; full M3 regression pending |
 | Newgirl Sex and active Mentors | AM agent + root / committed within scope | Actual independent confirmations, six printed result normals and real Mentor consumers | `1220436`; remaining actor/body/terminal/discovery adapters stay visible | Final coherent10 Newgirl checks /29.87s; static29 Python/26 source; offlineSDK21; no full regression |
 | Newgirl Easy Target | Malleable agent + root / committed within scope | Actual role reactions, child performances, harm/Punishment, cohort and separate failure Tag | `1220436`; other harm/protection/actor adapters remain required | Same final coherent10 /29.87s; original compatibility10+3 and final affected2 separately;20 CI cases collected only |
 | Newgirl Mentor daily workflow | Oldgen agent + root / committed within scope | Actual source-owned naming and real Mentor/Newgirl scene participation | `d038bba`; retain multiple-Mentor and other body/role adapters | Integrated6 passed /9.84s; static8 Python/7 source; offlineSDK19 commands;9 CI cases collected only |

@@ -284,6 +284,16 @@ class ChoiceEngine:
 
             apply_oldgen_sex(self.game, c, state, action, request, answer)
             return
+        if kind.startswith("casualty_"):
+            from girlframe.services.m3_casualty import apply_choice as apply_casualty_sex
+
+            apply_casualty_sex(self.game, c, state, action, request, answer)
+            return
+        if kind.startswith("vat_sex_") and action["data"].get("vatgrown_sex"):
+            from girlframe.services.m3_vatgrown_plays import apply_choice as apply_vatgrown_sex
+
+            apply_vatgrown_sex(self.game, c, state, action, request, answer)
+            return
         if kind.startswith("newgirl_sex_") and action["data"].get("newgirl_sex"):
             from girlframe.services.m3_newgirl_sex import apply_choice as apply_newgirl_sex
 
@@ -506,6 +516,14 @@ class ChoiceEngine:
                 not str(body["tag"]).startswith("bomb-collar:"),
                 "A bomb collar cannot be embraced or rejected",
             )
+            if answer.options == ("reject",):
+                from girlframe.engine.m3_actor_bonds import current_ref
+                from girlframe.services.m3_vatgrown_plays import rejection_allowed
+
+                require(
+                    rejection_allowed(state, current_ref(state, actor)),
+                    "A Vatgrown cannot reject this marked Tag.",
+                )
             from girlframe.services.m3_cute_uniforms import resolve_choice
 
             if resolve_choice(self.game, c, state, action, body, answer):
@@ -1264,10 +1282,17 @@ class ChoiceEngine:
         minimum = man_floor(action)
         if minimum is not None:
             total = max(total, minimum)
+        override = action["data"].get("casualty_override")
+        if override is not None:
+            total = max(total, int(override["total"]))
         action["data"]["result"].update(total=total, tier=tier(total))
 
     def results(self, c: Connection, state: GameState, action: dict[str, Any]) -> None:
         self.set_total(action)
+        from girlframe.services.m3_casualty import intercept_results as intercept_casualty
+
+        if intercept_casualty(self.game, c, state, action):
+            return
         from girlframe.services.m3_enforcer_requisitions import intercept_results
 
         if intercept_results(self.game, c, state, action):
@@ -1304,6 +1329,16 @@ class ChoiceEngine:
             from girlframe.services.m3_oldgen_sex import results as results_oldgen_sex
 
             results_oldgen_sex(self.game, c, state, action)
+            return
+        if action["data"].get("casualty_sex"):
+            from girlframe.services.m3_casualty import results as results_casualty_sex
+
+            results_casualty_sex(self.game, c, state, action)
+            return
+        if action["data"].get("vatgrown_sex"):
+            from girlframe.services.m3_vatgrown_plays import results as results_vatgrown_sex
+
+            results_vatgrown_sex(self.game, c, state, action)
             return
         if action["data"].get("newgirl_sex"):
             from girlframe.services.m3_newgirl_sex import results as results_newgirl_sex
@@ -1459,6 +1494,10 @@ class ChoiceEngine:
                 ),
             },
         )
+        if action["data"].get("vatgrown_leaving") and action["data"]["result"].get("can_disobey"):
+            from girlframe.services.m3_vatgrown_support import finish_departure
+
+            finish_departure(self.game, c, state, action, action["data"]["response_event"])
         if action["data"].get("ankou_feedback_child"):
             from girlframe.services.m3_ankou_feedback import complete_child as complete_ankou
 

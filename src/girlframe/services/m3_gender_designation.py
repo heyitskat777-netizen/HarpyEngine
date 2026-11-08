@@ -103,6 +103,17 @@ def valid_order(game: GameService, c: Connection, state: GameState, row: dict[st
 
 def _sex(state: GameState, action: dict[str, Any]) -> tuple[ActorRef, ActorRef]:
     data = action["data"]
+    if data.get("casualty_sex") and data["play"] == "casualty_sex":
+        from girlframe.services.m3_casualty import sex_parties
+
+        return sex_parties(state, action)
+    if data.get("vatgrown_sex") and data["play"] == "vatgrown_sex":
+        from girlframe.engine.m3_vatgrown_plays import get as vatgrown_session
+
+        vatgrown_value = vatgrown_session(state, data["vatgrown_sex"]["session"])
+        if vatgrown_value.action != action["id"] or not vatgrown_value.consent_event:
+            raise WorkflowError("Recover the actual accepted Vatgrown intimacy source")
+        return vatgrown_value.actor, vatgrown_value.target
     if action["data"]["play"] == "alpha_sex" and data.get("alpha_sex"):
         from girlframe.engine.m3_alpha_sex import get
 
@@ -171,6 +182,8 @@ def man_tag_options(
         "princess_sex",
         "stim_sex",
         "oldgen_sex",
+        "casualty_sex",
+        "vatgrown_sex",
         "newgirl_sex",
     ):
         return []
@@ -478,6 +491,10 @@ def _resume(game: GameService, c: Connection, state: GameState, action: dict[str
             from girlframe.services.m3_alpha_sex import results
         elif action["data"]["play"] == "newgirl_sex":
             from girlframe.services.m3_newgirl_sex import results
+        elif action["data"]["play"] == "casualty_sex":
+            from girlframe.services.m3_casualty import results
+        elif action["data"]["play"] == "vatgrown_sex":
+            from girlframe.services.m3_vatgrown_plays import results
         elif action["data"]["play"] == "oldgen_sex":
             from girlframe.services.m3_oldgen_sex import results
         elif action["data"]["play"] == "stim_sex":
@@ -493,7 +510,14 @@ def _resume(game: GameService, c: Connection, state: GameState, action: dict[str
             if action["data"]["alpha_sex"]["phase"] != "effects":
                 return
             from girlframe.services.m3_alpha_sex import _finish
-        elif action["data"]["play"] in ("princess_sex", "stim_sex", "oldgen_sex", "newgirl_sex"):
+        elif action["data"]["play"] in (
+            "princess_sex",
+            "stim_sex",
+            "oldgen_sex",
+            "newgirl_sex",
+            "casualty_sex",
+            "vatgrown_sex",
+        ):
             # Its actual source choices finish their own phase; a Tag reply does not waive them.
             return
         else:
@@ -572,9 +596,11 @@ def apply_choice(
         if answer.options == ("reject",):
             from girlframe.engine.m3_beneath import rejection_blocked
             from girlframe.engine.m3_girl_runtime_state import mentor_tag
+            from girlframe.services.m3_vatgrown_plays import rejection_allowed
 
             if (
-                answer.denied
+                not rejection_allowed(state, partner, tag)
+                or answer.denied
                 or rejection_blocked(state, int(partner.entity), tag.id)
                 or mentor_tag(sheet, tag, state)
             ):

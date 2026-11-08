@@ -1,5 +1,7 @@
 # HarpyEngine — GIRL FRAME private Discord pilot
 
+Current authorized target: **P1 playable Discord gameplay for every Girl/Frame**, with durable human-facilitator handling and an honest manual boundary. See [active queue](docs/P1_CURRENT_QUEUE.md) and [work order/type matrix](docs/work_orders/P1_PLAYABLE_RELEASE.md). Bot remains OFF. Most automated testing is deferred to the final P1 candidate; current scoped checks do not establish full rules or human acceptance. Earlier M3 descriptions below are historical scope/evidence.
+
 M0 is accepted. M1 now implements server setup, persistent owner-bound drafts,
 Girl/Frame dropdowns and Discord tags, raw OS-backed 2d6 receipts, a filtered ledger,
 OOC safety pauses, retryable public delivery, and local backup/restore/rebuild tools.

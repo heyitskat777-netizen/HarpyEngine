@@ -287,6 +287,7 @@ class RecoveryService:
             if not cancel and HandlerService(self.store).current(c)[1].handler_id != state.handler:
                 raise WorkflowError("Recover the actual original Handler appointment first.")
             choices = t.m2["m2_choices"]
+            released_learning = False
             for node in snapshot.nodes:
                 action = self.game.action(c, node)
                 data = dict(action["data"])
@@ -400,6 +401,12 @@ class RecoveryService:
                             )
                             .values(state=item.state, revision=item.revision + 1)
                         )
+                if cancel and action["data"].get("learned_play"):
+                    from girlframe.services.m3_learned_plays import release_unrolled
+
+                    released_learning = (
+                        release_unrolled(self.game, c, state, action) or released_learning
+                    )
                 del action["data"]["shared_recovery"]
                 self.game.save_action(c, action, state="aborted" if cancel else saved.state)
             if not cancel:
@@ -418,6 +425,7 @@ class RecoveryService:
                 viewer.user_id,
                 key,
                 "m3.shared_play_recovered",
+                state if released_learning else None,
                 action_id=identity,
                 cancelled_unrolled=cancel,
                 nodes=len(snapshot.nodes),

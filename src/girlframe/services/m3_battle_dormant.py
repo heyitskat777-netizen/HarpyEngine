@@ -276,6 +276,10 @@ class DormantService:
             from girlframe.services.m3_sup import offer
 
             detail["sup"] = offer(self.game, c, state, current) if own else None
+            if own and current == actor and body.get("phase", "void") == "void":
+                from girlframe.services.m3_casualty_support import part_choices
+
+                detail["casualty_parts"] = part_choices(self.game, c, state, current)
             detail["requires_source_role_resume"] = (
                 actual
                 and current.kind == "external_pilot"
@@ -405,6 +409,8 @@ class DormantService:
         piloting: bool,
         store_void: bool = False,
         growth_fields: dict[str, str] | None = None,
+        casualty_part: str | None = None,
+        casualty_site_account: str = "",
     ) -> dict[str, Any]:
         def authorize(c: Connection) -> None:
             self._owned(c, viewer, identity)
@@ -441,6 +447,29 @@ class DormantService:
                 storage = storage.model_copy(
                     update={"action": body.get("source_action") or identity}
                 )
+            if casualty_part is not None:
+                if growth is not None or store_void or asset is None:
+                    raise WorkflowError(
+                        "Resist an existing body onset instead of growth or Storage"
+                    )
+                from girlframe.services.m3_casualty import stage_work_resistance
+                from girlframe.services.m3_casualty_support import require_god
+
+                require_god(self.game)
+                stage_work_resistance(
+                    self.game,
+                    c,
+                    state,
+                    actor=actor,
+                    asset=asset,
+                    work=identity,
+                    event=event,
+                    part=casualty_part.removeprefix("part:"),
+                    account=casualty_site_account,
+                    source_kind="dormant",
+                )
+            elif casualty_site_account:
+                raise WorkflowError("Choose the actual infected part for this anatomical account")
             changed, followups = rules.inflict(
                 state,
                 profiles(c, self.store.campaign_id),
@@ -520,6 +549,10 @@ class DormantService:
             )
             _append(c, row, event, body, resolved=body["phase"] == "complete")
             _advance(self.game, c, identity, event, viewer, key)
+            if casualty_part is not None:
+                from girlframe.services.m3_casualty_support import post_part_change
+
+                post_part_change(self.game, c, actor, event, viewer, key)
             return dict(id=identity, phase=body["phase"])
 
         try:
@@ -536,7 +569,12 @@ class DormantService:
                     piloting=piloting,
                     store_void=store_void,
                 )
-                | (dict(growth_fields=growth_fields) if growth_fields is not None else {}),
+                | (dict(growth_fields=growth_fields) if growth_fields is not None else {})
+                | (
+                    dict(casualty_part=casualty_part, casualty_site_account=casualty_site_account)
+                    if casualty_part is not None or casualty_site_account
+                    else {}
+                ),
                 operation,
                 auto_audit=False,
                 authorize=authorize,

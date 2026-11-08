@@ -87,9 +87,29 @@ async def open_dormant(
                     required=False,
                 )
             )
+        if data.get("casualty_parts"):
+            fields.extend(
+                [
+                    Field(
+                        "casualty_part",
+                        "Optional Wounded God: infected part to break",
+                        tuple((x["id"], x["name"]) for x in data["casualty_parts"]),
+                        minimum=0,
+                        required=False,
+                    ),
+                    Field(
+                        "casualty_site_account",
+                        "Actual infected anatomical site, if resisting",
+                        paragraph=True,
+                        required=False,
+                    ),
+                ]
+            )
 
         async def submit(current: discord.Interaction, values: dict[str, Any]) -> str | None:
             if values["asset"][0] == GROW:
+                if values.get("casualty_part") or values.get("casualty_site_account", "").strip():
+                    raise WorkflowError("Choose growth or an existing body's resisted onset")
 
                 async def grow(
                     actual: discord.Interaction, fields: dict[str, str], text: str
@@ -124,6 +144,8 @@ async def open_dormant(
                 values["description"],
                 piloting=values["piloting"][0] == "yes",
                 store_void=bool(values.get("storage")),
+                casualty_part=values["casualty_part"][0] if values.get("casualty_part") else None,
+                casualty_site_account=values.get("casualty_site_account", ""),
             )
             return (
                 "Actual Void recorded. Reopen this source consequence for any "

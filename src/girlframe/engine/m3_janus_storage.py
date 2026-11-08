@@ -218,6 +218,10 @@ def alter(
     from girlframe.engine.m3_core import corrupt, void_followups
 
     state = GameState.model_validate_json(original.model_dump_json())
+    from girlframe.engine.m3_casualty import consume_resistance
+
+    if consume_resistance(state, actor, asset, action, event, step):
+        return state, ()
     if growth is not None:
         from girlframe.engine.m3_sup import grow
 

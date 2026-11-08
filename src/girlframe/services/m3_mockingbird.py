@@ -100,10 +100,12 @@ def projection(
         raise WorkflowError("Recover the original owned Mockingbird decision")
     ref = ActorRef.model_validate(meta["actor"])
     actual, _ = resources(state, ref)
+    from girlframe.services.m3_casualty_support import part_choices
     from girlframe.services.m3_janus_storage import available as storage_available
     from girlframe.services.m3_sup import offer
 
     return dict(
+        casualty_parts=part_choices(game, c, state, ref),
         sup=offer(game, c, state, ref),
         storage_available=storage_available(game, c, state, ref),
         total=meta["before"],
@@ -127,6 +129,9 @@ def apply(
         raise WorkflowError("Finish the real Void consequence; an acknowledgment cannot dismiss it")
     meta = action["data"]["risk_factor"]
     ref = ActorRef.model_validate(meta["actor"])
+    from girlframe.services.m3_casualty_support import require_god, resistance_answer
+
+    answer, casualty_part, casualty_site = resistance_answer(answer)
     if (
         meta["state"] != "pending"
         or str(request["actor_id"]) != str(action["actor_id"])
@@ -139,7 +144,7 @@ def apply(
     ):
         raise WorkflowError("Only the original owner chooses this actual roll's unused Risk Factor")
     if answer.number is None:
-        if answer.fields or answer.text:
+        if answer.fields or answer.text or casualty_part is not None:
             raise WorkflowError("Decline without selecting a cost or replacement total")
         meta["state"] = "declined"
     else:
@@ -153,6 +158,25 @@ def apply(
         ):
             raise WorkflowError("Choose one original eligible uncorrupted owned Asset")
         event = action["data"]["response_event"]
+        if casualty_part is not None:
+            if growth is not None or "storage" in answer.fields:
+                raise WorkflowError("Resist the actual body onset instead of growth or Storage")
+            from girlframe.services.m3_casualty import stage_resistance
+
+            require_god(game)
+            stage_resistance(
+                game,
+                c,
+                state,
+                action,
+                request,
+                actor=ref,
+                asset=answer.fields.get("asset", ""),
+                step=0,
+                part=casualty_part,
+                account=casualty_site,
+                source_kind="risk_factor",
+            )
         from girlframe.services.m3_janus_storage import gain_source
 
         changed, followups, payment = rules.risk(

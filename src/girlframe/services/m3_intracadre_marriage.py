@@ -91,6 +91,27 @@ def _price(state: GameState, actor: ActorRef, product: str, detail: str) -> int:
     }
     if product in fixed:
         return fixed[product]
+    if product == "girl.casualty.wounded-god":
+        from girlframe.engine.m3_casualty import part_state
+
+        if part_state(state, actor, detail) != "broken":
+            raise WorkflowError("Quote one actual broken Casualty part at its printed repair price")
+        return 1
+    if product == "vatgrown_investor":
+        from girlframe.engine.m3_vatgrown_plays import Investor, records
+
+        value = next((x for x in records(state, Investor) if x.id == detail), None)
+        if (
+            value is None
+            or value.actor != actor
+            or value.source != "added"
+            or not value.quote_event
+            or value.added_event
+            or type(value.quote) is not int
+            or value.quote <= 0
+        ):
+            raise WorkflowError("Use the original pending Handler quote for this actual Investor.")
+        return value.quote
     if product == "extra_asset_repair":
         quote = next((x for x in state.repair_quotes if x.id == detail), None)
         if quote is None or quote.owner != actor or quote.state != "pending":

@@ -140,7 +140,9 @@ async def open_details(
             for x in own["assets"]
             if x["family"] == family and (kind != "beating" or not x["damaged"])
         ]
-        fields.append(entities("asset", "Choose the affected Asset", assets))
+        if kind == "beating":
+            assets += own.get("body_parts", [])
+        fields.append(entities("asset", "Choose the affected Asset or allowed part", assets))
         if kind == "compliance_surgery":
             fields.extend(
                 [
@@ -227,7 +229,10 @@ async def open_details(
                 value = int(value)
             if field.key == "disclosed":
                 value = value == "yes"
-            details[field.key] = value
+            if field.key == "asset" and isinstance(value, str) and value.startswith("part:"):
+                details["body_part"] = value.removeprefix("part:")
+            else:
+                details[field.key] = value
         operation = (
             service.consult
             if moderate_girl and values["operation"][0] == "consult"

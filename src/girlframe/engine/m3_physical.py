@@ -394,6 +394,33 @@ def exchange_assigned_frame(
     return _finish(state, actor, source_event, account, "assigned_frame_exchanged")
 
 
+def stop_piloting(
+    original: GameState,
+    bindings: tuple[ProfileBinding, ...],
+    actor: ActorRef,
+    event: str,
+    account: str,
+) -> GameState:
+    """A real control loss keeps the original body in its actual cockpit and map cell."""
+    state = GameState.model_validate_json(original.model_dump_json())
+    _source(state, event, account, actor)
+    view = resolve(state, actor, bindings, require_current_profile=False)
+    placement = next((x for x in state.placements if x.actor == actor), None)
+    if placement is None or not view.piloting or placement.mode != "piloting":
+        raise ValueError("Use the original person's actual currently piloted cockpit")
+    _save(
+        state,
+        placement.model_copy(
+            update={
+                "mode": "inside_frame",
+                "source_event": event,
+                "account": account,
+            }
+        ),
+    )
+    return _finish(state, actor, event, account, "stop_piloting")
+
+
 def cockpit_enter(
     original: GameState,
     bindings: tuple[ProfileBinding, ...],
@@ -411,8 +438,11 @@ def cockpit_enter(
     if placement is None or type(pilot) is not bool:
         raise ValueError("Record the actual original physical facts first")
     if pilot:
+        from girlframe.engine.m3_casualty import can_pilot
         from girlframe.engine.m3_frame_control import active_takeover
 
+        if not can_pilot(state, actor):
+            raise ValueError("Repair this actual Casualty's Link before piloting")
         if view.frame_shutdown:
             raise ValueError(
                 "The captured Frame is still shut down; record its actual restart first"

@@ -1,0 +1,3148 @@
+{
+  "status": "P1_IMPLEMENTATION_AUTHORIZED_TESTING_PENDING",
+  "published_source": "b5db26c31680499375a37f78293ce34c76ec283c",
+  "main_merge": "c4550ecbd89bbf84363537e7bdf763c2177a998f",
+  "scope": "10Girl labels;10Frame labels representing9official Frame rulesets; JANUS-B uses JANUS",
+  "evidence_note": "Read-only reconciliation of current code, registry and historical test evidence. No new gameplay tests or independent source review in this planning task. A test reference is not a passing result; local planned test_vatgrown_offers.py is absent. Owner authorized P1 resumption; matrix records the reviewed baseline and is updated at bounded source handoffs. Most automated testing deferred to final P1 candidate.",
+  "rows": [
+    {
+      "category": "Girl",
+      "type": "Princess",
+      "registry_prefix": "girl.princess.",
+      "status": "Published scoped implementation",
+      "ordinary_workflows_with_evidence": "Standards and mission consequences; three-tier Sex with actual counterpart child; Show Dog NPC/Bond/message choices.",
+      "missing_before_AI": "Legal counterpart child Plays beyond the current Keep adapter; reconcile remaining ordinary base/source consumers.",
+      "later_candidates": "Exceptional retained-rule or changed-body combinations only after ordinary children work.",
+      "code": [
+        "src/girlframe/services/m3_princess_sex.py",
+        "src/girlframe/services/m3_show_dog.py"
+      ],
+      "tests": [
+        "tests/rules/test_princess_sex.py",
+        "tests/rules/test_show_dog.py"
+      ],
+      "rule_inventory": [
+        {
+          "id": "girl.princess.princess",
+          "title": "PRINCESS",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 31,
+            "printed_page": 29,
+            "heading": "PRINCESS"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "girl.princess.objectively-beautiful",
+          "title": "Objectively Beautiful",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 32,
+            "printed_page": 30,
+            "heading": "Objectively Beautiful"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_standards.py",
+            "tests/rules/test_medical.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_standards.py",
+            "tests/rules/test_medical.py"
+          ]
+        },
+        {
+          "id": "girl.princess.to-a-higher-standard",
+          "title": "To a Higher Standard",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 32,
+            "printed_page": 30,
+            "heading": "To a Higher Standard"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_reactions.py",
+            "tests/rules/test_reaction_service.py",
+            "tests/rules/test_reaction_ui.py",
+            "tests/rules/test_standards.py",
+            "tests/rules/test_girl_transition.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_reactions.py",
+            "tests/rules/test_reaction_service.py",
+            "tests/rules/test_reaction_ui.py",
+            "tests/rules/test_standards.py",
+            "tests/rules/test_girl_transition.py"
+          ]
+        },
+        {
+          "id": "girl.princess.sex-play",
+          "title": "Sex Play",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 33,
+            "printed_page": 31,
+            "heading": "Sex Play"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_princess_sex.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_princess_sex.py"
+          ]
+        },
+        {
+          "id": "girl.princess.show-dog",
+          "title": "Show Dog",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 33,
+            "printed_page": 31,
+            "heading": "Show Dog"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_show_dog.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_show_dog.py"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Girl",
+      "type": "Mockingbird",
+      "registry_prefix": "girl.mockingbird.",
+      "status": "Published scoped implementation",
+      "ordinary_workflows_with_evidence": "Person, Call/communion, Risk and source-owned Sex outcomes including Void take/redirect, witnesses and Handler Tag.",
+      "missing_before_AI": "Reconcile stale closure contract against current code; close any remaining ordinary source/target consequences established by that reconciliation. Missing Sex tiers are NOT an established gap.",
+      "later_candidates": "Exceptional retained-rule/carrier/successor-body combinations.",
+      "code": [
+        "src/girlframe/services/m3_mockingbird_plays.py",
+        "src/girlframe/services/m3_mockingbird_sex.py"
+      ],
+      "tests": [
+        "tests/rules/test_mockingbird_sex_closure.py",
+        "tests/rules/test_mockingbird_communion.py"
+      ],
+      "rule_inventory": [
+        {
+          "id": "girl.mockingbird.mockingbird",
+          "title": "MOCKINGBIRD",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 34,
+            "printed_page": 32,
+            "heading": "MOCKINGBIRD"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "girl.mockingbird.bad-at-being-a-person",
+          "title": "Bad at Being a Person",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 35,
+            "printed_page": 33,
+            "heading": "Bad at Being a Person"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_mockingbird_person.py",
+            "tests/rules/test_mockingbird_sex.py::test_real_mid_starry_tag_grants_actual_later_person_capability_only_while_tag_exists"
+          ],
+          "local_test_references": [
+            "tests/rules/test_mockingbird_person.py",
+            "tests/rules/test_mockingbird_sex.py::test_real_mid_starry_tag_grants_actual_later_person_capability_only_while_tag_exists"
+          ]
+        },
+        {
+          "id": "girl.mockingbird.call-of-the-void",
+          "title": "Call of the Void",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 35,
+            "printed_page": 33,
+            "heading": "Call of the Void"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_mockingbird_assets.py",
+            "tests/rules/test_mockingbird_call.py",
+            "tests/rules/test_call_actual_harpy.py",
+            "tests/rules/test_call_guest_handler_girl.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_mockingbird_assets.py",
+            "tests/rules/test_mockingbird_call.py",
+            "tests/rules/test_call_actual_harpy.py",
+            "tests/rules/test_call_guest_handler_girl.py"
+          ]
+        },
+        {
+          "id": "girl.mockingbird.risk-factor",
+          "title": "Risk Factor",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 35,
+            "printed_page": 33,
+            "heading": "Risk Factor"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_mockingbird_risk.py",
+            "tests/rules/test_mockingbird_call.py::test_risk_immunity_preserves_outside_girl_while_actual_fully_void_frame_becomes_gorgon"
+          ],
+          "local_test_references": [
+            "tests/rules/test_mockingbird_risk.py",
+            "tests/rules/test_mockingbird_call.py::test_risk_immunity_preserves_outside_girl_while_actual_fully_void_frame_becomes_gorgon"
+          ]
+        },
+        {
+          "id": "girl.mockingbird.sex-play",
+          "title": "Sex Play",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 36,
+            "printed_page": 34,
+            "heading": "Sex Play"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_mockingbird_sex.py",
+            "tests/rules/test_handler_void_service.py",
+            "tests/rules/test_handler_girl_void_service.py",
+            "tests/rules/test_handler_void.py",
+            "tests/rules/test_handler_girl_void.py",
+            "tests/rules/test_mockingbird_sex_closure.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_mockingbird_sex.py",
+            "tests/rules/test_handler_void_service.py",
+            "tests/rules/test_handler_girl_void_service.py",
+            "tests/rules/test_handler_void.py",
+            "tests/rules/test_handler_girl_void.py",
+            "tests/rules/test_mockingbird_sex_closure.py"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Girl",
+      "type": "Stim-Blissed",
+      "registry_prefix": "girl.stim-blissed.",
+      "status": "Published scoped implementation",
+      "ordinary_workflows_with_evidence": "Dose/drug clocks, Disposable Psyche, Malleable birth/forced embrace/NPC protection and native Sex physiology.",
+      "missing_before_AI": "Remaining ordinary drug-removal/Identity/Tag consumers and applicable Feedback/non-Heat adapters; faithful counterpart resources instead of Pilot proxies.",
+      "later_candidates": "Compound retained/protected Identity and exceptional carrier combinations.",
+      "code": [
+        "src/girlframe/services/m3_dose_up.py",
+        "src/girlframe/services/m3_stim_sex.py",
+        "src/girlframe/services/m3_malleable.py"
+      ],
+      "tests": [
+        "tests/rules/test_stim_sex.py",
+        "tests/rules/test_disposable_psyche.py",
+        "tests/rules/test_malleable.py"
+      ],
+      "rule_inventory": [
+        {
+          "id": "girl.stim-blissed.stim-blissed",
+          "title": "STIM-BLISSED",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 37,
+            "printed_page": 35,
+            "heading": "STIM-BLISSED"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "girl.stim-blissed.disposable-psyche",
+          "title": "Disposable Psyche",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 38,
+            "printed_page": 36,
+            "heading": "Disposable Psyche"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_disposable_psyche.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_disposable_psyche.py"
+          ]
+        },
+        {
+          "id": "girl.stim-blissed.dose-up",
+          "title": "Dose Up",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 38,
+            "printed_page": 36,
+            "heading": "Dose Up"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_dose_up.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_dose_up.py"
+          ]
+        },
+        {
+          "id": "girl.stim-blissed.malleable-me-malleable-you",
+          "title": "Malleable Me, Malleable You",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 39,
+            "printed_page": 37,
+            "heading": "Malleable Me, Malleable You"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_dose_up.py",
+            "tests/rules/test_malleable.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_dose_up.py",
+            "tests/rules/test_malleable.py"
+          ]
+        },
+        {
+          "id": "girl.stim-blissed.sex-play",
+          "title": "Sex Play",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 39,
+            "printed_page": 37,
+            "heading": "Sex Play"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_stim_sex.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_stim_sex.py"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Girl",
+      "type": "Newgirl",
+      "registry_prefix": "girl.newgirl.",
+      "status": "Published scoped implementation",
+      "ordinary_workflows_with_evidence": "Trainee; actual Mentor name/companions; Easy Target performance/consequences; Sex and actual Mentor changes.",
+      "missing_before_AI": "Other ordinary Mentor-discipline causes; remaining genuine Easy Target harm/protection/assistance and ordinary counterpart Status/mentorship adapters.",
+      "later_candidates": "Mentor ending/replacement during an already-pending complex multi-Mentor source.",
+      "code": [
+        "src/girlframe/services/m3_trainee.py",
+        "src/girlframe/services/m3_easy_target.py",
+        "src/girlframe/services/m3_newgirl_sex.py"
+      ],
+      "tests": [
+        "tests/rules/test_trainee.py",
+        "tests/rules/test_easy_target.py",
+        "tests/rules/test_newgirl_sex.py"
+      ],
+      "rule_inventory": [
+        {
+          "id": "girl.newgirl.newgirl",
+          "title": "NEWGIRL",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 40,
+            "printed_page": 38,
+            "heading": "NEWGIRL"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "girl.newgirl.easy-target",
+          "title": "Easy Target",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 41,
+            "printed_page": 39,
+            "heading": "Easy Target"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_easy_target.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_easy_target.py"
+          ]
+        },
+        {
+          "id": "girl.newgirl.trainee",
+          "title": "Trainee",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 41,
+            "printed_page": 39,
+            "heading": "Trainee"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_trainee.py",
+            "tests/rules/test_newgirl_sex.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_trainee.py",
+            "tests/rules/test_newgirl_sex.py"
+          ]
+        },
+        {
+          "id": "girl.newgirl.mentor",
+          "title": "Mentor",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 42,
+            "printed_page": 40,
+            "heading": "Mentor"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_trainee.py",
+            "tests/test_m2_game.py",
+            "tests/rules/test_mentor.py",
+            "tests/rules/test_newgirl_sex.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_trainee.py",
+            "tests/test_m2_game.py",
+            "tests/rules/test_mentor.py",
+            "tests/rules/test_newgirl_sex.py"
+          ]
+        },
+        {
+          "id": "girl.newgirl.sex-play",
+          "title": "Sex Play",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 42,
+            "printed_page": 40,
+            "heading": "Sex Play"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_newgirl_sex.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_newgirl_sex.py"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Girl",
+      "type": "Casualty",
+      "registry_prefix": "girl.casualty.",
+      "status": "Paused unpublished WIP; no final union",
+      "ordinary_workflows_with_evidence": "Unpublished: parts/repair, push, No One Better, Helpless/finder, genuine Void resistance, Brain ending and native Sex tiers;11 distinct normals passed separately.",
+      "missing_before_AI": "Final coherent integration; actual destroyed/removed hardware replacement; remaining ordinary resistance/part and source-dependent consequences. Broken-part repair cannot replace destroyed hardware.",
+      "later_candidates": "Exceptional AM/Clone/retained-rule carriers with already-pending costs, after ordinary body paths.",
+      "code": [
+        "src/girlframe/services/m3_casualty.py",
+        "src/girlframe/services/m3_casualty_support.py"
+      ],
+      "tests": [
+        "tests/rules/test_casualty.py"
+      ],
+      "rule_inventory": [
+        {
+          "id": "girl.casualty.casualty",
+          "title": "CASUALTY",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 43,
+            "printed_page": 41,
+            "heading": "CASUALTY"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "girl.casualty.barely-a-girl",
+          "title": "Barely a Girl",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 44,
+            "printed_page": 42,
+            "heading": "Barely a Girl"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": [
+            "tests/rules/test_casualty.py"
+          ]
+        },
+        {
+          "id": "girl.casualty.no-one-better",
+          "title": "No One Better",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 44,
+            "printed_page": 42,
+            "heading": "No One Better"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": [
+            "tests/rules/test_casualty.py"
+          ]
+        },
+        {
+          "id": "girl.casualty.sex-play",
+          "title": "Sex Play",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 44,
+            "printed_page": 42,
+            "heading": "Sex Play"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": [
+            "tests/rules/test_casualty.py"
+          ]
+        },
+        {
+          "id": "girl.casualty.wounded-god",
+          "title": "Wounded God",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 44,
+            "printed_page": 42,
+            "heading": "Wounded God"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": [
+            "tests/rules/test_casualty.py"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Girl",
+      "type": "Oldgen",
+      "registry_prefix": "girl.oldgen.",
+      "status": "Published scoped implementation",
+      "ordinary_workflows_with_evidence": "Standards, maxim/advice outcomes and actual maxim consumers; native Sex outcomes and reciprocal choices.",
+      "missing_before_AI": "Temporary one-use advice-maxim rewrite excluded by current base-maxim adapter; preserve spent advice; remaining ordinary counterparts.",
+      "later_candidates": "Complex retained-rule/alternate-body rewrite chains.",
+      "code": [
+        "src/girlframe/services/m3_oldgen.py",
+        "src/girlframe/services/m3_oldgen_sex.py"
+      ],
+      "tests": [
+        "tests/rules/test_oldgen.py",
+        "tests/rules/test_oldgen_sex.py"
+      ],
+      "rule_inventory": [
+        {
+          "id": "girl.oldgen.oldgen",
+          "title": "OLDGEN",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 45,
+            "printed_page": 43,
+            "heading": "OLDGEN"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "girl.oldgen.elder-bitch",
+          "title": "Elder Bitch",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 46,
+            "printed_page": 44,
+            "heading": "Elder Bitch"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_standards.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_standards.py"
+          ]
+        },
+        {
+          "id": "girl.oldgen.just-the-way-it-is",
+          "title": "Just the Way It Is",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 46,
+            "printed_page": 44,
+            "heading": "Just the Way It Is"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_oldgen.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_oldgen.py"
+          ]
+        },
+        {
+          "id": "girl.oldgen.old-dog-new-pups",
+          "title": "Old Dog, New Pups",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 46,
+            "printed_page": 44,
+            "heading": "Old Dog, New Pups"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_oldgen.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_oldgen.py"
+          ]
+        },
+        {
+          "id": "girl.oldgen.sex-play",
+          "title": "Sex Play",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 47,
+            "printed_page": 45,
+            "heading": "Sex Play"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_oldgen_sex.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_oldgen_sex.py"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Girl",
+      "type": "Vatgrown",
+      "registry_prefix": "girl.vatgrown.",
+      "status": "Published Doll + paused unpublished WIP; gift suite missing",
+      "ordinary_workflows_with_evidence": "Published Doll. Unpublished Experiment/Prime/Sex, real learned Brutalize once, original Investor/payment and Comfort gift;8 source normals passed separately.",
+      "missing_before_AI": "Gift Privacy/Home/Retirement effects and evidence; DNA first-comparison Tag; actual chaperone travel; ordinary leave/Disobey and learning/favour adapters; distinct new Vatgrown after genuine death plus fresh creation and owned notice choices; final union.",
+      "later_candidates": "Compound existing Investor/acquisition obligations during exceptional carrier transitions; ordinary death continuity stays BEFORE AI.",
+      "code": [
+        "src/girlframe/services/m3_vatgrown.py",
+        "src/girlframe/services/m3_vatgrown_plays.py",
+        "src/girlframe/services/m3_offered_girl_requisitions.py"
+      ],
+      "tests": [
+        "tests/rules/test_vatgrown.py",
+        "tests/rules/test_vatgrown_plays.py"
+      ],
+      "rule_inventory": [
+        {
+          "id": "girl.vatgrown.vatgrown",
+          "title": "VATGROWN",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 48,
+            "printed_page": 46,
+            "heading": "VATGROWN"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "girl.vatgrown.just-an-experiment",
+          "title": "Just an Experiment",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 49,
+            "printed_page": 47,
+            "heading": "Just an Experiment"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": [
+            "tests/rules/test_vatgrown_plays.py",
+            "tests/rules/test_vatgrown_offers.py"
+          ]
+        },
+        {
+          "id": "girl.vatgrown.prime-investment",
+          "title": "Prime Investment",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 49,
+            "printed_page": 47,
+            "heading": "Prime Investment"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": [
+            "tests/rules/test_vatgrown_plays.py",
+            "tests/rules/test_vatgrown_offers.py"
+          ]
+        },
+        {
+          "id": "girl.vatgrown.sex-play",
+          "title": "Sex Play",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 50,
+            "printed_page": 48,
+            "heading": "Sex Play"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": [
+            "tests/rules/test_vatgrown_plays.py",
+            "tests/rules/test_vatgrown_offers.py"
+          ]
+        },
+        {
+          "id": "girl.vatgrown.unassuming-doll",
+          "title": "Unassuming Doll",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 50,
+            "printed_page": 48,
+            "heading": "Unassuming Doll"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_vatgrown.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_vatgrown.py"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Girl",
+      "type": "Alpha",
+      "registry_prefix": "girl.alpha.",
+      "status": "Published scoped implementation",
+      "ordinary_workflows_with_evidence": "Brutalize PC/Guard, Broken/Status/Disobey, Hound review and native Sex damage/Bond/scent/sleep.",
+      "missing_before_AI": "Ordinary counter children beyond Keep; remaining target/Status/Punishment and applicable Sprite/inventory-cap continuations.",
+      "later_candidates": "Compound reciprocal Broken precedence and retained-rule mixed bodies.",
+      "code": [
+        "src/girlframe/services/m3_alpha.py",
+        "src/girlframe/services/m3_alpha_sex.py"
+      ],
+      "tests": [
+        "tests/rules/test_alpha_brutalize.py",
+        "tests/rules/test_alpha_sex.py",
+        "tests/rules/test_alpha_hound_status_review.py"
+      ],
+      "rule_inventory": [
+        {
+          "id": "girl.alpha.alpha",
+          "title": "ALPHA",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 51,
+            "printed_page": 49,
+            "heading": "ALPHA"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_alpha_brutalize.py",
+            "tests/rules/test_alpha_sex.py",
+            "tests/rules/test_alpha_hound_status_review.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_alpha_brutalize.py",
+            "tests/rules/test_alpha_sex.py",
+            "tests/rules/test_alpha_hound_status_review.py"
+          ]
+        },
+        {
+          "id": "girl.alpha.brutalize",
+          "title": "Brutalize",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 52,
+            "printed_page": 50,
+            "heading": "Brutalize"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_alpha_brutalize.py",
+            "tests/rules/test_npc_broken_orders.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_alpha_brutalize.py",
+            "tests/rules/test_npc_broken_orders.py"
+          ]
+        },
+        {
+          "id": "girl.alpha.itching-for-a-fight",
+          "title": "Itching for a Fight",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 52,
+            "printed_page": 50,
+            "heading": "Itching for a Fight"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_standards.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_standards.py"
+          ]
+        },
+        {
+          "id": "girl.alpha.nothing-more-than-a-hound",
+          "title": "Nothing More Than a Hound",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 52,
+            "printed_page": 50,
+            "heading": "Nothing More Than a Hound"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_standards.py",
+            "tests/rules/test_alpha_hound_status_review.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_standards.py",
+            "tests/rules/test_alpha_hound_status_review.py"
+          ]
+        },
+        {
+          "id": "girl.alpha.sex-play",
+          "title": "Sex Play",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 53,
+            "printed_page": 51,
+            "heading": "Sex Play"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_alpha_sex.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_alpha_sex.py"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Girl",
+      "type": "AM",
+      "registry_prefix": "girl.am.",
+      "status": "Published scoped implementation",
+      "ordinary_workflows_with_evidence": "Bounded Just Code/operators, records/memory/backup, real prepared-body swap/return, independent branches, Jailbroken and reset.",
+      "missing_before_AI": "AM Sex; ORDINARY body/physical routing, operator/record/body consequences, held/Storage/Battery/Frame interactions. Ordinary body mechanics cannot move after AI.",
+      "later_candidates": "Exceptional simultaneous branch/body/career transitions after ordinary AM play works.",
+      "code": [
+        "src/girlframe/services/m3_am_body.py",
+        "src/girlframe/services/m3_am_code.py",
+        "src/girlframe/services/m3_am_branch.py"
+      ],
+      "tests": [
+        "tests/rules/test_am_body.py",
+        "tests/rules/test_am_code.py",
+        "tests/rules/test_am_branch.py"
+      ],
+      "rule_inventory": [
+        {
+          "id": "girl.am.am-artificial-mind",
+          "title": "AM (ARTIFICIAL MIND)",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 54,
+            "printed_page": 52,
+            "heading": "AM (ARTIFICIAL MIND)"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "girl.am.jailbroken",
+          "title": "Jailbroken",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 55,
+            "printed_page": 53,
+            "heading": "Jailbroken"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_am_jailbroken.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_am_jailbroken.py"
+          ]
+        },
+        {
+          "id": "girl.am.scrutinized",
+          "title": "Scrutinized",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 55,
+            "printed_page": 53,
+            "heading": "Scrutinized"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_am_scrutinized.py",
+            "tests/rules/test_am_factory_reset.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_am_scrutinized.py",
+            "tests/rules/test_am_factory_reset.py"
+          ]
+        },
+        {
+          "id": "girl.am.just-code",
+          "title": "Just Code",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 56,
+            "printed_page": 54,
+            "heading": "Just Code"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_am_code.py",
+            "tests/rules/test_am_records.py",
+            "tests/rules/test_am_memory.py",
+            "tests/rules/test_am_backup.py",
+            "tests/rules/test_am_body.py",
+            "tests/rules/test_am_branch.py",
+            "tests/rules/test_am_code_new_operator.py",
+            "tests/rules/test_am_code_pilot_operator.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_am_code.py",
+            "tests/rules/test_am_records.py",
+            "tests/rules/test_am_memory.py",
+            "tests/rules/test_am_backup.py",
+            "tests/rules/test_am_body.py",
+            "tests/rules/test_am_branch.py",
+            "tests/rules/test_am_code_new_operator.py",
+            "tests/rules/test_am_code_pilot_operator.py"
+          ]
+        },
+        {
+          "id": "girl.am.sex-play",
+          "title": "Sex Play",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 56,
+            "printed_page": 54,
+            "heading": "Sex Play"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        }
+      ]
+    },
+    {
+      "category": "Girl",
+      "type": "Bonded",
+      "registry_prefix": "girl.bonded.",
+      "status": "Published scoped implementation",
+      "ordinary_workflows_with_evidence": "Pair-authored/accepted starting Assets, Paired/Bond baseline, protected Hers and transition primitives.",
+      "missing_before_AI": "Always By Her Side, Bonded Pair lifecycle, Workplace Inappropriate Intimacy and Sex; setup is not runtime completion.",
+      "later_candidates": "Compound retained-rule/extra-Identity/dual-cockpit cases after ordinary Pair lifecycle.",
+      "code": [
+        "src/girlframe/services/pair_assets.py",
+        "src/girlframe/engine/m2.py"
+      ],
+      "tests": [
+        "tests/test_pair_assets.py",
+        "tests/rules/test_actor_resources.py",
+        "tests/rules/test_girl_transition.py"
+      ],
+      "rule_inventory": [
+        {
+          "id": "girl.bonded.bonded",
+          "title": "BONDED",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 57,
+            "printed_page": 55,
+            "heading": "BONDED"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "girl.bonded.always-by-her-side",
+          "title": "Always By Her Side",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 58,
+            "printed_page": 56,
+            "heading": "Always By Her Side"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "girl.bonded.bonded-pair",
+          "title": "Bonded Pair",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 58,
+            "printed_page": 56,
+            "heading": "Bonded Pair"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "girl.bonded.workplace-inappropriate-intimacy",
+          "title": "Workplace-Inappropriate Intimacy",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 58,
+            "printed_page": 56,
+            "heading": "Workplace-Inappropriate Intimacy"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "girl.bonded.sex-play",
+          "title": "Sex Play",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 59,
+            "printed_page": 57,
+            "heading": "Sex Play"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        }
+      ]
+    },
+    {
+      "category": "Frame",
+      "type": "The Prince",
+      "registry_prefix": "frame.prince.",
+      "status": "Published scoped implementation",
+      "ordinary_workflows_with_evidence": "Starting fanbase choices and conditional Permission reward.",
+      "missing_before_AI": "Fanbase, Performer, A Hero We Can Believe In, Bad Girl, Immortal Hero, TV Interviews, Growing Fanbase and Power Imbalance runtime workflows.",
+      "later_candidates": "No named ordinary rule approved for deferral; later branches need source-bound classification.",
+      "code": [
+        "src/girlframe/engine/m3_frame_rewards.py",
+        "src/girlframe/engine/frame_setup.py"
+      ],
+      "tests": [
+        "tests/rules/test_frame_rewards.py",
+        "tests/rules/test_frame_reward_service.py"
+      ],
+      "rule_inventory": [
+        {
+          "id": "frame.prince.fanbase",
+          "title": "Fanbase",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 61,
+            "printed_page": 59,
+            "heading": "Fanbase"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.prince.permission-trigger",
+          "title": "Prince Permission trigger",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 61,
+            "printed_page": 59,
+            "heading": "Prince Permission trigger"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_frame_reward_service.py",
+            "tests/rules/test_frame_reward_ui.py",
+            "tests/rules/test_frame_rewards.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_frame_reward_service.py",
+            "tests/rules/test_frame_reward_ui.py",
+            "tests/rules/test_frame_rewards.py"
+          ]
+        },
+        {
+          "id": "frame.prince.the-prince",
+          "title": "The Prince",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 61,
+            "printed_page": 59,
+            "heading": "The Prince"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.prince.performer",
+          "title": "Performer",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 62,
+            "printed_page": 60,
+            "heading": "Performer"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.prince.a-hero-we-can-believe-in",
+          "title": "A Hero We Can Believe In",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 63,
+            "printed_page": 61,
+            "heading": "A Hero We Can Believe In"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.prince.bad-girl",
+          "title": "Bad Girl",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 63,
+            "printed_page": 61,
+            "heading": "Bad Girl"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.prince.immortal-hero",
+          "title": "Immortal Hero",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 63,
+            "printed_page": 61,
+            "heading": "Immortal Hero"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.prince.tv-interviews",
+          "title": "TV Interviews",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 63,
+            "printed_page": 61,
+            "heading": "TV Interviews"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.prince.growing-fanbase",
+          "title": "Growing Fanbase",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 64,
+            "printed_page": 62,
+            "heading": "Growing Fanbase"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.prince.power-imbalance",
+          "title": "Power Imbalance",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 64,
+            "printed_page": 62,
+            "heading": "Power Imbalance"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        }
+      ]
+    },
+    {
+      "category": "Frame",
+      "type": "CONSUME",
+      "registry_prefix": "frame.consume.",
+      "status": "Published scoped implementation",
+      "ordinary_workflows_with_evidence": "Creation labels and conditional Permission reward; campaign starting Quiet ruling recorded.",
+      "missing_before_AI": "Actual starvation/Eat, Human Hound, Let Us Partake, Cannibal Requisition Forms, Feral, Just a Nibble, Ontological Consumption Drive and Time to Eat effects/targets.",
+      "later_candidates": "Exceptional targets/body combinations after ordinary consumption; starvation is not deferred.",
+      "code": [
+        "src/girlframe/engine/frame_setup.py",
+        "src/girlframe/engine/m3_frame_rewards.py"
+      ],
+      "tests": [
+        "tests/rules/test_frame_rewards.py",
+        "tests/rules/test_frame_reward_service.py"
+      ],
+      "rule_inventory": [
+        {
+          "id": "frame.consume.consume",
+          "title": "CONSUME",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 65,
+            "printed_page": 63,
+            "heading": "CONSUME"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.consume.permission-trigger",
+          "title": "Consume Permission trigger",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 65,
+            "printed_page": 63,
+            "heading": "Consume Permission trigger"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_frame_reward_service.py",
+            "tests/rules/test_frame_reward_ui.py",
+            "tests/rules/test_frame_rewards.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_frame_reward_service.py",
+            "tests/rules/test_frame_reward_ui.py",
+            "tests/rules/test_frame_rewards.py"
+          ]
+        },
+        {
+          "id": "frame.consume.starvation",
+          "title": "Starvation",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 65,
+            "printed_page": 63,
+            "heading": "Starvation"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.consume.eat",
+          "title": "Eat",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 66,
+            "printed_page": 64,
+            "heading": "Eat"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.consume.human-hound",
+          "title": "\u2018Human\u2019 Hound",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 66,
+            "printed_page": 64,
+            "heading": "\u2018Human\u2019 Hound"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.consume.let-us-partake",
+          "title": "Let Us Partake",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 66,
+            "printed_page": 64,
+            "heading": "Let Us Partake"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.consume.cannibal-requisition-forms",
+          "title": "Cannibal Requisition Forms",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 67,
+            "printed_page": 65,
+            "heading": "Cannibal Requisition Forms"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.consume.feral",
+          "title": "Feral",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 67,
+            "printed_page": 65,
+            "heading": "Feral"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.consume.just-a-nibble",
+          "title": "Just a Nibble",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 67,
+            "printed_page": 65,
+            "heading": "Just a Nibble"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.consume.ontological-consumption-drive",
+          "title": "Ontological Consumption Drive",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 67,
+            "printed_page": 65,
+            "heading": "Ontological Consumption Drive"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.consume.time-to-eat",
+          "title": "Time to Eat",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 67,
+            "printed_page": 65,
+            "heading": "Time to Eat"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        }
+      ]
+    },
+    {
+      "category": "Frame",
+      "type": "JANUS",
+      "registry_prefix": "frame.janus.",
+      "status": "Published scoped implementation",
+      "ordinary_workflows_with_evidence": "Core/control separation, Battery, training, Universal Plug, Pandora, pet carry/return, Void Storage and Core liberation.",
+      "missing_before_AI": "Reconcile remaining ordinary Core/body/Frame-loss and source boundaries; no new wholly missing named JANUS mechanic established by this review.",
+      "later_candidates": "Exceptional converted-carrier and compound lifecycle branches after ordinary Core/Frame paths.",
+      "code": [
+        "src/girlframe/services/m3_janus.py",
+        "src/girlframe/services/m3_janus_storage.py"
+      ],
+      "tests": [
+        "tests/rules/test_janus_core_service.py",
+        "tests/rules/test_janus_battery.py",
+        "tests/rules/test_janus_control_lifecycle.py"
+      ],
+      "rule_inventory": [
+        {
+          "id": "frame.janus.harpy-core",
+          "title": "Harpy Core",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 68,
+            "printed_page": 66,
+            "heading": "Harpy Core"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ]
+        },
+        {
+          "id": "frame.janus.janus",
+          "title": "JANUS",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 68,
+            "printed_page": 66,
+            "heading": "JANUS"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ]
+        },
+        {
+          "id": "frame.janus.permission-trigger",
+          "title": "Janus Permission trigger",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 68,
+            "printed_page": 66,
+            "heading": "Janus Permission trigger"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_frame_reward_service.py",
+            "tests/rules/test_frame_reward_ui.py",
+            "tests/rules/test_frame_rewards.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_frame_reward_service.py",
+            "tests/rules/test_frame_reward_ui.py",
+            "tests/rules/test_frame_rewards.py"
+          ]
+        },
+        {
+          "id": "frame.janus.living-battery",
+          "title": "Living Battery",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 69,
+            "printed_page": 67,
+            "heading": "Living Battery"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ]
+        },
+        {
+          "id": "frame.janus.pandora",
+          "title": "PANDORA",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 69,
+            "printed_page": 67,
+            "heading": "PANDORA"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ]
+        },
+        {
+          "id": "frame.janus.a-girl-is-kinda-like-a-pet",
+          "title": "A Girl is Kinda Like a Pet",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 70,
+            "printed_page": 68,
+            "heading": "A Girl is Kinda Like a Pet"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ]
+        },
+        {
+          "id": "frame.janus.obedience-training",
+          "title": "Obedience Training",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 70,
+            "printed_page": 68,
+            "heading": "Obedience Training"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ]
+        },
+        {
+          "id": "frame.janus.universal-plug",
+          "title": "Universal Plug",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 70,
+            "printed_page": 68,
+            "heading": "Universal Plug"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ]
+        },
+        {
+          "id": "frame.janus.void-storage",
+          "title": "Void Storage",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 70,
+            "printed_page": 68,
+            "heading": "Void Storage"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_janus_storage.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_janus_storage.py"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Frame",
+      "type": "JANUS-B",
+      "registry_prefix": "frame.janus.",
+      "status": "Published scoped implementation",
+      "ordinary_workflows_with_evidence": "Official JANUS mechanics with retained server label; same source/evidence as JANUS.",
+      "missing_before_AI": "JANUS requirements plus alias compatibility. One official ruleset, not duplicated implementation.",
+      "later_candidates": "No extra mechanics arise from the cosmetic alias.",
+      "code": [
+        "src/girlframe/engine/creation.py",
+        "src/girlframe/engine/frame_classes.py"
+      ],
+      "tests": [
+        "tests/rules/test_janus_requisitions.py",
+        "tests/rules/test_janus_storage.py"
+      ],
+      "rule_inventory": [
+        {
+          "id": "frame.janus.harpy-core",
+          "title": "Harpy Core",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 68,
+            "printed_page": 66,
+            "heading": "Harpy Core"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ]
+        },
+        {
+          "id": "frame.janus.janus",
+          "title": "JANUS",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 68,
+            "printed_page": 66,
+            "heading": "JANUS"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ]
+        },
+        {
+          "id": "frame.janus.permission-trigger",
+          "title": "Janus Permission trigger",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 68,
+            "printed_page": 66,
+            "heading": "Janus Permission trigger"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_frame_reward_service.py",
+            "tests/rules/test_frame_reward_ui.py",
+            "tests/rules/test_frame_rewards.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_frame_reward_service.py",
+            "tests/rules/test_frame_reward_ui.py",
+            "tests/rules/test_frame_rewards.py"
+          ]
+        },
+        {
+          "id": "frame.janus.living-battery",
+          "title": "Living Battery",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 69,
+            "printed_page": 67,
+            "heading": "Living Battery"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ]
+        },
+        {
+          "id": "frame.janus.pandora",
+          "title": "PANDORA",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 69,
+            "printed_page": 67,
+            "heading": "PANDORA"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ]
+        },
+        {
+          "id": "frame.janus.a-girl-is-kinda-like-a-pet",
+          "title": "A Girl is Kinda Like a Pet",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 70,
+            "printed_page": 68,
+            "heading": "A Girl is Kinda Like a Pet"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ]
+        },
+        {
+          "id": "frame.janus.obedience-training",
+          "title": "Obedience Training",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 70,
+            "printed_page": 68,
+            "heading": "Obedience Training"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ]
+        },
+        {
+          "id": "frame.janus.universal-plug",
+          "title": "Universal Plug",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 70,
+            "printed_page": 68,
+            "heading": "Universal Plug"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_janus_requisitions.py",
+            "tests/rules/test_janus_core_service.py"
+          ]
+        },
+        {
+          "id": "frame.janus.void-storage",
+          "title": "Void Storage",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 70,
+            "printed_page": 68,
+            "heading": "Void Storage"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_janus_storage.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_janus_storage.py"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Frame",
+      "type": "DoctorDoctor Mk. II",
+      "registry_prefix": "frame.doctordoctor.",
+      "status": "Published scoped implementation",
+      "ordinary_workflows_with_evidence": "Nanobots, Borrowed Wings/return, Running Ragged, Cute Nurse, Here for Support, Adrenal Injectors, Metal Angel, obsolescence and replacement.",
+      "missing_before_AI": "Reconcile ordinary medical/death/replacement and patient/body consumers; no additional wholly missing named mechanic established here.",
+      "later_candidates": "Exceptional patient/carrier/compound prevention interactions after ordinary medical paths.",
+      "code": [
+        "src/girlframe/services/m3_doctor.py"
+      ],
+      "tests": [
+        "tests/rules/test_doctor_runtime.py",
+        "tests/rules/test_replacement_service.py"
+      ],
+      "rule_inventory": [
+        {
+          "id": "frame.doctordoctor.doctordoctor-mk-ii",
+          "title": "DoctorDoctor Mk. II",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 71,
+            "printed_page": 69,
+            "heading": "DoctorDoctor Mk. II"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_doctor_runtime.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_doctor_runtime.py"
+          ]
+        },
+        {
+          "id": "frame.doctordoctor.permission-trigger",
+          "title": "Doctordoctor Permission trigger",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 71,
+            "printed_page": 69,
+            "heading": "Doctordoctor Permission trigger"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_frame_reward_service.py",
+            "tests/rules/test_frame_reward_ui.py",
+            "tests/rules/test_frame_rewards.py",
+            "tests/rules/test_doctor_runtime.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_frame_reward_service.py",
+            "tests/rules/test_frame_reward_ui.py",
+            "tests/rules/test_frame_rewards.py",
+            "tests/rules/test_doctor_runtime.py"
+          ]
+        },
+        {
+          "id": "frame.doctordoctor.planned-obsolescence",
+          "title": "Planned Obsolescence",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 71,
+            "printed_page": 69,
+            "heading": "Planned Obsolescence"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_reactions.py",
+            "tests/rules/test_reaction_service.py",
+            "tests/rules/test_reaction_ui.py",
+            "tests/rules/test_replacement.py",
+            "tests/rules/test_replacement_service.py",
+            "tests/rules/test_replacement_ui.py",
+            "tests/rules/test_off_duty_service.py",
+            "tests/rules/test_strain_service.py",
+            "tests/rules/test_doctor_runtime.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_reactions.py",
+            "tests/rules/test_reaction_service.py",
+            "tests/rules/test_reaction_ui.py",
+            "tests/rules/test_replacement.py",
+            "tests/rules/test_replacement_service.py",
+            "tests/rules/test_replacement_ui.py",
+            "tests/rules/test_off_duty_service.py",
+            "tests/rules/test_strain_service.py",
+            "tests/rules/test_doctor_runtime.py"
+          ]
+        },
+        {
+          "id": "frame.doctordoctor.borrowed-wings",
+          "title": "Borrowed Wings",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 72,
+            "printed_page": 70,
+            "heading": "Borrowed Wings"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_doctor_runtime.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_doctor_runtime.py"
+          ]
+        },
+        {
+          "id": "frame.doctordoctor.nanobot-injection",
+          "title": "Nanobot Injection",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 72,
+            "printed_page": 70,
+            "heading": "Nanobot Injection"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_doctor_runtime.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_doctor_runtime.py"
+          ]
+        },
+        {
+          "id": "frame.doctordoctor.running-ragged",
+          "title": "Running Ragged",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 72,
+            "printed_page": 70,
+            "heading": "Running Ragged"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_doctor_runtime.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_doctor_runtime.py"
+          ]
+        },
+        {
+          "id": "frame.doctordoctor.the-cute-nurse",
+          "title": "The Cute Nurse",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 72,
+            "printed_page": 70,
+            "heading": "The Cute Nurse"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_doctor_runtime.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_doctor_runtime.py"
+          ]
+        },
+        {
+          "id": "frame.doctordoctor.adrenal-injectors",
+          "title": "Adrenal Injectors",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 73,
+            "printed_page": 71,
+            "heading": "Adrenal Injectors"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_doctor_runtime.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_doctor_runtime.py"
+          ]
+        },
+        {
+          "id": "frame.doctordoctor.here-for-support",
+          "title": "Here for Support",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 73,
+            "printed_page": 71,
+            "heading": "Here for Support"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_doctor_runtime.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_doctor_runtime.py"
+          ]
+        },
+        {
+          "id": "frame.doctordoctor.metal-angel",
+          "title": "Metal Angel",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 73,
+            "printed_page": 71,
+            "heading": "Metal Angel"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_doctor_runtime.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_doctor_runtime.py"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Frame",
+      "type": "Wyvern 0.4",
+      "registry_prefix": "frame.wyvern.",
+      "status": "Published scoped implementation",
+      "ordinary_workflows_with_evidence": "Five ordinary Asset slots plus protected Enormous; real purchase/replacement and Handler-judged Offering reward.",
+      "missing_before_AI": "A Vast and Tractless Beast, A Heavy Burden, Leviathan Chassis, Crushing Bulk, Deep Exploration, Renovation Permission Forms, Wraith AM and Protector.",
+      "later_candidates": "No named ordinary rule established optional. Gorgon Leviathan is different from Wyvern Leviathan Chassis.",
+      "code": [
+        "src/girlframe/engine/frame_setup.py",
+        "src/girlframe/engine/m3_frame_rewards.py"
+      ],
+      "tests": [
+        "tests/rules/test_requisition_service.py",
+        "tests/rules/test_frame_reward_service.py"
+      ],
+      "rule_inventory": [
+        {
+          "id": "frame.wyvern.a-vast-and-tractless-beast",
+          "title": "A Vast and Tractless Beast",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 74,
+            "printed_page": 72,
+            "heading": "A Vast and Tractless Beast"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.wyvern.permission-trigger",
+          "title": "Wyvern Permission trigger",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 74,
+            "printed_page": 72,
+            "heading": "Wyvern Permission trigger"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_frame_reward_service.py",
+            "tests/rules/test_frame_reward_ui.py",
+            "tests/rules/test_frame_rewards.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_frame_reward_service.py",
+            "tests/rules/test_frame_reward_ui.py",
+            "tests/rules/test_frame_rewards.py"
+          ]
+        },
+        {
+          "id": "frame.wyvern.wyvern-0-4",
+          "title": "Wyvern_0.4",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 74,
+            "printed_page": 72,
+            "heading": "Wyvern_0.4"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_asset_properties.py",
+            "tests/rules/test_requisition_service.py::test_wyvern_purchases_fill_five_ordinary_slots_without_replacing_enormous",
+            "tests/rules/test_requisition_service.py::test_wyvern_native_purchase_uses_ordinary_count_and_excludes_protected_replacements",
+            "tests/rules/test_replacement_ui.py::test_wyvern_native_package_allows_five_ordinary_assets_plus_printed_enormous"
+          ],
+          "local_test_references": [
+            "tests/rules/test_asset_properties.py",
+            "tests/rules/test_requisition_service.py::test_wyvern_purchases_fill_five_ordinary_slots_without_replacing_enormous",
+            "tests/rules/test_requisition_service.py::test_wyvern_native_purchase_uses_ordinary_count_and_excludes_protected_replacements",
+            "tests/rules/test_replacement_ui.py::test_wyvern_native_package_allows_five_ordinary_assets_plus_printed_enormous"
+          ]
+        },
+        {
+          "id": "frame.wyvern.a-heavy-burden",
+          "title": "A Heavy Burden",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 75,
+            "printed_page": 73,
+            "heading": "A Heavy Burden"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.wyvern.leviathan-chassis",
+          "title": "Leviathan Chassis",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 75,
+            "printed_page": 73,
+            "heading": "Leviathan Chassis"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.wyvern.crushing-bulk",
+          "title": "Crushing Bulk",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 76,
+            "printed_page": 74,
+            "heading": "Crushing Bulk"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.wyvern.deep-exploration",
+          "title": "Deep Exploration",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 76,
+            "printed_page": 74,
+            "heading": "Deep Exploration"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.wyvern.renovation-permission-forms",
+          "title": "Renovation Permission Forms",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 76,
+            "printed_page": 74,
+            "heading": "Renovation Permission Forms"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.wyvern.wraith-am",
+          "title": "Wraith AM",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 76,
+            "printed_page": 74,
+            "heading": "Wraith AM"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.wyvern.protector",
+          "title": "Protector",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 77,
+            "printed_page": 75,
+            "heading": "Protector"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        }
+      ]
+    },
+    {
+      "category": "Frame",
+      "type": "The Enforcer",
+      "registry_prefix": "frame.enforcer.",
+      "status": "Published scoped implementation",
+      "ordinary_workflows_with_evidence": "Conditioning/detention, Initiative/Director judgment, grips/volunteers, Master's Dog, Pavlov, Firearm/free packages, Compliance Virus, Firepower and Snoop.",
+      "missing_before_AI": "Reconcile remaining ordinary role/body/discipline ports and aggregate coverage. Aggregate playbook heading is not another missing mechanic.",
+      "later_candidates": "Exceptional source/body combinations after ordinary discipline.",
+      "code": [
+        "src/girlframe/services/m3_enforcement_initiative.py",
+        "src/girlframe/services/m3_enforcer_requisitions.py"
+      ],
+      "tests": [
+        "tests/rules/test_enforcer_conditioning.py",
+        "tests/rules/test_enforcer_director_judge.py",
+        "tests/rules/test_compliance_virus.py",
+        "tests/rules/test_enforcer_snoop.py"
+      ],
+      "rule_inventory": [
+        {
+          "id": "frame.enforcer.obedience-conditioning",
+          "title": "Obedience Conditioning",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 78,
+            "printed_page": 76,
+            "heading": "Obedience Conditioning"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_enforcer_conditioning.py",
+            "tests/rules/test_enforcer_volunteer.py",
+            "tests/rules/test_enforcer_retained_rules.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_enforcer_conditioning.py",
+            "tests/rules/test_enforcer_volunteer.py",
+            "tests/rules/test_enforcer_retained_rules.py"
+          ]
+        },
+        {
+          "id": "frame.enforcer.permission-trigger",
+          "title": "Enforcer Permission trigger",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 78,
+            "printed_page": 76,
+            "heading": "Enforcer Permission trigger"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_frame_reward_service.py",
+            "tests/rules/test_frame_reward_ui.py",
+            "tests/rules/test_frame_rewards.py",
+            "tests/rules/test_enforcer_retained_rules.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_frame_reward_service.py",
+            "tests/rules/test_frame_reward_ui.py",
+            "tests/rules/test_frame_rewards.py",
+            "tests/rules/test_enforcer_retained_rules.py"
+          ]
+        },
+        {
+          "id": "frame.enforcer.the-enforcer",
+          "title": "The Enforcer",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 78,
+            "printed_page": 76,
+            "heading": "The Enforcer"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.enforcer.enforcement-initiative",
+          "title": "Enforcement Initiative",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 79,
+            "printed_page": 77,
+            "heading": "Enforcement Initiative"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_enforcement_initiative.py",
+            "tests/rules/test_enforcer_director_judge.py",
+            "tests/rules/test_enforcer_grasp.py",
+            "tests/rules/test_role_punishments.py",
+            "tests/rules/test_retained_enforcer_plays.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_enforcement_initiative.py",
+            "tests/rules/test_enforcer_director_judge.py",
+            "tests/rules/test_enforcer_grasp.py",
+            "tests/rules/test_role_punishments.py",
+            "tests/rules/test_retained_enforcer_plays.py"
+          ]
+        },
+        {
+          "id": "frame.enforcer.masters-dog",
+          "title": "Master\u2019s Dog",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 79,
+            "printed_page": 77,
+            "heading": "Master\u2019s Dog"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_enforcer_requisitions.py",
+            "tests/rules/test_enforcer_retained_rules.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_enforcer_requisitions.py",
+            "tests/rules/test_enforcer_retained_rules.py"
+          ]
+        },
+        {
+          "id": "frame.enforcer.pavlovs-soldier",
+          "title": "Pavlov\u2019s Soldier",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 79,
+            "printed_page": 77,
+            "heading": "Pavlov\u2019s Soldier"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_enforcer_requisitions.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_enforcer_requisitions.py"
+          ]
+        },
+        {
+          "id": "frame.enforcer.personal-firearm",
+          "title": "Personal Firearm",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 79,
+            "printed_page": 77,
+            "heading": "Personal Firearm"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_personal_firearm.py",
+            "tests/rules/test_personal_firearm_service.py",
+            "tests/rules/test_items.py",
+            "tests/rules/test_frame_swap_service.py",
+            "tests/rules/test_free_personal_firearm_package.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_personal_firearm.py",
+            "tests/rules/test_personal_firearm_service.py",
+            "tests/rules/test_items.py",
+            "tests/rules/test_frame_swap_service.py",
+            "tests/rules/test_free_personal_firearm_package.py"
+          ]
+        },
+        {
+          "id": "frame.enforcer.compliance-virus",
+          "title": "Compliance Virus",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 80,
+            "printed_page": 78,
+            "heading": "Compliance Virus"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_compliance_virus.py",
+            "tests/rules/test_virus_role_source_bounds.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_compliance_virus.py",
+            "tests/rules/test_virus_role_source_bounds.py"
+          ]
+        },
+        {
+          "id": "frame.enforcer.overwhelming-firepower",
+          "title": "Overwhelming Firepower",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 80,
+            "printed_page": 78,
+            "heading": "Overwhelming Firepower"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_enforcer_firepower.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_enforcer_firepower.py"
+          ]
+        },
+        {
+          "id": "frame.enforcer.snoop",
+          "title": "Snoop",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 80,
+            "printed_page": 78,
+            "heading": "Snoop"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_enforcer_snoop.py",
+            "tests/rules/test_retained_enforcer_plays.py",
+            "tests/rules/test_item_legacy_source.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_enforcer_snoop.py",
+            "tests/rules/test_retained_enforcer_plays.py",
+            "tests/rules/test_item_legacy_source.py"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Frame",
+      "type": "CHANGELING",
+      "registry_prefix": "frame.changeling.",
+      "status": "Published scoped implementation",
+      "ordinary_workflows_with_evidence": "Starting anchors/catalogue and conditional Permission review; this is not runtime completion.",
+      "missing_before_AI": "Blank Slate, Fingers in the Brain, Mindfuck, Psych Strings, Web Implant, Body of Clay, Live Reconditioning Module and Psych-Whip with owned effects.",
+      "later_candidates": "No named ordinary rule approved for deferral; AI narration cannot substitute for mechanics.",
+      "code": [
+        "src/girlframe/engine/frame_setup.py",
+        "src/girlframe/engine/m3_frame_rewards.py"
+      ],
+      "tests": [
+        "tests/rules/test_frame_rewards.py",
+        "tests/rules/test_frame_reward_service.py"
+      ],
+      "rule_inventory": [
+        {
+          "id": "frame.changeling.blank-slate",
+          "title": "Blank Slate",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 81,
+            "printed_page": 79,
+            "heading": "Blank Slate"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.changeling.changeling",
+          "title": "CHANGELING",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 81,
+            "printed_page": 79,
+            "heading": "CHANGELING"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.changeling.permission-trigger",
+          "title": "Changeling Permission trigger",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 81,
+            "printed_page": 79,
+            "heading": "Changeling Permission trigger"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_frame_reward_service.py",
+            "tests/rules/test_frame_reward_ui.py",
+            "tests/rules/test_frame_rewards.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_frame_reward_service.py",
+            "tests/rules/test_frame_reward_ui.py",
+            "tests/rules/test_frame_rewards.py"
+          ]
+        },
+        {
+          "id": "frame.changeling.fingers-in-the-brain",
+          "title": "Fingers in the Brain",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 82,
+            "printed_page": 80,
+            "heading": "Fingers in the Brain"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.changeling.mindfuck",
+          "title": "Mindfuck",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 82,
+            "printed_page": 80,
+            "heading": "Mindfuck"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.changeling.psych-strings",
+          "title": "Psych Strings",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 82,
+            "printed_page": 80,
+            "heading": "Psych Strings"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.changeling.web-implant",
+          "title": "Web Implant",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 82,
+            "printed_page": 80,
+            "heading": "Web Implant"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.changeling.body-of-clay",
+          "title": "Body of Clay",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 83,
+            "printed_page": 81,
+            "heading": "Body of Clay"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.changeling.live-reconditioning-module",
+          "title": "Live Reconditioning Module",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 83,
+            "printed_page": 81,
+            "heading": "Live Reconditioning Module"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.changeling.psych-whip",
+          "title": "Psych Whip",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 83,
+            "printed_page": 81,
+            "heading": "Psych Whip"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        }
+      ]
+    },
+    {
+      "category": "Frame",
+      "type": "Project Ankou",
+      "registry_prefix": "frame.ankou.",
+      "status": "Published scoped implementation",
+      "ordinary_workflows_with_evidence": "Feedback Loop real commitment, owned child/reprisal/refusal/recovery/death and conditional Permission reward.",
+      "missing_before_AI": "Emotional Relay, Fight/Fawn Procedure, Obsessive, Processor Core, Amygdala Pulse, Quickchange Implant and Stalker; ordinary Feedback counterpart/source continuations.",
+      "later_candidates": "Exceptional carrier/counterpart combinations after the ordinary playbook. Feedback is not the whole Frame.",
+      "code": [
+        "src/girlframe/services/m3_ankou_feedback.py"
+      ],
+      "tests": [
+        "tests/rules/test_ankou_feedback.py",
+        "tests/rules/test_frame_rewards.py"
+      ],
+      "rule_inventory": [
+        {
+          "id": "frame.ankou.feedback-loop",
+          "title": "Feedback Loop",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 84,
+            "printed_page": 82,
+            "heading": "Feedback Loop"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_ankou_feedback.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_ankou_feedback.py"
+          ]
+        },
+        {
+          "id": "frame.ankou.permission-trigger",
+          "title": "Ankou Permission trigger",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 84,
+            "printed_page": 82,
+            "heading": "Ankou Permission trigger"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_frame_reward_service.py",
+            "tests/rules/test_frame_reward_ui.py",
+            "tests/rules/test_frame_rewards.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_frame_reward_service.py",
+            "tests/rules/test_frame_reward_ui.py",
+            "tests/rules/test_frame_rewards.py"
+          ]
+        },
+        {
+          "id": "frame.ankou.project-ankou",
+          "title": "Project Ankou",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 84,
+            "printed_page": 82,
+            "heading": "Project Ankou"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.ankou.emotional-relay",
+          "title": "Emotional Relay",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 85,
+            "printed_page": 83,
+            "heading": "Emotional Relay"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.ankou.fight-fawn-procedure",
+          "title": "Fight/Fawn Procedure",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 85,
+            "printed_page": 83,
+            "heading": "Fight/Fawn Procedure"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.ankou.obsessive",
+          "title": "Obsessive",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 86,
+            "printed_page": 84,
+            "heading": "Obsessive"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.ankou.processor-core",
+          "title": "Processor Core",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 86,
+            "printed_page": 84,
+            "heading": "Processor Core"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.ankou.amygdala-pulse",
+          "title": "Amygdala Pulse",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 87,
+            "printed_page": 85,
+            "heading": "Amygdala Pulse"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.ankou.quickchange-implant",
+          "title": "Quickchange Implant",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 87,
+            "printed_page": 85,
+            "heading": "Quickchange Implant"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.ankou.stalker",
+          "title": "Stalker",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 87,
+            "printed_page": 85,
+            "heading": "Stalker"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        }
+      ]
+    },
+    {
+      "category": "Frame",
+      "type": "The Red Queen",
+      "registry_prefix": "frame.red-queen.",
+      "status": "Published scoped implementation",
+      "ordinary_workflows_with_evidence": "Actual Court allocation/acceptance at creation/replacement/Swap and Queen-owned conditional reward.",
+      "missing_before_AI": "Queen's Court runtime, AM Transfer, Consult the Court, Judgement on High, One-Girl Panopticon, Personality Extraction, Biting Accusation, Memory Extraction and Regiment Commander.",
+      "later_candidates": "Exceptional Court/body combinations after ordinary Court agency/transfer/memory mechanics.",
+      "code": [
+        "src/girlframe/services/shared_setup.py",
+        "src/girlframe/services/m3_frame_swap.py"
+      ],
+      "tests": [
+        "tests/rules/test_frame_swap_service.py",
+        "tests/rules/test_replacement_service.py",
+        "tests/rules/test_frame_reward_service.py"
+      ],
+      "rule_inventory": [
+        {
+          "id": "frame.red-queen.permission-trigger",
+          "title": "Red-queen Permission trigger",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 88,
+            "printed_page": 86,
+            "heading": "Red-queen Permission trigger"
+          },
+          "published_implementation": "subset",
+          "local_implementation": "subset",
+          "independent_review": "pending",
+          "published_test_references": [
+            "tests/rules/test_frame_reward_service.py",
+            "tests/rules/test_frame_reward_ui.py",
+            "tests/rules/test_frame_rewards.py"
+          ],
+          "local_test_references": [
+            "tests/rules/test_frame_reward_service.py",
+            "tests/rules/test_frame_reward_ui.py",
+            "tests/rules/test_frame_rewards.py"
+          ]
+        },
+        {
+          "id": "frame.red-queen.queens-court",
+          "title": "Queen\u2019s Court",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 88,
+            "printed_page": 86,
+            "heading": "Queen\u2019s Court"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.red-queen.the-red-queen",
+          "title": "The Red Queen",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 88,
+            "printed_page": 86,
+            "heading": "The Red Queen"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.red-queen.am-transfer",
+          "title": "AM Transfer",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 89,
+            "printed_page": 87,
+            "heading": "AM Transfer"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.red-queen.consult-the-court",
+          "title": "Consult the Court",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 89,
+            "printed_page": 87,
+            "heading": "Consult the Court"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.red-queen.judgement-on-high",
+          "title": "Judgement On High",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 90,
+            "printed_page": 88,
+            "heading": "Judgement On High"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.red-queen.one-girl-panopticon",
+          "title": "One-Girl Panopticon",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 90,
+            "printed_page": 88,
+            "heading": "One-Girl Panopticon"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.red-queen.personality-extraction",
+          "title": "Personality Extraction",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 90,
+            "printed_page": 88,
+            "heading": "Personality Extraction"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.red-queen.biting-accusation",
+          "title": "Biting Accusation",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 91,
+            "printed_page": 89,
+            "heading": "Biting Accusation"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.red-queen.memory-extraction",
+          "title": "Memory Extraction",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 91,
+            "printed_page": 89,
+            "heading": "Memory Extraction"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        },
+        {
+          "id": "frame.red-queen.regiment-commander",
+          "title": "Regiment Commander",
+          "source": {
+            "document": "rulebook",
+            "pdf_page": 91,
+            "printed_page": 89,
+            "heading": "Regiment Commander"
+          },
+          "published_implementation": "unimplemented",
+          "local_implementation": "unimplemented",
+          "independent_review": "pending",
+          "published_test_references": [],
+          "local_test_references": []
+        }
+      ]
+    }
+  ]
+}

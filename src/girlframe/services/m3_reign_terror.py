@@ -272,6 +272,10 @@ def resolution(
             ):
                 item.state = "fulfilled"
     elif answer.options == ("reject",):
+        from girlframe.services.m3_vatgrown_plays import rejection_allowed
+
+        if not rejection_allowed(state, value.target, value.tag):
+            raise WorkflowError("A Vatgrown cannot reject this actual marked Tag.")
         if answer.fields:
             raise WorkflowError("Rejection does not also rewrite an Identity")
         changed = value.tag.model_copy(update=dict(rejection_pending=True))

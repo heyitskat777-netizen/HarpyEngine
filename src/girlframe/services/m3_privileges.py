@@ -22,6 +22,20 @@ from girlframe.services.read_only_bot import GuildViewer
 
 
 def purchase_proof(c: Connection, store: OnboardingStore, receipt: Requisition) -> None:
+    from girlframe.engine.m3_requisition_state import (
+        ComfortReceipt,
+        RetirementReceipt,
+        SceneReceipt,
+    )
+
+    if (
+        isinstance(receipt, (ComfortReceipt, SceneReceipt, RetirementReceipt))
+        and receipt.source_offer is not None
+    ):
+        from girlframe.services.m3_offered_girl_requisitions import prove_receipt
+
+        prove_receipt(GameService(store), c, load_state(c, store.campaign_id), receipt)
+        return
     history = t.m2["m2_state_history"]
     event = (
         c.execute(

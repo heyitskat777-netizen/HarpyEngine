@@ -10,6 +10,7 @@ from pydantic import Field, model_validator
 
 from girlframe.engine.identity import Snowflake
 from girlframe.engine.m2 import GameState, Model, PilotSheet, tier
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_adjudication_state import Decision
 from girlframe.engine.m3_choices import OFF_DUTY, off_duty_modifier
 from girlframe.engine.m3_core import Recovery, RepairSelection, recover_off_duty
@@ -62,6 +63,7 @@ class Scene(Model):
     acknowledgements: tuple[Snowflake, ...] = ()
     summary: str = Field(min_length=1, max_length=1200)
     character_ids: dict[str, str] = Field(default_factory=dict)
+    roles: tuple["ActorRef", ...] = Field(default=(), exclude_if=lambda value: not value)
 
     @model_validator(mode="after")
     def distinct(self) -> "Scene":

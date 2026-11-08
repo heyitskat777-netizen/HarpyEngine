@@ -2,6 +2,7 @@
 
 import json
 from typing import TYPE_CHECKING, Any, Literal
+from uuid import uuid4
 
 from sqlalchemy import Connection
 
@@ -289,6 +290,23 @@ def sync_finished_roll(
     from girlframe.services.m3_comforts import synchronize as comfort_opportunities
 
     comfort_opportunities(c, game.store, updated, event)
+    from girlframe.services.m3_vatgrown_plays import synchronize_off_duty
+
+    state = load_state(c, game.store.campaign_id)
+    before = state.model_dump_json()
+    source_event = str(uuid4())
+    synchronize_off_duty(game, c, state, updated, source_event)
+    if state.model_dump_json() != before:
+        game.event(
+            c,
+            int(action["actor_id"]),
+            source_event,
+            "m3.vatgrown_period_synchronized",
+            state,
+            event_id=source_event,
+            period=updated.id,
+            source_event=event,
+        )
 
 
 def resume(

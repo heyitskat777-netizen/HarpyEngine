@@ -132,11 +132,22 @@ def apply(
     maneuver_answer = answer.model_copy(
         update={"fields": {k: v for k, v in answer.fields.items() if k != "untouchable_tag"}}
     )
+    casualty_extra = extra and meta.get("extra_source") == "girl.casualty.no-one-better"
+    if casualty_extra:
+        from girlframe.engine.m3_girl_runtime_state import has_rule
+
+        if (
+            ref.kind != "pilot"
+            or action["data"]["result"]["tier"] != "high"
+            or not has_rule(state.sheets[ref.entity], "girl.casualty.no-one-better", "CASUALTY")
+        ):
+            raise WorkflowError("Preserve the actual Casualty's high Assault extra maneuver")
     maneuvers, damage = rules.select(
         actor,
         action["data"]["result"]["tier"],
         maneuver_answer,
         assault_extra=extra,
+        casualty_extra=casualty_extra,
         substitute_damage=selected_tag is not None,
     )
     if meta.get("extra_selected" if extra else "applied"):
@@ -296,10 +307,13 @@ def ensure_assault_extra(
     viewer: GuildViewer | None,
     key: str,
 ) -> bool:
-    if action["data"]["play"] != "all_out_assault" or not action["data"].get("actor_basic"):
+    if action["data"]["play"] != "all_out_assault":
         return True
-    ref = ActorRef.model_validate(action["data"]["actor_basic"]["ref"])
-    if ref.kind != "external_pilot":
+    casualty = action["data"]["battle"].get("extra_source") == "girl.casualty.no-one-better"
+    body = action["data"].get("actor_basic")
+    if not casualty and (
+        body is None or ActorRef.model_validate(body["ref"]).kind != "external_pilot"
+    ):
         return True
     if not action["data"]["battle"].get("extra_selected"):
         if game.pending(c, action["id"]):

@@ -341,6 +341,10 @@ def is_helpless(state: GameState, subject: ActorRef, foe: ActorRef | None = None
 
     if oldgen_sex_helpless(state, subject, foe):
         return True
+    from girlframe.engine.m3_casualty import helpless as casualty_helpless
+
+    if casualty_helpless(state, subject, foe):
+        return True
     if any(
         x.active
         and _same_body(state, x.subject, subject)

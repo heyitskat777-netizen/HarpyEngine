@@ -1,3 +1,11 @@
+# Active owner direction — P1
+
+The owner approved the November8 milestone proposal and authorized continuation until **P1 is ready for player testing**. Follow `docs/work_orders/P1_PLAYABLE_RELEASE.md` and `docs/P1_CURRENT_QUEUE.md`. P1 covers ordinary gameplay for every catalogued Girl/Frame and working durable human-facilitator escalation. P2 AI and P3 remaining unusual automation are later, separately authorized milestones. Preserve the original full-M3 backlog and certification; P1 remains RULES_SUBSET. Ordinary body/identity/AM/Court/Pair dependencies cannot be deferred merely because they are difficult. JANUS-B uses official JANUS; Gorgon Leviathan does not implement Wyvern Leviathan Chassis. Keep the bot OFF, and keep deployment/environment publication/model calls/Ancillary/private-engine writes separate.
+
+Latest owner testing instruction supersedes older per-workflow/coherent-checkpoint demands: **defer most automated testing until the final P1 candidate**. During development use only the minimum likely-flow smoke needed for functionality, preserve tests and record what was not run. Do not repeatedly run existing successes, compatibility sweeps or speculative role/tier/lifecycle matrices. At final P1 freeze run full regression and required global static/migration/privacy/restore checks on the exact integrated candidate; independent and human approval remain pending until actual review. Use at most two implementation workers; root owns shared integration and freezes explicit ownership. Existing sanitized source publication remains authorized; it is not deployment approval.
+
+Earlier instructions below describe the historical M3 development path; this active P1 direction and current owner messages take precedence when priorities conflict.
+
 # HarpyEngine development instructions
 
 Read `README.md`, then the original handoff's `AGENTS.md` and active work order

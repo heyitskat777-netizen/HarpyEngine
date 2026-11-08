@@ -419,6 +419,9 @@ class SceneRequisitionService(ComfortService):
             state = load_state(c, self.store.campaign_id)
             self._safe(c, state, viewer.user_id)
             identity, source = str(uuid4()), str(uuid4())
+            from girlframe.engine.m3_offered_requisition_state import require_request
+
+            require_request(state, actor)
             prepare_payment(self.game, c, state, viewer, actor, kind, 1 if kind == "privacy" else 2)
             updated = rules.purchase(
                 state,

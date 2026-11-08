@@ -151,6 +151,28 @@ async def open_dive(
                     required=not bool(detail.get("sup")),
                 ),
             ]
+            if detail.get("casualty_parts"):
+                fields.extend(
+                    [
+                        Field(
+                            "casualty_part",
+                            "Optional Wounded God: infected part to break",
+                            tuple(
+                                (x["id"].removeprefix("part:"), x["name"])
+                                for x in detail["casualty_parts"]
+                            ),
+                            0,
+                            1,
+                            required=False,
+                        ),
+                        Field(
+                            "casualty_site_account",
+                            "Actual infected anatomical site, if resisting",
+                            paragraph=True,
+                            required=False,
+                        ),
+                    ]
+                )
             if detail.get("storage_available"):
                 fields.append(
                     Field(
@@ -255,7 +277,15 @@ async def open_dive(
                     return None
                 answer = ChoiceAnswer(
                     fields=dict(asset=values["asset"][0])
-                    | ({"storage": "yes"} if values.get("storage") else {}),
+                    | ({"storage": "yes"} if values.get("storage") else {})
+                    | (
+                        dict(
+                            casualty_part=values["casualty_part"][0],
+                            casualty_site_account=values.get("casualty_site_account", ""),
+                        )
+                        if values.get("casualty_part")
+                        else {}
+                    ),
                     text=values["description"],
                 )
             elif option in ("erase_identity_and_table_question", "table_replaces_identity"):

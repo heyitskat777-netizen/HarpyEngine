@@ -424,6 +424,9 @@ def projection(
                 if not x.void and x.id not in stored
             ]
             data["storage_available"] = storage_available(game, c, state, actor)
+            from girlframe.services.m3_casualty_support import part_choices
+
+            data["casualty_parts"] = part_choices(game, c, state, actor)
             from girlframe.services.m3_sup import offer
 
             data["sup"] = offer(game, c, state, actor)
@@ -695,6 +698,9 @@ def apply(
             _apply_effect(game, c, state, action, step, request)
             return
         elif option == "void_and_unmark_all":
+            from girlframe.services.m3_casualty_support import require_god, resistance_answer
+
+            answer, casualty_part, casualty_site = resistance_answer(answer)
             _strict(answer, {"text", "fields"})
             from girlframe.services.m3_sup import parse
 
@@ -716,6 +722,25 @@ def apply(
                 description=answer.text,
                 growth=growth,
             )
+            if casualty_part is not None:
+                if growth is not None or "storage" in answer.fields:
+                    raise WorkflowError("Resist the actual body onset instead of growth or Storage")
+                from girlframe.services.m3_casualty import stage_resistance
+
+                require_god(game)
+                stage_resistance(
+                    game,
+                    c,
+                    state,
+                    action,
+                    request,
+                    actor=actor,
+                    asset=answer.fields.get("asset", ""),
+                    step=step,
+                    part=casualty_part,
+                    account=casualty_site,
+                    source_kind="dive_deep",
+                )
         elif option == "erase_identity_and_table_question":
             _strict(answer, {"text", "fields"})
             if set(answer.fields) != {"identity"}:

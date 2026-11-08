@@ -4939,3 +4939,15 @@ These are focused reducer, service/replay, native UI and photoshoot checks, not 
 new full-regression pass or remote CI result. Source type checks are not applicable
 because no production Python changed. Independent rules review and player testing
 remain pending; no merge, push, restart or deployment was performed.
+
+## P1 W0 integration — 2026-11-08
+
+Owner approved P1 resequencing and continuation, then deferred most automated testing to the final P1 candidate. Active P1 work order/queue and all20 catalog rows are now recorded; original historical handoff and full-rule backlog are retained. Bot OFF.
+
+W0 preserves actual Casualty body costs/repair/override/combat/Helpless/finder/death, owned resistance and source Sex; source-owned Vatgrown Investor/Prime/Sex, real one-use learnedPlay and actual cancel/resume; truthful offered GirlRequisition provenance and existing effect consumers. Gifts create no fake paid purchase or Permission flow.
+
+Evidence retained under ignored var: Casualty10 distinct normal cases passed segmented, plus real Dormant resistance1; Vatgrown8 source normals passed segmented, revised actual unrolled learning cancellation1; existing paid compatibility5 passed5.88s before planning pause. On resumption, only minimum new likely-flow smoke ran: GiftPrivacy1 passed5.24s and native Prime performance/judgment1 passed3.49s. Home/Retirement gift and native departure cases are authored but NOTRUN; no coherent full or combined gameplay regression was run. Earlier fixture-only failures and concrete callback/revision repairs remain in handoffs. W0 static covers all64 changed Python files; applicable60 source types passed. Final P1 exact-commit full regression and required release checks remain pending.
+
+Published prior sourceb5db26c was merged into mainc4550ec; merge CI42449920561 passed25focused in56.07s, full skipped. This new W0 source is a different checkpoint. CI interim selection now contains one real native smoke to follow the owner testing override; full mode still runs all preserved tests, including Deep-Brain-Spikes pagination. No completed tests were deleted or assertions weakened.
+
+Remaining normal dependencies include Vatgrown DNA/chaperone/death replacement/notice/other learning-favour sources, destroyed/removed Casualty hardware and ordinary other-chooser/body adapters. These remain P1 work, not silently deferred whole playbooks. Local registry7 added subsets are scoped bookkeeping, not whole-rule or milestone certification.

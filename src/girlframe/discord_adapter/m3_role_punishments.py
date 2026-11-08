@@ -56,7 +56,8 @@ async def open_instruction(
                     x
                     for x in own["assets"]
                     if x["family"] == family and (kind != "beating" or not x["damaged"])
-                ],
+                ]
+                + (own.get("body_parts", []) if kind == "beating" else []),
             )
         )
         if kind == "compliance_surgery":
@@ -140,7 +141,10 @@ async def open_instruction(
                 value = int(value)
             if field.key == "disclosed":
                 value = value == "yes"
-            selected[field.key] = value
+            if field.key == "asset" and isinstance(value, str) and value.startswith("part:"):
+                selected["body_part"] = value.removeprefix("part:")
+            else:
+                selected[field.key] = value
         instruction = Instruction(
             kind=kind, details_json=Details(**selected).model_dump_json(), counterpart=counterpart
         )

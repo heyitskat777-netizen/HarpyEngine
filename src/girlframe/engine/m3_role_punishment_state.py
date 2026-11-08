@@ -26,6 +26,7 @@ class RolePunishment(Model):
         "vatgrown_doll",
         "show_dog",
         "easy_target",
+        "vatgrown_plays",
         "trainee",
         "succubus_npc_disobey",
     ]
@@ -111,6 +112,7 @@ class RolePunishment(Model):
             "vatgrown_doll",
             "show_dog",
             "easy_target",
+            "vatgrown_plays",
             "trainee",
         ) and (self.executor.kind not in ("pilot", "external_pilot") or self.chooser is None):
             raise ValueError("Preserve the Enforcer source's original chooser and executor")

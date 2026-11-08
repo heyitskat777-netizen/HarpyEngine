@@ -90,6 +90,7 @@ def open_case(
         "vatgrown_doll",
         "show_dog",
         "easy_target",
+        "vatgrown_plays",
         "trainee",
         "succubus_npc_disobey",
     ],
@@ -360,6 +361,10 @@ def case_proof(c: Connection, game: GameService, identity: str) -> RolePunishmen
         from girlframe.services.m3_show_dog import validate_role_case
 
         validate_role_case(c, game, state, case)
+    if case.source_kind == "vatgrown_plays":
+        from girlframe.services.m3_vatgrown_plays import validate_role_case
+
+        validate_role_case(c, game, state, case)
     if case.source_kind == "easy_target":
         from girlframe.services.m3_easy_target import validate_role_case
 
@@ -436,6 +441,11 @@ def current(c: Connection, game: GameService, state: GameState, case: RolePunish
         return
     if case.source_kind == "show_dog":
         from girlframe.services.m3_show_dog import validate_role_case
+
+        validate_role_case(c, game, state, case)
+        return
+    if case.source_kind == "vatgrown_plays":
+        from girlframe.services.m3_vatgrown_plays import validate_role_case
 
         validate_role_case(c, game, state, case)
         return
@@ -710,6 +720,10 @@ def synchronize(
                 complete_role_case(c, game, completed, completion_id)
             elif completed.source_kind == "show_dog":
                 from girlframe.services.m3_show_dog import complete_role_case
+
+                complete_role_case(c, game, completed, completion_id)
+            elif completed.source_kind == "vatgrown_plays":
+                from girlframe.services.m3_vatgrown_plays import complete_role_case
 
                 complete_role_case(c, game, completed, completion_id)
             elif completed.source_kind == "easy_target":

@@ -145,6 +145,24 @@ async def open_sex(interaction: discord.Interaction, game: GameService, identity
                     required=False,
                 )
             )
+        if kind == "mockingbird_sex_rewrite" and detail.get("casualty_parts"):
+            fields.extend(
+                [
+                    Field(
+                        "casualty_part",
+                        "Optional Wounded God: infected part to break",
+                        tuple((x["id"], x["name"]) for x in detail["casualty_parts"]),
+                        minimum=0,
+                        required=False,
+                    ),
+                    Field(
+                        "casualty_site_account",
+                        "Actual infected anatomical site, if resisting",
+                        paragraph=True,
+                        required=False,
+                    ),
+                ]
+            )
     elif kind == "mockingbird_sex_self":
         fields = [
             Field("name", "Name the actual new Void Asset"),
@@ -213,13 +231,25 @@ async def open_sex(interaction: discord.Interaction, game: GameService, identity
             answer = ChoiceAnswer(options=tuple(values["corruption"]), text=values["account"])
         elif kind in ("mockingbird_sex_restore", "mockingbird_sex_rewrite"):
             if values.get("mode") == ("grow",):
+                if values.get("casualty_part") or values.get("casualty_site_account", "").strip():
+                    raise WorkflowError("Choose growth or an existing body's resisted onset")
                 from girlframe.discord_adapter.m3_sup import open_choice_growth
 
                 await open_choice_growth(current, game, identity, data, detail)
                 return None
             answer = ChoiceAnswer(
                 text=values["description"],
-                fields={"storage": "yes"} if values.get("storage") else {},
+                fields=({"storage": "yes"} if values.get("storage") else {})
+                | (
+                    dict(
+                        casualty_part=values["casualty_part"][0],
+                        casualty_site_account=values.get("casualty_site_account", ""),
+                    )
+                    if values.get("casualty_part")
+                    else {"casualty_site_account": values["casualty_site_account"]}
+                    if values.get("casualty_site_account", "").strip()
+                    else {}
+                ),
             )
         elif kind == "mockingbird_sex_self":
             answer = ChoiceAnswer(

@@ -358,6 +358,12 @@ def _roll_source(game: GameService, c: Connection, action: dict[str, Any]) -> tu
     minimum = man_floor(action)
     if minimum is not None:
         total = max(total, minimum)
+    if action["data"].get("casualty_override"):
+        from girlframe.services.m3_casualty import prove_override
+
+        adjustment = prove_override(game, c, load_state(c, game.store.campaign_id), action)
+        if adjustment is not None:
+            total = max(total, adjustment)
     if total != action["data"]["result"]["total"]:
         raise WorkflowError("Recover the actual source roll and applied Tag modifiers")
     return str(event), int(total)

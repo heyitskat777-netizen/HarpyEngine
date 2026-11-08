@@ -9,6 +9,7 @@ from pydantic import Field
 from girlframe.engine.creation_details import StandardChoice
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_girl_transition_state import GirlSetup
+from girlframe.engine.m3_learned_play_state import LearnedPlayUse
 
 if TYPE_CHECKING:
     from girlframe.engine.m2 import PilotSheet
@@ -35,6 +36,9 @@ class GirlRuntime(Model):
     swaps: tuple[PlaySwap, ...] = ()
     retained_rules: tuple[str, ...] = ()
     standards: tuple[StandardGrant, ...] = ()
+    learned_plays: tuple[LearnedPlayUse, ...] = Field(
+        default=(), exclude_if=lambda value: not value
+    )
 
 
 def has_rule(sheet: object, identity: str, native_playbook: str) -> bool:
@@ -54,6 +58,10 @@ def has_rule(sheet: object, identity: str, native_playbook: str) -> bool:
             active = False
         if swap.acquired_rule == identity:
             active = True
+    if runtime and any(
+        x.rule_id == identity and x.rolled_event is None for x in runtime.learned_plays
+    ):
+        active = True
     return active
 
 
@@ -97,6 +105,7 @@ def change_playbook_runtime(
         setup=runtime.setup,
         retained_rules=tuple(sorted(retained)),
         standards=runtime.standards,
+        learned_plays=runtime.learned_plays,
     )
     sheet.revision += 1
     return sheet, fact

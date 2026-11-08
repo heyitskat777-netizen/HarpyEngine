@@ -323,6 +323,16 @@ def prepare(
         BattleService(game.store)._defense(c, state, context, context.defense)
     acting = resolve(state, declaration.actor, bound, require_current_profile=False)
     target = resolve(state, declaration.target, bound, require_current_profile=False)
+    if prepared.play == "all_out_assault" and declaration.actor.kind == "pilot":
+        from girlframe.engine.m3_girl_runtime_state import has_rule
+
+        if has_rule(
+            state.sheets[declaration.actor.entity], "girl.casualty.no-one-better", "CASUALTY"
+        ):
+            registry = Access(game.store).registry
+            if registry is None:
+                raise WorkflowError("Approve the actual No One Better source before this Assault")
+            registry.require_available("girl.casualty.no-one-better")
     if acting.offstage_source is not None or target.offstage_source is not None:
         raise WorkflowError(
             "Resolve the actual offstage travel before declaring a battlefield attack."
@@ -512,6 +522,23 @@ def results(game: "GameService", c: Connection, action: dict[str, Any]) -> None:
         return
     meta = action["data"]["battle"]
     level = action["data"]["result"]["tier"]
+    if (
+        action["data"]["play"] == "all_out_assault"
+        and level == "high"
+        and not meta.get("extra_started")
+    ):
+        from girlframe.engine.m3_girl_runtime_state import has_rule
+
+        state = load_state(c, game.store.campaign_id)
+        actor, _ = _refs(action)
+        if actor.kind == "pilot" and has_rule(
+            state.sheets[actor.entity], "girl.casualty.no-one-better", "CASUALTY"
+        ):
+            from girlframe.services.m3_engage import start_assault_extra
+
+            meta["extra_source"] = "girl.casualty.no-one-better"
+            start_assault_extra(game, c, action)
+            return
     if action["data"]["play"] == "go_for_the_core" and level == "high":
         state = load_state(c, game.store.campaign_id)
         _, target = _refs(action)
@@ -2027,6 +2054,14 @@ def complete_damage_work(
             from girlframe.services.m3_newgirl_sex import synchronize as synchronize_newgirl_sex
 
             synchronize_newgirl_sex(game, c, action, event)
+        elif action["data"].get("casualty_sex"):
+            from girlframe.services.m3_casualty import synchronize as synchronize_casualty_sex
+
+            synchronize_casualty_sex(game, c, action, event)
+        elif action["data"].get("vatgrown_sex"):
+            from girlframe.services.m3_vatgrown_plays import synchronize as synchronize_vatgrown_sex
+
+            synchronize_vatgrown_sex(game, c, action, event)
         elif action["data"].get("alpha_sex"):
             from girlframe.services.m3_alpha_sex import synchronize as synchronize_alpha_sex
 
@@ -2043,6 +2078,10 @@ def complete_damage_work(
             from girlframe.services.m3_engage import complete_damage_work as complete_engage_damage
 
             complete_engage_damage(game, c, dict(latest), event, viewer, key)
+        if action["data"].get("investment_performance"):
+            from girlframe.services.m3_vatgrown_plays import synchronize_investment_performance
+
+            synchronize_investment_performance(game, c, game.action(c, action["id"]), event)
         if action["data"].get("easy_target_child"):
             from girlframe.services.m3_easy_target import synchronize as synchronize_easy_child
 

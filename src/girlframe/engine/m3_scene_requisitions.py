@@ -8,6 +8,7 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, CastRole, Model, ProfileBinding, SceneCast
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_intracadre_marriage import available, debit, payment_for
+from girlframe.engine.m3_offered_requisition_state import require_request
 from girlframe.engine.m3_privileges import suspended
 from girlframe.engine.m3_requisition_state import SceneReceipt
 
@@ -143,6 +144,7 @@ def purchase(
     identity: str,
     event: str,
 ) -> GameState:
+    require_request(original, actor)
     state = GameState.model_validate_json(original.model_dump_json())
     owner = resolve(state, actor, bindings)
     if owner.ref.kind != "pilot" or owner.rules != "girl_frame" or owner.source_sha256 != expected:
@@ -327,3 +329,46 @@ def reset(benefit: Benefit, human: int) -> Benefit:
             "Only the purchaser may revise an unentered scene and clear its agreements"
         )
     return Benefit.model_validate_json(benefit.model_copy(update={"scene": None}).model_dump_json())
+
+
+def grant_offered(
+    original: GameState,
+    actor: ActorRef,
+    bindings: tuple[ProfileBinding, ...],
+    expected: str,
+    kind: Kind,
+    companion: ActorRef | None,
+    account: str,
+    identity: str,
+    event: str,
+    offer: str,
+) -> GameState:
+    """Trusted free gift retains the genuine later scene and physical consumers."""
+    state = GameState.model_validate_json(original.model_dump_json())
+    actual = resolve(state, actor, bindings)
+    if (
+        actual.ref.kind != "pilot"
+        or actual.rules != "girl_frame"
+        or actual.source_sha256 != expected
+        or not offer
+        or any(x.id == identity or x.source_event == event for x in state.requisitions)
+    ):
+        raise ValueError("Use the current original Girl and one genuine offered source")
+    if companion is not None:
+        other = resolve(state, companion, bindings, require_current_profile=False)
+        if companion.kind != "pilot" or other.rules != "girl_frame" or companion == actor:
+            raise ValueError("The original recipient chooses another actual Girl for Privacy")
+    state.requisitions.append(
+        SceneReceipt(
+            id=identity,
+            kind=kind,
+            actor=actor,
+            price=0,
+            source_offer=offer,
+            companion=companion,
+            account=account,
+            source_event=event,
+        )
+    )
+    state.sheets[actor.entity].revision += 1
+    return state

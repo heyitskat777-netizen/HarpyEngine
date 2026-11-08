@@ -205,6 +205,10 @@ async def open_action(
             choices += tuple((x, x.replace("_", " ").title()) for x in OFF_DUTY["low"])
         elif level == "mid":
             choices = (("decline", "No optional scene"),) + choices
+        prime = data.get("prime_investors", []) if observation is None and level != "low" else []
+        if prime:
+            prime_kind = "prime_high" if level == "high" else "prime_mid"
+            choices += ((prime_kind, "Prime Investment — actual Investor scene"),)
         participants = tuple(x for x in data["participants"] if x[0] != str(viewer.user_id))
         if level != "mid" or observation is not None:
             participants += ((str(data["handler"]), "Handler"),)
@@ -228,8 +232,46 @@ async def open_action(
             ),
         ]
 
+        if prime:
+            fields.append(
+                Field(
+                    "investor",
+                    "Investor for Prime scene only",
+                    tuple(
+                        (x["id"], x["actor"]["kind"] + ": " + x["actor"]["entity"]) for x in prime
+                    ),
+                    0,
+                    1,
+                    required=False,
+                )
+            )
+
         async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
             kind = one(values, "kind")
+            if kind in ("prime_mid", "prime_high"):
+                investor = next((x for x in prime if x["id"] == one(values, "investor")), None)
+                if investor is None:
+                    raise WorkflowError("Choose the actual Investor for this scene.")
+                from girlframe.engine.m3_actor_state import ActorRef
+
+                members = tuple(dict.fromkeys((viewer.user_id, investor["controller"])))
+                if set(int(x) for x in values.get("participants", ())) - set(members):
+                    raise WorkflowError("Invite only the original Investor for this Prime scene.")
+                await asyncio.to_thread(
+                    service.scene,
+                    viewer_from_interaction(current),
+                    str(current.id),
+                    identity,
+                    data["revision"],
+                    data["game_revision"],
+                    kind,
+                    members,
+                    values.get("summary", ""),
+                    investor=ActorRef.model_validate(investor["actor"]),
+                )
+                return "Investor scene saved. Each original human confirms their own participation."
+            if one(values, "investor") is not None:
+                raise WorkflowError("The Investor selector belongs only to a Prime scene.")
             members = (viewer.user_id,) + tuple(int(x) for x in values.get("participants", ()))
             return await change(
                 current,

@@ -369,6 +369,8 @@ class CycleService:
         kind: str | None,
         participants: tuple[int, ...],
         summary: str,
+        *,
+        investor: ActorRef | None = None,
     ) -> dict[str, Any]:
         def change(c: Connection, period: rules.Period, state: GameState, event_id: str) -> Outcome:
             self._original(c, period, state, viewer.user_id)
@@ -404,6 +406,50 @@ class CycleService:
                     independent_controllers=independent,
                 )
                 return selected, state, [], {}
+            from girlframe.engine.m3_actor_bonds import current_ref
+            from girlframe.services.m3_vatgrown_plays import prime_scene, require_scene_allowed
+
+            if kind in ("prime_mid", "prime_high"):
+                if (
+                    investor is None
+                    or progress is None
+                    or progress.scene
+                    or progress.scene_declined
+                ):
+                    raise WorkflowError("Select the actual pending original Investor scene.")
+                investment = prime_scene(
+                    self.game, c, state, period, viewer.user_id, investor, kind, event_id
+                )
+                if investment.controller is None:
+                    raise WorkflowError("Recover the original Investor controller.")
+                expected_people = {viewer.user_id, investment.controller}
+                if set(participants) != expected_people or len(participants) != len(
+                    expected_people
+                ):
+                    raise WorkflowError("Invite the actual original Investor and performer.")
+                updated = rules.clone(period)
+                prime_saved = rules.Scene(
+                    kind=kind, participants=participants, summary=summary, roles=investment.roles
+                )
+                self._bind_scene(
+                    c,
+                    state,
+                    prime_saved,
+                    independent_controllers=frozenset({investment.controller})
+                    if investor.kind != "pilot"
+                    else frozenset(),
+                )
+                updated.progress[str(viewer.user_id)].scene = prime_saved
+                updated.revision += 1
+                return updated, state, [], {"investor": investor.model_dump(mode="json")}
+            if investor is not None:
+                raise WorkflowError("An Investor belongs only to its actual Prime scene.")
+            actors = tuple(
+                current_ref(state, uid)
+                for uid in participants
+                if str(uid) in state.sheets or uid == state.handler
+            )
+            require_scene_allowed(self.game, c, state, period, viewer.user_id, actors)
             people = (
                 self._mentor_participants(c, period, state, participants)
                 if kind is not None
@@ -430,7 +476,12 @@ class CycleService:
             expected,
             game_revision,
             "m3.off_duty_scene_chosen",
-            {"kind": kind, "participants": participants, "summary": summary},
+            {
+                "kind": kind,
+                "participants": participants,
+                "summary": summary,
+                "investor": investor.model_dump(mode="json") if investor else None,
+            },
             change,
         )
 
@@ -479,6 +530,16 @@ class CycleService:
                 else rules.acknowledge_scene(period, expected, viewer.user_id, scene_owner)
             )
             resolved = []
+            if scene_owner is not None:
+                attended = updated.progress[str(scene_owner)].scene
+                if (
+                    attended is not None
+                    and attended.kind in ("prime_mid", "prime_high")
+                    and set(attended.participants) == set(attended.acknowledgements)
+                ):
+                    from girlframe.services.m3_vatgrown_plays import complete_prime_scene
+
+                    complete_prime_scene(self.game, c, state, updated, scene_owner, event_id)
             if scene_owner is None:
                 scene = updated.handler_scene
                 assert scene is not None
@@ -950,8 +1011,25 @@ class CycleService:
                     {"id": key, "name": name, "marked": True}
                     for key, name in marked_maxims(state, viewer.user_id)
                 ]
+            prime_investors = []
+            if sheet_data is not None and own and own.roll and own.roll.stage == "choices":
+                from girlframe.engine.m3_girl_runtime_state import has_rule
+                from girlframe.engine.m3_vatgrown_plays import INVESTMENT
+                from girlframe.services.m3_vatgrown_plays import _access, investors
+
+                if has_rule(state.sheets[str(viewer.user_id)], INVESTMENT, "VATGROWN"):
+                    try:
+                        _access(self.game, c, viewer, INVESTMENT)
+                        prime_investors = [
+                            x.model_dump(mode="json")
+                            for x in investors(self.game, c, state, actor)
+                            if x.desires
+                        ]
+                    except (ValueError, WorkflowError):
+                        pass
             return {
                 **self.periods.get(viewer, identity),
+                "prime_investors": prime_investors,
                 "game_revision": state.revision,
                 "modular": modular,
                 "handler": period.handler,
@@ -1026,6 +1104,9 @@ class CycleService:
                 raise WorkflowError(
                     "Review current performance again after the intervening state change."
                 )
+            from girlframe.services.m3_vatgrown_plays import require_period_complete
+
+            require_period_complete(self.game, c, state, period)
             pending = frozenset(x["id"] for x in self.periods._pending(c, identity))
             # Prove actual completion before advancing any world entity.
             finished, updated = rules.finish(

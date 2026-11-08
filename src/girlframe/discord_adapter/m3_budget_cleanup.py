@@ -9,6 +9,7 @@ from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.services.m3_budget_cleanup import CleanupService
+from girlframe.services.onboarding import WorkflowError
 
 
 async def open_cleanup(
@@ -56,6 +57,24 @@ async def open_cleanup(
                     ),
                 )
             )
+        if data.get("casualty_parts"):
+            fields.extend(
+                [
+                    Field(
+                        "casualty_part",
+                        "Optional Wounded God: infected part to break",
+                        tuple((x["id"], x["name"]) for x in data["casualty_parts"]),
+                        minimum=0,
+                        required=False,
+                    ),
+                    Field(
+                        "casualty_site_account",
+                        "Actual infected anatomical site, if resisting",
+                        paragraph=True,
+                        required=False,
+                    ),
+                ]
+            )
     elif data["phase"] == "threshold":
         await reply(
             interaction, "Finish the pending Void consequence in your requests inbox first."
@@ -79,6 +98,8 @@ async def open_cleanup(
         from girlframe.discord_adapter.m3_sup import GROW, open_growth
 
         if values.get("asset") == (GROW,):
+            if values.get("casualty_part") or values.get("casualty_site_account", "").strip():
+                raise WorkflowError("Choose growth or an existing body's resisted onset")
 
             async def grow(actual: discord.Interaction, fields: dict[str, str], text: str) -> str:
                 await asyncio.to_thread(
@@ -107,6 +128,8 @@ async def open_cleanup(
             values["account"],
             values["asset"][0] if "asset" in values else None,
             values.get("storage", ("no",))[0] == "yes",
+            casualty_part=values["casualty_part"][0] if values.get("casualty_part") else None,
+            casualty_site_account=values.get("casualty_site_account", ""),
         )
         return "Your cleanup response is saved."
 

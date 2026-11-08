@@ -21,6 +21,8 @@ HEAT_IDS = (
     "stim_sex",
     "old_dog_new_pups",
     "oldgen_sex",
+    "casualty_sex",
+    "vatgrown_sex",
     "newgirl_sex",
     "easy_target",
     "unassuming_doll",

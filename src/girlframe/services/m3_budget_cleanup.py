@@ -185,6 +185,7 @@ class CleanupService:
             assets = []
             storage = False
             sup = None
+            casualty_parts: list[dict[str, str]] = []
             if own and value.phase == "rewrite":
                 assert target is not None
                 current(self.game, c, state, value)
@@ -200,6 +201,9 @@ class CleanupService:
                 from girlframe.services.m3_sup import offer
 
                 sup = offer(self.game, c, state, target)
+                from girlframe.services.m3_casualty_support import part_choices
+
+                casualty_parts = part_choices(self.game, c, state, target)
             return dict(
                 id=identity,
                 revision=state.revision,
@@ -216,6 +220,7 @@ class CleanupService:
                 assets=assets,
                 storage=storage,
                 sup=sup,
+                casualty_parts=casualty_parts,
                 thresholds=value.thresholds,
             )
 
@@ -230,6 +235,9 @@ class CleanupService:
         asset: str | None = None,
         storage: bool = False,
         growth_fields: dict[str, str] | None = None,
+        *,
+        casualty_part: str | None = None,
+        casualty_site_account: str = "",
     ) -> dict[str, Any]:
         if not account.strip() or len(account) > 1200:
             raise WorkflowError("Describe your actual cleanup attendance or owned Void alteration")
@@ -255,7 +263,13 @@ class CleanupService:
             event = str(uuid4())
             followups: tuple[Followup, ...] = ()
             if value.phase == "scene" and value.scene is not None:
-                if asset is not None or storage or growth_fields:
+                if (
+                    asset is not None
+                    or storage
+                    or growth_fields
+                    or casualty_part is not None
+                    or casualty_site_account
+                ):
                     raise WorkflowError("This cleanup scene grants no Asset or automatic Void")
                 scene = value.scene.model_copy(deep=True)
                 if action == "attend" and viewer.user_id not in scene.acknowledgements:
@@ -299,6 +313,27 @@ class CleanupService:
                     raise WorkflowError(
                         "Review your body and Frame mode in /mission position first"
                     )
+                if casualty_part is not None:
+                    if growth is not None or storage or asset is None:
+                        raise WorkflowError("Resist a body onset instead of growth or Storage")
+                    from girlframe.services.m3_casualty import stage_work_resistance
+                    from girlframe.services.m3_casualty_support import require_god
+
+                    require_god(self.game)
+                    stage_work_resistance(
+                        self.game,
+                        c,
+                        state,
+                        actor=actor,
+                        asset=asset,
+                        work=identity,
+                        event=event,
+                        part=casualty_part.removeprefix("part:"),
+                        account=casualty_site_account,
+                        source_kind="budget_cleanup",
+                    )
+                elif casualty_site_account:
+                    raise WorkflowError("Choose the actual infected part for this site account")
                 state, followups = alter(
                     state,
                     actor,
@@ -381,6 +416,11 @@ class CleanupService:
                     ),
                     event,
                 )
+            if casualty_part is not None:
+                assert value.selected is not None
+                from girlframe.services.m3_casualty_support import post_part_change
+
+                post_part_change(self.game, c, value.people[value.selected], event, viewer, key)
             return dict(id=identity, phase=value.phase)
 
         try:
@@ -396,7 +436,12 @@ class CleanupService:
                     asset=asset,
                     storage=storage,
                 )
-                | (dict(growth_fields=growth_fields) if growth_fields is not None else {}),
+                | (dict(growth_fields=growth_fields) if growth_fields is not None else {})
+                | (
+                    dict(casualty_part=casualty_part, casualty_site_account=casualty_site_account)
+                    if casualty_part is not None or casualty_site_account
+                    else {}
+                ),
                 operation,
                 auto_audit=False,
                 authorize=authorize,

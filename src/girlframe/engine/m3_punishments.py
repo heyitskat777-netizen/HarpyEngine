@@ -42,6 +42,9 @@ class Details(Model):
     kind: str = Field(max_length=80)
     identities: tuple[str, ...] = Field(default=(), max_length=2)
     asset: str | None = Field(default=None, max_length=100)
+    body_part: str | None = Field(
+        default=None, max_length=40, exclude_if=lambda value: value is None
+    )
     tag: str = Field(default="", max_length=120)
     bond_with: int | None = Field(default=None, gt=0)
     replacement_name: str = Field(default="", max_length=120)
@@ -115,7 +118,7 @@ def validate(details: Details) -> str:
     allowed = {
         "sedation": {"identities"},
         "revoked_privileges": {"requisition", "restoration"},
-        "beating": {"asset", "tag"},
+        "beating": {"asset", "body_part", "tag"},
         "reduced_socialization": {"bond_with"},
         "quality_time": {"tag"},
         "passing_responsibility": {"delegate"},
@@ -150,6 +153,7 @@ def apply(
     source_event: str | None = None,
     character_ids: dict[int, str] | None = None,
     profile_context: dict[int, tuple[str, int]] | None = None,
+    source_work: str | None = None,
 ) -> Applied:
     severity = validate(details)
     if inflictor != original.handler and str(inflictor) not in original.sheets:
@@ -305,6 +309,34 @@ def apply(
             and all(x.marked for x in sheet.identities)
         ):
             required.append(Followup(kind="ankou_feedback", owner=subject, source_pdf=84))
+    elif kind == "beating" and details.body_part is not None:
+        from girlframe.engine.m3_actor_bonds import current_ref
+        from girlframe.engine.m3_casualty import change_part
+        from girlframe.engine.m3_handler_consequences import active_handler
+
+        if (
+            details.asset is not None
+            or inflictor != state.handler
+            or not source_event
+            or not source_work
+        ):
+            raise ValueError(
+                "Only the actual Handler damages one proved body part instead of an Asset"
+            )
+        handler = active_handler(state)
+        if handler is None:
+            raise ValueError("Preserve the actual original Handler's part Punishment")
+        change_part(
+            state,
+            current_ref(state, subject),
+            details.body_part,
+            "broken",
+            event=source_event,
+            reason="punishment",
+            inflictor=handler,
+            work=source_work,
+            account="Source-bound performed Beating damages one actual body part",
+        )
     elif kind in ("beating", "frame_disassembly", "compliance_surgery"):
         asset = next((x for x in sheet.assets if x.id == details.asset), None)
         family = "frame" if kind == "frame_disassembly" else "girl"

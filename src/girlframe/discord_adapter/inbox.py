@@ -708,6 +708,22 @@ class InboxView(discord.ui.View):
             await open_oldgen_sex(
                 interaction, OldgenSexService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_casualty":
+            from girlframe.discord_adapter.m3_casualty import open_casualty
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_casualty import CasualtyService
+
+            await open_casualty(
+                interaction, CasualtyService(GameService(self.service.store)), item.identity
+            )
+        elif item.task == "m3_vatgrown_plays":
+            from girlframe.discord_adapter.m3_vatgrown_plays import open_vatgrown_plays
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_vatgrown_plays import VatgrownPlaysService
+
+            await open_vatgrown_plays(
+                interaction, VatgrownPlaysService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_newgirl_sex":
             from girlframe.discord_adapter.m3_newgirl_sex import open_newgirl_sex
             from girlframe.services.m2_game import GameService

@@ -5,6 +5,7 @@ from girlframe.engine.m3_actor_state import ActorRef, ProfileBinding, SceneCast
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_core import install
 from girlframe.engine.m3_intracadre_marriage import available, debit, payment_for
+from girlframe.engine.m3_offered_requisition_state import require_request
 from girlframe.engine.m3_requisition_state import (
     ComfortBenefit,
     ComfortReceipt,
@@ -22,6 +23,7 @@ def purchase(
     event: str,
     account: str,
 ) -> GameState:
+    require_request(original, actor)
     state = GameState.model_validate_json(original.model_dump_json())
     actual = resolve(state, actor, bindings)
     if actual.rules != "girl_frame" or actor.kind != "pilot" or actual.source_sha256 != expected:
@@ -223,3 +225,38 @@ def grant(
             "asset_description": asset.description,
         }
     )
+
+
+def grant_offered(
+    original: GameState,
+    actor: ActorRef,
+    bindings: tuple[ProfileBinding, ...],
+    expected: str,
+    identity: str,
+    event: str,
+    account: str,
+    offer: str,
+) -> GameState:
+    """Trusted source-funded receipt; callers prove the immutable actual offer."""
+    state = GameState.model_validate_json(original.model_dump_json())
+    actual = resolve(state, actor, bindings)
+    if (
+        actual.ref.kind != "pilot"
+        or actual.rules != "girl_frame"
+        or actual.source_sha256 != expected
+        or not offer
+        or any(x.id == identity or x.source_event == event for x in state.requisitions)
+    ):
+        raise ValueError("Use the current original Girl and one genuine unaccepted offered source")
+    state.requisitions.append(
+        ComfortReceipt(
+            id=identity,
+            actor=actor,
+            price=0,
+            source_offer=offer,
+            account=account,
+            source_event=event,
+        )
+    )
+    state.sheets[actor.entity].revision += 1
+    return state

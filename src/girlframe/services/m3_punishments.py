@@ -469,6 +469,13 @@ class PunishmentService:
                         )
                         >= 4,
                     }
+                    if viewer.user_id == state.handler:
+                        from girlframe.engine.m3_actor_bonds import current_ref
+                        from girlframe.services.m3_casualty_support import part_choices
+
+                        result["choices"]["body_parts"] = part_choices(
+                            self.game, c, state, current_ref(state, subject)
+                        )
                     ruling = self.store.policy.owner_m3_rulings
                     if (
                         ruling
@@ -667,6 +674,16 @@ class PunishmentService:
                             "The original discipline debt changed; recover it explicitly."
                         )
                     debt.state = "fulfilled"
+            if details.body_part is not None:
+                from girlframe.engine.m3_actor_bonds import current_ref as casualty_ref
+                from girlframe.services.m3_casualty import _ensure, prove_parts
+                from girlframe.services.m3_casualty_support import require_god
+
+                require_god(self.game)
+                subject_ref = casualty_ref(state, int(row["subject_id"]))
+                casualty_body = _ensure(self.game, c, state, subject_ref, event_id)
+                if casualty_body.event != event_id:
+                    prove_parts(self.game, c, state, subject_ref)
             result = rules.apply(
                 state,
                 int(row["subject_id"]),
@@ -676,6 +693,7 @@ class PunishmentService:
                 **self._context(c, row),
                 handler_consulted=consulted,
                 source_event=event_id,
+                source_work=identity,
                 character_ids=character_ids,
                 profile_context={
                     int(row["subject_id"]): c.execute(
@@ -695,7 +713,7 @@ class PunishmentService:
                 from girlframe.services.m3_role_punishments import mark_pc_effect
 
                 mark_pc_effect(result.state, role_case, event_id, execution_account or "")
-            if details.kind == "beating":
+            if details.kind == "beating" and details.body_part is None:
                 from girlframe.engine.m3_actor_bonds import current_ref
                 from girlframe.engine.m3_appearance_matrix import record_damage
                 from girlframe.engine.m3_handler_consequences import active_handler
@@ -826,6 +844,10 @@ class PunishmentService:
                                 body=self._body(item)
                                 | {"punishment_work": identity, "applied_event": event},
                             )
+            if details.body_part is not None:
+                from girlframe.services.m3_casualty_support import post_part_change
+
+                post_part_change(self.game, c, subject_ref, event, viewer, key)
             if details.kind in ("execution", "indefinite_imprisonment"):
                 from girlframe.services.m3_careers import synchronize_end
 

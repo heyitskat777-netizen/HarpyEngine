@@ -408,8 +408,10 @@ def apply(
     elif kind == "mockingbird_sex_rewrite":
         infection = meta["sex_infection"]
         recipient = ActorRef.model_validate(infection["target"])
+        from girlframe.services.m3_casualty_support import require_god, resistance_answer
         from girlframe.services.m3_sup import parse
 
+        answer, casualty_part, casualty_site = resistance_answer(answer)
         growth = parse(game, c, state, recipient, answer.fields)
         _strict(
             answer,
@@ -436,6 +438,25 @@ def apply(
         if meta.get("sex_transfer"):
             changed, source = _transfer_source(game, c, state, action)
             affected = (source, recipient)
+        if casualty_part is not None:
+            if growth is not None or "storage" in answer.fields or chosen is None:
+                raise WorkflowError("Resist an actual existing body onset, not growth or Storage")
+            from girlframe.services.m3_casualty import stage_resistance
+
+            require_god(game)
+            stage_resistance(
+                game,
+                c,
+                changed,
+                action,
+                row,
+                actor=recipient,
+                asset=chosen.id,
+                step=0,
+                part=casualty_part,
+                account=casualty_site,
+                source_kind="mockingbird_sex",
+            )
         from girlframe.services.m3_janus_storage import gain_source
 
         changed, _ = rules.infect(
@@ -592,6 +613,13 @@ def projection(
         kind == "mockingbird_sex_rewrite"
         and action["data"]["mockingbird"]["sex_infection"]["asset"] is None
     )
+    if (
+        kind == "mockingbird_sex_rewrite"
+        and int(row["actor_id"]) == _actual(game, c, state, recipient).controller
+    ):
+        from girlframe.services.m3_casualty_support import part_choices
+
+        result["casualty_parts"] = part_choices(game, c, state, recipient)
     result["destinations"] = _destinations(game, c, state, action)
     if not result["destinations"] and "collect" in choices:
         choices.remove("collect")

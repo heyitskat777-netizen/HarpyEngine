@@ -546,6 +546,18 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
 
         await open_oldgen_sex_choice(interaction, game, decision)
         return
+    if decision["kind"].startswith("casualty_"):
+        from girlframe.discord_adapter.m3_casualty import open_choice as open_casualty_choice
+
+        await open_casualty_choice(interaction, game, decision)
+        return
+    if decision["kind"].startswith("vat_sex_"):
+        from girlframe.discord_adapter.m3_vatgrown_plays import (
+            open_choice as open_vatgrown_plays_choice,
+        )
+
+        await open_vatgrown_plays_choice(interaction, game, decision)
+        return
     if decision["kind"].startswith("newgirl_sex_"):
         from girlframe.discord_adapter.m3_newgirl_sex import open_choice as open_newgirl_sex_choice
 
@@ -1028,6 +1040,8 @@ async def open_play(
             "stim_sex",
             "old_dog_new_pups",
             "oldgen_sex",
+            "casualty_sex",
+            "vatgrown_sex",
             "newgirl_sex",
             "easy_target",
             "unassuming_doll",
@@ -1982,12 +1996,11 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         name="vatgrown", description="Actual Unassuming Doll source and saved effects"
     )
     async def vatgrown_controls(interaction: discord.Interaction) -> None:
-        from girlframe.discord_adapter.m3_vatgrown import open_vatgrown
-        from girlframe.services.m3_vatgrown import DollService
+        from girlframe.discord_adapter.m3_vatgrown_menu import open_vatgrown_menu
 
         await interaction.response.defer(ephemeral=True)
         try:
-            await open_vatgrown(interaction, DollService(game))
+            await open_vatgrown_menu(interaction, game)
         except WorkflowError as error:
             await reply(interaction, str(error))
 
@@ -2001,6 +2014,19 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         await interaction.response.defer(ephemeral=True)
         try:
             await open_oldgen_sex(interaction, OldgenSexService(game))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @campaign.command(
+        name="casualty", description="Original Casualty parts, repair and actual source choices"
+    )
+    async def casualty_controls(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_casualty import open_casualty
+        from girlframe.services.m3_casualty import CasualtyService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_casualty(interaction, CasualtyService(game))
         except WorkflowError as error:
             await reply(interaction, str(error))
 

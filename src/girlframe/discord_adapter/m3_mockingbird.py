@@ -55,6 +55,24 @@ async def open_mockingbird(
                 required=False,
             )
         )
+    if detail.get("casualty_parts"):
+        fields.extend(
+            [
+                Field(
+                    "casualty_part",
+                    "Optional Wounded God: infected part to break",
+                    tuple((x["id"], x["name"]) for x in detail["casualty_parts"]),
+                    minimum=0,
+                    required=False,
+                ),
+                Field(
+                    "casualty_site_account",
+                    "Actual infected anatomical site, if resisting",
+                    paragraph=True,
+                    required=False,
+                ),
+            ]
+        )
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         choice = values["total"][0]
@@ -63,6 +81,8 @@ async def open_mockingbird(
                 values.get("asset")
                 or values.get("description", "").strip()
                 or values.get("storage")
+                or values.get("casualty_part")
+                or values.get("casualty_site_account", "").strip()
             ):
                 raise WorkflowError("Decline with no Asset or Void alteration selected")
             answer = ChoiceAnswer()
@@ -70,12 +90,24 @@ async def open_mockingbird(
             if not values.get("asset"):
                 raise WorkflowError("Choose the actual Asset that pays for this shift")
             if values["asset"][0] == GROW:
+                if values.get("casualty_part") or values.get("casualty_site_account", "").strip():
+                    raise WorkflowError("Choose growth or an existing body's resisted onset")
                 await open_choice_growth(current, game, identity, data, detail, number=int(choice))
                 return None
             answer = ChoiceAnswer(
                 number=int(choice),
                 fields=dict(asset=values["asset"][0])
-                | ({"storage": "yes"} if values.get("storage") else {}),
+                | ({"storage": "yes"} if values.get("storage") else {})
+                | (
+                    dict(
+                        casualty_part=values["casualty_part"][0],
+                        casualty_site_account=values.get("casualty_site_account", ""),
+                    )
+                    if values.get("casualty_part")
+                    else {"casualty_site_account": values["casualty_site_account"]}
+                    if values.get("casualty_site_account", "").strip()
+                    else {}
+                ),
                 text=values.get("description", ""),
             )
         await asyncio.to_thread(

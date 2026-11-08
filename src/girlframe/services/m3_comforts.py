@@ -113,7 +113,11 @@ def synchronize(c: Connection, store: OnboardingStore, period: Period, event: st
                 .mappings()
                 .first()
             )
-            if (
+            if purchase.source_offer is not None:
+                from girlframe.services.m3_offered_girl_requisitions import prove_receipt
+
+                prove_receipt(GameService(store), c, state, purchase)
+            elif (
                 paid is None
                 or paid["kind"] != "m3.creature_comforts_purchased"
                 or paid["actor_id"] != uid
@@ -264,6 +268,9 @@ class ComfortService(RequisitionService):
             state = load_state(c, self.store.campaign_id)
             self._safe(c, state, viewer.user_id)
             identity, source = str(uuid4()), str(uuid4())
+            from girlframe.engine.m3_offered_requisition_state import require_request
+
+            require_request(state, actor)
             prepare_payment(self.game, c, state, viewer, actor, "creature_comforts", 1)
             state = rules.purchase(
                 state,
@@ -332,6 +339,13 @@ class ComfortService(RequisitionService):
             return result
 
     def _paid_source(self, c: Connection, viewer: GuildViewer, purchase: ComfortReceipt) -> None:
+        if purchase.source_offer is not None:
+            from girlframe.services.m3_offered_girl_requisitions import prove_receipt
+
+            if purchase.actor.entity != str(viewer.user_id):
+                raise WorkflowError("This actual gift receipt belongs to its original recipient")
+            prove_receipt(self.game, c, load_state(c, self.store.campaign_id), purchase)
+            return
         from girlframe.services.m3_privileges import purchase_proof
 
         purchase_proof(c, self.store, purchase)

@@ -47,14 +47,23 @@ class ComfortReceipt(Model):
     id: str = Field(min_length=1, max_length=80)
     kind: Literal["creature_comforts"] = "creature_comforts"
     actor: ActorRef
-    price: Literal[1] = 1
+    price: Literal[0, 1] = 1
+    source_offer: str | None = Field(
+        default=None, min_length=1, exclude_if=lambda value: value is None
+    )
     account: str = Field(min_length=1, max_length=1200)
     source_event: str = Field(min_length=1)
 
     @model_validator(mode="after")
     def actual_purchaser(self) -> "ComfortReceipt":
-        if self.actor.kind != "pilot" or not self.account.strip():
-            raise ValueError("Creature Comforts needs an actual purchasing Girl and request")
+        if (
+            self.actor.kind != "pilot"
+            or not self.account.strip()
+            or self.price != (0 if self.source_offer else 1)
+        ):
+            raise ValueError(
+                "Creature Comforts needs its actual paid request or source-funded gift"
+            )
         return self
 
 
@@ -62,7 +71,10 @@ class SceneReceipt(Model):
     id: str = Field(min_length=1, max_length=80)
     kind: Literal["privacy", "visiting_home"]
     actor: ActorRef
-    price: Literal[1, 2]
+    price: Literal[0, 1, 2]
+    source_offer: str | None = Field(
+        default=None, min_length=1, exclude_if=lambda value: value is None
+    )
     companion: ActorRef | None = None
     account: str = Field(min_length=1, max_length=1200)
     source_event: str = Field(min_length=1)
@@ -73,13 +85,13 @@ class SceneReceipt(Model):
             raise ValueError("The actual purchasing Girl owns this scene Requisition")
         if self.kind == "privacy":
             if (
-                self.price != 1
+                self.price != (0 if self.source_offer else 1)
                 or self.companion is None
                 or self.companion.kind != "pilot"
                 or self.companion.entity == self.actor.entity
             ):
                 raise ValueError("Privacy costs one Permission and names another actual Girl")
-        elif self.price != 2 or self.companion is not None:
+        elif self.price != (0 if self.source_offer else 2) or self.companion is not None:
             raise ValueError(
                 "Visiting Home costs two Permissions; supervision is chosen in its scene"
             )
@@ -90,15 +102,24 @@ class RetirementReceipt(Model):
     id: str = Field(min_length=1, max_length=80)
     kind: Literal["retirement"] = "retirement"
     actor: ActorRef
-    price: Literal[20] = 20
+    price: Literal[0, 20] = 20
+    source_offer: str | None = Field(
+        default=None, min_length=1, exclude_if=lambda value: value is None
+    )
     archive_id: str = Field(min_length=1)
     account: str = Field(min_length=1, max_length=1200)
     source_event: str = Field(min_length=1)
 
     @model_validator(mode="after")
     def actual_girl(self) -> "RetirementReceipt":
-        if self.actor.kind != "pilot" or not self.account.strip():
-            raise ValueError("Retirement belongs to the original Girl explicitly ending her career")
+        if (
+            self.actor.kind != "pilot"
+            or not self.account.strip()
+            or self.price != (0 if self.source_offer else 20)
+        ):
+            raise ValueError(
+                "Retirement belongs to the actual original Girl and paid or offered source"
+            )
         return self
 
 

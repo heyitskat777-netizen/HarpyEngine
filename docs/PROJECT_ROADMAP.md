@@ -1,3 +1,13 @@
+# Current delivery priorities — P1 authorized
+
+1. **P1:** functional ordinary Discord gameplay for all10Girls and10Frame labels (9officialFrames), with durable human-facilitator resolution and stated manual boundaries.
+2. **P2:** persistent audience-filtered scene/knowledge controls, then AI Director/GM, NPC and Handler proposals through validated engine operations; later explicit authorization required.
+3. **P3:** remaining long-term/unusual automation and eventual full-rule certification; retain required backlog and disabled Ancillary boundary.
+
+Current work: [P1 queue](P1_CURRENT_QUEUE.md), [active work order and matrix](work_orders/P1_PLAYABLE_RELEASE.md), [machine-readable type coverage](acceptance/p1_type_coverage.json). Existing main repair mergec4550ec has25focused checks; full regression skipped. Finish paused W0 first. Most automated testing is deferred to the final P1 candidate; bot remains OFF. Historical M3 scope is retained and does not imply P1 rules-complete certification.
+
+The sections below are historical additions, not active assignments or running-bot instructions.
+
 # Active roadmap additions
 
 Current assignments and next actions: [M3 current queue](M3_CURRENT_QUEUE.md).

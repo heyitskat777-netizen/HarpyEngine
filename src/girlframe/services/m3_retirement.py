@@ -55,6 +55,9 @@ class RetirementService(RequisitionService):
                     "Resolve actual custody, extraction or medical care before Retirement."
                 )
             identity, archive, source = str(uuid4()), str(uuid4()), str(uuid4())
+            from girlframe.engine.m3_offered_requisition_state import require_request
+
+            require_request(state, actor)
             prepare_payment(self.game, c, state, viewer, actor, "retirement", 20)
             paid = rules.pay(
                 state,
