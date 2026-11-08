@@ -113,6 +113,34 @@ class CycleService:
         ):
             raise WorkflowError("This action belongs to the original living Girl's period.")
 
+    def _mentor_participants(
+        self,
+        c: Connection,
+        period: rules.Period,
+        state: GameState,
+        participants: tuple[int, ...],
+        *,
+        independent: frozenset[int] = frozenset(),
+    ) -> tuple[int, ...]:
+        from girlframe.services.m3_mentor import required_companions
+
+        actual = []
+        for uid in participants:
+            if uid not in period.pilots or uid == period.handler or uid in independent:
+                continue
+            character = period.character_ids.get(str(uid))
+            if character is None:
+                raise WorkflowError("Recover the original Pilot scene binding before companions")
+            actual.append(ActorRef(kind="pilot", entity=str(uid), incarnation=character))
+        result = required_companions(
+            self.game, c, state, participants, present_actors=tuple(actual)
+        )
+        if any(str(uid) not in period.character_ids for uid in set(result) - set(participants)):
+            raise WorkflowError(
+                "MENTOR_PERIOD_ROLE_REQUIRED: bind the original Newgirl to this period"
+            )
+        return result
+
     def _bind_scene(
         self,
         c: Connection,
@@ -350,12 +378,19 @@ class CycleService:
 
                 if kind is None:
                     raise WorkflowError("Void Observation always requires an actual scene.")
+                independent = scene_roles(period, state, viewer.user_id) - {
+                    viewer.user_id,
+                    period.handler,
+                }
+                people = self._mentor_participants(
+                    c, period, state, participants, independent=independent
+                )
                 selected = scene(
                     period,
                     expected,
                     viewer.user_id,
                     kind,
-                    participants,
+                    people,
                     summary,
                     extra_participants=scene_roles(period, state, viewer.user_id),
                     required_participants=scene_roles(period, state, viewer.user_id, kind),
@@ -366,16 +401,20 @@ class CycleService:
                     c,
                     state,
                     selected_scene,
-                    independent_controllers=scene_roles(period, state, viewer.user_id)
-                    - {viewer.user_id, period.handler},
+                    independent_controllers=independent,
                 )
                 return selected, state, [], {}
+            people = (
+                self._mentor_participants(c, period, state, participants)
+                if kind is not None
+                else participants
+            )
             updated = rules.choose_scene(
                 period,
                 expected,
                 viewer.user_id,
                 kind=kind,
-                participants=participants,
+                participants=people,
                 summary=summary,
                 available_pilots=frozenset(state.order),
             )
@@ -741,18 +780,25 @@ class CycleService:
                     )
             elif context is not None:
                 raise WorkflowError("This scene does not take a world entity or NPC operation.")
+            people = self._mentor_participants(
+                c,
+                period,
+                state,
+                tuple(dict.fromkeys(participants + tuple(extra))),
+                independent=extra,
+            )
             updated = rules.handler_scene(
                 period,
                 expected,
                 viewer.user_id,
                 kind,
-                tuple(dict.fromkeys(participants + tuple(extra))),
+                people,
                 summary,
                 extra_participants=extra,
             )
             if (
                 kind in ("permission", "punish", "exploit")
-                and (recipient not in participants or recipient not in period.pilots)
+                and (recipient not in people or recipient not in period.pilots)
             ) or (kind not in ("permission", "punish", "exploit") and recipient is not None):
                 raise WorkflowError(
                     "Choose an actual Girl participant only for the Permission award."
@@ -760,7 +806,7 @@ class CycleService:
             updated.handler_recipient = recipient
             updated.handler_context = context
             assert updated.handler_scene is not None
-            self._bind_scene(c, state, updated.handler_scene)
+            self._bind_scene(c, state, updated.handler_scene, independent_controllers=extra)
             if kind == "punish":
                 self.missions.access.authorize(c, viewer, "discipline")
                 updated.handler_work = identity + ":handler-punishment"

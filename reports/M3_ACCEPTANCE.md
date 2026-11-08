@@ -1,5 +1,44 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Mentor daily attendance and canonical callsign — 2026-11-08
+
+Extends source `1d0031a`. Reconciliation preserved existing M2 assignment, Personal
+Bond, initial name, effective rank and Mentor Tag/self-mark behavior. The new
+runtime operation proves the actual original Mentor, changes only the canonical
+fictional callsign and records its source. Profile revisions/resources stay intact.
+The recipient independently uses existing queue_sync, which already reads the
+current canonical callsign. Saved interrupted recovery prevents a source-staling
+rename. Native `/campaign mentor` and private naming history use existing controls.
+
+Actual Mentor Pilot participation now adds original Newgirl companions before
+ordinary, Observation and Handler scene binding/invitations. Human NPC/external
+controllers do not implicitly become Pilot participants. Character bindings and
+actual human attestations remain mandatory; the helper supplies no attendance.
+Routine decline creates no scene or invented companions. Unrepresentable role
+collisions and out-of-period original people fail closed rather than use aliases.
+
+| Executed evidence | Result |
+|---|---|
+| Three new normal flows plus ordinary/NPC scenes and actual Handler report privacy | 6 passed /9.84s; `var/m3-mentor-integrated.xml` |
+| Worker fixed normals | 3 passed /5.40s on first run; overlaps the integrated selection |
+| Coherent static | Ruff/format8 Python and mypy7 source pass without drift; `var/m3-mentor-union-static.json` |
+
+Tests exercise native original-Mentor name/retry/rollback/private view, separate
+owner cosmetic request and unchanged profile/resources; actual original companion
+invitations/attestation and recovery blocking; no-scene routine result; and actual
+Handler-scene companionship. Observation uses the same connected actor-aware
+helper, but no new direct companion-Observation scenario was added. The existing
+NPC scene compatibility check confirms no implicit character participation.
+
+The neutral original-Mentor proof now has two genuine tested consumers, retaining
+explicit rule/body/scene decisions in their services. No broad relationship rewrite
+or test-speed improvement is claimed. Generic other-cause mentoring discipline,
+Newgirl Sex/multiple-Mentor and broader body/role scene adapters remain required.
+Active Easy Target/Newgirl Sex work is excluded from this snapshot. No new full
+regression, remote CI, independent source review, human acceptance, deployment,
+publication or private-engine write occurred. Bot stays off; RULES_SUBSET.
+
+
 ## Newgirl Trainee: actual teaching and mentorship duty — 2026-11-08
 
 Extends source `f2cbc4f`. Unrolled human-authored factual teaching binds the original

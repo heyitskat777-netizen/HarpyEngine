@@ -1935,6 +1935,19 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         except WorkflowError as exc:
             await interaction.followup.send(str(exc), ephemeral=True)
 
+    @campaign.command(
+        name="mentor", description="Original Mentor callsign and owned cosmetic controls"
+    )
+    async def mentor_controls(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_mentor import open_mentor
+        from girlframe.services.m3_mentor import MentorService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_mentor(interaction, MentorService(game))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
     @campaign.command(name="trainee", description="Actual teaching and source-owned Mentor duty")
     async def trainee_controls(interaction: discord.Interaction) -> None:
         from girlframe.discord_adapter.m3_trainee import open_trainee

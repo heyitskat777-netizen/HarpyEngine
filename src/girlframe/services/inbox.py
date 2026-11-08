@@ -924,6 +924,22 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_mentor import MentorService
+
+            for mentor in MentorService(GameService(self.store))._tasks(connection, viewer):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, mentor),
+                        prefix="mentor:",
+                        source="mentor",
+                        counterpart="Original Mentor and actual Newgirl",
+                        effect="Review the genuine Mentor-authored callsign.",
+                        details="The owner separately controls current Discord cosmetic sync.",
+                        primary="Review Mentor name",
+                        task="m3_mentor",
+                    )
+                )
+
             from girlframe.services.m3_trainee import TraineeService
 
             for row in TraineeService(GameService(self.store))._tasks(connection, viewer):

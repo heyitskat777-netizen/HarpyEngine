@@ -6298,6 +6298,38 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "mentor-companion-scope",
+      "policy_key": "mentor_companion_scope",
+      "summary": "Required Newgirl companionship applies when the actual Mentor Pilot participates in an Off-Duty scene, including another owner's scene.",
+      "source": "Mentor, rulebook PDF42/printed40",
+      "rationale": "The printed duty refers to each of her Off-Duty scenes, not only the one she personally selected. Actual actor references distinguish a Pilot from a human acting only an NPC.",
+      "alternatives": [
+        "Apply it only to the Mentor's own chosen scene."
+      ],
+      "implementation_note": "Invite the original actual Newgirl; never auto-attest. Producer role collisions or missing original-period binding fail closed.",
+      "change_impact": "Version future scene/name authorization changes while preserving original assignments, actual attendance and existing cosmetic events.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "mentor-name-cosmetics",
+      "policy_key": "mentor_name_cosmetics",
+      "summary": "The actual Mentor chooses the canonical fictional callsign; current Discord cosmetic sync remains a separate existing owner-controlled operation.",
+      "source": "Mentor, rulebook PDF42/printed40",
+      "rationale": "Preserve printed name authority and existing platform authorization. The existing queue already prefers the active canonical callsign over the frozen profile.",
+      "alternatives": [
+        "Introduce an explicit versioned source-authorized automatic cosmetic policy later."
+      ],
+      "implementation_note": "Preserve profile revision/binding and resources; do not change an interrupted Play's source fingerprints during pending recovery.",
+      "change_impact": "Version future scene/name authorization changes while preserving original assignments, actual attendance and existing cosmetic events.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -8198,7 +8230,8 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_trainee.py",
-        "tests/test_m2_game.py"
+        "tests/test_m2_game.py",
+        "tests/rules/test_mentor.py"
       ],
       "m2_play_id": null,
       "module": "core"

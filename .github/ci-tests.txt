@@ -1,9 +1,9 @@
-# Current Trainee flows and affected original-role/Tag/Punishment consumers.
+# Mentor daily source flows and affected real scene/Handler/privacy consumers.
 # Final M3 mode still runs all tests.
-tests/rules/test_trainee.py
-tests/test_m2_game.py::test_newgirl_self_mark_and_nonrejectable_mentor_tag
-tests/rules/test_cast_service.py::test_character_replacement_cannot_inherit_original_legacy_join_or_cast_resources
-tests/rules/test_vatgrown.py::test_low_actual_observer_punishment_real_effect_then_benefit_and_parent_chat_closure
+tests/rules/test_mentor.py
+tests/rules/test_off_duty_cycle.py::test_actual_preparation_owned_rolls_recovery_review_and_world_end_are_resumable
+tests/rules/test_off_duty_handler_scenes.py::test_npc_scene_requires_actual_role_player_and_records_only_its_real_effect[hire-foundation]
+tests/rules/test_trainee.py::test_actual_shirking_report_original_handler_punishes_mentor_not_newgirl_and_saved_history
 tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng
-tests/test_m2_game.py::test_live_default_gate_and_active_editor_protection
 tests/test_m2_game.py::test_campaign_isolation_and_delivery_uncertainty_no_reroll
+tests/test_m2_game.py::test_live_default_gate_and_active_editor_protection
