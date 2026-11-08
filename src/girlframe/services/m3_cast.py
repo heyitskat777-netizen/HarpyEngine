@@ -357,6 +357,35 @@ class CastService:
         )
 
 
+def withdraw_easy_target(
+    game: "GameService", c: Connection, state: GameState, work: str, event: str
+) -> ActorRef:
+    """One proved contempt role leaves its actual held scene, preserving controller aliases."""
+    from girlframe.engine import m3_easy_target as rules
+    from girlframe.services.m3_easy_target import leave_actor
+
+    actor = leave_actor(game, c, state, work, event)
+    reaction = next(x for x in rules.records(state, rules.Reaction) if x.id == work)
+    source = next(x for x in rules.records(state, rules.Session) if x.id == reaction.session)
+    before = next(x for x in state.scene_casts if x.id == source.cast.id and x.open)
+    after = m3_cast.withdraw(before, actor, reaction.controller)
+    state.scene_casts = [after if x.id == before.id else x for x in state.scene_casts]
+    people = sorted(
+        {x.controller for x in after.roles if x.actor.kind == "pilot"}
+        | ({after.facilitator} if after.facilitator is not None else set())
+    )
+    table = t.m2["m2_scenes"]
+    c.execute(
+        table.update()
+        .where(
+            table.c.campaign_id == game.store.campaign_id,
+            table.c.id == before.id,
+        )
+        .values(participants_json=json.dumps(people), revision=table.c.revision + 1)
+    )
+    return actor
+
+
 def change_doll_presence(
     game: "GameService",
     viewer: GuildViewer,

@@ -8,6 +8,7 @@ import discord
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m3_trainee import TraineeService
 
 
@@ -39,6 +40,13 @@ async def open_trainee(
                     channel,
                     data["revision"],
                     answer["account"],
+                    ActorRef.model_validate(
+                        next(
+                            x["ref"]
+                            for x in data["mentors"]
+                            if ActorRef.model_validate(x["ref"]).token == answer["mentor"][0]
+                        )
+                    ),
                 )
                 return "Actual teaching saved. Open its source to make your Trainee choice: " + str(
                     result["id"]
@@ -49,7 +57,17 @@ async def open_trainee(
                 "Actual Mentor teaching",
                 "Describe the actual teaching by your original Mentor, intentional or incidental. "
                 "Do not invent their speech or import private notes. This does not roll dice.",
-                [Field("account", "Actual teaching and factual scene context", paragraph=True)],
+                [
+                    Field(
+                        "mentor",
+                        "Actual teaching Mentor",
+                        tuple(
+                            (ActorRef.model_validate(x["ref"]).token, x["label"])
+                            for x in data["mentors"]
+                        ),
+                    ),
+                    Field("account", "Actual teaching and factual scene context", paragraph=True),
+                ],
                 submit,
             )
             await reply(current, form.text(), form)

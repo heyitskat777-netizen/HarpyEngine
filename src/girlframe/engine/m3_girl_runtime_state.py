@@ -104,6 +104,17 @@ def change_playbook_runtime(
 
 def relation_current(sheet: object, relation: Literal["mentor", "pair"], state: object) -> bool:
     """A runtime relationship never transfers from an original person to their replacement."""
+    if relation == "mentor":
+        from girlframe.engine.m2 import GameState, PilotSheet
+        from girlframe.engine.m3_mentorship import active_mentors
+
+        if isinstance(state, GameState) and isinstance(sheet, PilotSheet) and sheet.character_id:
+            return bool(
+                active_mentors(
+                    state,
+                    ActorRef(kind="pilot", entity=str(sheet.owner), incarnation=sheet.character_id),
+                )
+            )
     runtime = getattr(sheet, "girl_runtime", None)
     setup = runtime.setup if runtime else None
     actual = getattr(setup, relation, None) if setup else None
@@ -114,17 +125,24 @@ def relation_current(sheet: object, relation: Literal["mentor", "pair"], state: 
 
 
 def mentor_tag(sheet: object, tag: object, state: object) -> bool:
+    from girlframe.engine.m2 import GameState, PilotSheet
+    from girlframe.engine.m3_mentorship import active_mentors
+
     if (
         getattr(tag, "gm_setter_appointment", None) is not None
         or not has_rule(sheet, "girl.newgirl.mentor", "NEWGIRL")
-        or not relation_current(sheet, "mentor", state)
-        or getattr(tag, "giver", None) != getattr(sheet, "mentor", None)
+        or not isinstance(state, GameState)
+        or not isinstance(sheet, PilotSheet)
+        or not sheet.character_id
     ):
         return False
-    runtime = getattr(sheet, "girl_runtime", None)
-    ref = runtime.setup.mentor if runtime and runtime.setup else None
+    mentors = active_mentors(
+        state, ActorRef(kind="pilot", entity=str(sheet.owner), incarnation=sheet.character_id)
+    )
     actual = getattr(tag, "giver_actor", None)
-    if ref is not None and actual is not None:
-        return bool(ref == actual)
-    original = getattr(tag, "giver_character", None)
-    return bool(ref is None or original is None or ref.incarnation == original)
+    giver, original = getattr(tag, "giver", None), getattr(tag, "giver_character", None)
+    return any(
+        int(ref.entity) == giver
+        and (ref == actual if actual is not None else original in (None, ref.incarnation))
+        for ref in mentors
+    )

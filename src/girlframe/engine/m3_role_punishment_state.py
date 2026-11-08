@@ -25,6 +25,7 @@ class RolePunishment(Model):
         "dose_up",
         "vatgrown_doll",
         "show_dog",
+        "easy_target",
         "trainee",
         "succubus_npc_disobey",
     ]
@@ -77,6 +78,13 @@ class RolePunishment(Model):
             or self.chooser != self.executor
         ):
             raise ValueError("Preserve the actual unrolled teaching and original duty executor")
+        if self.source_kind == "easy_target" and (
+            self.executor.kind != "handler"
+            or self.chooser is None
+            or self.source_work is None
+            or self.action is None
+        ):
+            raise ValueError("Preserve the actual Newgirl chooser, hurter and Handler executor")
         if self.source_kind == "show_dog" and (
             self.executor.kind != "handler"
             or self.chooser != self.executor
@@ -102,6 +110,7 @@ class RolePunishment(Model):
             "succubus_npc_disobey",
             "vatgrown_doll",
             "show_dog",
+            "easy_target",
             "trainee",
         ) and (self.executor.kind not in ("pilot", "external_pilot") or self.chooser is None):
             raise ValueError("Preserve the Enforcer source's original chooser and executor")

@@ -2,6 +2,7 @@
 
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model
+from girlframe.engine.m3_mentorship import is_mentor
 from girlframe.engine.shared_setup import CallsignChoice
 
 RULE = "girl.newgirl.mentor"
@@ -44,7 +45,7 @@ def rename(
         or mentor.entity not in original.sheets
         or original.sheets[learner.entity].character_id != learner.incarnation
         or original.sheets[mentor.entity].character_id != mentor.incarnation
-        or original.sheets[learner.entity].mentor != int(mentor.entity)
+        or not is_mentor(original, learner, mentor)
     ):
         raise ValueError("Use the actual distinct original Newgirl and proved assigned Mentor")
     if any(x.id == event for x in records(original)):

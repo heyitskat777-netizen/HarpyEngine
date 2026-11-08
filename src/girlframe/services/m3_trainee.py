@@ -12,7 +12,6 @@ from girlframe.engine import m3_trainee as rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef, Model
-from girlframe.engine.m3_girl_runtime_state import mentor_tag
 from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_work_scope import WorkScope
 from girlframe.services.m2_choices import ChoiceEngine
@@ -42,17 +41,25 @@ def _access(game: GameService, c: Connection, viewer: GuildViewer) -> None:
 
 
 def _relation(
-    game: GameService, c: Connection, state: GameState, learner: ActorRef
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    learner: ActorRef,
+    selected: ActorRef | None = None,
 ) -> tuple[ActorRef, str]:
     from girlframe.services.m3_mentorship import original_mentor
 
-    return original_mentor(game, c, state, learner, required_rule=rules.RULE)
+    return original_mentor(game, c, state, learner, required_rule=rules.RULE, selected=selected)
 
 
 def _mentor(
-    game: GameService, c: Connection, state: GameState, learner: ActorRef
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    learner: ActorRef,
+    selected: ActorRef | None = None,
 ) -> tuple[ActorRef, str]:
-    mentor, source = _relation(game, c, state, learner)
+    mentor, source = _relation(game, c, state, learner, selected)
     _native(game, c, state, learner)
     _native(game, c, state, mentor)
     return mentor, source
@@ -123,8 +130,7 @@ def _tags(
     result = tuple(
         x
         for x in state.sheets[lesson.learner.entity].tags
-        if mentor_tag(state.sheets[lesson.learner.entity], x, state)
-        and x.giver_actor == lesson.mentor
+        if x.giver_actor == lesson.mentor and x.gm_setter_appointment is None
     )
     for value in result:
         ChoiceEngine(game).prove_tag_setter(c, state, int(lesson.learner.entity), value)
@@ -156,7 +162,7 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
     _event(game, c, lesson.event, "m3.trainee_taught", int(lesson.learner.entity))
     if lesson not in rules.records(born, rules.Teaching):
         raise WorkflowError("Preserve the immutable actual teaching account and original people")
-    mentor, source = _relation(game, c, born, lesson.learner)
+    mentor, source = _relation(game, c, born, lesson.learner, lesson.mentor)
     if (
         mentor != lesson.mentor
         or source != lesson.relation_source
@@ -379,16 +385,22 @@ class TraineeService:
             raise WorkflowError(str(error)) from None
 
     def record_teaching(
-        self, viewer: GuildViewer, key: str, channel: int, revision: int, account: str
+        self,
+        viewer: GuildViewer,
+        key: str,
+        channel: int,
+        revision: int,
+        account: str,
+        mentor: ActorRef | None = None,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             state = load_state(c, self.store.campaign_id)
             if state.revision != revision or not account.strip() or len(account) > 1200:
                 raise WorkflowError("Refresh the actual scene and author the factual teaching")
             learner = current_ref(state, viewer.user_id)
-            mentor, source = _mentor(self.game, c, state, learner)
+            selected, source = _mentor(self.game, c, state, learner, mentor)
             cast = _cast(self.game, c, state, channel)
-            if not all(any(x.actor == ref for x in cast.roles) for ref in (learner, mentor)):
+            if not all(any(x.actor == ref for x in cast.roles) for ref in (learner, selected)):
                 raise WorkflowError("Use the real original Mentor and Newgirl in this actual scene")
             _idle(self.game, c, cast.id)
             if not any(x.id == cast.id for x in state.scene_casts):
@@ -402,7 +414,7 @@ class TraineeService:
                 rules.Teaching(
                     id=identity,
                     learner=learner,
-                    mentor=mentor,
+                    mentor=selected,
                     handler=handler,
                     cast=cast,
                     relation_source=source,
@@ -425,7 +437,12 @@ class TraineeService:
             viewer,
             key,
             "m3.trainee_taught",
-            dict(channel=channel, revision=revision, account=account),
+            dict(
+                channel=channel,
+                revision=revision,
+                account=account,
+                **({"mentor": mentor.model_dump(mode="json")} if mentor is not None else {}),
+            ),
             operation,
         )
 
@@ -581,8 +598,10 @@ class TraineeService:
             raise WorkflowError(
                 "Only this original person's current human owns this source decision"
             )
-        mentor, _ = _mentor(self.game, c, state, lesson.learner)
-        if mentor != lesson.mentor or active_handler(state) != lesson.handler:
+        # A later genuine Mentor swap does not erase an already owed teaching duty.
+        _native(self.game, c, state, lesson.learner)
+        _native(self.game, c, state, lesson.mentor)
+        if active_handler(state) != lesson.handler:
             raise WorkflowError(
                 "Recover the original Mentor and Handler; never substitute their replacements"
             )
@@ -728,23 +747,35 @@ class TraineeService:
         with self.store.engine.connect() as c:
             _access(self.game, c, viewer)
             state = load_state(c, self.store.campaign_id)
-            can_teach = False
-            mentor = None
+            mentors: list[dict[str, Any]] = []
             if str(viewer.user_id) in state.sheets:
                 learner = current_ref(state, viewer.user_id)
                 try:
-                    assigned, _ = _mentor(self.game, c, state, learner)
-                    cast = _cast(self.game, c, state, channel)
-                    can_teach = all(
-                        any(x.actor == ref for x in cast.roles) for ref in (learner, assigned)
+                    from girlframe.services.m3_mentorship import original_mentors
+
+                    assigned, _ = original_mentors(
+                        self.game, c, state, learner, required_rule=rules.RULE
                     )
-                    mentor = state.sheets[assigned.entity].callsign
+                    cast = _cast(self.game, c, state, channel)
+                    _native(self.game, c, state, learner)
+                    for ref in assigned:
+                        _native(self.game, c, state, ref)
+                        if all(
+                            any(x.actor == actor for x in cast.roles) for actor in (learner, ref)
+                        ):
+                            mentors.append(
+                                dict(
+                                    ref=ref.model_dump(mode="json"),
+                                    label=state.sheets[ref.entity].callsign,
+                                )
+                            )
                 except (WorkflowError, ValueError):
                     pass
             return dict(
                 revision=state.revision,
-                can_teach=can_teach,
-                mentor=mentor,
+                can_teach=bool(mentors),
+                mentor=", ".join(x["label"] for x in mentors),
+                mentors=mentors,
                 history=self._tasks(c, viewer),
             )
 

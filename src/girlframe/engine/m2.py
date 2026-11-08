@@ -481,20 +481,25 @@ def higher(state: GameState, first: int, second: int) -> bool:
     if second == state.handler:
         return False
     a, b = state.sheets.get(str(first)), state.sheets.get(str(second))
-    from girlframe.engine.m3_girl_runtime_state import has_rule, relation_current
+    from girlframe.engine.m3_actor_state import ActorRef
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+    from girlframe.engine.m3_mentorship import active_mentors
 
-    a_mentor = (
-        a is not None
-        and a.mentor == second
-        and has_rule(a, "girl.newgirl.mentor", "NEWGIRL")
-        and relation_current(a, "mentor", state)
-    )
-    b_mentor = (
-        b is not None
-        and b.mentor == first
-        and has_rule(b, "girl.newgirl.mentor", "NEWGIRL")
-        and relation_current(b, "mentor", state)
-    )
+    def assigned(sheet: PilotSheet | None, other: int) -> bool:
+        return bool(
+            sheet is not None
+            and sheet.character_id
+            and has_rule(sheet, "girl.newgirl.mentor", "NEWGIRL")
+            and any(
+                x.entity == str(other)
+                for x in active_mentors(
+                    state,
+                    ActorRef(kind="pilot", entity=str(sheet.owner), incarnation=sheet.character_id),
+                )
+            )
+        )
+
+    a_mentor, b_mentor = assigned(a, second), assigned(b, first)
     if a_mentor and b_mentor:
         raise ValueError("Reciprocal Mentor authority is unresolved")
     if a_mentor:

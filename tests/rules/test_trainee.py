@@ -52,6 +52,7 @@ def teach(controls, game, *, native=False):
         opened = current(2, 97902)
         await menu.confirm.callback(opened)
         form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values["mentor"] = (current_ref(state(game), 3).token,)
         form.values["account"] = (
             "PRIVATE_TEACHING My Mentor demonstrates patient controlled movement"
         )

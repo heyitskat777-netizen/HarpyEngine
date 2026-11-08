@@ -1043,6 +1043,42 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_newgirl_sex import NewgirlSexService
+
+            for newgirl_sex in NewgirlSexService(GameService(self.store))._tasks(
+                connection, viewer
+            ):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, newgirl_sex),
+                        prefix="newgirl-sex:",
+                        source="newgirl_sex",
+                        counterpart="Original voluntary source participants",
+                        effect="Review your own saved source choices and effects.",
+                        details="Other people retain their own choices and privacy.",
+                        primary="Review Newgirl source",
+                        task="m3_newgirl_sex",
+                    )
+                )
+
+            from girlframe.services.m3_easy_target import EasyTargetService
+
+            for easy_target in EasyTargetService(GameService(self.store))._tasks(
+                connection, viewer
+            ):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, easy_target),
+                        prefix="easy-target:",
+                        source="easy_target",
+                        counterpart="Original actual reacting people",
+                        effect="Review your own saved source choices and effects.",
+                        details="Other people retain their own choices and privacy.",
+                        primary="Review Easy Target source",
+                        task="m3_easy_target",
+                    )
+                )
+
             from girlframe.services.m3_oldgen import OldgenService
 
             for oldgen in OldgenService(GameService(self.store))._tasks(connection, viewer):

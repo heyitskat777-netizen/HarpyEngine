@@ -1,5 +1,65 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Newgirl Sex, current Mentor sets and Easy Target — 2026-11-08
+
+Extends `d038bba`/status `b2b9901`; source remains RULES_SUBSET and bot off.
+Actual voluntary native-Girl intimacy freezes every original participant's consent,
+cast/body and canonical one-roll source. Normal evidence covers mid respect yes/no,
+high actual damage/decline, low optional acceptance/ordinary decline and actual
+simultaneous group Mentors. Real Status/Bonds/Tags/damage, source discovery receipts
+and private reopen use existing canonical consumers. No scalar proxy represents a
+group: current Mentor sets retain immutable creation/history and original-person
+proof. Rank, self-mark/nonrejectable Mentor Tags, callsign, selected teaching and
+actual Off-Duty companion membership consume the real set. An immediate actual
+Trainee duty blocks a later Play before RNG; real discipline precedes a genuine
+later swap and old completed lesson/case history remains unchanged.
+
+Easy Target uses separate original-person reactions, actual source Tag, genuine
+child performances, real bodily hurt and Newgirl-chosen Handler-executed Punishment,
+actual request judgment/Status/Bond, independent optional protection-failure Tag,
+real contempt departure and positive-Tag cohort assistance/exemption. Low off-list
+responses bind supported real performances. NPC/controller aliases remain distinct;
+source-only cast departure updates the legacy projection too. A completed old
+protection source stays complete when an actual later injury creates an entitlement;
+it cannot reopen over a current action. Privacy, stale/retry/rollback and known
+receipt/no-new-RNG checks are folded into these normal workflows.
+
+| Executed evidence | Result |
+|---|---|
+| Final coherent `pytest -q tests/rules/test_newgirl_sex.py tests/rules/test_easy_target.py --maxfail=1 --junitxml=var/m3-newgirl-integrated.xml` | 10 passed /29.87s, frozen final source |
+| Existing Mentor/Trainee/original-character compatibility | 10 passed /14.15s; `var/m3-newgirl-shared-compat.xml`, before final child-only fixes and original-teaching Tag refinement |
+| Existing legal-designation, Battle declaration and actual Punishment consumers | 3 passed /6.36s; `var/m3-newgirl-affected-consumers.xml`, before final finite child-source allowance |
+| Final affected original-teaching Tag erasure, ordinary and Ankou Frames | 2 passed /3.55s; `var/m3-newgirl-final-original-teaching-tag.xml`, overlaps earlier compatibility |
+| Coherent static over every changed Python file | Ruff/format29 Python and mypy26 source passed without drift; `var/m3-newgirl-union-static.json` |
+| Registry/repository and offline Discord SDK | RULES_SUBSET; registry205 subsets/271 unimplemented, no independent verification; repository0 findings;21 campaign commands including both new controls registered offline |
+| Explicit focused CI selection | 20 cases collected only; `var/m3-newgirl-ci-collection.txt`; not remote CI or another execution |
+
+Private handoffs retain failed attempts and segmented worker evidence. Initial
+fixture/source-cast/response-proof errors were repaired; a group ordering test
+correctly encountered required work and now performs the duty before swapping.
+Easy Target found and repaired finite child routing and late completion, plus an
+invalid attempt to reopen a completed source over a current action. No earlier
+mixed run is represented as final green or as full regression. Exact final source
+hashes: `var/m3-newgirl-union-source-snapshot.json`; owned worker snapshots match.
+
+The demonstrated shared helper is limited to original-person Mentor membership
+and provenance; source-specific choices, consent, rule effects and duties remain
+explicit. The existing typed Inbox task helper serves both workflows, and genuine
+third-Girl setup reuses the existing Marriage creation workflow. No generic rules
+DSL, acquisition rewrite or measured test-speed improvement is claimed.
+
+Required gaps remain: NPC/Handler/external/other-body intimacy and Mentor duty
+adapters; other factual discovery channels (positive normal uses actual addressed
+disclosure); terminal/replacement/temporary/borrowed source continuations; other
+hurt/protection/actor/unsupported performance adapters and off-scene failure proof.
+The actual native group Gender and damage-completion ports are connected, but this
+selection does not directly combine group Sex with every designation or terminal
+damage branch. Those boundaries remain explicit, not source exclusions. Newgirl
+heading and whole M3 are not certified complete. Final full regression/global
+checks, independent rules/clarity review and player/owner acceptance remain pending.
+No live commands, deployment, publication or private recovered-engine writes.
+
+
 ## Mentor daily attendance and canonical callsign — 2026-11-08
 
 Extends source `1d0031a`. Reconciliation preserved existing M2 assignment, Personal

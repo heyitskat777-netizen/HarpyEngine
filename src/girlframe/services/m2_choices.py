@@ -284,6 +284,16 @@ class ChoiceEngine:
 
             apply_oldgen_sex(self.game, c, state, action, request, answer)
             return
+        if kind.startswith("newgirl_sex_") and action["data"].get("newgirl_sex"):
+            from girlframe.services.m3_newgirl_sex import apply_choice as apply_newgirl_sex
+
+            apply_newgirl_sex(self.game, c, state, action, request, answer)
+            return
+        if kind.startswith("easy_target_") and action["data"].get("easy_target"):
+            from girlframe.services.m3_easy_target import apply as apply_easy_target
+
+            apply_easy_target(self.game, c, state, action, request, answer)
+            return
         if kind.startswith("oldgen_") and action["data"].get("oldgen"):
             from girlframe.services.m3_oldgen import apply_choice as apply_oldgen
 
@@ -1223,6 +1233,9 @@ class ChoiceEngine:
                 }
             )
             self.set_total(action)
+            from girlframe.services.m3_easy_target import observe_assistance
+
+            observe_assistance(self.game, c, state, action, action["data"]["response_event"])
             if collar:
                 self.results(c, state, action)
                 return
@@ -1291,6 +1304,16 @@ class ChoiceEngine:
             from girlframe.services.m3_oldgen_sex import results as results_oldgen_sex
 
             results_oldgen_sex(self.game, c, state, action)
+            return
+        if action["data"].get("newgirl_sex"):
+            from girlframe.services.m3_newgirl_sex import results as results_newgirl_sex
+
+            results_newgirl_sex(self.game, c, state, action)
+            return
+        if action["data"].get("easy_target"):
+            from girlframe.services.m3_easy_target import results as results_easy_target
+
+            results_easy_target(self.game, c, state, action)
             return
         if action["data"].get("oldgen"):
             from girlframe.services.m3_oldgen import results as results_oldgen
@@ -1442,6 +1465,14 @@ class ChoiceEngine:
             require(
                 complete_ankou(self.game, c, state, action, action["data"]["response_event"]),
                 "Complete the actual Feedback child and source.",
+            )
+            return
+        if action["data"].get("easy_target_child"):
+            from girlframe.services.m3_easy_target import complete_child as complete_easy_child
+
+            require(
+                complete_easy_child(self.game, c, state, action, action["data"]["response_event"]),
+                "Complete this original Easy Target performance and source",
             )
             return
         if action["data"].get("princess_child"):

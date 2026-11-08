@@ -140,6 +140,28 @@ def _sex(state: GameState, action: dict[str, Any]) -> tuple[ActorRef, ActorRef]:
     raise WorkflowError("This actual Sex source needs its legal-designation adapter")
 
 
+def _sex_pairs(state: GameState, action: dict[str, Any]) -> tuple[tuple[ActorRef, ActorRef], ...]:
+    if action["data"].get("newgirl_sex") and action["data"]["play"] == "newgirl_sex":
+        from girlframe.services.m3_newgirl_sex import sex_parties
+
+        actor, *partners = sex_parties(state, action)
+        return tuple((actor, partner) for partner in partners)
+    return (_sex(state, action),)
+
+
+def _selected_partner(
+    state: GameState, action: dict[str, Any], tag_id: str
+) -> tuple[ActorRef, ActorRef]:
+    matches = [
+        (actor, partner)
+        for actor, partner in _sex_pairs(state, action)
+        if any(x.id == tag_id for x in state.sheets[partner.entity].tags)
+    ]
+    if len(matches) != 1:
+        raise WorkflowError("Choose the actual original participant whose Tag is selected")
+    return matches[0]
+
+
 def man_tag_options(
     game: GameService, c: Connection, state: GameState, action: dict[str, Any], owner: int
 ) -> list[dict[str, Any]]:
@@ -149,18 +171,23 @@ def man_tag_options(
         "princess_sex",
         "stim_sex",
         "oldgen_sex",
+        "newgirl_sex",
     ):
         return []
-    actor, partner = _sex(state, action)
-    value = _current(game, c, state, actor)
-    if actor.entity != str(owner) or value is None or value.gender != "man":
-        return []
-    _native(game, c, state, partner)
-    return [
-        dict(id=x.id, label=x.label, partner=partner.model_dump(mode="json"))
-        for x in state.sheets[partner.entity].tags
-        if owner in x.observers and x.scene_used != action["scene_id"] and not x.rejection_pending
-    ]
+    result: list[dict[str, Any]] = []
+    for actor, partner in _sex_pairs(state, action):
+        value = _current(game, c, state, actor)
+        if actor.entity != str(owner) or value is None or value.gender != "man":
+            continue
+        _native(game, c, state, partner)
+        result.extend(
+            dict(id=x.id, label=x.label, partner=partner.model_dump(mode="json"))
+            for x in state.sheets[partner.entity].tags
+            if owner in x.observers
+            and x.scene_used != action["scene_id"]
+            and not x.rejection_pending
+        )
+    return result
 
 
 def propose_man_tag(
@@ -187,7 +214,7 @@ def propose_man_tag(
     marker = markers.select(game, c, state, action, owner, answer.fields.get("marker"))
     if marker.actor != current_ref(state, owner):
         raise WorkflowError("The actual Man marks his partner's Tag")
-    _, partner = _sex(state, action)
+    _, partner = _selected_partner(state, action, answer.denied[0])
     from girlframe.engine.m3_girl_runtime_state import has_rule, relation_current
 
     sheet = state.sheets[partner.entity]
@@ -216,7 +243,7 @@ def apply_man_tag(
         x["id"] for x in options
     }:
         raise WorkflowError("The actual Man, partner or unused Tag changed before arbitration")
-    actor, partner = _sex(state, action)
+    actor, partner = _selected_partner(state, action, answer.denied[0])
     value = _current(game, c, state, actor)
     assert value is not None
     tag = next(x for x in state.sheets[partner.entity].tags if x.id == answer.denied[0])
@@ -263,7 +290,7 @@ def prove_man_result(
     if captured is None:
         return None
     original = _history(c, game, captured["event"])
-    actor, partner = _sex(original, action)
+    actor, partner = _selected_partner(original, action, captured["tag"])
     law = designation(game, c, original, captured["designation"])
     selected = action["data"].get("choices", {}).get("tag_window:" + actor.entity, {})
     tag = next((x for x in original.sheets[partner.entity].tags if x.id == captured["tag"]), None)
@@ -366,16 +393,21 @@ def offer_animal_tags(
         return False
     if action["data"].get("gender_animal_offered"):
         return any(x.action == action["id"] and x.tag is None for x in rules.gifts(state))
-    actor, partner = _sex(state, action)
+    pairs = _sex_pairs(state, action)
     action["data"]["gender_animal_offered"] = True
-    for animal, target in ((actor, partner), (partner, actor)):
+    for animal, target in tuple(
+        edge for actor, partner in pairs for edge in ((actor, partner), (partner, actor))
+    ):
         law, other = _current(game, c, state, animal), _current(game, c, state, target)
         if law is None or law.gender != "animal" or other and other.gender == "animal":
             continue
         _native(game, c, state, animal)
         _native(game, c, state, target)
         value = rules.AnimalGift(
-            id=action["id"] + ":animal:" + animal.token,
+            id=action["id"]
+            + ":animal:"
+            + animal.token
+            + (":" + target.token if len(pairs) > 1 else ""),
             action=action["id"],
             animal=animal,
             target=target,
@@ -396,7 +428,7 @@ def animal_gift(
     original = _history(c, game, value.event)
     born = next((x for x in rules.gifts(original) if x.id == identity), None)
     action = game.action(c, value.action)
-    first, second = _sex(original, action)
+    pairs = _sex_pairs(original, action)
     event = (
         c.execute(
             sa.select(t.events).where(
@@ -418,7 +450,7 @@ def animal_gift(
         or event is None
         or event["kind"] != "m3.choice_resolved"
         or json.loads(event["payload_json"]).get("action_id") != action["id"]
-        or {first, second} != {value.animal, value.target}
+        or not any({first, second} == {value.animal, value.target} for first, second in pairs)
         or law.actor != value.animal
         or law.gender != "animal"
         or rules.current(original, value.animal) != law
@@ -444,6 +476,8 @@ def _resume(game: GameService, c: Connection, state: GameState, action: dict[str
     if action["data"].pop("gender_sex_deferred", False):
         if action["data"]["play"] == "alpha_sex":
             from girlframe.services.m3_alpha_sex import results
+        elif action["data"]["play"] == "newgirl_sex":
+            from girlframe.services.m3_newgirl_sex import results
         elif action["data"]["play"] == "oldgen_sex":
             from girlframe.services.m3_oldgen_sex import results
         elif action["data"]["play"] == "stim_sex":
@@ -459,7 +493,7 @@ def _resume(game: GameService, c: Connection, state: GameState, action: dict[str
             if action["data"]["alpha_sex"]["phase"] != "effects":
                 return
             from girlframe.services.m3_alpha_sex import _finish
-        elif action["data"]["play"] in ("princess_sex", "stim_sex", "oldgen_sex"):
+        elif action["data"]["play"] in ("princess_sex", "stim_sex", "oldgen_sex", "newgirl_sex"):
             # Its actual source choices finish their own phase; a Tag reply does not waive them.
             return
         else:

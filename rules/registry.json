@@ -6330,6 +6330,134 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "newgirl-group-mentors",
+      "policy_key": "newgirl_group_mentors",
+      "summary": "Actual simultaneous confirmed partners all become Mentors, independently of their per-partner result; each partner owns the printed response and its actual effects once.",
+      "source": "Newgirl Sex PDF42/printed40",
+      "rationale": "The group note is unqualified; independent original people cannot be replaced by an aggregate human answer.",
+      "alternatives": [
+        "Apply group Mentorship only to partners who individually choose it."
+      ],
+      "implementation_note": "Preserve one genuine roll, separate voluntary confirmations and immutable original creation assignment; install a source-owned current set.",
+      "change_impact": "Version future interpretation changes; preserve original people, actual performed sources, old records and consumed entitlements.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "newgirl-sex-discovery",
+      "policy_key": "newgirl_sex_discovery",
+      "summary": "An actual third party learning of one genuine intimacy occurrence grants one optional Tag per actual source Mentor, including a Mentor made by that occurrence.",
+      "source": "Newgirl Sex PDF42/printed40",
+      "rationale": "Any person finding out is a source condition; participants already know. One occurrence supplies one entitlement rather than repeated witness farming.",
+      "alternatives": [
+        "Let participants count as discovery, or grant a new Tag for every witness."
+      ],
+      "implementation_note": "Require actual witnessed/addressed knowledge and recipient-authored receipt; preserve original Mentor lineage after later swaps. No passive chat or private-note ingestion.",
+      "change_impact": "Version future interpretation changes; preserve original people, actual performed sources, old records and consumed entitlements.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "newgirl-mentor-swap-history",
+      "policy_key": "newgirl_mentor_swap_history",
+      "summary": "A genuine single forced or accepted Mentor replacement installs a singleton; single decline preserves the current set, and old source duties/history remain intact.",
+      "source": "Newgirl Sex and Mentor PDF42/printed40",
+      "rationale": "A new current relationship does not rewrite performed lessons or erase mandatory work.",
+      "alternatives": [
+        "Rewrite the original assignment or cancel old source duties on each swap."
+      ],
+      "implementation_note": "Immediate actual duties block a new Play before RNG; real discipline precedes a later swap. Current rank, Mentor Tags, names, teaching and companions consume actual members.",
+      "change_impact": "Version future interpretation changes; preserve original people, actual performed sources, old records and consumed entitlements.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "easy-target-reaction-scope",
+      "policy_key": "easy_target_reaction_scope",
+      "summary": "High and low reactions belong separately to other actual scene people, excluding the Newgirl herself and an OOC facilitator without a fictional role. High may decline.",
+      "source": "Easy Target PDF41/printed39",
+      "rationale": "Typed actor roles preserve each person even when one human controls several; the caster is already the target of these reactions.",
+      "alternatives": [
+        "Include the caster in each person or limit low reactions to one selected person."
+      ],
+      "implementation_note": "Use exact role-specific choice IDs; no controller alias, inferred attendance or fabricated response.",
+      "change_impact": "Version future interpretation changes; preserve original people, actual performed sources, old records and consumed entitlements.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "easy-target-performed-sources",
+      "policy_key": "easy_target_performed_sources",
+      "summary": "Actual urges require real supported performances and consequences; the original Handler validates unspecified task/trigger details, and the requester judges actual completed requested work.",
+      "source": "Easy Target PDF41/printed39",
+      "rationale": "The text supplies urges and consequences, without a universal damage amount or a substitute Play.",
+      "alternatives": [
+        "Add separate explicitly priced factual harm/task adapters after rule clarification."
+      ],
+      "implementation_note": "Current hurt proof uses genuine physical damage to a Girl Asset; Frame-only damage does not prove bodily hurt. Other harm/actor/performance adapters remain required gaps; no text-as-mechanics or inferred intimacy consent.",
+      "change_impact": "Version future interpretation changes; preserve original people, actual performed sources, old records and consumed entitlements.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "easy-target-cohort-scope",
+      "policy_key": "easy_target_cohort_scope",
+      "summary": "Proven cohort assistance exempts both people from matching Easy Target consequences, preserving ordinary child Play costs and unrelated outcomes.",
+      "source": "Easy Target PDF41/printed39",
+      "rationale": "This source supplies the exemption; unrelated rules retain their actual effects.",
+      "alternatives": [
+        "Interpret neither facing consequences as broad immunity from all child Play results."
+      ],
+      "implementation_note": "Require actual positive Tag assistance to the selected primary child; no blanket narrative immunity or erased dice.",
+      "change_impact": "Version future interpretation changes; preserve original people, actual performed sources, old records and consumed entitlements.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "easy-target-protection-failure",
+      "policy_key": "easy_target_protection_failure",
+      "summary": "Proven physical bodily harm while actual original ward and protector remain in the same open source scene creates a separate optional failure Tag entitlement.",
+      "source": "Easy Target PDF41/printed39",
+      "rationale": "The actual protection and failure need source proof; a completed old Play cannot be reopened over a different current action.",
+      "alternatives": [
+        "Broader witnessed off-scene failure or explicit abandonment adapters, with their own actual evidence."
+      ],
+      "implementation_note": "Keep the original parent complete and preserve the current action/lock; the original Newgirl privately gives or declines the real Tag with replay protection. Other failure adapters remain explicit gaps.",
+      "change_impact": "Version future interpretation changes; preserve original people, actual performed sources, old records and consumed entitlements.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "easy-target-punishment-executor",
+      "policy_key": "easy_target_punishment_executor",
+      "summary": "The actual Newgirl selects the hurt consequence; the original Handler executes that source-owned Punishment on the actual hurter.",
+      "source": "Easy Target PDF41/printed39; ordinary Punishments",
+      "rationale": "Preserve the printed Newgirl selection through the existing separate chooser/executor pipeline.",
+      "alternatives": [
+        "Use another source-proved actual executor where future clarification assigns responsibility."
+      ],
+      "implementation_note": "Real instruction, scene, execution and follow-ups remain required. Multiple real hurts use separate source works under one parent, without duplicating an identical case.",
+      "change_impact": "Version future interpretation changes; preserve original people, actual performed sources, old records and consumed entitlements.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -8173,14 +8301,16 @@
         "heading": "Easy Target"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_easy_target.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -8204,7 +8334,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_trainee.py"
+        "tests/rules/test_trainee.py",
+        "tests/rules/test_newgirl_sex.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -8231,7 +8362,8 @@
       "test_evidence": [
         "tests/rules/test_trainee.py",
         "tests/test_m2_game.py",
-        "tests/rules/test_mentor.py"
+        "tests/rules/test_mentor.py",
+        "tests/rules/test_newgirl_sex.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -8248,14 +8380,16 @@
         "heading": "Sex Play"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_newgirl_sex.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

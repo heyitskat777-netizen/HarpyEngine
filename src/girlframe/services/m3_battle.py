@@ -268,11 +268,17 @@ def prepare(
     prepared: PlayInput,
 ) -> dict[str, Any]:
     authorize(game, c, viewer)
+    easy_child = None
+    if prepared.source_work:
+        from girlframe.services.m3_easy_target import prepare_child
+
+        easy_child = prepare_child(game, c, viewer, state, prepared, int(scene["channel_id"]))
     if (
         prepared.target is not None
         or prepared.order_id is not None
         or prepared.off_duty_id is not None
         or prepared.source_work
+        and easy_child is None
         or prepared.witnessed
     ):
         raise WorkflowError(
@@ -1699,6 +1705,21 @@ def damage_actor(
         work=source_work,
         occurrence=occurrence,
     )
+    from girlframe.services.m3_easy_target import observe_harm
+    from girlframe.services.m3_sprite import physical_incoming
+
+    observe_harm(
+        game,
+        c,
+        state,
+        changed,
+        target=target,
+        opponent=opponent or actor,
+        event=event,
+        source_action=source_action,
+        source_work=source_work,
+        physical_blow=physical_incoming(game, c, source_action, occurrence, physical_blow),
+    )
     return changed, tuple(ids)
 
 
@@ -2002,6 +2023,10 @@ def complete_damage_work(
             from girlframe.services.m3_enforcement_initiative import complete_director_consequence
 
             complete_director_consequence(game, c, action, dict(latest), event, viewer, key)
+        elif action["data"].get("newgirl_sex"):
+            from girlframe.services.m3_newgirl_sex import synchronize as synchronize_newgirl_sex
+
+            synchronize_newgirl_sex(game, c, action, event)
         elif action["data"].get("alpha_sex"):
             from girlframe.services.m3_alpha_sex import synchronize as synchronize_alpha_sex
 
@@ -2018,6 +2043,10 @@ def complete_damage_work(
             from girlframe.services.m3_engage import complete_damage_work as complete_engage_damage
 
             complete_engage_damage(game, c, dict(latest), event, viewer, key)
+        if action["data"].get("easy_target_child"):
+            from girlframe.services.m3_easy_target import synchronize as synchronize_easy_child
+
+            synchronize_easy_child(game, c, game.action(c, action["id"]), event)
 
 
 def damage_prerequisites(game: "GameService", c: Connection, row: dict[str, Any]) -> None:
@@ -2391,6 +2420,20 @@ class BattleService:
                 context=value.model_dump(mode="json"),
                 channel=int(channel) if channel else None,
                 revision=state.revision,
+                source_work=(
+                    c.scalar(
+                        sa.select(
+                            sa.func.json_extract(t.m2["m2_choices"].c.body_json, "$.work")
+                        ).where(
+                            t.m2["m2_choices"].c.campaign_id == self.store.campaign_id,
+                            t.m2["m2_choices"].c.id == value.source_choice,
+                        )
+                    )
+                    if value.source_action
+                    and value.source_choice
+                    and self.game.action(c, value.source_action)["data"].get("easy_target")
+                    else None
+                ),
             )
 
     def preview(self, viewer: GuildViewer, channel: int) -> dict[str, Any]:
@@ -2477,7 +2520,11 @@ class BattleService:
             if parent:
                 source = self.game.action(c, parent)
                 request: dict[str, Any] | None
-                if source["data"].get("gorgon_play"):
+                if source["data"].get("easy_target"):
+                    from girlframe.services.m3_easy_target import battle_declaration
+
+                    request = battle_declaration(self.game, c, source, declaration, viewer)
+                elif source["data"].get("gorgon_play"):
                     from girlframe.services.m3_gorgon_play import counter_declaration
 
                     request = counter_declaration(self.game, c, source, declaration)

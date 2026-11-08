@@ -89,6 +89,7 @@ def open_case(
         "dose_up",
         "vatgrown_doll",
         "show_dog",
+        "easy_target",
         "trainee",
         "succubus_npc_disobey",
     ],
@@ -137,7 +138,12 @@ def open_case(
             "UNSUPPORTED_ROLE_PUNISHMENT: this source target has no actual effect port."
         )
     if any(
-        x.id == identity or x.action == action and action is not None
+        x.id == identity
+        or (
+            x.action == action
+            and action is not None
+            and (source_kind != "easy_target" or x.source_work == source_work)
+        )
         for x in changed.role_punishments
     ):
         raise WorkflowError("This actual mandatory Punishment source already exists.")
@@ -354,6 +360,10 @@ def case_proof(c: Connection, game: GameService, identity: str) -> RolePunishmen
         from girlframe.services.m3_show_dog import validate_role_case
 
         validate_role_case(c, game, state, case)
+    if case.source_kind == "easy_target":
+        from girlframe.services.m3_easy_target import validate_role_case
+
+        validate_role_case(c, game, state, case)
     if case.source_kind == "vatgrown_doll":
         from girlframe.services.m3_vatgrown import validate_role_case
 
@@ -426,6 +436,11 @@ def current(c: Connection, game: GameService, state: GameState, case: RolePunish
         return
     if case.source_kind == "show_dog":
         from girlframe.services.m3_show_dog import validate_role_case
+
+        validate_role_case(c, game, state, case)
+        return
+    if case.source_kind == "easy_target":
+        from girlframe.services.m3_easy_target import validate_role_case
 
         validate_role_case(c, game, state, case)
         return
@@ -695,6 +710,10 @@ def synchronize(
                 complete_role_case(c, game, completed, completion_id)
             elif completed.source_kind == "show_dog":
                 from girlframe.services.m3_show_dog import complete_role_case
+
+                complete_role_case(c, game, completed, completion_id)
+            elif completed.source_kind == "easy_target":
+                from girlframe.services.m3_easy_target import complete_role_case
 
                 complete_role_case(c, game, completed, completion_id)
             elif completed.source_kind == "vatgrown_doll":

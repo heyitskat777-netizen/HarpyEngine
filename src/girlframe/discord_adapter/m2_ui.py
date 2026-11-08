@@ -546,6 +546,16 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
 
         await open_oldgen_sex_choice(interaction, game, decision)
         return
+    if decision["kind"].startswith("newgirl_sex_"):
+        from girlframe.discord_adapter.m3_newgirl_sex import open_choice as open_newgirl_sex_choice
+
+        await open_newgirl_sex_choice(interaction, game, decision)
+        return
+    if decision["kind"].startswith("easy_target_"):
+        from girlframe.discord_adapter.m3_easy_target import open_choice as open_easy_target_choice
+
+        await open_easy_target_choice(interaction, game, decision)
+        return
     if decision["kind"].startswith("oldgen_"):
         from girlframe.discord_adapter.m3_oldgen import open_choice as open_oldgen_choice
 
@@ -1018,6 +1028,8 @@ async def open_play(
             "stim_sex",
             "old_dog_new_pups",
             "oldgen_sex",
+            "newgirl_sex",
+            "easy_target",
             "unassuming_doll",
         )
     )
@@ -1291,7 +1303,14 @@ async def open_play(
             witnessed=one(values, "witnessed") == "yes",
             parent=parent["parent"] if parent else None,
             order_id=parent["body"].get("order_id") if parent else None,
-            source_work=code_source or am_source or sex_source,
+            source_work=code_source
+            or am_source
+            or sex_source
+            or (
+                parent["body"]["work"]
+                if parent and parent["kind"].startswith("easy_target_child:")
+                else None
+            ),
         )
         result = await threaded(
             lambda: game.begin(
@@ -1982,6 +2001,32 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         await interaction.response.defer(ephemeral=True)
         try:
             await open_oldgen_sex(interaction, OldgenSexService(game))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @campaign.command(
+        name="newgirl_sex", description="Voluntary Newgirl source and private saved choices"
+    )
+    async def newgirl_sex_controls(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_newgirl_sex import open_newgirl_sex
+        from girlframe.services.m3_newgirl_sex import NewgirlSexService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_newgirl_sex(interaction, NewgirlSexService(game))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @campaign.command(
+        name="easy_target", description="Actual Easy Target reactions and private source choices"
+    )
+    async def easy_target_controls(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_easy_target import open_easy_target
+        from girlframe.services.m3_easy_target import EasyTargetService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_easy_target(interaction, EasyTargetService(game))
         except WorkflowError as error:
             await reply(interaction, str(error))
 

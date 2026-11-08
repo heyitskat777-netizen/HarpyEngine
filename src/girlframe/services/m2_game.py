@@ -1144,12 +1144,17 @@ class GameService:
             from girlframe.services.m3_ankou_feedback import prepare_child as prepare_ankou_child
 
             ankou_child = prepare_ankou_child(self, c, viewer, state, prepared, channel)
+            from girlframe.services.m3_easy_target import prepare_child as prepare_easy_child
+
+            easy_target_child = prepare_easy_child(self, c, viewer, state, prepared, channel)
             mechanical_owner = (
                 int(princess_child["actor_controller"]) if princess_child else viewer.user_id
             )
             princess_sex = None
             stim_sex = None
             oldgen_sex = None
+            newgirl_sex = None
+            easy_target = None
             vatgrown = None
             oldgen = None
             m3 = None
@@ -1200,6 +1205,7 @@ class GameService:
                 and prepared.source_work is not None
                 and bomb_collar_source is None
                 and princess_child is None
+                and easy_target_child is None
             ):
                 from girlframe.services.m3_void_keep import prepare_keep
 
@@ -1208,6 +1214,7 @@ class GameService:
                 prepared.play == "dive_deep"
                 and prepared.source_work is not None
                 and bomb_collar_source is None
+                and easy_target_child is None
             ):
                 from girlframe.services.m3_battle_dormant import prepare_dive_source
 
@@ -1221,6 +1228,7 @@ class GameService:
                 and bomb_collar_source is None
                 and princess_child is None
                 and ankou_child is None
+                and easy_target_child is None
                 and prepared.play
                 not in (
                     "alpha_sex",
@@ -1228,6 +1236,8 @@ class GameService:
                     "princess_sex",
                     "stim_sex",
                     "oldgen_sex",
+                    "newgirl_sex",
+                    "easy_target",
                     "am_scrutinized",
                     "am_just_code",
                 )
@@ -1283,6 +1293,14 @@ class GameService:
                 from girlframe.services.m3_oldgen_sex import prepare as prepare_oldgen_sex
 
                 oldgen_sex = prepare_oldgen_sex(self, c, viewer, state, prepared, channel)
+            if prepared.play == "newgirl_sex":
+                from girlframe.services.m3_newgirl_sex import prepare as prepare_newgirl_sex
+
+                newgirl_sex = prepare_newgirl_sex(self, c, viewer, state, prepared, channel)
+            if prepared.play == "easy_target":
+                from girlframe.services.m3_easy_target import prepare as prepare_easy_target
+
+                easy_target = prepare_easy_target(self, c, viewer, state, prepared, channel)
             if prepared.play == "stim_sex":
                 from girlframe.services.m3_stim_sex import prepare as prepare_stim
 
@@ -1495,6 +1513,9 @@ class GameService:
                         am_code,
                         alpha_sex_counter_scope,
                         vatgrown,
+                        newgirl_sex,
+                        easy_target,
+                        easy_target_child,
                         alpha_counter_scope,
                         npc_order_scope,
                         gorgon_response,
@@ -1536,6 +1557,14 @@ class GameService:
                     source_cast = SceneCast.model_validate_json(json.dumps(npc_order_scope["cast"]))
                 elif vatgrown is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(vatgrown["cast"]))
+                elif newgirl_sex is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(newgirl_sex["cast"]))
+                elif easy_target is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(easy_target["cast"]))
+                elif easy_target_child is not None:
+                    source_cast = SceneCast.model_validate_json(
+                        json.dumps(easy_target_child["cast"])
+                    )
                 elif am_code is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(am_code["cast"]))
                 elif am_scrutinized is not None:
@@ -1654,41 +1683,48 @@ class GameService:
                     (
                         x
                         for x in choices
-                        if x["kind"]
-                        in (
-                            "escape_play",
-                            "secretary_response_play",
-                            "order_disobey",
-                            "am_prepare",
-                            "am_code_prepare",
-                            "beneath_response_play",
-                            "beneath_defeat",
-                            "required_defeat",
-                            "defeat_void_threshold",
-                            "dive_void_threshold",
-                            "enforcer_void_threshold",
-                            "battle_item_void_threshold",
-                            "battle_defeat",
-                            "battle_counter_play",
-                            "alpha_counter_play",
-                            "alpha_sex_counter_play",
-                            "princess_sex_child",
-                            "ankou_feedback_child",
-                            "battle_dormant_dive",
-                            "battle_dormant_threshold",
-                            "mockingbird_void_threshold",
-                            "mockingbird_sex_void_threshold",
-                            "janus_void_threshold",
-                            "snoop_item_void_threshold",
-                            "gorgon_response_play",
+                        if (
+                            x["kind"]
+                            in (
+                                "escape_play",
+                                "secretary_response_play",
+                                "order_disobey",
+                                "am_prepare",
+                                "am_code_prepare",
+                                "beneath_response_play",
+                                "beneath_defeat",
+                                "required_defeat",
+                                "defeat_void_threshold",
+                                "dive_void_threshold",
+                                "enforcer_void_threshold",
+                                "battle_item_void_threshold",
+                                "battle_defeat",
+                                "battle_counter_play",
+                                "alpha_counter_play",
+                                "alpha_sex_counter_play",
+                                "princess_sex_child",
+                                "ankou_feedback_child",
+                                "easy_target_child",
+                                "battle_dormant_dive",
+                                "battle_dormant_threshold",
+                                "mockingbird_void_threshold",
+                                "mockingbird_sex_void_threshold",
+                                "janus_void_threshold",
+                                "snoop_item_void_threshold",
+                                "gorgon_response_play",
+                            )
+                            or x["kind"].startswith("easy_target_child:")
                         )
                         and x["actor_id"]
                         == str(viewer.user_id if princess_child else mechanical_owner)
+                        and (easy_target_child is None or x["id"] == easy_target_child["choice"])
                     ),
                     None,
                 )
                 if required is None:
                     raise WorkflowError("Only the required player can make this response Play.")
+                if required["kind"].startswith("easy_target_child:") and easy_target_child is None:
+                    raise WorkflowError("Use the original actual Easy Target reaction performance")
                 if required["kind"] == "ankou_feedback_child" and ankou_child is None:
                     raise WorkflowError("Use the actual Feedback source and its fixed target.")
                 if required["kind"] == "princess_sex_child" and princess_child is None:
@@ -1818,6 +1854,8 @@ class GameService:
                     princess_sex,
                     stim_sex,
                     oldgen_sex,
+                    newgirl_sex,
+                    easy_target,
                     vatgrown,
                     oldgen,
                     am_scrutinized,
@@ -1926,6 +1964,25 @@ class GameService:
             }
             if ankou_child is not None:
                 data["ankou_feedback_child"] = ankou_child
+            if easy_target_child is not None:
+                data["easy_target_child"] = easy_target_child
+                from girlframe.engine.m3_actor_state import SceneCast as EasyCast
+                from girlframe.engine.m3_actors import fingerprint as easy_fingerprint
+                from girlframe.engine.m3_handler_consequences import active_handler as easy_handler
+
+                actual_child_cast = EasyCast.model_validate_json(
+                    json.dumps(easy_target_child["cast"])
+                )
+                original_handler = easy_handler(state)
+                data["participants"] = list(easy_target_child["table"])
+                data["tag_context"] = dict(
+                    actor=easy_target_child["actor"],
+                    handler=original_handler.model_dump(mode="json") if original_handler else None,
+                    gm_controller=actual_child_cast.facilitator,
+                    table=list(easy_target_child["table"]),
+                    cast=easy_target_child["cast"],
+                    cast_sha256=easy_fingerprint(actual_child_cast),
+                )
             if princess_child is not None:
                 data["princess_child"] = princess_child
             if oldgen is not None:
@@ -1960,6 +2017,28 @@ class GameService:
                     table=list(oldgen_sex["table"]),
                     cast=oldgen_sex["cast"],
                     cast_sha256=oldgen_sex["cast_sha256"],
+                )
+            if newgirl_sex is not None:
+                data["newgirl_sex"] = newgirl_sex
+                data["participants"] = list(newgirl_sex["table"])
+                data["tag_context"] = dict(
+                    actor=newgirl_sex["actor"],
+                    handler=newgirl_sex["handler"],
+                    gm_controller=newgirl_sex["handler_controller"],
+                    table=list(newgirl_sex["table"]),
+                    cast=newgirl_sex["cast"],
+                    cast_sha256=newgirl_sex["cast_sha256"],
+                )
+            if easy_target is not None:
+                data["easy_target"] = easy_target
+                data["participants"] = list(easy_target["table"])
+                data["tag_context"] = dict(
+                    actor=easy_target["actor"],
+                    handler=easy_target["handler"],
+                    gm_controller=easy_target["handler_controller"],
+                    table=list(easy_target["table"]),
+                    cast=easy_target["cast"],
+                    cast_sha256=easy_target["cast_sha256"],
                 )
             if stim_sex is not None:
                 data["stim_sex"] = stim_sex
@@ -2365,9 +2444,17 @@ class GameService:
                 or princess_sex
                 or stim_sex
                 or oldgen_sex
+                or newgirl_sex
+                or easy_target
+                or easy_target_child
                 or ankou_child
                 else None
             )
+            if easy_target_child is not None:
+                from girlframe.services.m3_easy_target import bind_child as bind_easy_child
+
+                assert begin_source_event is not None
+                bind_easy_child(self, c, state, action, begin_source_event)
             if ankou_child is not None:
                 from girlframe.services.m3_ankou_feedback import bind_child as bind_ankou_child
 
@@ -2382,6 +2469,10 @@ class GameService:
                 from girlframe.services.m3_oldgen_sex import bind as bind_oldgen_sex
 
                 bind_oldgen_sex(state, action, begin_source_event)
+            if newgirl_sex is not None:
+                from girlframe.services.m3_newgirl_sex import bind as bind_newgirl_sex
+
+                bind_newgirl_sex(state, action, begin_source_event)
             if stim_sex is not None:
                 from girlframe.services.m3_stim_sex import bind as bind_stim
 
@@ -2416,6 +2507,9 @@ class GameService:
                 or princess_sex is not None
                 or stim_sex is not None
                 or oldgen_sex is not None
+                or newgirl_sex is not None
+                or easy_target is not None
+                or easy_target_child is not None
                 or vatgrown is not None
                 or oldgen is not None
                 or princess_child is not None
@@ -2439,6 +2533,9 @@ class GameService:
                     or princess_sex is not None
                     or stim_sex is not None
                     or oldgen_sex is not None
+                    or newgirl_sex is not None
+                    or easy_target is not None
+                    or easy_target_child is not None
                     or vatgrown is not None
                     or oldgen is not None
                     or princess_child is not None
@@ -2752,6 +2849,14 @@ class GameService:
                 from girlframe.services.m3_oldgen_sex import pre_roll as pre_roll_oldgen_sex
 
                 pre_roll_oldgen_sex(self, c, viewer, state, action)
+            if action["data"].get("newgirl_sex"):
+                from girlframe.services.m3_newgirl_sex import pre_roll as pre_roll_newgirl_sex
+
+                pre_roll_newgirl_sex(self, c, viewer, state, action)
+            if action["data"].get("easy_target"):
+                from girlframe.services.m3_easy_target import pre_roll as pre_roll_easy_target
+
+                pre_roll_easy_target(self, c, viewer, state, action)
             if action["data"].get("stim_sex"):
                 from girlframe.services.m3_stim_sex import pre_roll as pre_roll_stim
 
@@ -2950,6 +3055,9 @@ class GameService:
                 or action["data"].get("princess_sex")
                 or action["data"].get("stim_sex")
                 or action["data"].get("oldgen_sex")
+                or action["data"].get("newgirl_sex")
+                or action["data"].get("easy_target")
+                or action["data"].get("easy_target_child")
                 or action["data"].get("vatgrown")
                 or action["data"].get("oldgen")
                 or action["data"].get("princess_child")
@@ -3126,6 +3234,9 @@ class GameService:
                 or action["data"].get("princess_sex")
                 or action["data"].get("stim_sex")
                 or action["data"].get("oldgen_sex")
+                or action["data"].get("newgirl_sex")
+                or action["data"].get("easy_target")
+                or action["data"].get("easy_target_child")
                 or action["data"].get("vatgrown")
                 or action["data"].get("oldgen")
                 or action["data"].get("princess_child")
@@ -3310,6 +3421,16 @@ class GameService:
                 from girlframe.services.m3_oldgen_sex import authorize as oldgen_sex_authorize
 
                 oldgen_sex_authorize(self, c, viewer, action)
+                director_tag_response = True
+            if action["data"].get("newgirl_sex"):
+                from girlframe.services.m3_newgirl_sex import authorize as newgirl_sex_authorize
+
+                newgirl_sex_authorize(self, c, viewer, action)
+                director_tag_response = True
+            if action["data"].get("easy_target"):
+                from girlframe.services.m3_easy_target import authorize as easy_target_authorize
+
+                easy_target_authorize(self, c, viewer, action)
                 director_tag_response = True
             if action["data"].get("stim_sex"):
                 from girlframe.services.m3_stim_sex import authorize as stim_authorize
@@ -3560,6 +3681,9 @@ class GameService:
                 or action["data"].get("princess_sex")
                 or action["data"].get("stim_sex")
                 or action["data"].get("oldgen_sex")
+                or action["data"].get("newgirl_sex")
+                or action["data"].get("easy_target")
+                or action["data"].get("easy_target_child")
                 or action["data"].get("vatgrown")
                 or action["data"].get("oldgen")
                 or action["data"].get("princess_child")
@@ -3711,7 +3835,15 @@ class GameService:
                 from girlframe.services.m3_princess_sex import synchronize as sync_princess
 
                 sync_princess(self, c, self.action(c, action["id"]), event)
-            if action["data"].get("dose_up") or action["data"].get("vatgrown"):
+            if action["data"].get("newgirl_sex"):
+                from girlframe.services.m3_newgirl_sex import synchronize as sync_newgirl
+
+                sync_newgirl(self, c, self.action(c, action["id"]), event)
+            if (
+                action["data"].get("dose_up")
+                or action["data"].get("vatgrown")
+                or action["data"].get("easy_target")
+            ):
                 from girlframe.services.m3_role_punishments import (
                     synchronize as synchronize_source_role,
                 )
@@ -3736,6 +3868,10 @@ class GameService:
             from girlframe.services.m3_virus_orders import post_response as post_virus_order
 
             post_virus_order(self, c, self.action(c, action["id"]), event)
+            if action["data"].get("easy_target_child"):
+                from girlframe.services.m3_easy_target import synchronize as sync_easy_child
+
+                sync_easy_child(self, c, self.action(c, action["id"]), event)
             return {"action_id": action["id"], "state": action["state"], "choice_id": choice_id}
 
         try:
@@ -4544,6 +4680,36 @@ class GameService:
                     channel=int(action["channel_id"]),
                     play=action["data"]["play"],
                     detail=oldgen_sex_projection(
+                        self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                    ),
+                )
+            if row["kind"].startswith("newgirl_sex_"):
+                from girlframe.services.m3_newgirl_sex import authorize as newgirl_sex_authorize
+                from girlframe.services.m3_newgirl_sex import projection as newgirl_sex_projection
+
+                newgirl_sex_authorize(self, c, viewer, action)
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    actor=int(action["actor_id"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    play=action["data"]["play"],
+                    detail=newgirl_sex_projection(
+                        self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                    ),
+                )
+            if row["kind"].startswith("easy_target_"):
+                from girlframe.services.m3_easy_target import authorize as easy_target_authorize
+                from girlframe.services.m3_easy_target import projection as easy_target_projection
+
+                easy_target_authorize(self, c, viewer, action)
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    actor=int(action["actor_id"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    play=action["data"]["play"],
+                    detail=easy_target_projection(
                         self, c, load_state(c, self.store.campaign_id), action, dict(row)
                     ),
                 )

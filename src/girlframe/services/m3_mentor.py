@@ -11,6 +11,7 @@ from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_girl_runtime_state import has_rule
+from girlframe.engine.m3_mentorship import active_mentors, current_set
 from girlframe.engine.shared_setup import CallsignChoice
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
@@ -18,7 +19,7 @@ from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_handler_advancements import _history
 from girlframe.services.m3_malleable import _audit
-from girlframe.services.m3_mentorship import original_mentor
+from girlframe.services.m3_mentorship import original_mentor, original_mentors
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -63,17 +64,22 @@ def required_companions(
     while True:
         added = False
         for sheet in state.sheets.values():
-            if (
-                not has_rule(sheet, rules.RULE, "NEWGIRL")
-                or sheet.mentor is None
-                or sheet.mentor not in {int(x.entity) for x in actual}
-            ):
+            if not has_rule(sheet, rules.RULE, "NEWGIRL"):
                 continue
             learner = current_ref(state, sheet.owner)
-            mentor, _ = original_mentor(game, c, state, learner)
-            if mentor not in actual:
-                raise WorkflowError("Recover the actual original Mentor role; no account alias")
-            _person(game, c, state, mentor)
+            if not set(active_mentors(state, learner)) & actual:
+                recorded = current_set(state, learner)
+                ids = (
+                    {x.entity for x in recorded.mentors}
+                    if recorded
+                    else ({str(sheet.mentor)} if sheet.mentor is not None else set())
+                )
+                if ids & {x.entity for x in actual}:
+                    original_mentors(game, c, state, learner)
+                continue
+            mentors, _ = original_mentors(game, c, state, learner)
+            for mentor in mentors:
+                _person(game, c, state, mentor)
             _person(game, c, state, learner)
             if sheet.owner in people and learner not in actual:
                 raise WorkflowError(
@@ -94,7 +100,7 @@ def prove_naming(game: GameService, c: Connection, state: GameState, identity: s
         raise WorkflowError("Recover the genuine original Mentor's actual name choice")
     born = _history(c, game, value.event)
     _audit(game, c, value.event, "m3.mentor_callsign", int(value.mentor.entity))
-    mentor, source = original_mentor(game, c, born, value.learner)
+    mentor, source = original_mentor(game, c, born, value.learner, selected=value.mentor)
     if (
         value not in rules.records(born)
         or mentor != value.mentor
@@ -125,7 +131,9 @@ class MentorService:
                 or interrupted(self.game, c, include_unrolled=True)
             ):
                 raise WorkflowError("Finish pending Plays and reopen current Mentor name controls")
-            mentor, assignment = original_mentor(self.game, c, state, learner)
+            mentor, assignment = original_mentor(
+                self.game, c, state, learner, selected=current_ref(state, viewer.user_id)
+            )
             actual = _person(self.game, c, state, mentor)
             _person(self.game, c, state, learner)
             if viewer.user_id != actual.controller or current_ref(state, viewer.user_id) != mentor:
@@ -166,16 +174,16 @@ class MentorService:
                     continue
                 learner = current_ref(state, sheet.owner)
                 try:
-                    mentor, _ = original_mentor(self.game, c, state, learner)
+                    mentors, _ = original_mentors(self.game, c, state, learner)
                 except (ValueError, WorkflowError):
                     continue
-                if mentor.entity == str(viewer.user_id):
+                if any(x.entity == str(viewer.user_id) for x in mentors):
                     learners.append(dict(ref=learner.model_dump(mode="json"), label=sheet.callsign))
                 if learner.entity == str(viewer.user_id):
                     own = dict(
                         ref=learner.model_dump(mode="json"),
                         callsign=sheet.callsign,
-                        mentor=state.sheets[mentor.entity].callsign,
+                        mentor=", ".join(state.sheets[x.entity].callsign for x in mentors),
                     )
             return dict(
                 revision=state.revision, learners=learners, own=own, history=self._tasks(c, viewer)

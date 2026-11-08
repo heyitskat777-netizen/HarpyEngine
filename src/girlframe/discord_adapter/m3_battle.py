@@ -206,6 +206,7 @@ async def open_context(
                 trigger_confirmed=True,
                 piloting=bool(actor["piloting"]),
                 parent=value["source_action"],
+                source_work=source.get("source_work"),
             )
             if role_service is not None and role_data is not None:
                 judge = role_data["adjudicator"]["ref"]
