@@ -2,20 +2,21 @@
 
 Owner authorized continuation2026-11-08. Bot OFF; RULES_SUBSET. Most automated testing deferred to final P1 candidate; only minimum likely-flow smoke during work. No unequal-rule percentages.
 
-Current published source: e112de3 (focused CI42509420443 passed; full regression
-not run). Local whole paired-travel and actual AM held-object conveyance slices
-now have minimum native evidence. Sources are frozen for publication. AM's next
-native CONSUME cap-loss contract is read-only; Malleable is reconciling precise
-routine-Strain blockers read-only. Root coordinates publication and shared ports.
-Most authored automation remains deferred; no broad or whole-P1 claim.
+Current published source: b7cfd10 (focused CI42511557063 passed; full regression
+not run). Local CONSUME new-Void/Partake cap-loss providers and Low Void next-own-
+Frame-entry workflow now have minimum likely-flow evidence and are frozen for
+publication. Next bounded contracts: distinct Vatgrown after actual death/reset/
+noticing (AM), actual prisoner escape/dealing source (Malleable read-only). Root
+owns shared integration. Most automation remains deferred to final P1; no whole-
+P1/full-M3 or independent-review claim.
 
 | Deliverable | Owner | Dependency | Next concrete action | Completion evidence |
 |---|---|---|---|---|
 | Received-Order rejection and paid-installment regrowth | Sources frozen; root integration complete | Actual Order/parent/receiver; canonical paid installation/removal | Preserve minimums for final regression; close only demonstrated failures | Actual Order normal passed in combined1failed/1passed66.85s; paid installment1/4.73s; eight-family Alpha counter actual Dive1/4.17s |
 | Ordinary required-Play continuations | Root after current integration | Existing Princess, Alpha and Ankou real-child adapters | Close named own-recipe directives, own-recipe Alpha counterpart responses and supported nominations using actual resources and parent completion | Current finite restrictions identified; broader normal cases deferred to final run |
 | Vatgrown travel and learning dependencies | Next bounded assignment | Actual movement/chaperone source; learned-Play proof | Travel attempt/conduct and learned Dose Up are implemented. Positive joint travel now implemented. Next named remaining learning consumers and real death→distinct Vatgrown/reset/notice source (generic Career draft is insufficient) | Actual joint travel1/2.21s; unchaperoned1/2.49s; learnedDose1/3.62s; prior evidence preserved. Other variants deferred |
-| CONSUME permanent-loss recovery | AM after paid-installment handoff | Genuine surviving same-current-Frame loss | Accepted-Defeat alternative loss proof is implemented; preserve its new normal. Next named producers are new-Void Defeat/own-Partake cap exchanges; never infer stock from ordinary damage or whole-Frame destruction | Budget and paid-installment normals preserved; accepted Defeat native normal1/6.84s; further producers pending |
-| Resolve remaining ordinary coverage claims | Root, bounded source-specific reconciliation | Existing all-type matrix/current source | Each unresolved claim gets an exact source entry, missing effect and normal reproduction, or implemented/unverified status | Stim expiry and Newgirl Pilot harm/protection/discipline already exist; directed Stim removal1/4.77s. Precise non-Heat/NPC source adapters remain; AM conveyed held-object source1/5.90s; remaining Battery/Storage/vessel/terminal-body/Pilot-operator guards and CHANGELING reset/controller continuity now pinpointed; vehicle aftermath and Strain still need bounded reconciliation |
+| CONSUME permanent-loss recovery | AM after paid-installment handoff | Genuine surviving same-current-Frame loss | Accepted-Defeat alternative loss proof is implemented; preserve its new normal. New-Void Defeat and own-Partake excretion/regrowth cap-loss adapters now implemented; preserve their two normals. Other genuine producers remain source-specific; never infer stock from ordinary damage or whole-Frame destruction | Budget and paid-installment normals preserved; accepted Defeat native normal1/6.84s; new-Void+Partake two normals2/17.81s; other producers explicit |
+| Resolve remaining ordinary coverage claims | Root, bounded source-specific reconciliation | Existing all-type matrix/current source | Each unresolved claim gets an exact source entry, missing effect and normal reproduction, or implemented/unverified status | Stim expiry and Newgirl Pilot harm/protection/discipline already exist; directed Stim removal1/4.77s. Precise non-Heat/NPC source adapters remain; AM conveyed held-object source1/5.90s; remaining Battery/Storage/vessel/terminal-body/Pilot-operator guards and CHANGELING reset/controller continuity now pinpointed; Low Void1.2 actual cockpit entry→Heat/additive Void Dive normal1/3.83s; Harpy/rescue/terminal source ports remain; actual prisoner Low Rebellion4.2, next-battle fuel Budget High1.2 and occupied-vehicle aftermath remain named ordinary work. Repair-shortage consumer exists; endgame hometown source remains required if selected |
 | Freeze human-operated campaign | Root | Ordinary source checklist closed | Run deferred authored normals and mission→social/combat→recovery/Off-Duty→next mission; verify facilitator resume/blockers/roles/delivery/restore; fix demonstrated failures | Existing implementations preserved; integrated verification pending |
 | Final exact-candidate gates and player handoff | Root; independent reviewer; owner/players | Frozen source and disclosed limitations | Full regression including Deep-Brain-Spikes pagination; global static/migration/privacy/restore; independent review; prepare agreed Discord playtest | PENDING; focused CI is not full regression, player success or acceptance |
 

@@ -1154,6 +1154,8 @@ async def open_play(
         plays = ("am_scrutinized",)
     if parent and parent["kind"] == "bonded_rejection_child":
         plays = tuple(parent["body"]["allowed"])
+    if parent and parent["kind"] == "void_frame_entry_child":
+        plays = ("dive_deep",)
     if parent and parent["kind"] == "alpha_sex_counter_play":
         from girlframe.services.m3_alpha_sex import COUNTER_PLAYS
 
@@ -1514,6 +1516,7 @@ async def open_play(
                     "consume_child",
                     "consume_order_child",
                     "bonded_rejection_child",
+                    "void_frame_entry_child",
                     "red_queen_child",
                     "changeling_interrupt",
                     "changeling_pause",
@@ -1584,6 +1587,10 @@ async def open_play(
     if parent and parent["kind"] == "bonded_rejection_child":
         form.values["context"] = parent["body"]["context"]
         form.values["play"] = (parent["body"]["play"],)
+    if parent and parent["kind"] == "void_frame_entry_child":
+        form.values["play"] = ("dive_deep",)
+        if parent["body"].get("context"):
+            form.values["context"] = parent["body"]["context"]
     if parent and parent["kind"] == "order_disobey" and parent.get("bonded_rejection_order"):
         form.values["context"] = parent["body"]["context"]
     form.confirm.label = "Confirm & Roll"

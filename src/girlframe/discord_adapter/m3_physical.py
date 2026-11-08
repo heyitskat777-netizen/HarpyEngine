@@ -70,7 +70,13 @@ async def open_initial(interaction: discord.Interaction, service: PhysicalServic
                     account=values["account"],
                     confirmed=True,
                 ),
+                channel=current.channel_id,
             )
+            if result.get("entry_dives"):
+                return (
+                    "Your actual cockpit state is saved. Resolve the required Dive Deep "
+                    "and any preceding Void consequences in your requests inbox."
+                )
             return (
                 "Your actual cockpit state is saved. Resolve the resulting Void consequence "
                 "in your requests inbox before another Play."

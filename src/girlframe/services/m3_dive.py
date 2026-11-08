@@ -136,11 +136,19 @@ def prepare(
             "Dive Deep uses your actual link and Heat, without a target or Off-Duty context."
         )
     if prepared.source_work:
+        from girlframe.engine import m3_void_frame_entry as entry_rules
         from girlframe.services.m3_bonded_rejection import prepare_child as prepare_rejection
 
         rejection = prepare_rejection(game, c, viewer, state, prepared, channel)
+        entry = None
+        if any(x.id == prepared.source_work for x in entry_rules.records(state, entry_rules.Entry)):
+            from girlframe.services.m3_void_frame_entry import prepare_child as prepare_entry_dive
+
+            entry = prepare_entry_dive(game, c, viewer, state, prepared, channel)
         if rejection is not None:
             pass  # The genuine required source is proved; normal Dive validation continues below.
+        elif entry is not None:
+            pass
         elif prepared.source_work.startswith("bomb-trigger:"):
             from girlframe.services.m3_bomb_collar import prepare_survival
 
@@ -868,6 +876,10 @@ def synchronize(game: "GameService", c: Connection, action: dict[str, Any], even
             item,
             item["source_event"],
         )
+    if action["data"].get("void_frame_entry"):
+        from girlframe.services.m3_void_frame_entry import synchronize_action
+
+        synchronize_action(game, c, action, event)
 
 
 def complete_void_continuation(
@@ -964,6 +976,10 @@ def complete_void_continuation(
         from girlframe.services.m3_bomb_collar import complete_action
 
         complete_action(game, c, action, completed_event, key)
+    if action["state"] == "complete" and action["data"].get("void_frame_entry"):
+        from girlframe.services.m3_void_frame_entry import synchronize_action
+
+        synchronize_action(game, c, action, completed_event)
 
 
 def prove_void_source(

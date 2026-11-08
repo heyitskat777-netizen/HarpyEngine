@@ -23,7 +23,14 @@ from girlframe.services.onboarding import WorkflowError
 
 
 class FrameAssetLoss(Model):
-    source_kind: Literal["budget", "asset_installment", "defeat_alternative"]
+    source_kind: Literal[
+        "budget",
+        "asset_installment",
+        "defeat_alternative",
+        "defeat_new_void",
+        "partake_excrete",
+        "partake_regrowth",
+    ]
     id: str
     actor: ActorRef
     frame: str
@@ -353,6 +360,263 @@ def defeat_alternative_losses(
                     actor=actor,
                     frame=current_frame,
                     event=event,
+                    asset=old,
+                )
+            )
+    return tuple(result)
+
+
+def _surviving_frame(state: GameState, before: GameState, born: GameState, actor: ActorRef) -> bool:
+    from girlframe.engine.m3_battle import original_ended
+
+    return all(
+        actor.kind == "pilot"
+        and actor.entity in source.sheets
+        and source.sheets[actor.entity].character_id == actor.incarnation
+        and not source.sheets[actor.entity].frame_scrapped
+        and not original_ended(source, actor)
+        and consume.frame(source, actor) == consume.frame(state, actor)
+        for source in (before, born, state)
+    )
+
+
+def _eligible(before: GameState, actor: ActorRef, old: AssetState) -> bool:
+    return (
+        old.family == "frame"
+        and old.intrinsic is None
+        and old.battery_asset is None
+        and old.id not in blocked(before, actor)
+    )
+
+
+def defeat_void_losses(
+    game: GameService, c: Connection, state: GameState, actor: ActorRef
+) -> tuple[FrameAssetLoss, ...]:
+    """An actual selected new-Void installation, never an inferred old inventory."""
+    from girlframe.engine import m3_defeat as defeat
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_consume import _raw_receipt
+    from girlframe.services.m3_defeat import decision
+
+    result = []
+    for fact in state.facts:
+        if fact.get("kind") != "defeat_resolved" or fact.get("actor") != actor.model_dump_json():
+            continue
+        event, action_id = fact["source_event"], fact["action"]
+        audit = (
+            c.execute(
+                sa.select(t.events).where(
+                    t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == event
+                )
+            )
+            .mappings()
+            .first()
+        )
+        payload = json.loads(audit["payload_json"]) if audit else {}
+        row = (
+            c.execute(
+                sa.select(t.m2["m2_choices"]).where(
+                    t.m2["m2_choices"].c.campaign_id == game.store.campaign_id,
+                    t.m2["m2_choices"].c.id == payload.get("choice_id"),
+                )
+            )
+            .mappings()
+            .first()
+        )
+        if audit is None or row is None or payload.get("action_id") != action_id:
+            raise WorkflowError("Recover the original canonical Defeat choice")
+        if row["kind"] != "defeat_select":
+            continue
+        before, born = snapshots(game, c, event)
+        if fact not in born.facts:
+            raise WorkflowError("Recover the immutable selected Defeat source")
+        if not _surviving_frame(state, before, born, actor):
+            continue
+        action = game.action(c, action_id)
+        binding = action["data"].get("character_ids") or game.legacy_action_bindings(c, action)
+        if (
+            action["data"].get("play") != "defeat"
+            or action["actor_id"] != actor.entity
+            or binding.get(actor.entity) != actor.incarnation
+            or action["data"].get("defeat", {}).get("actor") != actor.model_dump(mode="json")
+        ):
+            raise WorkflowError("Prove the original Girl's actual Defeat Action")
+        _, roll_event = _raw_receipt(game, c, action)
+        from girlframe.services.m3_dose_up import _roll_source
+
+        proven_roll, total = _roll_source(game, c, action)
+        if proven_roll != roll_event or action["data"]["defeat"]["roll_event"] != roll_event:
+            raise WorkflowError("Preserve the original actual Defeat roll event")
+        answer = _response(game, c, action_id, row["id"], event, "defeat_select", int(actor.entity))
+        if "new_girl_and_frame_void_assets_heat4" not in answer.options:
+            continue  # Another genuine Defeat branch supplies no cap-loss candidate here.
+        selected = Decision.model_validate_json(json.dumps(action["data"].get("defeat_selected")))
+        if decision(game, c, before, answer) != selected:
+            raise WorkflowError("Preserve the exact original human's Defeat selection")
+        # The genuine reducer checks tier, cap, Void, both births, and the selected replacement.
+        outcome = defeat.apply(
+            before,
+            actor,
+            profiles(c, game.store.campaign_id),
+            total,
+            selected,
+            action_id,
+            event,
+            prior_event=action["data"]["defeat"]["roll_event"],
+        )
+        if (
+            outcome.state.sheets[actor.entity].assets != born.sheets[actor.entity].assets
+            or born.sheets[actor.entity].heat != 4
+        ):
+            raise WorkflowError("Prove the actual new-Void Defeat Asset births and Heat")
+        assert selected.frame_asset is not None
+        identity = selected.frame_asset.replace
+        if identity is None:
+            continue
+        old = next((x for x in before.sheets[actor.entity].assets if x.id == identity), None)
+        if old is None or any(x.id == identity for x in born.sheets[actor.entity].assets):
+            raise WorkflowError("The actual chosen cap exchange must remove its named component")
+        if _eligible(before, actor, old):
+            result.append(
+                FrameAssetLoss(
+                    source_kind="defeat_new_void",
+                    id=consume.identity("defeat-void-loss", action_id, row["id"], identity),
+                    actor=actor,
+                    frame=consume.frame(state, actor),
+                    event=event,
+                    asset=old,
+                )
+            )
+    return tuple(result)
+
+
+def partake_losses(
+    game: GameService, c: Connection, state: GameState, actor: ActorRef
+) -> tuple[FrameAssetLoss, ...]:
+    """Each real Partake cap exchange has its own strictly earlier source proof."""
+    from girlframe.engine.m3_assets import can_replace_at_limit, counts_toward_limit, frame_capacity
+    from girlframe.services.m3_consume_regrowth import _dive, prove_regrowth
+
+    result = []
+    for source in consume.records(state, consume.Partaking):
+        if source.actor != actor or source.option not in ("excrete", "regrow"):
+            continue
+        before, born = snapshots(game, c, source.event)
+        if source not in consume.records(born, consume.Partaking) or source.id != source.event:
+            raise WorkflowError("Recover the immutable actual Partaking source")
+        if not _surviving_frame(state, before, born, actor):
+            continue
+        action = game.action(c, source.action)
+        opportunity, choice, _ = _dive(game, c, before, actor, action, historical=True)
+        answer = _response(
+            game, c, source.action, choice, source.event, "consume_partake", int(actor.entity)
+        )
+        actual_opportunity = next(
+            (x for x in consume.records(born, consume.Opportunity) if x.id == opportunity.id), None
+        )
+        if (
+            answer.options != (source.option,)
+            or answer.fields.get("girl_asset") != source.girl_asset
+            or tuple(json.loads(answer.fields.get("frame_assets", "[]"))) != source.frame_assets
+            or (answer.fields.get("replace_frame") or None) != source.replaced_frame
+            or json.loads(answer.fields.get("regrow_replacements", "{}"))
+            != source.regrow_replacements
+            or actual_opportunity is None
+            or actual_opportunity.completed_event != source.event
+        ):
+            raise WorkflowError("Prove the original resolved Partake choice and exact resources")
+        if source.option == "regrow":
+            for component in consume.records(born, consume.RegrownFrame):
+                if (
+                    component.event != source.event
+                    or component.actor != actor
+                    or not component.replacement
+                ):
+                    continue
+                # prove_regrowth reconstructs BEFORE source.event. It cannot see this new loss,
+                # so a cap exchange can never authorize its own preceding component birth.
+                prove_regrowth(game, c, born, component.id)
+                old = next(
+                    (
+                        x
+                        for x in before.sheets[actor.entity].assets
+                        if x.id == component.replacement
+                    ),
+                    None,
+                )
+                if old is None or any(x.id == old.id for x in born.sheets[actor.entity].assets):
+                    raise WorkflowError(
+                        "Regrowth must really remove the selected original cap component"
+                    )
+                if _eligible(before, actor, old):
+                    result.append(
+                        FrameAssetLoss(
+                            source_kind="partake_regrowth",
+                            id=consume.identity("partake-regrowth-loss", component.id, old.id),
+                            actor=actor,
+                            frame=component.frame,
+                            event=source.event,
+                            asset=old,
+                        )
+                    )
+            continue
+        # Excretion has its own real Girl consumption and exact source-authored new Void Asset.
+        old_girl = next(
+            (x for x in before.sheets[actor.entity].assets if x.id == source.girl_asset), None
+        )
+        if (
+            old_girl is None
+            or old_girl.family != "girl"
+            or any(x.id == source.girl_asset for x in born.sheets[actor.entity].assets)
+        ):
+            raise WorkflowError("The actual selected Girl Asset must really be consumed")
+        from girlframe.engine.m3_frame_state import SuppliedAsset
+
+        supplied = SuppliedAsset.model_validate_json(answer.fields.get("new_asset", "null"))
+        new = AssetState(
+            id=consume.identity("excreted", source.action, source.event),
+            family="frame",
+            name=supplied.name,
+            description=supplied.description,
+            void=True,
+        )
+        old = next(
+            (x for x in before.sheets[actor.entity].assets if x.id == source.replaced_frame), None
+        )
+        full = sum(
+            counts_toward_limit(before.sheets[actor.entity], x)
+            for x in before.sheets[actor.entity].assets
+            if x.family == "frame"
+        ) >= frame_capacity(before.sheets[actor.entity], before)
+        if (
+            supplied.damaged
+            or not supplied.void
+            or new not in born.sheets[actor.entity].assets
+            or bool(source.replaced_frame) != full
+            or old is not None
+            and (
+                not can_replace_at_limit(before.sheets[actor.entity], old)
+                or old.id in blocked(before, actor)
+            )
+            or [
+                x
+                for x in before.sheets[actor.entity].assets
+                if x.id not in {source.girl_asset, source.replaced_frame}
+            ]
+            + [new]
+            != born.sheets[actor.entity].assets
+        ):
+            raise WorkflowError("Prove the actual legal excreted component and cap exchange")
+        if source.replaced_frame and old is None:
+            raise WorkflowError("Recover the actual excreted cap replacement")
+        if old is not None and _eligible(before, actor, old):
+            result.append(
+                FrameAssetLoss(
+                    source_kind="partake_excrete",
+                    id=consume.identity("partake-excrete-loss", source.id, old.id),
+                    actor=actor,
+                    frame=consume.frame(state, actor),
+                    event=source.event,
                     asset=old,
                 )
             )

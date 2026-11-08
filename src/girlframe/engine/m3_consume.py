@@ -168,9 +168,16 @@ class RegrownFrame(Model):
     receipt: str
     loss: str
     loss_event: str
-    loss_kind: Literal["asset_installment", "defeat_alternative"] | None = Field(
-        default=None, exclude_if=lambda value: value is None
-    )
+    loss_kind: (
+        Literal[
+            "asset_installment",
+            "defeat_alternative",
+            "defeat_new_void",
+            "partake_excrete",
+            "partake_regrowth",
+        ]
+        | None
+    ) = Field(default=None, exclude_if=lambda value: value is None)
     original: AssetState
     component: AssetState
     event: str

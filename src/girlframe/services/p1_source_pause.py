@@ -68,7 +68,23 @@ def _sources(state: GameState) -> tuple[_Source, ...]:
         for x in borrowed_am.sources(state)
         if x.phase in ("active", "effects") and not x.completed_event
     )
-    return (*bonded, *commands, *openings, *sequences, *performances, *am_encounters)
+    from girlframe.engine import m3_void_frame_entry as entry_rules
+
+    entries: tuple[_Source, ...] = ()
+    if entry_rules.records(state, entry_rules.Entry):
+        from girlframe.services.m3_void_frame_entry import pause_sources
+
+        entries = tuple(
+            _Source(
+                str(x["id"]),
+                "void_frame_entry",
+                int(x["channel"]),
+                str(x["scene"]),
+                str(x["event"]),
+            )
+            for x in pause_sources(state)
+        )
+    return (*bonded, *commands, *openings, *sequences, *performances, *am_encounters, *entries)
 
 
 def active(state: GameState, identity: str) -> bool:
@@ -330,6 +346,20 @@ def require_clear(
             ):
                 continue
             raise WorkflowError("SOURCE_SCENE_PAUSED: perform the actual original Court command")
+        if row["kind"] == "void_frame_entry":
+            from girlframe.services.m3_void_frame_entry import prerequisite_source
+            from girlframe.services.m3_void_frame_entry import (
+                source_for_play as entry_source_for_play,
+            )
+
+            linked_source = prerequisite_source(game, c, state, prepared=prepared, action=action)
+            if linked_source is None:
+                linked_source = entry_source_for_play(
+                    game, c, state, prepared=prepared, action=action
+                )
+            if linked_source != row["id"] or row["state"] != "held" or not active(state, row["id"]):
+                raise WorkflowError("SOURCE_SCENE_PAUSED: resolve the actual Frame-entry Dive")
+            continue
         if row["kind"] == "bonded":
             from girlframe.services.m3_bonded_rejection import (
                 source_for_play as rejection_source_for_play,

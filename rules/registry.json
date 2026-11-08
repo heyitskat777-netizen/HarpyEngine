@@ -6824,7 +6824,7 @@
         "Reinsert old component IDs and automatically reactivate former minds, passengers or links.",
         "Create arbitrary former inventory or remove Void without a rule source."
       ],
-      "implementation_note": "Finite adapters use genuine Budget-removal Loss, actual paid Asset Installment cap replacement, or actual accepted Handler Defeat alternative. Each preserves its canonical producer proof, current original surviving actor/Frame, capacity/legal replacement and existing birth/loss/Void consequences. New-Void Defeat replacements, own Partake cap exchanges and other permanent-loss producers remain explicit work; expiry, swap, reclassification and temporary grants are not stock.",
+      "implementation_note": "Finite adapters prove genuine Budget removal, paid Asset Installment cap replacement, accepted Handler Defeat alternative, actual new-Void Defeat cap replacement, and own Partake excretion/regrowth cap exchanges. Each proves its canonical prior producer and current original surviving actor/Frame, preserves costs, capacity and birth/loss/Void consequences, and consumes the exact loss once. Regrown-cap proof reconstructs the earlier producer before the new loss: no self-source. Other permanent producers keep explicit guards; expiry, swap, reclassification and temporary grants are not stock.",
       "change_impact": "Version future source interpretation changes; retain original Asset/loss history, new births, source costs, consumed losses and actual occupants/control endings.",
       "provenance": "owner_approved_campaign_ruling",
       "authority": "delegated_recommendation",
@@ -6958,6 +6958,23 @@
       ],
       "implementation_note": "Positive exact genuine HeldItem/Asset and source proof, actual transition/conveyance account and original source author. Preserve IDs, damage/Void and actual custody; do not duplicate in parked hardware. Default empty fields omit as before. Battery/Storage connection lifetimes and other custody sources keep their own guards.",
       "change_impact": "Keep original possession, body, source and conveyance history. Later adjustments cannot silently recreate objects, end neural links or change another source lifetime.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "void-next-frame-entry-source",
+      "summary": "Low Void1.2 freezes the original actual period population and one random person; her next genuine entry into her then-current own Frame requires ordinary Heat Dive plus each effective Void Asset.",
+      "source": "Rulebook PDF144/printed142 Void low die1 column2",
+      "rationale": "Preserve original random selection and actual ownership rather than redrawing for successor accounts or guessing a cockpit. Printed additional modifier does not replace Heat.",
+      "policy_key": "void_next_frame_entry_source",
+      "alternatives": [
+        "Redraw after population or account changes.",
+        "Count only undamaged Frame Void Assets or replace ordinary Heat with their count."
+      ],
+      "implementation_note": "Freeze actual original period ActorRefs and uniform index once. Trigger on known outside-to-inside own-Frame placement; count effective Girl and Frame Void Assets, including damaged, at actual roll. Preserve real physical-entry Void prerequisites, costs, receipt, pause and original completion. Harpy prerequisite, held-parent rescue entry and terminal/body producers remain named unsupported source ports; never substitute Dormant or a fake Pilot.",
+      "change_impact": "Preserve original selection, entry, prerequisite, cast, roll and completion events. Future interpretation changes apply prospectively and never reroll prior sources.",
       "provenance": "owner_approved_campaign_ruling",
       "authority": "delegated_recommendation",
       "clarity_review": true,
@@ -15310,14 +15327,16 @@
         "heading": "Void low: die 1, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_void_frame_entry.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

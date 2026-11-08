@@ -864,6 +864,20 @@ class InboxView(discord.ui.View):
             await open_vatgrown_travel(
                 interaction, VatgrownTravelService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_void_frame_entry":
+            from girlframe.discord_adapter.m3_void_frame_entry import open_void_frame_entry
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_strain import StrainService
+            from girlframe.services.m3_void_frame_entry import VoidFrameEntryService
+
+            await open_void_frame_entry(
+                interaction,
+                VoidFrameEntryService(
+                    StrainService(OffDutyService(MissionService(self.service.store)))
+                ),
+                item.identity,
+            )
         elif item.task == "m3_vatgrown_plays":
             from girlframe.discord_adapter.m3_vatgrown_plays import open_vatgrown_plays
             from girlframe.services.m2_game import GameService

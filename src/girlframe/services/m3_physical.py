@@ -182,6 +182,8 @@ class PhysicalService:
         key: str,
         revision: int,
         command: CockpitAction,
+        *,
+        channel: int | None = None,
     ) -> dict[str, Any]:
         command = CockpitAction.model_validate_json(command.model_dump_json())
 
@@ -243,6 +245,23 @@ class PhysicalService:
                     command.account,
                     pilot=command.operation == "pilot",
                 )
+            from girlframe.engine import m3_void_frame_entry as entry_rules
+
+            entry_source = bool(entry_rules.records(state, entry_rules.Selection))
+            if entry_source:
+                from girlframe.services.m3_void_frame_entry import stage_entry, synchronize_entry
+
+                if actual.frame_instance is not None:
+                    stage_entry(
+                        self.game,
+                        c,
+                        state,
+                        updated,
+                        command.actor,
+                        actual.frame_instance,
+                        source,
+                        channel=channel,
+                    )
             self.game.event(
                 c,
                 viewer.user_id,
@@ -292,8 +311,17 @@ class PhysicalService:
                         source,
                     )
                     void_works.append(identity)
+            if entry_source:
+                synchronize_entry(self.game, c, source)
+                updated = load_state(c, self.store.campaign_id)
+            entry_dives = [
+                x.id for x in entry_rules.records(updated, entry_rules.Entry) if x.event == source
+            ]
             return dict(
-                operation=command.operation, revision=updated.revision, void_works=void_works
+                operation=command.operation,
+                revision=updated.revision,
+                void_works=void_works,
+                **({"entry_dives": entry_dives} if entry_dives else {}),
             )
 
         try:
@@ -304,6 +332,7 @@ class PhysicalService:
                 dict(
                     revision=revision,
                     command=command.model_dump(mode="json"),
+                    **({"channel": channel} if channel is not None else {}),
                 ),
                 operation,
                 authorize=access,

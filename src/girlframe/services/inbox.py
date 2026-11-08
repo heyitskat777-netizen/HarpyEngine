@@ -1315,11 +1315,15 @@ class InboxService:
             from girlframe.services.m3_changeling import ChangelingService
             from girlframe.services.m3_changeling_sex import ChangelingSexService
             from girlframe.services.m3_consume import _tasks as consume_tasks
+            from girlframe.services.m3_missions import MissionService as EntryMissions
             from girlframe.services.m3_npc_flirt import NpcFlirtService
+            from girlframe.services.m3_off_duty import OffDutyService as EntryPeriods
             from girlframe.services.m3_prince import PrinceService
             from girlframe.services.m3_red_queen import RedQueenService
+            from girlframe.services.m3_strain import StrainService as EntryStrain
             from girlframe.services.m3_vatgrown_dna import VatgrownDNAService
             from girlframe.services.m3_vatgrown_travel import VatgrownTravelService
+            from girlframe.services.m3_void_frame_entry import VoidFrameEntryService
             from girlframe.services.m3_wyvern import _tasks as wyvern_tasks
             from girlframe.services.m3_wyvern_combat import WyvernCombatService
 
@@ -1334,6 +1338,12 @@ class InboxService:
                 ("npc_flirt", NpcFlirtService(frame_game)._tasks(connection, viewer)),
                 ("vatgrown_dna", VatgrownDNAService(frame_game)._tasks(connection, viewer)),
                 ("vatgrown_travel", VatgrownTravelService(frame_game)._tasks(connection, viewer)),
+                (
+                    "void_frame_entry",
+                    VoidFrameEntryService(
+                        EntryStrain(EntryPeriods(EntryMissions(self.store)))
+                    )._tasks(connection, viewer),
+                ),
                 ("casualty_replacement", ReplacementService(frame_game)._tasks(connection, viewer)),
                 ("bonded", BondedService(frame_game)._tasks(connection, viewer)),
                 ("bonded_am", BondedAMService(frame_game)._tasks(connection, viewer)),
@@ -3523,10 +3533,14 @@ class InboxService:
                     and json.loads(work["body_json"]).get("rule_id") == "strain.budget.endgame.5"
                 ):
                     primary, task_name = "Review persistent Handler Tag", "m3_budget_tag"
+                elif kind == "void_frame_entry_dive":
+                    continue  # Actual source-owned Entry cards above preserve this obligation.
                 elif kind == "strain_event":
                     from girlframe.engine.m3_strain_effects import SUPPORTED
 
-                    if json.loads(work["body_json"])["rule_id"] in SUPPORTED:
+                    if json.loads(work["body_json"])["rule_id"] in SUPPORTED | {
+                        "strain.void.low.1.2"
+                    }:
                         primary, task_name = "Apply Strain consequences", "m3_strain_effect"
                 title = {
                     "punishment": "Required Punishment",

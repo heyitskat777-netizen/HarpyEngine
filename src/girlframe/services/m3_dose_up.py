@@ -407,6 +407,18 @@ def _roll_source(game: GameService, c: Connection, action: dict[str, Any]) -> tu
         )
         if actual != recorded:
             raise WorkflowError("Recover the actual consumed psychic Flirt grant")
+    if action["data"].get("void_frame_entry"):
+        from girlframe.engine.m3_void_frame_entry import MODIFIER as entry_modifier
+        from girlframe.services.m3_void_frame_entry import prove_modifier
+
+        amount = prove_modifier(game, c, load_state(c, game.store.campaign_id), action)
+        recorded_entry = [
+            x
+            for x in action["data"]["receipt"].get("pre_modifiers", ())
+            if x["source"] == entry_modifier
+        ]
+        if amount is None or recorded_entry != [dict(source=entry_modifier, amount=amount)]:
+            raise WorkflowError("Recover the actual Frame-entry Void bonus and original receipt")
     if action["data"].get("red_queen_modifier"):
         from girlframe.services.m3_red_queen import prove_personality_modifier
 

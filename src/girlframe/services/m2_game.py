@@ -1323,6 +1323,25 @@ class GameService:
             mechanical_owner = (
                 int(princess_child["actor_controller"]) if princess_child else viewer.user_id
             )
+            from girlframe.engine import m3_void_frame_entry as entry_rules
+
+            void_frame_entry = None
+            if entry_rules.records(state, entry_rules.Entry):
+                from girlframe.engine.m3_actor_bonds import current_ref as entry_actor
+                from girlframe.services.m3_void_frame_entry import (
+                    prepare_child as prepare_entry_dive,
+                )
+                from girlframe.services.m3_void_frame_entry import require_pending
+
+                require_pending(
+                    self,
+                    c,
+                    state,
+                    viewer,
+                    prepared,
+                    actor=entry_actor(state, mechanical_owner),
+                )
+                void_frame_entry = prepare_entry_dive(self, c, viewer, state, prepared, channel)
             from girlframe.services.m3_bonded_rejection import prepare_child as prepare_rejection
 
             rejection_child = prepare_rejection(self, c, viewer, state, prepared, channel)
@@ -1456,6 +1475,7 @@ class GameService:
             elif (
                 prepared.play == "dive_deep"
                 and prepared.source_work is not None
+                and void_frame_entry is None
                 and bomb_collar_source is None
                 and easy_target_child is None
                 and investment_performance is None
@@ -1484,6 +1504,7 @@ class GameService:
                 mockingbird = prepare_mockingbird(self, c, viewer, prepared, state, channel=channel)
             elif (
                 prepared.source_work is not None
+                and void_frame_entry is None
                 and bomb_collar_source is None
                 and princess_child is None
                 and ankou_child is None
@@ -1724,6 +1745,7 @@ class GameService:
                             virus_order_work,
                             red_queen_child["work"] if red_queen_child else None,
                             bomb_collar_source["work"] if bomb_collar_source else None,
+                            void_frame_entry["entry"] if void_frame_entry else None,
                         )
                         if x
                     ),
@@ -2421,6 +2443,8 @@ class GameService:
             }
             if prince_demand_attempt is not None:
                 data["prince_demand_attempt"] = prince_demand_attempt
+            if void_frame_entry is not None:
+                data["void_frame_entry"] = void_frame_entry
             if rejection_child is not None:
                 from girlframe.engine.m3_handler_consequences import (
                     active_handler as reject_handler,
@@ -3089,6 +3113,7 @@ class GameService:
                 or vatgrown_sex
                 or npc_flirt
                 or rejection_child
+                or void_frame_entry
                 or prince
                 or consume
                 or prince_demand_attempt
@@ -3204,6 +3229,12 @@ class GameService:
                 from girlframe.services.m3_required_plays import bind_action as bind_required_play
 
                 bind_required_play(self, c, state, action, begin_source_event)
+            if void_frame_entry is not None:
+                from girlframe.services.m3_void_frame_entry import bind_child as bind_entry_dive
+
+                assert begin_source_event is not None
+                bind_entry_dive(self, c, state, action, begin_source_event)
+                self.save_action(c, action)
             if red_queen_child is not None:
                 from girlframe.services.m3_red_queen_support import bind_child as bind_royal_child
 
@@ -3359,7 +3390,8 @@ class GameService:
                 else "m2.play_confirmed",
                 state
                 if (
-                    void_keep is not None
+                    void_frame_entry is not None
+                    or void_keep is not None
                     or alpha_sex is not None
                     or dose_up is not None
                     or princess_sex is not None
@@ -4107,6 +4139,11 @@ class GameService:
                 action["data"]["red_queen_doll"] = court_doll
             if court_adjustment:
                 action["data"]["red_queen_modifier"] = court_adjustment
+            entry_modifiers = []
+            if action["data"].get("void_frame_entry"):
+                from girlframe.services.m3_void_frame_entry import pre_roll as entry_pre_roll
+
+                entry_modifiers = entry_pre_roll(self, c, state, action, court_event)
             faces = self.dice.roll()
             if len(faces) != 2 or any(type(x) is not int or not 1 <= x <= 6 for x in faces):
                 raise ValueError("Dice source returned invalid faces")
@@ -4120,6 +4157,7 @@ class GameService:
             )
             pre_modifiers += refusal_modifiers
             pre_modifiers.extend(ankou_modifiers)
+            pre_modifiers.extend(entry_modifiers)
             if psychic_flirt:
                 pre_modifiers.append(dict(source="changeling_fingers_flirt", amount=psychic_flirt))
             if court_adjustment:
@@ -4276,7 +4314,7 @@ class GameService:
                     pre_modifiers=pre_modifiers, base_modifier=prepared.heat, modifier_source="Heat"
                 )
             if (
-                court_adjustment or psychic_flirt or ankou_modifiers
+                court_adjustment or psychic_flirt or ankou_modifiers or entry_modifiers
             ) and "pre_modifiers" not in receipt:
                 receipt.update(
                     pre_modifiers=pre_modifiers, base_modifier=prepared.heat, modifier_source="Heat"

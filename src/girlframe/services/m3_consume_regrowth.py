@@ -19,7 +19,9 @@ from girlframe.services.m3_budget_removal import prove_loss_source
 from girlframe.services.m3_frame_asset_losses import (
     FrameAssetLoss,
     defeat_alternative_losses,
+    defeat_void_losses,
     installment_loss,
+    partake_losses,
 )
 from girlframe.services.m3_handler_advancements import _history
 from girlframe.services.onboarding import WorkflowError
@@ -31,7 +33,16 @@ class Selection(Model):
     original: AssetState
     loss: str | None = None
     loss_event: str | None = None
-    loss_kind: Literal["asset_installment", "defeat_alternative"] | None = None
+    loss_kind: (
+        Literal[
+            "asset_installment",
+            "defeat_alternative",
+            "defeat_new_void",
+            "partake_excrete",
+            "partake_regrowth",
+        ]
+        | None
+    ) = None
     replacement: str | None = None
 
 
@@ -131,6 +142,17 @@ def _loss(game: GameService, c: Connection, state: GameState, value: budget.Loss
     return original
 
 
+def _namespace(base: str, kind: str | None) -> str:
+    # Preserve the published three providers' exact old IDs and namespaces.
+    if kind is None:
+        return base
+    if kind == "asset_installment":
+        return base + "-installment"
+    if kind == "defeat_alternative":
+        return base + "-defeat"
+    return base + "-" + kind.replace("_", "-")
+
+
 def _selections(
     game: GameService, c: Connection, state: GameState, actor: ActorRef
 ) -> tuple[Selection, ...]:
@@ -178,23 +200,27 @@ def _selections(
             paid_loss = installment_loss(game, c, state, receipt)
             if paid_loss is not None:
                 losses.append(paid_loss)
-    losses.extend(
-        value
-        for value in defeat_alternative_losses(game, c, state, actor)
-        if value.asset.id not in present and (value.source_kind, value.id) not in consumed
-    )
-    for loss in losses:
-        kind: Literal["asset_installment", "defeat_alternative"] | None = (
-            loss.source_kind if loss.source_kind != "budget" else None
+    for provider in (defeat_alternative_losses, defeat_void_losses, partake_losses):
+        losses.extend(
+            value
+            for value in provider(game, c, state, actor)
+            if value.asset.id not in present and (value.source_kind, value.id) not in consumed
         )
+    for loss in losses:
+        kind: (
+            Literal[
+                "asset_installment",
+                "defeat_alternative",
+                "defeat_new_void",
+                "partake_excrete",
+                "partake_regrowth",
+            ]
+            | None
+        ) = loss.source_kind if loss.source_kind != "budget" else None
         result.append(
             Selection(
                 token=rules.identity(
-                    "missing-frame-defeat"
-                    if kind == "defeat_alternative"
-                    else "missing-frame-installment"
-                    if kind
-                    else "missing-frame",
+                    _namespace("missing-frame", kind),
                     loss.id,
                 ),
                 kind="missing",
@@ -228,11 +254,7 @@ def regrowth_options(
 def _component(plan: RegrowthPlan, selected: Selection, event: str) -> AssetState:
     return AssetState(
         id=rules.identity(
-            "regrown-frame-defeat"
-            if selected.loss_kind == "defeat_alternative"
-            else "regrown-frame-installment"
-            if selected.loss_kind
-            else "regrown-frame",
+            _namespace("regrown-frame", selected.loss_kind),
             plan.action,
             selected.loss or "",
         ),
@@ -319,11 +341,7 @@ def _install(state: GameState, plan: RegrowthPlan, event: str, *, record: bool) 
                 changed,
                 rules.RegrownFrame(
                     id=rules.identity(
-                        "regrowth-defeat"
-                        if selected.loss_kind == "defeat_alternative"
-                        else "regrowth-installment"
-                        if selected.loss_kind
-                        else "regrowth",
+                        _namespace("regrowth", selected.loss_kind),
                         plan.action,
                         selected.loss or "",
                     ),

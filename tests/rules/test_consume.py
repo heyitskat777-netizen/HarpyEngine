@@ -1230,3 +1230,319 @@ def test_actual_accepted_defeat_component_loss_then_native_same_frame_regrowth(
         controls.view(OTHER, regrown.id)
     tick(worker, gateway, 6)
     assert game.inspect(PLAYER, dive)["state"] == "complete"
+
+
+def _actual_cap_defeat_void_context(ledger, tmp_path, monkeypatch):
+    """New source consumers share genuine paid capacity and required-Defeat setup."""
+    from girlframe.engine.m3_assets import counts_toward_limit
+    from girlframe.engine.m3_requisition_state import Installation
+    from girlframe.services.m3_requisitions import RequisitionService
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch)
+    acquire(controls, rules.PARTAKE)
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "owner_m3_rulings": ledger.policy.owner_m3_rulings.model_copy(
+                update={"beneath_private_choices": "affected_owner"}
+            )
+        }
+    )
+    actor = current_ref(state(game), 2)
+    purchase = RequisitionService(game)
+    index = 0
+    while True:
+        quote = purchase.view(PLAYER)
+        sheet = state(game).sheets["2"]
+        if (
+            sum(counts_toward_limit(sheet, x) for x in sheet.assets if x.family == "frame")
+            >= quote["frame_capacity"]
+        ):
+            break
+        purchase.buy(
+            PLAYER,
+            str(uuid4()),
+            actor,
+            quote["source_sha256"],
+            Installation(
+                name="Actual spare cap plate " + str(index),
+                description="Actual paid original Frame part",
+                account="I actually install this paid component",
+                trigger_confirmed=True,
+            ),
+        )
+        index += 1
+    lost = next(
+        x for x in state(game).sheets["2"].assets if x.family == "frame" and not x.intrinsic
+    )
+    with ledger.transaction() as c:
+        damaged = state(game)
+        for value in damaged.sheets["2"].assets:
+            if value.family == "frame" and value.id != lost.id:
+                value.damaged = True
+        game.event(c, 1, str(uuid4()), "synthetic.actual_prior_cap_frame_damage", damaged)
+    cockpit(game, "pilot")
+    game.dice.faces = (1, 1)
+    parent = game.begin(
+        PLAYER,
+        str(uuid4()),
+        900,
+        state(game).sheets["2"].revision,
+        PlayInput(
+            play="put_someone_beneath_you",
+            target=3,
+            heat=0,
+            piloting=True,
+            context="Actual confrontation while piloting my original Frame",
+            trigger_confirmed=True,
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    if game.inspect(PLAYER, parent)["state"] in ("acquiring", "ready_to_roll"):
+        game.roll(PLAYER, str(uuid4()), parent)
+    pass_tags(game)
+    answer(game, OTHER, "beneath_select", options=("damage",), text="My actual counterattack")
+    answer(game, PLAYER, "beneath_details", denied=(lost.id,))
+    game.dice.faces = (3, 3)
+    defeat = game.begin(
+        PLAYER,
+        str(uuid4()),
+        900,
+        state(game).sheets["2"].revision,
+        PlayInput(
+            play="defeat",
+            parent=parent,
+            heat=0,
+            piloting=True,
+            trigger_confirmed=True,
+            context="Actual required Defeat after the last working Frame Asset is damaged",
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    if game.inspect(PLAYER, defeat)["state"] in ("acquiring", "ready_to_roll"):
+        game.roll(PLAYER, str(uuid4()), defeat)
+    pass_tags(game)
+    answer(
+        game,
+        PLAYER,
+        "defeat_select",
+        options=("new_girl_and_frame_void_assets_heat4",),
+        fields={
+            "girl_name": "Actual emergency blood adaptation",
+            "girl_description": "Actual new Void-corrupted Girl feature from Defeat",
+            "frame_name": "Actual emergency Void plate",
+            "frame_description": "Actual new Frame blood-grown component at the cap",
+            "frame_replace": lost.id,
+        },
+        text="I choose the actual printed new-Void survival option",
+    )
+    assert game.inspect(PLAYER, defeat)["state"] == "complete"
+    assert game.inspect(PLAYER, parent)["state"] == "complete"
+    actual_lost = lost.model_copy(update={"damaged": True})
+    assert not any(x.id == lost.id for x in state(game).sheets["2"].assets)
+    tick(worker, gateway, 6)
+    return game, worker, gateway, controls, actor, actual_lost, defeat
+
+
+def _actual_next_partake(game, worker, gateway):
+    dive = roll(game, worker, gateway, play="dive_deep", heat=0, faces=(4, 5), piloting=True)
+    if any(x["kind"] == "dive_select" for x in game.choices(PLAYER)):
+        answer(
+            game,
+            PLAYER,
+            "dive_select",
+            options=("erase_identity_and_table_question",),
+            text="Actual communion before the actual source-owned Partake",
+        )
+        identity = next(x for x in state(game).sheets["2"].identities if not x.protected)
+        answer(
+            game,
+            PLAYER,
+            "dive_effect",
+            fields={"identity": identity.id},
+            text="What does this original Frame remember?",
+        )
+        for viewer in (PLAYER, OTHER, ADMIN):
+            answer(game, viewer, "dive_table_answer", text="My own actual table answer")
+    return dive, next(x for x in game.choices(PLAYER) if x["kind"] == "consume_partake")
+
+
+def _native_actual_cap_partake(game, row, *, girl, token=None, replacement=None, excrete=None):
+    import asyncio
+
+    from test_mission_ui import current
+
+    from girlframe.discord_adapter.m3_consume import open_choice
+
+    async def perform():
+        opened = current(2, uuid4().int % 1000000000)
+        opened.channel_id = 900
+        await opened.response.defer(ephemeral=True)
+        await open_choice(opened, game, game.decision(PLAYER, row["id"]))
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(current(3, uuid4().int % 1000000000))
+        form.values.update(
+            option=("excrete" if excrete else "regrow",),
+            girl_asset=(girl,),
+            account="My actual selected Girl cost and current Frame component exchange",
+        )
+        if excrete:
+            form.values.update(
+                replace_frame=(replacement,),
+                new_name=excrete,
+                new_description="Actual source-excreted Void hardware",
+            )
+        else:
+            form.values["frame_assets"] = (token,)
+        submitted = current(2, uuid4().int % 1000000000)
+        submitted.channel_id = 900
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        if not excrete and replacement:
+            space = submitted.edit_original_response.call_args.kwargs["view"]
+            space.values["replacement_0"] = (replacement,)
+            final = current(2, uuid4().int % 1000000000)
+            final.channel_id = 900
+            await space.confirm.callback(final)
+            assert space.completed, final.edit_original_response.call_args_list
+            before = state(game)
+            await space.confirm.callback(final)
+        else:
+            before = state(game)
+            await form.confirm.callback(submitted)
+        assert state(game) == before
+
+    asyncio.run(perform())
+
+
+def test_actual_new_void_defeat_cap_loss_then_native_same_frame_regrowth(
+    ledger, tmp_path, monkeypatch
+):
+    from girlframe.services.m3_consume_regrowth import _selections, prove_regrowth
+    from girlframe.services.m3_frame_asset_losses import defeat_void_losses
+
+    game, worker, gateway, controls, actor, lost, defeat = _actual_cap_defeat_void_context(
+        ledger, tmp_path, monkeypatch
+    )
+    frame = rules.frame(state(game), actor)
+    receipt = game.inspect(PLAYER, defeat)["receipt"]
+    with ledger.engine.connect() as c:
+        loss = next(
+            x for x in defeat_void_losses(game, c, state(game), actor) if x.asset.id == lost.id
+        )
+        assert loss.asset == lost and loss.frame == frame
+    dive, row = _actual_next_partake(game, worker, gateway)
+    token = rules.identity("missing-frame-defeat-new-void", loss.id)
+    assert token in game.decision(PLAYER, row["id"])["detail"]["regrow_missing"]
+    replacement = next(
+        x.id
+        for x in state(game).sheets["2"].assets
+        if x.family == "frame" and not x.void and not x.intrinsic
+    )
+    girl = asset(game, 2)
+    calls = game.dice.calls
+    _native_actual_cap_partake(game, row, girl=girl, token=token, replacement=replacement)
+    born = state(game)
+    regrown = next(
+        x
+        for x in rules.records(born, rules.RegrownFrame)
+        if x.loss_kind == "defeat_new_void" and x.loss == loss.id
+    )
+    assert regrown.original == lost and regrown.component.id != lost.id and regrown.frame == frame
+    assert regrown.component.void == lost.void and not regrown.component.damaged
+    assert regrown.component in born.sheets["2"].assets
+    assert next(x for x in born.sheets["2"].assets if x.id == girl).damaged
+    with ledger.engine.connect() as c:
+        assert prove_regrowth(game, c, born, regrown.id) == regrown
+        assert token not in {x.token for x in _selections(game, c, born, actor)}
+    assert controls.view(PLAYER, regrown.id)["type"] == "regrowth"
+    with pytest.raises(WorkflowError):
+        controls.view(OTHER, regrown.id)
+    assert game.inspect(PLAYER, defeat)["receipt"] == receipt and game.dice.calls == calls
+    tick(worker, gateway, 6)
+    assert game.inspect(PLAYER, dive)["state"] == "complete"
+
+
+def test_actual_partake_excretion_then_regrowth_cap_losses_have_prior_sources_only(
+    ledger, tmp_path, monkeypatch
+):
+    from girlframe.services.m3_consume_regrowth import _selections, prove_regrowth
+    from girlframe.services.m3_frame_asset_losses import partake_losses
+
+    # The real new-Void Defeat gives a third Girl Asset: excretion +two real damage costs.
+    game, worker, gateway, controls, actor, _, _ = _actual_cap_defeat_void_context(
+        ledger, tmp_path, monkeypatch
+    )
+    frame = rules.frame(state(game), actor)
+    first, row = _actual_next_partake(game, worker, gateway)
+    excreted_old = next(
+        x
+        for x in state(game).sheets["2"].assets
+        if x.family == "frame" and not x.void and not x.intrinsic
+    )
+    eaten = asset(game, 2)
+    _native_actual_cap_partake(
+        game,
+        row,
+        girl=eaten,
+        replacement=excreted_old.id,
+        excrete="Actual source-grown excreted shell",
+    )
+    assert not any(x.id == eaten for x in state(game).sheets["2"].assets)
+    with ledger.engine.connect() as c:
+        loss = next(
+            x
+            for x in partake_losses(game, c, state(game), actor)
+            if x.source_kind == "partake_excrete" and x.asset.id == excreted_old.id
+        )
+    tick(worker, gateway, 6)
+    assert game.inspect(PLAYER, first)["state"] == "complete"
+    second, row = _actual_next_partake(game, worker, gateway)
+    token = rules.identity("missing-frame-partake-excrete", loss.id)
+    replacement = next(
+        x
+        for x in state(game).sheets["2"].assets
+        if x.family == "frame" and not x.void and not x.intrinsic
+    )
+    _native_actual_cap_partake(
+        game, row, girl=asset(game, 2), token=token, replacement=replacement.id
+    )
+    grown = next(
+        x
+        for x in rules.records(state(game), rules.RegrownFrame)
+        if x.loss_kind == "partake_excrete" and x.loss == loss.id
+    )
+    with ledger.engine.connect() as c:
+        assert prove_regrowth(game, c, state(game), grown.id) == grown
+        displaced = next(
+            x
+            for x in partake_losses(game, c, state(game), actor)
+            if x.source_kind == "partake_regrowth" and x.asset.id == replacement.id
+        )
+    tick(worker, gateway, 6)
+    assert game.inspect(PLAYER, second)["state"] == "complete"
+    third, row = _actual_next_partake(game, worker, gateway)
+    next_token = rules.identity("missing-frame-partake-regrowth", displaced.id)
+    assert next_token in game.decision(PLAYER, row["id"])["detail"]["regrow_missing"]
+    final_replacement = next(
+        x.id
+        for x in state(game).sheets["2"].assets
+        if x.family == "frame" and not x.void and not x.intrinsic and x.id != grown.component.id
+    )
+    _native_actual_cap_partake(
+        game, row, girl=asset(game, 2), token=next_token, replacement=final_replacement
+    )
+    final = state(game)
+    last = next(
+        x
+        for x in rules.records(final, rules.RegrownFrame)
+        if x.loss_kind == "partake_regrowth" and x.loss == displaced.id
+    )
+    assert last.original == replacement and last.frame == frame
+    assert last.component.id != replacement.id and last.component in final.sheets["2"].assets
+    with ledger.engine.connect() as c:
+        assert prove_regrowth(game, c, final, last.id) == last
+        assert next_token not in {x.token for x in _selections(game, c, final, actor)}
+        assert token not in {x.token for x in _selections(game, c, final, actor)}
+    assert controls.view(PLAYER, last.id)["type"] == "regrowth"
+    tick(worker, gateway, 6)
+    assert game.inspect(PLAYER, third)["state"] == "complete"

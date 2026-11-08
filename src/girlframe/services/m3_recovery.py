@@ -448,6 +448,13 @@ class RecoveryService:
                         release_npc_flirt(self.game, c, state, action, recovery_event)
                         or released_learning
                     )
+                if cancel and action["data"].get("void_frame_entry"):
+                    from girlframe.services.m3_void_frame_entry import (
+                        release_unrolled as release_entry_dive,
+                    )
+
+                    release_entry_dive(self.game, c, state, action, recovery_event)
+                    released_learning = True
                 if cancel and action["data"].get("ankou_effect_child"):
                     from girlframe.services.m3_required_plays import (
                         release_unrolled as release_required_play,

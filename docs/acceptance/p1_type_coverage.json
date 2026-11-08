@@ -1,9 +1,9 @@
 {
   "status": "P1_IMPLEMENTATION_AUTHORIZED_TESTING_PENDING",
-  "published_source": "e112de3b79294e7cb5392395849602c702445f5b",
+  "published_source": "b7cfd10ae0376c8e84aa018edca2d3b4651dc846",
   "main_merge": "c4550ecbd89bbf84363537e7bdf763c2177a998f",
   "scope": "10Girl labels;10Frame labels representing9official Frame rulesets; JANUS-B uses JANUS",
-  "evidence_note": "Published baseline e112de3; focused CI42509420443 passed, full skipped. New local AM physical-possession and authored joint-travel minimums are scoped evidence. Original full M3/RULES_SUBSET and final full/global/independent/player gates remain pending.",
+  "evidence_note": "Published b7cfd10; focused CI42511557063 passed, full skipped. Local CONSUME new-Void and own-Partake cap-loss normals2/17.81s and Low Void next-entry normal1/3.83s are scoped evidence. Original full M3/RULES_SUBSET and final full/global/independent/player gates remain pending.",
   "rows": [
     {
       "category": "Girl",
@@ -1446,8 +1446,8 @@
       "type": "CONSUME",
       "registry_prefix": "frame.consume.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Original physical hunger/link state, actual Eat/Feral/owned source choices, body/custody/loss/ending support, starvation Tag/Smell/order hooks and paid Requisitions. Genuine-link/midBite smoke1 passed2.24s. Local Budget-loss Partake regrowth preserves exact original hardware history, real costs/capacity and new component identity; normal1 passed7.95s with guarded Opportunity completion repair. Static6/types5 pass. Actual native Sprite Bite interception/real Asset cost/one-time feeding/original receipt preservation now passed; fatal/decline branches unrun. Local paid Asset Installment cap-removal now has exact canonical loss proof and original same-Frame native regrowth; real paid-purchase/Dive/Partake/new-birth normal passed1/4.73s after a fixture cap correction. Existing Budget records/events remain unchanged. Local accepted Handler Defeat alternative removes actual named same-Frame components; precise canonical loss proof/native regrowth normal passed1/6.84s after fixture-only correction.",
-      "missing_before_AI": "remaining Sprite fatal/decline normal verification; ordinary body/carrier/linked-Asset consumers; permanent-loss regrowth producers beyond actual Budget removal and paid Asset Installment, including new-Void Defeat cap exchange and own Partake cap exchanges; typed knowledge/free-text boundary; final normal regression. Unsupported adapters stay explicit before costs.",
+      "ordinary_workflows_with_evidence": "Original physical hunger/link state, actual Eat/Feral/owned source choices, body/custody/loss/ending support, starvation Tag/Smell/order hooks and paid Requisitions. Genuine-link/midBite smoke1 passed2.24s. Local Budget-loss Partake regrowth preserves exact original hardware history, real costs/capacity and new component identity; normal1 passed7.95s with guarded Opportunity completion repair. Static6/types5 pass. Actual native Sprite Bite interception/real Asset cost/one-time feeding/original receipt preservation now passed; fatal/decline branches unrun. Local paid Asset Installment cap-removal now has exact canonical loss proof and original same-Frame native regrowth; real paid-purchase/Dive/Partake/new-birth normal passed1/4.73s after a fixture cap correction. Existing Budget records/events remain unchanged. Local accepted Handler Defeat alternative removes actual named same-Frame components; precise canonical loss proof/native regrowth normal passed1/6.84s after fixture-only correction. Local canonical new-Void Defeat and own-Partake excretion/regrowth cap exchanges prove prior original components and actual native recovery; two normal flows passed2/17.81s. No regrown-cap self-source.",
+      "missing_before_AI": "Remaining Sprite fatal/decline normal verification; ordinary body/carrier/linked-Asset consumers; other explicitly sourced permanent-loss producers (Supply Drop/Modular/Sup remain separate); typed knowledge/free-text boundary; final normal regression. Budget, paid installment, accepted Defeat, new-Void Defeat and own-Partake cap exchange providers now exist; unsupported adapters stay explicit before costs.",
       "later_candidates": "Exceptional targets/body combinations after ordinary consumption; starvation is not deferred.",
       "code": [
         "src/girlframe/engine/frame_setup.py",

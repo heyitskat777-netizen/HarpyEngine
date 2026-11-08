@@ -3753,8 +3753,10 @@ Frame, retaining Void and consuming its exact loss source once. Preserve actual
 Dive/Girl-Asset costs, capacity/replacement rules and mandatory birth/loss/Void
 consequences. The former component's occupants, custody and physical/control links
 stay ended. Finite sources now include canonical Budget removal and an actual paid Asset
-Installment cap exchange or a genuinely accepted Defeat alternative, each with
-its own source proof. Expiry, Frame
+Installment cap exchange, a genuinely accepted Defeat alternative, new-Void
+Defeat cap replacement, and own Partake excretion/regrowth cap exchanges, each
+with prior canonical source proof. A regrown component cannot use its own new
+loss as its acquisition source. Expiry, Frame
 swap, reclassification and temporary grants do not establish permanent stock.
 Other missing-component producers remain implementation work. This delegated
 interpretation requires clarity review; later adjustments preserve source/cost/
@@ -3881,3 +3883,18 @@ connection lifetimes retain their actual separate source rules. Preserve all
 possession/body/conveyance history on future adjustment. This delegated
 interpretation requires clarity review; it does not supply free equipment or
 resolve missing connection adapters.
+
+### Low Void: the selected Girl's next Frame entry
+
+`void-next-frame-entry-source` (PDF144/printed142): freeze the original actual
+period population and one uniform random selection once. The original person,
+not a successor account, owes an immediate Dive at her next genuine known entry
+into her then-current own Frame. Count effective Girl and Frame Void Assets,
+including damaged ones, at the real roll as an additional modifier alongside
+ordinary Heat and costs. Actual entry Void prerequisites remain first. Borrowed
+cockpits, unknown initial placement and an inside-to-pilot toggle establish no
+new entry. Preserve selection, physical source, venue, receipt and completion.
+This delegated interpretation requires clarity review; future adjustments never
+redraw or rewrite past events. Genuine Harpy prerequisites, held-parent rescue
+entry and terminal/body producers remain explicit source adapters, not completed
+by this bounded ordinary cockpit path.

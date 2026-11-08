@@ -719,3 +719,55 @@ mypy11 passed. Registry remains477/270 subset/207 unimplemented/440 required/
 findings; whitespace check passed. Exact source/commands retained in
 `var/p1-body-joint-checkpoint-{paths,frozen,checks}.json`. Full regression and
 independent/player review remain pending; bot stays OFF.
+
+### Source-proven CONSUME cap losses and Low Void next Frame entry
+
+Published preceding checkpoint **b7cfd10ae0376c8e84aa018edca2d3b4651dc846**:
+[focused CI42511557063](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42511557063) passed; full regression skipped.
+
+Minimum CONSUME nodes:
+`tests/rules/test_consume.py::test_actual_new_void_defeat_cap_loss_then_native_same_frame_regrowth`
+and `tests/rules/test_consume.py::test_actual_partake_excretion_then_regrowth_cap_losses_have_prior_sources_only`.
+Initial2failed/3.62s: new fixture used wrong Beneath target; corrected only its
+real target. Retry2failed/10.09s exposed actual new Defeat proof replay using
+empty bindings; repaired to actual campaign profiles. Retry **2passed/17.81s**.
+Canonical Defeat/Partake choices, real costs, prior component birth, same original
+surviving Frame and actual new loss remain proved. Regrown-cap proof uses the
+producer's prior snapshot, never its own new loss. Original Budget/paid/accepted
+alternative records, event names and defaults remain. Other producer families
+retain explicit source requirements. No earlier success rerun.
+
+Minimum Frame-entry node:
+`tests/rules/test_void_frame_entry.py::test_original_random_girl_real_entry_required_heat_dive_adds_void_then_real_consequence`.
+Only this new failed node was rerun. Actual sequence:
+
+- attempt1:1failed/1.97s; fixture accidentally selected High Void; set current Void after genuine Low review.
+- attempt2:1failed/2.04s; fixture missing world approval; preserve existing scopes and add synthetic world scope.
+- attempt3:1failed/2.02s; fixture expected identical service object; actual chain correctly shares store, corrected assertion.
+- attempt4:1failed/2.28s; real Game fallback misrouted entry Dive to Dormant; exclude only positive entry source from Dormant/generic fallback.
+- attempt5:1failed/2.48s; allocate actual begin source event for entry.
+- attempt6:1failed/2.40s; new service read nonexistent top-level Action.play; use actual persisted data.prepared.play throughout.
+- attempt7:1failed/2.68s; fixture inspect receipt path corrected.
+- attempt8:1failed/2.67s; worker retained unrolled Action after real source bind was not persisted.
+- attempt9:1failed/3.13s; temporary direct confirmed-roll diagnostic exposed missing bound child; persist state on same canonical begin event. Diagnostic then removed.
+- attempt10:1failed/3.20s; actual additive total was correct but receipt omitted modifier basis; include entry modifier in ordinary Heat receipt projection.
+- attempt11: **1passed/3.83s** with normal worker path restored.
+
+The normal proves one original random selection/retry, actual own-Frame physical
+entry, private addressed native controls, real pause, ordinary Heat plus additive
+Void modifier, original receipt, real Dive consequence and private completed reopen.
+Actual pre-existing physical Void work precedes the Dive. Genuine Harpy prerequisite,
+held-parent rescue entry and terminal/body producers remain explicit unfinished
+source adapters; this bounded ordinary cockpit source does not complete them.
+No broad regression or compatibility sweep was run. Most automation, including
+final DPS pagination, remains deferred to the exact final P1 candidate; independent
+and human review remain pending. Bot OFF; RULES_SUBSET; no deployment.
+
+Scoped publication checks:19 Python/17 source Ruff/format/type pass, followed
+by Game-only delta Ruff/format/type pass after the final source fixes. Registry
+477 entries/271 subset/206 unimplemented/440 required/0 independently verified.
+Repository scan1398 publishable files/40 preserved manifest entries/0 findings.
+Initial whitespace check identified regenerated CSV CRLF; normalized only its
+line endings and repeated whitespace check. Exact commands/source hashes and
+all failed-node logs retained under ignored `var/p1-cap-entry-checkpoint-*` and
+`var/p1-void-entry-minimum*`. No broad gameplay/regression run.
