@@ -89,7 +89,16 @@ class Progress(Model):
 
 class HandlerContext(Model):
     entity: str | None = None
-    operation: Literal["hire", "fire", "chastise", "request"] | None = None
+    operation: Literal["hire", "fire", "chastise", "request", "deprogram"] | None = None
+    deprogram_tags: tuple[str, ...] = Field(default=(), exclude_if=lambda value: not value)
+
+    @model_validator(mode="after")
+    def deprogram_scope(self) -> "HandlerContext":
+        if (self.operation == "deprogram") != bool(self.deprogram_tags):
+            raise ValueError("Only deprogramming selects actual work-affecting NPC Tags")
+        if len(set(self.deprogram_tags)) != len(self.deprogram_tags):
+            raise ValueError("Choose distinct real NPC Tags")
+        return self
 
 
 class Period(Model):

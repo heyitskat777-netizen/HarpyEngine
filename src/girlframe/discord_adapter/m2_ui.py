@@ -1915,6 +1915,17 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         except WorkflowError as exc:
             await interaction.followup.send(str(exc), ephemeral=True)
 
+    @campaign.command(name="malleable", description="Qualified Tags and NPC altered-state controls")
+    async def malleable_controls(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_malleable import open_malleable
+        from girlframe.services.m3_malleable import MalleableService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_malleable(interaction, MalleableService(game.store, game))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
     @campaign.command(name="stim", description="Voluntary Stim source, drugs and saved effects")
     async def stim_controls(interaction: discord.Interaction) -> None:
         from girlframe.discord_adapter.m3_stim_sex import open_stim

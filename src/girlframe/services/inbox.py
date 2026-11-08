@@ -924,6 +924,22 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_malleable import MalleableService
+
+            for malleable in MalleableService(self.store)._tasks(connection, viewer):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, malleable),
+                        prefix="malleable:",
+                        source="malleable",
+                        counterpart="Original giver and actual affected people",
+                        effect="Review your qualified Tag or actual NPC source history.",
+                        details="Forced replacement preserves other people's decisions.",
+                        primary="Review Malleable",
+                        task="m3_malleable",
+                    )
+                )
+
             from girlframe.services.m3_stim_sex import SexService as StimSexService
 
             for stim in StimSexService(GameService(self.store))._tasks(connection, viewer):

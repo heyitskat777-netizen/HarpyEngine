@@ -1,10 +1,9 @@
-# Current Stim Sex delivery and affected existing source consumers.
-# Earlier focused selections remain in Git/full suite; final M3 mode runs all tests.
-tests/rules/test_stim_sex.py
+# Current Malleable and affected genuine alteration/Off-Duty consumers.
+# Historical focused selections remain in Git; final M3 mode runs the full suite.
+tests/rules/test_malleable.py
 tests/rules/test_dose_up.py
-tests/rules/test_gender_designation.py
-tests/test_m2_game.py::test_disobey_requires_recorded_superior_order_and_low_halts
-tests/rules/test_ankou_feedback.py::test_actual_purpose_refusal_blocks_unrolled_play_then_real_recovery
+tests/rules/test_off_duty_cycle.py::test_actual_preparation_owned_rolls_recovery_review_and_world_end_are_resumable
+tests/rules/test_off_duty_cycle.py::test_scene_is_private_to_participants_and_cannot_be_attested_for_absent_humans
 # Preserve release/privacy/pause/replay and delivery boundaries.
 tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng
 tests/test_m2_game.py::test_campaign_isolation_and_delivery_uncertainty_no_reroll

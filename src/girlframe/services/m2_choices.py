@@ -4,6 +4,7 @@ import json
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
+import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
@@ -108,6 +109,95 @@ class ChoiceEngine:
                 and item.kind in ("reject_tag", "cannot_refuse_until_tag_resolved")
             ):
                 item.state = "fulfilled"
+
+    def malleable_resolved(
+        self, c: Connection, state: GameState, owner: int, tag: str, event: str
+    ) -> None:
+        """Consume this source's actual Tag resolution without another human's answer."""
+        from girlframe.engine import m3_malleable as malleable
+        from girlframe.services.m3_malleable import prove_birth
+
+        birth = prove_birth(self.game, c, state, tag)
+        performed = next(
+            (
+                x
+                for x in malleable.records(state, malleable.Forced)
+                if x.birth == tag and x.event == event
+            ),
+            None,
+        )
+        sheet = state.sheets.get(str(owner))
+        require(
+            birth.recipient.kind == "pilot"
+            and birth.recipient.entity == str(owner)
+            and performed is not None
+            and sheet is not None
+            and not any(x.id == tag for x in sheet.tags),
+            "Resolve only this actual giver-forced consumed Tag.",
+        )
+        table = t.m2["m2_choices"]
+        touched = {}
+        for row in c.execute(
+            sa.select(table).where(
+                table.c.campaign_id == self.game.store.campaign_id,
+                table.c.state.in_(("pending", "submitted")),
+            )
+        ).mappings():
+            body = json.loads(row["body_json"])
+            if body.get("tag") != tag or row["kind"] not in ("tag_resolution", "paired_tag"):
+                continue
+            action = self.game.action(c, row["action_id"])
+            require(
+                action["actor_id"] == str(owner)
+                and action["data"]["play"]
+                in ("keep_your_head", "check_sensors", "engage", "disobey_orders", "flirt")
+                and not any(
+                    action["data"].get(k)
+                    for k in (
+                        "actor_basic",
+                        "gorgon_play",
+                        "m3",
+                        "mockingbird",
+                        "alpha",
+                        "alpha_sex",
+                        "stim_sex",
+                        "princess_sex",
+                        "janus",
+                        "dose_up",
+                        "beneath",
+                        "defeat",
+                        "dive",
+                        "battle",
+                        "enforcement",
+                        "doctor",
+                        "am_code",
+                        "am_scrutinized",
+                    )
+                ),
+                "SOURCE_MALLEABLE_RESOLUTION_REQUIRED: preserve this specialised Tag source.",
+            )
+            c.execute(
+                table.update()
+                .where(
+                    table.c.campaign_id == self.game.store.campaign_id,
+                    table.c.id == row["id"],
+                )
+                .values(
+                    state="completed_by_malleable",
+                    revision=row["revision"] + 1,
+                    body_json=json.dumps(body | {"malleable_event": event, "malleable_birth": tag}),
+                )
+            )
+            action["data"].setdefault("malleable_resolutions", []).append(
+                dict(choice=row["id"], birth=tag, event=event, author=birth.giver_controller)
+            )
+            action["data"]["response_event"] = event
+            touched[action["id"]] = action
+        self.tag_resolved(state, owner, tag)
+        for action in touched.values():
+            if not self.game.pending(c, action["id"]):
+                self.results(c, state, action)
+            self.game.save_action(c, action)
 
     def unmark(
         self,

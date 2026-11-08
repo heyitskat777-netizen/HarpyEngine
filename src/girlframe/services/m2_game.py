@@ -211,6 +211,56 @@ class GameService:
             )
             for field in GameState.model_fields:
                 setattr(state, field, getattr(bound, field))
+            if self.store.policy.m3_approval is not None:
+                from girlframe.engine.m3_actor_state import ActorRef as BirthActor
+                from girlframe.engine.m3_girl_runtime_state import has_rule as birth_rule
+                from girlframe.services.m3_malleable import stage_birth
+
+                def qualify(giver: BirthActor, recipient: BirthActor, tag_id: str) -> None:
+                    source_sheet = previous_state.sheets.get(giver.entity)
+                    if (
+                        giver.kind == "pilot"
+                        and source_sheet is not None
+                        and source_sheet.character_id == giver.incarnation
+                        and birth_rule(
+                            source_sheet,
+                            "girl.stim-blissed.malleable-me-malleable-you",
+                            "STIM-BLISSED",
+                        )
+                    ):
+                        stage_birth(self, c, previous_state, state, giver, recipient, tag_id, event)
+
+                for sheet in state.sheets.values():
+                    if not sheet.character_id:
+                        continue
+                    previous = previous_state.sheets.get(str(sheet.owner))
+                    if previous is None or previous.character_id != sheet.character_id:
+                        continue  # A new person cannot have a prior altered-state source here.
+                    old_ids = {tag.id for tag in previous.tags}
+                    recipient = BirthActor(
+                        kind="pilot", entity=str(sheet.owner), incarnation=sheet.character_id
+                    )
+                    for tag in sheet.tags:
+                        if tag.id not in old_ids and tag.giver_actor is not None:
+                            qualify(tag.giver_actor, recipient, tag.id)
+                if state.world is not None:
+                    old_npcs = (
+                        {npc.id: npc for npc in previous_state.world.npcs}
+                        if previous_state.world
+                        else {}
+                    )
+                    for npc in state.world.npcs:
+                        if npc.id not in old_npcs:
+                            continue
+                        old_ids = {tag.id for tag in old_npcs[npc.id].tags}
+                        for world_tag in npc.tags:
+                            if world_tag.id in old_ids:
+                                continue
+                            try:
+                                giver = BirthActor.model_validate_json(world_tag.giver_entity)
+                            except ValueError:
+                                continue  # Older non-character setters grant no new ability.
+                            qualify(giver, BirthActor(kind="npc", entity=npc.id), world_tag.id)
             if any(
                 fact.get("kind") == "tracker_acquisition"
                 for fact in (*previous_state.facts, *state.facts)

@@ -405,9 +405,33 @@ async def open_action(
                     Field(
                         "operation",
                         "Actual interaction",
-                        tuple((x, x.title()) for x in ("hire", "fire", "chastise", "request")),
+                        tuple(
+                            (x, x.title())
+                            for x in ("hire", "fire", "chastise", "request", "deprogram")
+                        ),
                     )
                 )
+                if one(values, "operation") == "deprogram":
+                    target = next(
+                        (
+                            npc
+                            for npc in world["npcs"]
+                            if "npc:" + npc["id"] == one(values, "entity")
+                        ),
+                        None,
+                    )
+                    choices = (
+                        tuple((tag["id"], tag["label"]) for tag in target["tags"]) if target else ()
+                    )
+                    fields.append(
+                        Field(
+                            "deprogram_tags",
+                            "Actual Tags affecting Foundation work",
+                            choices or WAIT,
+                            1,
+                            max(1, len(choices)),
+                        )
+                    )
             elif kind == "prisoner":
                 targets = tuple(
                     ("npc:" + x["id"], x["name"])
@@ -422,7 +446,15 @@ async def open_action(
                     and x["custodian"] in members
                 )
                 fields.append(Field("entity", "Actual current prisoner", targets or WAIT))
-            fields.append(Field("summary", "Brief scene account", paragraph=True))
+            fields.append(
+                Field(
+                    "summary",
+                    "Actual procedure and how the selected Tags affect work"
+                    if kind == "npc_employment" and one(values, "operation") == "deprogram"
+                    else "Brief scene account",
+                    paragraph=True,
+                )
+            )
             return fields
 
         async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
@@ -436,6 +468,9 @@ async def open_action(
                     operation=cast(Any, one(values, "operation"))
                     if kind == "npc_employment"
                     else None,
+                    deprogram_tags=tuple(values.get("deprogram_tags", ()))
+                    if kind == "npc_employment" and one(values, "operation") == "deprogram"
+                    else (),
                 )
                 if kind in ("npc_employment", "prisoner")
                 else None

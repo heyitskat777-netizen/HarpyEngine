@@ -469,6 +469,75 @@ class CycleService:
                                     for x in state.world.npcs
                                 ),
                             )
+                    if (
+                        scene.kind == "npc_employment"
+                        and updated.handler_context is not None
+                        and updated.handler_context.operation == "deprogram"
+                    ):
+                        from girlframe.engine.m3_actor_state import ActorRef
+                        from girlframe.services.m3_malleable import stage_deprogram
+
+                        context = updated.handler_context
+                        if state.handler != period.handler:
+                            raise WorkflowError("Recover the original Handler's actual procedure.")
+                        history = t.m3["m3_off_duty_history"]
+                        origins = c.execute(
+                            sa.select(history.c.body_json, history.c.event_id)
+                            .join(
+                                t.events,
+                                sa.and_(
+                                    history.c.event_id == t.events.c.id,
+                                    history.c.campaign_id == t.events.c.campaign_id,
+                                ),
+                            )
+                            .where(
+                                history.c.campaign_id == self.store.campaign_id,
+                                history.c.id == period.id,
+                                t.events.c.kind == "m3.off_duty_handler_scene",
+                                t.events.c.actor_id == str(period.handler),
+                            )
+                            .order_by(t.events.c.seq.desc())
+                        ).mappings()
+                        origin = None
+                        for candidate in origins:
+                            recorded = rules.Period.model_validate_json(candidate["body_json"])
+                            performed = recorded.handler_scene
+                            if (
+                                recorded.handler_context == context
+                                and performed is not None
+                                and period.handler_scene is not None
+                                and performed.summary == period.handler_scene.summary
+                                and performed.participants == period.handler_scene.participants
+                            ):
+                                origin = candidate
+                                break
+                        if origin is None:
+                            raise WorkflowError(
+                                "Recover the actual Handler-authored procedure source."
+                            )
+                        subject = ActorRef(
+                            kind="npc", entity=(context.entity or "").removeprefix("npc:")
+                        )
+                        state, blocked = stage_deprogram(
+                            self.game, c, state, subject, context.deprogram_tags, event_id
+                        )
+                        state.facts.append(
+                            dict(
+                                kind="npc_deprogramming_origin",
+                                id=event_id,
+                                body=json.dumps(
+                                    dict(
+                                        period=period.id,
+                                        handler=period.handler,
+                                        source_event=origin["event_id"],
+                                        subject=subject.model_dump(mode="json"),
+                                        tags=list(context.deprogram_tags),
+                                        blocked=blocked,
+                                    ),
+                                    sort_keys=True,
+                                ),
+                            )
+                        )
                     if scene.kind in ("npc_employment", "prisoner", "exploit"):
                         state.facts.append(
                             {
@@ -1056,6 +1125,13 @@ class CycleService:
                 raise WorkflowError(
                     "An NPC in Gorgon custody is unavailable for this base interaction."
                 )
+            if context.operation == "deprogram":
+                if target.employment != "foundation" or not set(context.deprogram_tags) <= {
+                    tag.id for tag in target.tags
+                }:
+                    raise WorkflowError(
+                        "Select actual Foundation employment and existing work-affecting NPC Tags."
+                    )
             return target.controller
         if kind != "prisoner" or context.operation is not None:
             raise WorkflowError("Only NPC employment takes a hiring/firing/request operation.")

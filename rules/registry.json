@@ -6138,6 +6138,22 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "malleable-whole-npc-immunity",
+      "policy_key": "malleable_whole_npc_immunity",
+      "summary": "A genuine altered-at-birth Malleable Tag protects the original NPC against deprogramming, including later unrelated Tags; ordinary Foundation procedures remove selected actual work-affecting Tags.",
+      "source": "Rulebook PDF39/printed37 and NPC PDF12/printed10",
+      "rationale": "The printed protection names the NPC, rather than only a Tag. NPC self-description uses actual WorldTags, with no invented Pilot Identity inventory.",
+      "alternatives": [
+        "Protect only the qualifying Tag, allowing removal of other Tags."
+      ],
+      "implementation_note": "Require the original Handler-authored completed Foundation work procedure and historical birth proof. Alteration ending or Tag consumption does not erase original-person protection. Procedure attestations describe actual performance, not NPC consent.",
+      "change_impact": "Adjust protected_npc and deprogram selector policy plus the two normal procedure assertions; preserve source history and real receipts.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -7913,7 +7929,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_dose_up.py"
+        "tests/rules/test_dose_up.py",
+        "tests/rules/test_malleable.py"
       ],
       "m2_play_id": null,
       "module": "core"

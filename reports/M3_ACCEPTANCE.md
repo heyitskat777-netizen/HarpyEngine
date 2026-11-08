@@ -1,5 +1,45 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Malleable forced embrace and NPC deprogramming — 2026-11-08
+
+Extends source `213b9db`. Genuine newly stamped Tags record eligibility only when
+an actual altered source already exists at birth. Historical canonical proof
+prevents retroactive qualification. Temporary drug presentation Tags are excluded;
+consuming one does not end its actual intoxication clock. The original native
+Stim giver privately selects an ordinary legal Identity to replace, consuming the
+qualified Tag. Protected, Paired, AM and obsession restrictions and sedation locks
+remain effective. An exact pending ordinary Tag-resolution can finish under this
+forced source without forging an answer or changing the original row owner.
+
+Actual NPC altered-state facts belong to the current human controller; real NPC
+Tags retain their original giver. Completed original-Handler Foundation Off-Duty
+procedures remove selected ordinary work-affecting Tags or record the genuine
+whole-NPC Malleable protection. Actual performance attestations are not consent.
+Native `/campaign malleable`, private Inbox and durable history use existing paths.
+Only necessary legal Identity names are shown to the original qualified giver.
+
+| Executed evidence | Result |
+|---|---|
+| Frozen new normal flows and affected Dose/Off-Duty consumers | 10 passed /19.81s; `var/m3-malleable-integrated.xml` |
+| Worker initial four focused cases | 4 passed /10.52s; superseded by the integrated selection, not additional scenarios |
+| Coherent changed-file static | Ruff/format for 12 Python files and mypy for 11 source modules pass without drift; `var/m3-malleable-union-static.json` |
+
+The new cases exercise actual Dose, ordinary Tag creation, two real recipient
+scene closures, repeated Tag-resolution, native forcing/private reopen and source
+retry; consumed presentation-Tag eligibility, stale/auth/rollback and Identity
+restrictions; and both protected and unprotected actual NPC procedures. NPC setup
+uses the same explicit synthetic initial non-Void condition as the existing
+Disposable Psyche period scenario, before actual Strain/Off-Duty producers. It
+waives no printed starting exception or production gate. The worker handoff keeps
+initial fixture failures and the repaired legacy-slot selector finding.
+
+Remaining: specialised collar/uniform/virtual-control removal consumers, conditional
+body/extra-Identity adapters and other source branches. Consumed Dose is directly
+exercised; a separate consumed Sex-drug birth case was not added. No full regression,
+remote CI, independent source review, human acceptance, deployment, environment
+publication or recovered-engine write occurred. Bot remains off; RULES_SUBSET.
+
+
 ## Stim-Blissed Sex Play and source-scoped drug effects — 2026-11-08
 
 Extends source `e12960e`. Separately owned voluntary confirmation precedes the
