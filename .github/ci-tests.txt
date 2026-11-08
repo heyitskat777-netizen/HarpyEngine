@@ -1,3 +1,6 @@
+# Deep-Brain-Spikes pagination: native maximums/privacy plus existing memory lifecycle.
+tests/rules/test_deep_brain_spikes_pagination.py
+tests/rules/test_deep_brain_spikes.py
 # Newgirl source outcomes and affected actual relationship/child/privacy consumers.
 # Final M3 mode still runs all tests.
 tests/rules/test_newgirl_sex.py

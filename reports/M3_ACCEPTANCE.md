@@ -1,5 +1,55 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Deep-Brain-Spikes private pagination — 2026-11-07 (America/Chicago)
+
+Reconciled the handoff's published `4096705` reference against current source
+`430ceeb`, preserving newer Newgirl/Mentor work and unfinished Casualty/Vatgrown
+assignments. Both reported display defects were still present. This repair changes
+only the Deep-Brain-Spikes native adapter and a scoped memory pager; shared
+NativeForm, reply, services, saved text, rule effects and field limits stay intact.
+
+Returned History now has requester-bound backward/forward navigation. Active
+context uses separate memory-page buttons on its existing native form, retaining
+form-step/option navigation, entered values, explicit confirmation and retries.
+Every rendered page includes its headings/counters within a 1,000 UTF-16-unit
+budget (also at most1,000 Python characters). Escaping occurs before splitting;
+Markdown escape pairs, mention escapes, common joined Unicode and whitespace are
+preserved. Long unbroken text and oversized combining runs retain every code point.
+Every page rechecks current service access, uses private interaction delivery and
+disabled mentions. Read/navigation/timeout do not write game state or consume RNG.
+
+Focused execution:
+
+- `.venv/bin/pytest -q tests/rules/test_deep_brain_spikes_pagination.py tests/rules/test_deep_brain_spikes.py --tb=short --maxfail=1 --junitxml=var/m3-spikes-pagination-focused.xml`: **5 passed /12.03s**.
+- New tests cover exact rendered fit/overflow/multiples/two-digit counters, empty
+  text, escaping expansion, meaningful whitespace, long tokens, emoji/Unicode and
+  full ordered reconstruction. Two real native workflows cover1,200-character
+  modal fields, the1,800-character service-supported beginning, both return causes,
+  initial/deferred replies, private Inbox History, form controls, stale confirmation,
+  identical return retry, other-reader denial, current access revocation and timeout.
+- The existing real memory/linked-Play/current-effects/both-return normal passes.
+  Initial failures were test assertions about escaped markers and a reauthorization
+  spy on the wrong service instance; corrected without weakening full-text checks.
+  Earlier XML attempts remain under ignored var.
+- All3 changed Python files pass Ruff/format and both source modules pass mypy;
+  exact source snapshot/static report: `var/m3-spikes-pagination-source-snapshot.json`
+  and `var/m3-spikes-pagination-static.json`.
+
+Both test files are in the additive focused CI selection; normal full pytest also
+collects them. The exact committed candidate will receive an exported-source
+focused check before branch publication, excluding unfinished shared runtime work.
+Remote CI/full-mode evidence is not yet asserted in this source record. Final M3
+still requires the entire regression/global checks on its exact integrated commit,
+CI `full_suite:true`/`Scope: full` evidence, independent review and human acceptance.
+This focused pass is not that final regression or a live Discord validation.
+
+**Separate readback gap:** saved contributions and their linked Play references
+remain service-readable but are not added to the native History by this pagination
+repair. Track that omission separately; pagination does not certify full History
+content coverage. Bot remains off; no deployment, environment publication or
+private recovered-engine write.
+
+
 ## Newgirl Sex, current Mentor sets and Easy Target — 2026-11-08
 
 Extends `d038bba`/status `b2b9901`; source remains RULES_SUBSET and bot off.
