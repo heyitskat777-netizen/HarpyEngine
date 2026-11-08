@@ -20,6 +20,7 @@ class BodySpec(Model):
     medical: Literal["fit", "unconscious_injured"]
     assets: tuple[AssetState, ...]
     mind_assets: tuple[str, ...] = ()
+    carried_items: tuple[str, ...] = Field(default=(), exclude_if=lambda value: not value)
 
 
 class Preparation(Model):
@@ -60,6 +61,21 @@ class Swap(Model):
     active_pose: Placement
     event: str
     returned_event: str | None = None
+    carried_items: tuple[str, ...] = Field(default=(), exclude_if=lambda value: not value)
+
+
+class Conveyance(Model):
+    id: str
+    actor: ActorRef
+    previous: str
+    vessel: str
+    items: tuple[str, ...]
+    assets: tuple[AssetState, ...]
+    source: str
+    kind: Literal["code", "return", "jailbroken"]
+    controller: int
+    event: str
+    account: str = Field(min_length=1, max_length=1200)
 
 
 class Connection(Model):
@@ -126,7 +142,93 @@ def _pose(state: GameState, actor: ActorRef) -> Placement:
     return pose
 
 
-def _ordinary(state: GameState, actor: ActorRef, assets: tuple[AssetState, ...]) -> None:
+def carried_assets(
+    state: GameState, actor: ActorRef, items: tuple[str, ...]
+) -> tuple[AssetState, ...]:
+    """Exact current physical objects, never a mental classification or an alias."""
+    from girlframe.engine.m3_items import actual_asset
+
+    owned = tuple(x for x in state.held_items if x.asset_owner == actor)
+    if len(set(items)) != len(items) or set(items) != {x.id for x in owned}:
+        raise ValueError(
+            "SOURCE_BODY_CLASSIFICATION_REQUIRED: select every actual owned held object"
+        )
+    assets = []
+    for identity in items:
+        item = next(x for x in owned if x.id == identity)
+        asset = actual_asset(state, item)
+        if (
+            item.holder != actor
+            or item.location_mode != "carried"
+            or asset is None
+            or asset.family != "girl"
+            or asset.battery_asset is not None
+            or asset.intrinsic
+        ):
+            raise ValueError("Convey only genuinely carried own physical Girl Assets")
+        assets.append(asset)
+    if len({x.id for x in assets}) != len(assets):
+        raise ValueError("One actual physical Asset cannot have duplicated object bindings")
+    return tuple(assets)
+
+
+def carried_ids(state: GameState, actor: ActorRef) -> set[str]:
+    return {
+        x.id
+        for x in carried_assets(
+            state, actor, tuple(x.id for x in state.held_items if x.asset_owner == actor)
+        )
+    }
+
+
+def conveyances(state: GameState) -> tuple[Conveyance, ...]:
+    return values(state, "am_body_conveyance", Conveyance)
+
+
+def record_conveyance(
+    state: GameState,
+    actor: ActorRef,
+    previous: str,
+    vessel: str,
+    items: tuple[str, ...],
+    assets: tuple[AssetState, ...],
+    source: str,
+    kind: Literal["code", "return", "jailbroken"],
+    controller: int,
+    event: str,
+    account: str | None,
+) -> None:
+    if not items:
+        if account:
+            raise ValueError("Conveyance account needs actual selected physical objects")
+        return
+    if not account or not account.strip() or len(account) > 1200:
+        raise ValueError(
+            "Record the actual performed physical conveyance separately from the mind move"
+        )
+    value = Conveyance(
+        id=event,
+        actor=actor,
+        previous=previous,
+        vessel=vessel,
+        items=items,
+        assets=assets,
+        source=source,
+        kind=kind,
+        controller=controller,
+        event=event,
+        account=account.strip(),
+    )
+    put(state, "am_body_conveyance", event, value)
+
+
+def _ordinary(
+    state: GameState,
+    actor: ActorRef,
+    assets: tuple[AssetState, ...],
+    *,
+    carried_items: tuple[str, ...] = (),
+) -> None:
     if (
         any(x.family != "girl" or x.battery_asset is not None or x.intrinsic for x in assets)
         or any(not x.id.strip() or not x.name.strip() for x in assets)
@@ -142,8 +244,9 @@ def _ordinary(state: GameState, actor: ActorRef, assets: tuple[AssetState, ...])
 
     if active(state, actor):
         raise ValueError("SOURCE_BODY_CLASSIFICATION_REQUIRED: preserve actual stored Void sources")
-    if any(x.asset_owner == actor for x in state.held_items):
-        raise ValueError("SOURCE_BODY_CLASSIFICATION_REQUIRED: preserve actual held-object sources")
+    portable = carried_assets(state, actor, carried_items)
+    if any(x not in assets for x in portable):
+        raise ValueError("Preserve the exact current condition of the actually conveyed objects")
 
 
 def prepare(state: GameState, value: Maintenance, spec: BodySpec, event: str) -> Preparation:
@@ -175,7 +278,15 @@ def prepare(state: GameState, value: Maintenance, spec: BodySpec, event: str) ->
         raise ValueError(
             "A prepared body's actual Asset IDs cannot alias existing person's resources"
         )
-    _ordinary(state, value.actor, tuple(girls[x] for x in spec.mind_assets) + spec.assets)
+    portable = carried_assets(state, value.actor, spec.carried_items)
+    if set(spec.mind_assets) & {x.id for x in portable}:
+        raise ValueError("A physical held object is not a mind-linked Asset")
+    _ordinary(
+        state,
+        value.actor,
+        tuple(girls[x] for x in spec.mind_assets) + spec.assets + portable,
+        carried_items=spec.carried_items,
+    )
     assert pose.girl_cell is not None
     prepared = Preparation(
         id=str(uuid4()),
@@ -215,7 +326,15 @@ def _body(
     )
 
 
-def transfer(state: GameState, value: Maintenance, preparation: str, event: str) -> Swap:
+def transfer(
+    state: GameState,
+    value: Maintenance,
+    preparation: str,
+    event: str,
+    *,
+    carried_items: tuple[str, ...] = (),
+    carry_account: str | None = None,
+) -> Swap:
     old = _pose(state, value.actor)
     source = next((x for x in preparations(state) if x.id == preparation), None)
     sheet = state.sheets[value.actor.entity]
@@ -243,12 +362,21 @@ def transfer(state: GameState, value: Maintenance, preparation: str, event: str)
     mind = tuple(x for x in sheet.assets if x.id in source.spec.mind_assets)
     if len(mind) != len(source.spec.mind_assets):
         raise ValueError("Recover the original mind-linked Asset classification")
-    _ordinary(state, value.actor, mind + source.spec.assets)
+    if carried_items != source.spec.carried_items:
+        raise ValueError("Actually select the original prepared physical objects for this move")
+    portable = carried_assets(state, value.actor, carried_items)
+    if set(source.spec.mind_assets) & {x.id for x in portable}:
+        raise ValueError("A physical object cannot follow the mind without actual conveyance")
+    _ordinary(state, value.actor, mind + source.spec.assets + portable, carried_items=carried_items)
+    if carried_items and (not carry_account or not carry_account.strip()):
+        raise ValueError("Record actual physical conveyance before changing occupied bodies")
     old_body = _body(
         state,
         value.actor,
         old,
-        {x.id for x in sheet.assets if x.family == "girl"} - set(source.spec.mind_assets),
+        {x.id for x in sheet.assets if x.family == "girl"}
+        - set(source.spec.mind_assets)
+        - {x.id for x in portable},
         event,
         "Original AM body",
         None,
@@ -256,7 +384,10 @@ def transfer(state: GameState, value: Maintenance, preparation: str, event: str)
     )
     put(state, "am_body_hardware", old_body.vessel, old_body)
     sheet.assets = (
-        [x for x in sheet.assets if x.family == "frame"] + list(mind) + list(source.spec.assets)
+        [x for x in sheet.assets if x.family == "frame"]
+        + list(mind)
+        + list(source.spec.assets)
+        + list(portable)
     )
     sheet.medical_state = source.spec.medical
     sheet.revision += 1
@@ -294,11 +425,25 @@ def transfer(state: GameState, value: Maintenance, preparation: str, event: str)
         original_vessel=old.vessel_id,
         new_vessel=new.vessel_id,
         mind_assets=source.spec.mind_assets,
+        carried_items=carried_items,
         original_pose=old,
         active_pose=new,
         event=event,
     )
     put(state, "am_body_swap", result.id, result)
+    record_conveyance(
+        state,
+        value.actor,
+        old.vessel_id,
+        new.vessel_id,
+        carried_items,
+        portable,
+        result.id,
+        "code",
+        value.controller,
+        event,
+        carry_account,
+    )
     link = Connection(
         swap=result.id,
         actor=value.actor,
@@ -334,7 +479,8 @@ def current(state: GameState, actor: ActorRef) -> Body | None:
         actor,
         pose,
         {x.id for x in state.sheets[actor.entity].assets if x.family == "girl"}
-        - set(value.mind_assets),
+        - set(value.mind_assets)
+        - carried_ids(state, actor),
         saved.event,
         saved.label,
         actor,
@@ -342,7 +488,14 @@ def current(state: GameState, actor: ActorRef) -> Body | None:
     )
 
 
-def return_to_origin(state: GameState, identity: str, event: str) -> Swap:
+def return_to_origin(
+    state: GameState,
+    identity: str,
+    event: str,
+    *,
+    carried_items: tuple[str, ...] = (),
+    carry_account: str | None = None,
+) -> Swap:
     value = swap(state, identity)
     pose = _pose(state, value.actor)
     link = connection(state, identity)
@@ -350,6 +503,7 @@ def return_to_origin(state: GameState, identity: str, event: str) -> Swap:
     occupied = current(state, value.actor)
     sheet = state.sheets[value.actor.entity]
     prep = next(x for x in preparations(state) if x.id == value.preparation)
+    portable = carried_assets(state, value.actor, carried_items)
     if (
         value.returned_event
         or not event
@@ -360,13 +514,15 @@ def return_to_origin(state: GameState, identity: str, event: str) -> Swap:
         or pose.girl_cell != old.cell
         or old.occupant is not None
         or {x.id for x in sheet.assets if x.family == "girl"}
-        != set(value.mind_assets) | {x.id for x in prep.spec.assets}
+        != set(value.mind_assets) | {x.id for x in prep.spec.assets} | {x.id for x in portable}
     ):
         raise ValueError(
             "Return only while this actual original pair is still hooked up and colocated"
         )
     mind = tuple(x for x in sheet.assets if x.id in value.mind_assets)
-    _ordinary(state, value.actor, mind + old.assets)
+    _ordinary(state, value.actor, mind + old.assets + portable, carried_items=carried_items)
+    if carried_items and (not carry_account or not carry_account.strip()):
+        raise ValueError("Record actual physical conveyance on this return too")
     put(
         state,
         "am_body_hardware",
@@ -379,7 +535,12 @@ def return_to_origin(state: GameState, identity: str, event: str) -> Swap:
         old.vessel,
         old.model_copy(update=dict(occupant=value.actor, event=event)),
     )
-    sheet.assets = [x for x in sheet.assets if x.family == "frame"] + list(mind) + list(old.assets)
+    sheet.assets = (
+        [x for x in sheet.assets if x.family == "frame"]
+        + list(mind)
+        + list(old.assets)
+        + list(portable)
+    )
     sheet.medical_state = old.medical
     sheet.revision += 1
     restored = pose.model_copy(
@@ -393,6 +554,19 @@ def return_to_origin(state: GameState, identity: str, event: str) -> Swap:
         )
     )
     state.placements = [restored if x.actor == value.actor else x for x in state.placements]
+    record_conveyance(
+        state,
+        value.actor,
+        pose.vessel_id,
+        old.vessel,
+        carried_items,
+        portable,
+        value.id,
+        "return",
+        int(value.actor.entity),
+        event,
+        carry_account,
+    )
     result = value.model_copy(update=dict(returned_event=event))
     put(state, "am_body_swap", result.id, result)
     return result

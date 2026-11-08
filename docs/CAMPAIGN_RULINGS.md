@@ -3857,3 +3857,27 @@ joint foot accompaniment requires real evidence, not mere shared endpoints,
 co-location or a declaration. Existing explicit private disclosure remains the
 knowledge boundary. This delegated recommendation requires clarity review;
 future interpretation changes preserve past source and discipline history.
+
+### Source-authored joint chaperone travel
+
+`vatgrown-authored-joint-chaperone` (PDF49/printed47): actual independently
+authored movement and accompaniment for an exact joint trip can establish a
+chaperone in the abstract board. The two real bodies must actually move through
+validated existing physical operations, atomically; a label, shared cell or past
+trip establishes no standing supervision. No extra rank or Handler approval is
+invented. Two Experiments require both authors to explicitly authorize mutual
+supervision. Keep original proposal, response/decline/cancel and movement history.
+This delegated interpretation requires clarity review; a source record alone
+never proves movement or another player's consent.
+
+### AM physical possessions and actual conveyance
+
+`am-physical-item-conveyance` (PDF55–56/printed53–54): a mind changing bodies
+carries no physical possession automatically. Exact genuine held objects may
+accompany a transition through source-owned actual performed conveyance. Preserve
+Item/Asset IDs, damage/Void, custody and original author/source, with no duplicate
+in parked hardware or invented healing/reinstallation. Battery/Storage and other
+connection lifetimes retain their actual separate source rules. Preserve all
+possession/body/conveyance history on future adjustment. This delegated
+interpretation requires clarity review; it does not supply free equipment or
+resolve missing connection adapters.

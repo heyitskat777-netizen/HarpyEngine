@@ -4,8 +4,10 @@ import json
 from typing import Any
 from uuid import uuid4
 
+import sqlalchemy as sa
 from sqlalchemy import Connection
 
+from girlframe.database import tables as t
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import is_helpless
 from girlframe.engine.m3_actor_state import ActorRef
@@ -32,11 +34,29 @@ def proposal_context(
     account: str,
 ) -> dict[str, Any]:
     """Prove an actual possible physical proposal without moving any body."""
+    Access(game.store).authorize(c, viewer, "world", director_response=True)
+    return _physical_context(
+        game, c, state, channel, actor, destination, frame, account, controller=viewer.user_id
+    )
+
+
+def _physical_context(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    channel: int,
+    actor: ActorRef,
+    destination: tuple[int, int],
+    frame: bool,
+    account: str,
+    *,
+    controller: int,
+) -> dict[str, Any]:
+    """Physical checks only; callers prove live-viewer or canonical source authorization."""
     from girlframe.services.m3_physical import PhysicalService
     from girlframe.services.p1_facilitator import require_scene_clear
     from girlframe.services.p1_source_pause import require_clear
 
-    Access(game.store).authorize(c, viewer, "world", director_response=True)
     game.unpaused(c)
     PhysicalService(game.store)._idle(c)
     require_clear(game, c, channel)
@@ -44,7 +64,13 @@ def proposal_context(
     scene = game.scene(c, channel)
     if (
         state.world is None
-        or viewer.user_id not in scene["participants"]
+        or controller not in scene["participants"]
+        or not c.scalar(
+            sa.select(t.members.c.active).where(
+                t.members.c.campaign_id == game.store.campaign_id,
+                t.members.c.user_id == str(controller),
+            )
+        )
         or not account.strip()
         or len(account) > 1200
         or len(destination) != 2
@@ -55,7 +81,7 @@ def proposal_context(
     bound = profiles(c, game.store.campaign_id)
     actual = resolve(state, actor, bound, require_current_profile=False)
     if (
-        actual.controller != viewer.user_id
+        actual.controller != controller
         or actual.cell is None
         or actual.offstage_source
         or actual.custody not in (None, "free")
@@ -65,7 +91,7 @@ def proposal_context(
         raise WorkflowError("Resolve genuine custody, Helplessness or the source pin before moving")
     cast = next((x for x in state.scene_casts if x.id == scene["id"] and x.open), None)
     if cast is not None and not any(
-        x.actor == actor and x.controller == viewer.user_id for x in cast.roles
+        x.actor == actor and x.controller == controller for x in cast.roles
     ):
         raise WorkflowError("Join this actual role in the source scene first")
     pose = next((x for x in state.placements if x.actor == actor), None)
@@ -132,6 +158,65 @@ def proposal_context(
     )
 
 
+def _apply_context(state: GameState, context: dict[str, Any], event: str) -> None:
+    """Apply an already authorized and physically validated movement; allocate no source."""
+    actor = ActorRef.model_validate_json(json.dumps(context["actor"]))
+    destination = tuple(context["destination"])
+    frame, account = context["frame"], context["account"]
+    assert state.world is not None
+    if actor.kind == "pilot":
+        pose = next((x for x in state.placements if x.actor == actor), None)
+        assert pose is not None
+        if frame:
+            values = dict(frame_cell=destination, girl_cell=destination)
+        else:
+            values = dict(girl_cell=destination)
+        moved = pose.model_copy(update=values | dict(source_event=event, account=account))
+        moved = type(pose).model_validate_json(moved.model_dump_json())
+        state.placements = [moved if x.actor == actor else x for x in state.placements]
+    elif actor.kind == "npc":
+        npc = next(x for x in state.world.npcs if x.id == actor.entity)
+        state.world = state.world.model_copy(
+            update=dict(
+                npcs=tuple(
+                    x.model_copy(update=dict(cell=destination)) if x.id == npc.id else x
+                    for x in state.world.npcs
+                )
+            )
+        )
+    elif actor.kind == "gorgon":
+        state.world = state.world.model_copy(
+            update=dict(
+                gorgons=tuple(
+                    x.model_copy(update=dict(cell=destination)) if x.id == actor.entity else x
+                    for x in state.world.gorgons
+                )
+            )
+        )
+    elif actor.kind == "handler":
+        state.facts.append(
+            dict(
+                kind="ordinary_handler_movement",
+                actor=actor.model_dump_json(),
+                cell=json.dumps(destination),
+                event=event,
+                account=account,
+            )
+        )
+    elif actor.kind == "external_pilot":
+        external_pose = next((x for x in state.external_poses if x.actor == actor), None)
+        assert external_pose is not None
+        update = dict(position_event=event, account=account, girl_cell=destination)
+        if frame:
+            update["frame_cell"] = destination
+        state.external_poses = [
+            external_pose.model_copy(update=update) if x.actor == actor else x
+            for x in state.external_poses
+        ]
+    else:
+        raise WorkflowError("This actual body requires its specific movement source adapter")
+
+
 class MovementService:
     def __init__(self, game: GameService):
         self.game, self.store = game, game.store
@@ -166,9 +251,55 @@ class MovementService:
                             ),
                         )
                     )
+            companions = []
+            if any(row["vatgrown"] for row in actors):
+                from girlframe.services.m3_cast import CastService
+                from girlframe.services.m3_dose_up import _cast
+
+                try:
+                    actual_cast = _cast(self.game, c, state, channel)
+                    visible = {
+                        role["token"]: role
+                        for role in CastService(ActorService(MissionService(self.store))).view(
+                            viewer, channel
+                        )["roles"]
+                        if not role["stale"]
+                    }
+                except (ValueError, WorkflowError):
+                    actual_cast = None
+                    visible = {}
+                for role in actual_cast.roles if actual_cast else ():
+                    if role.actor.token not in visible:
+                        continue
+                    try:
+                        actual = resolve(state, role.actor, bound, require_current_profile=False)
+                    except ValueError:
+                        continue
+                    if (
+                        actual.controller != role.controller
+                        or actual.cell is None
+                        or actual.vessel_id is None
+                        or actual.offstage_source
+                        or (
+                            role.actor.kind == "npc"
+                            and any(
+                                npc.id == role.actor.entity and npc.source_kind is not None
+                                for npc in state.world.npcs
+                            )
+                        )
+                    ):
+                        continue
+                    companions.append(
+                        dict(
+                            id=role.actor.token,
+                            label=visible[role.actor.token]["label"],
+                            ref=role.actor.model_dump(mode="json"),
+                        )
+                    )
             return dict(
                 revision=state.revision,
                 actors=actors,
+                companions=companions,
                 minimum=state.world.board.minimum,
                 maximum=state.world.board.maximum,
                 channel=channel,
@@ -204,61 +335,7 @@ class MovementService:
             before_move(self.game, c, state, viewer, context, travel=vatgrown_travel)
             before = GameState.model_validate_json(state.model_dump_json())
             event = str(uuid4())
-            if actor.kind == "pilot":
-                pose = next((x for x in state.placements if x.actor == actor), None)
-                assert pose is not None
-                if frame:
-                    values = dict(frame_cell=destination, girl_cell=destination)
-                else:
-                    values = dict(girl_cell=destination)
-                moved = pose.model_copy(update=values | dict(source_event=event, account=account))
-                moved = type(pose).model_validate_json(moved.model_dump_json())
-                state.placements = [moved if x.actor == actor else x for x in state.placements]
-            elif actor.kind == "npc":
-                npc = next(x for x in state.world.npcs if x.id == actor.entity)
-                state.world = state.world.model_copy(
-                    update=dict(
-                        npcs=tuple(
-                            x.model_copy(update=dict(cell=destination)) if x.id == npc.id else x
-                            for x in state.world.npcs
-                        )
-                    )
-                )
-            elif actor.kind == "gorgon":
-                state.world = state.world.model_copy(
-                    update=dict(
-                        gorgons=tuple(
-                            x.model_copy(update=dict(cell=destination))
-                            if x.id == actor.entity
-                            else x
-                            for x in state.world.gorgons
-                        )
-                    )
-                )
-            elif actor.kind == "handler":
-                state.facts.append(
-                    dict(
-                        kind="ordinary_handler_movement",
-                        actor=actor.model_dump_json(),
-                        cell=json.dumps(destination),
-                        event=event,
-                        account=account,
-                    )
-                )
-            elif actor.kind == "external_pilot":
-                external_pose = next((x for x in state.external_poses if x.actor == actor), None)
-                assert external_pose is not None
-                update = dict(position_event=event, account=account, girl_cell=destination)
-                if frame:
-                    update["frame_cell"] = destination
-                state.external_poses = [
-                    external_pose.model_copy(update=update) if x.actor == actor else x
-                    for x in state.external_poses
-                ]
-            else:
-                raise WorkflowError(
-                    "This actual body requires its specific movement source adapter"
-                )
+            _apply_context(state, context, event)
             stage_movement(self.game, c, before, state, context, vatgrown_travel, event)
             self.game.event(
                 c,

@@ -1,6 +1,7 @@
 """Private factual hardware preparation and printed original-AM-owned body return."""
 
 import asyncio
+import json
 from typing import Any
 
 import discord
@@ -60,6 +61,7 @@ async def open_prepare(
                 medical=values["medical"][0],
                 assets=tuple(assets),
                 mind_assets=tuple(values.get("mind_assets", ())),
+                carried_items=tuple(values.get("carried_items", ())),
             )
         )
         await asyncio.to_thread(
@@ -100,6 +102,20 @@ async def open_prepare(
                 "One actual Asset per line: name | source | intact/damaged | clear/void",
                 paragraph=True,
             ),
+            *(
+                [
+                    Field(
+                        "carried_items",
+                        "Actual own objects to physically convey at transfer",
+                        tuple((x["id"], x["label"]) for x in source["carried_items"]),
+                        0,
+                        len(source["carried_items"]),
+                        required=False,
+                    )
+                ]
+                if source["carried_items"]
+                else []
+            ),
             Field(
                 "mind_assets",
                 "Existing mind-linked Assets that remain with this same AM",
@@ -129,7 +145,13 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             str(current.id),
             identity,
             data["revision"],
-            ChoiceAnswer(options=tuple(values["body"]), text=values["account"]),
+            ChoiceAnswer(
+                options=tuple(values["body"]),
+                text=values["account"],
+                fields={"carried_items": json.dumps(list(values["carried_items"]))}
+                if values.get("carried_items")
+                else {},
+            ),
         )
         return (
             "Same AM transferred to the actual prepared body. Physical Assets changed; "
@@ -145,7 +167,25 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             Field(
                 "body", "Actual prepared local body", tuple((x["id"], x["label"]) for x in bodies)
             ),
-            Field("account", "Actual operator's performed physical transfer", paragraph=True),
+            *(
+                [
+                    Field(
+                        "carried_items",
+                        "Own objects actually physically conveyed now",
+                        tuple((x["id"], x["label"]) for x in detail["body"]["carried_items"]),
+                        0,
+                        len(detail["body"]["carried_items"]),
+                        required=False,
+                    )
+                ]
+                if detail["body"]["carried_items"]
+                else []
+            ),
+            Field(
+                "account",
+                "Actual operator's performed transfer / object conveyance",
+                paragraph=True,
+            ),
         ],
         submit,
     )
@@ -236,6 +276,8 @@ async def open_body(
                 str(current.id),
                 identity,
                 data["revision"],
+                carried_items=tuple(values.get("carried_items", ())),
+                carry_account=values.get("account") if values.get("carried_items") else None,
             )
             return (
                 "The original AM returned. The other body's latest damage remains saved. "
@@ -258,9 +300,23 @@ async def open_body(
         instructions,
         [
             Field("operation", "Actual owned operation", options),
+            *(
+                [
+                    Field(
+                        "carried_items",
+                        "Own objects actually physically conveyed on return",
+                        tuple((x["id"], x["label"]) for x in data["carried_items"]),
+                        0,
+                        len(data["carried_items"]),
+                        required=False,
+                    )
+                ]
+                if data["carried_items"]
+                else []
+            ),
             Field(
                 "account",
-                "Actual physical facts (for hookup changes)",
+                "Actual physical facts / performed object conveyance",
                 paragraph=True,
                 required=False,
             ),

@@ -39,7 +39,7 @@ async def open_movement(interaction: discord.Interaction, service: MovementServi
             "Actual destination Y",
             tuple((str(y), str(y)) for y in range(data["minimum"][1], data["maximum"][1] + 1)),
         ),
-        Field("account", "Describe the permitted movement that actually occurred", paragraph=True),
+        Field("account", "Your actual movement or exact journey proposal", paragraph=True),
     ]
     if any(x["vatgrown"] for x in data["actors"]):
         fields.append(
@@ -49,13 +49,66 @@ async def open_movement(interaction: discord.Interaction, service: MovementServi
                 (
                     ("move", "Record actual movement"),
                     ("unchaperoned", "Record an unchaperoned Vatgrown attempt"),
+                    *(
+                        (("chaperoned", "Propose actual chaperoned joint travel"),)
+                        if data["companions"]
+                        else ()
+                    ),
                 ),
                 minimum=0,
                 required=False,
             )
         )
+        if data["companions"]:
+            fields.extend(
+                [
+                    Field(
+                        "companion",
+                        "Actual invited companion role (joint proposal)",
+                        tuple((x["id"], x["label"]) for x in data["companions"]),
+                        minimum=0,
+                        required=False,
+                    ),
+                    Field(
+                        "mutual",
+                        "If also an Experiment: explicitly accompany them too?",
+                        (
+                            ("yes", "I authorize actual mutual accompaniment throughout this trip"),
+                            ("no", "No mutual accompaniment authorization"),
+                        ),
+                        minimum=0,
+                        required=False,
+                    ),
+                ]
+            )
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        if values.get("intent") == ("chaperoned",):
+            from girlframe.services.m3_vatgrown_travel import VatgrownTravelService
+
+            if len(values.get("companion", ())) != 1:
+                raise WorkflowError("Choose the actual invited companion for this joint proposal")
+            companion = next(x for x in data["companions"] if x["id"] == values["companion"][0])
+            result = await asyncio.to_thread(
+                VatgrownTravelService(service.game).propose_chaperoned,
+                viewer_from_interaction(current),
+                str(current.id),
+                data["channel"],
+                data["revision"],
+                choices[values["actor"][0]],
+                ActorRef.model_validate(companion["ref"]),
+                (int(values["x"][0]), int(values["y"][0])),
+                frame=values["mode"] == ("frame",),
+                account=values["account"],
+                mutual=values.get("mutual") == ("yes",),
+            )
+            return (
+                "Joint proposal saved; neither body moved. Both move when the actual "
+                "companion accepts with their own movement account. You may cancel before "
+                "acceptance from your private requests inbox. Reference `"
+                + str(result["id"])
+                + "`."
+            )
         if values.get("intent") == ("unchaperoned",):
             from girlframe.services.m3_vatgrown_travel import VatgrownTravelService
 
@@ -93,7 +146,8 @@ async def open_movement(interaction: discord.Interaction, service: MovementServi
         interaction.user.id,
         "Record actual movement",
         "Record movement permitted in the fiction. This does not resolve a barrier, "
-        "source pin, custody or required escape.",
+        "source pin, custody or required escape. Joint travel is a proposal: both bodies "
+        "move together when the named companion accepts; the owner may cancel before then.",
         fields,
         submit,
     )

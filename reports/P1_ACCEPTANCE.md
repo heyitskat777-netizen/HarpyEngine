@@ -672,3 +672,50 @@ publishable files/40 preserved manifest entries/0 findings; whitespace check pas
 Exact commands, the initial static failure and final source hashes are retained in
 `var/p1-travel-learning-checkpoint-{paths,checks,frozen}.json`. No global/full
 regression, migration or human acceptance is claimed by this scoped preflight.
+
+### Genuine AM physical-object conveyance and positive joint travel
+
+Published preceding checkpoint **e112de3b79294e7cb5392395849602c702445f5b**:
+[focused CI42509420443](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42509420443) passed. Full regression remains deferred.
+
+- `pytest -q tests/rules/test_am_body.py::test_actual_carried_tool_conveyance_swap_new_body_effect_and_owned_return`: initial **1 failed/4.23s** was a new test expecting raw ValueError for the deliberate unselected-object rejection; Game.respond correctly wraps WorkflowError. Test-only correction, same-node retry **1 passed/5.90s**. No source guard removed.
+- `pytest -q tests/rules/test_vatgrown_travel.py::test_actual_native_companion_authorizes_both_real_moves_with_private_receipt_and_retry`: **1 passed/2.21s**. No earlier passing workflow rerun for this new source.
+
+AM possession preserves exact real Item/Asset IDs, source, custody and condition;
+actual performed conveyance is selected and authored for each body transition.
+Mind movement alone carries nothing. New body and parked hardware do not duplicate
+the object. Code body/return controls and actual known body damage are exercised;
+Jailbroken external native preparation/occupancy fields are wired and statically
+checked, with that variant's runtime deferred. Battery/Storage connection
+lifetimes, additional physical-vessel/terminal-body and Pilot-operator source
+adapters remain explicit work. Old optional/default payloads remain omitted.
+
+Positive joint travel stores an exact actual owner movement authorization and
+requires the actual invited controller to author her own movement/accompaniment.
+Both current roles/controllers/memberships/policy/poses/scene and physical guards
+are revalidated before the shared real reducer runs twice in one transaction,
+with one canonical movement receipt. No fabricated original-owner viewer,
+standing chaperone permission, inferred presence or NPC consent is supplied.
+Mutual supervision requires both source authors when both are Experiments.
+Existing private visible-role projection filters companions. Two-PC native flow
+passed; other controller/mode/mutual/decline/cancel variants remain for final P1.
+
+The ordinary Movement consumer is checked separately because this packet further
+extracts its actual shared physical preflight/reducer. Its earlier success was
+before that relevant change; this is not an unrelated repeated smoke. Final result
+and complete changed-file static/publication scope follow.
+
+Bounded genuine-death reconciliation confirms generic Career replacement accepts
+an arbitrary new Girl draft; it does not enforce a distinct Vatgrown/reset/owned
+noticing response. This ordinary source remains required. No resource duplication,
+free Frame, player reply or implementation completion is inferred from a fresh
+profile. Source-specific adjustments are recorded with clarity-review notes;
+original full-M3 and P1 regression/independent/player gates remain intact.
+
+Affected ordinary Movement normal: **1 passed/2.85s** after this packet's shared
+extraction. Final scoped preflight:19 paths/13 Python/11 source; Ruff/format13 and
+mypy11 passed. Registry remains477/270 subset/207 unimplemented/440 required/
+0 independently verified. Repository check1394 files/40 preserved manifest/0
+findings; whitespace check passed. Exact source/commands retained in
+`var/p1-body-joint-checkpoint-{paths,frozen,checks}.json`. Full regression and
+independent/player review remain pending; bot stays OFF.

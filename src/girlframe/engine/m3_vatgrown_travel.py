@@ -1,5 +1,9 @@
 """Actual unchaperoned proposals and separate physical movement receipts."""
 
+from typing import Literal
+
+from pydantic import Field
+
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
 
@@ -41,9 +45,42 @@ class Movement(Model):
     event: str
 
 
+class ChaperonedProposal(Model):
+    id: str
+    owner: Proposal
+    companion_snapshot: Proposal
+    policy_sha256: str
+    mutual: bool
+    mutual_required: bool
+    event: str
+
+
+class ChaperonedResponse(Model):
+    id: str
+    source: str
+    kind: Literal["accepted", "declined", "cancelled"]
+    controller: int
+    account: str
+    mutual: bool
+    proposal: Proposal | None = Field(default=None, exclude_if=lambda value: value is None)
+    event: str
+
+
+class JointMovement(Model):
+    id: str
+    source: str
+    response: str
+    owner: Proposal
+    companion: Proposal
+    event: str
+
+
 KINDS: dict[type[Model], str] = {
     Attempt: "vatgrown_travel_attempt",
     Movement: "vatgrown_travel_movement",
+    ChaperonedProposal: "vatgrown_chaperoned_proposal",
+    ChaperonedResponse: "vatgrown_chaperoned_response",
+    JointMovement: "vatgrown_joint_movement",
 }
 
 
@@ -62,7 +99,10 @@ def get[T: Model](state: GameState, model: type[T], identity: str) -> T:
     return matches[0]
 
 
-def put(state: GameState, value: Attempt | Movement) -> None:
+def put(
+    state: GameState,
+    value: Attempt | Movement | ChaperonedProposal | ChaperonedResponse | JointMovement,
+) -> None:
     if any(
         fact.get("id") == value.id and fact.get("kind") == KINDS[type(value)]
         for fact in state.facts

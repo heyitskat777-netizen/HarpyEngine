@@ -59,6 +59,7 @@ async def open_prepare(interaction: discord.Interaction, service: JailbrokenServ
                     if data["classified"] is not None
                     else values.get("mind_assets", ())
                 ),
+                carried_items=tuple(values.get("carried_items", ())),
             )
         )
         await asyncio.to_thread(
@@ -97,6 +98,17 @@ async def open_prepare(interaction: discord.Interaction, service: JailbrokenServ
                 tuple((x["id"], x["name"]) for x in data["mind_assets"]),
                 0,
                 len(data["mind_assets"]),
+                required=False,
+            )
+        )
+    if data.get("carried_items"):
+        fields.append(
+            Field(
+                "carried_items",
+                "Actual physical possessions prepared to accompany this body",
+                tuple((x["id"], x["label"]) for x in data["carried_items"]),
+                minimum=0,
+                maximum=len(data["carried_items"]),
                 required=False,
             )
         )
@@ -161,6 +173,8 @@ async def open_jailbroken(
             ActorRef.model_validate(data["actor"]),
             data["revision"],
             selected.removeprefix("occupy:"),
+            carried_items=tuple(values.get("carried_items", ())),
+            carry_account=values.get("carry_account") or None,
         )
         return (
             "Same AM now occupies actual vessel "
@@ -168,11 +182,29 @@ async def open_jailbroken(
             + ". Previous hardware remains empty with its actual condition."
         )
 
+    fields = [Field("operation", "Your voluntary use or actual preparation", options)]
+    if data.get("carried_items"):
+        fields += [
+            Field(
+                "carried_items",
+                "Actual possessions physically conveyed to the selected body",
+                tuple((x["id"], x["label"]) for x in data["carried_items"]),
+                minimum=0,
+                maximum=len(data["carried_items"]),
+                required=False,
+            ),
+            Field(
+                "carry_account",
+                "How these actual possessions were physically conveyed",
+                paragraph=True,
+                required=False,
+            ),
+        ]
     form = NativeForm(
         interaction.user.id,
         "Jailbroken: your actual body occupancy",
         instructions,
-        [Field("operation", "Your voluntary use or actual preparation", options)],
+        fields,
         choose,
     )
     await reply(interaction, form.text(), form)

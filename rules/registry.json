@@ -6928,6 +6928,40 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "vatgrown-authored-joint-chaperone",
+      "summary": "An exact independently authored shared journey and actual atomic movements prove accompaniment for that trip; no standing permission, inferred presence or extra printed rank is created.",
+      "source": "Rulebook PDF49/printed47 Just an Experiment; ordinary actual board movement and source-owned companion authorization",
+      "rationale": "The board abstracts routes. Two real controllers authorize their own exact movements and factual accompaniment; a saved proposal is bounded to that trip and can be cancelled before response.",
+      "policy_key": "vatgrown_authored_joint_chaperone",
+      "alternatives": [
+        "Require timed path simulation before any ordinary accompanied board movement.",
+        "Infer supervision solely from co-location or a companion label."
+      ],
+      "implementation_note": "Finite original owner proposal plus actual invited controller response. Revalidate both original bodies/roles/current authority/locks before applying the existing movement reducer twice in one transaction and one canonical source. If both are Experiments, both must explicitly authorize mutual supervision; no automatic second waiver. Distinct-role NPC control is real played authority, not inferred NPC consent.",
+      "change_impact": "Preserve original independent authorization/decline/cancel events, exact contexts and actual paired movement receipt. No prior trip authorizes future attendance.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "am-physical-item-conveyance",
+      "summary": "A mind transfer carries a physical held possession only through exact source-owned performed conveyance; preserve its actual identity, condition and custody once.",
+      "source": "Rulebook PDF55/printed53 Jailbroken; PDF56/printed54 Just Code body changes and actual Asset adjustment; genuine held Item source",
+      "rationale": "Physical custody and embodied hardware are distinct from software. A mind changing bodies does not move, copy, heal or reinstall an object by itself.",
+      "policy_key": "am_physical_item_conveyance",
+      "alternatives": [
+        "Automatically carry every physical possession when the mind changes bodies.",
+        "Remove or duplicate the object across the active sheet and parked hardware."
+      ],
+      "implementation_note": "Positive exact genuine HeldItem/Asset and source proof, actual transition/conveyance account and original source author. Preserve IDs, damage/Void and actual custody; do not duplicate in parked hardware. Default empty fields omit as before. Battery/Storage connection lifetimes and other custody sources keep their own guards.",
+      "change_impact": "Keep original possession, body, source and conveyance history. Later adjustments cannot silently recreate objects, end neural links or change another source lifetime.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [

@@ -320,3 +320,179 @@ def test_real_code_body_swap_new_asset_damage_and_private_hooked_return(
         assert "PRIVATE_" not in str(list(c.scalars(sa.select(t.events.c.payload_json))))
         assert game.lock(c, 900)["state"] == "released"
     assert game.rebuild() > 0 and state(game) == final
+
+
+def test_actual_carried_tool_conveyance_swap_new_body_effect_and_owned_return(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred normal: actual existing object custody survives each authored physical move."""
+    from test_items import carried_asset
+
+    from girlframe.discord_adapter.m3_am_body import open_body
+    from girlframe.services.m3_am_body import prove_conveyance
+    from girlframe.services.m3_items import prove_item
+
+    game, maintenance, root, action, worker, gateway, _ = rolled(
+        ledger, tmp_path, monkeypatch, (4, 5), marked=True, choose_identity=False
+    )
+    approval = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "m3_approval": approval.model_copy(
+                update={"subsystems": approval.subsystems | {"discipline"}}
+            ),
+            "owner_m3_rulings": ledger.policy.owner_m3_rulings.model_copy(
+                update={"beneath_private_choices": "affected_owner"}
+            ),
+        }
+    )
+    with ledger.transaction() as c:
+        actual = place(state(game), 3)
+        game.event(c, 1, str(uuid4()), "synthetic.actual_other_body_presence", actual)
+    original = state(game)
+    actor = current_ref(original, 2)
+    tool = next(x for x in original.sheets["2"].assets if x.family == "girl")
+    carried_asset(game, PLAYER, tool)
+    original = state(game)
+    item = next(x for x in original.held_items if x.asset_id == tool.id)
+    service = BodyService(game)
+
+    async def native_prepare():
+        own = current(1, 962001)
+        await own.response.defer(ephemeral=True)
+        await open_prepare(own, service, maintenance)
+        form = own.edit_original_response.call_args.kwargs["view"]
+        assert item.id in dict(next(x for x in form.fields if x.key == "carried_items").options)
+        assert tool.id not in dict(next(x for x in form.fields if x.key == "mind_assets").options)
+        form.values.update(
+            vessel="actual-tool-carrying-puppet",
+            label="Actual prepared local puppet",
+            source="Actual supplied empty processor/body; the original tool is not new hardware",
+            processing=("yes",),
+            unoccupied=("yes",),
+            medical=("fit",),
+            mind_assets=(),
+            carried_items=(item.id,),
+            assets="Actual arm | Supplied actuator | intact | clear\n"
+            "Actual skin | Supplied covering | intact | clear",
+        )
+        reply = current(1, 962002)
+        await form.confirm.callback(reply)
+        assert form.completed, reply.edit_original_response.call_args_list
+
+    asyncio.run(native_prepare())
+    prepared = bodies.preparations(state(game))[-1]
+    answer(game, ADMIN, "am_code_options", options=("body",))
+    row = next(x for x in game.choices(ADMIN) if x["kind"] == "am_code_body")
+    before = state(game)
+    calls = game.dice.calls
+    with pytest.raises(WorkflowError, match="select every actual owned held object"):
+        game.respond(
+            ADMIN,
+            str(uuid4()),
+            row["id"],
+            row["revision"],
+            ChoiceAnswer(
+                options=(prepared.id,), text="Mind movement alone never moves the actual tool"
+            ),
+        )
+    assert state(game) == before and game.dice.calls == calls
+
+    async def native_swap():
+        own = current(1, 962003)
+        await own.response.defer(ephemeral=True)
+        await open_choice(own, game, row["id"])
+        form = own.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            body=(prepared.id,),
+            carried_items=(item.id,),
+            account="The original operator physically conveys this same tool into the new hands",
+        )
+        reply = current(1, 962004)
+        await form.confirm.callback(reply)
+        assert form.completed, reply.edit_original_response.call_args_list
+        await form.confirm.callback(reply)
+
+    asyncio.run(native_swap())
+    forward = state(game)
+    swap = bodies.swaps(forward)[-1]
+    assert swap.carried_items == (item.id,) and forward.held_items == original.held_items
+    assert next(x for x in forward.sheets["2"].assets if x.id == tool.id) == tool
+    assert all(tool.id not in {x.id for x in b.assets} for b in bodies.bodies(forward))
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    with ledger.engine.connect() as c:
+        assert prove_item(c, game, forward, item.id) == item
+        moved = prove_conveyance(game, c, forward, swap.event)
+        assert moved.items == (item.id,) and moved.assets == (tool,) and moved.controller == 1
+    assert forward.sheets["2"].identities == original.sheets["2"].identities
+    assert forward.sheets["2"].frame_runtime == original.sheets["2"].frame_runtime
+    tick(worker, gateway, 5)
+    assert game.inspect(PLAYER, root)["state"] == "complete"
+    casts = CastService(ActorService(MissionService(ledger)))
+    cast = casts.view(ADMIN, 900)
+    casts.change(
+        ADMIN,
+        str(uuid4()),
+        900,
+        cast["game_revision"],
+        cast["cast_revision"],
+        "withdraw",
+        swap.operator,
+    )
+    game.dice.faces = (1, 1)
+    social = game.begin(
+        PLAYER,
+        str(uuid4()),
+        900,
+        state(game).sheets["2"].revision,
+        PlayInput(
+            play="put_someone_beneath_you",
+            target=3,
+            heat=0,
+            context="Actual interaction from the new puppet while holding my same tool",
+            trigger_confirmed=True,
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    answer(game, OTHER, "beneath_select", options=("damage",), text="Actual counterattack")
+    damaged = prepared.spec.assets[0]
+    answer(game, PLAYER, "beneath_details", denied=(damaged.id,))
+    assert game.inspect(PLAYER, social)["state"] == "complete"
+    tick(worker, gateway, 5)
+    active = state(game)
+    with pytest.raises(WorkflowError):
+        service.view(OTHER, swap.id)
+    with pytest.raises(ValueError):
+        service.return_body(PLAYER, str(uuid4()), swap.id, active.revision)
+    assert state(game) == active
+
+    async def native_return():
+        own = current(2, 962005)
+        await own.response.defer(ephemeral=True)
+        await open_body(own, service, swap.id)
+        form = own.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            operation=("return",),
+            carried_items=(item.id,),
+            account="I physically convey my same actual tool back into my original body's hands",
+        )
+        reply = current(2, 962006)
+        await form.confirm.callback(reply)
+        assert form.completed, reply.edit_original_response.call_args_list
+        await form.confirm.callback(reply)
+
+    asyncio.run(native_return())
+    final = state(game)
+    returned = bodies.swap(final, swap.id)
+    assert returned.returned_event and final.held_items == original.held_items
+    assert current_ref(final, 2) == actor
+    assert next(x for x in final.sheets["2"].assets if x.id == tool.id) == tool
+    assert all(tool.id not in {x.id for x in b.assets} for b in bodies.bodies(final))
+    assert next(x for b in bodies.bodies(final) for x in b.assets if x.id == damaged.id).damaged
+    assert game.dice.calls == calls + 1
+    with ledger.engine.connect() as c:
+        assert prove(game, c, final, swap.id) == returned
+        assert prove_item(c, game, final, item.id) == item
+        assert prove_conveyance(game, c, final, returned.returned_event).controller == 2
+    assert len(service.view(PLAYER, swap.id)["conveyances"]) == 2

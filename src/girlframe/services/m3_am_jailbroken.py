@@ -52,6 +52,9 @@ def prove_preparation(
     _audit(game, c, value.event, "m3.am_jailbroken_prepared", value.controller)
     if value.actor.kind != "pilot" or value.actor.entity != str(value.controller):
         raise WorkflowError("The actual original AM records her own prepared hardware facts")
+    from girlframe.services.m3_am_body import _prove_items
+
+    _prove_items(game, c, _history(game, c, value.event), value.actor, value.spec.carried_items)
     return value
 
 
@@ -70,6 +73,10 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
     for body in hardware.bodies(state):
         if body.actor == value.actor and body not in hardware.bodies(_history(game, c, body.event)):
             raise WorkflowError("Recover actual saved hardware conditions without healing")
+    if value.carried_items:
+        from girlframe.services.m3_am_body import prove_conveyance
+
+        prove_conveyance(game, c, state, value.event)
     return value
 
 
@@ -111,6 +118,8 @@ class JailbrokenService:
             body = hardware.current(state, actor)
             pose = hardware._pose(state, actor)
             girls = [x for x in state.sheets[actor.entity].assets if x.family == "girl"]
+            from girlframe.services.m3_am_body import carried_options, prove_conveyance
+
             return dict(
                 revision=state.revision,
                 actor=actor.model_dump(mode="json"),
@@ -123,7 +132,17 @@ class JailbrokenService:
                     assets=[x.model_dump(mode="json") for x in girls],
                     medical=state.sheets[actor.entity].medical_state,
                 ),
-                mind_assets=[x.model_dump(mode="json") for x in girls],
+                mind_assets=[
+                    x.model_dump(mode="json")
+                    for x in girls
+                    if x.id not in hardware.carried_ids(state, actor)
+                ],
+                carried_items=carried_options(self.game, c, state, actor),
+                conveyances=[
+                    prove_conveyance(self.game, c, state, x.event).model_dump(mode="json")
+                    for x in hardware.conveyances(state)
+                    if x.actor == actor
+                ],
                 classified=rules.mind_assets(state, actor),
                 available=[
                     dict(vessel=vessel, label=label)
@@ -148,6 +167,9 @@ class JailbrokenService:
             if state.revision != expected:
                 raise WorkflowError("STALE_AM_OCCUPANCY: refresh the actual current body")
             event = str(uuid4())
+            from girlframe.services.m3_am_body import _prove_items
+
+            _prove_items(self.game, c, state, actor, spec.carried_items)
             value = rules.prepare(state, actor, spec, event)
             self.game.event(
                 c,
@@ -174,7 +196,15 @@ class JailbrokenService:
         )
 
     def occupy(
-        self, viewer: GuildViewer, key: str, actor: ActorRef, expected: int, vessel: str
+        self,
+        viewer: GuildViewer,
+        key: str,
+        actor: ActorRef,
+        expected: int,
+        vessel: str,
+        *,
+        carried_items: tuple[str, ...] = (),
+        carry_account: str | None = None,
     ) -> dict[str, Any]:
         from girlframe.services.m3_requisitions import RequisitionService
 
@@ -189,7 +219,17 @@ class JailbrokenService:
             if target:
                 prove_preparation(self.game, c, state, target.id)
             event = str(uuid4())
-            value = rules.occupy(state, actor, vessel, event)
+            from girlframe.services.m3_am_body import _prove_items
+
+            _prove_items(self.game, c, state, actor, carried_items)
+            value = rules.occupy(
+                state,
+                actor,
+                vessel,
+                event,
+                carried_items=carried_items,
+                carry_account=carry_account,
+            )
             self.game.event(
                 c,
                 viewer.user_id,
@@ -205,7 +245,16 @@ class JailbrokenService:
             viewer,
             key,
             "m3.am_jailbroken_occupy",
-            dict(actor=actor.model_dump(mode="json"), expected=expected, vessel=vessel),
+            dict(
+                actor=actor.model_dump(mode="json"),
+                expected=expected,
+                vessel=vessel,
+                **(
+                    dict(carried_items=carried_items, carry_account=carry_account)
+                    if carried_items or carry_account is not None
+                    else {}
+                ),
+            ),
             change,
             auto_audit=False,
         )

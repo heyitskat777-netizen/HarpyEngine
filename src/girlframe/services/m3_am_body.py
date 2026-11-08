@@ -11,6 +11,7 @@ from girlframe.database import tables as t
 from girlframe.engine import m3_am_body as rules
 from girlframe.engine import m3_am_code as code
 from girlframe.engine.m2 import ChoiceAnswer, GameState
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.onboarding import WorkflowError
@@ -21,6 +22,141 @@ def _history(game: GameService, c: Connection, event: str) -> GameState:
     from girlframe.services.m3_am_scrutinized import _history as history
 
     return history(game, c, event)
+
+
+def _prove_items(
+    game: GameService, c: Connection, state: GameState, actor: ActorRef, items: tuple[str, ...]
+) -> None:
+    from girlframe.services.m3_items import prove_item
+
+    rules.carried_assets(state, actor, items)
+    for identity in items:
+        prove_item(c, game, state, identity)
+
+
+def carried_options(
+    game: GameService, c: Connection, state: GameState, actor: ActorRef
+) -> list[dict[str, str]]:
+    items = tuple(x.id for x in state.held_items if x.asset_owner == actor)
+    _prove_items(game, c, state, actor, items)
+    return [
+        dict(id=x.id, label=x.name, asset=str(x.asset_id))
+        for x in state.held_items
+        if x.id in items
+    ]
+
+
+def prove_conveyance(
+    game: GameService, c: Connection, state: GameState, event: str
+) -> rules.Conveyance:
+    value = next((x for x in rules.conveyances(state) if x.event == event), None)
+    if value is None:
+        raise WorkflowError("Recover the actual performed physical conveyance")
+    born = _history(game, c, event)
+    audit = (
+        c.execute(
+            sa.select(t.events).where(
+                t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == event
+            )
+        )
+        .mappings()
+        .first()
+    )
+    before_json = c.scalar(
+        sa.select(t.m2["m2_state_history"].c.body_json)
+        .join(
+            t.events,
+            sa.and_(
+                t.events.c.campaign_id == t.m2["m2_state_history"].c.campaign_id,
+                t.events.c.id == t.m2["m2_state_history"].c.event_id,
+            ),
+        )
+        .where(
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.seq < audit["seq"] if audit else sa.false(),
+        )
+        .order_by(t.events.c.seq.desc())
+        .limit(1)
+    )
+    if (
+        value not in rules.conveyances(born)
+        or value.id != event
+        or audit is None
+        or before_json is None
+        or audit["actor_id"] != str(value.controller)
+        or not value.items
+    ):
+        raise WorkflowError("Recover the original human's canonical conveyance source")
+    before = GameState.model_validate_json(before_json)
+    _prove_items(game, c, before, value.actor, value.items)
+    if (
+        rules.carried_assets(before, value.actor, value.items) != value.assets
+        or any(x not in born.sheets[value.actor.entity].assets for x in value.assets)
+        or any(x not in born.held_items for x in before.held_items if x.id in value.items)
+        or any(a.id in {x.id for x in value.assets} for b in rules.bodies(born) for a in b.assets)
+        or rules._pose(before, value.actor).vessel_id != value.previous
+        or rules._pose(born, value.actor).vessel_id != value.vessel
+    ):
+        raise WorkflowError("Preserve each actual object's sole Asset, custody and condition")
+    if value.kind == "code":
+        source = rules.swap(born, value.source)
+        choice = t.m2["m2_choices"]
+        response = t.m2["m2_responses"]
+        raw = c.scalar(
+            sa.select(response.c.answer_json)
+            .join(
+                choice,
+                sa.and_(
+                    choice.c.campaign_id == response.c.campaign_id,
+                    choice.c.id == response.c.choice_id,
+                ),
+            )
+            .where(
+                response.c.campaign_id == game.store.campaign_id,
+                response.c.event_id == event,
+                response.c.actor_id == str(value.controller),
+                choice.c.kind == "am_code_body",
+                choice.c.action_id == source.action,
+            )
+        )
+        answer = ChoiceAnswer.model_validate_json(raw) if raw else None
+        if (
+            source.event != event
+            or audit["kind"] not in ("m2.choice_resolved", "m3.choice_resolved")
+            or source.actor != value.actor
+            or source.controller != value.controller
+            or (source.original_vessel, source.new_vessel) != (value.previous, value.vessel)
+            or source.carried_items != value.items
+            or answer is None
+            or answer.options != (source.preparation,)
+            or answer.fields != {"carried_items": json.dumps(list(value.items))}
+            or answer.text.strip() != value.account
+        ):
+            raise WorkflowError("Prove the actual circuit operator's selected physical conveyance")
+    elif value.kind == "return":
+        source = rules.swap(born, value.source)
+        if (
+            source.returned_event != event
+            or source.actor != value.actor
+            or (source.new_vessel, source.original_vessel) != (value.previous, value.vessel)
+            or audit["kind"] != "m3.am_body_returned"
+            or value.controller != int(value.actor.entity)
+        ):
+            raise WorkflowError("Prove this original AM's actual return conveyance")
+    else:
+        from girlframe.engine.m3_am_jailbroken import get
+
+        occupancy = get(born, value.source)
+        if (
+            occupancy.event != event
+            or occupancy.actor != value.actor
+            or (occupancy.previous, occupancy.vessel) != (value.previous, value.vessel)
+            or occupancy.carried_items != value.items
+            or audit["kind"] != "m3.am_jailbroken_occupied"
+            or value.controller != int(value.actor.entity)
+        ):
+            raise WorkflowError("Prove this original AM's actual occupancy conveyance")
+    return value
 
 
 def prove_preparation(
@@ -42,6 +178,7 @@ def prove_preparation(
         or original.handler != value.controller
     ):
         raise WorkflowError("Recover the actual human's original hardware preparation facts")
+    _prove_items(game, c, original, value.actor, value.spec.carried_items)
     return value
 
 
@@ -118,6 +255,13 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
             or (event.kind, event.actor_id) != ("m3.am_body_returned", value.actor.entity)
         ):
             raise WorkflowError("Recover the original AM's actual hooked return")
+    if value.carried_items:
+        prove_conveyance(game, c, state, value.event)
+    if value.returned_event and any(
+        x.event == value.returned_event
+        for x in rules.conveyances(_history(game, c, value.returned_event))
+    ):
+        prove_conveyance(game, c, state, value.returned_event)
     return value
 
 
@@ -125,12 +269,18 @@ def projection(
     game: GameService, c: Connection, state: GameState, value: code.Maintenance
 ) -> dict[str, Any]:
     return dict(
+        carried_items=carried_options(game, c, state, value.actor),
         bodies=[
-            dict(id=x.id, label=x.spec.label, vessel=x.spec.vessel)
+            dict(
+                id=x.id,
+                label=x.spec.label,
+                vessel=x.spec.vessel,
+                carried_items=list(x.spec.carried_items),
+            )
             for x in rules.preparations(state)
             if x.maintenance == value.id
             and not any(s.preparation == x.id for s in rules.swaps(state))
-        ]
+        ],
     )
 
 
@@ -143,7 +293,7 @@ def apply(
     if (
         len(answer.options) != 1
         or answer.denied
-        or answer.fields
+        or set(answer.fields) - {"carried_items"}
         or answer.flag is not None
         or answer.number is not None
         or answer.member is not None
@@ -160,7 +310,22 @@ def apply(
         or prepared.controller != value.controller
     ):
         raise WorkflowError("Use this actual original operator's prepared hardware")
-    changed = rules.transfer(state, value, prepared.id, action["data"]["response_event"])
+    try:
+        raw = json.loads(answer.fields["carried_items"]) if answer.fields else []
+        if not isinstance(raw, list) or any(not isinstance(x, str) for x in raw):
+            raise ValueError("Select the actual physical object IDs")
+        items = tuple(raw)
+    except (ValueError, TypeError) as error:
+        raise WorkflowError("Select only the actual carried objects") from error
+    _prove_items(game, c, state, value.actor, items)
+    changed = rules.transfer(
+        state,
+        value,
+        prepared.id,
+        action["data"]["response_event"],
+        carried_items=items,
+        carry_account=answer.text if items else None,
+    )
     code.put(state, value.model_copy(update=dict(body_swap=changed.id)))
 
 
@@ -198,6 +363,7 @@ class BodyService:
                 raise WorkflowError(
                     "Only the actual original Handler records these local empty-body facts"
                 )
+            _prove_items(self.game, c, state, value.actor, spec.carried_items)
             event = str(uuid4())
             body = rules.prepare(state, value, spec, event)
             self.game.event(
@@ -283,7 +449,14 @@ class BodyService:
         )
 
     def return_body(
-        self, viewer: GuildViewer, key: str, identity: str, expected: int
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        expected: int,
+        *,
+        carried_items: tuple[str, ...] = (),
+        carry_account: str | None = None,
     ) -> dict[str, Any]:
         from girlframe.services.m3_requisitions import RequisitionService
 
@@ -299,7 +472,10 @@ class BodyService:
                     "Finish the actual maintenance effects before the hooked return"
                 )
             event = str(uuid4())
-            changed = rules.return_to_origin(state, identity, event)
+            _prove_items(self.game, c, state, value.actor, carried_items)
+            changed = rules.return_to_origin(
+                state, identity, event, carried_items=carried_items, carry_account=carry_account
+            )
             self.game.event(
                 c, viewer.user_id, key, "m3.am_body_returned", state, event_id=event, swap=identity
             )
@@ -309,7 +485,15 @@ class BodyService:
             viewer,
             key,
             "m3.am_body_return",
-            dict(id=identity, expected=expected),
+            dict(
+                id=identity,
+                expected=expected,
+                **(
+                    dict(carried_items=carried_items, carry_account=carry_account)
+                    if carried_items or carry_account is not None
+                    else {}
+                ),
+            ),
             change,
             auto_audit=False,
         )
@@ -328,6 +512,12 @@ class BodyService:
                 current=occupied.model_dump(mode="json") if occupied else None,
                 owner=viewer.user_id == int(value.actor.entity),
                 controller=viewer.user_id == value.controller,
+                carried_items=carried_options(self.game, c, state, value.actor),
+                conveyances=[
+                    prove_conveyance(self.game, c, state, x.event).model_dump(mode="json")
+                    for x in rules.conveyances(state)
+                    if x.actor == value.actor
+                ],
             )
 
     def menu(self, viewer: GuildViewer) -> dict[str, Any]:
@@ -345,8 +535,9 @@ class BodyService:
                         mind_assets=[
                             a.model_dump(mode="json")
                             for a in state.sheets[x.actor.entity].assets
-                            if a.family == "girl"
+                            if a.family == "girl" and a.id not in rules.carried_ids(state, x.actor)
                         ],
+                        carried_items=carried_options(self.game, c, state, x.actor),
                     )
                     for x in code.sessions(state)
                     if x.controller == viewer.user_id

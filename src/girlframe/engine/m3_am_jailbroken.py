@@ -2,6 +2,8 @@
 
 from uuid import uuid4
 
+from pydantic import Field
+
 from girlframe.engine import m3_am_body as hardware
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model
@@ -27,6 +29,7 @@ class Occupancy(Model):
     vessel: str
     preparation: str | None
     mind_assets: tuple[str, ...]
+    carried_items: tuple[str, ...] = Field(default=(), exclude_if=lambda value: not value)
     previous_pose: Placement
     current_pose: Placement
     event: str
@@ -99,7 +102,15 @@ def prepare(state: GameState, actor: ActorRef, spec: hardware.BodySpec, event: s
         raise ValueError(
             "Use genuinely available empty hardware and preserve real mind-linked sources"
         )
-    hardware._ordinary(state, actor, tuple(girls[x] for x in spec.mind_assets) + spec.assets)
+    portable = hardware.carried_assets(state, actor, spec.carried_items)
+    if set(spec.mind_assets) & {x.id for x in portable}:
+        raise ValueError("A physical held object is not a mind-linked Asset")
+    hardware._ordinary(
+        state,
+        actor,
+        tuple(girls[x] for x in spec.mind_assets) + spec.assets + portable,
+        carried_items=spec.carried_items,
+    )
     value = ReadyBody(
         id=str(uuid4()),
         actor=actor,
@@ -124,7 +135,7 @@ def current(state: GameState, actor: ActorRef) -> hardware.Body | None:
         state,
         actor,
         pose,
-        ids - set(mind_assets(state, actor) or ()),
+        ids - set(mind_assets(state, actor) or ()) - hardware.carried_ids(state, actor),
         body.event,
         body.label,
         actor,
@@ -149,7 +160,15 @@ def available(state: GameState, actor: ActorRef) -> tuple[tuple[str, str], ...]:
     return tuple(result)
 
 
-def occupy(state: GameState, actor: ActorRef, vessel: str, event: str) -> Occupancy:
+def occupy(
+    state: GameState,
+    actor: ActorRef,
+    vessel: str,
+    event: str,
+    *,
+    carried_items: tuple[str, ...] = (),
+    carry_account: str | None = None,
+) -> Occupancy:
     old = hardware._pose(state, actor)
     if not event or vessel not in dict(available(state, actor)):
         raise ValueError("Occupy actual available empty processing-capable hardware")
@@ -180,13 +199,20 @@ def occupy(state: GameState, actor: ActorRef, vessel: str, event: str) -> Occupa
             origin_event=prepared.event,
             event=prepared.event,
         )
-    hardware._ordinary(state, actor, mind + target.assets)
+    portable = hardware.carried_assets(state, actor, carried_items)
+    if set(ids) & {x.id for x in portable}:
+        raise ValueError("A physical object cannot be silently classified as software")
+    if prepared and target.event == prepared.event and carried_items != prepared.spec.carried_items:
+        raise ValueError("Select the original prepared physical objects for actual conveyance")
+    hardware._ordinary(state, actor, mind + target.assets + portable, carried_items=carried_items)
+    if carried_items and (not carry_account or not carry_account.strip()):
+        raise ValueError("Record actual performed object conveyance on this occupancy")
     previous = next((x for x in hardware.bodies(state) if x.vessel == old.vessel_id), None)
     parked = hardware._body(
         state,
         actor,
         old,
-        {x.id for x in sheet.assets if x.family == "girl"} - set(ids),
+        {x.id for x in sheet.assets if x.family == "girl"} - set(ids) - {x.id for x in portable},
         event,
         previous.label if previous else "Original AM body",
         None,
@@ -194,7 +220,10 @@ def occupy(state: GameState, actor: ActorRef, vessel: str, event: str) -> Occupa
     )
     hardware.put(state, "am_body_hardware", parked.vessel, parked)
     sheet.assets = (
-        [x for x in sheet.assets if x.family == "frame"] + list(mind) + list(target.assets)
+        [x for x in sheet.assets if x.family == "frame"]
+        + list(mind)
+        + list(target.assets)
+        + list(portable)
     )
     sheet.medical_state = target.medical
     sheet.revision += 1
@@ -223,9 +252,23 @@ def occupy(state: GameState, actor: ActorRef, vessel: str, event: str) -> Occupa
         vessel=vessel,
         preparation=prepared.id if prepared else None,
         mind_assets=ids,
+        carried_items=carried_items,
         previous_pose=old,
         current_pose=pose,
         event=event,
     )
     hardware.put(state, "am_jailbroken_occupancy", result.id, result)
+    hardware.record_conveyance(
+        state,
+        actor,
+        old.vessel_id,
+        vessel,
+        carried_items,
+        portable,
+        result.id,
+        "jailbroken",
+        int(actor.entity),
+        event,
+        carry_account,
+    )
     return result

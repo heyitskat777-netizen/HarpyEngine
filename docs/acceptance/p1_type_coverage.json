@@ -1,9 +1,9 @@
 {
   "status": "P1_IMPLEMENTATION_AUTHORIZED_TESTING_PENDING",
-  "published_source": "fafce935df2038b6299858d4eab7b212d77bff8e",
+  "published_source": "e112de3b79294e7cb5392395849602c702445f5b",
   "main_merge": "c4550ecbd89bbf84363537e7bdf763c2177a998f",
   "scope": "10Girl labels;10Frame labels representing9official Frame rulesets; JANUS-B uses JANUS",
-  "evidence_note": "Publication baseline fafce93, focused CI42506224033 passed; full regression skipped. New local source evidence is explicitly labeled and does not certify all ordinary cases. Original full-M3 backlog/RULES_SUBSET and final global/independent/player acceptance gates remain pending.",
+  "evidence_note": "Published baseline e112de3; focused CI42509420443 passed, full skipped. New local AM physical-possession and authored joint-travel minimums are scoped evidence. Original full M3/RULES_SUBSET and final full/global/independent/player gates remain pending.",
   "rows": [
     {
       "category": "Girl",
@@ -716,8 +716,8 @@
       "type": "Vatgrown",
       "registry_prefix": "girl.vatgrown.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Published scoped Doll and Experiment/Prime/Sex, real learned Brutalize once, original Investor/payment and Comfort gift;8 source normals passed separately. Local actual first DNA-comparison/Tag/private disclosure normal passed1/2.37s; explicit decline authored but unrun. Local genuine unchaperoned attempt/no-position-change/private disclosure/optional real Handler Punishment and actual source-bound movement normal passed1/2.49s; affected existing Wyvern movement normal passed in combined1failed/1passed3.86s. Local actual Stim-teacher learned Dose Up/native self-dose/consumed-grant readback passed1/3.62s. Earlier source/gift/DNA/Brutalize evidence remains.",
-      "missing_before_AI": "Positive source-proven joint chaperoned travel; other printed one-use learning families beyond actual Brutalize and Dose Up; fresh-Vatgrown-after-genuine-death entry still needs bounded reconciliation. Distinct-base route/interior geometry cannot be inferred. Preserve deferred authored source/learning/gift normals and final integration/review gates.",
+      "ordinary_workflows_with_evidence": "Published scoped Doll and Experiment/Prime/Sex, real learned Brutalize once, original Investor/payment and Comfort gift;8 source normals passed separately. Local actual first DNA-comparison/Tag/private disclosure normal passed1/2.37s; explicit decline authored but unrun. Local genuine unchaperoned attempt/no-position-change/private disclosure/optional real Handler Punishment and actual source-bound movement normal passed1/2.49s; affected existing Wyvern movement normal passed in combined1failed/1passed3.86s. Local actual Stim-teacher learned Dose Up/native self-dose/consumed-grant readback passed1/3.62s. Earlier source/gift/DNA/Brutalize evidence remains. Local independently authored positive chaperoned journey now commits both actual original movements atomically; native two-PC normal passed1/2.21s, with private receipt/retry and parked Frames preserved.",
+      "missing_before_AI": "Other printed one-use learning families beyond actual Brutalize and Dose Up; genuine death→mandatory distinct Vatgrown/reset/owned notice answers remains missing from generic Career replacement. Real additional source/body and unknown same-cell boundary cases remain explicit; joint travel is not standing supervision. Preserve deferred other companion/mode/mutual branches and final integration/review gates.",
       "later_candidates": "Compound existing Investor/acquisition obligations during exceptional carrier transitions; ordinary death continuity stays BEFORE AI.",
       "code": [
         "src/girlframe/services/m3_vatgrown.py",
@@ -979,8 +979,8 @@
       "type": "AM",
       "registry_prefix": "girl.am.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Existing Jailbroken, Scrutinized and Just Code/body/backup/records paths retained. New no-additional-roll Sex source readback and native circuit routing: actual Alpha→AM smoke1 passed2.15s. Genuine both-AM no-roll delegated encounter passed native/pause/private completion; original Pair outside scene/audience and no extra Action/dice/resources. Shared native completed readback +old policy consumer2 passed3.54s.",
-      "missing_before_AI": "Concrete ordinary guards: body transfer/Jailbroken reject HeldItem asset-owner, Battery and active Storage sources; local prepared-puppet entry does not admit additional real vessel/Frame sources; terminal/all-Void new-body consequences remain blocked; real Pilot circuit operators lack body/branch/records choices. Conditional other-Frame branch reassignment remains source-specific. Existing identity/memory/backup/records, local body/return, AM Sex and branch normals are implemented and awaiting final verification.",
+      "ordinary_workflows_with_evidence": "Existing Jailbroken, Scrutinized and Just Code/body/backup/records paths retained. New no-additional-roll Sex source readback and native circuit routing: actual Alpha→AM smoke1 passed2.15s. Genuine both-AM no-roll delegated encounter passed native/pause/private completion; original Pair outside scene/audience and no extra Action/dice/resources. Shared native completed readback +old policy consumer2 passed3.54s. Local exact physically conveyed held Item/Asset source now supports Code swap, actual new-body damage and owned hooked return; native normal passed1/5.90s after a test-only expected-exception fix. Same IDs/condition/custody, no duplicate parked hardware; Jailbroken native selectors also wired/static checked but that variant not run.",
+      "missing_before_AI": "Concrete ordinary guards: body transfer/Jailbroken still require real Battery and active Storage lifetime adapters; exact physically conveyed owned held-object source is now implemented; local prepared-puppet entry does not admit additional real vessel/Frame sources; terminal/all-Void new-body consequences remain blocked; real Pilot circuit operators lack body/branch/records choices. Conditional other-Frame branch reassignment remains source-specific. Existing identity/memory/backup/records, local body/return, AM Sex and branch normals are implemented and awaiting final verification.",
       "later_candidates": "Exceptional simultaneous branch/body/career transitions after ordinary AM play works.",
       "code": [
         "src/girlframe/services/m3_am_body.py",
@@ -989,7 +989,10 @@
         "src/girlframe/services/m3_am_sex.py",
         "src/girlframe/discord_adapter/m3_am_sex.py",
         "src/girlframe/services/m3_bonded_am.py",
-        "src/girlframe/discord_adapter/m3_bonded_am.py"
+        "src/girlframe/discord_adapter/m3_bonded_am.py",
+        "src/girlframe/engine/m3_am_body.py",
+        "src/girlframe/engine/m3_am_jailbroken.py",
+        "src/girlframe/services/m3_am_jailbroken.py"
       ],
       "tests": [
         "tests/rules/test_am_body.py",

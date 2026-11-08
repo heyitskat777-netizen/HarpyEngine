@@ -13,6 +13,117 @@ from girlframe.discord_adapter.onboarding import reply
 from girlframe.services.m3_vatgrown_travel import VatgrownTravelService
 
 
+async def _open_chaperoned(
+    interaction: discord.Interaction,
+    service: VatgrownTravelService,
+    identity: str,
+    data: dict[str, Any],
+) -> None:
+    viewer = viewer_from_interaction(interaction)
+
+    async def access(current: discord.Interaction) -> None:
+        await asyncio.to_thread(service.view, viewer_from_interaction(current), identity)
+
+    text = "\n".join(
+        (
+            "**Actual chaperoned joint travel**",
+            "Original route: "
+            + clean(str(data["origin"]))
+            + " → "
+            + clean(str(data["destination"])),
+            "Original owner's account: " + clean(data["owner_account"]),
+            "Actual companion's account: " + clean(data["companion_account"] or "Not submitted"),
+            "Journey result: " + clean(data["status"]),
+            "Both bodies move when the invited companion accepts with their own movement account. "
+            "The original owner may cancel before acceptance.",
+        )
+    )
+    if data.get("closure_account") and data["status"] == "cancelled":
+        text += "\nOriginal owner's cancellation: " + clean(data["closure_account"])
+    if not (data["can_respond"] or data["can_cancel"]):
+        history = MemoryHistory(viewer.user_id, text, access)
+        await reply(interaction, history.text(), history)
+        return
+    options: list[tuple[str, str]] = []
+    if data["can_respond"]:
+        options.extend(
+            (
+                ("accept", "Authorize my movement; both move together"),
+                ("decline", "Decline; neither body moves"),
+            )
+        )
+    if data["can_cancel"]:
+        options.append(("cancel", "Cancel my original proposal before acceptance"))
+    fields = [
+        Field("operation", "Your actual role's choice", tuple(options)),
+        Field("account", "Your actual movement/accompaniment or closure account", paragraph=True),
+    ]
+    if data["can_respond"]:
+        fields.append(
+            Field(
+                "mode",
+                "If accepting: your own actual movement mode",
+                (("body", "My actual body on foot"), ("frame", "My own Frame I actually pilot")),
+                minimum=0,
+                required=False,
+            )
+        )
+        if data["mutual_required"]:
+            fields.append(
+                Field(
+                    "mutual",
+                    "Both Experiments: actual mutual accompaniment for this entire trip?",
+                    (
+                        ("yes", "I explicitly authorize actual mutual accompaniment"),
+                        ("no", "I do not authorize mutual accompaniment"),
+                    ),
+                    minimum=0,
+                    required=False,
+                )
+            )
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        actual_viewer = viewer_from_interaction(current)
+        if values["operation"] == ("cancel",):
+            await asyncio.to_thread(
+                service.cancel_chaperoned,
+                actual_viewer,
+                str(current.id),
+                identity,
+                data["revision"],
+                values["account"],
+            )
+            return "Your original joint proposal is cancelled; neither body moved."
+        accepted = values["operation"] == ("accept",)
+        if accepted and len(values.get("mode", ())) != 1:
+            from girlframe.services.onboarding import WorkflowError
+
+            raise WorkflowError(
+                "Select your actual movement mode before authorizing both movements"
+            )
+        await asyncio.to_thread(
+            service.respond_chaperoned,
+            actual_viewer,
+            str(current.id),
+            identity,
+            data["revision"],
+            accept=accepted,
+            frame=values.get("mode") == ("frame",),
+            account=values["account"],
+            mutual=values.get("mutual") == ("yes",),
+        )
+        return (
+            "Both actual original bodies moved together; the private receipt is saved."
+            if accepted
+            else "Your actual decline is saved; neither body moved."
+        )
+
+    form = MemoryForm(
+        viewer.user_id, "Actual joint journey", text, fields, submit, authorize=access
+    )
+    await reply(interaction, form.text(), form)
+
+
 async def open_vatgrown_travel(
     interaction: discord.Interaction,
     service: VatgrownTravelService,
@@ -24,7 +135,8 @@ async def open_vatgrown_travel(
         if not tasks:
             await reply(
                 interaction,
-                "Record an actual unchaperoned attempt through /campaign movement first.",
+                "Record an actual journey proposal or unchaperoned attempt "
+                "through /campaign movement.",
             )
             return
 
@@ -38,7 +150,7 @@ async def open_vatgrown_travel(
             viewer.user_id,
             "Your actual travel sources",
             "Private saved history and choices.",
-            [Field("source", "Original attempt", tuple((x["id"], x["label"]) for x in tasks))],
+            [Field("source", "Original source", tuple((x["id"], x["label"]) for x in tasks))],
             choose,
             authorize=access_menu,
         )
@@ -46,6 +158,9 @@ async def open_vatgrown_travel(
         return
 
     data = await asyncio.to_thread(service.view, viewer, identity)
+    if data.get("type") == "chaperoned":
+        await _open_chaperoned(interaction, service, identity, data)
+        return
 
     async def access(current: discord.Interaction) -> None:
         await asyncio.to_thread(service.view, viewer_from_interaction(current), identity)
