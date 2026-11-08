@@ -657,6 +657,14 @@ class InboxView(discord.ui.View):
             await open_npc_bond_play(
                 interaction, NpcBondPlayService(self.service.store), item.identity
             )
+        elif item.task == "m3_trainee":
+            from girlframe.discord_adapter.m3_trainee import open_trainee
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_trainee import TraineeService
+
+            await open_trainee(
+                interaction, TraineeService(GameService(self.service.store)), item.identity
+            )
         elif item.task in ("m3_show_dog", "m3_show_dog_message", "m3_show_dog_interest"):
             from girlframe.discord_adapter.m3_show_dog import (
                 open_interest,

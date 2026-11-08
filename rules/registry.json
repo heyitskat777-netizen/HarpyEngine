@@ -6266,6 +6266,38 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "trainee-teaching-source",
+      "policy_key": "trainee_teaching_source",
+      "summary": "The learner records an actual factual teaching source and chooses her printed outcome, including incidental teaching; this does not author Mentor dialogue or import private notes.",
+      "source": "Trainee and Mentor, rulebook PDF41\u201342/printed39\u201340",
+      "rationale": "The trigger can be unintentional, and the choice belongs to the learner. Use explicit factual provenance without requiring an additional Mentor veto.",
+      "alternatives": [
+        "Require an extra Mentor declaration for every teaching."
+      ],
+      "implementation_note": "A mechanical acted-on outcome binds a real completed source; a nonmechanical rendition changes no unperformed mechanical outcome.",
+      "change_impact": "Version future factual-authority changes; preserve original assigned people, actual selections, reports and performed consequences.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "trainee-shirking-report",
+      "policy_key": "trainee_shirking_report",
+      "summary": "Actual immediate Mentor Punishment completes the challenge duty; an actual learner report and original Handler factual finding instead require real Punishment of the shirking Mentor.",
+      "source": "Trainee and Mentor, rulebook PDF41\u201342/printed39\u201340",
+      "rationale": "Preserve the Mentor responsibility printed on PDF42 and actual human report/finding rather than an automatic allegation-as-effect or a fake discipline acknowledgment.",
+      "alternatives": [
+        "Use a separate court/Handler investigation procedure if future source clarification requires one."
+      ],
+      "implementation_note": "Original people, real source scope and performed effects remain bound; no fictional speech, consent or witness is inferred from OOC facilitation.",
+      "change_impact": "Version future factual-authority changes; preserve original assigned people, actual selections, reports and performed consequences.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -8132,14 +8164,16 @@
         "heading": "Trainee"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_trainee.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -8155,14 +8189,17 @@
         "heading": "Mentor"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_trainee.py",
+        "tests/test_m2_game.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

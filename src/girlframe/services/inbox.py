@@ -924,6 +924,28 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_trainee import TraineeService
+
+            for row in TraineeService(GameService(self.store))._tasks(connection, viewer):
+                items.append(
+                    InboxItem(
+                        "trainee:" + row["id"],
+                        "trainee",
+                        row["id"],
+                        row["revision"],
+                        "playbook",
+                        row["label"],
+                        "Original Newgirl, Mentor and actual Handler",
+                        "established" if row["phase"] == "complete" else "pending",
+                        bool(row["pending"]),
+                        False,
+                        "Resolve actual teaching, your owned choice or the real duty consequence.",
+                        "Other people's private resources and responses remain theirs.",
+                        "Review Trainee",
+                        task="m3_trainee",
+                    )
+                )
+
             from girlframe.services.m3_show_dog import ShowDogService
 
             dog = ShowDogService(GameService(self.store))
@@ -3193,6 +3215,7 @@ class InboxService:
                 kind = work["kind"]
                 if kind in (
                     "show_dog",
+                    "trainee_duty",
                     "creature_comforts",
                     "physical_initial",
                     "janus_core_setup",

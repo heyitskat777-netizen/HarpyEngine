@@ -1,5 +1,55 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Newgirl Trainee: actual teaching and mentorship duty — 2026-11-08
+
+Extends source `f2cbc4f`. Unrolled human-authored factual teaching binds the original
+Newgirl, Mentor, actual cast and immutable assignment. All three choices apply real
+effects: erase a contradictory ordinary Identity and embrace an existing Mentor
+Tag when present; perform a substantive actual rendition or completed mechanical
+source for 1–3 Heat; challenge and require actual immediate Mentor discipline.
+Genuine embrace resolves the consumed Tag's cannot-refuse debt while unrelated
+Flirt followthrough remains owed. No dice or player response is fabricated.
+
+Actual Mentor Punishment uses source_kind trainee, action=None, real teaching work
+and scene scope. Actual reported shirking plus original-Handler factual finding
+instead produces real Punishment of the Mentor. Instructions, attendance, effects
+and children must complete before the duty closes. Source cards preserve You and
+Waiting, including original-person history and actual private learner fields.
+
+An unobserved Handler cannot discover/read a private teaching before a real report;
+a reported view shows the actual report without disclosing the private teaching.
+OOC facilitation alone supplies no fictional observation. Stored teaching remains
+available to its original people. This privacy correction followed the initial
+integration run and is directly rechecked in its existing report normal.
+
+| Executed evidence | Result and exact scope |
+|---|---|
+| Initial coherent normal/affected selection | 9 passed /9.35s; `var/m3-trainee-integrated.xml`, before final privacy/erasure refinements |
+| Final affected report/privacy normal | 1 passed /2.05s; `var/m3-trainee-handler-privacy.xml` |
+| Final actual erasure with ordinary Frame and Ankou | 2 passed /3.45s; `var/m3-trainee-erase-frames.xml` |
+| Final coherent changed-file static | Ruff/format10 Python and mypy9 source pass without drift; `var/m3-trainee-union-static.json` |
+
+These are overlapping focused selections, not a final combined/full regression.
+Ankou's blanket erasure exclusion was removed after checking its printed trigger:
+Feedback follows marking the last Identity, not erasing one. Existing interrupted
+recovery is guarded before new teaching. The affected Ankou case uses actual
+initial Frame creation and genuine Flirt/Tag/teaching sources, not a mutated label.
+Earlier worker evidence was3 pass/1 failed (incorrect low-Flirt Tag fixture), then
+the actual high owed-Tag erasure1 passed; retained in the compact handoff.
+
+A small readonly original-Mentor proof is shared with the near-term Mentor daily
+consumer. Explicit rule eligibility, actual bodies and scene decisions remain in
+their services; history joins bind both campaign and event. No relationship engine
+rewrite, suite migration or test-speed claim is made. The Mentor registry entry
+now records its tested M2 rank/Tag and Trainee duty subsets; upcoming daily scene
+attendance and runtime name work are not included in that evidence.
+
+Other actor/body and specialised Identity/Tag adapters, broader mentoring causes
+and multiple-Mentor sources remain required. Active Mentor files are excluded from
+the snapshot. Bot remains off; no deployment, publication, private-engine write,
+new full regression, remote CI or independent/player acceptance is claimed.
+
+
 ## Princess Show Dog: both actual Off-Duty choice lists — 2026-11-08
 
 Extends source `c619b73`. Reconciliation found Show Dog wholly missing; existing

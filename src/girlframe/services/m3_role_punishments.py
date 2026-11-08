@@ -89,6 +89,7 @@ def open_case(
         "dose_up",
         "vatgrown_doll",
         "show_dog",
+        "trainee",
         "succubus_npc_disobey",
     ],
     action: str | None,
@@ -345,6 +346,10 @@ def case_proof(c: Connection, game: GameService, identity: str) -> RolePunishmen
         from girlframe.services.m3_succubus import validate_role_case
 
         validate_role_case(c, game, state, case)
+    if case.source_kind == "trainee":
+        from girlframe.services.m3_trainee import validate_role_case
+
+        validate_role_case(c, game, state, case)
     if case.source_kind == "show_dog":
         from girlframe.services.m3_show_dog import validate_role_case
 
@@ -411,6 +416,11 @@ def current(c: Connection, game: GameService, state: GameState, case: RolePunish
         raise WorkflowError("Recover the actual original executor, Frame and affected person.")
     if case.source_kind == "succubus_npc_disobey":
         from girlframe.services.m3_succubus import validate_role_case
+
+        validate_role_case(c, game, state, case)
+        return
+    if case.source_kind == "trainee":
+        from girlframe.services.m3_trainee import validate_role_case
 
         validate_role_case(c, game, state, case)
         return
@@ -593,6 +603,12 @@ def synchronize(
                 scope = role_scope(c, game, case).model_dump() | dict(
                     campaign_id=game.store.campaign_id
                 )
+            elif case.source_kind == "trainee":
+                from girlframe.services.m3_trainee import role_scope
+
+                scope = role_scope(c, game, case).model_dump() | dict(
+                    campaign_id=game.store.campaign_id
+                )
             elif case.source_kind == "compliance_virus":
                 from girlframe.services.m3_compliance_virus import role_scope
 
@@ -671,6 +687,10 @@ def synchronize(
                 complete_role_case(c, game, completed, completion_id)
             elif completed.source_kind == "succubus_npc_disobey":
                 from girlframe.services.m3_succubus import complete_role_case
+
+                complete_role_case(c, game, completed, completion_id)
+            elif completed.source_kind == "trainee":
+                from girlframe.services.m3_trainee import complete_role_case
 
                 complete_role_case(c, game, completed, completion_id)
             elif completed.source_kind == "show_dog":
