@@ -4,7 +4,6 @@ import asyncio
 import json
 from typing import Literal, Protocol
 
-from girlframe.engine.drafts import DraftInput
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
 
@@ -68,7 +67,9 @@ class CharacterTagSynchronizer:
             if job["state"] == "complete":
                 return str(job["warning"]) or "Character Discord tags are already synchronized."
             try:
-                draft = DraftInput.model_validate(json.loads(job["desired_json"]))
+                draft = await asyncio.to_thread(
+                    self.store.cosmetic_draft, viewer, json.loads(job["desired_json"])
+                )
                 await gateway.member_ready(viewer.user_id)
             except Exception:
                 message = (
@@ -107,7 +108,11 @@ class CharacterTagSynchronizer:
                     )
                 else:
                     nickname_done = True
-                    nickname_message = "Server nickname matches the callsign. "
+                    nickname_message = (
+                        "Server nickname matches the callsign. "
+                        if draft.callsign
+                        else "Server nickname cleared for the recorded name removal. "
+                    )
             except TagSyncIssue as error:
                 warnings.append(str(error))
             except Exception:

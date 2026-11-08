@@ -1,0 +1,352 @@
+{
+  "milestone": "M2K",
+  "status": "implementation_complete_pending_review",
+  "rules_certification": "NOT_RUN",
+  "human_discord_mobile_playtest": "NOT_RUN_owner_deferred_to_end_of_M2",
+  "tests": [
+    {
+      "id": "M2-001",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_activation_and_prelock_no_rng",
+        "test_engage_exact_counts_and_used_asset_damage"
+      ]
+    },
+    {
+      "id": "M2-002",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_heat_identity_before_roll_and_forced_spend"
+      ]
+    },
+    {
+      "id": "M2-003",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_heat_identity_before_roll_and_forced_spend"
+      ]
+    },
+    {
+      "id": "M2-004",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_heat_identity_before_roll_and_forced_spend"
+      ]
+    },
+    {
+      "id": "M2-005",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_one_postroll_tag_bond_bonus_and_observer_auth",
+        "test_newgirl_self_mark_and_nonrejectable_mentor_tag"
+      ]
+    },
+    {
+      "id": "M2-006",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_stale_forms_pauses_replay_restart_and_unsupported_no_rng",
+        "test_stale_root_cannot_abort_new_root_and_duplicate_confirm_race"
+      ]
+    },
+    {
+      "id": "M2-007",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_keep_three_tiers_and_handler_ownership",
+        "test_flirt_all_tiers_full_high_branches_and_target_ownership"
+      ]
+    },
+    {
+      "id": "M2-008",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_backup_rebuild_immutable_private_history_and_public_sheet"
+      ]
+    },
+    {
+      "id": "M2-009",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_keep_three_tiers_and_handler_ownership",
+        "test_sensors_exact_questions_and_human_answers",
+        "test_engage_exact_counts_and_used_asset_damage",
+        "test_flirt_all_tiers_full_high_branches_and_target_ownership"
+      ]
+    },
+    {
+      "id": "M2-010",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_stale_forms_pauses_replay_restart_and_unsupported_no_rng"
+      ]
+    },
+    {
+      "id": "M2-011",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_disobey_requires_recorded_superior_order_and_low_halts"
+      ]
+    },
+    {
+      "id": "M2-012",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_disobey_requires_recorded_superior_order_and_low_halts"
+      ]
+    },
+    {
+      "id": "M2-013",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_nested_escape_play_is_real_roll_then_mutual_followthrough"
+      ]
+    },
+    {
+      "id": "M2-014",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_stale_forms_pauses_replay_restart_and_unsupported_no_rng"
+      ]
+    },
+    {
+      "id": "M2-015",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_keep_three_tiers_and_handler_ownership",
+        "test_lock_failure_no_rng_spend_or_fake_completion"
+      ]
+    },
+    {
+      "id": "LOCK-01",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_activation_and_prelock_no_rng"
+      ]
+    },
+    {
+      "id": "LOCK-02",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_lock_failure_no_rng_spend_or_fake_completion"
+      ]
+    },
+    {
+      "id": "LOCK-03",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_permissions_cover_every_send_override_and_merge_safe_restoration"
+      ]
+    },
+    {
+      "id": "LOCK-04",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_persistent_controls_and_inbox_route_owned_response",
+        "test_stale_forms_pauses_replay_restart_and_unsupported_no_rng"
+      ]
+    },
+    {
+      "id": "LOCK-05",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_keep_three_tiers_and_handler_ownership",
+        "test_campaign_isolation_and_delivery_uncertainty_no_reroll"
+      ]
+    },
+    {
+      "id": "LOCK-06",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_independent_scenes_and_one_winner_per_channel"
+      ]
+    },
+    {
+      "id": "LOCK-07",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_permission_drift_and_restore_preserve_unrelated_staff_changes"
+      ]
+    },
+    {
+      "id": "LOCK-08",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_backup_rebuild_immutable_private_history_and_public_sheet",
+        "test_lock_failure_no_rng_spend_or_fake_completion"
+      ]
+    },
+    {
+      "id": "LOCK-09",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_stale_forms_pauses_replay_restart_and_unsupported_no_rng",
+        "test_stale_root_cannot_abort_new_root_and_duplicate_confirm_race"
+      ]
+    },
+    {
+      "id": "LOCK-10",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_campaign_isolation_and_delivery_uncertainty_no_reroll",
+        "test_stale_root_cannot_abort_new_root_and_duplicate_confirm_race"
+      ]
+    },
+    {
+      "id": "LOCK-11",
+      "offline_status": "PASS",
+      "modules": [
+        "tests/test_m2_game.py",
+        "tests/test_m2_ui.py"
+      ],
+      "tests": [
+        "test_permissions_cover_every_send_override_and_merge_safe_restoration"
+      ]
+    },
+    {
+      "id": "BUILDER-01",
+      "offline_implementation": "PASS",
+      "acceptance_status": "NOT_RUN_until_independent_review_and_human_acceptance",
+      "tests": [
+        "test_every_girl_activation_preserves_source_and_printed_exceptions",
+        "test_every_frame_activation_retains_baseline",
+        "test_backup_rebuild_immutable_private_history_and_public_sheet"
+      ]
+    },
+    {
+      "id": "BUILDER-02",
+      "offline_implementation": "PASS",
+      "acceptance_status": "NOT_RUN_until_independent_review_and_human_acceptance",
+      "tests": [
+        "test_every_girl_activation_preserves_source_and_printed_exceptions",
+        "test_every_frame_activation_retains_baseline",
+        "test_backup_rebuild_immutable_private_history_and_public_sheet"
+      ]
+    },
+    {
+      "id": "BUILDER-03",
+      "offline_implementation": "PASS",
+      "acceptance_status": "NOT_RUN_until_independent_review_and_human_acceptance",
+      "tests": [
+        "test_every_girl_activation_preserves_source_and_printed_exceptions",
+        "test_every_frame_activation_retains_baseline",
+        "test_backup_rebuild_immutable_private_history_and_public_sheet"
+      ]
+    },
+    {
+      "id": "BUILDER-04",
+      "offline_implementation": "PASS",
+      "acceptance_status": "NOT_RUN_until_independent_review_and_human_acceptance",
+      "tests": [
+        "test_every_girl_activation_preserves_source_and_printed_exceptions",
+        "test_every_frame_activation_retains_baseline",
+        "test_backup_rebuild_immutable_private_history_and_public_sheet"
+      ]
+    },
+    {
+      "id": "LOCK-12",
+      "status": "NOT_RUN",
+      "reason": "Independent review and human smoke deferred by owner to this handoff"
+    }
+  ]
+}

@@ -4,11 +4,17 @@ import json
 import os
 from collections.abc import Mapping
 from pathlib import Path
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, SecretStr, field_validator
 
+from girlframe.engine.creation_details import InitialConditions
+from girlframe.engine.creation_review import CreationRulings
 from girlframe.engine.identity import Snowflake
+from girlframe.engine.m2 import ReleaseApproval
+from girlframe.engine.m3_policy import Approval as M3Approval
+from girlframe.engine.m3_policy import Rulings as M3Rulings
 
 
 class BotPolicy(BaseModel):
@@ -21,6 +27,19 @@ class BotPolicy(BaseModel):
     status_user_ids: frozenset[Snowflake] = frozenset()
     allow_guild_administrators: bool = False
     status_audience_approved: bool = False
+    owner_creation_rulings: CreationRulings | None = None
+    owner_initial_conditions: InitialConditions | None = None
+    owner_intense_tag_bonus: Literal[1, 2] | None = None
+    m2_approval: ReleaseApproval | None = None
+    m3_approval: M3Approval | None = None
+    owner_m3_rulings: M3Rulings | None = None
+
+    @field_validator("owner_creation_rulings")
+    @classmethod
+    def owner_rulings(cls, value: CreationRulings | None) -> CreationRulings | None:
+        if value is not None and value.provenance != "owner_approved_campaign_ruling":
+            raise ValueError("Trusted owner policy must record owner approval provenance")
+        return value
 
     @field_validator("sandbox")
     @classmethod
@@ -50,4 +69,4 @@ def load_bot_token(environ: Mapping[str, str] | None = None) -> SecretStr:
 
 def policy_summary(policy: BotPolicy) -> str:
     """Safe startup evidence; no filesystem paths or roster IDs."""
-    return json.dumps({"mode": "m1_draft_ledger", "guild_scoped": True, "commands": 11})
+    return json.dumps({"mode": "m2_review_gated", "guild_scoped": True, "commands": 14})

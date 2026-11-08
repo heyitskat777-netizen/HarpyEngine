@@ -1,0 +1,61 @@
+{
+  "unit": "Handler Tag use, all three choices",
+  "implementation": "IMPLEMENTED_AUTOMATED_WITHIN_STATED_SCOPE",
+  "source": {
+    "document": "rulebook",
+    "pdf": 11,
+    "printed": 9
+  },
+  "artifact": "var/m3-root-bounded-systems.xml",
+  "checks": {
+    "passed": 53,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 27.16
+  },
+  "implemented": [
+    "Actual observed Tag consumption and exact source body/human",
+    "Favour agree/decline with no invented benefit",
+    "Attention direct canonical effect without dice",
+    "Compel original Handler pause/give-in response",
+    "Native selectors and exact private Inbox route",
+    "Safety/stale/owner/privacy/replay/restart checks",
+    "Actual original Handler ending closure, no successor effect",
+    "During another held Play: uncommitted proposal invalidation and committed modifier/repeated-Tag reconciliation",
+    "True Director targets spend only their own world Tags and reply through their actual human",
+    "Exact already-owed rejection closes for the consumed original Tag",
+    "Concurrent different commands cannot spend one Tag twice",
+    "Actual native Harpy does not borrow its human's other PC resources",
+    "Original Handler receives durable attention notice; reading records only OOC receipt, no fictional reply or mandatory work",
+    "Saved private source receipts remain readable with unavailable registry; new gameplay stays blocked",
+    "Actual pre-roll source changes preserve the stale commitment without RNG/spending; original owner may cancel and redeclare"
+  ],
+  "independent_review": "NOT_RUN",
+  "human_discord_acceptance": "NOT_RUN",
+  "source_commit": "c46e9005bed43c25db46e653c69400db1a668e81",
+  "source_unit_cases": 22,
+  "latest_source_checks": {
+    "artifact": "var/m3-handler-tag-reviewed-whole.xml",
+    "passed": 22,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 13.6,
+    "additional_scope": "Actual HandlerGirl and Director roles, private invalid-state errors, owned attention notices, unavailable-registry saved reads, pre-roll staleness with genuine unrolled cancellation/redeclaration"
+  },
+  "technical_review": {
+    "reviewer": "Separate development agent; no human certification",
+    "findings": "Two confirmed findings corrected and tested; one pre-roll source-staleness question tested",
+    "human_rules_review": "NOT_RUN"
+  },
+  "full_regression": {
+    "artifact": "var/m3-bounded-gameplay-full-fixed.xml",
+    "passed": 2200,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 1070.22,
+    "scope": "Exact frozen source; separate next-work drafts excluded"
+  }
+}

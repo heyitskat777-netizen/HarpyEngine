@@ -1,0 +1,569 @@
+"""Original Handler award review and explicit selected-group Permission spend."""
+
+import asyncio
+from typing import Any
+
+import discord
+
+from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.ledger import clean
+from girlframe.discord_adapter.m2_forms import Field, NativeForm
+from girlframe.discord_adapter.onboarding import reply
+from girlframe.engine.m3_handler_advancements import PermissionGrant
+from girlframe.services.m3_handler_advancements import HandlerAdvancementService
+from girlframe.services.onboarding import WorkflowError
+
+
+async def open_advancement(
+    interaction: discord.Interaction, service: HandlerAdvancementService, identity: str
+) -> None:
+    data = await asyncio.to_thread(service.view, viewer_from_interaction(interaction), identity)
+    if data.get("location_build"):
+        from girlframe.discord_adapter.m3_location_build import open_build
+        from girlframe.services.m3_location_build import LocationBuildService
+
+        await open_build(interaction, LocationBuildService(service.store), identity)
+        return
+    if data.get("location_rebuild"):
+        from girlframe.discord_adapter.m3_location_rebuild import open_rebuild
+        from girlframe.services.m3_location_rebuild import LocationRebuildService
+
+        await open_rebuild(interaction, LocationRebuildService(service.store), identity)
+        return
+    if data.get("acquired_rule") == ("handler-advancement.handler-advancement.deep-brain-spikes"):
+        from girlframe.discord_adapter.m3_deep_brain_spikes import open_spikes
+        from girlframe.services.m3_deep_brain_spikes import DeepBrainSpikesService
+
+        await open_spikes(interaction, DeepBrainSpikesService(service.store), data["acquisition"])
+        return
+    if data.get("acquired_rule") == "handler-advancement.handler-advancement.secretary":
+        from girlframe.discord_adapter.m3_secretary import open_secretary
+        from girlframe.services.m3_secretary import SecretaryService
+
+        await open_secretary(interaction, SecretaryService(service.store), data["acquisition"])
+        return
+    if data.get("acquired_rule") == "handler-advancement.handler-advancement.bomb-collar":
+        from girlframe.discord_adapter.m3_bomb_collar import open_collar
+        from girlframe.services.m3_bomb_collar import BombCollarService
+
+        await open_collar(interaction, BombCollarService(service.store), data["acquisition"])
+        return
+    if data.get("acquired_rule") == "handler-advancement.handler-advancement.hidden-sidearm":
+        from girlframe.discord_adapter.m3_hidden_sidearm import open_sidearm
+        from girlframe.services.m3_hidden_sidearm import HiddenSidearmService
+
+        await open_sidearm(interaction, HiddenSidearmService(service.store), data["acquisition"])
+        return
+    if data.get("acquired_rule") == "handler-advancement.handler-advancement.reign-of-terror":
+        from girlframe.discord_adapter.m3_reign_terror import open_terror
+        from girlframe.services.m3_reign_terror import ReignTerrorService
+
+        await open_terror(interaction, ReignTerrorService(service.store), data["acquisition"])
+        return
+    if data.get("acquired_rule") == "handler-advancement.handler-advancement.tracker-implants":
+        from girlframe.discord_adapter.m3_tracker_implants import open_tracker
+        from girlframe.services.m3_tracker_implants import TrackerService
+
+        await open_tracker(interaction, TrackerService(service.store), data["acquisition"])
+        return
+    if data.get("acquired_rule") == "handler-advancement.handler-advancement.contaminant-zone":
+        from girlframe.discord_adapter.m3_contaminant_zone import open_zone
+        from girlframe.services.m3_contaminant_zone import ContaminantZoneService
+
+        await open_zone(interaction, ContaminantZoneService(service.store), data["acquisition"])
+        return
+    if (
+        data.get("acquired_rule")
+        == "handler-advancement.handler-advancement.politician-bribery-fund"
+    ):
+        from girlframe.discord_adapter.m3_politician_bribery import open_bribery
+        from girlframe.services.m3_politician_bribery import BriberyService
+
+        await open_bribery(interaction, BriberyService(service.store), data["acquisition"])
+        return
+    if data.get("acquired_rule") == "handler-advancement.handler-advancement.ship-base":
+        from girlframe.discord_adapter.m3_ship_base import open_ship
+        from girlframe.services.m3_ship_base import ShipBaseService
+
+        await open_ship(interaction, ShipBaseService(service.store), data["acquisition"])
+        return
+    if data.get("acquired_rule") == "handler-advancement.handler-advancement.a-bomb":
+        from girlframe.discord_adapter.m3_a_bomb import open_bomb
+        from girlframe.services.m3_a_bomb import ABombService
+
+        await open_bomb(interaction, ABombService(service.store), data["acquisition"])
+        return
+    if (
+        data.get("acquired_rule")
+        == "handler-advancement.handler-advancement.gender-designation-request"
+    ):
+        from girlframe.discord_adapter.m3_gender_designation import open_designation
+        from girlframe.services.m3_gender_designation import GenderDesignationService
+
+        await open_designation(
+            interaction, GenderDesignationService(service.store), data["acquisition"]
+        )
+        return
+    if data.get("acquired_rule") == "handler-advancement.handler-advancement.intracadre-marriage":
+        from girlframe.discord_adapter.m3_intracadre_marriage import open_marriage
+        from girlframe.services.m3_intracadre_marriage import MarriageService
+
+        await open_marriage(interaction, MarriageService(service.store), data["acquisition"])
+        return
+    if (
+        data.get("acquired_rule")
+        == "handler-advancement.handler-advancement.promotional-opportunity"
+    ):
+        from girlframe.discord_adapter.m3_promotional_opportunity import open_opportunity
+        from girlframe.services.m3_promotional_opportunity import PromotionalOpportunityService
+
+        await open_opportunity(
+            interaction, PromotionalOpportunityService(service.store), data["acquisition"]
+        )
+        return
+    if data.get("acquired_rule"):
+        await reply(
+            interaction,
+            "This advancement acquired "
+            + (
+                "Cute Uniforms"
+                if data["acquired_rule"].endswith("cute-uniforms")
+                else "Girl Insurance"
+                if data["acquired_rule"].endswith("girl-insurance")
+                else "Supply Drop"
+            )
+            + ". Its original acquisition source is saved; open the acquired rule to use it.",
+        )
+        return
+    if data["phase"] == "spent":
+        grants = "\n".join(
+            f"{clean(x['label'])}: +{x['amount']} Permissions ({x['before']} → {x['after']})"
+            for x in data["effects"]
+        )
+        embeds = [
+            discord.Embed(title="Actual Permission grants", description=grants),
+            discord.Embed(title="Original award", description=clean(data["account"])),
+            discord.Embed(
+                title="Original advancement spend", description=clean(data["spend_account"])
+            ),
+        ]
+        ordinary_source = data.get("ordinary_source")
+        content = "**Handler advancement spent**\n" + (
+            (
+                "Ordinary public-relations accomplishment"
+                if ordinary_source["trigger"] == "public_relations"
+                else "Ordinary capture and conversion accomplishment"
+                if ordinary_source["trigger"] == "capture_convert"
+                else "Ordinary starting-Identity accomplishment"
+            )
+            if ordinary_source
+            else "Void Endgame " + data["rule"].rsplit(".", 1)[1]
+        )
+        if interaction.response.is_done():
+            await interaction.edit_original_response(
+                content=content,
+                embeds=embeds,
+                view=None,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+        else:
+            await interaction.response.send_message(
+                content,
+                embeds=embeds,
+                ephemeral=True,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+        return
+    if not data["current"]:
+        await reply(
+            interaction,
+            "This original Handler's advancement source is saved. "
+            "Recover its original appointment and finish any pending Play before using it.",
+        )
+        return
+    if data["phase"] == "claim":
+
+        async def claim(current: discord.Interaction, values: dict[str, Any]) -> str:
+            await asyncio.to_thread(
+                service.claim_void,
+                viewer_from_interaction(current),
+                str(current.id),
+                identity,
+                data["revision"],
+                data["work_revision"],
+                values["account"],
+            )
+            return "Your actual Handler advancement is held. Reopen requests to keep or spend it."
+
+        await NativeForm(
+            interaction.user.id,
+            "Void Endgame — take a Handler advancement",
+            "Take this original source award once. "
+            "Taking it does not spend it or grant Permissions yet.",
+            [
+                Field(
+                    "claim",
+                    "Take this actual source award",
+                    (("claim", "Take one Handler advancement"),),
+                ),
+                Field("account", "Describe this actual award", paragraph=True),
+            ],
+            claim,
+        ).present(interaction)
+        return
+    if not data["candidates"]:
+        raise WorkflowError("No actual current Girls are available for this Permission grant")
+
+    async def select(current: discord.Interaction, values: dict[str, Any]) -> None:
+        selected = [x for x in data["candidates"] if x["token"] in values["girls"]]
+        await open_grant(current, service, data, selected)
+
+    form = NativeForm(
+        interaction.user.id,
+        "Spend Handler advancement — Permissions",
+        "Choose any number of your actual Girls. One advancement covers the whole selected group, "
+        "with one or two Permissions each. Keep it unspent by leaving this form.",
+        [
+            Field(
+                "girls",
+                "Actual Girls receiving Permissions",
+                tuple((x["token"], x["label"]) for x in data["candidates"]),
+                1,
+                len(data["candidates"]),
+            )
+        ],
+        select,
+    )
+    # This recipient selector has one field, so these two navigation buttons are idle.
+    # Leave the shared NativeForm and all rule-specific acquisition callbacks intact.
+    if len(form.fields) == 1:
+        form.remove_item(form.previous)
+        form.remove_item(form.next)
+    form.add_item(AcquireSupplyDrop(form, service))
+    form.add_item(AcquireCuteUniforms(form, service))
+    form.add_item(AcquireGirlInsurance(form, service))
+    form.add_item(RebuildLocation(form, service))
+    form.add_item(BuildLocation(form, service))
+    form.add_item(AcquireDeepBrainSpikes(form, service))
+    form.add_item(AcquireSecretary(form, service))
+    form.add_item(AcquireBombCollar(form, service))
+    form.add_item(AcquireHiddenSidearm(form, service))
+    form.add_item(AcquireReignTerror(form, service))
+    form.add_item(AcquireTracker(form, service, identity))
+    form.add_item(AcquireContaminantZone(form, service, identity))
+    form.add_item(AcquireBribery(form, service, identity))
+    form.add_item(AcquireShipBase(form, service, identity))
+    form.add_item(AcquireABomb(form, service, identity))
+    form.add_item(AcquireMore(form, service, identity))
+    await form.present(interaction)
+
+
+async def open_grant(
+    interaction: discord.Interaction,
+    service: HandlerAdvancementService,
+    data: dict[str, Any],
+    selected: list[dict[str, Any]],
+) -> None:
+    if not selected:
+        raise WorkflowError("Choose at least one actual original Girl")
+    fields = [
+        Field(
+            x["token"],
+            x["label"] + " — Permissions",
+            (("1", "One Permission"), ("2", "Two Permissions")),
+        )
+        for x in selected
+    ]
+    fields.append(Field("account", "Describe this actual group grant", paragraph=True))
+
+    async def spend(current: discord.Interaction, values: dict[str, Any]) -> str:
+        grants = tuple(
+            PermissionGrant.model_validate(
+                dict(actor=x["actor"], amount=int(values[x["token"]][0]))
+            )
+            for x in selected
+        )
+        await asyncio.to_thread(
+            service.spend_permissions,
+            viewer_from_interaction(current),
+            str(current.id),
+            data["id"],
+            data["revision"],
+            grants,
+            values["account"],
+        )
+        return (
+            "One advancement spent. The selected original Girls received their actual Permissions."
+        )
+
+    # Selected ActorRefs and game revision remain frozen through the exact final review.
+    await NativeForm(
+        interaction.user.id,
+        "Confirm advancement Permission grants",
+        "One advancement is consumed only when you confirm all selected amounts. "
+        + ", ".join(clean(x["label"]) for x in selected),
+        fields,
+        spend,
+    ).present(interaction)
+
+
+class AcquireSupplyDrop(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService):
+        super().__init__(label="Acquire Supply Drop instead", row=3)
+        self.form, self.service = form, service
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_supply_drop import open_supply_drop
+        from girlframe.services.m3_supply_drop import SupplyDropService
+
+        await open_supply_drop(interaction, SupplyDropService(self.service.store))
+
+
+class AcquireCuteUniforms(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService):
+        super().__init__(label="Acquire Cute Uniforms instead", row=3)
+        self.form, self.service = form, service
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_cute_uniforms import open_uniforms
+        from girlframe.services.m3_cute_uniforms import CuteUniformService
+
+        await open_uniforms(interaction, CuteUniformService(self.service.store))
+
+
+class AcquireGirlInsurance(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService):
+        super().__init__(label="Acquire Girl Insurance instead", row=3)
+        self.form, self.service = form, service
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_girl_insurance import open_insurance
+        from girlframe.services.m3_girl_insurance import GirlInsuranceService
+
+        await open_insurance(interaction, GirlInsuranceService(self.service.store))
+
+
+class RebuildLocation(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService):
+        super().__init__(label="Rebuild a location instead", row=3)
+        self.form, self.service = form, service
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_location_rebuild import open_rebuild
+        from girlframe.services.m3_location_rebuild import LocationRebuildService
+
+        await open_rebuild(interaction, LocationRebuildService(self.service.store))
+
+
+class BuildLocation(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService):
+        super().__init__(label="Build a new location instead", row=4)
+        self.form, self.service = form, service
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_location_build import open_build
+        from girlframe.services.m3_location_build import LocationBuildService
+
+        await open_build(interaction, LocationBuildService(self.service.store))
+
+
+class AcquireDeepBrainSpikes(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService):
+        super().__init__(label="Acquire Deep-Brain-Spikes instead", row=4)
+        self.form, self.service = form, service
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_deep_brain_spikes import open_spikes
+        from girlframe.services.m3_deep_brain_spikes import DeepBrainSpikesService
+
+        await open_spikes(interaction, DeepBrainSpikesService(self.service.store))
+
+
+class AcquireSecretary(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService):
+        super().__init__(label="Acquire a Secretary instead", row=4)
+        self.form, self.service = form, service
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_secretary import open_secretary
+        from girlframe.services.m3_secretary import SecretaryService
+
+        await open_secretary(interaction, SecretaryService(self.service.store))
+
+
+class AcquireBombCollar(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService):
+        super().__init__(label="Acquire Bomb Collars instead", row=4)
+        self.form, self.service = form, service
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_bomb_collar import open_collar
+        from girlframe.services.m3_bomb_collar import BombCollarService
+
+        await open_collar(interaction, BombCollarService(self.service.store))
+
+
+class AcquireHiddenSidearm(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService):
+        super().__init__(label="Acquire Hidden Sidearm instead", row=4)
+        self.form, self.service = form, service
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_hidden_sidearm import open_sidearm
+        from girlframe.services.m3_hidden_sidearm import HiddenSidearmService
+
+        await open_sidearm(interaction, HiddenSidearmService(self.service.store))
+
+
+class AcquireReignTerror(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService):
+        super().__init__(label="Acquire Reign of Terror instead", row=2)
+        self.form, self.service = form, service
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_reign_terror import open_terror
+        from girlframe.services.m3_reign_terror import ReignTerrorService
+
+        await open_terror(interaction, ReignTerrorService(self.service.store))
+
+
+class AcquireTracker(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService, identity: str):
+        super().__init__(label="Acquire Tracker Implants instead", row=2)
+        self.form, self.service, self.identity = form, service, identity
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_tracker_implants import open_tracker
+        from girlframe.services.m3_tracker_implants import TrackerService
+
+        await open_tracker(interaction, TrackerService(self.service.store), self.identity)
+
+
+class AcquireContaminantZone(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService, identity: str):
+        super().__init__(label="Acquire Contaminant Zone instead", row=2)
+        self.form, self.service, self.identity = form, service, identity
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_contaminant_zone import open_zone
+        from girlframe.services.m3_contaminant_zone import ContaminantZoneService
+
+        await open_zone(interaction, ContaminantZoneService(self.service.store), self.identity)
+
+
+class AcquireBribery(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService, identity: str):
+        super().__init__(label="Acquire Politician Bribery Fund", row=1)
+        self.form, self.service, self.identity = form, service, identity
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_politician_bribery import open_bribery
+        from girlframe.services.m3_politician_bribery import BriberyService
+
+        await open_bribery(interaction, BriberyService(self.service.store), self.identity)
+
+
+class AcquireShipBase(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService, identity: str):
+        super().__init__(label="Acquire Ship-Base instead", row=1)
+        self.form, self.service, self.identity = form, service, identity
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_ship_base import open_ship
+        from girlframe.services.m3_ship_base import ShipBaseService
+
+        await open_ship(interaction, ShipBaseService(self.service.store), self.identity)
+
+
+class AcquireABomb(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService, identity: str):
+        super().__init__(label="Acquire A-Bomb instead", row=1)
+        self.form, self.service, self.identity = form, service, identity
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+        from girlframe.discord_adapter.m3_a_bomb import open_bomb
+        from girlframe.services.m3_a_bomb import ABombService
+
+        await open_bomb(interaction, ABombService(self.service.store), self.identity)
+
+
+class AcquireMore(discord.ui.Button[NativeForm]):
+    def __init__(self, form: NativeForm, service: HandlerAdvancementService, identity: str):
+        super().__init__(label="More advancements", row=1)
+        self.form, self.service, self.identity = form, service, identity
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not await self.form.interaction_check(interaction):
+            return
+
+        async def choose(current: discord.Interaction, values: dict[str, Any]) -> None:
+            if values["advancement"][0] == "opportunity":
+                from girlframe.discord_adapter.m3_promotional_opportunity import open_opportunity
+                from girlframe.services.m3_promotional_opportunity import (
+                    PromotionalOpportunityService,
+                )
+
+                await open_opportunity(
+                    current, PromotionalOpportunityService(self.service.store), self.identity
+                )
+                return
+            if values["advancement"][0] == "marriage":
+                from girlframe.discord_adapter.m3_intracadre_marriage import open_marriage
+                from girlframe.services.m3_intracadre_marriage import MarriageService
+
+                await open_marriage(current, MarriageService(self.service.store), self.identity)
+                return
+            from girlframe.discord_adapter.m3_gender_designation import open_designation
+            from girlframe.services.m3_gender_designation import GenderDesignationService
+
+            await open_designation(
+                current, GenderDesignationService(self.service.store), self.identity
+            )
+
+        await NativeForm(
+            interaction.user.id,
+            "Choose an advancement",
+            "Select the advancement to acquire with this held award.",
+            [
+                Field(
+                    "advancement",
+                    "Advancement",
+                    (
+                        ("gender", "Gender Designation Request"),
+                        ("marriage", "Intracadre Marriage"),
+                        ("opportunity", "Promotional Opportunity"),
+                    ),
+                )
+            ],
+            choose,
+        ).present(interaction)

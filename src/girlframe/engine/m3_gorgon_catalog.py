@@ -1,0 +1,68 @@
+"""Named Gorgon capability selectors, from book PDF 169–176; effects are separate."""
+
+ASSETS = {
+    "incubus": (
+        "Immobilizing Tendrils",
+        "Deep-Sea Terror",
+        "Fleshy Skirts",
+        "Elongated Limbs",
+        "Leaking Poison",
+        "Eyeless Awareness",
+    ),
+    "doppleganger": (
+        "Cult Following",
+        "Hypnotic Stare",
+        "Hidden Tentacles",
+        "Kaiju Transformation",
+        "Human Shields",
+        "Explosives",
+    ),
+    "jackdaw": (
+        "Towering Body",
+        "Angelic Wings",
+        "Metal-Warping Shriek",
+        "Giant Bone-Sword",
+        "Fractal Telekinetics",
+        "Looks Exactly Like Your Dad",
+    ),
+    "mother": (
+        "Gaping Maw",
+        "Utter Stillness",
+        "Swarm of Spritelings",
+        "Whip-Blade",
+        "A Million Hands",
+        "Solar Wings",
+    ),
+    "sentinel": (
+        "Multiple Heads",
+        "Coral Roots",
+        "Stinger-Tongue",
+        "Open Arms",
+        "Floating Hair-Tendrils",
+        "Urchin Spikes",
+    ),
+    "leviathan": (
+        "Haunting Wail",
+        "Skyscraper Flagella",
+        "Truly Massive",
+        "Hurricane Winds",
+        "Giant Maw",
+        "Thick Hide",
+    ),
+    "growth": (
+        "Overgrown Musculature",
+        "Infectious Flagella",
+        "All Mouth",
+        "Superimposed Arms",
+        "Watcher Fluid",
+        "Drooling",
+    ),
+    "parasite": (
+        "Skitterlegs",
+        "Liquid Body",
+        "Knife-Fingers",
+        "Latched Smile",
+        "Thousand Enfoldment",
+        "Spiral Feelers",
+    ),
+}

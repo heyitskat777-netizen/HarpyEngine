@@ -1,0 +1,56 @@
+{
+  "unit": "Engage and actual Harpy extra Assault maneuver",
+  "implementation": "IMPLEMENTED_AUTOMATED_WITHIN_STATED_SCOPE",
+  "source": [
+    {
+      "document": "rulebook",
+      "pdf": 24,
+      "printed": 22
+    },
+    {
+      "document": "rulebook",
+      "pdf": 25,
+      "printed": 23
+    },
+    {
+      "document": "rulebook",
+      "pdf": 181,
+      "printed": 179
+    }
+  ],
+  "checks": {
+    "artifact": "var/m3-engage-shared-regression.xml",
+    "passed": 56,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 29.49
+  },
+  "implemented": [
+    "Eight actual source-bound maneuvers with typed actor/opponent/Asset/circumstances/event",
+    "Exact Pilot1/2/3 tier counts and optional Harpy extra",
+    "Actual used-Asset damage on low/high; no extra Engage damage in Assault",
+    "Actual final Pilot Frame Asset -> source-work Defeat -> cockpit escape -> parent/chat release",
+    "Actual final Harpy Frame Asset -> genuine Harpy Defeat -> message/escape -> source parent/chat release",
+    "Actual native role, opponent, maneuver and Asset selectors",
+    "All Harpy Assault tiers preserve their actual damage/Handler consequences",
+    "Wrong resource owner rejected; exact extra-choice replay applies once",
+    "Stale target/cast rejected before RNG; original receipts/recovery regressions"
+  ],
+  "limitations": [
+    "Fictional maneuver circumstances are authoritative human-authored Conversation facts; no invented map cells/HP",
+    "Broader world/combat/role branches remain tracked by their own units",
+    "Independent printed-source review and human Discord/mobile acceptance NOT_RUN",
+    "No live bot, migration, deployment or environment publication"
+  ],
+  "source_commit": "c46e9005bed43c25db46e653c69400db1a668e81",
+  "full_regression": {
+    "artifact": "var/m3-bounded-gameplay-full-fixed.xml",
+    "passed": 2200,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 1070.22,
+    "scope": "Exact frozen source; separate next-work drafts excluded"
+  }
+}

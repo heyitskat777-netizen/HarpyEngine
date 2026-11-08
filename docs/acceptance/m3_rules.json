@@ -1,0 +1,1517 @@
+{
+  "milestone": "M3",
+  "status": "IN_PROGRESS",
+  "rules_coverage": "RULES_SUBSET",
+  "owner_authorization": "Continue M3 development; recommendations for future ambiguities delegated and logged; no inferred player consent, independent review or release approval",
+  "required_evidence": [
+    "test_name",
+    "executed_command",
+    "actual_result",
+    "log_or_trace",
+    "git_commit"
+  ],
+  "cases": [
+    {
+      "id": "M3-001",
+      "title": "Status swap and one-use maxim",
+      "expected": "Oldgen gain exchange and consume only once.",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-002",
+      "title": "Go Off-Duty Status modifiers and 7\u2212 scene",
+      "expected": "Dog/Wing/Ace and on-screen harsh scene.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_shared_choices.py::test_off_duty_harsh_scene_is_required_and_status_modifiers_are_not_heat",
+        "tests/rules/test_core.py::test_off_duty_only_unmarks_one_and_preserves_sedation_locks",
+        "tests/rules/test_off_duty.py",
+        "tests/rules/test_off_duty_service.py",
+        "tests/rules/test_sedation_m2.py",
+        "tests/rules/test_strain.py",
+        "tests/rules/test_strain_service.py",
+        "tests/rules/test_strain_ui.py",
+        "tests/rules/test_off_duty_roll_service.py",
+        "tests/rules/test_off_duty_cycle.py",
+        "tests/rules/test_off_duty_cycle_ui.py",
+        "tests/rules/test_off_duty_discipline.py",
+        "tests/rules/test_off_duty_handler_scenes.py"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_foundation_only",
+          "command": ".venv/bin/pytest -q tests/rules",
+          "result": "62 passed in 4.79s",
+          "artifact": "var/m3-foundation-pytest.xml",
+          "limitation": "No complete mechanical service/Discord/independent case acceptance is claimed"
+        },
+        {
+          "scope": "partial_offline_period_and_recovery_foundation",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-off-duty-foundation-pytest.xml",
+          "result": "622 passed in 69.85s",
+          "artifact": "var/m3-off-duty-foundation-pytest.xml",
+          "limitation": "Strain preparation, full source interactions, cycle Discord integration and independent/human acceptance remain incomplete"
+        },
+        {
+          "scope": "partial_strain_scheduler_and_native_preparation_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-strain-scheduler-pytest.xml",
+          "result": "733 passed in 81.08s",
+          "artifact": "var/m3-strain-scheduler-pytest.xml",
+          "limitation": "Selecting all 72 source columns is not implementation of their effects. Typed world/sheet effects, complete Off-Duty flow, independent/human acceptance remain pending."
+        },
+        {
+          "scope": "partial_offline_ordinary_cycle_and_all_six_handler_scenes",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-off-duty-cycle-pytest.xml",
+          "result": "801 passed in 102.44s after canonical Status, inbox, review freshness and restored-chat guards; no failures/errors/skips",
+          "artifact": "var/m3-off-duty-cycle-pytest.xml",
+          "limitation": "Void Observation, all one-use/shortage/economy and playbook interactions, remaining Strain/Endgame consequences and independent/human acceptance remain incomplete."
+        }
+      ]
+    },
+    {
+      "id": "M3-003",
+      "title": "Princess Show Dog both extra choices",
+      "expected": "Printed second selection/NPC Bond not dropped.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_show_dog.py"
+      ],
+      "evidence": [
+        {
+          "test_name": "Both Show Dog lists, actual risk and source-authorized NPC introduction",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_show_dog.py tests/rules/test_world_service.py::test_npc_control_is_claimed_by_actual_member_and_keeps_private_records_private tests/rules/test_world_service.py::test_handler_cannot_introduce_a_self_controlled_director tests/rules/test_off_duty_cycle.py::test_actual_preparation_owned_rolls_recovery_review_and_world_end_are_resumable tests/rules/test_vatgrown.py::test_low_actual_observer_punishment_real_effect_then_benefit_and_parent_chat_closure tests/test_m2_game.py::test_live_default_gate_and_active_editor_protection --maxfail=1 --junitxml=var/m3-show-dog-integrated.xml",
+          "actual_result": "9 passed in13.27s; final coherent static12 Python/11 source after annotation/local rename only; registry/repository/native offline imports passed;11 CI cases collected only.",
+          "log_or_trace": "var/m3-show-dog-integrated.xml; var/m3-show-dog-union-static.json; var/m3-show-dog-union-source-snapshot.json; var/m3-show-dog-handoff.json",
+          "git_commit": "f2cbc4f093152f2fc9f4be31f6a0b362ebe90d3c",
+          "limitation": "Broader role/body/authority and special NPC source adapters remain required. Focused offline evidence only; final full/independent/human gates pending."
+        }
+      ],
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN"
+    },
+    {
+      "id": "M3-004",
+      "title": "Dog mission-end Punishment",
+      "expected": "Applies even if not in mission; absent PC choice respected.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_missions.py::test_absent_dog_punishment_remains_real_pending_work",
+        "tests/rules/test_mission_service.py::test_mission_rewards_and_absent_dog_are_atomic_idempotent_and_durable",
+        "tests/rules/test_mission_service.py::test_inbox_exposes_absent_dogs_work_without_the_private_mission_objective",
+        "tests/rules/test_punishment_service.py::test_one_actual_punishment_resolves_both_causes_once_and_mission_can_complete",
+        "tests/rules/test_punishment_service.py::test_paired_heat_remains_owned_pending_and_blocks_new_plays_until_split_once",
+        "tests/rules/test_punishment_service.py::test_absent_dogs_punishment_applies_without_exposing_the_mission"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_foundation_only",
+          "command": ".venv/bin/pytest -q tests/rules",
+          "result": "62 passed in 4.79s",
+          "artifact": "var/m3-foundation-pytest.xml",
+          "limitation": "No complete mechanical service/Discord/independent case acceptance is claimed"
+        },
+        {
+          "scope": "partial_offline_mission_subsystem_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-missions-pytest.xml",
+          "result": "520 passed in 46.41s; zero failures/errors/skips",
+          "artifact": "var/m3-missions-pytest.xml",
+          "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
+        },
+        {
+          "scope": "partial_offline_discipline_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-discipline-pytest.xml",
+          "result": "549 passed in 53.14s, zero failures/errors/skips; subsequent focused absent-Dog application test: 1 passed",
+          "artifact": "var/m3-discipline-pytest.xml",
+          "limitation": "Six Punishment types, special follow-ups, broader M3 mechanics and independent/human acceptance remain unfinished"
+        }
+      ]
+    },
+    {
+      "id": "M3-005",
+      "title": "Budget High 6 second-column recursion",
+      "expected": "Compulsory extra rolls/endgame; cannot park indefinitely.",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-006",
+      "title": "Low Rebellion escaped prisoner escalation",
+      "expected": "Mandatory Strain rise if unresolved.",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-007",
+      "title": "Void/Gorgon movement and placement",
+      "expected": "No invented map square; exact eligible movements.",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-008",
+      "title": "Flirt 11+ all official extra options",
+      "expected": "Never swap arbitrary Tag for printed choice.",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-009",
+      "title": "Director due price and breach consequence",
+      "expected": "No consequence-free expiration.",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-010",
+      "title": "Harpy medical, custody, Core consent separate",
+      "expected": "No implied conversion from medical help.",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-011",
+      "title": "Requisitions and Permissions triggers",
+      "expected": "All participants and Ace bonuses exact.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_core.py::test_requisition_costs_are_exact_and_do_not_charge_input",
+        "tests/rules/test_core.py::test_extra_repair_uses_current_handler_quote_not_an_invented_default",
+        "tests/rules/test_mission_service.py::test_current_ace_gets_bonus_even_when_absent",
+        "tests/rules/test_mission_service.py::test_source_end_reactions_precede_reward_snapshot",
+        "tests/rules/test_reaction_service.py::test_princess_promotion_and_own_bonus_precede_the_final_ace_bonus",
+        "tests/rules/test_installation_history.py",
+        "tests/rules/test_comfort_receipts.py"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_foundation_only",
+          "command": ".venv/bin/pytest -q tests/rules",
+          "result": "62 passed in 4.79s",
+          "artifact": "var/m3-foundation-pytest.xml",
+          "limitation": "No complete mechanical service/Discord/independent case acceptance is claimed"
+        },
+        {
+          "scope": "partial_offline_mission_subsystem_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-missions-pytest.xml",
+          "result": "520 passed in 46.41s; zero failures/errors/skips",
+          "artifact": "var/m3-missions-pytest.xml",
+          "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
+        },
+        {
+          "scope": "partial_offline_reactions_and_recovery_context",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-reactions-pytest.xml",
+          "result": "574 passed in 54.24s; zero failures/errors/skips",
+          "artifact": "var/m3-reactions-pytest.xml",
+          "limitation": "Frame replacement and remaining M3 mechanics, source interactions, independent review and human acceptance remain pending"
+        },
+        {
+          "scope": "Asset Installment acquisition/original-receipt workflow only; broader Requisitions case remains IN_PROGRESS",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-unit-1a-full.xml",
+          "result": "1388 passed in 387.42s",
+          "artifact": "var/m3-unit-1a-full.xml",
+          "git_commit": "af0a2213a3a23f231f0b5f002197d545ffb0b88e"
+        },
+        {
+          "scope": "Creature Comforts paid-source, qualifying roll, scene/attendance, actual Asset or decline and original-receipt workflow only; broader economy remains IN_PROGRESS",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-unit-1b-full-final.xml",
+          "result": "1399 passed in 389.68s",
+          "artifact": "var/m3-unit-1b-full-final.xml",
+          "git_commit": "620e87987daca80b87409cbd46000e52732b867e"
+        }
+      ]
+    },
+    {
+      "id": "M3-012",
+      "title": "Per-Playbook and Frame Assets",
+      "expected": "All agreed printed roles and exceptions tested.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_reactions.py::test_obsolescence_printed_triggers_mark_one_and_scrapping_cannot_be_ignored",
+        "tests/rules/test_reaction_service.py::test_doctor_scrapping_persists_mandatory_owner_replacement_and_blocks_missions_and_plays",
+        "tests/rules/test_replacement.py::test_free_replacement_uses_exact_handler_asset_count_and_preserves_girl_resources",
+        "tests/rules/test_replacement.py::test_new_court_requires_real_recipient_response_and_supported_extra_rules_only"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_reactions_and_recovery_context",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-reactions-pytest.xml",
+          "result": "574 passed in 54.24s; zero failures/errors/skips",
+          "artifact": "var/m3-reactions-pytest.xml",
+          "limitation": "Frame replacement and remaining M3 mechanics, source interactions, independent review and human acceptance remain pending"
+        },
+        {
+          "scope": "partial_offline_doctor_replacement_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-replacement-pytest.xml",
+          "result": "600 passed in 56.65s; zero failures/errors/skips; includes ruleset provenance and stale Court refusal",
+          "artifact": "var/m3-replacement-pytest.xml",
+          "limitation": "Defeat integration, full Frame/Core/Court/World mechanics and independent/human acceptance remain unfinished"
+        }
+      ]
+    },
+    {
+      "id": "M3-013",
+      "title": "All published table rows tracked",
+      "expected": "Each Low/High Strain table branch has source fixture.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_registry.py::test_inventory_is_not_certification_and_strain_columns_are_distinct"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_foundation_only",
+          "command": ".venv/bin/pytest -q tests/rules",
+          "result": "62 passed in 4.79s",
+          "artifact": "var/m3-foundation-pytest.xml",
+          "limitation": "No complete mechanical service/Discord/independent case acceptance is claimed"
+        }
+      ]
+    },
+    {
+      "id": "M3-014",
+      "title": "Full rule registry coverage report",
+      "expected": "No unsupported Play incorrectly marked verified.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_registry.py::test_registry_rejects_invalid_sources_and_false_verification"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_foundation_only",
+          "command": ".venv/bin/pytest -q tests/rules",
+          "result": "62 passed in 4.79s",
+          "artifact": "var/m3-foundation-pytest.xml",
+          "limitation": "No complete mechanical service/Discord/independent case acceptance is claimed"
+        }
+      ]
+    },
+    {
+      "id": "RUL-001",
+      "title": "Status displacement and one-use Oldgen maxim",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "RUL-002",
+      "title": "High Budget second-column 6 recursion/endgame",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "RUL-003",
+      "title": "Unaddressed escaped-prisoner Rebellion escalation",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "RUL-004",
+      "title": "Full Flirt high-result choices and target authority",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "RUL-005",
+      "title": "Harsh Off-Duty scene and Princess Show Dog choices",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_shared_choices.py::test_off_duty_harsh_scene_is_required_and_status_modifiers_are_not_heat"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_foundation_only",
+          "command": ".venv/bin/pytest -q tests/rules",
+          "result": "62 passed in 4.79s",
+          "artifact": "var/m3-foundation-pytest.xml",
+          "limitation": "No complete mechanical service/Discord/independent case acceptance is claimed"
+        }
+      ]
+    },
+    {
+      "id": "RUL-006",
+      "title": "Director price due, breach or legitimate dispute",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "RUL-007",
+      "title": "Harpy location/custody continuity and distinct consent",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "RUL-008",
+      "title": "Human player choices, words and private reveals remain owned",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "RUL-009",
+      "title": "Mission-end Dog Punishment even when not participating",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_missions.py::test_absent_dog_punishment_remains_real_pending_work",
+        "tests/rules/test_mission_service.py::test_mission_rewards_and_absent_dog_are_atomic_idempotent_and_durable",
+        "tests/rules/test_punishment_service.py::test_one_actual_punishment_resolves_both_causes_once_and_mission_can_complete",
+        "tests/rules/test_punishment_service.py::test_paired_heat_remains_owned_pending_and_blocks_new_plays_until_split_once",
+        "tests/rules/test_punishment_service.py::test_absent_dogs_punishment_applies_without_exposing_the_mission"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_foundation_only",
+          "command": ".venv/bin/pytest -q tests/rules",
+          "result": "62 passed in 4.79s",
+          "artifact": "var/m3-foundation-pytest.xml",
+          "limitation": "No complete mechanical service/Discord/independent case acceptance is claimed"
+        },
+        {
+          "scope": "partial_offline_mission_subsystem_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-missions-pytest.xml",
+          "result": "520 passed in 46.41s; zero failures/errors/skips",
+          "artifact": "var/m3-missions-pytest.xml",
+          "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
+        },
+        {
+          "scope": "partial_offline_discipline_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-discipline-pytest.xml",
+          "result": "549 passed in 53.14s, zero failures/errors/skips; subsequent focused absent-Dog application test: 1 passed",
+          "artifact": "var/m3-discipline-pytest.xml",
+          "limitation": "Six Punishment types, special follow-ups, broader M3 mechanics and independent/human acceptance remain unfinished"
+        }
+      ]
+    },
+    {
+      "id": "RUL-010",
+      "title": "No unprinted rescue quotas or predetermined consent",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3-ADD-001",
+      "title": "Every registered Play has complete source/owner/tier/follow-up contract",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_registry.py::test_registry_rejects_invalid_sources_and_false_verification"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_foundation_only",
+          "command": ".venv/bin/pytest -q tests/rules",
+          "result": "62 passed in 4.79s",
+          "artifact": "var/m3-foundation-pytest.xml",
+          "limitation": "No complete mechanical service/Discord/independent case acceptance is claimed"
+        }
+      ]
+    },
+    {
+      "id": "M3-ADD-002",
+      "title": "Every passive and compulsory cross-playbook dependency tested",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_punishment_service.py::test_last_girl_asset_requires_handler_context_and_applies_helplessness_conditionally",
+        "tests/rules/test_replacement_service.py::test_free_replacement_updates_canon_profile_history_and_cosmetic_intent_once"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_reactions_and_recovery_context",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-reactions-pytest.xml",
+          "result": "574 passed in 54.24s; zero failures/errors/skips",
+          "artifact": "var/m3-reactions-pytest.xml",
+          "limitation": "Frame replacement and remaining M3 mechanics, source interactions, independent review and human acceptance remain pending"
+        },
+        {
+          "scope": "partial_offline_doctor_replacement_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-replacement-pytest.xml",
+          "result": "600 passed in 56.65s; zero failures/errors/skips; includes ruleset provenance and stale Court refusal",
+          "artifact": "var/m3-replacement-pytest.xml",
+          "limitation": "Defeat integration, full Frame/Core/Court/World mechanics and independent/human acceptance remain unfinished"
+        }
+      ]
+    },
+    {
+      "id": "M3-ADD-003",
+      "title": "Required cascade work survives restart without lost/duplicate effects",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_mission_service.py::test_mission_rewards_and_absent_dog_are_atomic_idempotent_and_durable",
+        "tests/rules/test_mission_service.py::test_rollback_after_permission_event_restores_all_mission_state",
+        "tests/rules/test_punishment_service.py::test_one_actual_punishment_resolves_both_causes_once_and_mission_can_complete",
+        "tests/rules/test_punishment_service.py::test_paired_heat_remains_owned_pending_and_blocks_new_plays_until_split_once",
+        "tests/rules/test_punishment_service.py::test_absent_dogs_punishment_applies_without_exposing_the_mission",
+        "tests/rules/test_reaction_service.py::test_doctor_failure_marks_once_before_rewards_and_has_no_acknowledgment_shortcut",
+        "tests/rules/test_replacement_service.py::test_completed_replacement_backup_and_projection_rebuild_keep_frame_and_profile"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_mission_subsystem_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-missions-pytest.xml",
+          "result": "520 passed in 46.41s; zero failures/errors/skips",
+          "artifact": "var/m3-missions-pytest.xml",
+          "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
+        },
+        {
+          "scope": "partial_offline_discipline_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-discipline-pytest.xml",
+          "result": "549 passed in 53.14s, zero failures/errors/skips; subsequent focused absent-Dog application test: 1 passed",
+          "artifact": "var/m3-discipline-pytest.xml",
+          "limitation": "Six Punishment types, special follow-ups, broader M3 mechanics and independent/human acceptance remain unfinished"
+        },
+        {
+          "scope": "partial_offline_reactions_and_recovery_context",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-reactions-pytest.xml",
+          "result": "574 passed in 54.24s; zero failures/errors/skips",
+          "artifact": "var/m3-reactions-pytest.xml",
+          "limitation": "Frame replacement and remaining M3 mechanics, source interactions, independent review and human acceptance remain pending"
+        },
+        {
+          "scope": "partial_offline_doctor_replacement_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-replacement-pytest.xml",
+          "result": "600 passed in 56.65s; zero failures/errors/skips; includes ruleset provenance and stale Court refusal",
+          "artifact": "var/m3-replacement-pytest.xml",
+          "limitation": "Defeat integration, full Frame/Core/Court/World mechanics and independent/human acceptance remain unfinished"
+        }
+      ]
+    },
+    {
+      "id": "M3-ADD-004",
+      "title": "M2-to-M3 migration preserves existing sheets, resources and receipts",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_mission_service.py::test_0012_preserves_populated_0011_and_does_not_activate_m3"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_mission_subsystem_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-missions-pytest.xml",
+          "result": "520 passed in 46.41s; zero failures/errors/skips",
+          "artifact": "var/m3-missions-pytest.xml",
+          "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
+        }
+      ]
+    },
+    {
+      "id": "M3-ADD-005",
+      "title": "World/mission deadlines advance only through explicit fictional triggers",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_mission_service.py::test_mission_rewards_and_absent_dog_are_atomic_idempotent_and_durable",
+        "tests/rules/test_mission_service.py::test_pending_scene_play_cannot_be_bypassed_by_mission_end"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_mission_subsystem_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-missions-pytest.xml",
+          "result": "520 passed in 46.41s; zero failures/errors/skips",
+          "artifact": "var/m3-missions-pytest.xml",
+          "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
+        },
+        {
+          "scope": "partial_offline_doctor_replacement_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-replacement-pytest.xml",
+          "result": "600 passed in 56.65s; zero failures/errors/skips; includes ruleset provenance and stale Court refusal",
+          "artifact": "var/m3-replacement-pytest.xml",
+          "limitation": "Defeat integration, full Frame/Core/Court/World mechanics and independent/human acceptance remain unfinished"
+        }
+      ]
+    },
+    {
+      "id": "M3-ADD-006",
+      "title": "Native controls, scene locks, OOC pause and absence behavior",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_mission_service.py::test_pause_revocation_and_other_campaign_do_not_leak_or_mutate",
+        "tests/rules/test_mission_service.py::test_saved_mission_reads_survive_a_vacant_handler_appointment",
+        "tests/rules/test_punishment_service.py::test_one_actual_punishment_resolves_both_causes_once_and_mission_can_complete",
+        "tests/rules/test_punishment_service.py::test_paired_heat_remains_owned_pending_and_blocks_new_plays_until_split_once",
+        "tests/rules/test_punishment_service.py::test_absent_dogs_punishment_applies_without_exposing_the_mission",
+        "tests/rules/test_reaction_ui.py::test_doctor_native_confirmation_applies_the_source_effect_once",
+        "tests/rules/test_punishment_ui.py::test_sedation_zero_identities_is_an_explicit_confirmed_heat_reset",
+        "tests/rules/test_replacement_ui.py::test_native_free_replacement_requires_proposal_handler_package_and_owner_confirmation",
+        "tests/rules/test_replacement_ui.py::test_exact_package_review_pages_do_not_truncate_descriptions_and_reject_changed_quotes"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_mission_subsystem_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-missions-pytest.xml",
+          "result": "520 passed in 46.41s; zero failures/errors/skips",
+          "artifact": "var/m3-missions-pytest.xml",
+          "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
+        },
+        {
+          "scope": "partial_offline_discipline_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-discipline-pytest.xml",
+          "result": "549 passed in 53.14s, zero failures/errors/skips; subsequent focused absent-Dog application test: 1 passed",
+          "artifact": "var/m3-discipline-pytest.xml",
+          "limitation": "Six Punishment types, special follow-ups, broader M3 mechanics and independent/human acceptance remain unfinished"
+        },
+        {
+          "scope": "partial_offline_reactions_and_recovery_context",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-reactions-pytest.xml",
+          "result": "574 passed in 54.24s; zero failures/errors/skips",
+          "artifact": "var/m3-reactions-pytest.xml",
+          "limitation": "Frame replacement and remaining M3 mechanics, source interactions, independent review and human acceptance remain pending"
+        },
+        {
+          "scope": "partial_offline_doctor_replacement_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-replacement-pytest.xml",
+          "result": "600 passed in 56.65s; zero failures/errors/skips; includes ruleset provenance and stale Court refusal",
+          "artifact": "var/m3-replacement-pytest.xml",
+          "limitation": "Defeat integration, full Frame/Core/Court/World mechanics and independent/human acceptance remain unfinished"
+        }
+      ]
+    },
+    {
+      "id": "M3-ADD-007",
+      "title": "Campaign isolation, private projections, concurrency and backups",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_mission_service.py::test_private_mission_and_metadata_have_no_administrator_override",
+        "tests/rules/test_mission_service.py::test_concurrent_end_never_duplicates_rewards",
+        "tests/rules/test_mission_service.py::test_immutable_history_rebuild_and_real_backup_restore",
+        "tests/rules/test_punishment_service.py::test_one_actual_punishment_resolves_both_causes_once_and_mission_can_complete",
+        "tests/rules/test_punishment_service.py::test_paired_heat_remains_owned_pending_and_blocks_new_plays_until_split_once",
+        "tests/rules/test_punishment_service.py::test_absent_dogs_punishment_applies_without_exposing_the_mission",
+        "tests/rules/test_replacement_service.py::test_other_campaign_and_revoked_owner_cannot_read_or_confirm_replacement",
+        "tests/rules/test_replacement_service.py::test_rollback_and_duplicate_concurrent_acceptance_preserve_exactly_once_effects"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_mission_subsystem_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-missions-pytest.xml",
+          "result": "520 passed in 46.41s; zero failures/errors/skips",
+          "artifact": "var/m3-missions-pytest.xml",
+          "limitation": "Punishment and special-reaction resolution, remaining source interactions, independent review and human/live M3 acceptance remain pending"
+        },
+        {
+          "scope": "partial_offline_discipline_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-discipline-pytest.xml",
+          "result": "549 passed in 53.14s, zero failures/errors/skips; subsequent focused absent-Dog application test: 1 passed",
+          "artifact": "var/m3-discipline-pytest.xml",
+          "limitation": "Six Punishment types, special follow-ups, broader M3 mechanics and independent/human acceptance remain unfinished"
+        },
+        {
+          "scope": "partial_offline_doctor_replacement_only",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-replacement-pytest.xml",
+          "result": "600 passed in 56.65s; zero failures/errors/skips; includes ruleset provenance and stale Court refusal",
+          "artifact": "var/m3-replacement-pytest.xml",
+          "limitation": "Defeat integration, full Frame/Core/Court/World mechanics and independent/human acceptance remain unfinished"
+        }
+      ]
+    },
+    {
+      "id": "M3-ADD-008",
+      "title": "Independent source audit, human acceptance and milestone sign-off",
+      "status": "NOT_RUN",
+      "planned_tests": [],
+      "evidence": []
+    },
+    {
+      "id": "M3F-SCHED-001",
+      "title": "Strain start, actual dice, column choice and restart-safe cascades",
+      "expected": "Explicit scenario and factual triggers; one saved die per request, source-bound column/recursive choices and separate unresolved mechanical effect work.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_strain.py",
+        "tests/rules/test_strain_service.py",
+        "tests/rules/test_strain_ui.py"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_scheduler_and_native_preparation",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-strain-scheduler-pytest.xml",
+          "result": "733 passed in 81.08s",
+          "artifact": "var/m3-strain-scheduler-pytest.xml",
+          "git_commit": "d42ca3e",
+          "limitation": "Table/Endgame effects and deferred world triggers remain unsupported blocking work. Source selection coverage is not effect implementation or independent/human acceptance."
+        }
+      ]
+    },
+    {
+      "id": "M3G-WORLD-001",
+      "title": "Canonical world and source-specific initial Strain consequences",
+      "expected": "Source-legal actual entities, owned NPC links, private projection, condition/custody provenance and typed source-bound effect transactions.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_world.py",
+        "tests/rules/test_world_service.py",
+        "tests/rules/test_world_ui.py",
+        "tests/rules/test_strain_effects.py",
+        "tests/rules/test_strain_effect_service.py",
+        "tests/rules/test_strain_effect_ui.py"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_world_and_12_initial_strain_effects",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-world-strain-effects-pytest.xml",
+          "result": "775 passed in 80.73s; subsequent counter hardening 32 passed in 5.36s",
+          "artifact": "var/m3-world-strain-effects-pytest.xml",
+          "limitation": "World combat/scene/period integration, all other table effects and independent/human acceptance remain pending."
+        }
+      ]
+    },
+    {
+      "id": "M3E-OFF-DUTY-CYCLE-001",
+      "title": "Actual ordinary Off-Duty cycle and all six Handler scenes",
+      "expected": "Actual Strain work precedes activation; no-reroll chat/Tag pipeline; own scene attestations, canonical recovery/Status, typed discipline and once-only world end.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_off_duty_roll_service.py",
+        "tests/rules/test_off_duty_cycle.py",
+        "tests/rules/test_off_duty_cycle_ui.py",
+        "tests/rules/test_off_duty_discipline.py",
+        "tests/rules/test_off_duty_handler_scenes.py"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_ordinary_cycle_and_all_six_handler_scenes",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-off-duty-cycle-pytest.xml",
+          "result": "801 passed in 102.44s after canonical Status, inbox, review freshness and restored-chat guards; no failures/errors/skips",
+          "artifact": "var/m3-off-duty-cycle-pytest.xml",
+          "limitation": "Void Observation, all one-use/shortage/economy and playbook interactions, remaining Strain/Endgame consequences and independent/human acceptance remain incomplete."
+        }
+      ]
+    },
+    {
+      "id": "M3E-OBSERVATION-001",
+      "title": "Actual Observation substitution and separately played role requests",
+      "expected": "Real locked Void roll with pre-roll Status reduction; exact final-tier owned selections, nested effects, separate NPC role/appearance/scene responses and canonical recovery gates.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_observation.py",
+        "tests/rules/test_observation_service.py",
+        "tests/rules/test_observation_ui.py",
+        "tests/rules/test_npc_roles.py"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_observation_and_roles",
+          "command": ".venv/bin/pytest -q tests/rules/test_observation_service.py tests/rules/test_npc_roles.py tests/rules/test_observation.py tests/rules/test_observation_ui.py",
+          "result": "42 passed in 19.01s before the final Director-context guard; later source interactions receive a new full-suite artifact.",
+          "limitation": "Director Handler/Girl mode/prices, automatic world triggers, future-period ordering and full playbook/battle/economy interactions remain incomplete; no independent or human acceptance."
+        },
+        {
+          "scope": "partial_offline_observation_and_roles_final_checkpoint",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-observation-pytest.xml",
+          "result": "907 passed in 139.24s; zero failures/errors/skips",
+          "artifact": "var/m3-observation-pytest.xml",
+          "git_commit": "6d76c44",
+          "limitation": "Director context work remains required; no M3-complete, independent review, human play-test or live-deployment claim."
+        }
+      ]
+    },
+    {
+      "id": "M3G-DIRECTOR-CONTEXT-001",
+      "title": "Actual Director context and owned resources/departure",
+      "expected": "Source-reviewed Handler presence, own two starting Identities and zero Heat without Pilot/rank fabrication; actual overlap/departure and scene absence evidence.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_director.py",
+        "tests/rules/test_director_service.py",
+        "tests/rules/test_director_ui.py"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_director_context",
+          "command": ".venv/bin/pytest -q tests/rules/test_director.py tests/rules/test_director_service.py tests/rules/test_director_ui.py tests/rules/test_observation.py tests/rules/test_observation_service.py tests/rules/test_off_duty_handler_scenes.py",
+          "result": "53 passed in 28.35s",
+          "limitation": "Shared Girl Play ports, Director Handler Plays/prices/phone calls, broader cast integration and independent/human acceptance remain incomplete."
+        }
+      ]
+    },
+    {
+      "id": "M3B-ACTORS-001",
+      "title": "Actual role references, scene cast and saved character generations",
+      "expected": "One human can own separate roles without resource/knowledge borrowing; immutable original joins/actions preserve character generations through replay and recovery.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_actors.py",
+        "tests/rules/test_actor_service.py",
+        "tests/rules/test_actor_ui.py",
+        "tests/rules/test_cast_service.py"
+      ],
+      "evidence": [
+        {
+          "scope": "partial_offline_actor_cast_and_legacy_action_binding",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-actors-regulations-pytest.xml",
+          "result": "974 passed in 177.32s; no failures/errors/skips",
+          "artifact": "var/m3-actors-regulations-pytest.xml",
+          "limitation": "Actor-aware shared Plays, complete location/resource consumers, career/archive and independent/human acceptance remain unfinished."
+        }
+      ]
+    },
+    {
+      "id": "M3D-REGULATIONS-001",
+      "title": "Concealed Strict Regulations and real current/future discipline causes",
+      "expected": "Inflictor-owned exact Moderate proposal, disclosure choice, informed Handler breach source, independent required Punishment and actual next-period preservation/fulfillment.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_regulations.py",
+        "tests/rules/test_regulation_service.py",
+        "tests/rules/test_off_duty_discipline.py"
+      ],
+      "evidence": [
+        {
+          "scope": "offline_strict_regulations_and_two_period_discipline",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-actors-regulations-pytest.xml",
+          "result": "974 passed in 177.32s; no failures/errors/skips",
+          "artifact": "var/m3-actors-regulations-pytest.xml",
+          "limitation": "Knowledge transfer to a replacement Handler, career lifecycle and broader discipline/playbook/mission interactions still need implementation and independent/human acceptance."
+        }
+      ]
+    },
+    {
+      "id": "M3F-BUDGET-REPAIRS-001",
+      "title": "Actual Low Budget repair shortage and exact optional paid repairs",
+      "expected": "Real source/dispatch/end/recovery binding, one free repair per family, private current Handler quotes, separate owner payment, no stale/duplicate/unauthorized repair.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_repairs.py",
+        "tests/rules/test_repair_service.py",
+        "tests/rules/test_off_duty_cycle.py",
+        "tests/rules/test_off_duty_cycle_ui.py"
+      ],
+      "evidence": [
+        {
+          "scope": "offline_mission_bound_shortage_and_exact_asset_repair_quotes",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-shortage-repairs-pytest.xml",
+          "result": "988 passed in 209.11s; no failures/errors/skips",
+          "artifact": "var/m3-shortage-repairs-pytest.xml",
+          "limitation": "Other Requisitions, Casualty body-part recovery, remaining playbook/world/economy interactions and independent/human acceptance remain incomplete."
+        }
+      ]
+    },
+    {
+      "id": "M3F-SUPPLY-001",
+      "title": "Actual random supply-loss assignment and separate pre-roll recovery penalty",
+      "expected": "One source-proven uniform draw from the actual character-bound Cadre; no recipient picker; preserve the -2 through ordinary/Observation tiers, Tags and known-roll recovery without redrawing or double application.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_supply.py",
+        "tests/rules/test_supply_service.py",
+        "tests/rules/test_off_duty_roll_service.py",
+        "tests/rules/test_observation_service.py"
+      ],
+      "evidence": [
+        {
+          "scope": "offline_supply_assignment_and_pre_roll_modifier_integration",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-supply-pytest.xml",
+          "result": "1011 passed in 252.42s; no failures/errors/skips",
+          "artifact": "var/m3-supply-pytest.xml",
+          "limitation": "Other temporary modifiers and remaining Strain, playbook, world, economy, career and independent/human acceptance remain incomplete."
+        }
+      ]
+    },
+    {
+      "id": "M3F-SCIENTIFIC-OBSERVATION-001",
+      "title": "Actual scientific Observation orders and distinct causes under one recovery roll",
+      "expected": "One/two real character-bound orders, exact hiding reviews, distinct real source events, preserved original context, no premature recovery, and actual scene/Frame-review settlement of overlapping causes.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_scientific_observation.py",
+        "tests/rules/test_scientific_observation_service.py",
+        "tests/rules/test_observation_service.py"
+      ],
+      "evidence": [
+        {
+          "scope": "offline_scientific_order_and_full_overlapping_recovery",
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-scientific-observation-pytest.xml",
+          "result": "1029 passed in 257.16s; no failures/errors/skips",
+          "artifact": "var/m3-scientific-observation-pytest.xml",
+          "limitation": "Remaining actor-aware core Plays, playbooks/economy/careers, Strain/Endgames/world rules and independent/human acceptance remain incomplete."
+        }
+      ]
+    },
+    {
+      "id": "M3-REFUSAL-RECOVERY",
+      "title": "Actual next-refusal source and original root/child recovery",
+      "expected": "Source-bound +2 consumes only on the first actual Girl refusal, with original receipts/choices and private owned recovery.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_refusal.py",
+        "tests/rules/test_refusal_service.py",
+        "tests/rules/test_shared_recovery.py"
+      ],
+      "evidence": [
+        {
+          "scope": "offline_actual_source_and_shared_response_chain",
+          "command": ".venv/bin/pytest -q --tb=short --junitxml=var/m3-shared-refusal-final-pytest.xml",
+          "result": "1309 passed in 360.67s; no failures/errors/skips",
+          "artifact": "var/m3-shared-refusal-final-pytest.xml",
+          "limitation": "Full actor-aware Plays, career/physical/runtime rules, remaining Strain and independent/human acceptance remain incomplete."
+        }
+      ]
+    },
+    {
+      "id": "M3-CONTRABAND",
+      "title": "Actual random contraband and private optional Asset",
+      "expected": "Uniform actual source, original recipient consent, ordinary Asset caps and concealed public views until explicit sharing.",
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_contraband.py",
+        "tests/rules/test_contraband_service.py",
+        "tests/rules/test_contraband_ui.py"
+      ],
+      "evidence": [
+        {
+          "scope": "offline_actual_source_private_claim_and_projections",
+          "command": ".venv/bin/pytest -q --tb=short --junitxml=var/m3-contraband-pytest.xml",
+          "result": "1344 passed in 409.65s; no failures/errors/skips",
+          "artifact": "var/m3-contraband-pytest.xml",
+          "limitation": "Full physical/career/control, further secret discovery, remaining core rules and independent/human acceptance remain unfinished."
+        }
+      ]
+    },
+    {
+      "id": "M3C-TRACKER-NORMAL-001",
+      "title": "Tracker installed hardware, live pose/location, two source Plays and exact removal/site alerts",
+      "expected": "Actual original award/body/site/vessel; owned contact/observed moment, real same-object recovery and source-bound private alerts; no implicit map journey or source adaptation.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_tracker_implants.py"
+      ],
+      "related_cases": [
+        "M3-ADD-001",
+        "M3-ADD-006",
+        "M3-ADD-007"
+      ],
+      "evidence": [
+        {
+          "test_name": "test_native_secret_tracker_location_both_plays_real_removal_and_exact_site_void",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_tracker_implants.py",
+          "actual_result": "1 passed /7.804s; affected compatibility3 passed /3.346s; union Ruff/format30 and mypy28source passed",
+          "log_or_trace": "var/m3-tracker-implants-handoff.json; var/m3-tracker-implants-normal.xml; var/m3-tracker-contaminant-final-source-snapshot.json",
+          "git_commit": "37c8d6bc4557badccaf734d2cc5508cace8c117d",
+          "limitation": "Cockpit/pose read, not distinct-square journey. Current native original bodies; finite actual Dive anatomical source. Other source/body/lifecycle adapters and independent/player review remain. Not full regression."
+        }
+      ]
+    },
+    {
+      "id": "M3G-CONTAMINANT-NORMAL-001",
+      "title": "Actual quarantine four effects, warp and breach lifecycle",
+      "expected": "Real territory/temporary effective Void source; resource-preserving Dormancy/awakening; group organization replacement into usable Harpy; actual study/protection; sourced warp and real break.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE_SEGMENTED",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_contaminant_zone.py"
+      ],
+      "related_cases": [
+        "M3-ADD-001",
+        "M3-ADD-006",
+        "M3G-WORLD-001",
+        "M3F-SCHED-001"
+      ],
+      "evidence": [
+        {
+          "test_name": "test_actual_relief_dormancy_awakening_strain_consumer_and_real_breach; test_actual_group_harpy_study_warp_protection_expiry_and_private_history",
+          "executed_command": "Initial module attempt, then final second normal plus tests/rules/test_handler_advancements.py; exact commands in artifact",
+          "actual_result": "First normal passed in mixed1 failed/1 passed5.76s (second fake Picker defer fixed); unchanged first called paths reused. Final second+awards4 passed9.36s. Unionstatic30Python28source passed.",
+          "log_or_trace": "var/m3-contaminant-zone-test-results.json; var/m3-contaminant-zone-first-mixed-attempt.txt; var/m3-tracker-contaminant-final-source-snapshot.json",
+          "git_commit": "37c8d6bc4557badccaf734d2cc5508cace8c117d",
+          "limitation": "No single final two-normal process claimed. Partial-footprint/conditional actor/source adapters, independent/player review and full regression remain pending."
+        }
+      ]
+    },
+    {
+      "id": "M3C-POLITICAL-CONTACTS-NORMAL-001",
+      "title": "Actual political aid, owned NPC Bonds, Strings and three cash-outs",
+      "expected": "Real current Cities/contacts, original Cadre-authored spheres/private Bonds, source-proved benefit and atomic actual Budget/Tag/job-loss outcomes.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_politician_bribery.py"
+      ],
+      "related_cases": [
+        "M3-ADD-001",
+        "M3-ADD-006",
+        "M3-ADD-007",
+        "M3G-WORLD-001"
+      ],
+      "evidence": [
+        {
+          "test_name": "test_actual_cadre_political_aid_budget_tag_and_causal_job_loss_with_saved_history",
+          "executed_command": "Final Bribery normal; exact compatibility selectors and commands in recorded handoff",
+          "actual_result": "Final normal1 passed14.236s; three unchanged compatibility cases retained from focused4 passed16.14s; final unionstatic24Python22source passed",
+          "log_or_trace": "var/m3-politician-bribery-fund-handoff.json; var/m3-politician-bribery-normal.xml; var/m3-bribery-ship-source-snapshot.json",
+          "git_commit": "aaf4a64ec75921ca672ae23e9081a146417e7f37",
+          "limitation": "Known-position NPC construction only; generic NPC-Bond forced Play and other causal consequence producers remain open. No full regression or independent/player approval."
+        }
+      ]
+    },
+    {
+      "id": "M3G-SHIP-BASE-NORMAL-001",
+      "title": "Source-proved actual Ship-Base transport, armour and ram branches",
+      "expected": "Only actual boarded original bodies/Frames/NPCs move; genuine armour/rearm, real costs/dice/Core/pin, actual low GM effect and Base destruction/history.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_ship_base.py"
+      ],
+      "related_cases": [
+        "M3-ADD-001",
+        "M3-ADD-006",
+        "M3G-WORLD-001"
+      ],
+      "evidence": [
+        {
+          "test_name": "Four expected ram/transport source traces in tests/rules/test_ship_base.py",
+          "executed_command": "Ship four-normal module; exact commands/attempts in var/m3-ship-base-test-results.json",
+          "actual_result": "4 passed11.40s, final source restored. Superseded extra-veto1/3.30s excluded; final unionstatic24Python22source plus exact restored2Python1source delta checks pass; affected old native Handler1/1.19s pass.",
+          "log_or_trace": "var/m3-ship-base-normal.xml; var/m3-ship-base-handoff.json; var/m3-bribery-ship-static.json",
+          "git_commit": "aaf4a64ec75921ca672ae23e9081a146417e7f37",
+          "limitation": "Ordinary native cargo/Gorgon threat scope; conditional/AM/Harpy/nested cargo/special Core and other opening producers remain adapters. Canonical last-Base work preserved, unrelated endpoint not claimed tested. Not full regression or independent/player approval."
+        }
+      ]
+    },
+    {
+      "id": "M3-CORE-NPC-BOND-NORMAL-001",
+      "title": "Actual NPC Bond cost and other-human Conversation performance",
+      "expected": "Original Girl weakens canonical NPC Bond; actual NPC human performs a supported source job Play; work and addressed private receipt close without an invented Girl roll.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_npc_bond_play.py"
+      ],
+      "related_cases": [
+        "M3-ADD-006",
+        "M3-ADD-007"
+      ],
+      "evidence": [
+        {
+          "test_name": "test_real_girl_bond_cost_other_npc_human_performance_addressed_receipt_and_history",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_npc_bond_play.py --junitxml=var/m3-npc-bond-play-normal.xml",
+          "actual_result": "Final normal1 passed3.935s; unchanged canonical primitive3 retained from focused4/4.07s; final6Python5source static plus changed2/1 delta passed; old scoped noticeprivacy1/1.30s passed.",
+          "log_or_trace": "var/m3-npc-bond-play-handoff.json; var/m3-npc-bond-final-source-snapshot.json; var/m3-npc-bond-final-static.json",
+          "git_commit": "907b16689334d89eacdcdfe4f3e47c86d3853296",
+          "limitation": "Existing nonmechanical Conversation subset only; mechanical/other job and changed-controller/body adapters remain. Service Intense2\u21921 not separately tested; unchanged reducer reused. No full regression, independent review or human acceptance."
+        }
+      ]
+    },
+    {
+      "id": "M3C-A-BOMB-NORMAL-001",
+      "title": "Actual nuclear device, blast effects, conditional Budget and fallout lifecycle",
+      "expected": "Genuine award/device/custody; immutable release/impact/roster; actual deaths and owner-chosen resource effects; safe/unsafe ejection; successful direct waiver preserves independent writes; real temporary fallout expiry.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_a_bomb.py"
+      ],
+      "related_cases": [
+        "M3-ADD-001",
+        "M3-ADD-006",
+        "M3-ADD-007",
+        "M3G-WORLD-001",
+        "M3F-SCHED-001"
+      ],
+      "evidence": [
+        {
+          "test_name": "test_actual_casualties_core_exposure_owned_damage_safe_defeat_ejection_history; test_actual_causal_mission_waiver_real_expiry_and_independent_high_noop",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_a_bomb.py --junitxml=var/m3-a-bomb-final-normal.xml",
+          "actual_result": "Final2 passed9.01s in one process; affected existing8 passed27.49s. Static coverage28Python/27source passes with exact4 static-only corrections and unchanged checks reused.",
+          "log_or_trace": "var/m3-a-bomb-test-evidence.json; var/m3-a-bomb-compatibility.xml; var/m3-a-bomb-final-source-snapshot.json; var/m3-a-bomb-final-static.json",
+          "git_commit": "e223c1adeb56401a6c1339ca9637f0f925ee7f64",
+          "limitation": "Actual Armoured blast interception and quarantine-boundary breach were not exercised; no separate nuclear Doctor branch. JANUS/Core, conditional/guest/parked/unknown/external/layered/overlaid body adapters fail closed. Not a full regression or independent/player acceptance."
+        },
+        {
+          "test_name": "test_actual_armoured_ship_intercepts_blast_then_unarmoured_base_is_destroyed; test_actual_nuclear_perimeter_breach_removes_relief_and_protected_study_before_destruction",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_a_bomb.py::test_actual_armoured_ship_intercepts_blast_then_unarmoured_base_is_destroyed tests/rules/test_a_bomb.py::test_actual_nuclear_perimeter_breach_removes_relief_and_protected_study_before_destruction --junitxml=var/m3-a-bomb-world-interactions-normal.xml",
+          "actual_result": "2 new tests passed5.85s; changed test Ruff/format PASS. Production unchanged; original test/helper prefix AST matches ac91aa0, prior2 evidence reused. Focused CI selector collection23 succeeded; collection is not execution.",
+          "log_or_trace": "var/m3-a-bomb-world-interactions-evidence.json; var/m3-a-bomb-world-interactions-source-snapshot.json; var/m3-world-interactions-ci-collection.json",
+          "git_commit": "1f8806ab165f9bc126c01f55d4772eceeb054032",
+          "limitation": "Only these two added normal cases were executed; no full suite/global static/source mypy rerun. Nuclear Doctor not separately exercised; conditional body/source adapters and independent/player gates remain. Prior e223c1a evidence limitations remain historical."
+        }
+      ]
+    },
+    {
+      "id": "M3C-GENDER-DESIGNATION-NORMAL-001",
+      "title": "Original legal designation, native partner Tags, relative Orders and spoken No",
+      "expected": "Genuine award and original Handler legal assignment; three categories retain natural Status and human source ownership; actual native Sex Tag effect and real Punishment close with saved private history.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_gender_designation.py"
+      ],
+      "related_cases": [
+        "M3-ADD-001",
+        "M3-ADD-006"
+      ],
+      "evidence": [
+        {
+          "test_name": "test_actual_three_legal_categories_orders_partner_tag_sex_reassignment_and_punishment",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_gender_designation.py tests/rules/test_handler_advancements.py tests/rules/test_alpha_sex.py::test_mid_actual_native_source_bond_broken_and_smell_without_movement tests/rules/test_mockingbird_sex_closure.py::test_native_high_owned_asset_choice_and_patient_rewrite_preserve_one_receipt --junitxml=var/m3-gender-focused.xml",
+          "actual_result": "6 passed /12.35s; coherent Ruff/format19Python and mypy18source passed.",
+          "log_or_trace": "var/m3-gender-focused.xml; var/m3-gender-final-source-snapshot.json; var/m3-gender-final-static.json",
+          "git_commit": "6d80d82e6e9638861f2cc3fabcc47674aaea01d7",
+          "limitation": "Ordinary native Alpha/Mockingbird sources; other Sex/body providers, paired partner conversion and separate Gender Alpha low/high evidence remain explicit gaps. Focused evidence, not full regression or independent/human approval."
+        }
+      ]
+    },
+    {
+      "id": "M3C-MARRIAGE-NORMAL-001",
+      "title": "Original Marriage shared Status, exact finances and allocated actual discipline",
+      "expected": "Actual native declaration deepens Bond, shares group rank and conserves source grants/payments; recipient-owned real purchase needs exact financial approval; completed outsider Flirt requires explicit witnessed discovery and actual assigned-body Punishment/private history.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_intracadre_marriage.py"
+      ],
+      "related_cases": [
+        "M3-ADD-001",
+        "M3-ADD-006",
+        "M3-ADD-007"
+      ],
+      "evidence": [
+        {
+          "test_name": "test_actual_marriage_shared_grant_approved_other_body_purchase_caught_flirt_and_punishment",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_intracadre_marriage.py --junitxml=var/m3-marriage-registry-final.xml",
+          "actual_result": "Whole normal+4 existing consumers5 passed/9.70s; root27 and producer8 separate affected checks passed; final registry normal1/4.94s. Coherent Ruff/format70Python,mypy69source passed without drift. Registry and repository0findings pass.",
+          "log_or_trace": "var/m3-marriage-handoff.json; var/m3-marriage-focused.xml; var/m3-marriage-registry-final.xml; var/m3-marriage-union-source-snapshot.json; var/m3-marriage-union-static.json",
+          "git_commit": "fa0c9935ed6408a52b845ddf61c1328d56273813",
+          "limitation": "Ending/replacement/Handler-roster recovery; nonparty/remote/unknown-position witness; separately played married Permission-loss Defeat/sharedDog/tiedTag branches and further body/Class combinations remain visible gaps. No full regression, independent source review, human acceptance or deployment claim. Six interpretations require clarity review."
+        }
+      ]
+    },
+    {
+      "id": "M3G-PROMOTIONAL-OPPORTUNITY-NORMAL-001",
+      "title": "Actual neighbouring map, source-proved rival downfall and responsibility",
+      "expected": "Native original Award creates three real boons/two threats; genuine arranged NPC death authorizes takeover, actual Base intake and regional source effects; original map/bodies/history preserved.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_promotional_opportunity.py"
+      ],
+      "related_cases": [
+        "M3-ADD-001",
+        "M3G-WORLD-001"
+      ],
+      "evidence": [
+        {
+          "test_name": "test_native_actual_map_rival_downfall_takeover_physical_storage_and_world; alternate resource cases",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_promotional_opportunity.py::test_native_actual_map_rival_downfall_takeover_physical_storage_and_world --junitxml=var/m3-promotional-registry-final.xml",
+          "actual_result": "Main1/7.09s, alternatives2/3.87s, oldcompat11/5.12s separate; final registry+storage source authority delta1/6.11s. Coherent19Python18source static and registry/repository pass.",
+          "log_or_trace": "var/m3-promotional-opportunity-contract.json; var/m3-promotional-union-static.json; var/m3-promotional-union-source-snapshot.json; var/m3-promotional-registry-final.xml",
+          "git_commit": "4e59ccd38965da3844f51492e708c174d0c2bf2b",
+          "limitation": "Ordinary rivalNPC death source only; nonfatal/native/Director/other death producer, body/office inheritance and known-body actual transport remain adapters. No separate regional A-Bomb/lifecycle matrix/full regression/independent/player approval. Five interpretations require source clarity review."
+        }
+      ]
+    },
+    {
+      "id": "M3B-DOSE-UP-NORMAL-001",
+      "title": "Actual native Dose Up choices, source DrugTags and scene expiry",
+      "expected": "True followed self-Order/source contact, original Heat/receipt, all result tiers, low recipient real-dose/Punishment choice, real drug/selfmark/repeat and participated-scene expiry with private history.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_dose_up.py"
+      ],
+      "related_cases": [
+        "M3-ADD-006",
+        "M3-ADD-007"
+      ],
+      "evidence": [
+        {
+          "test_name": "Four distinct Dose Up outcome nodes plus affected actual Alpha low Punishment",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_dose_up.py --junitxml=var/m3-dose-up-registry-final.xml",
+          "actual_result": "Final normal4/6.45s; preceding coherent5/8.38s, rootold7/6.55s+basegates3/1.88s separately. Coherent12Python11source static, registry/repository, offline SDK registration and17caseCIcollection passed.",
+          "log_or_trace": "var/m3-dose-up-handoff.json; var/m3-dose-up-final-focused.xml; var/m3-dose-up-registry-final.xml; var/m3-dose-up-root-evidence.json; var/m3-dose-up-union-static.json; var/m3-dose-up-union-source-snapshot.json",
+          "git_commit": "99865b05e7d6942d17b738c2c9c738f3d4c09726",
+          "limitation": "Native stable bodies and source DoseUp intoxication only; other Stim/Malleable facets, external/NPC/Handler/clone/changed-body/ending adapters remain required gaps. No full regression, remoteCI run, independent/human acceptance or deployment. Four rulings need printed clarity review."
+        }
+      ]
+    },
+    {
+      "id": "M3C-PRINCESS-SEX-NORMAL-001",
+      "title": "Actual native Princess source, printed outcomes and real counterpart child",
+      "expected": "Separate voluntary source confirmation; actual low Bond/Tag, mid owned favour/refusal and optional Tag, high counterpart Keep with fixed actor/resources and true Princess author; Handler choices retained, genuine Gender effects, private resume and retry.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_princess_sex.py"
+      ],
+      "related_cases": [
+        "M3-ADD-006",
+        "M3-ADD-007"
+      ],
+      "evidence": [
+        {
+          "test_name": "Whole native source workflow plus affected old consumers",
+          "executed_command": "See exact argv in var/m3-princess-psyche-root-evidence.json",
+          "actual_result": "Integration: 23 passed in 34.55s before the final two-file Disposable proof change; the two affected checks then passed in 6.04s. Coherent static checks for 19 Python files and types for 17 source modules, registry/repository and offline SDK passed; 18 CI cases collected only.",
+          "log_or_trace": "var/m3-princess-psyche-root-evidence.json; var/m3-princess-psyche-final-focused.xml; var/m3-princess-psyche-disposal-proof-final.xml; var/m3-princess-psyche-union-static.json; var/m3-princess-psyche-union-source-snapshot.json",
+          "git_commit": "0f4659f8ae577e0f1d1fcec56305ed5c5ca46115",
+          "limitation": "Other child Plays, Kicked/Dampener and conditional body/controller sources remain required adapters. Necessary decision fields only; no full counterpart profile or consent fabrication. Focused/segmented checks only; final full regression, independent/human review and deployment not performed."
+        }
+      ]
+    },
+    {
+      "id": "M3C-DISPOSABLE-PSYCHE-NORMAL-001",
+      "title": "Actual Disposable Psyche mark/removal and mandatory Off-Duty conversion",
+      "expected": "Real additional 3/4 Heat plus ordinary gain and removal of that Identity, immutable receipt/source proof; mandatory conversion of 1\u20134 actual Tags with capacity replacements, then real recovery/period closure and private history/retry.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_disposable_psyche.py"
+      ],
+      "related_cases": [
+        "M3-ADD-006",
+        "M3-ADD-007"
+      ],
+      "evidence": [
+        {
+          "test_name": "Whole native source workflow plus affected old consumers",
+          "executed_command": "See exact argv in var/m3-princess-psyche-root-evidence.json",
+          "actual_result": "Integration: 23 passed in 34.55s before the final two-file Disposable proof change; the two affected checks then passed in 6.04s. Coherent static checks for 19 Python files and types for 17 source modules, registry/repository and offline SDK passed; 18 CI cases collected only.",
+          "log_or_trace": "var/m3-princess-psyche-root-evidence.json; var/m3-princess-psyche-final-focused.xml; var/m3-princess-psyche-disposal-proof-final.xml; var/m3-princess-psyche-union-static.json; var/m3-princess-psyche-union-source-snapshot.json",
+          "git_commit": "0f4659f8ae577e0f1d1fcec56305ed5c5ca46115",
+          "limitation": "Protected/Paired/Limiter/Clone-extra, forced/other marking sources, non-Heat bases and genuine Ankou Feedback remain required adapters; zero Tags is an explicit applicability ruling, not missing implementation relief. Focused/segmented checks only; final full regression, independent/human review and deployment not performed."
+        }
+      ]
+    },
+    {
+      "id": "M3C-ANKOU-FEEDBACK-NORMAL-001",
+      "title": "Native Ankou Feedback with actual pre-roll commitment and safe recovery",
+      "expected": "Actual last mark/removal and Heat commitment, person-authored purpose/Identity, Bond-to-Asset, co-present Frame tear/5 Heat and genuine targeted child; one original roll. Refusal/Helpless recovery and death/archive produce no fake dice. Staff restoration preserves mandatory source work.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_ankou_feedback.py"
+      ],
+      "related_cases": [
+        "M3-ADD-006",
+        "M3-ADD-007"
+      ],
+      "evidence": [
+        {
+          "test_name": "Three distinct native normals and affected consumers",
+          "executed_command": "Exact commands in var/m3-ankou-feedback-contract.json and var/m3-ankou-root-evidence.json",
+          "actual_result": "Three normals passed in 12.49s; final affected main in 8.27s. Existing compatibility: 13 passed/1 failed in 24.55s, then only the repaired legacy room check passed in 1.13s. Coherent static checks for 18 Python files and types for 17 source modules, registry/repository and offline SDK passed. 16 CI cases collected only.",
+          "log_or_trace": "var/m3-ankou-feedback-normal.xml; var/m3-ankou-feedback-recovery-normal.xml; var/m3-ankou-root-evidence.json; var/m3-ankou-union-static.json; var/m3-ankou-union-source-snapshot.json",
+          "git_commit": "e12960ef382d8ee3beb947867660b65acbb5acef",
+          "limitation": "Specialised/parented marking, other counterparts/bodies, Relay/Clone, linked/protected resources and last-Frame/full-Void continuations remain required adapters; broader prevention combinations unplayed. Separate focused runs, not a full regression. Independent/human review and deployment not performed."
+        }
+      ]
+    },
+    {
+      "id": "M3C-STIM-SEX-NORMAL-001",
+      "title": "Native Stim Sex, reciprocal source effects, Orders and drug expiry",
+      "expected": "Voluntary source confirmation then actual Heat/receipt and all result choices, optional low self-drug branches, source Tag/self-mark, temporary Helpless consumer, legitimate lower-Status Orders surviving source expiry, actual Off-Duty/Disposable use and private history/replay.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_stim_sex.py"
+      ],
+      "related_cases": [
+        "M3-ADD-006",
+        "M3-ADD-007"
+      ],
+      "evidence": [
+        {
+          "test_name": "Four native outcomes and affected existing source consumers",
+          "executed_command": "Exact argv in var/m3-stim-sex-root-evidence.json",
+          "actual_result": "14 passed in 28.61s; coherent static checks for 12 Python files and types for 11 source modules passed without drift. Registry/repository and offline SDK registration passed. 16 CI cases collected only.",
+          "log_or_trace": "var/m3-stim-sex-final-focused.xml; var/m3-stim-sex-root-evidence.json; var/m3-stim-sex-union-static.json; var/m3-stim-sex-union-source-snapshot.json",
+          "git_commit": "213b9db68ebf782c55861b0936cf1bde09664982",
+          "limitation": "Full Malleable, other recipient/body/controller/ending and physiological-removal adapters remain required. Focused checks, not a full regression or remote CI. Independent/human review and deployment not performed."
+        }
+      ]
+    },
+    {
+      "id": "M3C-MALLEABLE-NORMAL-001",
+      "title": "Birth-bound Malleable forced embrace and actual NPC deprogramming",
+      "expected": "Genuine altered-at-birth Tag proof, original giver native legal replacement, exact pending resolution without forged answers, actual protected and unprotected original Handler Foundation procedures.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_malleable.py"
+      ],
+      "evidence": [
+        {
+          "test_name": "Four focused new cases plus affected Dose and Off-Duty consumers",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_malleable.py tests/rules/test_dose_up.py tests/rules/test_off_duty_cycle.py::test_actual_preparation_owned_rolls_recovery_review_and_world_end_are_resumable tests/rules/test_off_duty_cycle.py::test_scene_is_private_to_participants_and_cannot_be_attested_for_absent_humans --maxfail=1 --junitxml=var/m3-malleable-integrated.xml",
+          "actual_result": "10 passed in19.81s; coherent static12 Python/11 source passed without drift; registry/repository and offline SDK passed;13 CI cases collected only.",
+          "log_or_trace": "var/m3-malleable-integrated.xml; var/m3-malleable-union-static.json; var/m3-malleable-union-source-snapshot.json; var/m3-malleable-handoff.json",
+          "git_commit": "01c8cfebc5a81ce39d5fe0b9ce5ab2b13a7c45d1",
+          "limitation": "Specialised source removals, conditional body/extra Identities remain required; focused evidence only, independent/human review pending."
+        }
+      ]
+    },
+    {
+      "id": "M3C-OLDGEN-ADVICE-NORMAL-001",
+      "title": "Oldgen actual maxims and all Old Dog advice outcomes",
+      "expected": "Actual chosen base maxim Heat/Tag and source-granted unmark; all advice tiers, real Status and recipient listening, once-only original maxim owner/subject, original-Handler high poor outcome and actual Identity rewrite.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_oldgen.py"
+      ],
+      "related_cases": [
+        "M3-001"
+      ],
+      "evidence": [
+        {
+          "test_name": "Four new printed normal cases and affected existing shared consumers",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_oldgen.py tests/rules/test_standards.py::test_actual_keep_runtime_and_native_ui_respect_borrowed_and_removed_rules tests/rules/test_off_duty_cycle.py::test_actual_preparation_owned_rolls_recovery_review_and_world_end_are_resumable tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng --maxfail=1 --junitxml=var/m3-oldgen-integrated.xml",
+          "actual_result": "8 passed in9.56s; coherent static12 Python/11 source passed without drift; registry/repository and offline SDK passed;10 CI cases collected only.",
+          "log_or_trace": "var/m3-oldgen-integrated.xml; var/m3-oldgen-union-static.json; var/m3-oldgen-union-source-snapshot.json; var/m3-oldgen-handoff.json",
+          "git_commit": "b9c3f1309db98cc6a3cbe9f4460e608c05820159",
+          "limitation": "Oldgen Sex and conditional/non-native adapters remain required. New Off-Duty maxim token is connected but not directly scenario-tested here. Focused checks only; full/independent/human gates pending."
+        }
+      ]
+    },
+    {
+      "id": "M3C-OLDGEN-SEX-NORMAL-001",
+      "title": "Oldgen Sex all printed normal choices and real source effects",
+      "expected": "Actual voluntary source, Heat/roll and low base-maxim rewrite, mid effects, high yes/no real counterpart choice and reciprocal/additional effects, independent physiological inability and actual recovery.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_oldgen_sex.py"
+      ],
+      "evidence": [
+        {
+          "test_name": "Four printed normal paths plus affected current consumers",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_oldgen_sex.py tests/rules/test_oldgen.py tests/rules/test_stim_sex.py::test_mid_real_lower_status_order_drug_tag_consumer_expiry_and_private_saved_source tests/rules/test_gender_designation.py tests/test_m2_game.py::test_helpless_requires_explicit_recovery_and_no_silent_timeout tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng --maxfail=1 --junitxml=var/m3-oldgen-sex-integrated.xml",
+          "actual_result": "12 passed in19.20s; static14 Python/13 source passed without drift; registry/repository and offlineSDK16 commands passed;14 CI cases collected only.",
+          "log_or_trace": "var/m3-oldgen-sex-integrated.xml; var/m3-oldgen-sex-union-static.json; var/m3-oldgen-sex-union-source-snapshot.json; var/m3-oldgen-sex-handoff.json",
+          "git_commit": "3e8ef8bd71f88cdc2b3700f8af49f4eb11777713",
+          "limitation": "Temporary advice-maxim rewrite and non-native/conditional-body adapters remain required. Active Doll edits excluded. Focused only; full/independent/human gates pending."
+        }
+      ]
+    },
+    {
+      "id": "M3C-DOLL-NORMAL-001",
+      "title": "Unassuming Doll normal outcomes, actual information and source departure",
+      "expected": "Real receipt/choices, quiet and object attention consumers, substantive actual private answer/secret, genuine source exit/reentry retaining known placement, low Tag and actual completed Punishment, fresh effects unaffected by past acts.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_vatgrown.py"
+      ],
+      "evidence": [
+        {
+          "test_name": "Four source normal cases plus affected existing consumers",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_vatgrown.py tests/rules/test_dose_up.py tests/rules/test_handler_plays.py::test_brief_threat_expectation_are_real_owned_saved_facts_not_player_responses tests/rules/test_cast_service.py::test_cast_atomic_rollback_restart_rebuild_and_close_preserve_source_links tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng --maxfail=1 --junitxml=var/m3-vatgrown-integrated.xml",
+          "actual_result": "11 passed in15.73s; coherent static14 Python/13 source without drift; registry/repository and offlineSDK17 commands passed;13 CI cases collected only.",
+          "log_or_trace": "var/m3-vatgrown-integrated.xml; var/m3-vatgrown-union-static.json; var/m3-vatgrown-union-source-snapshot.json; var/m3-vatgrown-handoff.json",
+          "git_commit": "c619b735e409d894235bca60ea991356cc706958",
+          "limitation": "Other meaningful actual-act, NPC/body adapters and other Vatgrown rules remain required. Source exit is scene-bound, no global stealth/travel. Active Show Dog edits excluded. Focused evidence only; final full/independent/human gates pending."
+        }
+      ]
+    },
+    {
+      "id": "M3C-TRAINEE-NORMAL-001",
+      "title": "Trainee actual teaching, three choices and real mentor duty consequences",
+      "expected": "Original assigned Mentor source, actual erasure/mandatory Tag embrace, actual performed source for1\u20133Heat, real immediate Mentor Punishment or actual report/finding and Handler Punishment of Mentor, private source/report separation.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_trainee.py"
+      ],
+      "evidence": [
+        {
+          "test_name": "Initial integrated selection and final affected source/privacy checks",
+          "executed_command": "Exact selectors/artifacts in reports/M3_ACCEPTANCE.md and var/m3-trainee-handoff.json",
+          "actual_result": "Initial integrated9 passed9.35s; final report/privacy1 passed2.05s; final ordinary/Ankou erase2 passed3.45s, overlapping selections. Final static10 Python/9 source passed without drift. OfflineSDK18 commands, registry/repository passed;12 CI cases collected only.",
+          "log_or_trace": "var/m3-trainee-integrated.xml; var/m3-trainee-handler-privacy.xml; var/m3-trainee-erase-frames.xml; var/m3-trainee-union-static.json; var/m3-trainee-union-source-snapshot.json",
+          "git_commit": "1d0031ae43abad60ac22fadc0b7f747b1abdb4a8",
+          "limitation": "No final combined or full rerun; broader actor/body/Identity/Tag and multiple-Mentor sources remain required. Mentor daily scene/name code excluded; independent/human gates pending."
+        }
+      ]
+    },
+    {
+      "id": "M3C-MENTOR-DAILY-NORMAL-001",
+      "title": "Mentor actual Off-Duty companions and canonical fictional callsign",
+      "expected": "Actual original Mentor participation requires the original Newgirl companion, and that Mentor can rename the canonical Girl without resource reset or forced platform cosmetics.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_mentor.py"
+      ],
+      "evidence": [
+        {
+          "test_name": "Mentor normal flow and actual Off-Duty/Trainee compatibility",
+          "executed_command": "Exact selection in reports/M3_ACCEPTANCE.md and var/m3-mentor-handoff.json",
+          "actual_result": "Integrated6 passed9.84s; coherent static8 Python/7 source passed without drift. OfflineSDK19 commands;9 CI cases collected only.",
+          "log_or_trace": "var/m3-mentor-integrated.xml; var/m3-mentor-union-static.json; var/m3-mentor-union-source-snapshot.json",
+          "git_commit": "d038bba24e16c57e6b71dc911ea713687861987d",
+          "limitation": "Observation connected but no new direct companion Observation scenario. Multiple-Mentor, other body/role and generic mentoring discipline sources remain required. No full regression, independent review or human acceptance."
+        }
+      ]
+    },
+    {
+      "id": "M3C-NEWGIRL-SEX-NORMAL-001",
+      "title": "Newgirl actual Sex and source-owned multiple Mentor outcomes",
+      "expected": "Every actual original native partner voluntarily confirms; actual receipt and independently owned responses produce real Bond/Status/Tag/damage/current Mentor outcomes. Actual learned third-party receipt grants an optional original-Mentor Tag; current rank/name/Tag/teaching consumers use all real Mentors.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_newgirl_sex.py"
+      ],
+      "evidence": [
+        {
+          "test_name": "Frozen combined six Sex plus four Easy Target normal workflows",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_newgirl_sex.py tests/rules/test_easy_target.py --maxfail=1 --junitxml=var/m3-newgirl-integrated.xml",
+          "actual_result": "10 passed29.87s; coherent Ruff/format29 Python and mypy26 source passed without drift. Existing compatibility10/14.15s plus3/6.36s separately; final original teaching erasure2/3.55s overlaps. Registry/repository and offlineSDK21 passed;20 CI cases collected only.",
+          "log_or_trace": "var/m3-newgirl-integrated.xml; var/m3-newgirl-union-source-snapshot.json; var/m3-newgirl-union-static.json; reports/M3_ACCEPTANCE.md",
+          "git_commit": "1220436b7284997baeeaf61f20ac4e5cc4c6b7a9",
+          "limitation": "Other actor/body, terminal/replacement/temporary/borrowed and other discovery channels; no direct group-all-Gender or terminal-damage scenario. Worker segmented/failed attempts preserved. No new full regression, independent certification, human acceptance or deployment."
+        }
+      ]
+    },
+    {
+      "id": "M3C-EASY-TARGET-NORMAL-001",
+      "title": "Easy Target actual independently owned reactions and performed consequences",
+      "expected": "Actual mistake receipt, original-person Tag/reactions, supported real child performances, actual bodily hurt and Punishment, genuine protection/failure Tag, request/Bond/Status, source contempt departure and actual cohort assistance.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_easy_target.py"
+      ],
+      "evidence": [
+        {
+          "test_name": "Frozen combined six Sex plus four Easy Target normal workflows",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_newgirl_sex.py tests/rules/test_easy_target.py --maxfail=1 --junitxml=var/m3-newgirl-integrated.xml",
+          "actual_result": "10 passed29.87s; coherent Ruff/format29 Python and mypy26 source passed without drift. Existing compatibility10/14.15s plus3/6.36s separately; final original teaching erasure2/3.55s overlaps. Registry/repository and offlineSDK21 passed;20 CI cases collected only.",
+          "log_or_trace": "var/m3-newgirl-integrated.xml; var/m3-newgirl-union-source-snapshot.json; var/m3-newgirl-union-static.json; reports/M3_ACCEPTANCE.md",
+          "git_commit": "1220436b7284997baeeaf61f20ac4e5cc4c6b7a9",
+          "limitation": "Other actor/performance/harm/protection adapters and off-scene failure proof remain required; free text cannot complete unsupported effects. Worker segmented/failed attempts preserved. No new full regression, independent certification, human acceptance or deployment."
+        }
+      ]
+    },
+    {
+      "id": "M3D-DEEP-BRAIN-SPIKES-PAGINATION-001",
+      "title": "Lossless ordered private memory context and returned History pages",
+      "expected": "All saved beginning/circumstances/return text remains accessible in ordered private pages of at most1000 rendered UTF16 units, including overhead; active form state/confirmation and private current authorization remain intact.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_deep_brain_spikes_pagination.py",
+        "tests/rules/test_deep_brain_spikes.py"
+      ],
+      "evidence": [
+        {
+          "test_name": "Native maximums, both returned causes, escaping/Unicode/boundaries and unchanged memory flow",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_deep_brain_spikes_pagination.py tests/rules/test_deep_brain_spikes.py --tb=short --maxfail=1",
+          "actual_result": "5 passed12.03s in working tree; exact933b10d committed export5 passed13.90s without unfinished runtime modules. Ruff/format3 Python and mypy2 source passed. Additive focused CI selection includes both files; final full suite pending.",
+          "log_or_trace": "var/m3-spikes-pagination-focused.xml; var/m3-spikes-pagination-committed.xml; var/m3-spikes-pagination-committed-check.json; var/m3-spikes-pagination-static.json",
+          "git_commit": "933b10d9a6f0783dbfa10df61154c1a7e8cd10c4",
+          "limitation": "No full final M3 regression, remote CI or live Discord validation asserted yet. Missing contributions/linked-Play native readback stays separate; services/state/shared forms unchanged."
+        }
+      ]
+    }
+  ],
+  "enabled_modules": [
+    "core"
+  ],
+  "deferred_modules": [
+    "ancillary"
+  ],
+  "pending_owner_rulings": [],
+  "working_queue": "docs/M3_CURRENT_QUEUE.md",
+  "evidence_note": "Scoped automated cases overlap broader acceptance gates and are not equal-sized tasks. Historical evidence is preserved; IN_PROGRESS and independent/human gates remain open.",
+  "maintenance_evidence": [
+    {
+      "scope": "bounded acquisition/proof, matching inbox entry and neutral real scenario pilots; no rule coverage increase",
+      "git_commit": "91f69a18ecb2dc209d92b7e8efc6f70ed45d0c00",
+      "executed_command": ".venv/bin/pytest -q tests/rules/test_advancement_acquisition.py tests/rules/test_secretary.py::test_actual_promoted_secretary_all_plays_withdraw_child_continuation_history tests/rules/test_secretary.py::test_actual_new_secretary_is_real_npc_not_extra_pc_or_free_assets tests/rules/test_deep_brain_spikes.py::test_real_memory_context_current_play_relevance_and_discrepancy_return_keep_present tests/rules/test_tracker_implants.py tests/rules/test_contaminant_zone.py tests/rules/test_reign_terror.py::test_actual_enemy_owned_rejection_is_real_external_action_with_lock_and_history --junitxml=var/m3-efficiency-pilot-focused.xml",
+      "actual_result": "8 passed in29.757s; Ruff/format10Python and mypy5source passed; registry/repository checks passed",
+      "log_or_trace": "var/m3-efficiency-pilot-focused.xml; var/m3-efficiency-pilot-final-source-snapshot.json",
+      "limitation": "Focused evidence, not full regression, independent rules review, human acceptance or measured speedup."
+    }
+  ],
+  "integration_regression": {
+    "phase": "pre_marriage_baseline",
+    "required": true,
+    "status": "FULL_RUN_FAILED_TARGETED_REPAIRS_PASS",
+    "source_commit": "eb7eec52c818b032299e9dc29e352f774e721e77",
+    "repair_commit": "1a259ec1ff1d5e7745480275f641cf83332a5f3e",
+    "plan": "docs/M3_PRE_MARRIAGE_REGRESSION.md",
+    "full_result": "2562 passed,3 failed,0 errors/skips in1781.24s;2565 cases",
+    "full_artifact": "var/m3-pre-marriage-regression.xml",
+    "static": "Global Ruff/format1092Python and mypy643source PASS on baseline; each changed source file Ruff/format/mypy PASS after repair",
+    "auxiliary": "CLI help/health isolatedDB, registry, original planning and repository checks PASS",
+    "focused_repairs": [
+      {
+        "artifact": "var/m3-external-heat-regression-repair.xml",
+        "result": "3 passed5.05s, includes2 failures+genuineReign"
+      },
+      {
+        "artifact": "var/m3-am-backup-regression-normal.xml",
+        "result": "1 passed3.46s, failed nativeBackup"
+      },
+      {
+        "artifact": "var/m3-am-backup-regression-compat.xml",
+        "result": "3 passed7.47s, real high/low backups+bound operator"
+      }
+    ],
+    "full_rerun_after_repairs": "NOT_RUN",
+    "milestone_completion": false,
+    "reason": "All baseline failures isolated and pass targeted repairs. Continue authorized M3 gameplay; do not call failed full artifact green. Final candidate integrated regression remains required.",
+    "required_pagination_tests": [
+      "tests/rules/test_deep_brain_spikes_pagination.py",
+      "tests/rules/test_deep_brain_spikes.py"
+    ],
+    "pagination_gate": "Final exact integrated candidate must run full pytest/global checks and CI full_suite:true with Scope:full; focused pagination evidence is not a full regression."
+  }
+}

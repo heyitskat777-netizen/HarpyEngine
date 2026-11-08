@@ -1,15 +1,30 @@
-name: M1 Discord pilot
+name: Discord pilot offline checks
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      full_suite:
+        description: Final M3 candidate — run full regression and global static checks
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+
+# Push and PR runs for the same source branch share one queue, including forks.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   offline-foundation:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version-file: .python-version
@@ -17,26 +32,107 @@ jobs:
         run: python -m pip install uv==0.12.23
       - name: Install locked dependencies
         run: uv sync --locked --all-groups
-      - name: Lint
-        run: uv run --no-sync ruff check .
-      - name: Format
-        run: uv run --no-sync ruff format --check .
-      - name: Types
-        run: uv run --no-sync mypy
-      - name: Offline unit and integration tests
+      - name: Select verification scope
+        id: scope
+        env:
+          COMPARE_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          FINAL_CANDIDATE: ${{ github.event_name == 'workflow_dispatch' && inputs.full_suite }}
+        run: |
+          python - <<'PY'
+          import os
+          import subprocess
+          from pathlib import Path
+
+          def git(*args):
+              return subprocess.check_output(["git", *args]).decode().strip()
+
+          base = os.environ.get("COMPARE_BASE", "")
+          if not base or set(base) == {"0"}:
+              base = git("merge-base", "HEAD", "origin/main")
+          paths = subprocess.check_output([
+              "git", "diff", "--no-renames", "--name-only", "--diff-filter=ACMD", "-z", base, "HEAD"
+          ]).decode().split("\0")
+          paths = [p for p in paths if p]
+          # Runtime rules/configuration and JSON contracts are never ordinary docs.
+          docs_only = bool(paths) and all(
+              p in {"README.md", "AGENTS.md"} or
+              p.endswith(".md") and p.startswith(("docs/", "reports/"))
+              for p in paths
+          )
+          full = os.environ.get("FINAL_CANDIDATE") == "true"
+          mode = "full" if full else "documentation" if docs_only else "focused"
+          Path("var").mkdir(exist_ok=True)
+          Path("var/ci-python-files.txt").write_text(
+              "\n".join(p for p in paths if p.endswith(".py") and Path(p).is_file())
+          )
+          evidence = f"Commit: {git('rev-parse', 'HEAD')}\nBase: {base}\nScope: {mode}\n"
+          Path("var/ci-scope.txt").write_text(evidence)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(f"mode={mode}\n")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write("### Verification scope\n\n" + evidence + "\n")
+          PY
+      - name: Lint, format and applicable types
+        env:
+          VERIFY_MODE: ${{ steps.scope.outputs.mode }}
+        run: |
+          python - <<'PY'
+          import os
+          import subprocess
+          from pathlib import Path
+
+          def run(*args):
+              subprocess.run(["uv", "run", "--no-sync", *args], check=True)
+
+          if os.environ["VERIFY_MODE"] == "full":
+              run("ruff", "check", ".")
+              run("ruff", "format", "--check", ".")
+              run("mypy")
+          else:
+              files = Path("var/ci-python-files.txt").read_text().splitlines()
+              if files:
+                  run("ruff", "check", *files)
+                  run("ruff", "format", "--check", *files)
+              typed = [p for p in files if p.startswith("src/girlframe/")]
+              if typed:
+                  run("mypy", *typed)
+          PY
+      - name: Focused expected gameplay
+        if: steps.scope.outputs.mode == 'focused'
+        run: |
+          mapfile -t tests < <(sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d' .github/ci-tests.txt)
+          if [ "${#tests[@]}" -eq 0 ]; then
+            echo 'The focused selection must name the completed workflow checks.' >&2
+            exit 1
+          fi
+          for test in "${tests[@]}"; do
+            [[ "$test" == tests/* ]] || { echo 'Use explicit pytest paths under tests/.' >&2; exit 1; }
+          done
+          uv run --no-sync pytest -q "${tests[@]}" --junitxml=var/pytest.xml
+      - name: Full regression — final candidate
+        if: steps.scope.outputs.mode == 'full'
         run: uv run --no-sync pytest -q --junitxml=var/pytest.xml
+      - name: Documentation scope
+        if: steps.scope.outputs.mode == 'documentation'
+        run: echo 'Ordinary documentation change — gameplay tests not scheduled.'
       - name: CLI smoke
+        if: steps.scope.outputs.mode != 'documentation'
         run: |
           uv run --no-sync python -m girlframe --help
           uv run --no-sync python -m girlframe health
+      - name: Runtime rules contract
+        run: uv run --no-sync python tools/check_rules_registry.py
       - name: Planning contracts
         run: uv run --no-sync python GIRLFRAME_Discord_Codex_Handoff_v0.2/verification/verify_handoff.py
       - name: Publishable file and manifest check
-        run: uv run --no-sync python tools/check_repository.py
-      - name: Preserve synthetic test results
+        if: ${{ !cancelled() }}
+        run: python tools/check_repository.py
+      - name: Preserve synthetic verification scope and test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: offline-test-results
-          path: var/pytest.xml
+          path: |
+            var/ci-scope.txt
+            var/pytest.xml
           if-no-files-found: ignore

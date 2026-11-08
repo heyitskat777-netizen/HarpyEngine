@@ -8,6 +8,7 @@ from typing import Any
 import discord
 from discord import app_commands
 
+from girlframe.discord_adapter import presence
 from girlframe.discord_adapter.config import BotPolicy
 from girlframe.services.character_tags import CharacterTagSynchronizer
 from girlframe.services.engine_status import EngineStatusUnavailable
@@ -110,7 +111,12 @@ class ReadOnlyDiscordBot(discord.Client):
             application_id=policy.application_id,
             allowed_mentions=discord.AllowedMentions.none(),
             proxy=proxy,
+            activity=presence.activity("starting"),
+            status=presence.status("starting"),
         )
+        self._last_presence: presence.Phase | None = None
+        self._shutdown_phase: presence.Phase | None = None
+        self._closing_started = False
         self.policy = policy
         self.service = service
         self.store = store
@@ -118,6 +124,10 @@ class ReadOnlyDiscordBot(discord.Client):
         self.tag_sync = CharacterTagSynchronizer(store) if store else None
         self._tag_worker: asyncio.Task[None] | None = None
         self._delivery_worker: asyncio.Task[None] | None = None
+        self._game_worker: asyncio.Task[None] | None = None
+        from girlframe.services.m2_game import GameService
+
+        self.game = GameService(store) if store else None
         self.tree = ReadOnlyCommandTree(self, fallback_to_global=False)
         guild = discord.Object(id=policy.guild_id)
         commands: tuple[tuple[ReadOnlyCommand, str], ...] = (
@@ -148,6 +158,39 @@ class ReadOnlyDiscordBot(discord.Client):
 
             assert self.ledger is not None
             register_ledger(self.tree, policy.guild_id, self.ledger, self.tag_sync)
+            from girlframe.discord_adapter.creation import register_creation
+            from girlframe.services.creation import CreationService
+
+            register_creation(self.tree, policy.guild_id, CreationService(store))
+            from girlframe.discord_adapter.bonds import register_bonds
+            from girlframe.services.bonds import BondService
+
+            register_bonds(self.tree, policy.guild_id, BondService(store))
+            from girlframe.discord_adapter.handler_setup import register_handler_setup
+            from girlframe.services.handler_setup import HandlerService
+
+            register_handler_setup(self.tree, policy.guild_id, HandlerService(store))
+            from girlframe.discord_adapter.pair_assets import register_pair_assets
+            from girlframe.services.pair_assets import PairService
+
+            register_pair_assets(self.tree, policy.guild_id, PairService(store))
+            from girlframe.discord_adapter.shared_setup import register_shared_setup
+            from girlframe.services.shared_setup import SharedSetupService
+
+            register_shared_setup(self.tree, policy.guild_id, SharedSetupService(store))
+
+            from girlframe.discord_adapter.creation_review import register_creation_review
+            from girlframe.services.creation_review import CreationReviewService
+
+            register_creation_review(self.tree, policy.guild_id, CreationReviewService(store))
+            from girlframe.discord_adapter.m2_ui import register_game
+
+            assert self.game is not None
+            register_game(self.tree, policy.guild_id, self.game)
+            from girlframe.discord_adapter.m3_missions import register_missions
+            from girlframe.services.m3_missions import MissionService
+
+            register_missions(self.tree, policy.guild_id, MissionService(store))
 
     def _callback(
         self, name: ReadOnlyCommand
@@ -169,12 +212,24 @@ class ReadOnlyDiscordBot(discord.Client):
                         "/server setup — administrator setup preview\n"
                         "/campaign create, /campaign join, /campaign status\n"
                         "/character create (or /girl create), /character sync, /sheet\n"
+                        "/character build — save starting Assets and appearance\n"
+                        "/character review — validate and save a private review sheet\n"
+                        "/character pair_assets — accepted Pair chooses Bonded Assets\n"
+                        "/character court, mentor_callsign, requests — shared starting choices\n"
+                        "/campaign effective_status — private setup comparison\n"
+                        "/character bond, /character bonds — propose/review private setup Bonds\n"
+                        "/campaign handler, mentor, status_setup, setup — explicit starting setup\n"
+                        "/campaign creation_rules — Handler-confirmed starting resource rulings\n"
                         "/roll basic — raw 2d6, public by default; publish:false is private\n"
                         "/roll show — retrieve a permitted receipt\n/ledger — permitted events\n"
                         "/safety pause, /safety resume — save or clear your own OOC pause\n"
                         "/health — configured administrators only\n"
-                        "Drafts are rules unverified. Official Plays, recovered-engine writes "
-                        "and AI are disabled."
+                        "/play, /choice resume — M2 guided Plays and pending human responses\n"
+                        "/mission offer, inbox, show — M3 scoped approval required\n"
+                        "/character activate, /character followthrough — M2 character state\n"
+                        "/campaign scene_bind, scene_join, scene_close, order, play_recovery\n"
+                        "M2 gameplay requires the end-of-milestone release approval. "
+                        "Recovered-engine writes and AI remain disabled."
                     )
                 else:
                     await private_operation(
@@ -199,16 +254,53 @@ class ReadOnlyDiscordBot(discord.Client):
             from girlframe.discord_adapter.onboarding import NewPlayerView
 
             self.add_view(NewPlayerView(self.store, self.tag_sync))
+            from girlframe.discord_adapter.m2_ui import SceneControls
+
+            assert self.game is not None
+            self.add_view(SceneControls(self.game))
         await self.fetch_guild(self.policy.guild_id)
         await self.tree.sync(guild=discord.Object(id=self.policy.guild_id))
 
+    async def _publish_presence(self, phase: presence.Phase) -> None:
+        activity, status = presence.activity(phase), presence.status(phase)
+        self.activity, self.status = activity, status
+        if not self.is_ready() or self._last_presence == phase:
+            return
+        try:
+            async with asyncio.timeout(2):
+                await self.change_presence(activity=activity, status=status)
+            self._last_presence = phase
+            print(f"HarpyEngine presence: {activity.name}", flush=True)
+        except Exception:
+            # Presence is best effort; it must never block serving or clean shutdown.
+            print("HarpyEngine presence update unavailable.", flush=True)
+
+    async def on_disconnect(self) -> None:
+        self._last_presence = None
+        if not self._closing_started:
+            self.activity = presence.activity("reconnecting")
+            self.status = presence.status("reconnecting")
+
+    async def on_resumed(self) -> None:
+        if not self._closing_started:
+            await self._publish_presence("running")
+
+    async def close_for_restart(self) -> None:
+        self._shutdown_phase = "restarting"
+        await self.close()
+
     async def on_ready(self) -> None:
+        if self._closing_started:
+            return
+        await self._publish_presence("running")
         if self.store is not None and (self._tag_worker is None or self._tag_worker.done()):
             self._tag_worker = asyncio.create_task(self._sync_character_tags())
         if self.ledger is not None and (
             self._delivery_worker is None or self._delivery_worker.done()
         ):
             self._delivery_worker = asyncio.create_task(self._deliver_rolls())
+        if self.game is not None and (self._game_worker is None or self._game_worker.done()):
+            self._game_worker = asyncio.create_task(self._advance_game())
         print(
             "HarpyEngine ready: commands registered in the configured test guild.",
             flush=True,
@@ -247,9 +339,27 @@ class ReadOnlyDiscordBot(discord.Client):
                     pass  # Durable lease/retry; no provider payload logging.
             await asyncio.sleep(5)
 
+    async def _advance_game(self) -> None:
+        from girlframe.delivery.m2_worker import GameWorker
+        from girlframe.discord_adapter.m2_gateway import DiscordGameGateway
+
+        assert self.game is not None
+        worker = GameWorker(self.game)
+        while not self.is_closed():
+            guild = self.get_guild(self.policy.guild_id)
+            if guild is not None:
+                try:
+                    await worker.tick(DiscordGameGateway(guild, self.game))
+                except Exception:
+                    pass  # Durable jobs remain pending; never log provider/private payloads.
+            await asyncio.sleep(5)
+
     async def close(self) -> None:
-        tasks = [self._tag_worker, self._delivery_worker]
-        self._tag_worker = self._delivery_worker = None
+        if not self._closing_started:
+            self._closing_started = True
+            await self._publish_presence(self._shutdown_phase or "stopping")
+        tasks = [self._tag_worker, self._delivery_worker, self._game_worker]
+        self._tag_worker = self._delivery_worker = self._game_worker = None
         for task in tasks:
             if task is not None and task is not asyncio.current_task() and not task.done():
                 task.cancel()

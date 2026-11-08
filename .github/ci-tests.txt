@@ -1,0 +1,14 @@
+# Deep-Brain-Spikes pagination: native maximums/privacy plus existing memory lifecycle.
+tests/rules/test_deep_brain_spikes_pagination.py
+tests/rules/test_deep_brain_spikes.py
+# Newgirl source outcomes and affected actual relationship/child/privacy consumers.
+# Final M3 mode still runs all tests.
+tests/rules/test_newgirl_sex.py
+tests/rules/test_easy_target.py
+tests/rules/test_mentor.py
+tests/rules/test_trainee.py::test_erase_real_contradiction_and_mandatory_original_mentor_tag_atomic_private_reopen
+tests/rules/test_gender_designation.py::test_actual_three_legal_categories_orders_partner_tag_sex_reassignment_and_punishment
+tests/rules/test_battle_service.py::test_actual_owner_proposes_adjudicator_confirms_then_exact_source_prepares_without_rng
+tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng
+tests/test_m2_game.py::test_campaign_isolation_and_delivery_uncertainty_no_reroll
+tests/test_m2_game.py::test_live_default_gate_and_active_editor_protection

@@ -104,7 +104,8 @@ class DiscordCharacterTagGateway:
         self, owner: int, callsign: str
     ) -> Literal["updated", "unchanged", "owner", "hierarchy"]:
         member = await self.guild.fetch_member(owner)
-        if member.nick == callsign:
+        nickname = callsign or None
+        if member.nick == nickname:
             return "unchanged"
         if member.id == self.guild.owner_id:
             return "owner"
@@ -114,7 +115,7 @@ class DiscordCharacterTagGateway:
         if highest >= self.bot_top_role():
             return "hierarchy"
         try:
-            await member.edit(nick=callsign, reason="HarpyEngine confirmed character callsign")
+            await member.edit(nick=nickname, reason="HarpyEngine confirmed character callsign")
         except discord.HTTPException:
             raise TagSyncIssue(
                 "Nickname pending: Discord denied the change; check role hierarchy."

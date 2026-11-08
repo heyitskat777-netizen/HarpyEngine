@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "scope": "M2J private mandatory playbook setup; no activation or runtime Play effects",
+  "command": ".venv/bin/pytest -q --junitxml=var/m2-playbook-creation-pytest.xml",
+  "evidence": "reports/M2_ACCEPTANCE.md",
+  "cases": [
+    {
+      "id": "DETAIL-01",
+      "title": "Exact chooser roles, including Handler without a Pilot profile",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation_coordination.py::test_exact_chooser_authority_and_handler_without_fake_pilot_profile"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "DETAIL-02",
+      "title": "Source-backed owner choices and role contracts",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation_coordination.py::test_choice_models_reject_invalid_owner_fields_and_allow_same_standard_for_each_author",
+        "tests/test_creation_coordination.py::test_three_princess_choosers_may_select_the_same_printed_standard",
+        "tests/test_creation_coordination.py::test_unapproved_initial_conditions_stay_unresolved_and_role_contract_rejects_forgery"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "DETAIL-03",
+      "title": "Authority replacement, profile/Bond staleness and replay",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation_coordination.py::test_role_replacement_withdrawal_profile_staleness_and_revoked_replay",
+        "tests/test_creation_coordination.py::test_duplicate_requests_decision_states_and_exact_interaction_replay"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "DETAIL-04",
+      "title": "Private immutable history, transaction rollback, concurrency and recovery",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation_coordination.py::test_transaction_rollback_concurrency_immutability_backup_and_isolation"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "DETAIL-05",
+      "title": "Unified inbox task deduplication, owner decisions and native routing",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation_coordination.py::test_inbox_party_roles_tasks_dedup_review_effects_and_generic_decision",
+        "tests/test_creation_coordination.py::test_native_inbox_routes_chooser_and_owner_details_with_back"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "DETAIL-06",
+      "title": "Resumable owner requirements, shared choices and changing NPC roles",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation_coordination.py::test_owner_details_persist_and_missing_shared_choice_blocks_readiness",
+        "tests/test_creation_coordination.py::test_native_owner_choices_custom_maxims_investors_and_saved_resume",
+        "tests/test_creation_coordination.py::test_changing_npc_roles_clears_only_incompatible_investor_choices"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "DETAIL-07",
+      "title": "CHANGELING anchors and old review compatibility",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation_coordination.py::test_changeling_anchors_and_legacy_review_compatibility"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "DETAIL-08",
+      "title": "Native chooser selection, custom standard, role checks and stale send protection",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation_coordination.py::test_native_chooser_dropdown_custom_text_send_and_owner_guards",
+        "tests/test_creation_coordination.py::test_old_send_button_cannot_submit_a_newer_chooser_selection"
+      ],
+      "manual_status": "NOT_RUN"
+    }
+  ],
+  "complete_builder": "NOT_RUN",
+  "independent_rules_review": "PENDING",
+  "playable_activation": "NOT_IMPLEMENTED"
+}

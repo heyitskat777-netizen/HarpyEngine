@@ -3,8 +3,130 @@
 import sqlalchemy as sa
 
 from girlframe.database.base import Base
+from girlframe.database.m2_schema import define
+from girlframe.database.m3_schema import define as define_m3
 
 metadata = Base.metadata
+m2 = define(metadata)
+m3 = define_m3(metadata)
+coordination_revisions = sa.Table(
+    "creation_coordination_revisions",
+    metadata,
+    sa.Column("campaign_id", sa.Text, primary_key=True),
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("revision", sa.Integer, primary_key=True),
+    sa.Column("author_id", sa.Text, nullable=False),
+    sa.Column("owner_id", sa.Text, nullable=False),
+    sa.Column("role", sa.Text, nullable=False),
+    sa.Column("context_json", sa.Text, nullable=False),
+    sa.Column("choice_json", sa.Text, nullable=False),
+    sa.Column("state", sa.Text, nullable=False),
+    sa.Column("event_id", sa.ForeignKey("events.id"), nullable=False, unique=True),
+    sa.ForeignKeyConstraint(
+        ["campaign_id", "author_id"], ["campaign_members.campaign_id", "campaign_members.user_id"]
+    ),
+    sa.ForeignKeyConstraint(
+        ["campaign_id", "owner_id"], ["characters.campaign_id", "characters.user_id"]
+    ),
+)
+creation_reviews = sa.Table(
+    "creation_review_revisions",
+    metadata,
+    sa.Column("campaign_id", sa.Text, primary_key=True),
+    sa.Column("user_id", sa.Text, primary_key=True),
+    sa.Column("revision", sa.Integer, primary_key=True),
+    sa.Column("dependency_hash", sa.Text, nullable=False),
+    sa.Column("body_json", sa.Text, nullable=False),
+    sa.Column("event_id", sa.ForeignKey("events.id"), nullable=False, unique=True),
+    sa.ForeignKeyConstraint(
+        ["campaign_id", "user_id"], ["characters.campaign_id", "characters.user_id"]
+    ),
+)
+creation_drafts = sa.Table(
+    "creation_drafts",
+    metadata,
+    sa.Column("campaign_id", sa.Text, primary_key=True),
+    sa.Column("user_id", sa.Text, primary_key=True),
+    sa.Column("revision", sa.Integer, primary_key=True),
+    sa.Column("character_revision", sa.Integer, nullable=False),
+    sa.Column("event_id", sa.ForeignKey("events.id"), nullable=False, unique=True),
+    sa.Column("schema_version", sa.Integer, nullable=False, server_default="1"),
+    sa.Column("body_json", sa.Text, nullable=False),
+    sa.ForeignKeyConstraint(
+        ["campaign_id", "user_id"], ["characters.campaign_id", "characters.user_id"]
+    ),
+)
+bond_revisions = sa.Table(
+    "creation_bond_revisions",
+    metadata,
+    sa.Column("campaign_id", sa.Text, primary_key=True),
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("revision", sa.Integer, primary_key=True),
+    sa.Column("source_id", sa.Text, nullable=False),
+    sa.Column("target_id", sa.Text, nullable=False),
+    sa.Column("source_revision", sa.Integer, nullable=False),
+    sa.Column("target_revision", sa.Integer, nullable=False),
+    sa.Column("mentor_assignment_id", sa.Text),
+    sa.Column("girl_playbook", sa.Text, nullable=False),
+    sa.Column("prompt", sa.Integer, nullable=False),
+    sa.Column("context", sa.Text, nullable=False),
+    sa.Column("state", sa.Text, nullable=False),
+    sa.Column("event_id", sa.ForeignKey("events.id"), nullable=False, unique=True),
+    sa.ForeignKeyConstraint(
+        ["campaign_id", "source_id"], ["characters.campaign_id", "characters.user_id"]
+    ),
+    sa.ForeignKeyConstraint(
+        ["campaign_id", "target_id"], ["characters.campaign_id", "characters.user_id"]
+    ),
+)
+pair_asset_revisions = sa.Table(
+    "pair_asset_revisions",
+    metadata,
+    sa.Column("campaign_id", sa.Text, primary_key=True),
+    sa.Column("bond_id", sa.Text, primary_key=True),
+    sa.Column("revision", sa.Integer, primary_key=True),
+    sa.Column("bond_revision", sa.Integer, nullable=False),
+    sa.Column("names_json", sa.Text, nullable=False),
+    sa.Column("event_id", sa.ForeignKey("events.id"), nullable=False, unique=True),
+    sa.ForeignKeyConstraint(
+        ["campaign_id", "bond_id", "bond_revision"],
+        [
+            "creation_bond_revisions.campaign_id",
+            "creation_bond_revisions.id",
+            "creation_bond_revisions.revision",
+        ],
+    ),
+)
+shared_setup_revisions = sa.Table(
+    "shared_setup_revisions",
+    metadata,
+    sa.Column("campaign_id", sa.Text, primary_key=True),
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("revision", sa.Integer, primary_key=True),
+    sa.Column("source_id", sa.Text, nullable=False),
+    sa.Column("target_id", sa.Text, nullable=False),
+    sa.Column("source_revision", sa.Integer, nullable=False),
+    sa.Column("target_revision", sa.Integer, nullable=False),
+    sa.Column("kind", sa.Text, nullable=False),
+    sa.Column("choice_json", sa.Text, nullable=False),
+    sa.Column("constraint_token", sa.Text),
+    sa.Column("state", sa.Text, nullable=False),
+    sa.Column("event_id", sa.ForeignKey("events.id"), nullable=False, unique=True),
+    sa.ForeignKeyConstraint(
+        ["campaign_id", "source_id"], ["characters.campaign_id", "characters.user_id"]
+    ),
+    sa.ForeignKeyConstraint(
+        ["campaign_id", "target_id"], ["characters.campaign_id", "characters.user_id"]
+    ),
+)
+setup_revisions = sa.Table(
+    "campaign_setup_revisions",
+    metadata,
+    sa.Column("campaign_id", sa.ForeignKey("campaigns.id"), primary_key=True),
+    sa.Column("revision", sa.Integer, primary_key=True),
+    sa.Column("body_json", sa.Text, nullable=False),
+    sa.Column("event_id", sa.ForeignKey("events.id"), nullable=False, unique=True),
+)
 campaigns = sa.Table(
     "campaigns",
     metadata,

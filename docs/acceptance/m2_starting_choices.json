@@ -1,0 +1,288 @@
+{
+  "schema_version": 1,
+  "scope": "M2 first creation step only; no playable activation or Plays",
+  "command": ".venv/bin/pytest -q --junitxml=var/m2-starting-choices-pytest.xml",
+  "evidence": "reports/M2_ACCEPTANCE.md",
+  "cases": [
+    {
+      "id": "START-01",
+      "title": "Source-anchored catalogues and official JANUS alias",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation.py::test_source_catalog_and_starting_identities",
+        "tests/test_creation.py::test_frame_assets_and_owner_approved_janus_alias"
+      ],
+      "manual_status": "NOT_RUN_LIVE_COVERED_OFFLINE"
+    },
+    {
+      "id": "START-02",
+      "title": "Legal choices, Void and Pair authority",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation.py::test_invalid_assets_duplicates_void_and_pair_authority"
+      ],
+      "manual_status": "NOT_RUN_LIVE_COVERED_OFFLINE"
+    },
+    {
+      "id": "START-03",
+      "title": "Private persistence, replay, concurrent saves and isolation",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation.py::test_owner_save_restart_history_and_private_audit",
+        "tests/test_creation.py::test_stale_profile_concurrency_and_two_campaign_isolation",
+        "tests/test_creation.py::test_creation_rollback_revocation_and_private_backup"
+      ],
+      "manual_status": "NOT_RUN_LIVE_COVERED_OFFLINE"
+    },
+    {
+      "id": "START-04",
+      "title": "Native controls, owner authorization, stale forms and atomic failure",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation.py::test_native_wizard_restores_choices_and_rejects_other_owner",
+        "tests/test_creation.py::test_builder_save_callback_and_stale_modal",
+        "tests/test_creation.py::test_creation_rollback_revocation_and_private_backup"
+      ],
+      "manual_status": "NOT_RUN_LIVE_COVERED_OFFLINE"
+    },
+    {
+      "id": "START-05",
+      "title": "Database upgrade and offline schema checks",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_database.py::test_alembic_migrations_upgrade_check_and_downgrade"
+      ],
+      "manual_status": "OWNER_DEFERRED_TEST"
+    },
+    {
+      "id": "DETAIL-01",
+      "title": "Playbook applicability, custom labels and legacy JSON",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation.py::test_playbook_details_branch_validation_and_legacy_json"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "DETAIL-02",
+      "title": "Private selectors, modal details, authorization and restart reads",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_creation.py::test_playbook_detail_controls_save_and_private_restore"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "BOND-01",
+      "title": "Source branch rules and blocked Handler-only Mentor",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_bonds.py::test_starting_branch_and_source_depth"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "BOND-02",
+      "title": "Two-party authority, private immutable history and replay",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_bonds.py::test_two_party_decisions_replay_history_and_privacy",
+        "tests/test_bonds.py::test_recipient_withdrawal_and_revoked_replay"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "BOND-03",
+      "title": "Profile staleness, revocation and campaign isolation",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_bonds.py::test_profile_staleness_revocation_and_isolation"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "BOND-04",
+      "title": "Concurrency, atomic rollback, backup and restart",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_bonds.py::test_concurrent_decisions_atomic_failure_and_restart_backup"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "BOND-05",
+      "title": "Private native review/acceptance and pagination",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_bonds.py::test_private_ui_review_and_recipient_accept",
+        "tests/test_bonds.py::test_private_pagination_cursor_has_no_duplicates"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "SETUP-01",
+      "title": "NPC roles, Oldgen count and legacy drafts",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_handler_setup.py::test_npc_choice_branches_optional_feelings_and_legacy",
+        "tests/test_handler_setup.py::test_npc_native_controls_private_save_and_stale_form"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "SETUP-02",
+      "title": "Explicit authority and revoked replay",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_handler_setup.py::test_appointment_authority_and_revocation_including_replay",
+        "tests/test_handler_setup.py::test_handler_account_is_outside_starting_pilot_bond_roster"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "SETUP-03",
+      "title": "Starting hierarchy and Princess",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_handler_setup.py::test_status_roster_princess_revision_and_unique_ranks"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "SETUP-04",
+      "title": "Mentor authority, mutual agreement and fresh nomination tokens",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_handler_setup.py::test_handler_mentor_nomination_mutual_setup_and_reassignment"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "SETUP-05",
+      "title": "Atomicity, immutable history, backup and campaign isolation",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_handler_setup.py::test_setup_transaction_rollback_concurrency_immutability_and_backup",
+        "tests/test_handler_setup.py::test_migration_preserves_existing_0005_proposals"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "SETUP-06",
+      "title": "Owner-bound native rank review and explicit confirmation",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_handler_setup.py::test_setup_native_review_confirm_and_owner_guards"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "PAIR-01",
+      "title": "Pair names vs owner descriptions and illegal options",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_pair_assets.py::test_pair_option_and_owner_authority"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "PAIR-02",
+      "title": "Provenance, stale selection, withdrawal and privacy",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_pair_assets.py::test_owner_descriptions_staleness_withdrawal_and_private_restart"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "PAIR-03",
+      "title": "Concurrency, replay, atomicity, immutable backup and isolation",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_pair_assets.py::test_pair_concurrency_rollback_immutability_isolation_and_backup"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "PAIR-04",
+      "title": "Native Pair selection and read-only owner names",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_pair_assets.py::test_native_pair_selection_owner_descriptions_and_member_guards"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "FRAME-01",
+      "title": "Verified baselines, serialization and rejected Core forgery",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_pair_assets.py::test_verified_frame_baselines_and_roundtrip"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "SHARED-01",
+      "title": "All Court roles and exact four/one allocation",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_shared_setup.py::test_court_all_roles_exact_four_one_and_owner_provenance",
+        "tests/test_shared_setup.py::test_court_invalid_source_recipient_choices_and_private_admin_denial"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "SHARED-02",
+      "title": "Agreement, withdrawal, revoked replay and stale profiles",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_shared_setup.py::test_shared_decline_withdraw_replay_and_revocation",
+        "tests/test_shared_setup.py::test_setup_request_pagination_and_profile_change"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "SHARED-03",
+      "title": "Mentor-authorized callsign, privacy and fresh nomination",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_shared_setup.py::test_mentor_callsign_authority_mutual_agreement_and_assignment_staleness",
+        "tests/test_shared_setup.py::test_native_mentor_name_and_private_builder_provenance"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "SHARED-04",
+      "title": "Effective Mentor Status exception and unresolved stale order",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_shared_setup.py::test_effective_status_mentor_override_handler_and_stale_order"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "SHARED-05",
+      "title": "Atomicity, concurrency, immutable backup and isolation",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_shared_setup.py::test_shared_rollback_concurrency_history_backup_and_isolation"
+      ],
+      "manual_status": "NOT_RUN"
+    },
+    {
+      "id": "SHARED-06",
+      "title": "Native Court selector and request decisions",
+      "automated_status": "PASS",
+      "tests": [
+        "tests/test_shared_setup.py::test_native_court_and_callsign_requests"
+      ],
+      "manual_status": "NOT_RUN"
+    }
+  ],
+  "complete_builder": {
+    "BUILDER-01": "NOT_RUN",
+    "BUILDER-02": "NOT_RUN",
+    "BUILDER-03": "NOT_RUN",
+    "BUILDER-04": "NOT_RUN"
+  }
+}

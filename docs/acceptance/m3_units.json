@@ -1,0 +1,651 @@
+{
+  "milestone": "M3",
+  "rules_coverage": "RULES_SUBSET",
+  "units": [
+    {
+      "id": "M3-UNIT-1A",
+      "name": "Asset Installment purchase and original receipt",
+      "status": "IMPLEMENTED_AUTOMATED",
+      "source": [
+        {
+          "document": "rulebook",
+          "pdf": 16,
+          "printed": 14,
+          "topic": "Asset Installment"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 15,
+          "printed": 13,
+          "topic": "Asset limits"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 74,
+          "printed": 72,
+          "topic": "WYVERN Enormous exception"
+        }
+      ],
+      "campaign_ruling": "unpriced-standard-requisitions",
+      "registry_entries": [
+        "core.core.assets",
+        "core.core.frame-requisitions",
+        "core.core.permissions-requisitions"
+      ],
+      "contract": {
+        "trigger": "An actual Pilot explicitly confirms a paid Asset Installment and describes its installation.",
+        "actor_type": "The human owner of the actual current Girl and Frame.",
+        "pre_roll_sources": [],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "diceless": [
+            "One printed Asset from an enabled base Frame or one owner-authored ordinary Asset.",
+            "At the Frame cap choose one actual replaceable non-Void Frame Asset."
+          ]
+        },
+        "choice_ownership": "Purchasing human chooses source, details, actual installation, legal replacement and payment confirmation.",
+        "target_policy": "Own current character and Frame only. Historical receipts remain private to the original human without granting current purchase authority.",
+        "post_roll_effects": [
+          "Debit exactly one available Permission under the owner-approved campaign price.",
+          "Install exactly one ordinary undamaged non-Void Frame Asset with a distinct ID.",
+          "Preserve the original character/Frame purchase receipt and immutable event/state history atomically."
+        ],
+        "mandatory_followups": [],
+        "handler_or_gm_intervention": "No invented approval step for the printed purchase. Unsupported rules and existing immediate consequences remain blocking.",
+        "test_fixture_ids": [
+          "tests/rules/test_requisitions.py",
+          "tests/rules/test_requisition_service.py",
+          "tests/rules/test_installation_history.py",
+          "tests/rules/test_asset_properties.py"
+        ]
+      },
+      "scope_limit": "Complete acquisition and original receipt workflow only. Full Requisitions, acquired ability effects, careers and independent/player acceptance remain separate.",
+      "independent_review": "NOT_RUN",
+      "human_acceptance": "NOT_RUN",
+      "checks": [
+        {
+          "branch": "All enabled base Frame selections and JANUS-B alias",
+          "tests": [
+            "test_each_printed_base_frame_asset_and_janus_b_label_is_selectable"
+          ]
+        },
+        {
+          "branch": "Custom ordinary Asset; no implicit playbook, Void or intrinsic grant",
+          "tests": [
+            "test_custom_installation_is_an_asset_and_does_not_grant_playbooks_intrinsic_rules_or_void"
+          ]
+        },
+        {
+          "branch": "One Permission, no-funds rejection, caps, Void/intrinsic protection",
+          "tests": [
+            "test_asset_cap_requires_explicit_non_void_replacement_in_actual_frame_family",
+            "test_wyvern_purchases_fill_five_ordinary_slots_without_replacing_enormous"
+          ]
+        },
+        {
+          "branch": "Owner, actual profile/character/Frame, pause, pending Play/lock and scoped release checks",
+          "tests": [
+            "test_wrong_owner_policy_revocation_and_stale_native_form_do_not_charge",
+            "test_changed_frame_body_or_profile_cannot_reuse_purchase_preview",
+            "test_pause_pending_play_and_unrestored_chat_block_purchase_without_resource_effects"
+          ]
+        },
+        {
+          "branch": "Atomic application, same-command replay, concurrent stale requests, rollback",
+          "tests": [
+            "test_source_payment_acquisition_and_private_receipt_are_atomic_durable_and_replay_safe",
+            "test_concurrent_same_purchase_is_exactly_once_and_distinct_stale_purchase_does_not_charge",
+            "test_rollback_after_history_event_restores_payment_asset_receipt_and_command"
+          ]
+        },
+        {
+          "branch": "Original details after changed Asset/Frame/profile/character, private saved reads under pause/missing registry",
+          "tests": [
+            "test_original_receipt_survives_change_without_granting_purchase_rights",
+            "test_saved_installation_is_readable_when_paused_gates_revoked_and_registry_missing"
+          ]
+        },
+        {
+          "branch": "Source proof, participant/campaign privacy, revocation and real restore/rebuild",
+          "tests": [
+            "test_changed_receipt_cannot_forge_an_original_purchase_source_or_reader",
+            "test_original_purchase_is_private_to_member_and_campaign_without_admin_override",
+            "test_original_receipt_survives_backup_restore_and_canonical_rebuild_without_public_leak"
+          ]
+        },
+        {
+          "branch": "Native source/payment confirmation, paginated original details and fresh authority on every page",
+          "tests": [
+            "test_native_asset_catalog_is_paginated_owner_bound_and_requires_explicit_payment",
+            "test_native_history_reopens_after_character_change_and_reads_each_page_with_current_authority",
+            "test_native_receipt_preserves_long_escaped_account_in_discord_sized_pages"
+          ]
+        }
+      ],
+      "evidence": [
+        {
+          "command": ".venv/bin/pytest -q tests/rules/test_requisitions.py tests/rules/test_requisition_service.py tests/rules/test_installation_history.py tests/rules/test_asset_properties.py --junitxml=var/m3-unit-1a-focused.xml",
+          "result": "47 passed in 11.93s",
+          "artifact": "var/m3-unit-1a-focused.xml"
+        },
+        {
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-unit-1a-full.xml",
+          "result": "1388 passed in 387.42s",
+          "artifact": "var/m3-unit-1a-full.xml",
+          "git_commit": "af0a2213a3a23f231f0b5f002197d545ffb0b88e"
+        },
+        {
+          "command": "ruff check; ruff format --check; mypy",
+          "result": "Passed; 382 Python files formatted; 197 source files typed"
+        }
+      ],
+      "code_commit": "af0a2213a3a23f231f0b5f002197d545ffb0b88e",
+      "source_check": "All 81 base-Frame catalogue Asset names matched normalized text in the actual nine rulebook sections; JANUS-B uses JANUS."
+    },
+    {
+      "id": "M3-UNIT-1B",
+      "name": "Creature Comforts purchase, actual scene and Asset",
+      "status": "IMPLEMENTED_AUTOMATED",
+      "source": [
+        {
+          "document": "rulebook",
+          "pdf": 16,
+          "printed": 14,
+          "topic": "Creature Comforts"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 27,
+          "printed": 25,
+          "topic": "Go Off-Duty and scene choices"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 15,
+          "printed": 13,
+          "topic": "Girl Asset limit"
+        }
+      ],
+      "campaign_rulings": [
+        "unpriced-standard-requisitions",
+        "comforts-qualification",
+        "comforts-stacking",
+        "comforts-decline"
+      ],
+      "registry_entries": [
+        "core.core.girl-requisitions",
+        "core.core.permissions-requisitions",
+        "play.basic.go_off_duty"
+      ],
+      "scope_limit": "Paid benefit, actual qualifying roll, owned scene/attendance, legal Girl Asset or explicit decline, and original receipt. Full economy, world travel, careers, future playbook runtimes and independent/player acceptance remain separate.",
+      "independent_review": "NOT_RUN",
+      "human_acceptance": "NOT_RUN",
+      "contract": {
+        "trigger": "An actual purchasing Girl next completes an ordinary Go Off-Duty roll with final total at least eight.",
+        "actor_type": "Actual original purchasing Girl; each scene human supplies only their own attendance.",
+        "pre_roll_sources": [
+          "Original paid purchase must exist in raw-roll state.",
+          "Actual period/character, immutable raw/final receipt and post-roll modifiers."
+        ],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [
+          "Use the actual final ordinary Go Off-Duty total; this benefit supplies no extra roll modifier."
+        ],
+        "tier_options": {
+          "waiting": [
+            "Low result or Void Observation retains the paid request."
+          ],
+          "eligible": [
+            "Original owner explicitly declines without refund or plays an actual improvement scene."
+          ],
+          "grant": [
+            "All actual humans attest, then owner writes one legal ordinary Girl Asset reflecting the scene."
+          ]
+        },
+        "choice_ownership": "Purchaser owns payment, scene/roles/details, decline and Asset; every other participating human owns their own attendance.",
+        "target_policy": "Original Girl only; known actual scene roles at a surviving recorded location, with existing positions respected. A city is allowed; recording the scene grants no movement.",
+        "post_roll_effects": [
+          "Charge one Permission atomically at purchase; no Asset then.",
+          "Bind each paid source once to the actual next qualifying roll.",
+          "After actual scene/attendance, install one undamaged non-Void Girl Asset under the cap, or consume explicit decline without refund."
+        ],
+        "mandatory_followups": [
+          "Qualified saved opportunity requires its actual owned scene/grant or explicit decline before recovery can falsely complete."
+        ],
+        "handler_or_gm_intervention": "Humans describe the actual scene; no invented NPC participation, transportation, consent or mechanical reward. Unsupported consequences stay gated.",
+        "test_fixture_ids": [
+          "tests/rules/test_comforts.py",
+          "tests/rules/test_comfort_service.py",
+          "tests/rules/test_comfort_receipts.py"
+        ]
+      },
+      "checks": [
+        {
+          "branch": "Payment source, rollback, concurrent/restarted replay and private real restore/rebuild",
+          "tests": [
+            "test_paid_request_rolls_back_then_concurrent_retry_commits_one_charge_and_original_receipt",
+            "test_original_paid_receipt_survives_real_backup_restore_rebuild_and_private_export"
+          ]
+        },
+        {
+          "branch": "Actual final post-Tag eight-plus result, original pre-roll purchase, no retroactive qualification",
+          "tests": [
+            "test_actual_paid_purchase_qualifies_once_only_after_actual_named_final_roll",
+            "test_purchase_after_known_roll_does_not_retroactively_claim_it",
+            "test_actual_post_roll_tag_modifier_can_qualify_or_remove_the_paid_opportunity",
+            "test_paid_after_known_aborted_roll_cannot_retroactively_qualify_on_resume"
+          ]
+        },
+        {
+          "branch": "Low roll, Observation, separate purchases and real two-period continuity",
+          "tests": [
+            "test_low_roll_retains_paid_purchase_without_a_scene_opportunity_or_asset",
+            "test_actual_observation_replacement_preserves_paid_comforts_for_a_future_ordinary_roll",
+            "test_two_paid_sources_qualify_separately_and_optional_choices_block_false_recovery",
+            "test_paid_low_roll_source_survives_real_period_end_mission_and_next_period_qualifier"
+          ]
+        },
+        {
+          "branch": "Actual scene, own attendance per human, legal existing positions, city location and actual Asset",
+          "tests": [
+            "test_scene_participants_own_attendance_and_do_not_receive_private_sheet_or_cost_details",
+            "test_one_human_controlling_two_real_roles_does_not_need_a_second_invented_response",
+            "test_actual_world_role_must_already_be_at_the_selected_surviving_location",
+            "test_native_improvement_scene_can_use_a_city_and_complete_its_actual_asset_grant"
+          ]
+        },
+        {
+          "branch": "Decline, safety, cap/Void protection, stale body, scoped policy and exactly-once grant",
+          "tests": [
+            "test_owner_may_decline_optional_opportunity_without_a_refund_or_scene",
+            "test_scene_attendance_is_ooc_during_pause_but_asset_grant_waits_for_resume",
+            "test_comforts_gift_respects_girl_cap_and_never_replaces_a_void_or_frame_asset",
+            "test_same_body_draft_edit_preserves_owed_benefit_but_replacement_body_cannot_take_it",
+            "test_economy_policy_revocation_blocks_even_an_owned_qualified_gift_without_erasing_it",
+            "test_concurrent_same_gift_is_once_and_stale_distinct_gift_does_not_add_an_asset"
+          ]
+        },
+        {
+          "branch": "Original paid receipts before/after qualification, ownership/source/campaign/membership checks and complete native paging",
+          "tests": [
+            "test_paid_receipt_does_not_grant_access_to_other_humans_admins_or_campaigns",
+            "test_original_payment_source_cannot_be_substituted_for_another_receipt_or_reader",
+            "test_native_waiting_paid_receipt_rechecks_membership_instead_of_using_cached_private_account",
+            "test_actual_qualified_opportunity_keeps_its_separate_paid_receipt_accessible",
+            "test_paid_receipt_long_escaped_request_is_complete_paginated_and_owned"
+          ]
+        }
+      ],
+      "evidence": [
+        {
+          "command": ".venv/bin/pytest -q tests/rules/test_comforts.py tests/rules/test_comfort_service.py tests/rules/test_comfort_receipts.py tests/rules/test_installation_history.py --junitxml=var/m3-unit-1b-final-focused.xml",
+          "result": "61 passed in 36.36s",
+          "artifact": "var/m3-unit-1b-final-focused.xml"
+        },
+        {
+          "command": ".venv/bin/pytest -q tests/rules/test_comfort_receipts.py --junitxml=var/m3-unit-1b-payment.xml",
+          "result": "10 passed in 4.99s (before the later city-path case)",
+          "artifact": "var/m3-unit-1b-payment.xml"
+        },
+        {
+          "command": ".venv/bin/pytest -q --junitxml=var/m3-unit-1b-full-final.xml",
+          "result": "1399 passed in 389.68s",
+          "artifact": "var/m3-unit-1b-full-final.xml",
+          "git_commit": "620e87987daca80b87409cbd46000e52732b867e"
+        },
+        {
+          "command": "ruff check; ruff format --check; mypy",
+          "result": "Passed; 383 Python files formatted; 197 source files typed"
+        }
+      ],
+      "code_commit": "620e87987daca80b87409cbd46000e52732b867e",
+      "source_correction": "Removed an unprinted Foundation-base-only scene restriction. An actual surviving city/location is legal; existing position and human-attendance checks still apply."
+    },
+    {
+      "id": "M3-UNIT-2A",
+      "name": "Put Someone Beneath You and required actual consequences",
+      "status": "IN_PROGRESS",
+      "source": [
+        {
+          "document": "rulebook",
+          "pdf": 22,
+          "printed": 20,
+          "topic": "Put Someone Beneath You"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 11,
+          "printed": 9,
+          "topic": "Tag rejection"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 13,
+          "printed": 11,
+          "topic": "Bonds"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 17,
+          "printed": 15,
+          "topic": "Minor Punishments"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 29,
+          "printed": 27,
+          "topic": "Defeat"
+        }
+      ],
+      "campaign_rulings": [
+        "beneath-private-detail-ownership",
+        "temporary-requisition-restoration"
+      ],
+      "registry_entries": [
+        "play.basic.put_someone_beneath_you",
+        "core.core.minor-punishments"
+      ],
+      "implemented": [
+        "Actual Heat roll and shared scene lock; original actor/target and fresh policy/membership checks.",
+        "Exact mid/high/low choices, reversed low-result owner, actual Tag/Status/PC/Handler/NPC Bond changes.",
+        "Original-setter consent gates for locked Tags; private owned decisions and inbox.",
+        "Affected owner selects private Bond/Asset; actual damage and outside-Frame Helplessness.",
+        "Pin response is human-authored or an actual child Play with its own receipt; no automatic escape.",
+        "Real on-scene Punishment, source-proved followed-order authority, Handler consultation and downstream discipline integration.",
+        "Temporary removal/restoration for actual implemented Requisitions, preserving source, damage, character and Frame.",
+        "Last usable Frame removal has source-locked Handler context review; actual piloting battle loss creates required Defeat work and keeps the root held."
+      ],
+      "blocking_dependencies": [
+        "Last Frame Asset counter-damage requires a complete actual Defeat workflow.",
+        "Full supported target roles and cross-playbook/lifecycle effects remain part of agreed M3.",
+        "Four Severe Punishments, other Requisition types and remaining Void/discipline dependencies are unfinished."
+      ],
+      "independent_review": "NOT_RUN",
+      "human_acceptance": "NOT_RUN",
+      "evidence": [
+        {
+          "command": "pytest -q tests/rules/test_beneath_discipline.py",
+          "result": "4 passed in 3.28s",
+          "artifact": "var/m3-unit-2a-order.xml"
+        },
+        {
+          "command": "pytest -q tests/rules/test_privileges.py tests/rules/test_punishments.py tests/rules/test_punishment_service.py tests/rules/test_comforts.py tests/rules/test_comfort_service.py",
+          "result": "70 passed in 41.09s",
+          "artifact": "var/m3-privileges-regression-fixed.xml"
+        },
+        {
+          "command": "pytest -q --junitxml=var/m3-social-and-privileges-full.xml",
+          "result": "1442 passed in 396.12s; before the later Frame-loss fix and final UI refinements",
+          "artifact": "var/m3-social-and-privileges-full.xml"
+        },
+        {
+          "command": "pytest -q current social, discipline, privilege and Off-Duty discipline tests",
+          "result": "87 passed in 41.09s",
+          "artifact": "var/m3-social-final-focused.xml"
+        },
+        {
+          "command": "pytest -q native social, service and privilege tests",
+          "result": "18 passed in 14.69s",
+          "artifact": "var/m3-social-native-final.xml"
+        },
+        {
+          "command": ".venv/bin/pytest -q --tb=short --junitxml=var/m3-social-final-full.xml",
+          "result": "1450 passed in 399.12s; zero failures/errors/skips",
+          "artifact": "var/m3-social-final-full.xml",
+          "git_commit": "402a6f8eab5840d5dc8f8f5705cf680a62acbef3"
+        }
+      ],
+      "contract": {
+        "trigger": "An actual Girl tries to put another Girl beneath her; the human confirms the trigger and chooses Heat before the roll.",
+        "actor_type": "Current human-controlled Pilot and another actual scene Girl. Other printed actor ports remain outstanding.",
+        "pre_roll_sources": [
+          "Original actor/target incarnations, actual scene participation and current release approval.",
+          "Current sheet, legal Heat/Identity sources and original target snapshot.",
+          "Any counter-Punishment order needs its original addressed recipient and immutable completed owned Receive Orders response."
+        ],
+        "roll_kind": "2d6",
+        "allowed_modifiers": [
+          "Human-owned Heat spending and applicable source-legal pre-roll effects.",
+          "Existing owned Tag windows and actual Bond adjustments. Locked rejection requires original-setter permission."
+        ],
+        "tier_options": {
+          "mid": [
+            "Exactly two distinct base effects: Tag, lower Status, weaken a Bond."
+          ],
+          "high": [
+            "One base effect, then one extra: lock Tag rejection to consent, pin and ask for a response, or inflict a legally authorized Punishment."
+          ],
+          "low": [
+            "The actual target chooses one base/extra effect against the original actor, or damages one actual Asset."
+          ]
+        },
+        "choice_ownership": "The printed chooser owns effect/Tag selection. The affected original human selects private Bond/Asset details under the recorded ruling. The pinned human owns their response. Unspecified Punishment details stay inflictor-owned; printed exceptions override defaults.",
+        "target_policy": "A different original Girl in the joined scene. Fresh membership, original character bindings, held scene and scoped release checks apply. A controller/account alias cannot grant another actor resources.",
+        "post_roll_effects": [
+          "Actual Heat roll and shared scene lock; original actor/target and fresh policy/membership checks.",
+          "Exact mid/high/low choices, reversed low-result owner, actual Tag/Status/PC/Handler/NPC Bond changes.",
+          "Original-setter consent gates for locked Tags; private owned decisions and inbox.",
+          "Affected owner selects private Bond/Asset; actual damage and outside-Frame Helplessness.",
+          "Pin response is human-authored or an actual child Play with its own receipt; no automatic escape.",
+          "Real on-scene Punishment, source-proved followed-order authority, Handler consultation and downstream discipline integration.",
+          "Temporary removal/restoration for actual implemented Requisitions, preserving source, damage, character and Frame.",
+          "Last usable Frame removal has source-locked Handler context review; actual piloting battle loss creates required Defeat work and keeps the root held."
+        ],
+        "mandatory_followups": [
+          "Last Frame Asset counter-damage requires a complete actual Defeat workflow.",
+          "Full supported target roles and cross-playbook/lifecycle effects remain part of agreed M3.",
+          "Core Severe Punishment workflows now have bounded source evidence; broader role consumers, future Requisitions and remaining original-ending continuations remain unfinished.",
+          "Actual Helplessness, Void thresholds, Paired Heat and other immediate linked consequences must finish through supported source-backed consumers."
+        ],
+        "handler_or_gm_intervention": "Current Handler supplies actual consultation and factual context where required. Human decisions remain owned; generic acknowledgement or unsupported pending work does not complete the Play.",
+        "test_fixture_ids": [
+          "tests/rules/test_beneath.py",
+          "tests/rules/test_beneath_service.py",
+          "tests/rules/test_beneath_permissions.py",
+          "tests/rules/test_beneath_discipline.py",
+          "tests/rules/test_beneath_ui.py",
+          "tests/rules/test_privileges.py",
+          "tests/rules/test_frame_loss_discipline.py"
+        ]
+      },
+      "code_commit": "402a6f8eab5840d5dc8f8f5705cf680a62acbef3",
+      "publication": {
+        "status": "PUSHED",
+        "remote_branch": "codex/m3-rules",
+        "remote_baseline": "5323f3b1f9f14cbb4fe700847bc428e41413ddbd",
+        "portable_checkpoint": "var/m3-social-checkpoint.bundle",
+        "remote_ci": "NOT_RUN",
+        "pushed_checkpoint": "57392d0bfd6cfc2d93df480e524f16b86c38675e",
+        "historical_error": "Git push: fatal error in commit_refs; Git API ref update: HTTP 500.",
+        "note": "The earlier ref-write failure was followed by a successful normal push. Unit implementation remains IN_PROGRESS; this does not deploy or certify gameplay."
+      }
+    },
+    {
+      "id": "M3-UNIT-3-HANDLER-CREATION",
+      "name": "Original Handler creation and fresh generation",
+      "status": "IMPLEMENTED_AUTOMATED",
+      "source": [
+        {
+          "document": "rulebook",
+          "pdf": 124,
+          "printed": 122,
+          "topic": "Handler starting variants"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 126,
+          "printed": 124,
+          "topic": "Handler starting variants"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 128,
+          "printed": 126,
+          "topic": "Handler starting variants"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 131,
+          "printed": 129,
+          "topic": "Handler starting variants"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 134,
+          "printed": 132,
+          "topic": "Handler starting variants"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 137,
+          "printed": 135,
+          "topic": "Handler starting variants"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 139,
+          "printed": 137,
+          "topic": "Handler starting variants"
+        },
+        {
+          "document": "rulebook",
+          "pdf": 141,
+          "printed": 139,
+          "topic": "Handler starting variants"
+        }
+      ],
+      "contract": {
+        "trigger": "The actual appointed human creates the first Handler persona or a fresh persona after an actual body ending.",
+        "actor_type": "Actual Handler human appointment and distinct prospective persona, plus the actual original Girls/NPC controllers who own shared history.",
+        "pre_roll_sources": [],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "diceless": [
+            "Seven printed starting variants; exact owned gear, descriptions, Bonds, history, rank and starting phrases."
+          ]
+        },
+        "choice_ownership": "Each original human approves only their exact shared proposal; private details remain private. Same-human separate-role NPC consent remains explicit.",
+        "target_policy": "Original actual ActorRef/character/persona and frozen exact human controllers; new profiles and replacements cannot inherit.",
+        "post_roll_effects": [
+          "Activate the exact original generation and actual agreed starting choices once.",
+          "Preserve established stronger same-body relationships on first legacy adoption only.",
+          "After any Handler archive require fresh choices and agreements; no predecessor inheritance."
+        ],
+        "mandatory_followups": [
+          "Keep actual source-owned agreements and required consequences pending until their real human responses/effects."
+        ],
+        "handler_or_gm_intervention": "Use actual printed/delegated decision ownership; no bot-selected consent or independent certification.",
+        "test_fixture_ids": [
+          "tests/rules/test_handler_creation.py",
+          "tests/rules/test_handler_creation_ui.py",
+          "tests/rules/test_handler_generations.py"
+        ]
+      },
+      "scope_limit": "Creation only; remaining Handler abilities, general Off-Duty old-body scene cleanup and first-legacy cast alias audit are separate. Full automated checkpoint passes; independent/player acceptance remains pending.",
+      "independent_review": "NOT_RUN",
+      "human_acceptance": "NOT_RUN",
+      "checks": [
+        {
+          "branch": "Bounded workflow source/checkpoint checklist",
+          "tests": [
+            "test_all_seven_actual_starting_variants_save_reopen_agree_and_activate",
+            "test_activation_concurrent_retry_and_failure_after_canonical_write_are_atomic",
+            "test_actual_death_starts_new_generation_and_rejects_old_native_form",
+            "test_cached_old_menu_cannot_propose_new_generation_with_same_revision"
+          ]
+        }
+      ],
+      "evidence_report": "reports/M3_ACCEPTANCE.md",
+      "source_commit": "e9e528b077fac98435862cc62c13cd3bb25b4ecb",
+      "full_regression": {
+        "artifact": "var/m3-parallel-full-fixed.xml",
+        "passed": 1796,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 676.62
+      }
+    },
+    {
+      "id": "M3-UNIT-PAID-PRIVACY-HOME",
+      "name": "Paid Privacy and Visiting Home with original private receipts",
+      "status": "IMPLEMENTED_AUTOMATED",
+      "source": [
+        {
+          "document": "rulebook",
+          "pdf": 16,
+          "printed": 14,
+          "topic": "Privacy and Visiting Home"
+        }
+      ],
+      "contract": {
+        "trigger": "An actual current Girl pays for an eligible optional scene and later reaches its source-defined qualifying Off-Duty activation/result.",
+        "actor_type": "Original purchasing Girl, actual invited companion and actual controlled Foundation supervisor.",
+        "pre_roll_sources": [],
+        "roll_kind": "diceless",
+        "allowed_modifiers": [],
+        "tier_options": {
+          "diceless": [
+            "Privacy qualifies on the next actual activation; Home qualifies on a future actual ordinary final 8+. Owned proposal, attendance, ending or decline."
+          ]
+        },
+        "choice_ownership": "Each original participant and supervisor answers personally; one original Privacy participant may end participation. Actual OOC rules adjudication remains available.",
+        "target_policy": "Original actual ActorRef/character/persona and frozen exact human controllers; new profiles and replacements cannot inherit.",
+        "post_roll_effects": [
+          "Charge once and preserve immutable original receipt and known qualification.",
+          "Enter/end the actual scene only through original owned agreements; Home uses actual supervised co-travel and return.",
+          "Freeze Privacy receipt audience to the original two humans and deliver delayed receipts privately after closure.",
+          "Actual death ends protection by source and creates actual investigation/discipline without invented consent.",
+          "Temporary suspension defers an unspent benefit with original qualification proof, not a false consumed outcome."
+        ],
+        "mandatory_followups": [
+          "Keep actual source-owned agreements and required consequences pending until their real human responses/effects."
+        ],
+        "handler_or_gm_intervention": "Use actual printed/delegated decision ownership; no bot-selected consent or independent certification.",
+        "test_fixture_ids": [
+          "tests/rules/test_scene_requisitions.py",
+          "tests/rules/test_scene_requisition_service.py",
+          "tests/rules/test_privacy_trouble.py",
+          "tests/rules/test_privacy_game_delivery.py",
+          "tests/rules/test_economy_revocation.py"
+        ]
+      },
+      "scope_limit": "Named paid-scene workflows only. General travel, unrelated captivity/Harpy ports and all other economy consumers are not implied. Positive gameplay tests use synthetic scoped approval.",
+      "independent_review": "NOT_RUN",
+      "human_acceptance": "NOT_RUN",
+      "checks": [
+        {
+          "branch": "Bounded workflow source/checkpoint checklist",
+          "tests": [
+            "test_privacy_agreement_protection_and_delayed_audience",
+            "test_home_actual_final_eight_roll_supervision_and_physical_round_trip_are_owned",
+            "test_actual_inquiry_requires_survivor_owned_response_and_allows_refusal",
+            "test_actual_private_play_delivers_only_original_two_dms_after_room_closes_and_restart"
+          ]
+        }
+      ],
+      "evidence_report": "reports/M3_ACCEPTANCE.md",
+      "source_commit": "e9e528b077fac98435862cc62c13cd3bb25b4ecb",
+      "full_regression": {
+        "artifact": "var/m3-parallel-full-fixed.xml",
+        "passed": 1796,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 676.62
+      }
+    }
+  ],
+  "current_candidate_validation": {
+    "status": "PASS_AUTOMATED_WITHIN_DOCUMENTED_SCOPE",
+    "tests": 1983,
+    "seconds": 815.95,
+    "artifact": "var/m3-combat-harpy-full-fixed.xml",
+    "independent_review": "NOT_RUN",
+    "human_acceptance": "NOT_RUN",
+    "milestone_complete": false,
+    "source_commit": "57392d0bfd6cfc2d93df480e524f16b86c38675e"
+  }
+}

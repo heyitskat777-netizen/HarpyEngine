@@ -14,6 +14,7 @@ from pydantic import ValidationError
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.character_tags import DiscordCharacterTagGateway
+from girlframe.discord_adapter.labels import entity_label
 from girlframe.engine.drafts import DraftInput
 from girlframe.engine.playbooks import FRAME_TYPES, GIRL_TYPES, canonical_frame, canonical_girl
 from girlframe.services.character_tags import CharacterTagSynchronizer
@@ -35,7 +36,8 @@ def allow_action(guild: int | None, user: int, action: str, now: float | None = 
     start, count = _action_buckets.get(key, (current, 0))
     if current - start >= 10:
         start, count = current, 0
-    if count >= 3:
+    limit = 20 if action == "inbox_read" else 3
+    if count >= limit:
         return False
     _action_buckets[key] = (start, count + 1)
     _action_buckets.move_to_end(key)
@@ -88,6 +90,39 @@ def sheet_text(data: dict[str, Any] | None) -> str:
     def clean(value: object) -> str:
         return discord.utils.escape_markdown(discord.utils.escape_mentions(str(value)))
 
+    if data.get("status") == "active_m2_subset":
+        lines = [
+            "**" + clean(data["callsign"]) + " — active M2 sheet**",
+            clean(data["girl_playbook"]) + " / " + clean(data["frame_playbook"]),
+            "Status: " + str(data.get("rank", "unavailable")),
+        ]
+        sheet = data.get("canonical")
+        if sheet:
+            lines.extend(
+                [
+                    "Heat: " + str(sheet["heat"]) + " · Permissions: " + str(sheet["permissions"]),
+                    "Identities: "
+                    + ", ".join(
+                        clean(entity_label(x)) + (" [marked]" if x["marked"] else "")
+                        for x in sheet["identities"]
+                    ),
+                    "Assets: "
+                    + ", ".join(
+                        clean(x["name"]) + (" [damaged]" if x["damaged"] else "")
+                        for x in sheet["assets"]
+                    ),
+                    "Tags: "
+                    + ", ".join(
+                        clean(x["label"]) + (" [marked]" if x["marked"] else "")
+                        for x in sheet["tags"]
+                    ),
+                ]
+            )
+        else:
+            for key in ("frame_name", "appearance", "frame_appearance", "identities", "assets"):
+                if key in data:
+                    lines.append(key.replace("_", " ") + ": " + clean(data[key]))
+        return "\n".join(lines)[:1900]
     text = (
         "**Character draft — rules unverified**\n"
         f"ID: {data['id']} | revision {data['revision']}\n"

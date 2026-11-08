@@ -405,18 +405,25 @@ class CampaignLedger(OnboardingStore):
         with self.engine.connect() as connection:
             self._binding_matches(connection)
             sheets = connection.execute(
-                sa.select(t.characters.c.public_json).where(
+                sa.select(t.characters.c.user_id, t.characters.c.public_json).where(
                     t.characters.c.campaign_id == self.campaign_id
                 )
-            ).scalars()
+            ).all()
             receipts = connection.execute(
                 sa.select(t.rolls.c.receipt_json).where(
                     t.rolls.c.campaign_id == self.campaign_id, t.rolls.c.visibility == "campaign"
                 )
             ).scalars()
             safe = {"id", "callsign", "faces", "total", "rolled_utc", "kind", "visibility"}
+            from girlframe.services.m2_state import load_state, public_sheet
+
+            state = load_state(connection, self.campaign_id)
+            public = [
+                public_sheet(state.sheets[uid], state) if uid in state.sheets else json.loads(body)
+                for uid, body in sheets
+            ]
             return {
                 "schema_version": 1,
-                "sheets": [json.loads(s) for s in sheets],
+                "sheets": public,
                 "rolls": [{k: v for k, v in json.loads(r).items() if k in safe} for r in receipts],
             }
