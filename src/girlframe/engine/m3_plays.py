@@ -19,6 +19,7 @@ HEAT_IDS = (
     "dose_up",
     "princess_sex",
     "stim_sex",
+    "old_dog_new_pups",
 )
 ASSET_IDS = ("defeat",)
 

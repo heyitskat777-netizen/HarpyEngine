@@ -394,6 +394,12 @@ class GameService:
                 if additional:
                     prove_additional(self, c, state, sheet.owner)
                 data["additional_identities"] = [x.model_dump(mode="json") for x in additional]
+                from girlframe.engine.m3_oldgen import marked_maxims
+
+                data["marked_maxims"] = [
+                    {"id": key, "name": name, "marked": True}
+                    for key, name in marked_maxims(state, sheet.owner)
+                ]
             if sheet.owner == viewer.user_id and sheet.character_id:
                 from girlframe.engine.m3_actor_state import ActorRef
 
@@ -1115,6 +1121,9 @@ class GameService:
         def operation(c: Connection) -> dict[str, Any]:
             self.unpaused(c)
             state = load_state(c, self.store.campaign_id)
+            from girlframe.services.m3_oldgen import require_listened
+
+            require_listened(self, c, state, viewer)
             from girlframe.services.m3_princess_sex import child_source
 
             princess_child = child_source(self, c, viewer, state, prepared, channel)
@@ -1126,6 +1135,7 @@ class GameService:
             )
             princess_sex = None
             stim_sex = None
+            oldgen = None
             m3 = None
             beneath = None
             defeat = None
@@ -1244,6 +1254,10 @@ class GameService:
                 from girlframe.services.m3_am_scrutinized import prepare as prepare_am
 
                 am_scrutinized = prepare_am(self, c, viewer, state, prepared, channel)
+            if prepared.play == "old_dog_new_pups":
+                from girlframe.services.m3_oldgen import prepare as prepare_oldgen
+
+                oldgen = prepare_oldgen(self, c, viewer, state, prepared, channel)
             if prepared.play == "stim_sex":
                 from girlframe.services.m3_stim_sex import prepare as prepare_stim
 
@@ -1775,13 +1789,14 @@ class GameService:
                     dose_up,
                     princess_sex,
                     stim_sex,
+                    oldgen,
                     am_scrutinized,
                     am_code,
                     doctor,
                 )
             ):
                 raise WorkflowError("This implemented Play does not take a fictional actor target.")
-            if prepared.play in ("flirt", "put_someone_beneath_you"):
+            if prepared.play in ("flirt", "put_someone_beneath_you", "old_dog_new_pups"):
                 if (
                     prepared.target == mechanical_owner
                     or str(prepared.target) not in state.sheets
@@ -1878,6 +1893,17 @@ class GameService:
                 data["ankou_feedback_child"] = ankou_child
             if princess_child is not None:
                 data["princess_child"] = princess_child
+            if oldgen is not None:
+                data["oldgen"] = oldgen
+                data["participants"] = list(oldgen["table"])
+                data["tag_context"] = dict(
+                    actor=oldgen["actor"],
+                    handler=oldgen["handler"],
+                    gm_controller=oldgen["handler_controller"],
+                    table=list(oldgen["table"]),
+                    cast=oldgen["cast"],
+                    cast_sha256=oldgen["cast_sha256"],
+                )
             if stim_sex is not None:
                 data["stim_sex"] = stim_sex
                 data["participants"] = list(stim_sex["table"])
@@ -2327,6 +2353,7 @@ class GameService:
                 or dose_up is not None
                 or princess_sex is not None
                 or stim_sex is not None
+                or oldgen is not None
                 or princess_child is not None
                 or ankou_child is not None
                 or prepared.disposable_heat
@@ -2347,6 +2374,7 @@ class GameService:
                     or dose_up is not None
                     or princess_sex is not None
                     or stim_sex is not None
+                    or oldgen is not None
                     or princess_child is not None
                     or ankou_child is not None
                     or am_scrutinized is not None
@@ -2646,6 +2674,10 @@ class GameService:
 
                 enforcement_pre_roll(self, c, viewer, state, action)
                 action["data"]["enforcement"]["roll_event"] = str(uuid4())
+            if action["data"].get("oldgen"):
+                from girlframe.services.m3_oldgen import pre_roll as pre_roll_oldgen
+
+                pre_roll_oldgen(self, c, viewer, state, action)
             if action["data"].get("stim_sex"):
                 from girlframe.services.m3_stim_sex import pre_roll as pre_roll_stim
 
@@ -2843,6 +2875,7 @@ class GameService:
                 or action["data"].get("dose_up")
                 or action["data"].get("princess_sex")
                 or action["data"].get("stim_sex")
+                or action["data"].get("oldgen")
                 or action["data"].get("princess_child")
                 or action["data"].get("ankou_feedback")
                 or action["data"].get("ankou_feedback_child")
@@ -2987,6 +3020,7 @@ class GameService:
                 or action["data"].get("dose_up")
                 or action["data"].get("princess_sex")
                 or action["data"].get("stim_sex")
+                or action["data"].get("oldgen")
                 or action["data"].get("princess_child")
                 or action["data"].get("ankou_feedback")
                 or action["data"].get("ankou_feedback_child")
@@ -3408,6 +3442,7 @@ class GameService:
                 or action["data"].get("dose_up")
                 or action["data"].get("princess_sex")
                 or action["data"].get("stim_sex")
+                or action["data"].get("oldgen")
                 or action["data"].get("princess_child")
                 or action["data"].get("ankou_feedback")
                 or action["data"].get("ankou_feedback_child")
@@ -4350,6 +4385,19 @@ class GameService:
 
                 return SpriteService(self.store).decision(viewer, choice_id)
             action = self.action(c, row["action_id"])
+            if row["kind"].startswith("oldgen_"):
+                from girlframe.services.m3_oldgen import detail as oldgen_detail
+
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    actor=int(action["actor_id"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    play=action["data"]["play"],
+                    detail=oldgen_detail(
+                        self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                    ),
+                )
             if row["kind"].startswith("stim_sex_"):
                 from girlframe.services.m3_stim_sex import authorize as stim_authorize
                 from girlframe.services.m3_stim_sex import projection as stim_projection
@@ -4774,6 +4822,13 @@ class GameService:
                 if additional:
                     prove_additional(self, c, state, own.owner)
                 own_data["additional_identities"] = [x.model_dump(mode="json") for x in additional]
+                if scoped_author is None:
+                    from girlframe.engine.m3_oldgen import marked_maxims
+
+                    own_data["marked_maxims"] = [
+                        {"id": key, "name": name, "marked": True}
+                        for key, name in marked_maxims(state, own.owner)
+                    ]
                 own_data.setdefault("tags", [])
                 own_data["tags"] += [
                     x.model_dump(mode="json") for x in uniform_tags(state, own.owner)

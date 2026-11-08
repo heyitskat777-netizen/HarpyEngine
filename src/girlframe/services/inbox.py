@@ -924,6 +924,22 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_oldgen import OldgenService
+
+            for oldgen in OldgenService(GameService(self.store))._tasks(connection, viewer):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, oldgen),
+                        prefix="oldgen:",
+                        source="oldgen",
+                        counterpart="Original maxim owner and actual affected people",
+                        effect="Review actual advice and maxim effects.",
+                        details="Only the addressed humans own their choices.",
+                        primary="Review Oldgen",
+                        task="m3_oldgen",
+                    )
+                )
+
             from girlframe.services.m3_malleable import MalleableService
 
             for malleable in MalleableService(self.store)._tasks(connection, viewer):

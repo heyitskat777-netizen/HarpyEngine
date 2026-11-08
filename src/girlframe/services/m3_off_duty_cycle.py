@@ -660,8 +660,15 @@ class CycleService:
                 if entitlement(self.game, c, state, actor) is None:
                     raise WorkflowError("Restore the original Modular Build repair entitlement")
             from girlframe.engine.m3_clone_am import additional_identities, unmark_additional
+            from girlframe.engine.m3_oldgen import marked_maxims, unmark_maxim
             from girlframe.services.m3_clone_am import prove_additional
+            from girlframe.services.m3_oldgen import prove_unmark
 
+            maxim_unmark = choice.unmark_identity in dict(marked_maxims(state, viewer.user_id))
+            if maxim_unmark:
+                assert choice.unmark_identity is not None
+                prove_unmark(self.game, c, state, viewer.user_id, choice.unmark_identity)
+                trusted = trusted.model_copy(update={"unmark_identity": None})
             clone_unmark = choice.unmark_identity in {
                 x.id for x in additional_identities(state, viewer.user_id)
             }
@@ -677,6 +684,10 @@ class CycleService:
                 pending_effects=pending,
             )
             state.sheets[str(viewer.user_id)] = sheet
+            if maxim_unmark:
+                assert choice.unmark_identity is not None
+                if not unmark_maxim(state, viewer.user_id, choice.unmark_identity):
+                    raise WorkflowError("Recover the actual marked maxim")
             if clone_unmark:
                 assert choice.unmark_identity is not None
                 unmark_additional(state, viewer.user_id, (choice.unmark_identity,))
@@ -886,6 +897,12 @@ class CycleService:
                 sheet_data = state.sheets[str(viewer.user_id)].model_dump(mode="json")
                 sheet_data["additional_identities"] = [
                     x.model_dump(mode="json") for x in additional
+                ]
+                from girlframe.engine.m3_oldgen import marked_maxims
+
+                sheet_data["marked_maxims"] = [
+                    {"id": key, "name": name, "marked": True}
+                    for key, name in marked_maxims(state, viewer.user_id)
                 ]
             return {
                 **self.periods.get(viewer, identity),

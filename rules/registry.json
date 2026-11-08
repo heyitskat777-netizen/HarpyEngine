@@ -6154,6 +6154,22 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "oldgen-maxim-consequences",
+      "policy_key": "oldgen_maxim_consequences",
+      "summary": "One-use advice maxims use the ordinary reinforcement/rejection effects once against their original subject. A high-result Identity rewrite requires the original Handler factual rejection-and-poor-outcome account.",
+      "source": "Oldgen, rulebook PDF46/printed44",
+      "rationale": "The printed result gives the low maxim to its recipient and conditions the high rewrite on rejection going poorly. Source-bound human factual adjudication retains these causes without inferring dialogue or consent.",
+      "alternatives": [
+        "Let the adviser alone adjudicate the poor result, or require a separate recipient rejection declaration."
+      ],
+      "implementation_note": "Keep actual original maxim owner/subject, real advice roll, source-bound once-only consumption and actual Identity ID/slot/marks/locks. Only base maxims can be refreshed under an actual Identity-unmark grant.",
+      "change_impact": "Adjust factual source ownership and version future maxim effects; preserve existing advice, human choices and immutable use history.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -8250,14 +8266,16 @@
         "heading": "Just the Way It Is"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_oldgen.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -8273,14 +8291,16 @@
         "heading": "Old Dog, New Pups"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_oldgen.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

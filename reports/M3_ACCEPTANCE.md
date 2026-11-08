@@ -1,5 +1,45 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Oldgen maxims and all Old Dog advice outcomes — 2026-11-08
+
+Extends source `01c8cfe`. Just the Way It Is uses the actual original two chosen
+maxims: owner-authored factual reinforcement gives the other Girl 2 Heat; rejection
+gives a real Tag. Genuine shared Identity-unmark opportunities offer marked base
+maxims under the same count. The actual Off-Duty recovery path is connected too;
+this selection directly exercises Flirt unmarking, not a new Off-Duty maxim case.
+One-use advice maxims can be consumed only once and cannot be refreshed.
+
+Old Dog spends actual Heat and rolls through the existing receipt/Tag protocol.
+All three result tiers use the printed author: mid/high raise the adviser's real
+Status and require actual recipient listening, while low lets the recipient unmark
+an Identity/maxim and author the one-use maxim against the adviser. Pending mid/high
+listening blocks unrelated-channel Plays without supplying a recipient answer.
+The high maxim's proved original-Handler rejected-and-poor outcome permits an
+actual Identity rewrite, retaining its ID, slot, mark and sedation lock.
+
+Private native controls, ordinary choices and Inbox keep actual source/owners.
+Used/marked maxim cards show saved text and state from an unbound channel; history
+reads create no scene, placement or fictional action.
+
+| Executed evidence | Result |
+|---|---|
+| New four normal outcomes plus existing Keep/runtime, Off-Duty and stale/pause/replay consumers | 8 passed /9.56s; `var/m3-oldgen-integrated.xml` |
+| Initial final worker selection | 4 passed /5.54s; overlaps the integrated run |
+| Coherent changed-file static | Ruff/format for 12 Python files and mypy for 11 source modules pass without drift; `var/m3-oldgen-union-static.json` |
+
+The handoff preserves the actual strict SceneCast decoding fix and corrected test
+inputs from earlier focused attempts. Only formatting followed the worker pass;
+root's integrated run uses the frozen source. Tests cover actual Heat/Tag, source
+unmark, all tiers, forced listening/cross-channel ordering, one-use ownership,
+source-bound high rewrite, stale/auth/rollback/retry and private history.
+
+Oldgen Sex remains required and separate. Non-native/borrowed/conditional-body
+maxim adapters remain fail closed. The connected Off-Duty maxim token path has no
+new direct scenario in this bounded selection. No new full regression, remote CI,
+independent source review, human acceptance, deployment or environment publication
+is claimed. Bot stays off; RULES_SUBSET and all existing final gates remain.
+
+
 ## Malleable forced embrace and NPC deprogramming — 2026-11-08
 
 Extends source `213b9db`. Genuine newly stamped Tags record eligibility only when

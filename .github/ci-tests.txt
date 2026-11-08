@@ -1,9 +1,8 @@
-# Current Malleable and affected genuine alteration/Off-Duty consumers.
-# Historical focused selections remain in Git; final M3 mode runs the full suite.
-tests/rules/test_malleable.py
-tests/rules/test_dose_up.py
+# Current Oldgen source outcomes and affected existing shared consumers.
+# Historical selections remain in Git; final M3 mode runs all tests.
+tests/rules/test_oldgen.py
+tests/rules/test_standards.py::test_actual_keep_runtime_and_native_ui_respect_borrowed_and_removed_rules
 tests/rules/test_off_duty_cycle.py::test_actual_preparation_owned_rolls_recovery_review_and_world_end_are_resumable
-tests/rules/test_off_duty_cycle.py::test_scene_is_private_to_participants_and_cannot_be_attested_for_absent_humans
 # Preserve release/privacy/pause/replay and delivery boundaries.
 tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng
 tests/test_m2_game.py::test_campaign_isolation_and_delivery_uncertainty_no_reroll

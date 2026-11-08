@@ -96,7 +96,9 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
     identities = (
         [
             x
-            for x in own["identities"] + own.get("additional_identities", [])
+            for x in own["identities"]
+            + own.get("additional_identities", [])
+            + own.get("marked_maxims", [])
             if x["marked"] and x["id"] not in own.get("sedation_locked", ())
         ]
         if own
@@ -534,6 +536,11 @@ def answer_values(values: dict[str, Any]) -> ChoiceAnswer:
 
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
     decision = await threaded(lambda: game.decision(viewer_from_interaction(interaction), identity))
+    if decision["kind"].startswith("oldgen_"):
+        from girlframe.discord_adapter.m3_oldgen import open_choice as open_oldgen_choice
+
+        await open_oldgen_choice(interaction, game, decision)
+        return
     if decision["kind"].startswith("stim_sex_"):
         from girlframe.discord_adapter.m3_stim_sex import open_choice as open_stim_choice
 
@@ -999,6 +1006,7 @@ async def open_play(
             "dose_up",
             "princess_sex",
             "stim_sex",
+            "old_dog_new_pups",
         )
     )
     if parent and parent["kind"] == "am_code_prepare":
@@ -1914,6 +1922,17 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
             await open_princess(interaction, SexService(game))
         except WorkflowError as exc:
             await interaction.followup.send(str(exc), ephemeral=True)
+
+    @campaign.command(name="oldgen", description="Owned maxims and actual Old Dog advice")
+    async def oldgen_controls(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_oldgen import open_oldgen
+        from girlframe.services.m3_oldgen import OldgenService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_oldgen(interaction, OldgenService(game))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
 
     @campaign.command(name="malleable", description="Qualified Tags and NPC altered-state controls")
     async def malleable_controls(interaction: discord.Interaction) -> None:

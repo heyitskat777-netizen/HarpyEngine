@@ -212,13 +212,22 @@ class ChoiceEngine:
 
         additional = additional_identities(state, sheet.owner)
         extra = tuple(x.id for x in additional if x.marked)
+        from girlframe.engine.m3_oldgen import marked_maxims, unmark_maxim
+        from girlframe.services.m3_oldgen import prove_unmark
+
+        maxims = dict(marked_maxims(state, sheet.owner))
         picks(
             ids,
             {x.id for x in sheet.identities if x.marked and x.id not in sheet.sedation_locked}
-            | set(extra),
+            | set(extra)
+            | set(maxims),
             0,
             maximum,
         )
+        for token in ids:
+            if token in maxims:
+                prove_unmark(self.game, c, state, sheet.owner, token)
+                require(unmark_maxim(state, sheet.owner, token), "Recover the actual marked maxim.")
         selected_extra = tuple(x for x in ids if x in extra)
         if selected_extra:
             prove_additional(self.game, c, state, sheet.owner)
@@ -265,6 +274,11 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         sheet = state.sheets.get(str(owner))
         body = json.loads(request["body_json"])
+        if kind.startswith("oldgen_") and action["data"].get("oldgen"):
+            from girlframe.services.m3_oldgen import apply_choice as apply_oldgen
+
+            apply_oldgen(self.game, c, state, action, request, answer)
+            return
         if kind.startswith("stim_sex_") and action["data"].get("stim_sex"):
             from girlframe.services.m3_stim_sex import apply_choice as apply_stim
 
@@ -1257,6 +1271,11 @@ class ChoiceEngine:
             from girlframe.services.m3_am_scrutinized import results as results_am
 
             results_am(self.game, c, state, action)
+            return
+        if action["data"].get("oldgen"):
+            from girlframe.services.m3_oldgen import results as results_oldgen
+
+            results_oldgen(self.game, c, state, action)
             return
         if action["data"].get("stim_sex"):
             from girlframe.services.m3_stim_sex import results as results_stim
