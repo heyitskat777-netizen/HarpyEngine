@@ -924,6 +924,22 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_vatgrown import DollService
+
+            for doll in DollService(GameService(self.store))._tasks(connection, viewer):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, doll),
+                        prefix="vatgrown-doll:",
+                        source="vatgrown_doll",
+                        counterpart="Actual original source people",
+                        effect="Review your actual Doll effects or addressed information.",
+                        details="Private replies remain with their actual recipients.",
+                        primary="Review Unassuming Doll",
+                        task="m3_vatgrown_doll",
+                    )
+                )
+
             from girlframe.services.m3_oldgen_sex import OldgenSexService
 
             for oldgen_sex in OldgenSexService(GameService(self.store))._tasks(connection, viewer):

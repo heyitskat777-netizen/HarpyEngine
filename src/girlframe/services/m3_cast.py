@@ -1,7 +1,7 @@
 """Transactional actor casting with immutable legacy-scene evidence."""
 
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import sqlalchemy as sa
@@ -15,6 +15,9 @@ from girlframe.services.m2_state import load_state
 from girlframe.services.m3_actors import ActorService, profiles
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
+
+if TYPE_CHECKING:
+    from girlframe.services.m2_game import GameService
 
 
 class CastService:
@@ -352,3 +355,86 @@ class CastService:
             auto_audit=False,
             authorize=authorize,
         )
+
+
+def change_doll_presence(
+    game: "GameService",
+    viewer: GuildViewer,
+    key: str,
+    channel: int,
+    source: str,
+    revision: int,
+    account: str,
+    *,
+    returning: bool,
+) -> dict[str, Any]:
+    """Commit a source-proved fictional exit/return, retaining the known map cell."""
+    if not account.strip() or len(account) > 1200:
+        raise WorkflowError("Describe your actual departure or return to this scene")
+
+    def authorize(c: Connection) -> None:
+        from girlframe.services.m3_access import Access
+
+        Access(game.store).authorize(c, viewer, "plays")
+
+    def operation(c: Connection) -> dict[str, Any]:
+        from girlframe.engine.m3_vatgrown import record_departure, record_return
+        from girlframe.services.m3_vatgrown import departure_source, return_source
+
+        game.unpaused(c)
+        state = load_state(c, game.store.campaign_id)
+        if state.revision != revision:
+            raise WorkflowError("STALE_SOURCE: reopen your actual Doll source")
+        if game.pending_actions(c):
+            raise WorkflowError(
+                "Finish the actual pending consequences before departing or returning"
+            )
+        scene = game.scene(c, channel)
+        lock = game.lock(c, channel)
+        if lock and lock["state"] != "released":
+            raise WorkflowError("Restore the actual scene chat before departing or returning")
+        before = next((x for x in state.scene_casts if x.id == scene["id"] and x.open), None)
+        if before is None:
+            raise WorkflowError("Recover the actual original scene cast")
+        event = str(uuid4())
+        if returning:
+            departure = return_source(game, c, state, viewer, source, channel)
+            actual = m3_actors.resolve(state, departure.actor, profiles(c, game.store.campaign_id))
+            after = m3_cast.join(state.scene_casts, before.id, actual, viewer.user_id, event)
+            fact_id = record_return(state, departure, before, after, event, account.strip()).id
+        else:
+            effect = departure_source(game, c, state, viewer, source, channel)
+            after = m3_cast.withdraw(before, effect.actor, viewer.user_id)
+            fact_id = record_departure(state, effect, before, after, event, account.strip()).id
+        state.scene_casts = [x for x in state.scene_casts if x.id != before.id] + [after]
+        people = sorted(
+            {x.controller for x in after.roles if x.actor.kind == "pilot"}
+            | ({after.facilitator} if after.facilitator is not None else set())
+        )
+        table = t.m2["m2_scenes"]
+        c.execute(
+            table.update()
+            .where(table.c.campaign_id == game.store.campaign_id, table.c.id == before.id)
+            .values(participants_json=json.dumps(people), revision=table.c.revision + 1)
+        )
+        game.event(
+            c,
+            viewer.user_id,
+            key,
+            "m3.vatgrown_returned" if returning else "m3.vatgrown_departed",
+            state,
+            event_id=event,
+            source=source,
+            scene=before.id,
+        )
+        return {"id": fact_id, "scene": before.id, "revision": state.revision}
+
+    return game.store._write(
+        viewer,
+        key,
+        "m3.vatgrown_returned" if returning else "m3.vatgrown_departed",
+        {"channel": channel, "source": source, "revision": revision, "account": account},
+        operation,
+        auto_audit=False,
+        authorize=authorize,
+    )

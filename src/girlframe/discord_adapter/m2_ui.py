@@ -536,6 +536,11 @@ def answer_values(values: dict[str, Any]) -> ChoiceAnswer:
 
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
     decision = await threaded(lambda: game.decision(viewer_from_interaction(interaction), identity))
+    if decision["kind"].startswith("vat_doll_"):
+        from girlframe.discord_adapter.m3_vatgrown import open_choice as open_doll_choice
+
+        await open_doll_choice(interaction, game, decision)
+        return
     if decision["kind"].startswith("oldgen_sex_"):
         from girlframe.discord_adapter.m3_oldgen_sex import open_choice as open_oldgen_sex_choice
 
@@ -1013,6 +1018,7 @@ async def open_play(
             "stim_sex",
             "old_dog_new_pups",
             "oldgen_sex",
+            "unassuming_doll",
         )
     )
     if parent and parent["kind"] == "am_code_prepare":
@@ -1928,6 +1934,19 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
             await open_princess(interaction, SexService(game))
         except WorkflowError as exc:
             await interaction.followup.send(str(exc), ephemeral=True)
+
+    @campaign.command(
+        name="vatgrown", description="Actual Unassuming Doll source and saved effects"
+    )
+    async def vatgrown_controls(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_vatgrown import open_vatgrown
+        from girlframe.services.m3_vatgrown import DollService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_vatgrown(interaction, DollService(game))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
 
     @campaign.command(
         name="oldgen_sex", description="Voluntary Oldgen source and private saved choices"

@@ -657,6 +657,14 @@ class InboxView(discord.ui.View):
             await open_npc_bond_play(
                 interaction, NpcBondPlayService(self.service.store), item.identity
             )
+        elif item.task == "m3_vatgrown_doll":
+            from girlframe.discord_adapter.m3_vatgrown import open_vatgrown
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_vatgrown import DollService
+
+            await open_vatgrown(
+                interaction, DollService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_oldgen_sex":
             from girlframe.discord_adapter.m3_oldgen_sex import open_oldgen_sex
             from girlframe.services.m2_game import GameService

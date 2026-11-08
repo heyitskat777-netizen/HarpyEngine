@@ -1124,6 +1124,20 @@ class GameService:
             from girlframe.services.m3_oldgen import require_listened
 
             require_listened(self, c, state, viewer)
+            from girlframe.engine.m3_actor_bonds import current_ref as doll_target_ref
+            from girlframe.services.m3_vatgrown import require_attention as require_doll_attention
+
+            doll_target = prepared.target_actor
+            if (
+                doll_target is None
+                and prepared.target is not None
+                and str(prepared.target) in state.sheets
+            ):
+                doll_target = doll_target_ref(state, prepared.target)
+            if doll_target is not None:
+                require_doll_attention(
+                    self, c, state, doll_target, self.scene(c, channel)["id"], "discovery"
+                )
             from girlframe.services.m3_princess_sex import child_source
 
             princess_child = child_source(self, c, viewer, state, prepared, channel)
@@ -1136,6 +1150,7 @@ class GameService:
             princess_sex = None
             stim_sex = None
             oldgen_sex = None
+            vatgrown = None
             oldgen = None
             m3 = None
             beneath = None
@@ -1260,6 +1275,10 @@ class GameService:
                 from girlframe.services.m3_oldgen import prepare as prepare_oldgen
 
                 oldgen = prepare_oldgen(self, c, viewer, state, prepared, channel)
+            if prepared.play == "unassuming_doll":
+                from girlframe.services.m3_vatgrown import prepare as prepare_doll
+
+                vatgrown = prepare_doll(self, c, viewer, state, prepared, channel)
             if prepared.play == "oldgen_sex":
                 from girlframe.services.m3_oldgen_sex import prepare as prepare_oldgen_sex
 
@@ -1475,6 +1494,7 @@ class GameService:
                         am_scrutinized,
                         am_code,
                         alpha_sex_counter_scope,
+                        vatgrown,
                         alpha_counter_scope,
                         npc_order_scope,
                         gorgon_response,
@@ -1514,6 +1534,8 @@ class GameService:
                     )
                 elif npc_order_scope is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(npc_order_scope["cast"]))
+                elif vatgrown is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(vatgrown["cast"]))
                 elif am_code is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(am_code["cast"]))
                 elif am_scrutinized is not None:
@@ -1796,6 +1818,7 @@ class GameService:
                     princess_sex,
                     stim_sex,
                     oldgen_sex,
+                    vatgrown,
                     oldgen,
                     am_scrutinized,
                     am_code,
@@ -1803,7 +1826,12 @@ class GameService:
                 )
             ):
                 raise WorkflowError("This implemented Play does not take a fictional actor target.")
-            if prepared.play in ("flirt", "put_someone_beneath_you", "old_dog_new_pups"):
+            if prepared.play in (
+                "flirt",
+                "put_someone_beneath_you",
+                "old_dog_new_pups",
+                "unassuming_doll",
+            ) and not (vatgrown is not None and prepared.target_actor is not None):
                 if (
                     prepared.target == mechanical_owner
                     or str(prepared.target) not in state.sheets
@@ -1910,6 +1938,17 @@ class GameService:
                     table=list(oldgen["table"]),
                     cast=oldgen["cast"],
                     cast_sha256=oldgen["cast_sha256"],
+                )
+            if vatgrown is not None:
+                data["vatgrown"] = vatgrown
+                data["participants"] = list(vatgrown["table"])
+                data["tag_context"] = dict(
+                    actor=vatgrown["actor"],
+                    handler=vatgrown["handler"],
+                    gm_controller=vatgrown["handler_controller"],
+                    table=list(vatgrown["table"]),
+                    cast=vatgrown["cast"],
+                    cast_sha256=vatgrown["cast_sha256"],
                 )
             if oldgen_sex is not None:
                 data["oldgen_sex"] = oldgen_sex
@@ -2377,6 +2416,7 @@ class GameService:
                 or princess_sex is not None
                 or stim_sex is not None
                 or oldgen_sex is not None
+                or vatgrown is not None
                 or oldgen is not None
                 or princess_child is not None
                 or ankou_child is not None
@@ -2399,6 +2439,7 @@ class GameService:
                     or princess_sex is not None
                     or stim_sex is not None
                     or oldgen_sex is not None
+                    or vatgrown is not None
                     or oldgen is not None
                     or princess_child is not None
                     or ankou_child is not None
@@ -2703,6 +2744,10 @@ class GameService:
                 from girlframe.services.m3_oldgen import pre_roll as pre_roll_oldgen
 
                 pre_roll_oldgen(self, c, viewer, state, action)
+            if action["data"].get("vatgrown"):
+                from girlframe.services.m3_vatgrown import pre_roll as pre_roll_doll
+
+                pre_roll_doll(self, c, viewer, state, action)
             if action["data"].get("oldgen_sex"):
                 from girlframe.services.m3_oldgen_sex import pre_roll as pre_roll_oldgen_sex
 
@@ -2905,6 +2950,7 @@ class GameService:
                 or action["data"].get("princess_sex")
                 or action["data"].get("stim_sex")
                 or action["data"].get("oldgen_sex")
+                or action["data"].get("vatgrown")
                 or action["data"].get("oldgen")
                 or action["data"].get("princess_child")
                 or action["data"].get("ankou_feedback")
@@ -3025,6 +3071,35 @@ class GameService:
                 "receipt",
                 {"receipt": receipt, "callsign": sheet.callsign, "play": prepared.play},
             )
+            from girlframe.engine.m3_actor_state import ActorRef as DollActRef
+            from girlframe.engine.m3_vatgrown import stage_act as stage_doll_act
+
+            doll_source_actor = action["data"].get("tag_context", {}).get("actor")
+            doll_original_character = (
+                action["data"].get("character_ids", {}).get(str(action["actor_id"]))
+            )
+            doll_act_actor = (
+                DollActRef.model_validate_json(json.dumps(doll_source_actor))
+                if doll_source_actor is not None
+                else DollActRef(
+                    kind="pilot",
+                    entity=str(action["actor_id"]),
+                    incarnation=doll_original_character,
+                )
+                if doll_original_character is not None
+                else None
+            )
+            if doll_act_actor is not None:
+                doll_act_event = roll_event_id or str(uuid4())
+                if stage_doll_act(
+                    state,
+                    doll_act_actor,
+                    action["scene_id"],
+                    action["id"],
+                    doll_act_event,
+                    "play",
+                ):
+                    roll_event_id = doll_act_event
             if committed is not None:
                 from girlframe.services.m3_ankou_feedback import record_roll
 
@@ -3051,6 +3126,7 @@ class GameService:
                 or action["data"].get("princess_sex")
                 or action["data"].get("stim_sex")
                 or action["data"].get("oldgen_sex")
+                or action["data"].get("vatgrown")
                 or action["data"].get("oldgen")
                 or action["data"].get("princess_child")
                 or action["data"].get("ankou_feedback")
@@ -3225,6 +3301,11 @@ class GameService:
 
                 Access(self.store).authorize(c, viewer, "strain")
             director_tag_response = False
+            if action["data"].get("vatgrown"):
+                from girlframe.services.m3_vatgrown import authorize as doll_authorize
+
+                doll_authorize(self, c, viewer, action)
+                director_tag_response = True
             if action["data"].get("oldgen_sex"):
                 from girlframe.services.m3_oldgen_sex import authorize as oldgen_sex_authorize
 
@@ -3479,6 +3560,7 @@ class GameService:
                 or action["data"].get("princess_sex")
                 or action["data"].get("stim_sex")
                 or action["data"].get("oldgen_sex")
+                or action["data"].get("vatgrown")
                 or action["data"].get("oldgen")
                 or action["data"].get("princess_child")
                 or action["data"].get("ankou_feedback")
@@ -3629,12 +3711,12 @@ class GameService:
                 from girlframe.services.m3_princess_sex import synchronize as sync_princess
 
                 sync_princess(self, c, self.action(c, action["id"]), event)
-            if action["data"].get("dose_up"):
+            if action["data"].get("dose_up") or action["data"].get("vatgrown"):
                 from girlframe.services.m3_role_punishments import (
-                    synchronize as synchronize_dose_role,
+                    synchronize as synchronize_source_role,
                 )
 
-                synchronize_dose_role(self, c, action, event)
+                synchronize_source_role(self, c, action, event)
             if action["data"].get("alpha_sex"):
                 from girlframe.services.m3_alpha_sex import synchronize as synchronize_alpha_sex
 
@@ -4435,6 +4517,21 @@ class GameService:
                         self, c, load_state(c, self.store.campaign_id), action, dict(row)
                     ),
                 )
+            if row["kind"].startswith("vat_doll_"):
+                from girlframe.services.m3_vatgrown import authorize as doll_authorize
+                from girlframe.services.m3_vatgrown import projection as doll_projection
+
+                doll_authorize(self, c, viewer, action)
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    actor=int(action["actor_id"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    play=action["data"]["play"],
+                    detail=doll_projection(
+                        self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                    ),
+                )
             if row["kind"].startswith("oldgen_sex_"):
                 from girlframe.services.m3_oldgen_sex import authorize as oldgen_sex_authorize
                 from girlframe.services.m3_oldgen_sex import projection as oldgen_sex_projection
@@ -5152,6 +5249,36 @@ class GameService:
             operation,
             auto_audit=False,
             authorize=lambda c: self.authorize(c, viewer),
+        )
+
+    def depart_doll(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        channel: int,
+        source: str,
+        revision: int,
+        account: str,
+    ) -> dict[str, Any]:
+        from girlframe.services.m3_cast import change_doll_presence
+
+        return change_doll_presence(
+            self, viewer, key, channel, source, revision, account, returning=False
+        )
+
+    def return_doll(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        channel: int,
+        source: str,
+        revision: int,
+        account: str,
+    ) -> dict[str, Any]:
+        from girlframe.services.m3_cast import change_doll_presence
+
+        return change_doll_presence(
+            self, viewer, key, channel, source, revision, account, returning=True
         )
 
     def leave_scene(self, viewer: GuildViewer, key: str, channel: int) -> dict[str, Any]:

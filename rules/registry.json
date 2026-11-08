@@ -6202,6 +6202,22 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "doll-object-duration",
+      "policy_key": "doll_object_duration",
+      "summary": "Object-like insignificance ends on the next meaningful actual act or actual scene exit/closure, within the original scene and body. It grants no combat immunity or global disappearance.",
+      "source": "Unassuming Doll, rulebook PDF50/printed48",
+      "rationale": "The high text omits duration. Use a finite source-scene effect, with actual source-bound acts rather than private UI reads or unrelated past actions.",
+      "alternatives": [
+        "Keep object treatment until scene closure only, or require a separate explicit fictional ending."
+      ],
+      "implementation_note": "Actual rolled Plays, authored questions and genuine source departure/return consume exact then-active effect IDs. Ordinary movement and other specialised actual-act consumers remain explicit follow-up gaps.",
+      "change_impact": "Version future duration changes and source adapters; preserve actual original effects, consumed IDs and canonical history.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -8465,14 +8481,16 @@
         "heading": "Unassuming Doll"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_vatgrown.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

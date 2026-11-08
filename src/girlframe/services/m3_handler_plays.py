@@ -1439,6 +1439,26 @@ class HandlerPlayService:
                 _ordinary_scene_idle(c, self.game)
             if state.revision != expected:
                 raise WorkflowError("The scene changed; reopen the saved Handler Play.")
+            if effect.kind in ("expectation", "tracker_intercept"):
+                from girlframe.services.m3_vatgrown import (
+                    require_attention as require_doll_attention,
+                )
+
+                for target in (effect.target,) if effect.target else grant.targets:
+                    for cast in state.scene_casts:
+                        if (
+                            cast.open
+                            and any(x.actor == target for x in cast.roles)
+                            and any(x.actor == grant.chooser_actor for x in cast.roles)
+                        ):
+                            require_doll_attention(
+                                self.game,
+                                c,
+                                state,
+                                target,
+                                cast.id,
+                                "expectation" if effect.kind == "expectation" else "intercept",
+                            )
             if effect.target is not None:
                 resolve(
                     state,

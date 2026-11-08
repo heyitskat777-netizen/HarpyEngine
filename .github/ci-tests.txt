@@ -1,10 +1,9 @@
-# Oldgen Sex and affected existing sources; final M3 mode still runs the full suite.
-tests/rules/test_oldgen_sex.py
-tests/rules/test_oldgen.py
-tests/rules/test_stim_sex.py::test_mid_real_lower_status_order_drug_tag_consumer_expiry_and_private_saved_source
-tests/rules/test_gender_designation.py
-tests/test_m2_game.py::test_helpless_requires_explicit_recovery_and_no_silent_timeout
+# Current Doll normal flows and affected existing source/cast/Handler consumers.
+# Final M3 mode still runs all tests.
+tests/rules/test_vatgrown.py
+tests/rules/test_dose_up.py
+tests/rules/test_handler_plays.py::test_brief_threat_expectation_are_real_owned_saved_facts_not_player_responses
+tests/rules/test_cast_service.py::test_cast_atomic_rollback_restart_rebuild_and_close_preserve_source_links
 tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng
-# Preserve campaign/privacy/delivery and default release boundaries.
 tests/test_m2_game.py::test_campaign_isolation_and_delivery_uncertainty_no_reroll
 tests/test_m2_game.py::test_live_default_gate_and_active_editor_protection

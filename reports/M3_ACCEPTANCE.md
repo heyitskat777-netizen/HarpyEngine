@@ -1,5 +1,46 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Unassuming Doll: actual benefits, information and scene exit — 2026-11-08
+
+Extends source `3e8ef8b`. Genuine Heat/receipt/Tag and owned choices cover mid,
+high and both low consequences. Low uses the actual observer's real Tag or real
+RolePunishment, including actual effects and completion before the source benefit
+and parent chat closure. Information is a substantive human-authored answer or
+offered secret, privately saved for the addressed original people.
+
+Quiet presentation reaches real targeted discovery and same-cast Handler intercept
+checks; high object treatment reaches same-cast Handler expectations. A facilitator
+alone is not a physical Handler. Genuine rolled Plays, authored questions and
+source exits consume exact active effect IDs, so earlier actions and returned
+departures cannot disable a fresh later effect in that scene.
+
+Native departure/re-entry commits actual source-owned casting changes and factual
+accounts. It preserves the sheet, body, Frame and last known broad map cell; legal
+co-presence is proved on return. OOC withdrawal does not supply this source. Root
+roll hooks use original action ActorRefs/character IDs, never the replacement
+character associated with the same human. Private UI reads consume no effect.
+
+| Executed evidence | Result |
+|---|---|
+| Coherent four normal paths plus affected Dose, Handler, cast and pause/replay consumers | 11 passed /15.73s; `var/m3-vatgrown-integrated.xml` |
+| Coherent changed-file static | Ruff/format14 Python files and mypy13 source modules pass without drift; `var/m3-vatgrown-union-static.json` |
+| Worker evidence before root integration | Final four-node attempt:3 passed/1 failed /7.76s (only invalid duplicate-choice test construction); corrected mid1 passed /2.60s, other3 unchanged. Root's clean11 supersedes segmented evidence. |
+
+The compact worker handoff retains earlier fixture/source failures and successful
+segments. Shared fixes admit genuine target_actor metadata past a numeric-only
+legacy check and synchronize actual low-Punishment work after the real response
+row exists. Tests include new-source reuse after old acts/exit, real Handler
+withdrawal before ordinary native Plays, source retry/stale/rollback and private
+saved replies. No gate was bypassed to make a normal succeed.
+
+Remaining: Just an Experiment, Prime Investment and Vatgrown Sex; NPC and other
+body adapters, plus other meaningful movement/trade/source-act consumers. Source
+exit is within the actual scene, not a global stealth/travel engine. This is
+focused offline evidence, not a full regression, remote CI or independent/player
+acceptance. Separate active Show Dog edits are excluded from this snapshot.
+Bot stays off; no deployment, publication, migration or recovered-engine write.
+
+
 ## Oldgen Sex: all printed normal paths — 2026-11-08
 
 Extends source `b9c3f13`. Actual voluntary source confirmation precedes the genuine

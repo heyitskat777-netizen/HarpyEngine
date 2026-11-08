@@ -87,6 +87,7 @@ def open_case(
         "janus_training",
         "alpha_sex",
         "dose_up",
+        "vatgrown_doll",
         "succubus_npc_disobey",
     ],
     action: str | None,
@@ -343,6 +344,10 @@ def case_proof(c: Connection, game: GameService, identity: str) -> RolePunishmen
         from girlframe.services.m3_succubus import validate_role_case
 
         validate_role_case(c, game, state, case)
+    if case.source_kind == "vatgrown_doll":
+        from girlframe.services.m3_vatgrown import validate_role_case
+
+        validate_role_case(c, game, state, case)
     if case.source_kind == "dose_up":
         from girlframe.services.m3_dose_up import validate_role_case
 
@@ -401,6 +406,11 @@ def current(c: Connection, game: GameService, state: GameState, case: RolePunish
         raise WorkflowError("Recover the actual original executor, Frame and affected person.")
     if case.source_kind == "succubus_npc_disobey":
         from girlframe.services.m3_succubus import validate_role_case
+
+        validate_role_case(c, game, state, case)
+        return
+    if case.source_kind == "vatgrown_doll":
+        from girlframe.services.m3_vatgrown import validate_role_case
 
         validate_role_case(c, game, state, case)
         return
@@ -651,6 +661,10 @@ def synchronize(
                 complete_role_case(c, game, completed, completion_id)
             elif completed.source_kind == "succubus_npc_disobey":
                 from girlframe.services.m3_succubus import complete_role_case
+
+                complete_role_case(c, game, completed, completion_id)
+            elif completed.source_kind == "vatgrown_doll":
+                from girlframe.services.m3_vatgrown import complete_role_case
 
                 complete_role_case(c, game, completed, completion_id)
             elif completed.source_kind == "dose_up":
