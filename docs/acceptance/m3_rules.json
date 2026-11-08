@@ -1392,6 +1392,50 @@
           "limitation": "Observation connected but no new direct companion Observation scenario. Multiple-Mentor, other body/role and generic mentoring discipline sources remain required. No full regression, independent review or human acceptance."
         }
       ]
+    },
+    {
+      "id": "M3C-NEWGIRL-SEX-NORMAL-001",
+      "title": "Newgirl actual Sex and source-owned multiple Mentor outcomes",
+      "expected": "Every actual original native partner voluntarily confirms; actual receipt and independently owned responses produce real Bond/Status/Tag/damage/current Mentor outcomes. Actual learned third-party receipt grants an optional original-Mentor Tag; current rank/name/Tag/teaching consumers use all real Mentors.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_newgirl_sex.py"
+      ],
+      "evidence": [
+        {
+          "test_name": "Frozen combined six Sex plus four Easy Target normal workflows",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_newgirl_sex.py tests/rules/test_easy_target.py --maxfail=1 --junitxml=var/m3-newgirl-integrated.xml",
+          "actual_result": "10 passed29.87s; coherent Ruff/format29 Python and mypy26 source passed without drift. Existing compatibility10/14.15s plus3/6.36s separately; final original teaching erasure2/3.55s overlaps. Registry/repository and offlineSDK21 passed;20 CI cases collected only.",
+          "log_or_trace": "var/m3-newgirl-integrated.xml; var/m3-newgirl-union-source-snapshot.json; var/m3-newgirl-union-static.json; reports/M3_ACCEPTANCE.md",
+          "git_commit": "1220436b7284997baeeaf61f20ac4e5cc4c6b7a9",
+          "limitation": "Other actor/body, terminal/replacement/temporary/borrowed and other discovery channels; no direct group-all-Gender or terminal-damage scenario. Worker segmented/failed attempts preserved. No new full regression, independent certification, human acceptance or deployment."
+        }
+      ]
+    },
+    {
+      "id": "M3C-EASY-TARGET-NORMAL-001",
+      "title": "Easy Target actual independently owned reactions and performed consequences",
+      "expected": "Actual mistake receipt, original-person Tag/reactions, supported real child performances, actual bodily hurt and Punishment, genuine protection/failure Tag, request/Bond/Status, source contempt departure and actual cohort assistance.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_easy_target.py"
+      ],
+      "evidence": [
+        {
+          "test_name": "Frozen combined six Sex plus four Easy Target normal workflows",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_newgirl_sex.py tests/rules/test_easy_target.py --maxfail=1 --junitxml=var/m3-newgirl-integrated.xml",
+          "actual_result": "10 passed29.87s; coherent Ruff/format29 Python and mypy26 source passed without drift. Existing compatibility10/14.15s plus3/6.36s separately; final original teaching erasure2/3.55s overlaps. Registry/repository and offlineSDK21 passed;20 CI cases collected only.",
+          "log_or_trace": "var/m3-newgirl-integrated.xml; var/m3-newgirl-union-source-snapshot.json; var/m3-newgirl-union-static.json; reports/M3_ACCEPTANCE.md",
+          "git_commit": "1220436b7284997baeeaf61f20ac4e5cc4c6b7a9",
+          "limitation": "Other actor/performance/harm/protection adapters and off-scene failure proof remain required; free text cannot complete unsupported effects. Worker segmented/failed attempts preserved. No new full regression, independent certification, human acceptance or deployment."
+        }
+      ]
     }
   ],
   "enabled_modules": [
