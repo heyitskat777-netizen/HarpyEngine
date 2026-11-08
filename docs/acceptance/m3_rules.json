@@ -1191,6 +1191,32 @@
           "limitation": "Protected/Paired/Limiter/Clone-extra, forced/other marking sources, non-Heat bases and genuine Ankou Feedback remain required adapters; zero Tags is an explicit applicability ruling, not missing implementation relief. Focused/segmented checks only; final full regression, independent/human review and deployment not performed."
         }
       ]
+    },
+    {
+      "id": "M3C-ANKOU-FEEDBACK-NORMAL-001",
+      "title": "Native Ankou Feedback with actual pre-roll commitment and safe recovery",
+      "expected": "Actual last mark/removal and Heat commitment, person-authored purpose/Identity, Bond-to-Asset, co-present Frame tear/5 Heat and genuine targeted child; one original roll. Refusal/Helpless recovery and death/archive produce no fake dice. Staff restoration preserves mandatory source work.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_ankou_feedback.py"
+      ],
+      "related_cases": [
+        "M3-ADD-006",
+        "M3-ADD-007"
+      ],
+      "evidence": [
+        {
+          "test_name": "Three distinct native normals and affected consumers",
+          "executed_command": "Exact commands in var/m3-ankou-feedback-contract.json and var/m3-ankou-root-evidence.json",
+          "actual_result": "Three normals passed in 12.49s; final affected main in 8.27s. Existing compatibility: 13 passed/1 failed in 24.55s, then only the repaired legacy room check passed in 1.13s. Coherent static checks for 18 Python files and types for 17 source modules, registry/repository and offline SDK passed. 16 CI cases collected only.",
+          "log_or_trace": "var/m3-ankou-feedback-normal.xml; var/m3-ankou-feedback-recovery-normal.xml; var/m3-ankou-root-evidence.json; var/m3-ankou-union-static.json; var/m3-ankou-union-source-snapshot.json",
+          "git_commit": "e12960ef382d8ee3beb947867660b65acbb5acef",
+          "limitation": "Specialised/parented marking, other counterparts/bodies, Relay/Clone, linked/protected resources and last-Frame/full-Void continuations remain required adapters; broader prevention combinations unplayed. Separate focused runs, not a full regression. Independent/human review and deployment not performed."
+        }
+      ]
     }
   ],
   "enabled_modules": [
