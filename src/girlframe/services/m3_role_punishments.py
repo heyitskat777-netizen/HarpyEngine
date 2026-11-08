@@ -91,6 +91,7 @@ def open_case(
         "show_dog",
         "easy_target",
         "vatgrown_plays",
+        "prince",
         "trainee",
         "succubus_npc_disobey",
     ],
@@ -361,6 +362,10 @@ def case_proof(c: Connection, game: GameService, identity: str) -> RolePunishmen
         from girlframe.services.m3_show_dog import validate_role_case
 
         validate_role_case(c, game, state, case)
+    if case.source_kind == "prince":
+        from girlframe.services.m3_prince import validate_role_case as validate_prince_role
+
+        validate_prince_role(c, game, state, case)
     if case.source_kind == "vatgrown_plays":
         from girlframe.services.m3_vatgrown_plays import validate_role_case
 
@@ -443,6 +448,11 @@ def current(c: Connection, game: GameService, state: GameState, case: RolePunish
         from girlframe.services.m3_show_dog import validate_role_case
 
         validate_role_case(c, game, state, case)
+        return
+    if case.source_kind == "prince":
+        from girlframe.services.m3_prince import validate_role_case as validate_prince_role
+
+        validate_prince_role(c, game, state, case)
         return
     if case.source_kind == "vatgrown_plays":
         from girlframe.services.m3_vatgrown_plays import validate_role_case
@@ -628,6 +638,12 @@ def synchronize(
                 scope = role_scope(c, game, case).model_dump() | dict(
                     campaign_id=game.store.campaign_id
                 )
+            elif case.source_kind == "prince":
+                from girlframe.services.m3_prince import role_scope as prince_role_scope
+
+                scope = prince_role_scope(c, game, case).model_dump() | dict(
+                    campaign_id=game.store.campaign_id
+                )
             elif case.source_kind == "trainee":
                 from girlframe.services.m3_trainee import role_scope
 
@@ -722,6 +738,10 @@ def synchronize(
                 from girlframe.services.m3_show_dog import complete_role_case
 
                 complete_role_case(c, game, completed, completion_id)
+            elif completed.source_kind == "prince":
+                from girlframe.services.m3_prince import complete_role_case as complete_prince_role
+
+                complete_prince_role(c, game, completed, completion_id)
             elif completed.source_kind == "vatgrown_plays":
                 from girlframe.services.m3_vatgrown_plays import complete_role_case
 

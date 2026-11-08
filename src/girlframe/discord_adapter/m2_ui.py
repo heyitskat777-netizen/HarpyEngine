@@ -115,7 +115,11 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
     fields = []
     if kind == "tag_window":
         partner_tags = decision.get("gender_man_tags", ())
-        options = ("pass", "tag", "gender_man") if partner_tags else ("pass", "tag")
+        options: tuple[str, ...] = (
+            ("pass", "tag", "gender_man") if partner_tags else ("pass", "tag")
+        )
+        if decision.get("consume_starvation"):
+            options += ("starvation",)
         visible_tags = list(decision["tags"]) + [
             dict(id="gender-partner:" + x["id"], name="Partner: " + x["label"])
             for x in partner_tags
@@ -269,9 +273,9 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
             menu(
                 "options",
                 "Listed questions",
-                QUESTIONS,
+                tuple(QUESTIONS) + (("consume_smell",) if decision.get("consume_smell") else ()),
                 1 if level == "low" else 0,
-                count,
+                count + int(bool(decision.get("consume_smell"))),
                 level == "low",
             )
         ]
@@ -381,11 +385,32 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
                         "mouthing_off",
                         "gritted_teeth",
                         "disobey",
+                        *(("consume_follow",) if decision.get("consume_order_tags") else ()),
                     )
                     if x != "disobey" or decision.get("am_can_refuse", True)
                 ),
             )
         ]
+        if decision.get("consume_order_tags"):
+            fields.extend(
+                [
+                    entities(
+                        "fields.consume_tag",
+                        "Actual active Feral Tag (for pursuit)",
+                        decision["consume_order_tags"],
+                        0,
+                        1,
+                        False,
+                    ),
+                    menu(
+                        "fields.consume_follow",
+                        "Follow actual Tag or hunger",
+                        ("tag", "hunger"),
+                        required=False,
+                    ),
+                    text("text", "Describe the actual pursuit (for Feral exception)", False),
+                ]
+            )
         if decision.get("gender_spoken_no"):
             fields.extend(
                 [
@@ -536,6 +561,16 @@ def answer_values(values: dict[str, Any]) -> ChoiceAnswer:
 
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
     decision = await threaded(lambda: game.decision(viewer_from_interaction(interaction), identity))
+    if decision["kind"].startswith("prince_"):
+        from girlframe.discord_adapter.m3_prince import open_choice as open_prince_choice
+
+        await open_prince_choice(interaction, game, decision)
+        return
+    if decision["kind"].startswith("consume_"):
+        from girlframe.discord_adapter.m3_consume import open_choice as open_consume_choice
+
+        await open_consume_choice(interaction, game, decision)
+        return
     if decision["kind"].startswith("vat_doll_"):
         from girlframe.discord_adapter.m3_vatgrown import open_choice as open_doll_choice
 
@@ -1165,6 +1200,20 @@ async def open_play(
         )
     fields.extend(dampener_controls)
     fields.extend(kicked_controls)
+    from girlframe.discord_adapter.m3_prince import fields as prince_fields
+
+    fields.extend(await prince_fields(interaction, game))
+    if sheet["frame"] == "CONSUME":
+        fields.append(
+            Field(
+                "consume_seek_food",
+                "Is this Play actually seeking food?",
+                YES,
+                0,
+                1,
+                required=False,
+            )
+        )
 
     if approval is not None and "plays" in approval.subsystems and "keep_your_head" in plays:
         from girlframe.services.m3_enforcer_requisitions import pavlov_available
@@ -1301,7 +1350,11 @@ async def open_play(
                 raise WorkflowError("Use your actual confirmed AM discovery preparation")
             am_source = parent["body"]["discovery"]
             target_actor = ActorRef.model_validate(parent["body"]["target"])
+        from girlframe.discord_adapter.m3_prince import prepared_values as prince_values
+
         prepared = PlayInput(
+            **prince_values(values),
+            consume_seek_food=one(values, "consume_seek_food") == "yes",
             play=play,
             context=values["context"],
             trigger_confirmed=True,
@@ -1328,6 +1381,8 @@ async def open_play(
             or (
                 parent["body"]["work"]
                 if parent and parent["kind"].startswith("easy_target_child:")
+                else parent["body"]["source_work"]
+                if parent and parent["kind"] in ("consume_child", "consume_order_child")
                 else None
             ),
         )
@@ -1369,6 +1424,15 @@ async def open_play(
             + ". "
             + scene["memory"]["instruction"]
             if scene.get("memory")
+            else ""
+        )
+        + (
+            " Current perceived parts: "
+            + "; ".join(
+                scene["labels"][uid] + ": " + part
+                for uid, part in scene.get("perceived_parts", {}).items()
+            )
+            if scene.get("perceived_parts")
             else ""
         )
         + (
@@ -1652,6 +1716,15 @@ class StatePages(discord.ui.View):
             "Heat: " + str(sheet["heat"]),
             "Permissions: " + str(sheet["permissions"]),
         ]
+        if sheet.get("official_pronouns"):
+            lines.extend(
+                "Official " + part + " pronouns: " + value
+                for part, value in sheet["official_pronouns"].items()
+            )
+        if sheet.get("consume_runtime"):
+            lines.append("Hunger: " + sheet["consume_runtime"]["hunger"])
+            if sheet["consume_runtime"].get("appearance"):
+                lines.append("Current appearance: " + sheet["consume_runtime"]["appearance"])
         lines += [
             "Identity: " + entity_label(x) + (" [marked]" if x["marked"] else "")
             for x in sheet["identities"]
@@ -1729,7 +1802,9 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
     guild = discord.Object(id=guild_id)
     character = tree.get_command("character", guild=guild)
     campaign = tree.get_command("campaign", guild=guild)
+    girl = tree.get_command("girl", guild=guild)
     assert isinstance(character, app_commands.Group) and isinstance(campaign, app_commands.Group)
+    assert isinstance(girl, app_commands.Group)
 
     @character.command(
         name="activate", description="Review public fields and confirm your M2 character activation"
@@ -1936,7 +2011,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
             ),
         )
 
-    @campaign.command(name="am", description="Owned AM discovery, Limiter and secret controls")
+    @girl.command(name="am", description="Owned AM discovery, Limiter and secret controls")
     async def am_controls(interaction: discord.Interaction) -> None:
         from girlframe.discord_adapter.m3_am import open_am
         from girlframe.services.m3_am_scrutinized import ScrutinyService
@@ -1947,9 +2022,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         except WorkflowError as error:
             await reply(interaction, str(error))
 
-    @campaign.command(
-        name="alpha", description="Owned Alpha source interactions and scent tracking"
-    )
+    @girl.command(name="alpha", description="Owned Alpha source interactions and scent tracking")
     async def alpha_controls(interaction: discord.Interaction) -> None:
         from girlframe.discord_adapter.m3_alpha_sex import open_alpha
         from girlframe.services.m3_alpha_sex import SexService
@@ -1960,7 +2033,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         except WorkflowError as error:
             await reply(interaction, str(error))
 
-    @campaign.command(
+    @girl.command(
         name="princess", description="Voluntary Princess source and private saved choices"
     )
     async def princess_controls(interaction: discord.Interaction) -> None:
@@ -1973,9 +2046,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         except WorkflowError as exc:
             await interaction.followup.send(str(exc), ephemeral=True)
 
-    @campaign.command(
-        name="mentor", description="Original Mentor callsign and owned cosmetic controls"
-    )
+    @girl.command(name="mentor", description="Original Mentor callsign and owned cosmetic controls")
     async def mentor_controls(interaction: discord.Interaction) -> None:
         from girlframe.discord_adapter.m3_mentor import open_mentor
         from girlframe.services.m3_mentor import MentorService
@@ -1986,7 +2057,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         except WorkflowError as error:
             await reply(interaction, str(error))
 
-    @campaign.command(name="trainee", description="Actual teaching and source-owned Mentor duty")
+    @girl.command(name="trainee", description="Actual teaching and source-owned Mentor duty")
     async def trainee_controls(interaction: discord.Interaction) -> None:
         from girlframe.discord_adapter.m3_trainee import open_trainee
         from girlframe.services.m3_trainee import TraineeService
@@ -1997,9 +2068,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         except WorkflowError as error:
             await reply(interaction, str(error))
 
-    @campaign.command(
-        name="vatgrown", description="Actual Unassuming Doll source and saved effects"
-    )
+    @girl.command(name="vatgrown", description="Actual Unassuming Doll source and saved effects")
     async def vatgrown_controls(interaction: discord.Interaction) -> None:
         from girlframe.discord_adapter.m3_vatgrown_menu import open_vatgrown_menu
 
@@ -2009,7 +2078,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         except WorkflowError as error:
             await reply(interaction, str(error))
 
-    @campaign.command(
+    @girl.command(
         name="oldgen_sex", description="Voluntary Oldgen source and private saved choices"
     )
     async def oldgen_sex_controls(interaction: discord.Interaction) -> None:
@@ -2022,7 +2091,30 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         except WorkflowError as error:
             await reply(interaction, str(error))
 
-    @campaign.command(
+    @campaign.command(name="frame", description="Your current Frame's source-owned controls")
+    async def frame_controls(interaction: discord.Interaction) -> None:
+        await interaction.response.defer(ephemeral=True)
+        try:
+            sheet = await threaded(lambda: game.sheet(viewer_from_interaction(interaction)))
+            frame = sheet["frame"]
+            if frame == "THE PRINCE":
+                from girlframe.discord_adapter.m3_prince import open_prince
+                from girlframe.services.m3_prince import PrinceService
+
+                await open_prince(interaction, PrinceService(game))
+            elif frame == "CONSUME":
+                from girlframe.discord_adapter.m3_consume import open_consume
+                from girlframe.services.m3_consume import ConsumeService
+
+                await open_consume(interaction, ConsumeService(game))
+            else:
+                await reply(
+                    interaction, "Use this Frame's existing campaign controls and private inbox."
+                )
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @girl.command(
         name="casualty", description="Original Casualty parts, repair and actual source choices"
     )
     async def casualty_controls(interaction: discord.Interaction) -> None:
@@ -2035,7 +2127,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         except WorkflowError as error:
             await reply(interaction, str(error))
 
-    @campaign.command(
+    @girl.command(
         name="newgirl_sex", description="Voluntary Newgirl source and private saved choices"
     )
     async def newgirl_sex_controls(interaction: discord.Interaction) -> None:
@@ -2048,7 +2140,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         except WorkflowError as error:
             await reply(interaction, str(error))
 
-    @campaign.command(
+    @girl.command(
         name="easy_target", description="Actual Easy Target reactions and private source choices"
     )
     async def easy_target_controls(interaction: discord.Interaction) -> None:
@@ -2061,7 +2153,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         except WorkflowError as error:
             await reply(interaction, str(error))
 
-    @campaign.command(name="oldgen", description="Owned maxims and actual Old Dog advice")
+    @girl.command(name="oldgen", description="Owned maxims and actual Old Dog advice")
     async def oldgen_controls(interaction: discord.Interaction) -> None:
         from girlframe.discord_adapter.m3_oldgen import open_oldgen
         from girlframe.services.m3_oldgen import OldgenService
@@ -2072,7 +2164,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         except WorkflowError as error:
             await reply(interaction, str(error))
 
-    @campaign.command(name="malleable", description="Qualified Tags and NPC altered-state controls")
+    @girl.command(name="malleable", description="Qualified Tags and NPC altered-state controls")
     async def malleable_controls(interaction: discord.Interaction) -> None:
         from girlframe.discord_adapter.m3_malleable import open_malleable
         from girlframe.services.m3_malleable import MalleableService
@@ -2083,7 +2175,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         except WorkflowError as error:
             await reply(interaction, str(error))
 
-    @campaign.command(name="stim", description="Voluntary Stim source, drugs and saved effects")
+    @girl.command(name="stim", description="Voluntary Stim source, drugs and saved effects")
     async def stim_controls(interaction: discord.Interaction) -> None:
         from girlframe.discord_adapter.m3_stim_sex import open_stim
         from girlframe.services.m3_stim_sex import SexService as StimSexService
@@ -2105,9 +2197,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         except WorkflowError as error:
             await reply(interaction, str(error))
 
-    @campaign.command(
-        name="psyche", description="Owned Disposable Psyche choices and private history"
-    )
+    @girl.command(name="psyche", description="Owned Disposable Psyche choices and private history")
     async def psyche_controls(interaction: discord.Interaction) -> None:
         from girlframe.discord_adapter.m3_disposable_psyche import open_psyche
         from girlframe.services.m3_disposable_psyche import PsycheService
@@ -2118,9 +2208,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         except WorkflowError as error:
             await reply(interaction, str(error))
 
-    @campaign.command(
-        name="dose", description="Owned Dose Up cocktail choices and saved drug history"
-    )
+    @girl.command(name="dose", description="Owned Dose Up cocktail choices and saved drug history")
     async def dose_controls(interaction: discord.Interaction) -> None:
         from girlframe.discord_adapter.m3_dose_up import open_dose_up
         from girlframe.services.m3_dose_up import DoseUpService

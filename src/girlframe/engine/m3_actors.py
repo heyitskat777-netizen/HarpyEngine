@@ -365,6 +365,31 @@ def resolve(
                     ).hexdigest()
                 }
             )
+    from girlframe.engine.m3_consume import InternalCustody
+    from girlframe.engine.m3_consume import records as consumption_records
+
+    enclosed = next(
+        (
+            x
+            for x in consumption_records(state, InternalCustody)
+            if x.target == ref and not x.escaped_event
+        ),
+        None,
+    )
+    if enclosed is not None:
+        actual = actual.model_copy(
+            update=dict(
+                cell=enclosed.cell,
+                inside_frame=True,
+                piloting=False,
+                occupied_frame_instance=enclosed.frame,
+                custody="consume:" + enclosed.id,
+                offstage_source="consume:" + enclosed.id,
+                source_sha256=hashlib.sha256(
+                    (actual.source_sha256 + enclosed.model_dump_json()).encode()
+                ).hexdigest(),
+            )
+        )
     travel = offstage_travel(state, ref)
     if travel is None:
         return actual
@@ -471,6 +496,7 @@ def _resolve(
                 "hidden_sidearm_actual_position",
                 "reign_terror_actual_position",
                 "tracker_initial_handler_position",
+                "consume_handler_position",
                 "ship_base_actual_position",
                 "a_bomb_actual_position",
                 "handler_transport_arrived",

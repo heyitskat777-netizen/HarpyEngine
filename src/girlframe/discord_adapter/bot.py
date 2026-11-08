@@ -234,6 +234,12 @@ class ReadOnlyDiscordBot(discord.Client):
                         "/mission offer, inbox, show — M3 scoped approval required\n"
                         "/character activate, /character followthrough — M2 character state\n"
                         "/campaign scene_bind, scene_join, scene_close, order, play_recovery\n"
+                        "/girl am, alpha, princess, casualty, vatgrown, oldgen, stim "
+                        "— private sources\n"
+                        "/girl mentor, trainee, easy_target, newgirl_sex, oldgen_sex "
+                        "— owned choices\n"
+                        "/campaign frame — current Frame's source controls\n"
+                        "/facilitator request, inbox — source-bound human adjudication\n"
                         "M2 gameplay requires the end-of-milestone release approval. "
                         "Recovered-engine writes and AI remain disabled."
                     )

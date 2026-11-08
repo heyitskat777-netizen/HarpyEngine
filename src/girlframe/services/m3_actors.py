@@ -213,6 +213,10 @@ class ActorService:
                 )
             known = []
             for ref in dict.fromkeys(refs):
+                from girlframe.services.m3_consume_support import knowledge_allowed
+
+                if not knowledge_allowed(state, ref):
+                    continue
                 try:
                     target = rules.resolve(
                         state, ref, bindings, require_current_profile=require_current_profile

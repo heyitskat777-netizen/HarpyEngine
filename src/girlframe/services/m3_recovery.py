@@ -401,6 +401,11 @@ class RecoveryService:
                             )
                             .values(state=item.state, revision=item.revision + 1)
                         )
+                if cancel and action["data"].get("consume_child"):
+                    from girlframe.services.m3_consume import release_child
+
+                    release_child(self.game, c, state, action, key)
+                    released_learning = True
                 if cancel and action["data"].get("learned_play"):
                     from girlframe.services.m3_learned_plays import release_unrolled
 

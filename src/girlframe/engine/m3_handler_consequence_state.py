@@ -110,6 +110,8 @@ class HandlerFatalSource(Model):
     source_event: str = Field(min_length=1)
     source_action: str = Field(min_length=1)
     source_choice: str | None = None
-    clause: Literal["go_for_the_core.high", "go_for_the_core.mid", "go_for_the_core.low"]
+    clause: Literal[
+        "go_for_the_core.high", "go_for_the_core.mid", "go_for_the_core.low", "consume_eat.kill"
+    ]
     appointment: str = Field(min_length=1)
     account: str = Field(min_length=1, max_length=1200)

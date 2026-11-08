@@ -1,6 +1,7 @@
 """M3 rolled Plays routed through the existing owned roll/Tag/chat-lock protocol."""
 
 ROLL_IDS = ("go_off_duty", "void_observation")
+FIXED_IDS = ("consume_feral",)
 HEAT_IDS = (
     "all_out_assault",
     "go_for_the_core",
@@ -26,6 +27,8 @@ HEAT_IDS = (
     "newgirl_sex",
     "easy_target",
     "unassuming_doll",
+    "prince_performer",
+    "consume_eat",
 )
 ASSET_IDS = ("defeat",)
 

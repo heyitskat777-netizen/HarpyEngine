@@ -1459,6 +1459,48 @@
           "limitation": "No full final M3 regression, remote CI or live Discord validation asserted yet. Missing contributions/linked-Play native readback stays separate; services/state/shared forms unchanged."
         }
       ]
+    },
+    {
+      "id": "P1-PRINCE-CONSUME-AM-SOURCE-001",
+      "title": "Ordinary source integration and bounded native startup",
+      "expected": "Actual original source choices, costs, receipts and private navigation; no invented AM roll, fake actor or waived mandatory work.",
+      "status": "IN_PROGRESS",
+      "automated_status": "FOCUSED_SMOKES_ONLY",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_prince.py",
+        "tests/rules/test_consume.py",
+        "tests/rules/test_am_sex.py",
+        "tests/rules/test_p1_command_surface.py"
+      ],
+      "evidence": [
+        {
+          "test_name": "Native Prince mid Performer",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_prince.py::test_native_mid_performer_real_demographic_mark_two_owners_and_private_reopen",
+          "result": "1 passed / 2.19s; other normals NOT RUN"
+        },
+        {
+          "test_name": "Genuine CONSUME link and actual mid Eat",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_consume.py::test_genuine_link_then_actual_mid_bite_lowers_hunger_and_removes_temporary_asset",
+          "result": "1 passed / 2.24s; other normals NOT RUN"
+        },
+        {
+          "test_name": "Actual counterpart roll and private native AM readback",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_am_sex.py",
+          "result": "1 passed / 2.15s"
+        },
+        {
+          "test_name": "Actual offline complete Discord command registration",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_p1_command_surface.py",
+          "result": "1 passed / 0.85s"
+        }
+      ],
+      "remaining": [
+        "Final integrated regression on exact candidate including DPS pagination; independent and human acceptance",
+        "CONSUME Sprite/body/linked-Asset/destroyed-hardware/knowledge adapters",
+        "Other original P1 ordinary workflows; no whole-book completion inferred"
+      ]
     }
   ],
   "enabled_modules": [

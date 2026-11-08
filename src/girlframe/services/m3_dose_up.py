@@ -350,6 +350,10 @@ def _roll_source(game: GameService, c: Connection, action: dict[str, Any]) -> tu
     )
     if event is None:
         raise WorkflowError("Recover the actual canonical original Dose Up roll event")
+    if action["data"].get("prince_mark"):
+        from girlframe.services.m3_prince import prove_mark
+
+        prove_mark(game, c, load_state(c, game.store.campaign_id), action)
     total = action["data"]["receipt"]["pre_total"] + sum(
         x["amount"] for x in action["data"]["modifiers"]
     )
@@ -364,6 +368,18 @@ def _roll_source(game: GameService, c: Connection, action: dict[str, Any]) -> tu
         adjustment = prove_override(game, c, load_state(c, game.store.campaign_id), action)
         if adjustment is not None:
             total = max(total, adjustment)
+    if action["data"].get("prince_override"):
+        from girlframe.services.m3_prince import prove_override as prove_prince_override
+
+        adjustment = prove_prince_override(game, c, load_state(c, game.store.campaign_id), action)
+        if adjustment is not None:
+            total = max(total, adjustment)
+    if action["data"].get("consume_disobey_limit"):
+        from girlframe.services.m3_consume import prove_disobey_limit
+
+        cap = prove_disobey_limit(game, c, load_state(c, game.store.campaign_id), action)
+        if cap is not None:
+            total = min(total, cap)
     if total != action["data"]["result"]["total"]:
         raise WorkflowError("Recover the actual source roll and applied Tag modifiers")
     return str(event), int(total)

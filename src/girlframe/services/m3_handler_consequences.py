@@ -415,7 +415,14 @@ def force_end_handler(
     from girlframe.engine.m3_handler_consequence_state import HandlerFatalSource
 
     action = game.action(c, source_action)
-    if action["data"].get("play") != "go_for_the_core":
+    consume_death = clause == "consume_eat.kill"
+    if consume_death:
+        from girlframe.services.m3_consume_support import prove_kill
+
+        consumed = prove_kill(game, c, state, actor, source_action, event)
+        if consumed.choice != source_choice:
+            raise WorkflowError("Preserve the actual original CONSUME killing choice")
+    elif action["data"].get("play") != "go_for_the_core":
         raise WorkflowError(
             "A compulsory Handler death needs the actual printed fatal Play source."
         )

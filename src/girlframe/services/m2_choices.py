@@ -284,6 +284,16 @@ class ChoiceEngine:
 
             apply_oldgen_sex(self.game, c, state, action, request, answer)
             return
+        if kind.startswith("prince_"):
+            from girlframe.services.m3_prince import apply_choice as apply_prince
+
+            apply_prince(self.game, c, state, action, request, answer)
+            return
+        if kind.startswith("consume_"):
+            from girlframe.services.m3_consume import apply as apply_consume
+
+            apply_consume(self.game, c, state, action, request, answer)
+            return
         if kind.startswith("casualty_"):
             from girlframe.services.m3_casualty import apply_choice as apply_casualty_sex
 
@@ -677,20 +687,28 @@ class ChoiceEngine:
             return
         if kind == "actor_sensors":
             count = {"low": 1, "mid": 2, "high": 3}[level]
-            picks(answer.options, set(QUESTIONS), 1 if level == "low" else 0, count)
+            from girlframe.services.p1_consume_hooks import smell_question
+
+            smell = smell_question(self.game, c, state, action)
+            ordinary = tuple(x for x in answer.options if x != "consume_smell")
+            require(
+                "consume_smell" not in answer.options or smell is not None,
+                "Acquire the actual Human Hound source first",
+            )
+            picks(ordinary, set(QUESTIONS), 1 if level == "low" else 0, count)
             require(
                 set(answer.fields) <= {"q1", "q2", "q3"}
                 and all(x.strip() for x in answer.fields.values()),
                 "Provide valid custom questions.",
             )
             require(
-                len(answer.options) + len(answer.fields) == count
+                len(ordinary) + len(answer.fields) == count
                 and (level != "low" or not answer.fields),
                 "Choose the printed question count; low results use listed questions only.",
             )
-            result["questions"] = list(answer.options) + [
-                answer.fields[x] for x in sorted(answer.fields)
-            ]
+            result["questions"] = list(ordinary) + [answer.fields[x] for x in sorted(answer.fields)]
+            if "consume_smell" in answer.options:
+                result["questions"].append(smell)
             result["off_list"] = bool(answer.fields)
             self.game.request(c, action, state.handler, "handler_sensors")
             return
@@ -973,6 +991,13 @@ class ChoiceEngine:
             self.finish(c, state, action)
             return
         if kind == "order_response":
+            if answer.options == ("consume_follow",):
+                from girlframe.services.m3_consume import begin_order_pursuit
+
+                begin_order_pursuit(
+                    self.game, c, state, action, answer, action["data"]["response_event"]
+                )
+                return
             from girlframe.services.m3_gender_designation import order_no
 
             order_no(self.game, c, state, action, answer)
@@ -1040,19 +1065,31 @@ class ChoiceEngine:
         from girlframe.services.m3_reign_terror import propose as propose_reign
 
         available_tags += reign_candidates(self.game, c, state, action)
-        picks(answer.options, {"pass", "tag", "gender_man"}, 1)
+        picks(answer.options, {"pass", "tag", "gender_man", "starvation"}, 1)
         require(
             set(answer.fields) <= {"status", "marker"}, "Choose only supported source-role fields."
         )
         marker = (
             markers.select(self.game, c, state, action, owner, answer.fields.get("marker"))
-            if answer.options == ("tag",) or "marker" in answer.fields
+            if answer.options in (("tag",), ("starvation",)) or "marker" in answer.fields
             else None
         )
         if answer.options == ("pass",):
             require(
                 not answer.denied and set(answer.fields) <= {"status", "marker"},
                 "A pass does not modify a Tag.",
+            )
+        elif answer.options == ("starvation",):
+            from girlframe.services.p1_consume_hooks import starvation
+
+            require(
+                marker is not None
+                and starvation(self.game, c, state, action, marker.actor) is not None,
+                "Use only the actual available starvation source and original marker",
+            )
+            require(
+                not answer.denied and answer.number in (None, -1) and bool(answer.text.strip()),
+                "Starvation is a fixed -1 source; explain its actual relevance",
             )
         elif answer.options == ("gender_man",):
             from girlframe.services.m3_gender_designation import propose_man_tag
@@ -1114,7 +1151,7 @@ class ChoiceEngine:
                 )
         elif set(answer.fields) - {"marker"}:
             raise WorkflowError("This actor has no supported Status-mark modifier.")
-        if answer.options == ("tag",):
+        if answer.options in (("tag",), ("starvation",)):
             assert marker is not None
             markers.capture(self.game, c, state, action, marker)
 
@@ -1127,7 +1164,7 @@ class ChoiceEngine:
         proposals = []
         for person in action["data"]["participants"]:
             answer = self.answered(action, "tag_window", person)
-            if answer.options in (("tag",), ("gender_man",)):
+            if answer.options in (("tag",), ("gender_man",), ("starvation",)):
                 try:
                     marker = markers.saved(self.game, c, state, action, person)
                 except WorkflowError:
@@ -1172,6 +1209,30 @@ class ChoiceEngine:
                 return
         if selected:
             person, answer, marker = selected
+            if answer.options == ("starvation",):
+                from girlframe.services.m3_consume import acting, mark_starvation
+                from girlframe.services.m3_enforcement_initiative import _cast
+
+                original = acting(state, action)
+                require(
+                    original is not None and marker.actor is not None,
+                    "Recover the actual original starvation bodies",
+                )
+                assert original is not None and marker.actor is not None
+                amount = mark_starvation(
+                    self.game,
+                    c,
+                    state,
+                    original,
+                    marker.actor,
+                    _cast(self.game, c, state, int(action["channel_id"])),
+                    action["data"]["response_event"],
+                )
+                action["data"]["modifiers"].append(
+                    dict(source="consume_starvation", amount=amount, actor=person, text=answer.text)
+                )
+                self.results(c, state, action)
+                return
             if answer.options == ("gender_man",):
                 from girlframe.services.m3_gender_designation import apply_man_tag
 
@@ -1285,13 +1346,28 @@ class ChoiceEngine:
         override = action["data"].get("casualty_override")
         if override is not None:
             total = max(total, int(override["total"]))
+        override = action["data"].get("prince_override")
+        if override is not None:
+            total = max(total, int(override["total"]))
+        cap = action["data"].get("consume_disobey_limit")
+        if cap is not None:
+            total = min(total, int(cap["cap"]))
         action["data"]["result"].update(total=total, tier=tier(total))
 
     def results(self, c: Connection, state: GameState, action: dict[str, Any]) -> None:
         self.set_total(action)
+        from girlframe.services.m3_consume import apply_disobey_limit, intercept_targeted_results
+
+        apply_disobey_limit(self.game, c, state, action)
+        if intercept_targeted_results(self.game, c, state, action):
+            return
         from girlframe.services.m3_casualty import intercept_results as intercept_casualty
 
         if intercept_casualty(self.game, c, state, action):
+            return
+        from girlframe.services.m3_prince import intercept_bad_girl
+
+        if intercept_bad_girl(self.game, c, state, action):
             return
         from girlframe.services.m3_enforcer_requisitions import intercept_results
 
@@ -1305,6 +1381,16 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         play = action["data"]["play"]
         level = action["data"]["result"]["tier"]
+        if action["data"].get("prince"):
+            from girlframe.services.m3_prince import results as prince_results
+
+            prince_results(self.game, c, state, action)
+            return
+        if action["data"].get("consume"):
+            from girlframe.services.m3_consume import results as consume_results
+
+            consume_results(self.game, c, state, action)
+            return
         if action["data"].get("dose_up"):
             from girlframe.services.m3_dose_up import results as results_dose
 
@@ -1470,6 +1556,15 @@ class ChoiceEngine:
 
             if not finish_keep(self.game, c, state, action):
                 return
+        from girlframe.services.m3_consume import intercept_finish as consume_intercept_finish
+        from girlframe.services.m3_consume import offer_partake
+
+        if action["data"]["play"] == "dive_deep" and action["data"].get("receipt"):
+            offer_partake(self.game, c, state, action, action["data"]["response_event"])
+            if self.game.pending(c, action["id"]):
+                return
+        if consume_intercept_finish(self.game, c, state, action):
+            return
         from girlframe.services.m3_mockingbird import intercept_finish
 
         if intercept_finish(self.game, c, state, action):
@@ -1494,6 +1589,17 @@ class ChoiceEngine:
                 ),
             },
         )
+        if (
+            action["data"].get("prince_demands")
+            or action["data"].get("prince_demand_attempt")
+            or action["data"].get("play") == "disobey_orders"
+        ):
+            from girlframe.services.m3_prince import sync_finished
+
+            sync_finished(self.game, c, state, action, action["data"]["response_event"])
+        if action["data"].get("consume_child"):
+            # Its actual source is completed after this canonical child event exists.
+            return
         if action["data"].get("vatgrown_leaving") and action["data"]["result"].get("can_disobey"):
             from girlframe.services.m3_vatgrown_support import finish_departure
 

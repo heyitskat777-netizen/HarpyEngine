@@ -709,6 +709,23 @@ class InboxView(discord.ui.View):
             await open_oldgen_sex(
                 interaction, OldgenSexService(GameService(self.service.store)), item.identity
             )
+        elif item.task in ("m3_prince", "m3_consume"):
+            from girlframe.services.m2_game import GameService
+
+            if item.task == "m3_prince":
+                from girlframe.discord_adapter.m3_prince import open_prince
+                from girlframe.services.m3_prince import PrinceService
+
+                await open_prince(
+                    interaction, PrinceService(GameService(self.service.store)), item.identity
+                )
+            else:
+                from girlframe.discord_adapter.m3_consume import open_consume
+                from girlframe.services.m3_consume import ConsumeService
+
+                await open_consume(
+                    interaction, ConsumeService(GameService(self.service.store)), item.identity
+                )
         elif item.task == "p1_facilitator":
             from girlframe.discord_adapter.p1_facilitator import (
                 open_request as open_facilitator_request,

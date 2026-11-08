@@ -4951,3 +4951,7 @@ Evidence retained under ignored var: Casualty10 distinct normal cases passed seg
 Published prior sourceb5db26c was merged into mainc4550ec; merge CI42449920561 passed25focused in56.07s, full skipped. This new W0 source is a different checkpoint. CI interim selection now contains one real native smoke to follow the owner testing override; full mode still runs all preserved tests, including Deep-Brain-Spikes pagination. No completed tests were deleted or assertions weakened.
 
 Remaining normal dependencies include Vatgrown DNA/chaperone/death replacement/notice/other learning-favour sources, destroyed/removed Casualty hardware and ordinary other-chooser/body adapters. These remain P1 work, not silently deferred whole playbooks. Local registry7 added subsets are scoped bookkeeping, not whole-rule or milestone certification.
+
+## P1 continuation — Prince, CONSUME and AM source checkpoint (2026-11-08)
+
+Historical M3 full completion remains pending; current scope is the approved P1 plan. See `reports/P1_ACCEPTANCE.md` and `docs/work_orders/P1_PRINCE_CONSUME_AM.md`. Four individual minimum smokes passed: Prince1/2.19s, CONSUME1/2.24s, AM1/2.15s and offline command registration1/0.85s. Other authored normals are deferred to final P1, not counted as executed evidence. Remaining ordinary adapters, exact-candidate full regression including DPS pagination, independent review and human acceptance remain pending. No live restart or deployment.

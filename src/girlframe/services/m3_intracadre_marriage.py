@@ -112,6 +112,13 @@ def _price(state: GameState, actor: ActorRef, product: str, detail: str) -> int:
         ):
             raise WorkflowError("Use the original pending Handler quote for this actual Investor.")
         return value.quote
+    from girlframe.engine.m3_consume import REQUISITIONS as CONSUME_RULES
+    from girlframe.engine.m3_prince import RULES as PRINCE_RULES
+
+    if product in PRINCE_RULES:
+        return 2 if state.sheets[actor.entity].frame == "THE PRINCE" else 3
+    if product in CONSUME_RULES:
+        return 2
     if product == "extra_asset_repair":
         quote = next((x for x in state.repair_quotes if x.id == detail), None)
         if quote is None or quote.owner != actor or quote.state != "pending":

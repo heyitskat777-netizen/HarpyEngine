@@ -377,6 +377,14 @@ class GameState(Model):
 
 
 class PlayInput(Model):
+    prince_demands: Literal["following", "against"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    prince_demand_account: str = Field(
+        default="", max_length=1200, exclude_if=lambda value: not value
+    )
+    consume_seek_food: bool = Field(default=False, exclude_if=lambda value: not value)
+    prince_exception: str | None = Field(default=None, exclude_if=lambda value: value is None)
     play: str
     context: str = Field(min_length=1, max_length=1200)
     trigger_confirmed: Literal[True]

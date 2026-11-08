@@ -1,4 +1,4 @@
-# Owner November8: bare minimum interim functional smoke; most automation at P1 end.
-# Full candidate mode still discovers all tests, including memory pagination and
-# the authored-but-unrun gift/departure normals. Preserve those files.
-tests/rules/test_vatgrown_support_ui.py::test_actual_native_prime_keep_completes_before_separate_original_investor_judgment
+# Owner November8: minimum interim functional checks; most automation at P1 end.
+# Check actual offline SDK startup after native route integration. Full candidate
+# mode discovers ALL tests, including DPS pagination and authored normal flows.
+tests/rules/test_p1_command_surface.py

@@ -190,13 +190,20 @@ class CastService:
                             for x in state.director_contexts
                         )
                     )
+                from girlframe.engine.m3_prince import presentation
+                from girlframe.services.m3_consume_support import knowledge_allowed
+
+                known = known and knowledge_allowed(state, actor.ref)
+                part = presentation(state, actor.ref, cast.id)
                 if known:
                     known_refs.add(actor.ref)
                     visible.append(
                         {
                             "ref": actor.ref.model_dump(mode="json"),
                             "token": actor.ref.token,
-                            "label": actor.label,
+                            "label": actor.label + (" · presents as: " + part if part else ""),
+                            "perceived_part": part,
+                            "can_detect_act": part is None,
                             "stale": role.controller != actor.controller,
                             "own": role.controller == viewer.user_id,
                         }

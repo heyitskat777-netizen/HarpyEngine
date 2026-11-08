@@ -329,6 +329,10 @@ def _same_body(state: GameState, first: ActorRef, second: ActorRef) -> bool:
 
 
 def is_helpless(state: GameState, subject: ActorRef, foe: ActorRef | None = None) -> bool:
+    from girlframe.engine.m3_consume import mouth_helpless
+
+    if mouth_helpless(state, subject, foe):
+        return True
     from girlframe.engine.m3_janus import drugged
 
     if drugged(state, subject):

@@ -1306,6 +1306,43 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_consume import _tasks as consume_tasks
+            from girlframe.services.m3_prince import PrinceService
+
+            frame_game = GameService(self.store)
+            frame_state = load_state(connection, self.store.campaign_id)
+            for book, rows in (
+                ("prince", PrinceService(frame_game)._tasks(connection, viewer)),
+                ("consume", consume_tasks(frame_game, connection, frame_state, viewer)),
+            ):
+                for row in rows:
+                    actionable = bool(row["pending"])
+                    status = (
+                        "pending"
+                        if actionable
+                        else "waiting"
+                        if row["phase"] == "pending"
+                        else "established"
+                    )
+                    items.append(
+                        InboxItem(
+                            book + ":" + row["id"],
+                            book,
+                            row["id"],
+                            row["revision"],
+                            "playbook",
+                            row["label"],
+                            "Original source owners",
+                            status,
+                            actionable,
+                            False,
+                            "Resolve the original source-owned choice.",
+                            "Private details remain with the actual owners.",
+                            "Open private Frame record",
+                            task="m3_" + book,
+                        )
+                    )
+
             from girlframe.services.p1_facilitator import FacilitatorService
 
             for ruling in FacilitatorService(GameService(self.store)).tasks(viewer):

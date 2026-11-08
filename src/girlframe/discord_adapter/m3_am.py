@@ -59,6 +59,7 @@ async def open_am(
         pass
     if data["native"]:
         options.append(("presentation", "Your actual expression and presentation"))
+        options.append(("sex", "Counterpart Sex Play or actual circuit contact"))
     for value in data["discoveries"]:
         if value["phase"] == "reset_pending" and value["handler_controller"] == viewer.user_id:
             options.append(("reset:" + value["id"], "Take the actual factory-reset NPC"))
@@ -111,6 +112,12 @@ async def open_am(
             return None
         operation, _, identity = action.partition(":")
         value = next((x for x in data["discoveries"] if x["id"] == identity), None)
+        if operation == "sex":
+            from girlframe.discord_adapter.m3_am_sex import open_am_sex
+            from girlframe.services.m3_am_sex import SexService
+
+            await open_am_sex(current, SexService(service.game))
+            return None
         if operation == "reset":
             from girlframe.discord_adapter.m3_am_reset import open_reset
             from girlframe.services.m3_am_reset import FactoryResetService

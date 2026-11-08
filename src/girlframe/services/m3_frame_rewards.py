@@ -612,6 +612,15 @@ class RewardService:
                 if fanbase and body["origin_frame"] == "THE PRINCE"
                 else None
             )
+            if body["origin_frame"] == "THE PRINCE":
+                from girlframe.engine.m3_actor_bonds import current_ref as prince_reward_ref
+                from girlframe.services.m3_prince import current_fanbase
+
+                actual_fans = current_fanbase(
+                    self.game, c, facts, prince_reward_ref(facts, int(row["subject_id"]))
+                )
+                if actual_fans is not None:
+                    result["fanbase"] = actual_fans
             return result
 
     def apply(

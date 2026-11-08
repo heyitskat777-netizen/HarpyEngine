@@ -6570,6 +6570,86 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "prince-performer-owned-options",
+      "summary": "Each Performer chooser independently selects the printed effect; actual Bond and Status bounds apply. Low Tag/Punishment is elective. One dismissal covers exactly one actual temporary break.",
+      "source": "Prince PDF62/printed60",
+      "rationale": "Do not fabricate a punishment, infer private motives or turn duplicate choices into unlimited dismissal.",
+      "alternatives": [
+        "Require different choices; force a low Punishment."
+      ],
+      "policy_key": "prince_performer_owned_options",
+      "implementation_note": "P1 scoped source adapters; full normal regression and independent clarity review remain pending. Preserve records when changing interpretations.",
+      "change_impact": "Version future interpretation changes; preserve actual people, source receipts, costs and historical effects.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "prince-handler-plan-capability",
+      "summary": "Bad Girl grants the original actual Handler an ongoing Plan capability. Uses require genuinely completed original disobedience and actual addressed recipients; repeated uses retain separate immutable histories.",
+      "source": "Prince PDF63/printed61",
+      "rationale": "The separate paragraph grants a Play rather than a one-use converted-low reward. No invented one-use quota or shared secret recipients.",
+      "alternatives": [
+        "Restrict the Handler capability to a single converted-low outcome."
+      ],
+      "policy_key": "prince_handler_plan_capability",
+      "implementation_note": "P1 scoped source adapters; full normal regression and independent clarity review remain pending. Preserve records when changing interpretations.",
+      "change_impact": "Version future interpretation changes; preserve actual people, source receipts, costs and historical effects.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "prince-fanbase-and-pronouns",
+      "summary": "Real demographic marks require following actual demands; Keep completion has no invented success threshold, while Disobey requires its real permission to disobey. Hero pronouns do not change legal GenderDesignation, and another replacement Frame inherits no old Frame pronouns.",
+      "source": "Prince PDF61\u201364/printed59\u201362",
+      "rationale": "Keep original fan groups, protected Identity sources, exact exceptions, actual hierarchy and separate legal designation.",
+      "alternatives": [
+        "Treat Hero as a legal gender change; require 8+ Keep."
+      ],
+      "policy_key": "prince_fanbase_and_pronouns",
+      "implementation_note": "P1 scoped source adapters; full normal regression and independent clarity review remain pending. Preserve records when changing interpretations.",
+      "change_impact": "Version future interpretation changes; preserve actual people, source receipts, costs and historical effects.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "consume-hunger-and-basis",
+      "summary": "Hunger belongs to the original physical Frame, caps at Ravenous and grants 3 Heat on entry to Gnawing. Ravenous food-seeking uses flat +4; Feral uses its specific -1/+1/+3 basis without stacking +7.",
+      "source": "CONSUME PDF65,67/printed63,65",
+      "rationale": "Preserve original physical resources and the specific printed Feral basis; require actual source proximity for another body becoming Helpless.",
+      "alternatives": [
+        "Grant repeated 3 Heat at the capped state; stack Ravenous and Feral bases."
+      ],
+      "policy_key": "consume_hunger_and_basis",
+      "implementation_note": "P1 scoped source adapters; full normal regression and independent clarity review remain pending. Preserve records when changing interpretations.",
+      "change_impact": "Version future interpretation changes; preserve actual people, source receipts, costs and historical effects.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "consume-body-and-regrowth-source",
+      "summary": "Gentle Eat preserves the initial nonvulnerable cost. A mouth-held body part supplies an independent Helpless cause. Regrowth must identify genuine canonical hardware; the current damaged-Asset repair adapter does not recreate missing hardware.",
+      "source": "CONSUME PDF66\u201367/printed64\u201365",
+      "rationale": "Do not waive costs, erase unrelated conditions or manufacture destroyed hardware. A missing hardware producer remains implementation work, not a ruling that excludes printed regrowth.",
+      "alternatives": [
+        "Waive the initial cost; recreate arbitrary old hardware without a source."
+      ],
+      "policy_key": "consume_body_and_regrowth_source",
+      "implementation_note": "P1 scoped source adapters; full normal regression and independent clarity review remain pending. Preserve records when changing interpretations.",
+      "change_impact": "Version future interpretation changes; preserve actual people, source receipts, costs and historical effects.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -9124,14 +9204,16 @@
         "heading": "Sex Play"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_am_sex.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -9262,14 +9344,16 @@
         "heading": "Fanbase"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_prince.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "THE PRINCE",
@@ -9298,7 +9382,8 @@
       "test_evidence": [
         "tests/rules/test_frame_reward_service.py",
         "tests/rules/test_frame_reward_ui.py",
-        "tests/rules/test_frame_rewards.py"
+        "tests/rules/test_frame_rewards.py",
+        "tests/rules/test_prince.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -9344,15 +9429,17 @@
         "heading": "Performer"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
-      "m2_play_id": null,
+      "test_evidence": [
+        "tests/rules/test_prince.py"
+      ],
+      "m2_play_id": "prince_performer",
       "module": "core",
       "frame_playbook": "THE PRINCE",
       "frame_class": "autocrat",
@@ -9370,14 +9457,16 @@
         "heading": "A Hero We Can Believe In"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_prince.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "THE PRINCE",
@@ -9396,14 +9485,16 @@
         "heading": "Bad Girl"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_prince.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "THE PRINCE",
@@ -9422,14 +9513,16 @@
         "heading": "Immortal Hero"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_prince.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "THE PRINCE",
@@ -9448,14 +9541,16 @@
         "heading": "TV Interviews"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_prince.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "THE PRINCE",
@@ -9474,14 +9569,16 @@
         "heading": "Growing Fanbase"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_prince.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "THE PRINCE",
@@ -9500,14 +9597,16 @@
         "heading": "Power Imbalance"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_prince.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "THE PRINCE",
@@ -9562,7 +9661,8 @@
       "test_evidence": [
         "tests/rules/test_frame_reward_service.py",
         "tests/rules/test_frame_reward_ui.py",
-        "tests/rules/test_frame_rewards.py"
+        "tests/rules/test_frame_rewards.py",
+        "tests/rules/test_consume.py"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -9582,14 +9682,16 @@
         "heading": "Starvation"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_consume.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "CONSUME",
@@ -9608,15 +9710,17 @@
         "heading": "Eat"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
-      "m2_play_id": null,
+      "test_evidence": [
+        "tests/rules/test_consume.py"
+      ],
+      "m2_play_id": "consume_eat",
       "module": "core",
       "frame_playbook": "CONSUME",
       "frame_class": "priestess",
@@ -9634,14 +9738,16 @@
         "heading": "\u2018Human\u2019 Hound"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_consume.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "CONSUME",
@@ -9660,14 +9766,16 @@
         "heading": "Let Us Partake"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_consume.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "CONSUME",
@@ -9686,14 +9794,16 @@
         "heading": "Cannibal Requisition Forms"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_consume.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "CONSUME",
@@ -9712,15 +9822,17 @@
         "heading": "Feral"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
-      "m2_play_id": null,
+      "test_evidence": [
+        "tests/rules/test_consume.py"
+      ],
+      "m2_play_id": "consume_feral",
       "module": "core",
       "frame_playbook": "CONSUME",
       "frame_class": "priestess",
@@ -9738,14 +9850,16 @@
         "heading": "Just a Nibble"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_consume.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "CONSUME",
@@ -9764,14 +9878,16 @@
         "heading": "Ontological Consumption Drive"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_consume.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "CONSUME",
@@ -9790,14 +9906,16 @@
         "heading": "Time to Eat"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_consume.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "CONSUME",

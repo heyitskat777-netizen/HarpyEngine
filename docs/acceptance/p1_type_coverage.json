@@ -3,7 +3,7 @@
   "published_source": "b5db26c31680499375a37f78293ce34c76ec283c",
   "main_merge": "c4550ecbd89bbf84363537e7bdf763c2177a998f",
   "scope": "10Girl labels;10Frame labels representing9official Frame rulesets; JANUS-B uses JANUS",
-  "evidence_note": "Read-only reconciliation of current code, registry and historical test evidence. No new gameplay tests or independent source review in this planning task. A test reference is not a passing result; local planned test_vatgrown_offers.py is absent. Owner authorized P1 resumption; matrix records the reviewed baseline and is updated at bounded source handoffs. Most automated testing deferred to final P1 candidate.",
+  "evidence_note": "Read-only reconciliation of current code, registry and historical test evidence. No new gameplay tests or independent source review in this planning task. A test reference is not a passing result; local planned test_vatgrown_offers.py is absent. Owner authorized P1 resumption; matrix records the reviewed baseline and is updated at bounded source handoffs. Most automated testing deferred to final P1 candidate. Prince/CONSUME/AM source checkpoint: exactly one likely gameplay smoke each plus offline complete command registration; remaining authored normals deferred to final P1. References include unrun tests and do not imply success.",
   "rows": [
     {
       "category": "Girl",
@@ -935,19 +935,22 @@
       "category": "Girl",
       "type": "AM",
       "registry_prefix": "girl.am.",
-      "status": "Published scoped implementation",
-      "ordinary_workflows_with_evidence": "Bounded Just Code/operators, records/memory/backup, real prepared-body swap/return, independent branches, Jailbroken and reset.",
-      "missing_before_AI": "AM Sex; ORDINARY body/physical routing, operator/record/body consequences, held/Storage/Battery/Frame interactions. Ordinary body mechanics cannot move after AI.",
+      "status": "Local scoped implementation; final P1 gates pending",
+      "ordinary_workflows_with_evidence": "Existing Jailbroken, Scrutinized and Just Code/body/backup/records paths retained. New no-additional-roll Sex source readback and native circuit routing: actual Alpha\u2192AM smoke1 passed2.15s.",
+      "missing_before_AI": "Reconcile remaining ordinary body/identity consumers and Bonded no-roll delegation; circuit path uses existing real CodeService sources. Expanded consumer regression and independent review remain pending.",
       "later_candidates": "Exceptional simultaneous branch/body/career transitions after ordinary AM play works.",
       "code": [
         "src/girlframe/services/m3_am_body.py",
         "src/girlframe/services/m3_am_code.py",
-        "src/girlframe/services/m3_am_branch.py"
+        "src/girlframe/services/m3_am_branch.py",
+        "src/girlframe/services/m3_am_sex.py",
+        "src/girlframe/discord_adapter/m3_am_sex.py"
       ],
       "tests": [
         "tests/rules/test_am_body.py",
         "tests/rules/test_am_code.py",
-        "tests/rules/test_am_branch.py"
+        "tests/rules/test_am_branch.py",
+        "tests/rules/test_am_sex.py"
       ],
       "rule_inventory": [
         {
@@ -1048,10 +1051,12 @@
             "heading": "Sex Play"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_am_sex.py"
+          ]
         }
       ]
     },
@@ -1154,17 +1159,20 @@
       "category": "Frame",
       "type": "The Prince",
       "registry_prefix": "frame.prince.",
-      "status": "Published scoped implementation",
-      "ordinary_workflows_with_evidence": "Starting fanbase choices and conditional Permission reward.",
-      "missing_before_AI": "Fanbase, Performer, A Hero We Can Believe In, Bad Girl, Immortal Hero, TV Interviews, Growing Fanbase and Power Imbalance runtime workflows.",
+      "status": "Local scoped implementation; final P1 gates pending",
+      "ordinary_workflows_with_evidence": "Prince native Performer, real fan demographics/demand marks, independent owned effects, actual acquisition receipts, Hero pronouns, Handler Plan capability, source-owned legacy/OffDuty fan tasks. Native Performer smoke1 passed2.19s.",
+      "missing_before_AI": "Final normal regression for other tiers and Requisitions, retention/lifecycle compatibility and independent source review. This is not whole-playbook certification.",
       "later_candidates": "No named ordinary rule approved for deferral; later branches need source-bound classification.",
       "code": [
         "src/girlframe/engine/m3_frame_rewards.py",
-        "src/girlframe/engine/frame_setup.py"
+        "src/girlframe/engine/frame_setup.py",
+        "src/girlframe/services/m3_prince.py",
+        "src/girlframe/discord_adapter/m3_prince.py"
       ],
       "tests": [
         "tests/rules/test_frame_rewards.py",
-        "tests/rules/test_frame_reward_service.py"
+        "tests/rules/test_frame_reward_service.py",
+        "tests/rules/test_prince.py"
       ],
       "rule_inventory": [
         {
@@ -1177,10 +1185,12 @@
             "heading": "Fanbase"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_prince.py"
+          ]
         },
         {
           "id": "frame.prince.permission-trigger",
@@ -1202,7 +1212,8 @@
           "local_test_references": [
             "tests/rules/test_frame_reward_service.py",
             "tests/rules/test_frame_reward_ui.py",
-            "tests/rules/test_frame_rewards.py"
+            "tests/rules/test_frame_rewards.py",
+            "tests/rules/test_prince.py"
           ]
         },
         {
@@ -1230,10 +1241,12 @@
             "heading": "Performer"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_prince.py"
+          ]
         },
         {
           "id": "frame.prince.a-hero-we-can-believe-in",
@@ -1245,10 +1258,12 @@
             "heading": "A Hero We Can Believe In"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_prince.py"
+          ]
         },
         {
           "id": "frame.prince.bad-girl",
@@ -1260,10 +1275,12 @@
             "heading": "Bad Girl"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_prince.py"
+          ]
         },
         {
           "id": "frame.prince.immortal-hero",
@@ -1275,10 +1292,12 @@
             "heading": "Immortal Hero"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_prince.py"
+          ]
         },
         {
           "id": "frame.prince.tv-interviews",
@@ -1290,10 +1309,12 @@
             "heading": "TV Interviews"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_prince.py"
+          ]
         },
         {
           "id": "frame.prince.growing-fanbase",
@@ -1305,10 +1326,12 @@
             "heading": "Growing Fanbase"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_prince.py"
+          ]
         },
         {
           "id": "frame.prince.power-imbalance",
@@ -1320,10 +1343,12 @@
             "heading": "Power Imbalance"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_prince.py"
+          ]
         }
       ]
     },
@@ -1331,17 +1356,20 @@
       "category": "Frame",
       "type": "CONSUME",
       "registry_prefix": "frame.consume.",
-      "status": "Published scoped implementation",
-      "ordinary_workflows_with_evidence": "Creation labels and conditional Permission reward; campaign starting Quiet ruling recorded.",
-      "missing_before_AI": "Actual starvation/Eat, Human Hound, Let Us Partake, Cannibal Requisition Forms, Feral, Just a Nibble, Ontological Consumption Drive and Time to Eat effects/targets.",
+      "status": "Local scoped implementation; final P1 gates pending",
+      "ordinary_workflows_with_evidence": "Original physical hunger/link state, actual Eat/Feral/owned source choices, body/custody/loss/ending support, starvation Tag/Smell/order hooks and paid Requisitions. Genuine-link/midBite smoke1 passed2.24s.",
+      "missing_before_AI": "Sprite Eat continuation; ordinary body/carrier/linked-Asset consumers; destroyed-hardware regrowth producer; typed knowledge/free-text boundary; final normal regression. Unsupported adapters stay explicit before costs.",
       "later_candidates": "Exceptional targets/body combinations after ordinary consumption; starvation is not deferred.",
       "code": [
         "src/girlframe/engine/frame_setup.py",
-        "src/girlframe/engine/m3_frame_rewards.py"
+        "src/girlframe/engine/m3_frame_rewards.py",
+        "src/girlframe/services/m3_consume.py",
+        "src/girlframe/discord_adapter/m3_consume.py"
       ],
       "tests": [
         "tests/rules/test_frame_rewards.py",
-        "tests/rules/test_frame_reward_service.py"
+        "tests/rules/test_frame_reward_service.py",
+        "tests/rules/test_consume.py"
       ],
       "rule_inventory": [
         {
@@ -1379,7 +1407,8 @@
           "local_test_references": [
             "tests/rules/test_frame_reward_service.py",
             "tests/rules/test_frame_reward_ui.py",
-            "tests/rules/test_frame_rewards.py"
+            "tests/rules/test_frame_rewards.py",
+            "tests/rules/test_consume.py"
           ]
         },
         {
@@ -1392,10 +1421,12 @@
             "heading": "Starvation"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_consume.py"
+          ]
         },
         {
           "id": "frame.consume.eat",
@@ -1407,10 +1438,12 @@
             "heading": "Eat"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_consume.py"
+          ]
         },
         {
           "id": "frame.consume.human-hound",
@@ -1422,10 +1455,12 @@
             "heading": "\u2018Human\u2019 Hound"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_consume.py"
+          ]
         },
         {
           "id": "frame.consume.let-us-partake",
@@ -1437,10 +1472,12 @@
             "heading": "Let Us Partake"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_consume.py"
+          ]
         },
         {
           "id": "frame.consume.cannibal-requisition-forms",
@@ -1452,10 +1489,12 @@
             "heading": "Cannibal Requisition Forms"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_consume.py"
+          ]
         },
         {
           "id": "frame.consume.feral",
@@ -1467,10 +1506,12 @@
             "heading": "Feral"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_consume.py"
+          ]
         },
         {
           "id": "frame.consume.just-a-nibble",
@@ -1482,10 +1523,12 @@
             "heading": "Just a Nibble"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_consume.py"
+          ]
         },
         {
           "id": "frame.consume.ontological-consumption-drive",
@@ -1497,10 +1540,12 @@
             "heading": "Ontological Consumption Drive"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_consume.py"
+          ]
         },
         {
           "id": "frame.consume.time-to-eat",
@@ -1512,10 +1557,12 @@
             "heading": "Time to Eat"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_consume.py"
+          ]
         }
       ]
     },

@@ -37,6 +37,10 @@ def subjects(game: GameService, c: Connection, state: GameState) -> list[dict[st
         )
     result = []
     for ref in refs:
+        from girlframe.services.m3_consume_support import knowledge_allowed
+
+        if not knowledge_allowed(state, ref):
+            continue
         try:
             actual = resolve(state, ref, bound)
         except ValueError:

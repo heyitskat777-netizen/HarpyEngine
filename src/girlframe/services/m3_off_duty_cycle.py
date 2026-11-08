@@ -1107,6 +1107,16 @@ class CycleService:
             from girlframe.services.m3_vatgrown_plays import require_period_complete
 
             require_period_complete(self.game, c, state, period)
+            from girlframe.engine.m3_actor_bonds import current_ref as prince_ref
+            from girlframe.services.m3_prince import (
+                require_off_duty_complete as require_prince_off_duty,
+            )
+
+            for prince_owner in period.pilots:
+                if str(prince_owner) in state.sheets:
+                    require_prince_off_duty(
+                        self.game, c, state, identity, prince_ref(state, prince_owner)
+                    )
             pending = frozenset(x["id"] for x in self.periods._pending(c, identity))
             # Prove actual completion before advancing any world entity.
             finished, updated = rules.finish(
