@@ -1217,6 +1217,32 @@
           "limitation": "Specialised/parented marking, other counterparts/bodies, Relay/Clone, linked/protected resources and last-Frame/full-Void continuations remain required adapters; broader prevention combinations unplayed. Separate focused runs, not a full regression. Independent/human review and deployment not performed."
         }
       ]
+    },
+    {
+      "id": "M3C-STIM-SEX-NORMAL-001",
+      "title": "Native Stim Sex, reciprocal source effects, Orders and drug expiry",
+      "expected": "Voluntary source confirmation then actual Heat/receipt and all result choices, optional low self-drug branches, source Tag/self-mark, temporary Helpless consumer, legitimate lower-Status Orders surviving source expiry, actual Off-Duty/Disposable use and private history/replay.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_stim_sex.py"
+      ],
+      "related_cases": [
+        "M3-ADD-006",
+        "M3-ADD-007"
+      ],
+      "evidence": [
+        {
+          "test_name": "Four native outcomes and affected existing source consumers",
+          "executed_command": "Exact argv in var/m3-stim-sex-root-evidence.json",
+          "actual_result": "14 passed in 28.61s; coherent static checks for 12 Python files and types for 11 source modules passed without drift. Registry/repository and offline SDK registration passed. 16 CI cases collected only.",
+          "log_or_trace": "var/m3-stim-sex-final-focused.xml; var/m3-stim-sex-root-evidence.json; var/m3-stim-sex-union-static.json; var/m3-stim-sex-union-source-snapshot.json",
+          "git_commit": "213b9db68ebf782c55861b0936cf1bde09664982",
+          "limitation": "Full Malleable, other recipient/body/controller/ending and physiological-removal adapters remain required. Focused checks, not a full regression or remote CI. Independent/human review and deployment not performed."
+        }
+      ]
     }
   ],
   "enabled_modules": [

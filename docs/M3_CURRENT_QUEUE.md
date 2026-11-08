@@ -1,13 +1,24 @@
 # Current M3 queue
 
-Updated 2026-11-08. Integration checkpoint: `e12960e`; gameplay source: `e12960e`;
-efficiency checkpoint: `91f69a1`, local branch
+Updated 2026-11-08. Gameplay integration source: `213b9db`; local branch
 `codex/integrated-repairs-20261107`. **RULES_SUBSET; bot off.** No deployment,
 environment publication, recovered-engine writes, AI/M4 or Ancillary activation.
-This is the working view; older roadmap/audit additions are historical evidence.
-The bounded efficiency pilot has 8 focused checks, static checks for 10 Python files and types for 5 source modules
-passing at `var/m3-efficiency-pilot-final-source-snapshot.json`; it is not a full
-regression or speed benchmark.
+This working list separates upcoming work from completed scoped checkpoints.
+Registry entries and workflows overlap and differ in size; counts are not percentages.
+
+## Active queue
+
+| Workflow | Owner / state | Dependency | Next concrete action | Completion evidence |
+|---|---|---|---|---|
+| Malleable force-embrace / NPC protection | Malleable agent + root / active bounded implementation | Real altered-at-birth eligibility, later forced Identity replacement and genuine NPC deprogramming | Root adds stamped Tag-birth hook, exact pending-resolution consumer and actual OffDuty NPC operation; run fixed PC/NPC normals | Worker NEW4 authored; tests held pending shared ports; no acceptance yet |
+| Successor | Root / lifecycle dependency queued | Proven singleton Handler, unranked Girl and actual link-removal gaps | Assign source-bound concurrent junior/full Handler lifecycle and actual threshold consumers; avoid a Gold-Star-only placeholder | Frozen346-word source/dependency contract,12 inspected dependency hashes; no code or acceptance |
+| Remaining required core systems | Root + bounded assignments / open | Existing source inventory and actual consumers | Select the next whole dependency-ready gameplay workflow; keep unsupported branches visible | [Registry](../rules/registry.json), [remaining scope](M3_REMAINING_WORK.md), [acceptance](acceptance/m3_rules.json) |
+| Final integrated candidate | Root / blocked by required gameplay | Frozen full core candidate and complete ordinary workflows | Run final full regression and global static/migration/privacy/contract checks | Pending; focused/segmented results do not substitute |
+| Independent and human acceptance | Independent reviewer + owner/players / pending | Review-ready candidate and stated test checklist | Independent source/clarity review, Discord play-testing and owner milestone review | Not run; no inferred certification or release approval |
+
+## Completed scoped checkpoints
+
+These are implementation evidence, not independent certification or milestone sign-off.
 
 | Workflow | Owner / state | Dependency | Next concrete action | Completion evidence |
 |---|---|---|---|---|
@@ -27,12 +38,8 @@ regression or speed benchmark.
 | Princess Sex Play | Nightmare + root / committed within stated scope | True voluntary source, actual counterpart child/Princess author and real Gender effects | `0f4659f`; retain other child Play/body/source adapters | Whole normal1/9.25s; integrated23/34.55s before final Disposable-only proof delta; final coherent static for 19 Python files and 17 source modules; independent/player review pending |
 | Disposable Psyche | AM + root / committed within stated scope | Actual extra Heat/Identity removal, mandatory Tag conversion and real Off-Duty closure | `0f4659f`; next resolve actual Ankou Feedback dependency | Whole normal1/5.33s before classification; integrated23/34.55s then final affected 2/6.04s; coherent static for 19 Python files and 17 source modules, offline SDK and collection of 18 CI cases only |
 | Ankou Feedback Loop | Nightmare + root / committed within stated scope | Actual pre-dice commitment, owned choices/child/death and safe staff interruption | `e12960e`; retain specialised marking/counterparts and last-Frame/Void/linked source continuations | Three normals /12.49s; final affected recovery main /8.27s; old13 pass/1 fail then affected legacy room /1.13s repaired; coherent18 Python/17 source static; offline SDK and16 CI cases collected |
-| Stim-Blissed Sex Play | AM + root / active bounded implementation | Genuine reciprocal drug/effect source, scoped Helpless lifetime, source-time Orders and real expiry | Root integrating shared Game/Choice/Gender/Tag/Order/Scene/Inbox ports; then run fixed4 normal outcomes | NEW4 authored; worker source types and Ruff passed; normal tests held pending root ports |
-| Malleable force-embrace / NPC protection | Nightmare / source contract only | Real altered-at-birth Tag proof, later Identity replacement and an actual NPC deprogramming consumer | Review frozen316-word contract and assign finite missing NPC producers before implementation | No source/test acceptance; existing drug self-mark is only a completed facet |
-| Successor | Root / lifecycle dependency queued | Proven singleton Handler, unranked Girl and actual link-removal gaps | Assign source-bound concurrent junior/full Handler lifecycle and actual threshold consumers; avoid a Gold-Star-only placeholder | Frozen346-word source/dependency contract,12 inspected dependency hashes; no code or acceptance |
-| Remaining required core systems | Root + bounded assignments / open | Existing source inventory and actual consumers | Select the next whole dependency-ready gameplay workflow; keep unsupported branches visible | [Registry](../rules/registry.json), [remaining scope](M3_REMAINING_WORK.md), [acceptance](acceptance/m3_rules.json) |
-| Final integrated candidate | Root / blocked by required gameplay | Frozen full core candidate and complete ordinary workflows | Run final full regression and global static/migration/privacy/contract checks | Pending; focused/segmented results do not substitute |
-| Independent and human acceptance | Independent reviewer + owner/players / pending | Review-ready candidate and stated test checklist | Independent source/clarity review, Discord play-testing and owner milestone review | Not run; no inferred certification or release approval |
+| Stim-Blissed Sex Play | AM + root / committed within scope | Real drugs/effects, independent physiological condition and source-time Orders | `213b9db`; remaining Malleable/body/medical adapters stay visible | Frozen14 checks /28.61s, coherent static12 Python/11 source; offlineSDK13 commands and16 CI cases collected only |
+
 
 Recent completed implementation within stated scope:
 
