@@ -24,6 +24,15 @@ class Maxim(Model):
     high: bool = False
 
 
+class MaximRewrite(Model):
+    id: str
+    owner: ActorRef
+    slot: int
+    before: str
+    after: str
+    event: str
+
+
 class Advice(Model):
     id: str
     actor: ActorRef
@@ -65,6 +74,7 @@ class Use(Model):
 
 KINDS: dict[type[Model], str] = {
     Maxim: "oldgen_maxim",
+    MaximRewrite: "oldgen_maxim_rewrite",
     Advice: "oldgen_advice",
     PoorOutcome: "oldgen_poor",
     Use: "oldgen_use",
@@ -100,7 +110,14 @@ def base_maxims(state: GameState, owner: int) -> tuple[Maxim, ...]:
         Maxim(
             id="oldgen-base:" + actor.token + ":" + str(x),
             owner=actor,
-            text=MAXIMS[x],
+            text=next(
+                (
+                    item.after
+                    for item in reversed(records(state, MaximRewrite))
+                    if item.owner == actor and item.slot == x
+                ),
+                MAXIMS[x],
+            ),
             event=setup.source_event if setup else sheet.source_fingerprint,
             slot=x,
         )
@@ -219,3 +236,23 @@ def mark(
         own.maxims_marked = tuple(sorted((*own.maxims_marked, value.slot)))
         own.revision += 1
     put(state, use)
+
+
+def rewrite_base_maxim(state: GameState, owner: int, token: str, text: str, event: str) -> None:
+    choices = {"oldgen:" + str(x.slot): x for x in base_maxims(state, owner)}
+    value = choices.get(token)
+    if value is None or not text.strip() or len(text.strip()) > 300 or not event:
+        raise ValueError("Rewrite an actual chosen base maxim with human-authored text")
+    assert value.slot is not None
+    put(
+        state,
+        MaximRewrite(
+            id=event,
+            owner=value.owner,
+            slot=value.slot,
+            before=value.text,
+            after=text.strip(),
+            event=event,
+        ),
+    )
+    state.sheets[str(owner)].revision += 1

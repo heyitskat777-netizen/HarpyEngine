@@ -1,9 +1,10 @@
-# Current Oldgen source outcomes and affected existing shared consumers.
-# Historical selections remain in Git; final M3 mode runs all tests.
+# Oldgen Sex and affected existing sources; final M3 mode still runs the full suite.
+tests/rules/test_oldgen_sex.py
 tests/rules/test_oldgen.py
-tests/rules/test_standards.py::test_actual_keep_runtime_and_native_ui_respect_borrowed_and_removed_rules
-tests/rules/test_off_duty_cycle.py::test_actual_preparation_owned_rolls_recovery_review_and_world_end_are_resumable
-# Preserve release/privacy/pause/replay and delivery boundaries.
+tests/rules/test_stim_sex.py::test_mid_real_lower_status_order_drug_tag_consumer_expiry_and_private_saved_source
+tests/rules/test_gender_designation.py
+tests/test_m2_game.py::test_helpless_requires_explicit_recovery_and_no_silent_timeout
 tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng
+# Preserve campaign/privacy/delivery and default release boundaries.
 tests/test_m2_game.py::test_campaign_isolation_and_delivery_uncertainty_no_reroll
 tests/test_m2_game.py::test_live_default_gate_and_active_editor_protection

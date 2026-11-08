@@ -325,6 +325,24 @@ def _maxim(game: GameService, c: Connection, state: GameState, identity: str) ->
             raise WorkflowError("Recover the exact original authored one-use maxim")
     else:
         _oldgen(game, c, state, value.owner, rules.RULE)
+        rewrites = tuple(
+            x
+            for x in rules.records(state, rules.MaximRewrite)
+            if x.owner == value.owner and x.slot == value.slot
+        )
+        if rewrites:
+            from girlframe.services.m3_oldgen_sex import prove_maxim_rewrite
+
+            latest = rewrites[-1]
+            prove_maxim_rewrite(
+                game,
+                c,
+                state,
+                int(latest.owner.entity),
+                "oldgen:" + str(latest.slot),
+                latest.after,
+                latest.event,
+            )
     return value
 
 

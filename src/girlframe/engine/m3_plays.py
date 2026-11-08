@@ -20,6 +20,7 @@ HEAT_IDS = (
     "princess_sex",
     "stim_sex",
     "old_dog_new_pups",
+    "oldgen_sex",
 )
 ASSET_IDS = ("defeat",)
 

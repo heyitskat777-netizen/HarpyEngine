@@ -6170,6 +6170,38 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "oldgen-reciprocal-maxim",
+      "policy_key": "oldgen_reciprocal_maxim",
+      "summary": "For the high yes reciprocal effect, unmark one of the actual original Oldgen's marked base maxims.",
+      "source": "Oldgen Sex Play, rulebook PDF47/printed45; ordinary Helpless recovery",
+      "rationale": "The other person performs the selected effect on the original Oldgen; ordinary counterparts may have no maxims.",
+      "alternatives": [
+        "Flip this option to the counterpart's own maxims, making it unavailable when they have none."
+      ],
+      "implementation_note": "Keep the printed original chooser and source grant; no free unmark or consumed one-use refresh.",
+      "change_impact": "Version future changes explicitly; preserve original people, actual choices, immutable sources and existing condition/mark history.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "oldgen-sex-inability",
+      "policy_key": "oldgen_sex_inability",
+      "summary": "The source no-state-to-do-anything outcome is independent unqualified Helplessness, recoverable through the actual ordinary moment-alone procedure.",
+      "source": "Oldgen Sex Play, rulebook PDF47/printed45; ordinary Helpless recovery",
+      "rationale": "Use the existing printed Helpless recovery rather than fabricate an opponent, invent a timer or merge temporary drug causes.",
+      "alternatives": [
+        "Require a source-specific duration or a narrower inability condition if clarified."
+      ],
+      "implementation_note": "End only the actual source condition; other independent physiology remains effective. Preserve the real recovery event and original body.",
+      "change_impact": "Version future changes explicitly; preserve original people, actual choices, immutable sources and existing condition/mark history.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -8316,14 +8348,16 @@
         "heading": "Sex Play"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_oldgen_sex.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

@@ -274,6 +274,11 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         sheet = state.sheets.get(str(owner))
         body = json.loads(request["body_json"])
+        if kind.startswith("oldgen_sex_") and action["data"].get("oldgen_sex"):
+            from girlframe.services.m3_oldgen_sex import apply_choice as apply_oldgen_sex
+
+            apply_oldgen_sex(self.game, c, state, action, request, answer)
+            return
         if kind.startswith("oldgen_") and action["data"].get("oldgen"):
             from girlframe.services.m3_oldgen import apply_choice as apply_oldgen
 
@@ -1271,6 +1276,11 @@ class ChoiceEngine:
             from girlframe.services.m3_am_scrutinized import results as results_am
 
             results_am(self.game, c, state, action)
+            return
+        if action["data"].get("oldgen_sex"):
+            from girlframe.services.m3_oldgen_sex import results as results_oldgen_sex
+
+            results_oldgen_sex(self.game, c, state, action)
             return
         if action["data"].get("oldgen"):
             from girlframe.services.m3_oldgen import results as results_oldgen

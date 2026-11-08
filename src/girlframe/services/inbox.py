@@ -924,6 +924,22 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_oldgen_sex import OldgenSexService
+
+            for oldgen_sex in OldgenSexService(GameService(self.store))._tasks(connection, viewer):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, oldgen_sex),
+                        prefix="oldgen-sex:",
+                        source="oldgen_sex",
+                        counterpart="Original voluntary source participants",
+                        effect="Review your own saved source choices and effects.",
+                        details="Other people retain their own choices and privacy.",
+                        primary="Review Oldgen source",
+                        task="m3_oldgen_sex",
+                    )
+                )
+
             from girlframe.services.m3_oldgen import OldgenService
 
             for oldgen in OldgenService(GameService(self.store))._tasks(connection, viewer):

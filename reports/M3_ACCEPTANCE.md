@@ -1,5 +1,39 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Oldgen Sex: all printed normal paths — 2026-11-08
+
+Extends source `b9c3f13`. Actual voluntary source confirmation precedes the genuine
+Heat/receipt/Tag pipeline. Low lets the real counterpart rewrite a chosen base
+maxim while preserving its original ID/slot/mark; future maxim consumers use that
+proved current text. Mid applies two genuine effects. High asks the actual
+counterpart the creep question, then their yes enables one reciprocal effect;
+their no grants the original actor one additional distinct effect. No answer,
+consent, counterpart resource or fictional performance is manufactured.
+
+Real Tags, Status shifts, Bond changes and source-granted maxim unmarks use existing
+reducers. Physiological inability is independent unqualified Helplessness; actual
+ordinary moment-alone recovery proves and ends its source while independent drug
+conditions retain their clocks. Native/history views reveal only necessary fields
+for each exact original decision. Existing Gender source offers remain connected.
+
+| Executed evidence | Result |
+|---|---|
+| Four printed paths plus existing maxim, drug, Gender, ordinary recovery and pause/replay consumers | 12 passed /19.20s; `var/m3-oldgen-sex-integrated.xml` |
+| Worker final fixed four | 4 passed /6.93s; overlaps the integrated selection; earlier passes 6.69s/6.51s precede source/private projection refinements |
+| Coherent static | Ruff/format14 Python files and mypy13 source modules pass without drift; `var/m3-oldgen-sex-union-static.json` |
+
+The worker handoff records stale/auth/source proof, rollback/retry, real physiology
+recovery and private saved-source reopen evidence. Refinements restrict maxim
+texts to actual unmark/rewrite phases. Root distinguishes advice and Sex choice
+prefixes and uses the genuine recover-before-source-ending ordering.
+
+Remaining: temporary advice-maxim rewrite and non-native/conditional-body adapters;
+consumed one-use maxims are never refreshed. This is focused offline evidence,
+not a full regression, remote CI, independent rules review or human acceptance.
+The separate active Doll work is excluded from this source snapshot. Bot stays
+off; no deployment, publication or private recovered-engine write.
+
+
 ## Oldgen maxims and all Old Dog advice outcomes — 2026-11-08
 
 Extends source `01c8cfe`. Just the Way It Is uses the actual original two chosen

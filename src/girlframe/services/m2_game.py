@@ -1135,6 +1135,7 @@ class GameService:
             )
             princess_sex = None
             stim_sex = None
+            oldgen_sex = None
             oldgen = None
             m3 = None
             beneath = None
@@ -1211,6 +1212,7 @@ class GameService:
                     "dose_up",
                     "princess_sex",
                     "stim_sex",
+                    "oldgen_sex",
                     "am_scrutinized",
                     "am_just_code",
                 )
@@ -1258,6 +1260,10 @@ class GameService:
                 from girlframe.services.m3_oldgen import prepare as prepare_oldgen
 
                 oldgen = prepare_oldgen(self, c, viewer, state, prepared, channel)
+            if prepared.play == "oldgen_sex":
+                from girlframe.services.m3_oldgen_sex import prepare as prepare_oldgen_sex
+
+                oldgen_sex = prepare_oldgen_sex(self, c, viewer, state, prepared, channel)
             if prepared.play == "stim_sex":
                 from girlframe.services.m3_stim_sex import prepare as prepare_stim
 
@@ -1789,6 +1795,7 @@ class GameService:
                     dose_up,
                     princess_sex,
                     stim_sex,
+                    oldgen_sex,
                     oldgen,
                     am_scrutinized,
                     am_code,
@@ -1903,6 +1910,17 @@ class GameService:
                     table=list(oldgen["table"]),
                     cast=oldgen["cast"],
                     cast_sha256=oldgen["cast_sha256"],
+                )
+            if oldgen_sex is not None:
+                data["oldgen_sex"] = oldgen_sex
+                data["participants"] = list(oldgen_sex["table"])
+                data["tag_context"] = dict(
+                    actor=oldgen_sex["actor"],
+                    handler=oldgen_sex["handler"],
+                    gm_controller=oldgen_sex["handler_controller"],
+                    table=list(oldgen_sex["table"]),
+                    cast=oldgen_sex["cast"],
+                    cast_sha256=oldgen_sex["cast_sha256"],
                 )
             if stim_sex is not None:
                 data["stim_sex"] = stim_sex
@@ -2307,6 +2325,7 @@ class GameService:
                 or princess_child
                 or princess_sex
                 or stim_sex
+                or oldgen_sex
                 or ankou_child
                 else None
             )
@@ -2320,6 +2339,10 @@ class GameService:
 
                 assert begin_source_event is not None
                 bind_child(self, c, state, action, begin_source_event)
+            if oldgen_sex is not None:
+                from girlframe.services.m3_oldgen_sex import bind as bind_oldgen_sex
+
+                bind_oldgen_sex(state, action, begin_source_event)
             if stim_sex is not None:
                 from girlframe.services.m3_stim_sex import bind as bind_stim
 
@@ -2353,6 +2376,7 @@ class GameService:
                 or dose_up is not None
                 or princess_sex is not None
                 or stim_sex is not None
+                or oldgen_sex is not None
                 or oldgen is not None
                 or princess_child is not None
                 or ankou_child is not None
@@ -2374,6 +2398,7 @@ class GameService:
                     or dose_up is not None
                     or princess_sex is not None
                     or stim_sex is not None
+                    or oldgen_sex is not None
                     or oldgen is not None
                     or princess_child is not None
                     or ankou_child is not None
@@ -2678,6 +2703,10 @@ class GameService:
                 from girlframe.services.m3_oldgen import pre_roll as pre_roll_oldgen
 
                 pre_roll_oldgen(self, c, viewer, state, action)
+            if action["data"].get("oldgen_sex"):
+                from girlframe.services.m3_oldgen_sex import pre_roll as pre_roll_oldgen_sex
+
+                pre_roll_oldgen_sex(self, c, viewer, state, action)
             if action["data"].get("stim_sex"):
                 from girlframe.services.m3_stim_sex import pre_roll as pre_roll_stim
 
@@ -2875,6 +2904,7 @@ class GameService:
                 or action["data"].get("dose_up")
                 or action["data"].get("princess_sex")
                 or action["data"].get("stim_sex")
+                or action["data"].get("oldgen_sex")
                 or action["data"].get("oldgen")
                 or action["data"].get("princess_child")
                 or action["data"].get("ankou_feedback")
@@ -3020,6 +3050,7 @@ class GameService:
                 or action["data"].get("dose_up")
                 or action["data"].get("princess_sex")
                 or action["data"].get("stim_sex")
+                or action["data"].get("oldgen_sex")
                 or action["data"].get("oldgen")
                 or action["data"].get("princess_child")
                 or action["data"].get("ankou_feedback")
@@ -3194,6 +3225,11 @@ class GameService:
 
                 Access(self.store).authorize(c, viewer, "strain")
             director_tag_response = False
+            if action["data"].get("oldgen_sex"):
+                from girlframe.services.m3_oldgen_sex import authorize as oldgen_sex_authorize
+
+                oldgen_sex_authorize(self, c, viewer, action)
+                director_tag_response = True
             if action["data"].get("stim_sex"):
                 from girlframe.services.m3_stim_sex import authorize as stim_authorize
 
@@ -3442,6 +3478,7 @@ class GameService:
                 or action["data"].get("dose_up")
                 or action["data"].get("princess_sex")
                 or action["data"].get("stim_sex")
+                or action["data"].get("oldgen_sex")
                 or action["data"].get("oldgen")
                 or action["data"].get("princess_child")
                 or action["data"].get("ankou_feedback")
@@ -4385,7 +4422,7 @@ class GameService:
 
                 return SpriteService(self.store).decision(viewer, choice_id)
             action = self.action(c, row["action_id"])
-            if row["kind"].startswith("oldgen_"):
+            if row["kind"] in ("oldgen_write_maxim", "oldgen_low_maxim", "oldgen_listen"):
                 from girlframe.services.m3_oldgen import detail as oldgen_detail
 
                 return dict(row) | dict(
@@ -4395,6 +4432,21 @@ class GameService:
                     channel=int(action["channel_id"]),
                     play=action["data"]["play"],
                     detail=oldgen_detail(
+                        self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                    ),
+                )
+            if row["kind"].startswith("oldgen_sex_"):
+                from girlframe.services.m3_oldgen_sex import authorize as oldgen_sex_authorize
+                from girlframe.services.m3_oldgen_sex import projection as oldgen_sex_projection
+
+                oldgen_sex_authorize(self, c, viewer, action)
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    actor=int(action["actor_id"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    play=action["data"]["play"],
+                    detail=oldgen_sex_projection(
                         self, c, load_state(c, self.store.campaign_id), action, dict(row)
                     ),
                 )
@@ -5077,7 +5129,10 @@ class GameService:
                 raise WorkflowError("Recover an Asset only if all Girl Assets are damaged.")
             sheet.revision += 1
             response_event = str(uuid4())
+            from girlframe.services.m3_oldgen_sex import recover_helpless as recover_oldgen_sex
+
             state = clear_helpless(state, current_ref(state, viewer.user_id), response_event)
+            recover_oldgen_sex(self, c, state, current_ref(state, viewer.user_id), response_event)
             self.event(
                 c,
                 viewer.user_id,
