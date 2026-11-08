@@ -1436,6 +1436,29 @@
           "limitation": "Other actor/performance/harm/protection adapters and off-scene failure proof remain required; free text cannot complete unsupported effects. Worker segmented/failed attempts preserved. No new full regression, independent certification, human acceptance or deployment."
         }
       ]
+    },
+    {
+      "id": "M3D-DEEP-BRAIN-SPIKES-PAGINATION-001",
+      "title": "Lossless ordered private memory context and returned History pages",
+      "expected": "All saved beginning/circumstances/return text remains accessible in ordered private pages of at most1000 rendered UTF16 units, including overhead; active form state/confirmation and private current authorization remain intact.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_deep_brain_spikes_pagination.py",
+        "tests/rules/test_deep_brain_spikes.py"
+      ],
+      "evidence": [
+        {
+          "test_name": "Native maximums, both returned causes, escaping/Unicode/boundaries and unchanged memory flow",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_deep_brain_spikes_pagination.py tests/rules/test_deep_brain_spikes.py --tb=short --maxfail=1",
+          "actual_result": "5 passed12.03s in working tree; exact933b10d committed export5 passed13.90s without unfinished runtime modules. Ruff/format3 Python and mypy2 source passed. Additive focused CI selection includes both files; final full suite pending.",
+          "log_or_trace": "var/m3-spikes-pagination-focused.xml; var/m3-spikes-pagination-committed.xml; var/m3-spikes-pagination-committed-check.json; var/m3-spikes-pagination-static.json",
+          "git_commit": "933b10d9a6f0783dbfa10df61154c1a7e8cd10c4",
+          "limitation": "No full final M3 regression, remote CI or live Discord validation asserted yet. Missing contributions/linked-Play native readback stays separate; services/state/shared forms unchanged."
+        }
+      ]
     }
   ],
   "enabled_modules": [
@@ -1484,6 +1507,11 @@
     ],
     "full_rerun_after_repairs": "NOT_RUN",
     "milestone_completion": false,
-    "reason": "All baseline failures isolated and pass targeted repairs. Continue authorized M3 gameplay; do not call failed full artifact green. Final candidate integrated regression remains required."
+    "reason": "All baseline failures isolated and pass targeted repairs. Continue authorized M3 gameplay; do not call failed full artifact green. Final candidate integrated regression remains required.",
+    "required_pagination_tests": [
+      "tests/rules/test_deep_brain_spikes_pagination.py",
+      "tests/rules/test_deep_brain_spikes.py"
+    ],
+    "pagination_gate": "Final exact integrated candidate must run full pytest/global checks and CI full_suite:true with Scope:full; focused pagination evidence is not a full regression."
   }
 }

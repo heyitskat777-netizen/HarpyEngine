@@ -36,8 +36,10 @@ Focused execution:
   and `var/m3-spikes-pagination-static.json`.
 
 Both test files are in the additive focused CI selection; normal full pytest also
-collects them. The exact committed candidate will receive an exported-source
-focused check before branch publication, excluding unfinished shared runtime work.
+collects them. An exported source tree of exact commit `933b10d9a6f0783dbfa10df61154c1a7e8cd10c4`
+passed the same5 focused tests /13.90s, with package import verified inside that
+export and exact source hashes matching. It excludes unfinished runtime work and
+creates no Git worktree. Artifact: `var/m3-spikes-pagination-committed-check.json`.
 Remote CI/full-mode evidence is not yet asserted in this source record. Final M3
 still requires the entire regression/global checks on its exact integrated commit,
 CI `full_suite:true`/`Scope: full` evidence, independent review and human acceptance.
