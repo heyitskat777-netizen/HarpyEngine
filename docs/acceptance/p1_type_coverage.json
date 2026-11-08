@@ -1,6 +1,6 @@
 {
   "status": "P1_IMPLEMENTATION_AUTHORIZED_TESTING_PENDING",
-  "published_source": "9cdea91b2b8dd1c66355894e08bf8b9dcc209d7b",
+  "published_source": "84aaf01dbc9295b24826785db2f76d4283774606",
   "main_merge": "c4550ecbd89bbf84363537e7bdf763c2177a998f",
   "scope": "10Girl labels;10Frame labels representing9official Frame rulesets; JANUS-B uses JANUS",
   "evidence_note": "Current integrated working coverage, preserving historical source evidence. Test references include authored tests not yet run. Owner defers most automated checks to final P1; interim evidence is limited to the named likely-flow smokes in reports/P1_ACCEPTANCE.md. No independent certification, full regression or player acceptance is implied.",
@@ -494,7 +494,7 @@
       "type": "Casualty",
       "registry_prefix": "girl.casualty.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Unpublished: parts/repair, push, No One Better, Helpless/finder, genuine Void resistance, Brain ending and native Sex tiers;11 distinct normals passed separately.",
+      "ordinary_workflows_with_evidence": "Published scoped: parts/repair, push, No One Better, Helpless/finder, genuine Void resistance, Brain ending and native Sex tiers;11 distinct normals passed separately.",
       "missing_before_AI": "Destroyed/removed hardware replacement and remaining ordinary resistance/part/body consequences. Published segmented normals remain separate from final integrated regression.",
       "later_candidates": "Exceptional AM/Clone/retained-rule carriers with already-pending costs, after ordinary body paths.",
       "code": [
@@ -705,7 +705,7 @@
       "type": "Vatgrown",
       "registry_prefix": "girl.vatgrown.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Published Doll. Unpublished Experiment/Prime/Sex, real learned Brutalize once, original Investor/payment and Comfort gift;8 source normals passed separately.",
+      "ordinary_workflows_with_evidence": "Published scoped Doll and Experiment/Prime/Sex, real learned Brutalize once, original Investor/payment and Comfort gift;8 source normals passed separately.",
       "missing_before_AI": "DNA first-comparison Tag, actual chaperone travel, ordinary leave/Disobey and learning/favour adapters, distinct fresh Vatgrown creation after genuine death. Home/Retirement/departure authored tests and integrated regression remain pending.",
       "later_candidates": "Compound existing Investor/acquisition obligations during exceptional carrier transitions; ordinary death continuity stays BEFORE AI.",
       "code": [
@@ -1064,7 +1064,7 @@
       "category": "Girl",
       "type": "Bonded",
       "registry_prefix": "girl.bonded.",
-      "status": "Local scoped implementation; final P1 gates pending",
+      "status": "Published scoped implementation; final P1 gates pending",
       "ordinary_workflows_with_evidence": "Actual Side and Pair-owned replies, source-owned witnessed affection/children, copied Sex rules with original resources, explicit no-roll low result and durable pause. Native Side smoke1/2.56s; no-roll pause and exact permission restore1/1.89s.",
       "missing_before_AI": "Final authored normal regression, optional Man mark on explicit no-roll source, remaining ordinary identity/body/lifecycle adapters and independent source review.",
       "later_candidates": "Compound retained-rule/extra-Identity/dual-cockpit cases after ordinary Pair lifecycle.",
@@ -2225,9 +2225,9 @@
       "category": "Frame",
       "type": "Wyvern 0.4",
       "registry_prefix": "frame.wyvern.",
-      "status": "Local scoped implementation; combat integration active",
+      "status": "Published scoped implementation; final P1 gates pending",
       "ordinary_workflows_with_evidence": "Existing intrinsic/capacity and Offering retained. New exploration, Roused, cargo, Wraith, paid questions/Renovation and Protector source/native paths. Actual mid-Rouse/body-Asset strike1/2.18s; no new full regression.",
-      "missing_before_AI": "Finish actual Pin/replacement/Crushing Bulk and source callbacks; authored normal tests, occupied vehicle aftermath and remaining physical adapters. No Gorgon Leviathan substitution.",
+      "missing_before_AI": "Final authored ordinary regression, occupied vehicle aftermath and remaining body/source adapters. Pin/replacement/Crushing Bulk code and four unrun normal scenarios are published; not independently certified.",
       "later_candidates": "No named ordinary rule established optional. Gorgon Leviathan is different from Wyvern Leviathan Chassis.",
       "code": [
         "src/girlframe/services/m3_wyvern.py",
@@ -2236,7 +2236,8 @@
         "src/girlframe/discord_adapter/m3_wyvern.py"
       ],
       "tests": [
-        "tests/rules/test_wyvern.py"
+        "tests/rules/test_wyvern.py",
+        "tests/rules/test_wyvern_combat.py"
       ],
       "rule_inventory": [
         {

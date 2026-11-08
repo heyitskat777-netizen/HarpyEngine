@@ -75,4 +75,12 @@ retained under ignored `var/p1-bonded-wyvern-integration-static.json` and
 `var/p1-bonded-wyvern-checkpoint-static.log`. Two formatting-only deltas were in
 root-owned movement/vehicle files; frozen worker sources stayed intact. This is
 scoped static verification, not the final global/full-regression gate. Four
-expected combat test scenarios are being authored separately and have not run.
+expected combat test scenarios were authored separately and have not run.
+
+Published runtime checkpoint: `84aaf01dbc9295b24826785db2f76d4283774606`.
+The additional frozen `tests/rules/test_wyvern_combat.py` contains four expected
+normal scenarios: actual Pin/release, known-receipt replacement, Sprite
+interception/whole destruction, and Handler-assessed empty vehicle destruction.
+Worker Ruff/format passed; source SHA256
+`7a7a46f7913a2ecd592f17fd34e82a81c750c4d2ae016718b0b0489fdd464284`.
+**NOT RUN**; include them in the final full P1 regression. No new game smoke.
