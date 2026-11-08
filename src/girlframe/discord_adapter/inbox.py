@@ -717,6 +717,14 @@ class InboxView(discord.ui.View):
             await open_ankou(
                 interaction, AnkouService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_body_facts":
+            from girlframe.discord_adapter.m3_body_facts import open_body_facts
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_body_facts import BodyFactsService
+
+            await open_body_facts(
+                interaction, BodyFactsService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_changeling_sex":
             from girlframe.discord_adapter.m3_changeling_sex import open_changeling_sex
             from girlframe.services.m2_game import GameService

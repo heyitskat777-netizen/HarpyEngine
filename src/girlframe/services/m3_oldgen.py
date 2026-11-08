@@ -319,10 +319,29 @@ def _maxim(game: GameService, c: Connection, state: GameState, identity: str) ->
     value = rules.get(state, identity)
     if value.advice:
         advice = prove_advice(game, c, state, value.advice)
-        if advice.maxim != value.id or value not in rules.records(
+        original = _record(state, rules.Maxim, identity)
+        if advice.maxim != value.id or original not in rules.records(
             _history(c, game, value.event), rules.Maxim
         ):
             raise WorkflowError("Recover the exact original authored one-use maxim")
+        advice_rewrites = tuple(
+            x
+            for x in rules.records(state, rules.AdviceMaximRewrite)
+            if x.owner == value.owner and x.maxim == value.id
+        )
+        if advice_rewrites:
+            from girlframe.services.m3_oldgen_sex import prove_maxim_rewrite
+
+            latest_advice = advice_rewrites[-1]
+            prove_maxim_rewrite(
+                game,
+                c,
+                state,
+                int(value.owner.entity),
+                value.id,
+                latest_advice.after,
+                latest_advice.event,
+            )
     else:
         _oldgen(game, c, state, value.owner, rules.RULE)
         rewrites = tuple(
@@ -545,7 +564,7 @@ class OldgenService:
                 subjects.append(dict(ref=role.actor.model_dump(mode="json"), label=actual.label))
             values = [
                 x for sheet in state.sheets.values() for x in rules.base_maxims(state, sheet.owner)
-            ] + list(rules.records(state, rules.Maxim))
+            ] + [rules.get(state, x.id) for x in rules.records(state, rules.Maxim)]
             return dict(
                 revision=state.revision,
                 scene_available=cast is not None,
@@ -611,7 +630,7 @@ class OldgenService:
         return [
             dict(
                 id=x.id,
-                label="Your one-use maxim: " + x.text,
+                label="Your one-use maxim: " + rules.get(state, x.id).text,
                 pending=rules.available(state, x),
                 revision=state.revision,
             )

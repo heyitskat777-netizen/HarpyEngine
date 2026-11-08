@@ -375,7 +375,13 @@ def apply_choice(
             and len(answer.text) <= 300
         ):
             token = answer.fields["maxim"]
-            maxims.rewrite_base_maxim(state, value.caster, token, answer.text.strip(), event)
+            if not token.startswith("oldgen:"):
+                from girlframe.services.m3_oldgen import _maxim
+
+                original = _maxim(game, c, state, token)
+                if original.owner != value.actor:
+                    raise WorkflowError("Rewrite only this original Oldgen's actual maxim")
+            maxims.rewrite_maxim(state, value.caster, token, answer.text.strip(), event)
             rules.put(state, selected)
             rules.put(
                 state,
@@ -394,7 +400,7 @@ def apply_choice(
             )
         else:
             raise WorkflowError(
-                "The original counterpart may rewrite one actual base maxim or decline"
+                "The original counterpart may rewrite one actual owned maxim or decline"
             )
         _finish(game, c, state, action)
         return
@@ -511,11 +517,7 @@ def projection(
         minimum=2 if value.phase == "caster" else 0,
         maximum=2 if value.phase == "caster" else 1,
         maxims=marked if value.phase in ("caster", "additional", "reciprocal") else (),
-        rewrite=tuple(
-            ("oldgen:" + str(x.slot), x.text) for x in maxims.base_maxims(state, value.caster)
-        )
-        if value.phase == "rewrite"
-        else (),
+        rewrite=maxims.rewritable_maxims(state, value.caster) if value.phase == "rewrite" else (),
     )
 
 
@@ -555,7 +557,7 @@ def prove_effect(game: GameService, c: Connection, state: GameState, identity: s
         ):
             raise WorkflowError("Recover the actual original authored Tag")
     if value.kind in ("unmark", "rewrite") and value.maxim != answer.fields.get("maxim"):
-        raise WorkflowError("Recover the actual selected Oldgen base maxim")
+        raise WorkflowError("Recover the actual selected Oldgen maxim")
     return value
 
 

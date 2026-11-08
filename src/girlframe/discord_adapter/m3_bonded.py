@@ -137,6 +137,7 @@ async def _play(
     target: ActorRef | None = None,
     delegated_target: ActorRef | None = None,
     channel: int | None = None,
+    title: str = "Actual Bonded source Play",
 ) -> None:
     sheet = await asyncio.to_thread(game.sheet, viewer_from_interaction(interaction))
     identities = [x for x in sheet["identities"] if not x["marked"]]
@@ -197,7 +198,7 @@ async def _play(
 
     form = NativeForm(
         interaction.user.id,
-        "Actual Bonded source Play",
+        title,
         "Use real resources and your actual trigger. Preparing does not perform the Play.",
         fields,
         start,

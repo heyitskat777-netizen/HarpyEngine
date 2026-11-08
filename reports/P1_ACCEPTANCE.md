@@ -145,3 +145,63 @@ node ran. All independent-review fields remain pending. Shared body-fact/native
 setup, legacy starting-source reconciliation, further ordinary required-Play and
 NPC/body adapters, full exact-commit regression/global release checks and human
 review still prevent a P1-ready claim. No deployment, restart or environment publish.
+
+### Frame checkpoint publication and next bounded adapters
+
+Published sanitized branch checkpoint **c703a29d581c53e5c92f50b17c3accbb838f00c2**.
+[CI42480378085](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42480378085)
+passed its focused scope, applicable static checks, SDK registration, CLI and
+contract/repository checks; **full regression skipped**. Before commit, local
+Ruff/format passed83 changed Python paths, mypy passed78 source paths, registry
+reported269 subset/207 unimplemented/0 independently verified, and repository
+check found0 findings. The CSV newline issue was fixed before commit. The preceding
+0981b36 CI failed at setup-python before any gameplay test; the new run completed.
+
+The next Oldgen adapter reuses immutable advice records and adds a text-only
+rewrite overlay for the original owner's one-use maxim. Original target, source,
+use history and unavailable/spent state persist. The existing base rewrite
+records/events remain unchanged. Source: rulebook PDF46–47 / printed44–45.
+The new native normal covers actual advice → actual first use → original
+counterpart low Sex result → private rewritten readback → second use refused.
+Only that new node ran: first failed in3.02s because the synthetic fixture did not
+drain the completed advice delivery; after adding the ordinary delivery drain,
+it passed **1 test in3.58s**. Both logs/XML retained under
+`var/p1-oldgen-advice-rewrite-minimum*`. Four changed source paths passed mypy;
+no old successful gameplay nodes were repeated. Remaining affected-consumer tests
+are deferred to the final exact-commit P1 regression.
+
+Shared body setup now has an authored `/campaign frame area:body` dropdown route
+before the Girl-sheet lookup, plus private inbox dispatch; the scoped service
+and immutable legacy starting-String import are in progress. Required Play family
+adapters are under a bounded read-only contract review. Bot stays OFF. No live
+Discord connection, restart, deployment, main merge or environment publication.
+
+### Shared body setup and explicit original starting repair
+
+Implemented `/campaign frame area:body` before Girl-sheet lookup, dropdown-driven
+actual-role/body recording, private saved source readback and Inbox routing.
+Existing source authority remains actual owner or original Handler witness; saved
+accounts do not become visible to unrelated later Handlers. Existing witnessed
+body/source guards remain. Explicit original-owner repair reads immutable accepted
+starting anchors and actual Frame birth; it imports independently proven subjects
+in one transaction while naming unresolved subjects. A current Bond never becomes
+proof, and a saved/spent String never refreshes on retry.
+
+Minimum checks: SDK command construction **1 passed** in the initial two-node run.
+The import node initially failed with stale synthetic mission-registry approval;
+subsequent attempts exposed an all-or-none import blocking a proven Pilot behind
+an unresolved real NPC role (including a diagnostic assertion attempt). The
+repair preserves the actual reviewed NPC anchor and makes eligible-subject import
+explicit. Only the failed node was rerun: **1 passed in2.93s**. Exact evidence:
+`var/p1-body-setup-minimum.xml`, `var/p1-body-setup-minimum-attempt2.xml`,
+`var/p1-body-setup-minimum-attempt3.xml`, `var/p1-body-setup-minimum-attempt4.xml`,
+and their logs. Native general body/deepen and Handler/NPC normals are authored
+**NOTRUN**; they remain in the final regression. Worker scoped Ruff/format/type
+checks passed; exact source hashes and APIs are in the private body-facts handoff.
+
+Positive initial body evidence comes from a genuine accepted owner proposal and
+Handler physical review, or an actual same-brain source at original Frame birth.
+Unknown NPC original-body continuity remains a named source gap; its explicit
+factual evidence adapter is the next bounded body task. Required Ankou nomination
+→ own Alpha source is a separate bounded dependency with both IDs preserved.
+No whole-P1 or human acceptance is inferred.

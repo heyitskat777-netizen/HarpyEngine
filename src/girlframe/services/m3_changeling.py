@@ -903,6 +903,8 @@ def stage_start(
     actor: ActorRef,
     event: str,
     subjects: tuple[ActorRef, ...],
+    *,
+    source: str | None = None,
 ) -> None:
     if not _available(game, rules.STRINGS):
         return
@@ -913,13 +915,21 @@ def stage_start(
     for subject in subjects:
         if subject == actor:
             raise WorkflowError("Starting Strings require actual other original people")
-        identity = rules.identity("starting", actor.token, subject.token)
-        if any(value.id == identity for value in rules.records(state, rules.StartingBond)):
+        identity = rules.identity("starting", actor.token, original, subject.token)
+        if any(
+            value.actor == actor and value.frame == original and value.subject == subject
+            for value in rules.records(state, rules.StartingBond)
+        ):
             continue
         rules.put(
             state,
             rules.StartingBond(
-                id=identity, actor=actor, frame=original, subject=subject, source=event, event=event
+                id=identity,
+                actor=actor,
+                frame=original,
+                subject=subject,
+                source=source or event,
+                event=event,
             ),
         )
 
@@ -943,6 +953,14 @@ def stage_brain(
         return
     brain = _brain(game, c, after, subject, "starting")
     for value in waiting:
+        from girlframe.services.m3_body_facts import _original_brain
+
+        try:
+            _original_brain(game, c, after, _history(c, game, value.source), subject)
+        except WorkflowError as error:
+            if str(error).startswith("SOURCE_ORIGINAL_BRAIN_REQUIRED:"):
+                continue
+            raise
         support.validate_start_brain(game, c, before, after, value, brain, event)
         ids = _grant(after, value.actor, value.frame, brain, "start", value.id, event)
         rules.put(after, value.model_copy(update=dict(node=ids[0], attached_event=event)))
@@ -1993,6 +2011,10 @@ class ChangelingService:
         actual_account = _text(account)
 
         def operation(c: Connection, state: GameState, event: str) -> dict[str, Any]:
+            from girlframe.services.m3_recovery import pending
+
+            if self.game.pending_actions(c) or pending(self.game, c, include_unrolled=True):
+                raise WorkflowError("Finish the actual held Play before establishing body facts")
             scene = _cast(self.game, c, state, channel)
             actual = resolve(
                 state, actor, profiles(c, self.store.campaign_id), require_current_profile=False

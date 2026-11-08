@@ -1307,6 +1307,7 @@ class InboxService:
                 )
 
             from girlframe.services.m3_ankou import AnkouService
+            from girlframe.services.m3_body_facts import BodyFactsService
             from girlframe.services.m3_bonded import BondedService
             from girlframe.services.m3_changeling import ChangelingService
             from girlframe.services.m3_changeling_sex import ChangelingSexService
@@ -1320,6 +1321,7 @@ class InboxService:
             frame_state = load_state(connection, self.store.campaign_id)
             for book, rows in (
                 ("ankou", AnkouService(frame_game)._tasks(connection, viewer)),
+                ("body_facts", BodyFactsService(frame_game)._tasks(connection, viewer)),
                 ("changeling", ChangelingService(frame_game)._tasks(connection, viewer)),
                 ("changeling_sex", ChangelingSexService(frame_game)._tasks(connection, viewer)),
                 ("red_queen", RedQueenService(frame_game)._tasks(connection, viewer)),

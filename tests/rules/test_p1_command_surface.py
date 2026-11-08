@@ -23,6 +23,9 @@ def test_actual_bot_registers_complete_bounded_private_command_surface(ledger):
             assert not girl.get_command("mentor").parameters
             for name in ("frame", "move", "vehicle"):
                 assert campaign.get_command(name) is not None
+            frame_area = campaign.get_command("frame").parameters[0]
+            assert frame_area.name == "area" and frame_area.default == "frame"
+            assert {choice.value for choice in frame_area.choices} == {"frame", "body"}
             assert bot.tree.get_command("facilitator", guild=guild) is not None
             for name in ("am", "alpha", "princess", "casualty", "vatgrown", "bonded"):
                 assert girl.get_command(name) is not None

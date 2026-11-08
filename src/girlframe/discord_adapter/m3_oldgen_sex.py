@@ -39,11 +39,11 @@ async def open_choice(
             Field(
                 "effects",
                 "Your own optional low result",
-                (("rewrite", "Rewrite an actual base maxim"), ("decline", "Decline")),
+                (("rewrite", "Rewrite an actual owned maxim"), ("decline", "Decline")),
             ),
             Field(
                 "maxim",
-                "Actual base maxim if rewriting",
+                "Actual owned maxim if rewriting",
                 tuple(data["rewrite"]),
                 minimum=0,
                 required=False,

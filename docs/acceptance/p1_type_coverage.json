@@ -1,9 +1,9 @@
 {
   "status": "P1_IMPLEMENTATION_AUTHORIZED_TESTING_PENDING",
-  "published_source": "84aaf01dbc9295b24826785db2f76d4283774606",
+  "published_source": "c703a29d581c53e5c92f50b17c3accbb838f00c2",
   "main_merge": "c4550ecbd89bbf84363537e7bdf763c2177a998f",
   "scope": "10Girl labels;10Frame labels representing9official Frame rulesets; JANUS-B uses JANUS",
-  "evidence_note": "Published columns retain the stated published-source baseline. Local columns include the current Frame candidate. Focused passing normals and authored unrun tests are distinguished in reports/P1_ACCEPTANCE.md; no new full regression or independent/player acceptance.",
+  "evidence_note": "Published inventory fields use c703a29. Local prose includes the new scoped Oldgen adapter and shared body-setup work in progress. Focused CI passed for c703a29; full regression, independent review and player acceptance remain pending.",
   "rows": [
     {
       "category": "Girl",
@@ -529,10 +529,12 @@
             "printed_page": 42,
             "heading": "Barely a Girl"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_casualty.py"
+          ],
           "local_test_references": [
             "tests/rules/test_casualty.py"
           ]
@@ -546,10 +548,12 @@
             "printed_page": 42,
             "heading": "No One Better"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_casualty.py"
+          ],
           "local_test_references": [
             "tests/rules/test_casualty.py"
           ]
@@ -563,10 +567,12 @@
             "printed_page": 42,
             "heading": "Sex Play"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_casualty.py"
+          ],
           "local_test_references": [
             "tests/rules/test_casualty.py"
           ]
@@ -580,10 +586,12 @@
             "printed_page": 42,
             "heading": "Wounded God"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_casualty.py"
+          ],
           "local_test_references": [
             "tests/rules/test_casualty.py"
           ]
@@ -595,8 +603,8 @@
       "type": "Oldgen",
       "registry_prefix": "girl.oldgen.",
       "status": "Published scoped implementation",
-      "ordinary_workflows_with_evidence": "Standards, maxim/advice outcomes and actual maxim consumers; native Sex outcomes and reciprocal choices.",
-      "missing_before_AI": "Temporary one-use advice-maxim rewrite excluded by current base-maxim adapter; preserve spent advice; remaining ordinary counterparts.",
+      "ordinary_workflows_with_evidence": "Standards, maxim/advice outcomes and actual maxim consumers; native Sex outcomes and reciprocal choices. Local native one-use advice rewrite normal passed; immutable original subject and spent state preserved.",
+      "missing_before_AI": "Remaining ordinary counterparts; final affected-consumer regression and review. One-use rewrite is implemented locally with one passing normal, not independently accepted.",
       "later_candidates": "Complex retained-rule/alternate-body rewrite chains.",
       "code": [
         "src/girlframe/services/m3_oldgen.py",
@@ -742,10 +750,13 @@
             "printed_page": 47,
             "heading": "Just an Experiment"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_vatgrown_plays.py",
+            "tests/rules/test_vatgrown_offers.py"
+          ],
           "local_test_references": [
             "tests/rules/test_vatgrown_plays.py",
             "tests/rules/test_vatgrown_offers.py"
@@ -760,10 +771,13 @@
             "printed_page": 47,
             "heading": "Prime Investment"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_vatgrown_plays.py",
+            "tests/rules/test_vatgrown_offers.py"
+          ],
           "local_test_references": [
             "tests/rules/test_vatgrown_plays.py",
             "tests/rules/test_vatgrown_offers.py"
@@ -778,10 +792,13 @@
             "printed_page": 48,
             "heading": "Sex Play"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_vatgrown_plays.py",
+            "tests/rules/test_vatgrown_offers.py"
+          ],
           "local_test_references": [
             "tests/rules/test_vatgrown_plays.py",
             "tests/rules/test_vatgrown_offers.py"
@@ -935,8 +952,8 @@
       "category": "Girl",
       "type": "AM",
       "registry_prefix": "girl.am.",
-      "status": "Local scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Existing Jailbroken, Scrutinized and Just Code/body/backup/records paths retained. New no-additional-roll Sex source readback and native circuit routing: actual Alpha→AM smoke1 passed2.15s.",
+      "status": "Published scoped implementation; final P1 gates pending",
+      "ordinary_workflows_with_evidence": "Existing Jailbroken, Scrutinized and Just Code/body/backup/records paths retained. New no-additional-roll Sex source readback and native circuit routing: actual Alpha\u2192AM smoke1 passed2.15s.",
       "missing_before_AI": "Reconcile remaining ordinary body/identity consumers and Bonded no-roll delegation; circuit path uses existing real CodeService sources. Expanded consumer regression and independent review remain pending.",
       "later_candidates": "Exceptional simultaneous branch/body/career transitions after ordinary AM play works.",
       "code": [
@@ -1050,10 +1067,12 @@
             "printed_page": 54,
             "heading": "Sex Play"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_am_sex.py"
+          ],
           "local_test_references": [
             "tests/rules/test_am_sex.py"
           ]
@@ -1102,10 +1121,12 @@
             "printed_page": 56,
             "heading": "Always By Her Side"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_bonded.py"
+          ],
           "local_test_references": [
             "tests/rules/test_bonded.py"
           ]
@@ -1119,10 +1140,12 @@
             "printed_page": 56,
             "heading": "Bonded Pair"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_bonded.py"
+          ],
           "local_test_references": [
             "tests/rules/test_bonded.py"
           ]
@@ -1136,10 +1159,12 @@
             "printed_page": 56,
             "heading": "Workplace-Inappropriate Intimacy"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_bonded.py"
+          ],
           "local_test_references": [
             "tests/rules/test_bonded.py"
           ]
@@ -1153,10 +1178,12 @@
             "printed_page": 57,
             "heading": "Sex Play"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_bonded.py"
+          ],
           "local_test_references": [
             "tests/rules/test_bonded.py"
           ]
@@ -1167,7 +1194,7 @@
       "category": "Frame",
       "type": "The Prince",
       "registry_prefix": "frame.prince.",
-      "status": "Local scoped implementation; final P1 gates pending",
+      "status": "Published scoped implementation; final P1 gates pending",
       "ordinary_workflows_with_evidence": "Prince native Performer, real fan demographics/demand marks, independent owned effects, actual acquisition receipts, Hero pronouns, Handler Plan capability, source-owned legacy/OffDuty fan tasks. Native Performer smoke1 passed2.19s.",
       "missing_before_AI": "Final normal regression for other tiers and Requisitions, retention/lifecycle compatibility and independent source review. This is not whole-playbook certification.",
       "later_candidates": "No named ordinary rule approved for deferral; later branches need source-bound classification.",
@@ -1192,10 +1219,12 @@
             "printed_page": 59,
             "heading": "Fanbase"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_prince.py"
+          ],
           "local_test_references": [
             "tests/rules/test_prince.py"
           ]
@@ -1215,7 +1244,8 @@
           "published_test_references": [
             "tests/rules/test_frame_reward_service.py",
             "tests/rules/test_frame_reward_ui.py",
-            "tests/rules/test_frame_rewards.py"
+            "tests/rules/test_frame_rewards.py",
+            "tests/rules/test_prince.py"
           ],
           "local_test_references": [
             "tests/rules/test_frame_reward_service.py",
@@ -1248,10 +1278,12 @@
             "printed_page": 60,
             "heading": "Performer"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_prince.py"
+          ],
           "local_test_references": [
             "tests/rules/test_prince.py"
           ]
@@ -1265,10 +1297,12 @@
             "printed_page": 61,
             "heading": "A Hero We Can Believe In"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_prince.py"
+          ],
           "local_test_references": [
             "tests/rules/test_prince.py"
           ]
@@ -1282,10 +1316,12 @@
             "printed_page": 61,
             "heading": "Bad Girl"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_prince.py"
+          ],
           "local_test_references": [
             "tests/rules/test_prince.py"
           ]
@@ -1299,10 +1335,12 @@
             "printed_page": 61,
             "heading": "Immortal Hero"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_prince.py"
+          ],
           "local_test_references": [
             "tests/rules/test_prince.py"
           ]
@@ -1316,10 +1354,12 @@
             "printed_page": 61,
             "heading": "TV Interviews"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_prince.py"
+          ],
           "local_test_references": [
             "tests/rules/test_prince.py"
           ]
@@ -1333,10 +1373,12 @@
             "printed_page": 62,
             "heading": "Growing Fanbase"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_prince.py"
+          ],
           "local_test_references": [
             "tests/rules/test_prince.py"
           ]
@@ -1350,10 +1392,12 @@
             "printed_page": 62,
             "heading": "Power Imbalance"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_prince.py"
+          ],
           "local_test_references": [
             "tests/rules/test_prince.py"
           ]
@@ -1364,7 +1408,7 @@
       "category": "Frame",
       "type": "CONSUME",
       "registry_prefix": "frame.consume.",
-      "status": "Local scoped implementation; final P1 gates pending",
+      "status": "Published scoped implementation; final P1 gates pending",
       "ordinary_workflows_with_evidence": "Original physical hunger/link state, actual Eat/Feral/owned source choices, body/custody/loss/ending support, starvation Tag/Smell/order hooks and paid Requisitions. Genuine-link/midBite smoke1 passed2.24s.",
       "missing_before_AI": "Sprite Eat continuation; ordinary body/carrier/linked-Asset consumers; destroyed-hardware regrowth producer; typed knowledge/free-text boundary; final normal regression. Unsupported adapters stay explicit before costs.",
       "later_candidates": "Exceptional targets/body combinations after ordinary consumption; starvation is not deferred.",
@@ -1410,7 +1454,8 @@
           "published_test_references": [
             "tests/rules/test_frame_reward_service.py",
             "tests/rules/test_frame_reward_ui.py",
-            "tests/rules/test_frame_rewards.py"
+            "tests/rules/test_frame_rewards.py",
+            "tests/rules/test_consume.py"
           ],
           "local_test_references": [
             "tests/rules/test_frame_reward_service.py",
@@ -1428,10 +1473,12 @@
             "printed_page": 63,
             "heading": "Starvation"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_consume.py"
+          ],
           "local_test_references": [
             "tests/rules/test_consume.py"
           ]
@@ -1445,27 +1492,31 @@
             "printed_page": 64,
             "heading": "Eat"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_consume.py"
+          ],
           "local_test_references": [
             "tests/rules/test_consume.py"
           ]
         },
         {
           "id": "frame.consume.human-hound",
-          "title": "‘Human’ Hound",
+          "title": "\u2018Human\u2019 Hound",
           "source": {
             "document": "rulebook",
             "pdf_page": 66,
             "printed_page": 64,
-            "heading": "‘Human’ Hound"
+            "heading": "\u2018Human\u2019 Hound"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_consume.py"
+          ],
           "local_test_references": [
             "tests/rules/test_consume.py"
           ]
@@ -1479,10 +1530,12 @@
             "printed_page": 64,
             "heading": "Let Us Partake"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_consume.py"
+          ],
           "local_test_references": [
             "tests/rules/test_consume.py"
           ]
@@ -1496,10 +1549,12 @@
             "printed_page": 65,
             "heading": "Cannibal Requisition Forms"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_consume.py"
+          ],
           "local_test_references": [
             "tests/rules/test_consume.py"
           ]
@@ -1513,10 +1568,12 @@
             "printed_page": 65,
             "heading": "Feral"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_consume.py"
+          ],
           "local_test_references": [
             "tests/rules/test_consume.py"
           ]
@@ -1530,10 +1587,12 @@
             "printed_page": 65,
             "heading": "Just a Nibble"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_consume.py"
+          ],
           "local_test_references": [
             "tests/rules/test_consume.py"
           ]
@@ -1547,10 +1606,12 @@
             "printed_page": 65,
             "heading": "Ontological Consumption Drive"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_consume.py"
+          ],
           "local_test_references": [
             "tests/rules/test_consume.py"
           ]
@@ -1564,10 +1625,12 @@
             "printed_page": 65,
             "heading": "Time to Eat"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_consume.py"
+          ],
           "local_test_references": [
             "tests/rules/test_consume.py"
           ]
@@ -2249,10 +2312,12 @@
             "printed_page": 72,
             "heading": "A Vast and Tractless Beast"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_wyvern.py"
+          ],
           "local_test_references": [
             "tests/rules/test_wyvern.py"
           ]
@@ -2314,10 +2379,12 @@
             "printed_page": 73,
             "heading": "A Heavy Burden"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_wyvern.py"
+          ],
           "local_test_references": [
             "tests/rules/test_wyvern.py"
           ]
@@ -2331,10 +2398,12 @@
             "printed_page": 73,
             "heading": "Leviathan Chassis"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_wyvern.py"
+          ],
           "local_test_references": [
             "tests/rules/test_wyvern.py"
           ]
@@ -2348,10 +2417,12 @@
             "printed_page": 74,
             "heading": "Crushing Bulk"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_wyvern.py"
+          ],
           "local_test_references": [
             "tests/rules/test_wyvern.py"
           ]
@@ -2365,10 +2436,12 @@
             "printed_page": 74,
             "heading": "Deep Exploration"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_wyvern.py"
+          ],
           "local_test_references": [
             "tests/rules/test_wyvern.py"
           ]
@@ -2382,10 +2455,12 @@
             "printed_page": 74,
             "heading": "Renovation Permission Forms"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_wyvern.py"
+          ],
           "local_test_references": [
             "tests/rules/test_wyvern.py"
           ]
@@ -2399,10 +2474,12 @@
             "printed_page": 74,
             "heading": "Wraith AM"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_wyvern.py"
+          ],
           "local_test_references": [
             "tests/rules/test_wyvern.py"
           ]
@@ -2416,10 +2493,12 @@
             "printed_page": 75,
             "heading": "Protector"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_wyvern.py"
+          ],
           "local_test_references": [
             "tests/rules/test_wyvern.py"
           ]
@@ -2537,12 +2616,12 @@
         },
         {
           "id": "frame.enforcer.masters-dog",
-          "title": "Master’s Dog",
+          "title": "Master\u2019s Dog",
           "source": {
             "document": "rulebook",
             "pdf_page": 79,
             "printed_page": 77,
-            "heading": "Master’s Dog"
+            "heading": "Master\u2019s Dog"
           },
           "published_implementation": "subset",
           "local_implementation": "subset",
@@ -2558,12 +2637,12 @@
         },
         {
           "id": "frame.enforcer.pavlovs-soldier",
-          "title": "Pavlov’s Soldier",
+          "title": "Pavlov\u2019s Soldier",
           "source": {
             "document": "rulebook",
             "pdf_page": 79,
             "printed_page": 77,
-            "heading": "Pavlov’s Soldier"
+            "heading": "Pavlov\u2019s Soldier"
           },
           "published_implementation": "subset",
           "local_implementation": "subset",
@@ -2671,7 +2750,7 @@
       "category": "Frame",
       "type": "CHANGELING",
       "registry_prefix": "frame.changeling.",
-      "status": "Scoped runtime candidate; final gates pending",
+      "status": "Published scoped implementation; final P1 gates pending",
       "ordinary_workflows_with_evidence": "Core Blank Slate/String/owned-question normal passed; actual remote Oldgen source also passed. Code includes Fingers, Clay and paid sources; other normals remain unrun.",
       "missing_before_AI": "Shared native body-fact setup/legacy starting-String reconciliation; ordinary counterpart and source-family continuations, named body/group/lineage adapters; final regression and review.",
       "later_candidates": "No named ordinary rule approved for deferral; AI narration cannot substitute for mechanics.",
@@ -2699,10 +2778,12 @@
             "printed_page": 79,
             "heading": "Blank Slate"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_changeling.py"
+          ],
           "local_test_references": [
             "tests/rules/test_changeling.py"
           ]
@@ -2716,10 +2797,12 @@
             "printed_page": 79,
             "heading": "CHANGELING"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_changeling.py"
+          ],
           "local_test_references": [
             "tests/rules/test_changeling.py"
           ]
@@ -2756,10 +2839,12 @@
             "printed_page": 80,
             "heading": "Fingers in the Brain"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_changeling.py"
+          ],
           "local_test_references": [
             "tests/rules/test_changeling.py"
           ]
@@ -2773,10 +2858,12 @@
             "printed_page": 80,
             "heading": "Mindfuck"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_changeling.py"
+          ],
           "local_test_references": [
             "tests/rules/test_changeling.py"
           ]
@@ -2790,10 +2877,12 @@
             "printed_page": 80,
             "heading": "Psych Strings"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_changeling.py"
+          ],
           "local_test_references": [
             "tests/rules/test_changeling.py"
           ]
@@ -2807,10 +2896,12 @@
             "printed_page": 80,
             "heading": "Web Implant"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_changeling.py"
+          ],
           "local_test_references": [
             "tests/rules/test_changeling.py"
           ]
@@ -2824,10 +2915,12 @@
             "printed_page": 81,
             "heading": "Body of Clay"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_changeling.py"
+          ],
           "local_test_references": [
             "tests/rules/test_changeling.py"
           ]
@@ -2841,10 +2934,12 @@
             "printed_page": 81,
             "heading": "Live Reconditioning Module"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_changeling.py"
+          ],
           "local_test_references": [
             "tests/rules/test_changeling.py"
           ]
@@ -2858,10 +2953,12 @@
             "printed_page": 81,
             "heading": "Psych Whip"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_changeling.py"
+          ],
           "local_test_references": [
             "tests/rules/test_changeling.py"
           ]
@@ -2872,7 +2969,7 @@
       "category": "Frame",
       "type": "Project Ankou",
       "registry_prefix": "frame.ankou.",
-      "status": "Scoped runtime candidate; final gates pending",
+      "status": "Published scoped implementation; final P1 gates pending",
       "ordinary_workflows_with_evidence": "Existing final-Identity Feedback retained. New native mid-Processor/resources/private reopen/unlink normal passed; candidate includes Relay, Fawn, Obsessive and paid sources. Other new normals unrun.",
       "missing_before_AI": "Ordinary source-family and NPC child/nominee continuations; final authored lifecycle normals and exact-commit regression, independent/player review.",
       "later_candidates": "Exceptional carrier/counterpart combinations after the ordinary playbook. Feedback is not the whole Frame.",
@@ -2941,10 +3038,12 @@
             "printed_page": 82,
             "heading": "Project Ankou"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_ankou.py"
+          ],
           "local_test_references": [
             "tests/rules/test_ankou.py"
           ]
@@ -2958,10 +3057,12 @@
             "printed_page": 83,
             "heading": "Emotional Relay"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_ankou.py"
+          ],
           "local_test_references": [
             "tests/rules/test_ankou.py"
           ]
@@ -2975,10 +3076,12 @@
             "printed_page": 83,
             "heading": "Fight/Fawn Procedure"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_ankou.py"
+          ],
           "local_test_references": [
             "tests/rules/test_ankou.py"
           ]
@@ -2992,10 +3095,12 @@
             "printed_page": 84,
             "heading": "Obsessive"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_ankou.py"
+          ],
           "local_test_references": [
             "tests/rules/test_ankou.py"
           ]
@@ -3009,10 +3114,12 @@
             "printed_page": 84,
             "heading": "Processor Core"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_ankou.py"
+          ],
           "local_test_references": [
             "tests/rules/test_ankou.py"
           ]
@@ -3026,10 +3133,12 @@
             "printed_page": 85,
             "heading": "Amygdala Pulse"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_ankou.py"
+          ],
           "local_test_references": [
             "tests/rules/test_ankou.py"
           ]
@@ -3043,10 +3152,12 @@
             "printed_page": 85,
             "heading": "Quickchange Implant"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_ankou.py"
+          ],
           "local_test_references": [
             "tests/rules/test_ankou.py"
           ]
@@ -3060,10 +3171,12 @@
             "printed_page": 85,
             "heading": "Stalker"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_ankou.py"
+          ],
           "local_test_references": [
             "tests/rules/test_ankou.py"
           ]
@@ -3074,7 +3187,7 @@
       "category": "Frame",
       "type": "The Red Queen",
       "registry_prefix": "frame.red-queen.",
-      "status": "Scoped runtime candidate; final gates pending",
+      "status": "Published scoped implementation; final P1 gates pending",
       "ordinary_workflows_with_evidence": "Native Queen/Consult/Decree/discipline/private reopen normal passed. Candidate includes real marks, Orders, memory, accusation and Court reward ownership; remaining authored normals unrun.",
       "missing_before_AI": "Actual NPC forced-Flirt/remaining body and source-family adapters; final authored normals, exact-commit regression and independent/player review.",
       "later_candidates": "Exceptional Court/body combinations after ordinary Court agency/transfer/memory mechanics.",
@@ -3118,17 +3231,19 @@
         },
         {
           "id": "frame.red-queen.queens-court",
-          "title": "Queen’s Court",
+          "title": "Queen\u2019s Court",
           "source": {
             "document": "rulebook",
             "pdf_page": 88,
             "printed_page": 86,
-            "heading": "Queen’s Court"
+            "heading": "Queen\u2019s Court"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_red_queen.py"
+          ],
           "local_test_references": [
             "tests/rules/test_red_queen.py"
           ]
@@ -3142,10 +3257,12 @@
             "printed_page": 86,
             "heading": "The Red Queen"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_red_queen.py"
+          ],
           "local_test_references": [
             "tests/rules/test_red_queen.py"
           ]
@@ -3159,10 +3276,12 @@
             "printed_page": 87,
             "heading": "AM Transfer"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_red_queen.py"
+          ],
           "local_test_references": [
             "tests/rules/test_red_queen.py"
           ]
@@ -3176,10 +3295,12 @@
             "printed_page": 87,
             "heading": "Consult the Court"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_red_queen.py"
+          ],
           "local_test_references": [
             "tests/rules/test_red_queen.py"
           ]
@@ -3193,10 +3314,12 @@
             "printed_page": 88,
             "heading": "Judgement On High"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_red_queen.py"
+          ],
           "local_test_references": [
             "tests/rules/test_red_queen.py"
           ]
@@ -3210,10 +3333,12 @@
             "printed_page": 88,
             "heading": "One-Girl Panopticon"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_red_queen.py"
+          ],
           "local_test_references": [
             "tests/rules/test_red_queen.py"
           ]
@@ -3227,10 +3352,12 @@
             "printed_page": 88,
             "heading": "Personality Extraction"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_red_queen.py"
+          ],
           "local_test_references": [
             "tests/rules/test_red_queen.py"
           ]
@@ -3244,10 +3371,12 @@
             "printed_page": 89,
             "heading": "Biting Accusation"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_red_queen.py"
+          ],
           "local_test_references": [
             "tests/rules/test_red_queen.py"
           ]
@@ -3261,10 +3390,12 @@
             "printed_page": 89,
             "heading": "Memory Extraction"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_red_queen.py"
+          ],
           "local_test_references": [
             "tests/rules/test_red_queen.py"
           ]
@@ -3278,10 +3409,12 @@
             "printed_page": 89,
             "heading": "Regiment Commander"
           },
-          "published_implementation": "unimplemented",
+          "published_implementation": "subset",
           "local_implementation": "subset",
           "independent_review": "pending",
-          "published_test_references": [],
+          "published_test_references": [
+            "tests/rules/test_red_queen.py"
+          ],
           "local_test_references": [
             "tests/rules/test_red_queen.py"
           ]

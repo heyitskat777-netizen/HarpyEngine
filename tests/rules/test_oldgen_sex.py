@@ -131,6 +131,82 @@ def source(game, worker, gateway, service, faces, *, stale=False):
     return identity, action
 
 
+def test_native_low_result_rewrites_actual_advice_without_reviving_spent_use(
+    ledger, tmp_path, monkeypatch
+):
+    from test_oldgen import advice
+    from test_oldgen import native_choice as advice_choice
+
+    game, worker, gateway, service, _ = setup(ledger, tmp_path, monkeypatch)
+    advice(game, worker, gateway, (4, 4))
+    advice_choice(game, PLAYER, "oldgen_write_maxim", "PRIVATE_ORIGINAL_TARGET_ONLY_MAXIM")
+    advice_choice(game, OTHER, "oldgen_listen", "I actually hear the advice")
+    tick(worker, gateway, 5)
+    original = maxims.records(state(game), maxims.Maxim)[-1]
+    controls = OldgenService(game)
+    controls.use(
+        PLAYER,
+        str(uuid4()),
+        original.id,
+        original.subject,
+        "reinforce",
+        900,
+        state(game).revision,
+        "The intended Girl reinforces my actual one-use maxim",
+    )
+    before = state(game)
+    assert not maxims.available(before, original)
+    identity, action = source(game, worker, gateway, service, (1, 1))
+    row = next(x for x in game.choices(OTHER) if x["kind"] == "oldgen_sex_rewrite")
+    assert (original.id, original.text) in game.decision(OTHER, row["id"])["detail"]["rewrite"]
+    with pytest.raises(WorkflowError):
+        game.respond(
+            PLAYER,
+            str(uuid4()),
+            row["id"],
+            row["revision"],
+            ChoiceAnswer(options=("rewrite",), fields={"maxim": original.id}, text="Forged"),
+        )
+    native_choice(
+        game,
+        OTHER,
+        "oldgen_sex_rewrite",
+        ("rewrite",),
+        fields={"maxim": original.id},
+        text="PRIVATE_REWRITTEN_TARGET_ONLY_MAXIM",
+    )
+    actual = state(game)
+    rewritten = maxims.get(actual, original.id)
+    assert rewritten.text == "PRIVATE_REWRITTEN_TARGET_ONLY_MAXIM"
+    assert rewritten.model_dump(exclude={"text"}) == original.model_dump(exclude={"text"})
+    assert not maxims.available(actual, rewritten)
+    assert maxims.records(actual, maxims.Use) == maxims.records(before, maxims.Use)
+    assert controls.view(PLAYER, original.id)["text"] == rewritten.text
+    assert controls.view(PLAYER, original.id)["status"] == "used"
+    assert (
+        next(x for x in controls.menu(PLAYER, 900)["maxims"] if x["id"] == original.id)["text"]
+        == rewritten.text
+    )
+    with pytest.raises(WorkflowError):
+        controls.view(ADMIN, original.id)
+    with ledger.engine.connect() as c:
+        assert prove(game, c, actual, identity).phase == "complete"
+        for effect in rules.records(actual, rules.Effect):
+            prove_effect(game, c, actual, effect.id)
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    with pytest.raises((WorkflowError, ValueError)):
+        controls.use(
+            PLAYER,
+            str(uuid4()),
+            original.id,
+            original.subject,
+            "reinforce",
+            900,
+            actual.revision,
+            "Text cannot create a second use",
+        )
+
+
 @pytest.mark.parametrize(
     "branch,faces", [("low", (1, 1)), ("mid", (3, 4)), ("yes", (5, 5)), ("no", (5, 5))]
 )

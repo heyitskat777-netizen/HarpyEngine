@@ -2211,10 +2211,19 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         except WorkflowError as error:
             await reply(interaction, str(error))
 
-    @campaign.command(name="frame", description="Your current Frame's source-owned controls")
-    async def frame_controls(interaction: discord.Interaction) -> None:
+    @campaign.command(name="frame", description="Frame controls and actual body setup")
+    async def frame_controls(
+        interaction: discord.Interaction,
+        area: Literal["frame", "body"] = "frame",
+    ) -> None:
         await interaction.response.defer(ephemeral=True)
         try:
+            if area == "body":
+                from girlframe.discord_adapter.m3_body_facts import open_body_facts
+                from girlframe.services.m3_body_facts import BodyFactsService
+
+                await open_body_facts(interaction, BodyFactsService(game))
+                return
             sheet = await threaded(lambda: game.sheet(viewer_from_interaction(interaction)))
             frame = sheet["frame"]
             if frame == "THE PRINCE":

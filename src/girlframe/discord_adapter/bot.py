@@ -239,6 +239,7 @@ class ReadOnlyDiscordBot(discord.Client):
                         "/girl mentor, trainee, easy_target, newgirl_sex, oldgen_sex "
                         "— owned choices\n"
                         "/campaign frame — current Frame's source controls\n"
+                        "/campaign frame area:body — factual body setup and private records\n"
                         "/facilitator request, inbox — source-bound human adjudication\n"
                         "M2 gameplay requires the end-of-milestone release approval. "
                         "Recovered-engine writes and AI remain disabled."

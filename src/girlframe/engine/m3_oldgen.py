@@ -33,6 +33,15 @@ class MaximRewrite(Model):
     event: str
 
 
+class AdviceMaximRewrite(Model):
+    id: str
+    owner: ActorRef
+    maxim: str
+    before: str
+    after: str
+    event: str
+
+
 class Advice(Model):
     id: str
     actor: ActorRef
@@ -75,6 +84,7 @@ class Use(Model):
 KINDS: dict[type[Model], str] = {
     Maxim: "oldgen_maxim",
     MaximRewrite: "oldgen_maxim_rewrite",
+    AdviceMaximRewrite: "oldgen_advice_maxim_rewrite",
     Advice: "oldgen_advice",
     PoorOutcome: "oldgen_poor",
     Use: "oldgen_use",
@@ -139,6 +149,17 @@ def get(state: GameState, identity: str) -> Maxim:
         )
     if value is None:
         raise ValueError("Recover the actual original owned maxim")
+    if value.advice:
+        changed = next(
+            (
+                x
+                for x in reversed(records(state, AdviceMaximRewrite))
+                if x.maxim == value.id and x.owner == value.owner
+            ),
+            None,
+        )
+        if changed:
+            value = value.model_copy(update={"text": changed.after})
     return value
 
 
@@ -255,4 +276,41 @@ def rewrite_base_maxim(state: GameState, owner: int, token: str, text: str, even
             event=event,
         ),
     )
+    state.sheets[str(owner)].revision += 1
+
+
+def rewritable_maxims(state: GameState, owner: int) -> tuple[tuple[str, str], ...]:
+    actor = current_ref(state, owner)
+    return tuple(("oldgen:" + str(x.slot), x.text) for x in base_maxims(state, owner)) + tuple(
+        (x.id, get(state, x.id).text)
+        for x in records(state, Maxim)
+        if x.owner == actor and x.advice is not None
+    )
+
+
+def rewrite_maxim(state: GameState, owner: int, token: str, text: str, event: str) -> None:
+    if token.startswith("oldgen:"):
+        rewrite_base_maxim(state, owner, token, text, event)
+        return
+    value = get(state, token)
+    if (
+        value.owner != current_ref(state, owner)
+        or value.advice is None
+        or not text.strip()
+        or len(text.strip()) > 300
+        or not event
+    ):
+        raise ValueError("Rewrite an actual owned one-use maxim with human-authored text")
+    put(
+        state,
+        AdviceMaximRewrite(
+            id=event,
+            owner=value.owner,
+            maxim=value.id,
+            before=value.text,
+            after=text.strip(),
+            event=event,
+        ),
+    )
+    # Text changes never change the original target, source or spent-use record.
     state.sheets[str(owner)].revision += 1
