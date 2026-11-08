@@ -119,6 +119,8 @@ def source(
             "supply_drop_expiry",
             "budget_removal",
             "ankou_feedback",
+            "ankou_feedback_sequence",
+            "ankou_processor_unlink",
             "consume_partake",
             "consume_starvation_expiry",
         ):
@@ -487,6 +489,10 @@ def complete(
             # These actual loss sources have no synthetic parent Play; source-scoped
             # required work was resolved above by the real owned Void outcome.
             continue
+        elif body.get("reason") in ("ankou_feedback_sequence", "ankou_processor_unlink"):
+            from girlframe.services.m3_ankou import synchronize_events as sync_ankou_effects
+
+            sync_ankou_effects(game, c, event)
         elif body.get("reason") == "wyvern_renovation":
             from girlframe.services.m3_wyvern_support import synchronize as sync_renovation
 

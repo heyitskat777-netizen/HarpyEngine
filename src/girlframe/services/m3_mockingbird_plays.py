@@ -163,6 +163,21 @@ def prepare(
         )
     )
     source = GameState.model_validate_json(raw) if raw else None
+    if value.changeling_source is not None:
+        from girlframe.services.m3_changeling_sex import prove_source_link
+
+        if value.play != SEX or len(value.parties) != 1:
+            raise WorkflowError("Use the exact actual psychic Sex source")
+        prove_source_link(
+            game,
+            c,
+            state,
+            value.changeling_source,
+            value.id,
+            value.actor,
+            value.parties[0].actor,
+            PLAY_RULES[value.play],
+        )
     if value.bonded_source is not None:
         from girlframe.services.m3_bonded import prove_delegation
 
@@ -239,24 +254,33 @@ def prepare(
             raise WorkflowError(
                 "This actual counterpart needs its real Void target resources before rolling"
             )
-    return dict(
-        actor=actor.model_dump(mode="json"),
-        trigger=value.id,
-        play=prepared.play,
-        parties=[x.model_dump(mode="json") for x in value.parties],
-        cast=cast.model_dump(mode="json"),
-        cast_sha256=fingerprint(cast),
-        table=sorted(
-            {x.controller for x in cast.roles} | ({cast.facilitator} if cast.facilitator else set())
-        ),
-        applied=False,
-        phase="rolled",
-        judge=judge.model_dump(mode="json") if judge else None,
-        judge_controller=judge_controller,
-        judge_source=judge_source,
-        appointment=appointment,
-        followups=[],
-    ) | ({"bonded_source": value.bonded_source} if value.bonded_source is not None else {})
+    return (
+        dict(
+            actor=actor.model_dump(mode="json"),
+            trigger=value.id,
+            play=prepared.play,
+            parties=[x.model_dump(mode="json") for x in value.parties],
+            cast=cast.model_dump(mode="json"),
+            cast_sha256=fingerprint(cast),
+            table=sorted(
+                {x.controller for x in cast.roles}
+                | ({cast.facilitator} if cast.facilitator else set())
+            ),
+            applied=False,
+            phase="rolled",
+            judge=judge.model_dump(mode="json") if judge else None,
+            judge_controller=judge_controller,
+            judge_source=judge_source,
+            appointment=appointment,
+            followups=[],
+        )
+        | ({"bonded_source": value.bonded_source} if value.bonded_source is not None else {})
+        | (
+            {"changeling_source": value.changeling_source}
+            if value.changeling_source is not None
+            else {}
+        )
+    )
 
 
 def pre_roll(game: "GameService", c: Connection, state: GameState, action: dict[str, Any]) -> None:
@@ -575,6 +599,14 @@ def synchronize(game: "GameService", c: Connection, action: dict[str, Any], even
 
     synchronize_effects(game, c, action, event)
 
+    if action["data"].get("play") == SEX:
+        state = load_state(c, game.store.campaign_id)
+        source = _trigger(state, action["data"]["mockingbird"]["trigger"])
+        if source.changeling_source is not None:
+            from girlframe.services.m3_changeling_sex import synchronize_session
+
+            synchronize_session(game, c, state, source.id, event)
+
 
 class MockingbirdService:
     def __init__(self, game: "GameService"):
@@ -592,6 +624,7 @@ class MockingbirdService:
         *,
         primary: ActorRef | None = None,
         bonded_source: str | None = None,
+        changeling_source: str | None = None,
     ) -> dict[str, Any]:
         def access(c: Connection) -> None:
             Access(self.store).authorize(c, viewer, "plays", director_response=True)
@@ -606,6 +639,14 @@ class MockingbirdService:
             cast = _cast(self.game, c, state, channel)
             bound = profiles(c, self.store.campaign_id)
             actual = resolve(state, actor, bound, require_current_profile=False)
+            if changeling_source is not None:
+                from girlframe.services.m3_changeling_sex import admit_contact
+
+                if play != SEX or len(targets) != 1 or bonded_source is not None:
+                    raise WorkflowError("Use a genuine single original psychic Sex counterpart")
+                admit_contact(
+                    self.game, c, state, actor, targets[0], PLAY_RULES[play], changeling_source
+                )
             if (
                 actual.controller != viewer.user_id
                 or not _owned_source_rule(self.game, c, state, actor, play, targets, bonded_source)
@@ -671,6 +712,7 @@ class MockingbirdService:
             value = Trigger(
                 id=identity,
                 bonded_source=bonded_source,
+                changeling_source=changeling_source,
                 play=play,
                 actor=actor,
                 parties=parties,
@@ -684,6 +726,12 @@ class MockingbirdService:
             state.mockingbird = state.mockingbird.model_copy(
                 update={"triggers": (*state.mockingbird.triggers, value)}
             )
+            if changeling_source is not None:
+                from girlframe.services.m3_changeling_sex import bind_source
+
+                bind_source(
+                    self.game, c, state, changeling_source, value.id, PLAY_RULES[play], event
+                )
             if bonded_source is not None:
                 from girlframe.services.m3_bonded import bind_delegation
 
@@ -713,7 +761,8 @@ class MockingbirdService:
                 account=account,
             )
             | ({"primary": primary.model_dump(mode="json")} if primary is not None else {})
-            | ({"bonded_source": bonded_source} if bonded_source is not None else {}),
+            | ({"bonded_source": bonded_source} if bonded_source is not None else {})
+            | ({"changeling_source": changeling_source} if changeling_source is not None else {}),
             operation,
             authorize=access,
             auto_audit=False,
@@ -833,6 +882,10 @@ class MockingbirdService:
                 party=party.model_dump(mode="json"),
                 accept=accept,
             )
+            if value.changeling_source is not None:
+                from girlframe.services.m3_changeling_sex import synchronize_session
+
+                synchronize_session(self.game, c, state, value.id, event)
             return dict(id=identity, state=value.state)
 
         return self.store._write(

@@ -49,6 +49,15 @@ def available_for_case(
             else ("stimulant_injection",)
         )
     kinds = rules.available(state, case.subject, case.executor, bindings)
+    if case.source_kind == "red_queen":
+        from girlframe.engine import m3_red_queen as court
+
+        accusation = next(
+            (x for x in court.records(state, court.Accusation) if x.id == case.source_work), None
+        )
+        if accusation is not None:
+            desired = accusation.consequence_detail.get("kind")
+            return tuple(x for x in kinds if x == desired)
     if (
         case.source_kind in ("compliance_virus", "janus_training")
         and case.subject.kind == "external_pilot"
@@ -92,6 +101,7 @@ def open_case(
         "easy_target",
         "vatgrown_plays",
         "prince",
+        "red_queen",
         "trainee",
         "succubus_npc_disobey",
     ],
@@ -362,6 +372,10 @@ def case_proof(c: Connection, game: GameService, identity: str) -> RolePunishmen
         from girlframe.services.m3_show_dog import validate_role_case
 
         validate_role_case(c, game, state, case)
+    if case.source_kind == "red_queen":
+        from girlframe.services.m3_red_queen import validate_role_case as validate_royal_role
+
+        validate_royal_role(c, game, state, case)
     if case.source_kind == "prince":
         from girlframe.services.m3_prince import validate_role_case as validate_prince_role
 
@@ -448,6 +462,11 @@ def current(c: Connection, game: GameService, state: GameState, case: RolePunish
         from girlframe.services.m3_show_dog import validate_role_case
 
         validate_role_case(c, game, state, case)
+        return
+    if case.source_kind == "red_queen":
+        from girlframe.services.m3_red_queen import validate_role_case as validate_royal_role
+
+        validate_royal_role(c, game, state, case)
         return
     if case.source_kind == "prince":
         from girlframe.services.m3_prince import validate_role_case as validate_prince_role
@@ -638,6 +657,12 @@ def synchronize(
                 scope = role_scope(c, game, case).model_dump() | dict(
                     campaign_id=game.store.campaign_id
                 )
+            elif case.source_kind == "red_queen":
+                from girlframe.services.m3_red_queen import role_scope as royal_role_scope
+
+                scope = royal_role_scope(c, game, case).model_dump() | dict(
+                    campaign_id=game.store.campaign_id
+                )
             elif case.source_kind == "prince":
                 from girlframe.services.m3_prince import role_scope as prince_role_scope
 
@@ -738,6 +763,12 @@ def synchronize(
                 from girlframe.services.m3_show_dog import complete_role_case
 
                 complete_role_case(c, game, completed, completion_id)
+            elif completed.source_kind == "red_queen":
+                from girlframe.services.m3_red_queen import (
+                    complete_role_case as complete_royal_role,
+                )
+
+                complete_royal_role(c, game, completed, completion_id)
             elif completed.source_kind == "prince":
                 from girlframe.services.m3_prince import complete_role_case as complete_prince_role
 

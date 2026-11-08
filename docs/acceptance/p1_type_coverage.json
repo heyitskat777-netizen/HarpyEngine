@@ -3,7 +3,7 @@
   "published_source": "84aaf01dbc9295b24826785db2f76d4283774606",
   "main_merge": "c4550ecbd89bbf84363537e7bdf763c2177a998f",
   "scope": "10Girl labels;10Frame labels representing9official Frame rulesets; JANUS-B uses JANUS",
-  "evidence_note": "Current integrated working coverage, preserving historical source evidence. Test references include authored tests not yet run. Owner defers most automated checks to final P1; interim evidence is limited to the named likely-flow smokes in reports/P1_ACCEPTANCE.md. No independent certification, full regression or player acceptance is implied.",
+  "evidence_note": "Published columns retain the stated published-source baseline. Local columns include the current Frame candidate. Focused passing normals and authored unrun tests are distinguished in reports/P1_ACCEPTANCE.md; no new full regression or independent/player acceptance.",
   "rows": [
     {
       "category": "Girl",
@@ -936,7 +936,7 @@
       "type": "AM",
       "registry_prefix": "girl.am.",
       "status": "Local scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Existing Jailbroken, Scrutinized and Just Code/body/backup/records paths retained. New no-additional-roll Sex source readback and native circuit routing: actual Alpha\u2192AM smoke1 passed2.15s.",
+      "ordinary_workflows_with_evidence": "Existing Jailbroken, Scrutinized and Just Code/body/backup/records paths retained. New no-additional-roll Sex source readback and native circuit routing: actual Alpha→AM smoke1 passed2.15s.",
       "missing_before_AI": "Reconcile remaining ordinary body/identity consumers and Bonded no-roll delegation; circuit path uses existing real CodeService sources. Expanded consumer regression and independent review remain pending.",
       "later_candidates": "Exceptional simultaneous branch/body/career transitions after ordinary AM play works.",
       "code": [
@@ -1455,12 +1455,12 @@
         },
         {
           "id": "frame.consume.human-hound",
-          "title": "\u2018Human\u2019 Hound",
+          "title": "‘Human’ Hound",
           "source": {
             "document": "rulebook",
             "pdf_page": 66,
             "printed_page": 64,
-            "heading": "\u2018Human\u2019 Hound"
+            "heading": "‘Human’ Hound"
           },
           "published_implementation": "unimplemented",
           "local_implementation": "subset",
@@ -2537,12 +2537,12 @@
         },
         {
           "id": "frame.enforcer.masters-dog",
-          "title": "Master\u2019s Dog",
+          "title": "Master’s Dog",
           "source": {
             "document": "rulebook",
             "pdf_page": 79,
             "printed_page": 77,
-            "heading": "Master\u2019s Dog"
+            "heading": "Master’s Dog"
           },
           "published_implementation": "subset",
           "local_implementation": "subset",
@@ -2558,12 +2558,12 @@
         },
         {
           "id": "frame.enforcer.pavlovs-soldier",
-          "title": "Pavlov\u2019s Soldier",
+          "title": "Pavlov’s Soldier",
           "source": {
             "document": "rulebook",
             "pdf_page": 79,
             "printed_page": 77,
-            "heading": "Pavlov\u2019s Soldier"
+            "heading": "Pavlov’s Soldier"
           },
           "published_implementation": "subset",
           "local_implementation": "subset",
@@ -2671,17 +2671,23 @@
       "category": "Frame",
       "type": "CHANGELING",
       "registry_prefix": "frame.changeling.",
-      "status": "Published scoped implementation",
-      "ordinary_workflows_with_evidence": "Starting anchors/catalogue and conditional Permission review; this is not runtime completion.",
-      "missing_before_AI": "Blank Slate, Fingers in the Brain, Mindfuck, Psych Strings, Web Implant, Body of Clay, Live Reconditioning Module and Psych-Whip with owned effects.",
+      "status": "Scoped runtime candidate; final gates pending",
+      "ordinary_workflows_with_evidence": "Core Blank Slate/String/owned-question normal passed; actual remote Oldgen source also passed. Code includes Fingers, Clay and paid sources; other normals remain unrun.",
+      "missing_before_AI": "Shared native body-fact setup/legacy starting-String reconciliation; ordinary counterpart and source-family continuations, named body/group/lineage adapters; final regression and review.",
       "later_candidates": "No named ordinary rule approved for deferral; AI narration cannot substitute for mechanics.",
       "code": [
         "src/girlframe/engine/frame_setup.py",
-        "src/girlframe/engine/m3_frame_rewards.py"
+        "src/girlframe/engine/m3_frame_rewards.py",
+        "src/girlframe/engine/m3_changeling.py",
+        "src/girlframe/services/m3_changeling.py",
+        "src/girlframe/services/m3_changeling_sex.py",
+        "src/girlframe/discord_adapter/m3_changeling.py"
       ],
       "tests": [
         "tests/rules/test_frame_rewards.py",
-        "tests/rules/test_frame_reward_service.py"
+        "tests/rules/test_frame_reward_service.py",
+        "tests/rules/test_changeling.py",
+        "tests/rules/test_changeling_sex.py"
       ],
       "rule_inventory": [
         {
@@ -2694,10 +2700,12 @@
             "heading": "Blank Slate"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_changeling.py"
+          ]
         },
         {
           "id": "frame.changeling.changeling",
@@ -2709,10 +2717,12 @@
             "heading": "CHANGELING"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_changeling.py"
+          ]
         },
         {
           "id": "frame.changeling.permission-trigger",
@@ -2747,10 +2757,12 @@
             "heading": "Fingers in the Brain"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_changeling.py"
+          ]
         },
         {
           "id": "frame.changeling.mindfuck",
@@ -2762,10 +2774,12 @@
             "heading": "Mindfuck"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_changeling.py"
+          ]
         },
         {
           "id": "frame.changeling.psych-strings",
@@ -2777,10 +2791,12 @@
             "heading": "Psych Strings"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_changeling.py"
+          ]
         },
         {
           "id": "frame.changeling.web-implant",
@@ -2792,10 +2808,12 @@
             "heading": "Web Implant"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_changeling.py"
+          ]
         },
         {
           "id": "frame.changeling.body-of-clay",
@@ -2807,10 +2825,12 @@
             "heading": "Body of Clay"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_changeling.py"
+          ]
         },
         {
           "id": "frame.changeling.live-reconditioning-module",
@@ -2822,10 +2842,12 @@
             "heading": "Live Reconditioning Module"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_changeling.py"
+          ]
         },
         {
           "id": "frame.changeling.psych-whip",
@@ -2837,10 +2859,12 @@
             "heading": "Psych Whip"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_changeling.py"
+          ]
         }
       ]
     },
@@ -2848,16 +2872,22 @@
       "category": "Frame",
       "type": "Project Ankou",
       "registry_prefix": "frame.ankou.",
-      "status": "Published scoped implementation",
-      "ordinary_workflows_with_evidence": "Feedback Loop real commitment, owned child/reprisal/refusal/recovery/death and conditional Permission reward.",
-      "missing_before_AI": "Emotional Relay, Fight/Fawn Procedure, Obsessive, Processor Core, Amygdala Pulse, Quickchange Implant and Stalker; ordinary Feedback counterpart/source continuations.",
+      "status": "Scoped runtime candidate; final gates pending",
+      "ordinary_workflows_with_evidence": "Existing final-Identity Feedback retained. New native mid-Processor/resources/private reopen/unlink normal passed; candidate includes Relay, Fawn, Obsessive and paid sources. Other new normals unrun.",
+      "missing_before_AI": "Ordinary source-family and NPC child/nominee continuations; final authored lifecycle normals and exact-commit regression, independent/player review.",
       "later_candidates": "Exceptional carrier/counterpart combinations after the ordinary playbook. Feedback is not the whole Frame.",
       "code": [
-        "src/girlframe/services/m3_ankou_feedback.py"
+        "src/girlframe/services/m3_ankou_feedback.py",
+        "src/girlframe/engine/m3_ankou.py",
+        "src/girlframe/services/m3_ankou.py",
+        "src/girlframe/services/m3_ankou_feedback_sequences.py",
+        "src/girlframe/discord_adapter/m3_ankou.py"
       ],
       "tests": [
         "tests/rules/test_ankou_feedback.py",
-        "tests/rules/test_frame_rewards.py"
+        "tests/rules/test_frame_rewards.py",
+        "tests/rules/test_ankou.py",
+        "tests/rules/test_ankou_bonds.py"
       ],
       "rule_inventory": [
         {
@@ -2912,10 +2942,12 @@
             "heading": "Project Ankou"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_ankou.py"
+          ]
         },
         {
           "id": "frame.ankou.emotional-relay",
@@ -2927,10 +2959,12 @@
             "heading": "Emotional Relay"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_ankou.py"
+          ]
         },
         {
           "id": "frame.ankou.fight-fawn-procedure",
@@ -2942,10 +2976,12 @@
             "heading": "Fight/Fawn Procedure"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_ankou.py"
+          ]
         },
         {
           "id": "frame.ankou.obsessive",
@@ -2957,10 +2993,12 @@
             "heading": "Obsessive"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_ankou.py"
+          ]
         },
         {
           "id": "frame.ankou.processor-core",
@@ -2972,10 +3010,12 @@
             "heading": "Processor Core"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_ankou.py"
+          ]
         },
         {
           "id": "frame.ankou.amygdala-pulse",
@@ -2987,10 +3027,12 @@
             "heading": "Amygdala Pulse"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_ankou.py"
+          ]
         },
         {
           "id": "frame.ankou.quickchange-implant",
@@ -3002,10 +3044,12 @@
             "heading": "Quickchange Implant"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_ankou.py"
+          ]
         },
         {
           "id": "frame.ankou.stalker",
@@ -3017,10 +3061,12 @@
             "heading": "Stalker"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_ankou.py"
+          ]
         }
       ]
     },
@@ -3028,18 +3074,23 @@
       "category": "Frame",
       "type": "The Red Queen",
       "registry_prefix": "frame.red-queen.",
-      "status": "Published scoped implementation",
-      "ordinary_workflows_with_evidence": "Actual Court allocation/acceptance at creation/replacement/Swap and Queen-owned conditional reward.",
-      "missing_before_AI": "Queen's Court runtime, AM Transfer, Consult the Court, Judgement on High, One-Girl Panopticon, Personality Extraction, Biting Accusation, Memory Extraction and Regiment Commander.",
+      "status": "Scoped runtime candidate; final gates pending",
+      "ordinary_workflows_with_evidence": "Native Queen/Consult/Decree/discipline/private reopen normal passed. Candidate includes real marks, Orders, memory, accusation and Court reward ownership; remaining authored normals unrun.",
+      "missing_before_AI": "Actual NPC forced-Flirt/remaining body and source-family adapters; final authored normals, exact-commit regression and independent/player review.",
       "later_candidates": "Exceptional Court/body combinations after ordinary Court agency/transfer/memory mechanics.",
       "code": [
         "src/girlframe/services/shared_setup.py",
-        "src/girlframe/services/m3_frame_swap.py"
+        "src/girlframe/services/m3_frame_swap.py",
+        "src/girlframe/engine/m3_red_queen.py",
+        "src/girlframe/services/m3_red_queen.py",
+        "src/girlframe/services/m3_red_queen_support.py",
+        "src/girlframe/discord_adapter/m3_red_queen.py"
       ],
       "tests": [
         "tests/rules/test_frame_swap_service.py",
         "tests/rules/test_replacement_service.py",
-        "tests/rules/test_frame_reward_service.py"
+        "tests/rules/test_frame_reward_service.py",
+        "tests/rules/test_red_queen.py"
       ],
       "rule_inventory": [
         {
@@ -3067,18 +3118,20 @@
         },
         {
           "id": "frame.red-queen.queens-court",
-          "title": "Queen\u2019s Court",
+          "title": "Queen’s Court",
           "source": {
             "document": "rulebook",
             "pdf_page": 88,
             "printed_page": 86,
-            "heading": "Queen\u2019s Court"
+            "heading": "Queen’s Court"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_red_queen.py"
+          ]
         },
         {
           "id": "frame.red-queen.the-red-queen",
@@ -3090,10 +3143,12 @@
             "heading": "The Red Queen"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_red_queen.py"
+          ]
         },
         {
           "id": "frame.red-queen.am-transfer",
@@ -3105,10 +3160,12 @@
             "heading": "AM Transfer"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_red_queen.py"
+          ]
         },
         {
           "id": "frame.red-queen.consult-the-court",
@@ -3120,10 +3177,12 @@
             "heading": "Consult the Court"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_red_queen.py"
+          ]
         },
         {
           "id": "frame.red-queen.judgement-on-high",
@@ -3135,10 +3194,12 @@
             "heading": "Judgement On High"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_red_queen.py"
+          ]
         },
         {
           "id": "frame.red-queen.one-girl-panopticon",
@@ -3150,10 +3211,12 @@
             "heading": "One-Girl Panopticon"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_red_queen.py"
+          ]
         },
         {
           "id": "frame.red-queen.personality-extraction",
@@ -3165,10 +3228,12 @@
             "heading": "Personality Extraction"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_red_queen.py"
+          ]
         },
         {
           "id": "frame.red-queen.biting-accusation",
@@ -3180,10 +3245,12 @@
             "heading": "Biting Accusation"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_red_queen.py"
+          ]
         },
         {
           "id": "frame.red-queen.memory-extraction",
@@ -3195,10 +3262,12 @@
             "heading": "Memory Extraction"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_red_queen.py"
+          ]
         },
         {
           "id": "frame.red-queen.regiment-commander",
@@ -3210,10 +3279,12 @@
             "heading": "Regiment Commander"
           },
           "published_implementation": "unimplemented",
-          "local_implementation": "unimplemented",
+          "local_implementation": "subset",
           "independent_review": "pending",
           "published_test_references": [],
-          "local_test_references": []
+          "local_test_references": [
+            "tests/rules/test_red_queen.py"
+          ]
         }
       ]
     }

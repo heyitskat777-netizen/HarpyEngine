@@ -18,6 +18,7 @@ BRUTALIZE = "girl.alpha.brutalize"
 
 class Session(Model):
     bonded_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    changeling_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
     id: str
     actor: ActorRef
     target: ActorRef

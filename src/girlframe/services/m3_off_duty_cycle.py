@@ -225,6 +225,22 @@ class CycleService:
                 punishment_subject = int(subject.entity)
                 punishment_body.update(character=subject.incarnation)
                 punishment_body.update(marriage.allocation_fields(state, updated.handler_work))
+            if kind == "m3.off_duty_activated":
+                from girlframe.services.m3_red_queen import reset_at_start as reset_court
+
+                for uid in updated.pilots:
+                    sheet = state.sheets.get(str(uid))
+                    if sheet is not None and sheet.character_id == updated.character_ids.get(
+                        str(uid)
+                    ):
+                        reset_court(
+                            self.game, c, state, current_ref(state, uid), identity, event_id
+                        )
+                        from girlframe.services.m3_ankou import off_duty_start as start_ankou_period
+
+                        start_ankou_period(
+                            self.game, c, state, current_ref(state, uid), identity, event_id
+                        )
             event = self.game.event(
                 c, viewer.user_id, key, kind, state, event_id=event_id, period_id=identity
             )
@@ -1193,6 +1209,17 @@ class CycleService:
                 from girlframe.engine.m3_repairs import close_period
 
                 updated = close_period(updated, identity)
+                from girlframe.engine.m3_actor_bonds import current_ref as ended_period_actor
+                from girlframe.services.m3_ankou import off_duty_complete as finish_ankou_period
+
+                for uid in finished.pilots:
+                    sheet = updated.sheets.get(str(uid))
+                    if sheet is not None and sheet.character_id == finished.character_ids.get(
+                        str(uid)
+                    ):
+                        finish_ankou_period(
+                            self.game, c, updated, ended_period_actor(updated, uid), identity, event
+                        )
             self.game.event(
                 c,
                 viewer.user_id,

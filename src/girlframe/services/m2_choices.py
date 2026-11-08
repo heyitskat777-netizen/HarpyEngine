@@ -255,6 +255,17 @@ class ChoiceEngine:
                 state.sheets[str(uid)].revision += 1
         else:
             state.bonds[key] = min(max(old + delta, 0), 2)
+        from girlframe.engine.m3_bond_operations import record
+
+        record(
+            state,
+            refs[0],
+            refs[1],
+            1 if delta > 0 else -1,
+            old,
+            state.bonds.get(key, 0),
+            source_event,
+        )
 
     def answered(self, action: dict[str, Any], kind: str, actor: int) -> ChoiceAnswer:
         return ChoiceAnswer.model_validate_json(
@@ -288,6 +299,40 @@ class ChoiceEngine:
             from girlframe.services.m3_prince import apply_choice as apply_prince
 
             apply_prince(self.game, c, state, action, request, answer)
+            return
+        if kind.startswith("ankou_") and not kind.startswith("ankou_feedback"):
+            from girlframe.services.m3_ankou import apply_choice as apply_ankou_source
+
+            require(
+                apply_ankou_source(self.game, c, state, action, request, answer),
+                "Use the actual original Ankou choice",
+            )
+            if not self.game.pending(c, action["id"]):
+                if kind == "ankou_interrupt" and action["data"].get("receipt"):
+                    self.results(c, state, action)
+                elif kind not in ("ankou_interrupt", "ankou_interrupt_child"):
+                    self.finish(c, state, action)
+            return
+        if kind == "changeling_interrupt":
+            raise WorkflowError(
+                "Perform the actual different Play from the original psychic source"
+            )
+        if kind.startswith("changeling_"):
+            from girlframe.services.m3_changeling import apply as apply_changeling
+
+            apply_changeling(self.game, c, state, action, request, answer)
+            if not self.game.pending(c, action["id"]):
+                self.finish(c, state, action)
+            return
+        if kind.startswith("red_queen_"):
+            from girlframe.services.m3_red_queen import apply_choice as apply_royal
+
+            require(
+                apply_royal(self.game, c, state, action, request, answer),
+                "Use the actual owned Court choice",
+            )
+            if not self.game.pending(c, action["id"]):
+                self.finish(c, state, action)
             return
         if kind.startswith("wyvern_"):
             from girlframe.services.m3_wyvern import apply as apply_wyvern
@@ -914,10 +959,24 @@ class ChoiceEngine:
                 else:
                     self.finish(c, state, action)
             else:
-                if (
-                    result["question"] == "intimacy"
-                    and state.bonds.get(pair_key(actor, owner), 0) == 2
-                ):
+                intense_desire = state.bonds.get(pair_key(actor, owner), 0) == 2
+                if not intense_desire and acting.character_id and sheet.character_id:
+                    from girlframe.engine.m3_actor_state import ActorRef as IntimacyActor
+                    from girlframe.services.m3_ankou_bonds import intense_benefit
+
+                    # The responder's one-sided benefit never assigns desire to the other side.
+                    intense_desire = intense_benefit(
+                        self.game,
+                        c,
+                        state,
+                        IntimacyActor(
+                            kind="pilot", entity=str(owner), incarnation=sheet.character_id
+                        ),
+                        IntimacyActor(
+                            kind="pilot", entity=str(actor), incarnation=acting.character_id
+                        ),
+                    )
+                if result["question"] == "intimacy" and intense_desire:
                     require(
                         answer.flag is True,
                         "Consent is not inferred. Use safety pause for an unwanted interaction.",
@@ -1068,6 +1127,7 @@ class ChoiceEngine:
         answer: ChoiceAnswer,
     ) -> None:
         from girlframe.services import m3_tag_markers as markers
+        from girlframe.services.m3_ankou import self_tag as champion_self_tag
         from girlframe.services.m3_dose_up import self_tag as drug_self_tag
         from girlframe.services.m3_kicked_puppy import self_tag as kicked_self_tag
         from girlframe.services.m3_stim_sex import self_tag as stim_self_tag
@@ -1145,7 +1205,8 @@ class ChoiceEngine:
                 or kicked_self_tag(self.game, c, state, action, owner, tag)
                 or ritual_self_tag(self.game, c, state, action, owner, tag)
                 or drug_self_tag(self.game, c, state, action, owner, tag)
-                or stim_self_tag(self.game, c, state, action, owner, tag),
+                or stim_self_tag(self.game, c, state, action, owner, tag)
+                or champion_self_tag(self.game, c, state, markers.roller(state, action), tag.id),
                 "Only another player or a printed self-mark exception can mark this Girl Tag.",
             )
             require(
@@ -1320,6 +1381,22 @@ class ChoiceEngine:
             amount = modifier(
                 state, markers.roller(state, action), marker, 1 if answer.number == 1 else -1
             )
+            if marker.obsessive_intense and marker.actor is not None:
+                from girlframe.services.m3_ankou import prove_obsession
+
+                require(
+                    prove_obsession(
+                        self.game, c, state, marker.actor, markers.roller(state, action)
+                    )
+                    is not None,
+                    "Recover the actual one-sided Obsessive benefit source",
+                )
+            if marker.actor is not None:
+                from girlframe.services.m3_red_queen import regiment_amount
+
+                amount = regiment_amount(
+                    self.game, c, state, marker.actor, markers.roller(state, action), amount
+                )
             action["data"]["tag_marker_applied"] = dict(
                 actor=marker.actor.model_dump(mode="json") if marker.actor else None,
                 controller=person,
@@ -1376,10 +1453,18 @@ class ChoiceEngine:
         cap = action["data"].get("consume_disobey_limit")
         if cap is not None:
             total = min(total, int(cap["cap"]))
+        if action["data"].get("red_queen_doll"):
+            total = min(total, 7)
         action["data"]["result"].update(total=total, tier=tier(total))
 
     def results(self, c: Connection, state: GameState, action: dict[str, Any]) -> None:
         self.set_total(action)
+        if any(
+            x["kind"] in ("ankou_interrupt", "ankou_interrupt_child")
+            for x in self.game.pending(c, action["id"])
+        ):
+            self.game.save_action(c, action, state="awaiting_choices")
+            return
         from girlframe.services.m3_consume import apply_disobey_limit, intercept_targeted_results
 
         apply_disobey_limit(self.game, c, state, action)
@@ -1409,6 +1494,21 @@ class ChoiceEngine:
             from girlframe.services.m3_prince import results as prince_results
 
             prince_results(self.game, c, state, action)
+            return
+        if action["data"].get("ankou"):
+            from girlframe.services.m3_ankou import results as ankou_results
+
+            ankou_results(self.game, c, state, action)
+            return
+        if action["data"].get("changeling"):
+            from girlframe.services.m3_changeling import results as changeling_results
+
+            changeling_results(self.game, c, state, action)
+            return
+        if action["data"].get("red_queen"):
+            from girlframe.services.m3_red_queen import results as royal_results
+
+            royal_results(self.game, c, state, action)
             return
         if action["data"].get("wyvern"):
             from girlframe.services.m3_wyvern import results as wyvern_results
@@ -1590,6 +1690,20 @@ class ChoiceEngine:
 
             if not finish_keep(self.game, c, state, action):
                 return
+        if action["data"].get("ankou") and action["data"]["ankou"].get("phase") != "complete":
+            self.game.save_action(c, action, state="awaiting_choices")
+            return
+        if (
+            action["data"].get("changeling")
+            and action["data"]["changeling"].get("phase") != "complete"
+        ):
+            self.game.save_action(c, action, state="awaiting_choices")
+            return
+        if (
+            action["data"].get("red_queen")
+            and action["data"]["red_queen"].get("phase") != "complete"
+        ):
+            return
         from girlframe.services.m3_wyvern import intercept_finish as wyvern_intercept_finish
 
         if wyvern_intercept_finish(self.game, c, state, action):
@@ -1641,7 +1755,15 @@ class ChoiceEngine:
             sync_finished(self.game, c, state, action, action["data"]["response_event"])
         if any(
             action["data"].get(k)
-            for k in ("bonded_child", "wyvern_child", "wyvern_pin_response", "wyvern_replacement")
+            for k in (
+                "bonded_child",
+                "wyvern_child",
+                "wyvern_pin_response",
+                "wyvern_replacement",
+                "red_queen_child",
+                "ankou_effect_child",
+                "changeling_child",
+            )
         ):
             return
         if action["data"].get("consume_child"):

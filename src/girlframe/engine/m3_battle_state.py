@@ -69,6 +69,7 @@ class Context(Model):
     defense: Defense | None = None
     source_action: str | None = None
     source_choice: str | None = None
+    source_work: str | None = Field(default=None, exclude_if=lambda value: value is None)
     dormant_awakened: bool = False
     dormant_close: bool = False
     judge_actor: ActorRef | None = None

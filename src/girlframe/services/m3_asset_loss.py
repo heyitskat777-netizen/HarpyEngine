@@ -22,6 +22,8 @@ Reason = Literal[
     "supply_drop_expiry",
     "budget_removal",
     "ankou_feedback",
+    "ankou_feedback_sequence",
+    "ankou_processor_unlink",
     "consume_partake",
     "consume_starvation_expiry",
 ]
@@ -29,6 +31,8 @@ REASONS = (
     "supply_drop_expiry",
     "budget_removal",
     "ankou_feedback",
+    "ankou_feedback_sequence",
+    "ankou_processor_unlink",
     "consume_partake",
     "consume_starvation_expiry",
 )
@@ -118,6 +122,22 @@ def create_loss_work(
         if source.get("piloting") != actual.piloting or source.get("in_battle") != in_battle:
             raise WorkflowError("Preserve this actual Feedback tear's physical source context.")
         source_action = source["source_action"]
+    if reason == "ankou_processor_unlink":
+        from girlframe.services.m3_ankou_support import prove_unlink_loss
+
+        source = prove_unlink_loss(game, c, after, event, source_id, actor)
+        if source.get("piloting") != actual.piloting or source.get("in_battle") != in_battle:
+            raise WorkflowError("Preserve the actual temporary processor loss context")
+        source_action = source.get("source_action")
+    if reason == "ankou_feedback_sequence":
+        from girlframe.services.m3_ankou_feedback_sequences import (
+            prove_loss_source as prove_sequence_loss,
+        )
+
+        source = prove_sequence_loss(game, c, after, event, source_id, actor)
+        if source.get("piloting") != actual.piloting or source.get("in_battle") != in_battle:
+            raise WorkflowError("Preserve this actual standalone Feedback loss context")
+        source_action = source.get("source_action")
     if reason in ("consume_partake", "consume_starvation_expiry"):
         from girlframe.services.m3_consume_support import prove_loss_source as prove_consume_loss
 
@@ -197,6 +217,20 @@ def prove_loss_work(
         context = prove_feedback_loss(game, c, after, event, source_id, actor)
         if body.get("source_action") != context.get("source_action"):
             raise WorkflowError("Preserve the actual held Feedback parent, not an external loss.")
+    elif reason == "ankou_processor_unlink":
+        from girlframe.services.m3_ankou_support import prove_unlink_loss
+
+        context = prove_unlink_loss(game, c, after, event, source_id, actor)
+        if body.get("source_action") != context.get("source_action"):
+            raise WorkflowError("Preserve the actual processor unlink source")
+    elif reason == "ankou_feedback_sequence":
+        from girlframe.services.m3_ankou_feedback_sequences import (
+            prove_loss_source as prove_sequence_loss,
+        )
+
+        context = prove_sequence_loss(game, c, after, event, source_id, actor)
+        if body.get("source_action") != context.get("source_action"):
+            raise WorkflowError("Preserve the actual standalone Feedback source")
     elif reason in ("consume_partake", "consume_starvation_expiry"):
         from girlframe.services.m3_consume_support import prove_loss_source as prove_consume_loss
 

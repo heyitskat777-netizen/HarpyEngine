@@ -259,6 +259,26 @@ def authorize(
         proved_judge(game, c, action)
 
 
+def _required_battle_child(
+    game: "GameService",
+    c: Connection,
+    viewer: GuildViewer,
+    state: GameState,
+    prepared: PlayInput,
+    channel: int,
+) -> dict[str, Any] | None:
+    """Route only proven required performances; each service retains its own authority."""
+    from girlframe.services.m3_ankou_feedback_sequences import prepare_child as ankou_child
+    from girlframe.services.m3_changeling_effects import prepare_child as mental_child
+    from girlframe.services.m3_red_queen_support import prepare_child as court_child
+
+    for source in (court_child, ankou_child, mental_child):
+        value = source(game, c, viewer, state, prepared, channel)
+        if value is not None:
+            return value
+    return None
+
+
 def prepare(
     game: "GameService",
     c: Connection,
@@ -269,6 +289,11 @@ def prepare(
 ) -> dict[str, Any]:
     authorize(game, c, viewer)
     easy_child = None
+    required_child = (
+        _required_battle_child(game, c, viewer, state, prepared, int(scene["channel_id"]))
+        if prepared.source_work
+        else None
+    )
     if prepared.source_work:
         from girlframe.services.m3_easy_target import prepare_child
 
@@ -279,6 +304,7 @@ def prepare(
         or prepared.off_duty_id is not None
         or prepared.source_work
         and easy_child is None
+        and required_child is None
         or prepared.witnessed
     ):
         raise WorkflowError(
@@ -298,6 +324,8 @@ def prepare(
     context = Context.model_validate_json(raw["body"])
     _context_proof(game, c, context)
     declaration = context.declaration
+    if required_child is not None and context.source_work != prepared.source_work:
+        raise WorkflowError("Use the declaration bound to this actual original Court command")
     if prepared.parent != context.source_action:
         raise WorkflowError("Use this actual declaration's frozen original source parent.")
     if (
@@ -1564,6 +1592,10 @@ def damage_actor(
         from girlframe.engine.m3_am import require_harm
 
         require_harm(state, actor, target)
+    from girlframe.engine.m3_ankou import Touch as AnkouTouch
+    from girlframe.engine.m3_ankou import records as ankou_records
+    from girlframe.engine.m3_changeling import Fingers as ChangelingFingers
+    from girlframe.engine.m3_changeling import records as changeling_records
     from girlframe.engine.m3_wyvern import RousedUse
     from girlframe.engine.m3_wyvern import records as wyvern_records
 
@@ -1590,6 +1622,34 @@ def damage_actor(
         prove_damage_source(
             game, c, state, source_work, target, asset_id, event, actor, chooser_controller
         )
+    elif source_work and any(
+        x.id == source_work and x.kind == "damage"
+        for x in changeling_records(state, ChangelingFingers)
+    ):
+        from girlframe.services.m3_changeling_effects import (
+            prove_damage_source as prove_fingers_damage,
+        )
+
+        prove_fingers_damage(
+            game, c, state, source_work, target, asset_id, event, actor, chooser_controller
+        )
+    elif source_work and any(x.id == source_work for x in ankou_records(state, AnkouTouch)):
+        from girlframe.services.m3_ankou import prove_touch, validate_pending_touch
+
+        touch = next(x for x in ankou_records(state, AnkouTouch) if x.id == source_work)
+        if touch.event == event:
+            validate_pending_touch(game, c, state, touch.id, event)
+        else:
+            touch = prove_touch(game, c, state, touch.id)
+        if (
+            touch.completed_event is not None
+            or target != touch.actor
+            or actor != touch.actor
+            or asset_id != touch.asset
+            or chooser_controller
+            != resolve(state, touch.actor, bound, require_current_profile=False).controller
+        ):
+            raise WorkflowError("Damage only the original Relay user's selected real Asset")
     elif actor is not None:
         frozen_original = False
         if source_action and actor.kind == "pilot" and rules.original_ended(state, actor):
@@ -1725,6 +1785,28 @@ def damage_actor(
 
     scene = game.action(c, source_action)["scene_id"] if source_action else None
     if scene is None and source_work:
+        from girlframe.engine.m3_ankou import Encounter as AnkouEncounter
+
+        scope_touch = next(
+            (x for x in ankou_records(state, AnkouTouch) if x.id == source_work), None
+        )
+        if scope_touch is not None:
+            encounter = next(
+                x for x in ankou_records(state, AnkouEncounter) if x.id == scope_touch.encounter
+            )
+            scene = encounter.cast.id
+    if scene is None and source_work:
+        mental = next(
+            (
+                x
+                for x in changeling_records(state, ChangelingFingers)
+                if x.id == source_work and x.kind == "damage"
+            ),
+            None,
+        )
+        if mental is not None:
+            scene = mental.cast.id
+    if scene is None and source_work:
         use = next((x for x in wyvern_records(state, RousedUse) if x.id == source_work), None)
         if use is not None:
             scene = use.cast.id
@@ -1793,14 +1875,37 @@ def damage_frame_at_scene(
         )
     else:
         if source_work is None:
-            raise WorkflowError("A parked Frame strike needs its actual original Roused grant")
-        from girlframe.services.m3_wyvern_combat import prove_damage_source
+            raise WorkflowError("A parked Frame effect needs its actual original source")
+        from girlframe.engine.m3_ankou import Touch as FrameTouch
+        from girlframe.engine.m3_ankou import records as frame_touches
 
-        use = prove_damage_source(
-            game, c, state, source_work, target, asset_id, event, actor, chooser_controller
-        )
-        if use.target_frame != frame_instance:
-            raise WorkflowError("Preserve the actual selected parked Frame, not another body")
+        touch = next((x for x in frame_touches(state, FrameTouch) if x.id == source_work), None)
+        if touch is not None:
+            from girlframe.services.m3_ankou import prove_touch, validate_pending_touch
+
+            if touch.event == event:
+                validate_pending_touch(game, c, state, touch.id, event)
+            else:
+                touch = prove_touch(game, c, state, touch.id)
+            if (
+                touch.completed_event
+                or actor != touch.actor
+                or target != touch.actor
+                or frame_instance != touch.frame
+                or asset_id != touch.asset
+                or chooser_controller != int(touch.actor.entity)
+            ):
+                raise WorkflowError(
+                    "Pay only the exact original Relay user's real Frame Asset cost"
+                )
+        else:
+            from girlframe.services.m3_wyvern_combat import prove_damage_source
+
+            use = prove_damage_source(
+                game, c, state, source_work, target, asset_id, event, actor, chooser_controller
+            )
+            if use.target_frame != frame_instance:
+                raise WorkflowError("Preserve the actual selected parked Frame, not another body")
     if target.kind != "pilot":
         raise WorkflowError("The actual assigned Frame port requires its original Pilot owner.")
     from girlframe.services.m3_wyvern_combat import require_damage_allowed
@@ -2567,7 +2672,8 @@ class BattleService:
                 context=value.model_dump(mode="json"),
                 channel=int(channel) if channel else None,
                 revision=state.revision,
-                source_work=(
+                source_work=value.source_work
+                or (
                     c.scalar(
                         sa.select(
                             sa.func.json_extract(t.m2["m2_choices"].c.body_json, "$.work")
@@ -2658,16 +2764,45 @@ class BattleService:
         declaration: Declaration,
         *,
         parent: str | None = None,
+        source_work: str | None = None,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             state = load_state(c, self.store.campaign_id)
             if state.revision != revision:
                 raise WorkflowError("STALE_BATTLE: reopen the actual scene declaration.")
+            source_grant = None
+            if source_work is not None:
+                prepared_source = PlayInput(
+                    play=declaration.play,
+                    context=declaration.account,
+                    trigger_confirmed=True,
+                    heat=0,
+                    target_actor=declaration.target,
+                    parent=parent,
+                    source_work=source_work,
+                )
+                source_grant = _required_battle_child(
+                    self.game, c, viewer, state, prepared_source, channel
+                )
+                if source_grant is None or source_grant["actor"] != declaration.actor.model_dump(
+                    mode="json"
+                ):
+                    raise WorkflowError("Declare only this actual original required performance")
             source_choice = None
             if parent:
                 source = self.game.action(c, parent)
                 request: dict[str, Any] | None
-                if source["data"].get("easy_target"):
+                if source_grant is not None:
+                    request = next(
+                        (
+                            x
+                            for x in self.game.pending(c, parent)
+                            if x["id"] == source_grant.get("choice")
+                            and x["actor_id"] == str(viewer.user_id)
+                        ),
+                        None,
+                    )
+                elif source["data"].get("easy_target"):
                     from girlframe.services.m3_easy_target import battle_declaration
 
                     request = battle_declaration(self.game, c, source, declaration, viewer)
@@ -2766,6 +2901,7 @@ class BattleService:
                 core_source=core,
                 source_action=parent,
                 source_choice=source_choice,
+                source_work=source_work,
                 judge_actor=judge,
                 judge_controller=judge_controller,
                 judge_source=judge_source,
@@ -2794,6 +2930,7 @@ class BattleService:
                 channel=channel,
                 declaration=declaration.model_dump(mode="json"),
                 parent=parent,
+                **({"source_work": source_work} if source_work is not None else {}),
             ),
             operation,
             auto_audit=False,

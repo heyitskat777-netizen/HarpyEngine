@@ -249,6 +249,9 @@ def change(
         raise ValueError("There is no Bond to weaken")
     value: Literal[0, 1, 2] = 0 if old + delta <= 0 else 2 if old + delta >= 2 else 1
     state = set_depth(original, first, second, value, source_event)
+    from girlframe.engine.m3_bond_operations import record
+
+    record(state, first, second, delta, old, value, source_event)
     if delta == 1 and old == 2:
         for actor in (first, second):
             _heat(state, actor, source_event)
@@ -329,6 +332,10 @@ def _same_body(state: GameState, first: ActorRef, second: ActorRef) -> bool:
 
 
 def is_helpless(state: GameState, subject: ActorRef, foe: ActorRef | None = None) -> bool:
+    from girlframe.engine.m3_ankou import helpless as ankou_helpless
+
+    if ankou_helpless(state, subject, foe):
+        return True
     from girlframe.engine.m3_bonded import helpless as bonded_helpless
 
     if bonded_helpless(state, subject):
@@ -446,6 +453,10 @@ def clear_helpless(
         sheet.helpless_against = (
             () if foe is None else tuple(x for x in sheet.helpless_against if str(x) != foe.entity)
         )
+    if foe is None:
+        from girlframe.engine.m3_ankou import clear_unqualified_helpless
+
+        clear_unqualified_helpless(state, subject, source_event)
     return state
 
 

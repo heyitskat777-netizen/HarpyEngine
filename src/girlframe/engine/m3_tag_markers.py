@@ -19,10 +19,13 @@ class Marker(Model):
     label: str
     bond_depth: int = Field(default=0, ge=0, le=2)
     bonus: int = Field(default=1, ge=1, le=2)
+    obsessive_intense: bool = Field(default=False, exclude_if=lambda value: not value)
 
     @model_validator(mode="after")
     def no_body_authority(self) -> "Marker":
-        if self.actor is None and (self.bond_depth != 0 or self.bonus != 1):
+        if self.actor is None and (
+            self.bond_depth != 0 or self.bonus != 1 or self.obsessive_intense
+        ):
             raise ValueError("An OOC human has no fictional Bond or Status authority")
         return self
 
@@ -34,6 +37,12 @@ class Marker(Model):
 def make_marker(state: GameState, view: ActorView, binding: str, roller: ActorRef) -> Marker:
     amount = depth(state, bond_ref(state, roller), bond_ref(state, view.ref))
     bonus = 2 if amount == 1 else int(state.intense_tag_bonus or 1) if amount == 2 else 1
+    from girlframe.engine.m3_ankou import effective_intense
+
+    obsessive = amount < 2 and bonus < 2 and effective_intense(state, view.ref, roller)
+    if obsessive:
+        bonus = 2
+    bonus = regiment_bonus(state, view.ref, roller, bonus)
     return Marker(
         actor=view.ref,
         controller=view.controller,
@@ -42,6 +51,7 @@ def make_marker(state: GameState, view: ActorView, binding: str, roller: ActorRe
         label=view.label,
         bond_depth=amount,
         bonus=bonus,
+        obsessive_intense=obsessive,
     )
 
 
@@ -118,6 +128,37 @@ def modifier(state: GameState, roller: ActorRef, marker: Marker, direction: Lite
         else 0
     )
     bonus = 2 if amount == 1 else int(state.intense_tag_bonus or 1) if amount == 2 else 1
-    if amount != marker.bond_depth or bonus != marker.bonus:
+    from girlframe.engine.m3_ankou import effective_intense
+
+    obsessive = (
+        marker.actor is not None
+        and amount < 2
+        and bonus < 2
+        and effective_intense(state, marker.actor, roller)
+    )
+    if obsessive:
+        bonus = 2
+    bonus = regiment_bonus(state, marker.actor, roller, bonus)
+    if (
+        amount != marker.bond_depth
+        or bonus != marker.bonus
+        or obsessive != marker.obsessive_intense
+    ):
         raise ValueError("STALE_TAG_MARKER: review the actual changed source Bond and modifier")
     return bonus * direction
+
+
+def regiment_bonus(state: GameState, giver: ActorRef | None, target: ActorRef, bonus: int) -> int:
+    """A genuine Queen can mark assigned AM bearers at two, independent of Bond depth."""
+    from girlframe.engine import m3_red_queen as court
+
+    if (
+        giver is not None
+        and any(
+            x.actor == giver and court.assigned(state, target, x.id)
+            for x in court.records(state, court.Court)
+        )
+        and court.held(state, giver, court.REGIMENT)
+    ):
+        return 2
+    return bonus

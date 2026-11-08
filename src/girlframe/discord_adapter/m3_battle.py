@@ -46,8 +46,11 @@ async def open_declaration(
     ]
     targets = [x for x in data["actors"] if x["ref"]["kind"] != "pilot" or not x["owned"]]
     if parent is not None:
-        own = [x for x in own if x["ref"] == parent["body"]["actor"]]
-        targets = [x for x in targets if x["ref"] == parent["body"]["attacker"]]
+        if parent["body"].get("actor"):
+            own = [x for x in own if x["ref"] == parent["body"]["actor"]]
+        fixed_target = parent["body"].get("attacker") or parent["body"].get("target")
+        if fixed_target:
+            targets = [x for x in targets if x["ref"] == fixed_target]
     if not own or not targets:
         await reply(interaction, "Join your actual Pilot and opposing actor to this scene first.")
         return
@@ -76,6 +79,18 @@ async def open_declaration(
                 channel,
                 proposal,
                 parent=parent["parent"] if parent else None,
+                **(
+                    {"source_work": parent["body"]["source_work"]}
+                    if parent
+                    and parent["kind"]
+                    in (
+                        "red_queen_child",
+                        "ankou_effect_child",
+                        "changeling_interrupt",
+                        "changeling_pause",
+                    )
+                    else {}
+                ),
             )
             return "Actual declaration saved for opening/reach review: " + str(result["id"])
 
@@ -122,7 +137,12 @@ async def open_declaration(
             Field(
                 "play",
                 "Choose your Play",
-                (("all_out_assault", "All Out Assault"), ("go_for_the_core", "Go For the Core")),
+                (("all_out_assault", "Required All Out Assault"),)
+                if parent and parent["kind"] == "red_queen_child"
+                else (
+                    ("all_out_assault", "All Out Assault"),
+                    ("go_for_the_core", "Go For the Core"),
+                ),
             ),
             Field(
                 "target", "Actual opposing actor", tuple((x["token"], x["name"]) for x in targets)
@@ -188,6 +208,14 @@ async def open_context(
             interaction, DampenerService(service.game), ActorRef.model_validate(actor["ref"])
         )
 
+        from girlframe.discord_adapter.m3_ankou_controls import pulse_fields, selected_pulse
+
+        pulse_controls = (
+            await pulse_fields(interaction, service.game)
+            if actor["ref"]["kind"] == "pilot" and value["declaration"]["play"] == "all_out_assault"
+            else []
+        )
+
         async def start(current: discord.Interaction, values: dict[str, Any]) -> str:
             declared = value["declaration"]
             chosen = values["identity"][0]
@@ -195,6 +223,7 @@ async def open_context(
                 play=declared["play"],
                 heat=int(values["heat"][0]),
                 dampener_modifier=dampener_modifier(values),
+                ankou_pulse=selected_pulse(values),
                 identity=None if chosen == "none" else chosen,
                 gain=int(values["gain"][0]),
                 pair_share=int(values["pair_share"][0]),
@@ -256,7 +285,8 @@ async def open_context(
                     tuple((str(x), str(x)) for x in range(resources["heat"] + 6)),
                 ),
             ]
-            + dampener_controls,
+            + dampener_controls
+            + pulse_controls,
             start,
         )
         await reply(interaction, form.text(), form)

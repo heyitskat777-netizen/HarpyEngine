@@ -561,6 +561,27 @@ def answer_values(values: dict[str, Any]) -> ChoiceAnswer:
 
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
     decision = await threaded(lambda: game.decision(viewer_from_interaction(interaction), identity))
+    if decision["kind"].startswith("ankou_") and not decision["kind"].startswith("ankou_feedback"):
+        from girlframe.discord_adapter.m3_ankou import open_choice as open_ankou_source_choice
+
+        await open_ankou_source_choice(interaction, game, decision)
+        return
+    if decision["kind"].startswith("red_queen_"):
+        from girlframe.discord_adapter.m3_red_queen import open_choice as open_court_choice
+
+        await open_court_choice(interaction, game, decision)
+        return
+    if decision["kind"] == "changeling_interrupt":
+        from girlframe.discord_adapter.m3_changeling import open_changeling
+        from girlframe.services.m3_changeling import ChangelingService
+
+        await open_changeling(interaction, ChangelingService(game), decision["detail"]["source"])
+        return
+    if decision["kind"].startswith("changeling_"):
+        from girlframe.discord_adapter.m3_changeling import open_choice as open_changeling_choice
+
+        await open_changeling_choice(interaction, game, decision)
+        return
     if decision["kind"].startswith("prince_"):
         from girlframe.discord_adapter.m3_prince import open_choice as open_prince_choice
 
@@ -1020,12 +1041,21 @@ async def open_play(
             and x.get("heat") is not None
         ]
         if parent is not None:
-            if parent["kind"] != "battle_counter_play":
+            if parent["kind"] not in (
+                "battle_counter_play",
+                "changeling_interrupt",
+                "changeling_pause",
+            ):
                 actual = []
             elif parent.get("actor"):
                 actual = [x for x in actual if x["ref"] == parent["actor"]]
         pilots = [x for x in roles["actors"] if x["kind"] == "pilot"]
-        if parent and parent["kind"] == "battle_counter_play" and parent.get("actor"):
+        if (
+            parent
+            and parent["kind"]
+            in ("battle_counter_play", "changeling_interrupt", "changeling_pause")
+            and parent.get("actor")
+        ):
             pilots = [x for x in pilots if x["ref"] == parent["actor"]]
         if actual and not pilots and len(actual) == 1:
             await open_actor_play(
@@ -1110,6 +1140,14 @@ async def open_play(
         plays = ("am_just_code",)
     if parent and parent["kind"] == "am_prepare":
         plays = ("am_scrutinized",)
+    if parent and parent["kind"] == "red_queen_child":
+        plays = (parent["body"]["play"],)
+    if parent and parent["kind"] == "ankou_effect_child":
+        plays = (
+            (parent["play"],)
+            if parent.get("play")
+            else tuple(parent["body"].get("allowed", PLAY_IDS))
+        )
     if (
         not parent
         and approval is not None
@@ -1219,6 +1257,9 @@ async def open_play(
         )
     fields.extend(dampener_controls)
     fields.extend(kicked_controls)
+    from girlframe.discord_adapter.m3_ankou_controls import pulse_fields, selected_pulse
+
+    fields.extend(await pulse_fields(interaction, game))
     from girlframe.discord_adapter.m3_prince import fields as prince_fields
 
     fields.extend(await prince_fields(interaction, game))
@@ -1362,6 +1403,14 @@ async def open_play(
             code_source = parent["body"]["maintenance"]
             target_actor = ActorRef.model_validate(parent["body"]["target"])
         am_source = None
+        if parent and parent["kind"] == "ankou_effect_child" and parent["body"].get("target"):
+            from girlframe.engine.m3_actor_state import ActorRef
+
+            target_actor = ActorRef.model_validate(parent["body"]["target"])
+        if parent and parent["kind"] == "red_queen_child":
+            from girlframe.engine.m3_actor_state import ActorRef
+
+            target_actor = ActorRef.model_validate(parent["body"]["target"])
         if play == "am_scrutinized":
             from girlframe.engine.m3_actor_state import ActorRef
 
@@ -1374,6 +1423,7 @@ async def open_play(
         prepared = PlayInput(
             **prince_values(values),
             consume_seek_food=one(values, "consume_seek_food") == "yes",
+            ankou_pulse=selected_pulse(values),
             play=play,
             context=values["context"],
             trigger_confirmed=True,
@@ -1387,7 +1437,16 @@ async def open_play(
             gain=int(one(values, "gain")),
             pair_share=int(one(values, "pair_share")),
             disposable_heat=cast(Literal[0, 3, 4], int(one(values, "disposable_heat") or "0")),
-            target=int(one(values, "target"))
+            target=int(parent["body"]["target"]["entity"])
+            if parent
+            and parent["kind"] == "ankou_effect_child"
+            and (parent["body"].get("target") or {}).get("kind") == "pilot"
+            and play in ("flirt", "put_someone_beneath_you")
+            else int(parent["body"]["target"]["entity"])
+            if parent
+            and parent["kind"] == "red_queen_child"
+            and parent["body"]["target"]["kind"] == "pilot"
+            else int(one(values, "target"))
             if play in ("flirt", "put_someone_beneath_you") and one(values, "target")
             else None,
             piloting=one(values, "piloting") == "yes",
@@ -1405,7 +1464,16 @@ async def open_play(
                 else parent["body"]["work"]
                 if parent and parent["kind"].startswith("easy_target_child:")
                 else parent["body"]["source_work"]
-                if parent and parent["kind"] in ("consume_child", "consume_order_child")
+                if parent
+                and parent["kind"]
+                in (
+                    "consume_child",
+                    "consume_order_child",
+                    "red_queen_child",
+                    "changeling_interrupt",
+                    "changeling_pause",
+                    "ankou_effect_child",
+                )
                 else None
             ),
         )
@@ -1768,6 +1836,9 @@ class StatePages(discord.ui.View):
             "Tag: " + x["label"] + (" [marked]" if x["marked"] else "") for x in sheet["tags"]
         ]
         lines += ["Helpless against: " + str(x) for x in sheet["helpless_against"]]
+        lines += [
+            "Official allegation: " + x["allegation"] for x in sheet.get("official_allegations", ())
+        ]
         if await threaded(lambda: self.game.helpless_status(viewer_from_interaction(interaction))):
             lines.append("Helpless: recover through /character recover after a moment alone.")
         obligations = await threaded(
@@ -2151,6 +2222,21 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
                 from girlframe.services.m3_prince import PrinceService
 
                 await open_prince(interaction, PrinceService(game))
+            elif frame == "THE RED QUEEN":
+                from girlframe.discord_adapter.m3_red_queen import open_red_queen
+                from girlframe.services.m3_red_queen import RedQueenService
+
+                await open_red_queen(interaction, RedQueenService(game))
+            elif frame == "PROJECT ANKOU":
+                from girlframe.discord_adapter.m3_ankou import open_ankou
+                from girlframe.services.m3_ankou import AnkouService
+
+                await open_ankou(interaction, AnkouService(game))
+            elif frame == "CHANGELING":
+                from girlframe.discord_adapter.m3_changeling import open_changeling
+                from girlframe.services.m3_changeling import ChangelingService
+
+                await open_changeling(interaction, ChangelingService(game))
             elif frame == "WYVERN 0.4":
                 from girlframe.discord_adapter.m3_wyvern import open_wyvern
                 from girlframe.services.m3_wyvern import WyvernService

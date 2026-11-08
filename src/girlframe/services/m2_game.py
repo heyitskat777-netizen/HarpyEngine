@@ -249,6 +249,12 @@ class GameService:
             )
             for field in GameState.model_fields:
                 setattr(state, field, getattr(bound, field))
+            from girlframe.engine.m3_red_queen import JUDGEMENT as COURT_JUDGEMENT
+
+            if any(getattr(x, "rule_id", None) == COURT_JUDGEMENT for x in state.requisitions):
+                from girlframe.services.m3_red_queen_support import stage_tag_births
+
+                stage_tag_births(self, c, previous_state, state, event)
             if self.store.policy.m3_approval is not None:
                 from girlframe.engine.m3_actor_state import ActorRef as BirthActor
                 from girlframe.engine.m3_girl_runtime_state import has_rule as birth_rule
@@ -306,6 +312,19 @@ class GameService:
                 from girlframe.services.m3_tracker_implants import prepare as prepare_trackers
 
                 prepare_trackers(self, c, previous_state, state, event)
+            if any(sheet.frame == "PROJECT ANKOU" for sheet in state.sheets.values()) or any(
+                fact.get("kind", "").startswith("ankou_")
+                and not fact.get("kind", "").startswith("ankou_feedback")
+                for fact in state.facts
+            ):
+                from girlframe.services.m3_ankou import observe as observe_ankou
+
+                observe_ankou(
+                    self, c, previous_state, state, event, metadata | dict(event_kind=kind)
+                )
+            from girlframe.services.m3_changeling_hooks import stage as stage_changeling
+
+            stage_changeling(self, c, previous_state, state, event, metadata)
             from girlframe.services.m3_intracadre_marriage import prepare_punishments
 
             prepare_punishments(self, c, previous_state, state, event)
@@ -396,6 +415,22 @@ class GameService:
                 for field in GameState.model_fields:
                     setattr(state, field, getattr(sex_state, field))
 
+        if state is not None and any(
+            fact.get("kind", "").startswith("ankou_")
+            and not fact.get("kind", "").startswith("ankou_feedback")
+            for fact in state.facts
+        ):
+            from girlframe.services.m3_ankou import synchronize_events as sync_ankou_events
+
+            sync_ankou_events(self, c, event)
+            newest = load_state(c, self.store.campaign_id)
+            if newest.revision > state.revision:
+                for field in GameState.model_fields:
+                    setattr(state, field, getattr(newest, field))
+        if state is not None and any(x.get("kind") == "changeling_body_fact" for x in state.facts):
+            from girlframe.services.m3_changeling import synchronize_brains
+
+            synchronize_brains(self, c, event)
         if state is not None:
             from girlframe.services.p1_source_pause import reserve
 
@@ -428,6 +463,14 @@ class GameService:
                 if sheet.owner == viewer.user_id
                 else public_sheet(sheet, state)
             )
+            from girlframe.services.m3_red_queen_accusation import official_allegations
+
+            if sheet.character_id:
+                data["official_allegations"] = official_allegations(
+                    state,
+                    "girl",
+                    ActorRef(kind="pilot", entity=str(sheet.owner), incarnation=sheet.character_id),
+                )
             if sheet.owner == viewer.user_id:
                 from girlframe.engine.m3_clone_am import additional_identities
                 from girlframe.services.m3_clone_am import prove_additional
@@ -1011,6 +1054,9 @@ class GameService:
         saved = action["data"].get("character_ids")
         if saved is None:
             saved = self.legacy_action_bindings(c, action)
+            # Cache only the immutable original bindings already proved below.
+            # Read-only callers do not save this local action object.
+            action["data"]["character_ids"] = saved
         for owner, original in saved.items():
             if allow_archived or (owner, original) in allowed_archived:
                 from girlframe.engine.m3_actor_state import ActorRef
@@ -1253,6 +1299,21 @@ class GameService:
 
             wyvern_pin_response = prepare_pin_response(self, c, viewer, state, prepared, channel)
             wyvern_replacement = prepare_replacement(self, c, viewer, state, prepared, channel)
+            from girlframe.services.m3_red_queen_support import prepare_child as royal_child_source
+
+            red_queen_child = royal_child_source(self, c, viewer, state, prepared, channel)
+            from girlframe.services.m3_changeling_effects import (
+                prepare_child as changeling_child_source,
+            )
+
+            changeling_child = changeling_child_source(self, c, viewer, state, prepared, channel)
+            from girlframe.services.m3_ankou_feedback_sequences import (
+                prepare_child as prepare_ankou_effect_child,
+            )
+
+            ankou_effect_child = prepare_ankou_effect_child(
+                self, c, viewer, state, prepared, channel
+            )
             from girlframe.services.p1_source_pause import require_clear as require_source_clear
 
             require_source_clear(self, c, channel, prepared=prepared)
@@ -1263,6 +1324,9 @@ class GameService:
             consume = None
             bonded = None
             wyvern = None
+            red_queen = None
+            changeling = None
+            ankou = None
             princess_sex = None
             stim_sex = None
             oldgen_sex = None
@@ -1324,6 +1388,18 @@ class GameService:
                 from girlframe.services.m3_wyvern import prepare as prepare_wyvern
 
                 wyvern = prepare_wyvern(self, c, viewer, state, prepared, channel)
+            elif prepared.play == "ankou_processor":
+                from girlframe.services.m3_ankou import prepare as prepare_ankou
+
+                ankou = prepare_ankou(self, c, viewer, state, prepared, channel)
+            elif prepared.play in ("changeling_blank_slate", "changeling_body_of_clay"):
+                from girlframe.services.m3_changeling import prepare as prepare_changeling
+
+                changeling = prepare_changeling(self, c, viewer, state, prepared, channel)
+            elif prepared.play in ("red_queen_consult", "red_queen_panopticon", "red_queen_memory"):
+                from girlframe.services.m3_red_queen import prepare as prepare_red_queen
+
+                red_queen = prepare_red_queen(self, c, viewer, state, prepared, channel)
             elif prepared.play in ("bonded_side", "bonded_sex"):
                 from girlframe.services.m3_bonded import prepare as prepare_bonded
 
@@ -1347,10 +1423,16 @@ class GameService:
                 and consume_child is None
                 and bonded_child is None
                 and wyvern_child is None
+                and red_queen_child is None
+                and ankou_effect_child is None
+                and changeling_child is None
                 and wyvern_pin_response is None
                 and wyvern_replacement is None
                 and bonded is None
                 and wyvern is None
+                and red_queen is None
+                and changeling is None
+                and ankou is None
             ):
                 from girlframe.services.m3_void_keep import prepare_keep
 
@@ -1365,10 +1447,16 @@ class GameService:
                 and consume_child is None
                 and bonded_child is None
                 and wyvern_child is None
+                and red_queen_child is None
+                and ankou_effect_child is None
+                and changeling_child is None
                 and wyvern_pin_response is None
                 and wyvern_replacement is None
                 and bonded is None
                 and wyvern is None
+                and red_queen is None
+                and changeling is None
+                and ankou is None
             ):
                 from girlframe.services.m3_battle_dormant import prepare_dive_source
 
@@ -1388,10 +1476,16 @@ class GameService:
                 and consume_child is None
                 and bonded_child is None
                 and wyvern_child is None
+                and red_queen_child is None
+                and ankou_effect_child is None
+                and changeling_child is None
                 and wyvern_pin_response is None
                 and wyvern_replacement is None
                 and bonded is None
                 and wyvern is None
+                and red_queen is None
+                and changeling is None
+                and ankou is None
                 and prepared.play
                 not in (
                     "prince_performer",
@@ -1696,8 +1790,14 @@ class GameService:
                         consume,
                         bonded,
                         wyvern,
+                        red_queen,
+                        changeling,
+                        ankou,
                         bonded_child,
                         wyvern_child,
+                        red_queen_child,
+                        ankou_effect_child,
+                        changeling_child,
                         wyvern_pin_response,
                         wyvern_replacement,
                         easy_target,
@@ -1747,6 +1847,22 @@ class GameService:
                     source_cast = SceneCast.model_validate_json(json.dumps(newgirl_sex["cast"]))
                 elif casualty_sex is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(casualty_sex["cast"]))
+                elif ankou is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(ankou["cast"]))
+                elif changeling is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(changeling["cast"]))
+                elif changeling_child is not None:
+                    source_cast = SceneCast.model_validate_json(
+                        json.dumps(changeling_child["cast"])
+                    )
+                elif red_queen is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(red_queen["cast"]))
+                elif ankou_effect_child is not None:
+                    source_cast = SceneCast.model_validate_json(
+                        json.dumps(ankou_effect_child["cast"])
+                    )
+                elif red_queen_child is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(red_queen_child["cast"]))
                 elif wyvern is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(wyvern["cast"]))
                 elif wyvern_pin_response is not None:
@@ -1840,6 +1956,16 @@ class GameService:
                     c, state, mechanical_owner, require_current_profile=False
                 ),
             )
+            if defeat is None and void_keep is None:
+                from girlframe.services.m3_ankou import require_free as require_ankou_free
+
+                require_ankou_free(
+                    self,
+                    c,
+                    state,
+                    acting_ref,
+                    ankou_effect_child["id"] if ankou_effect_child else None,
+                )
             from girlframe.engine.m3_am import require_freedom, require_harm
 
             if acting_ref.kind == "pilot" and state.sheets[acting_ref.entity].frame == "CONSUME":
@@ -1931,6 +2057,8 @@ class GameService:
                                 "consume_child",
                                 "wyvern_child",
                                 "wyvern_replacement",
+                                "changeling_interrupt",
+                                "ankou_interrupt_child",
                                 "consume_order_child",
                                 "easy_target_child",
                                 "battle_dormant_dive",
@@ -1947,12 +2075,31 @@ class GameService:
                         == str(viewer.user_id if princess_child else mechanical_owner)
                         and (easy_target_child is None or x["id"] == easy_target_child["choice"])
                         and (wyvern_child is None or x["id"] == wyvern_child["choice"])
+                        and (
+                            ankou_effect_child is None
+                            or ankou_effect_child.get("parent") is None
+                            or x["id"] == ankou_effect_child["choice"]
+                        )
+                        and (
+                            changeling_child is None
+                            or changeling_child["kind"] != "interrupt"
+                            or x["id"] == changeling_child["choice"]
+                        )
                         and (wyvern_replacement is None or x["id"] == wyvern_replacement["choice"])
                     ),
                     None,
                 )
                 if required is None:
                     raise WorkflowError("Only the required player can make this response Play.")
+                if required["kind"] == "ankou_interrupt_child" and (
+                    ankou_effect_child is None
+                    or ankou_effect_child.get("parent") != prepared.parent
+                ):
+                    raise WorkflowError("Use the actual original Relay interrupt source")
+                if required["kind"] == "changeling_interrupt" and (
+                    changeling_child is None or changeling_child["kind"] != "interrupt"
+                ):
+                    raise WorkflowError("Use the exact actual original interrupted Play source")
                 if required["kind"] == "wyvern_replacement" and wyvern_replacement is None:
                     raise WorkflowError(
                         "Use the genuine incoming Play's original replacement source"
@@ -2104,8 +2251,14 @@ class GameService:
                     consume,
                     bonded,
                     wyvern,
+                    red_queen,
+                    changeling,
+                    ankou,
                     bonded_child,
                     wyvern_child,
+                    red_queen_child,
+                    ankou_effect_child,
+                    changeling_child,
                     wyvern_pin_response,
                     wyvern_replacement,
                     easy_target,
@@ -2248,6 +2401,51 @@ class GameService:
                         cast=counter["cast"],
                         cast_sha256=counter["cast_sha256"],
                     )
+            if changeling_child is not None:
+                from girlframe.engine.m3_handler_consequences import active_handler as child_handler
+
+                actual_handler = child_handler(state)
+                if actual_handler is None:
+                    raise WorkflowError("Recover the actual source Handler")
+                data["changeling_child"] = changeling_child
+                data["participants"] = list(changeling_child["table"])
+                data["tag_context"] = dict(
+                    actor=changeling_child["actor"],
+                    handler=actual_handler.model_dump(mode="json"),
+                    gm_controller=state.handler,
+                    table=list(changeling_child["table"]),
+                    cast=changeling_child["cast"],
+                    cast_sha256=changeling_child["cast_sha256"],
+                )
+            if ankou_effect_child is not None:
+                from girlframe.engine.m3_handler_consequences import (
+                    active_handler as ankou_source_handler,
+                )
+
+                source_handler = ankou_source_handler(state)
+                if source_handler is None:
+                    raise WorkflowError("Recover the actual source Handler")
+                data["ankou_effect_child"] = ankou_effect_child
+                data["participants"] = sorted(set(ankou_effect_child["table"]) | {state.handler})
+                data["tag_context"] = dict(
+                    actor=ankou_effect_child["actor"],
+                    handler=source_handler.model_dump(mode="json"),
+                    gm_controller=state.handler,
+                    table=data["participants"],
+                    cast=ankou_effect_child["cast"],
+                    cast_sha256=ankou_effect_child["cast_sha256"],
+                )
+            if red_queen_child is not None:
+                data["red_queen_child"] = red_queen_child
+                data["participants"] = list(red_queen_child["table"])
+                data["tag_context"] = dict(
+                    actor=red_queen_child["actor"],
+                    handler=red_queen_child["handler"],
+                    gm_controller=red_queen_child["handler_controller"],
+                    table=list(red_queen_child["table"]),
+                    cast=red_queen_child["cast"],
+                    cast_sha256=red_queen_child["cast_sha256"],
+                )
             if prince_mark is not None:
                 data["prince_mark"] = prince_mark
             if prince_demands is not None:
@@ -2259,6 +2457,9 @@ class GameService:
                 ("consume", consume),
                 ("bonded", bonded),
                 ("wyvern", wyvern),
+                ("red_queen", red_queen),
+                ("changeling", changeling),
+                ("ankou", ankou),
             ):
                 if scope is not None:
                     cast = scope["cast"] if book == "prince" else scope["cast"]
@@ -2779,9 +2980,13 @@ class GameService:
                     if legacy_cast:
                         state.scene_casts.append(source_cast)
                         marriage_cast_saved = True
+            from girlframe.services.m3_changeling_sex import for_play as remote_sex_source
+
+            remote_sex_link = remote_sex_source(self, c, state, action)
             begin_source_event = (
                 str(uuid4())
-                if secretary_response is not None
+                if remote_sex_link is not None
+                or secretary_response is not None
                 or princess_child
                 or princess_sex
                 or stim_sex
@@ -2794,8 +2999,14 @@ class GameService:
                 or consume_child
                 or bonded
                 or wyvern
+                or red_queen
+                or changeling
+                or ankou
                 or bonded_child
                 or wyvern_child
+                or red_queen_child
+                or ankou_effect_child
+                or changeling_child
                 or wyvern_pin_response
                 or wyvern_replacement
                 or newgirl_sex
@@ -2805,6 +3016,16 @@ class GameService:
                 or investment_performance
                 else None
             )
+            from girlframe.engine.m3_ankou import Task as AnkouTask
+            from girlframe.engine.m3_ankou import records as ankou_tasks
+            from girlframe.services.m3_ankou import on_play as stage_ankou_play
+
+            ankou_begin_event = begin_source_event or str(uuid4())
+            stage_ankou_play(self, c, state, action, ankou_begin_event)
+            if any(x.event == ankou_begin_event for x in ankou_tasks(state, AnkouTask)):
+                begin_source_event = ankou_begin_event
+                action["data"]["ankou_source_tasks"] = ankou_begin_event
+                self.save_action(c, action)
             from girlframe.services.m3_learned_plays import claim as claim_learned_play
 
             claimed_learned = claim_learned_play(
@@ -2829,6 +3050,53 @@ class GameService:
 
                 assert begin_source_event is not None
                 bind_consume(state, action, begin_source_event)
+            if remote_sex_link is not None:
+                from girlframe.services.m3_changeling_sex import bind_action as bind_remote_source
+
+                assert begin_source_event is not None
+                bind_remote_source(self, c, state, action, begin_source_event)
+                self.save_action(c, action)
+            from girlframe.services.m3_changeling import reserve_flirt
+
+            flirt_begin = begin_source_event or str(uuid4())
+            reserve_flirt(self, c, state, action, flirt_begin)
+            if action["data"].get("changeling_flirt"):
+                begin_source_event = flirt_begin
+                self.save_action(c, action)
+            if ankou is not None:
+                from girlframe.services.m3_ankou import bind as bind_ankou
+
+                assert begin_source_event is not None
+                bind_ankou(state, action, begin_source_event)
+            if changeling is not None:
+                from girlframe.services.m3_changeling import bind as bind_changeling
+
+                assert begin_source_event is not None
+                bind_changeling(state, action, begin_source_event)
+            if changeling_child is not None:
+                from girlframe.services.m3_changeling_effects import (
+                    bind_child as bind_changeling_child,
+                )
+
+                assert begin_source_event is not None
+                bind_changeling_child(self, c, state, action, begin_source_event)
+            if red_queen is not None:
+                from girlframe.services.m3_red_queen import bind as bind_red_queen
+
+                assert begin_source_event is not None
+                bind_red_queen(state, action, begin_source_event)
+            if ankou_effect_child is not None:
+                from girlframe.services.m3_ankou_feedback_sequences import (
+                    bind_child as bind_ankou_effect_child,
+                )
+
+                assert begin_source_event is not None
+                bind_ankou_effect_child(self, c, state, action, begin_source_event)
+            if red_queen_child is not None:
+                from girlframe.services.m3_red_queen_support import bind_child as bind_royal_child
+
+                assert begin_source_event is not None
+                bind_royal_child(self, c, state, action, begin_source_event)
             if wyvern is not None:
                 from girlframe.services.m3_wyvern import bind as bind_wyvern
 
@@ -2942,8 +3210,19 @@ class GameService:
                 or consume_child is not None
                 or bonded is not None
                 or wyvern is not None
+                or red_queen is not None
+                or action["data"].get("ankou_pulse")
+                or action["data"].get("ankou_roll_modifiers")
+                or action["data"].get("ankou_source_tasks")
+                or action["data"].get("changeling_remote")
+                or action["data"].get("changeling_flirt")
+                or changeling is not None
+                or ankou is not None
                 or bonded_child is not None
                 or wyvern_child is not None
+                or red_queen_child is not None
+                or ankou_effect_child is not None
+                or changeling_child is not None
                 or wyvern_pin_response is not None
                 or wyvern_replacement is not None
                 or newgirl_sex is not None
@@ -2980,8 +3259,19 @@ class GameService:
                     or consume_child is not None
                     or bonded is not None
                     or wyvern is not None
+                    or red_queen is not None
+                    or action["data"].get("ankou_pulse")
+                    or action["data"].get("ankou_roll_modifiers")
+                    or action["data"].get("ankou_source_tasks")
+                    or action["data"].get("changeling_remote")
+                    or action["data"].get("changeling_flirt")
+                    or changeling is not None
+                    or ankou is not None
                     or bonded_child is not None
                     or wyvern_child is not None
+                    or red_queen_child is not None
+                    or ankou_effect_child is not None
+                    or changeling_child is not None
                     or wyvern_pin_response is not None
                     or wyvern_replacement is not None
                     or newgirl_sex is not None
@@ -3003,8 +3293,19 @@ class GameService:
                     or consume_child is not None
                     or bonded is not None
                     or wyvern is not None
+                    or red_queen is not None
+                    or action["data"].get("ankou_pulse")
+                    or action["data"].get("ankou_roll_modifiers")
+                    or action["data"].get("ankou_source_tasks")
+                    or action["data"].get("changeling_remote")
+                    or action["data"].get("changeling_flirt")
+                    or changeling is not None
+                    or ankou is not None
                     or bonded_child is not None
                     or wyvern_child is not None
+                    or red_queen_child is not None
+                    or ankou_effect_child is not None
+                    or changeling_child is not None
                     or wyvern_pin_response is not None
                     or wyvern_replacement is not None
                     or investment_performance is not None
@@ -3112,6 +3413,17 @@ class GameService:
 
             body = json.loads(row["body_json"]) | {"id": row["id"]}
             source_authority = valid_bonded_order(self, c, state, body) or source_authority
+        if row is not None and json.loads(row["body_json"]).get("red_queen"):
+            from girlframe.engine.m3_actor_state import ActorRef as CourtRef
+            from girlframe.services.m3_red_queen import valid_order as valid_court_order
+
+            body = json.loads(row["body_json"]) | {"id": row["id"]}
+            target_ref = CourtRef(
+                kind="pilot", entity=str(owner), incarnation=state.sheets[str(owner)].character_id
+            )
+            source_authority = (
+                valid_court_order(self, c, state, body, target_ref) or source_authority
+            )
         if row is None or (
             not source_authority and not higher(state, int(row["issuer_id"]), owner)
         ):
@@ -3320,6 +3632,55 @@ class GameService:
                 from girlframe.services.m3_wyvern import pre_roll_child as pre_roll_wyvern_child
 
                 pre_roll_wyvern_child(self, c, viewer, state, action)
+            from girlframe.services.m3_changeling import pre_roll_flirt
+            from girlframe.services.m3_changeling import require_answers as require_psychic_answers
+            from girlframe.services.m3_red_queen import _acting as original_roll_actor
+
+            require_psychic_answers(self, c, state, original_roll_actor(action))
+            from girlframe.services.m3_ankou import require_source_tasks
+
+            require_source_tasks(self, c, state, action)
+            if not action["data"].get("defeat") and not action["data"].get("void_keep"):
+                from girlframe.services.m3_ankou import require_free as require_ankou_free
+
+                require_ankou_free(
+                    self,
+                    c,
+                    state,
+                    original_roll_actor(action),
+                    action["data"].get("ankou_effect_child", {}).get("id"),
+                )
+            pre_roll_flirt(self, c, state, action)
+            if action["data"].get("ankou"):
+                from girlframe.services.m3_ankou import pre_roll as pre_roll_ankou
+
+                pre_roll_ankou(self, c, viewer, state, action)
+            if action["data"].get("changeling"):
+                from girlframe.services.m3_changeling import pre_roll as pre_roll_changeling
+
+                pre_roll_changeling(self, c, viewer, state, action)
+            if action["data"].get("changeling_child"):
+                from girlframe.services.m3_changeling_effects import (
+                    pre_roll_child as pre_roll_changeling_child,
+                )
+
+                pre_roll_changeling_child(self, c, viewer, state, action)
+            if action["data"].get("red_queen"):
+                from girlframe.services.m3_red_queen import pre_roll as pre_roll_red_queen
+
+                pre_roll_red_queen(self, c, viewer, state, action)
+            if action["data"].get("ankou_effect_child"):
+                from girlframe.services.m3_ankou_feedback_sequences import (
+                    pre_roll_child as pre_roll_ankou_effect_child,
+                )
+
+                pre_roll_ankou_effect_child(self, c, viewer, state, action)
+            if action["data"].get("red_queen_child"):
+                from girlframe.services.m3_red_queen_support import (
+                    pre_roll_child as pre_roll_royal_child,
+                )
+
+                pre_roll_royal_child(self, c, viewer, state, action)
             if action["data"].get("wyvern"):
                 from girlframe.services.m3_wyvern import pre_roll as pre_roll_wyvern
 
@@ -3548,6 +3909,68 @@ class GameService:
             from girlframe.services.m3_wyvern_support import require_play_target
 
             require_play_target(self, c, state, prepared)
+            from girlframe.services.m3_red_queen import (
+                _acting as court_actor,
+            )
+            from girlframe.services.m3_red_queen import (
+                consume_doll,
+                doll_source,
+            )
+            from girlframe.services.m3_red_queen import (
+                roll_modifier as court_modifier,
+            )
+
+            court_event = next(
+                (
+                    action["data"][name]["roll_event"]
+                    for name in ("defeat", "doctor", "dive", "enforcement", "battle", "janus")
+                    if action["data"].get(name, {}).get("roll_event")
+                ),
+                str(uuid4()),
+            )
+            if prepared.ankou_pulse:
+                from girlframe.engine.m3_actor_state import ActorRef as PulseTarget
+                from girlframe.services.m3_ankou import apply_pulse
+
+                pulse_target = prepared.target_actor
+                if pulse_target is None and prepared.target is not None:
+                    original_id = action["data"].get("character_ids", {}).get(str(prepared.target))
+                    if original_id:
+                        pulse_target = PulseTarget(
+                            kind="pilot", entity=str(prepared.target), incarnation=original_id
+                        )
+                if pulse_target is None:
+                    raise WorkflowError("Choose this actual Play's original Amygdala target")
+                apply_pulse(self, c, state, action, prepared.ankou_pulse, pulse_target, court_event)
+                action["data"]["ankou_pulse"] = prepared.ankou_pulse
+            court_adjustment = court_modifier(self, c, state, action, court_event)
+            from girlframe.services.m3_ankou import (
+                consume_roll_modifiers as consume_ankou_modifiers,
+            )
+
+            ankou_modifiers = consume_ankou_modifiers(self, c, state, action, court_event)
+            if ankou_modifiers:
+                action["data"]["ankou_roll_modifiers"] = ankou_modifiers
+            from girlframe.services.m3_changeling import (
+                consume_flirt,
+            )
+            from girlframe.services.m3_changeling import (
+                flirt_modifier as psychic_flirt_modifier,
+            )
+
+            psychic_flirt = psychic_flirt_modifier(self, c, state, action)
+            if psychic_flirt:
+                consume_flirt(self, c, state, action, court_event)
+            court_doll = (
+                doll_source(self, c, state, court_actor(action))
+                if prepared.play == "disobey_orders"
+                else None
+            )
+            if court_doll is not None:
+                consume_doll(self, c, state, court_doll["id"], action["id"], court_event)
+                action["data"]["red_queen_doll"] = court_doll
+            if court_adjustment:
+                action["data"]["red_queen_modifier"] = court_adjustment
             faces = self.dice.roll()
             if len(faces) != 2 or any(type(x) is not int or not 1 <= x <= 6 for x in faces):
                 raise ValueError("Dice source returned invalid faces")
@@ -3560,6 +3983,11 @@ class GameService:
                 else []
             )
             pre_modifiers += refusal_modifiers
+            pre_modifiers.extend(ankou_modifiers)
+            if psychic_flirt:
+                pre_modifiers.append(dict(source="changeling_fingers_flirt", amount=psychic_flirt))
+            if court_adjustment:
+                pre_modifiers.append(dict(source="red_queen_personality", amount=court_adjustment))
             from girlframe.services.m3_consume import acting as consume_actor
             from girlframe.services.p1_consume_hooks import roll_modifiers as consume_modifiers
 
@@ -3650,8 +4078,14 @@ class GameService:
                 or action["data"].get("consume_child")
                 or action["data"].get("bonded")
                 or action["data"].get("wyvern")
+                or action["data"].get("red_queen")
+                or action["data"].get("changeling")
+                or action["data"].get("ankou")
                 or action["data"].get("bonded_child")
                 or action["data"].get("wyvern_child")
+                or action["data"].get("red_queen_child")
+                or action["data"].get("ankou_effect_child")
+                or action["data"].get("changeling_child")
                 or action["data"].get("wyvern_pin_response")
                 or action["data"].get("wyvern_replacement")
                 or action["data"].get("newgirl_sex")
@@ -3703,6 +4137,12 @@ class GameService:
                 receipt.update(
                     pre_modifiers=pre_modifiers, base_modifier=prepared.heat, modifier_source="Heat"
                 )
+            if (
+                court_adjustment or psychic_flirt or ankou_modifiers
+            ) and "pre_modifiers" not in receipt:
+                receipt.update(
+                    pre_modifiers=pre_modifiers, base_modifier=prepared.heat, modifier_source="Heat"
+                )
             if action["data"].get("dose_up"):
                 receipt.update(
                     pre_modifiers=pre_modifiers, base_modifier=prepared.heat, modifier_source="Heat"
@@ -3748,6 +4188,18 @@ class GameService:
                 if action["data"].get("janus")
                 else None
             )
+            from girlframe.engine.m3_red_queen import Mark as CourtMark
+            from girlframe.engine.m3_red_queen import records as court_records
+
+            if (
+                psychic_flirt
+                or court_doll is not None
+                or any(
+                    x.used_action == action["id"] and x.applied_event == court_event
+                    for x in court_records(state, CourtMark)
+                )
+            ):
+                roll_event_id = court_event
             if committed is not None:
                 roll_event_id = roll_event_id or str(uuid4())
             if disposal_before is not None:
@@ -3855,8 +4307,14 @@ class GameService:
                 or action["data"].get("consume_child")
                 or action["data"].get("bonded")
                 or action["data"].get("wyvern")
+                or action["data"].get("red_queen")
+                or action["data"].get("changeling")
+                or action["data"].get("ankou")
                 or action["data"].get("bonded_child")
                 or action["data"].get("wyvern_child")
+                or action["data"].get("red_queen_child")
+                or action["data"].get("ankou_effect_child")
+                or action["data"].get("changeling_child")
                 or action["data"].get("wyvern_pin_response")
                 or action["data"].get("wyvern_replacement")
                 or action["data"].get("newgirl_sex")
@@ -3892,6 +4350,12 @@ class GameService:
                 from girlframe.services.m3_doctor import synchronize as synchronize_doctor
 
                 synchronize_doctor(self, c, action, event)
+            if action["data"].get("changeling_remote"):
+                from girlframe.services.m3_changeling_sex import (
+                    synchronize_action as sync_remote_source,
+                )
+
+                sync_remote_source(self, c, self.action(c, action["id"]), event)
             return {"action_id": identity, "receipt": receipt}
 
         try:
@@ -4050,6 +4514,18 @@ class GameService:
 
                 authorize_prince(self, c, viewer, action)
                 return dict(row)
+            if action["data"].get("ankou"):
+                from girlframe.services.m3_ankou import authorize as authorize_ankou
+
+                authorize_ankou(self, c, viewer, action)
+            if action["data"].get("changeling"):
+                from girlframe.services.m3_changeling import authorize as authorize_changeling
+
+                authorize_changeling(self, c, viewer, action)
+            if action["data"].get("red_queen"):
+                from girlframe.services.m3_red_queen import authorize as authorize_red_queen
+
+                authorize_red_queen(self, c, viewer, action)
             if action["data"].get("wyvern"):
                 from girlframe.services.m3_wyvern import authorize as authorize_wyvern
 
@@ -4376,8 +4852,14 @@ class GameService:
                 or action["data"].get("consume_child")
                 or action["data"].get("bonded")
                 or action["data"].get("wyvern")
+                or action["data"].get("red_queen")
+                or action["data"].get("changeling")
+                or action["data"].get("ankou")
                 or action["data"].get("bonded_child")
                 or action["data"].get("wyvern_child")
+                or action["data"].get("red_queen_child")
+                or action["data"].get("ankou_effect_child")
+                or action["data"].get("changeling_child")
                 or action["data"].get("wyvern_pin_response")
                 or action["data"].get("wyvern_replacement")
                 or action["data"].get("newgirl_sex")
@@ -4537,6 +5019,53 @@ class GameService:
             from girlframe.services.m3_bonded import synchronize_delegation
 
             synchronize_delegation(self, c, self.action(c, action["id"]), event)
+            from girlframe.services.m3_changeling_hooks import (
+                performance as observe_changeling_assault,
+            )
+
+            observe_changeling_assault(self, c, self.action(c, action["id"]), event)
+            if action["data"].get("ankou"):
+                from girlframe.services.m3_ankou import synchronize as sync_ankou
+
+                sync_ankou(
+                    self,
+                    c,
+                    load_state(c, self.store.campaign_id),
+                    self.action(c, action["id"]),
+                    event,
+                )
+            if action["data"].get("changeling"):
+                from girlframe.services.m3_changeling import synchronize as sync_changeling
+
+                sync_changeling(self, c, self.action(c, action["id"]), event)
+            if action["state"] == "complete" and action["data"].get("changeling_child"):
+                from girlframe.services.m3_changeling_effects import (
+                    complete_child as complete_changeling_child,
+                )
+
+                complete_changeling_child(self, c, state, self.action(c, action["id"]), event)
+            if action["data"].get("red_queen"):
+                from girlframe.services.m3_red_queen import synchronize as sync_red_queen
+
+                sync_red_queen(self, c, self.action(c, action["id"]), event)
+            if action["state"] == "complete" and action["data"].get("ankou_effect_child"):
+                from girlframe.services.m3_ankou_feedback_sequences import (
+                    complete_child as complete_ankou_effect_child,
+                )
+
+                complete_ankou_effect_child(self, c, state, self.action(c, action["id"]), event)
+            if action["state"] == "complete" and action["data"].get("red_queen_child"):
+                from girlframe.services.m3_red_queen_support import (
+                    complete_child as complete_royal_child,
+                )
+
+                complete_royal_child(
+                    self,
+                    c,
+                    load_state(c, self.store.campaign_id),
+                    self.action(c, action["id"]),
+                    event,
+                )
             if action["data"].get("wyvern"):
                 from girlframe.services.m3_wyvern import synchronize as sync_wyvern
 
@@ -4647,6 +5176,12 @@ class GameService:
                 from girlframe.services.m3_easy_target import synchronize as sync_easy_child
 
                 sync_easy_child(self, c, self.action(c, action["id"]), event)
+            if action["data"].get("changeling_remote"):
+                from girlframe.services.m3_changeling_sex import (
+                    synchronize_action as sync_remote_source,
+                )
+
+                sync_remote_source(self, c, self.action(c, action["id"]), event)
             return {"action_id": action["id"], "state": action["state"], "choice_id": choice_id}
 
         try:
@@ -5333,7 +5868,9 @@ class GameService:
                     for x in state.scene_casts
                 ]
             close_event = str(uuid4())
-            drugs_changed = False
+            from girlframe.services.m3_ankou import expire_scene as expire_ankou_scene
+
+            drugs_changed = expire_ankou_scene(self, c, state, scene["id"], close_event)
             if any(x.get("kind") == "stim_sex_drug" for x in state.facts):
                 from girlframe.services.m3_stim_sex import expire_scene as expire_stim
 
@@ -5490,6 +6027,72 @@ class GameService:
                     channel=int(action["channel_id"]),
                     play=action["data"]["play"],
                     prince=detail,
+                    detail=detail,
+                )
+            if row["kind"].startswith("ankou_") and not row["kind"].startswith("ankou_feedback"):
+                from girlframe.services.m3_ankou import (
+                    authorize as ankou_authorize,
+                )
+                from girlframe.services.m3_ankou import (
+                    projection as ankou_projection,
+                )
+
+                ankou_authorize(self, c, viewer, action)
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    actor=int(action["actor_id"]),
+                    play=action["data"]["play"],
+                    result=action["data"]["result"],
+                    detail=ankou_projection(
+                        self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                    ),
+                )
+            if row["kind"] == "changeling_interrupt":
+                from girlframe.services.m3_changeling_hooks import interruption
+
+                detail = interruption(
+                    self, c, viewer, load_state(c, self.store.campaign_id), action, dict(row)
+                )
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    play=action["data"]["play"],
+                    detail=detail,
+                )
+            if row["kind"].startswith("changeling_"):
+                from girlframe.services.m3_changeling import authorize as changeling_authorize
+                from girlframe.services.m3_changeling import projection as changeling_projection
+
+                changeling_authorize(self, c, viewer, action)
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    actor=int(action["actor_id"]),
+                    play=action["data"]["play"],
+                    result=action["data"]["result"],
+                    detail=changeling_projection(
+                        self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                    ),
+                )
+            if row["kind"].startswith("red_queen_"):
+                from girlframe.services.m3_red_queen import authorize as royal_authorize
+                from girlframe.services.m3_red_queen import projection as royal_projection
+
+                royal_authorize(self, c, viewer, action)
+                detail = royal_projection(
+                    self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                )
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    actor=int(action["actor_id"]),
+                    play=action["data"]["play"],
+                    result=action["data"]["result"],
                     detail=detail,
                 )
             if row["kind"].startswith("wyvern_"):
@@ -5980,8 +6583,10 @@ class GameService:
                 and row["kind"] == "tag_window"
                 and viewer.user_id == actor.owner
             ):
+                from girlframe.engine.m3_actor_state import ActorRef as ChampionActor
                 from girlframe.engine.m3_girl_runtime_state import has_rule as kicked_has_rule
                 from girlframe.engine.m3_girl_runtime_state import mentor_tag as kicked_mentor_tag
+                from girlframe.services.m3_ankou import self_tag as champion_self_tag
                 from girlframe.services.m3_dose_up import self_tag as drug_self_tag
                 from girlframe.services.m3_kicked_puppy import self_tag as kicked_self_tag
                 from girlframe.services.m3_stim_sex import self_tag as stim_self_tag
@@ -5994,6 +6599,16 @@ class GameService:
                     if kicked_self_tag(self, c, state, action, viewer.user_id, x)
                     or drug_self_tag(self, c, state, action, viewer.user_id, x)
                     or stim_self_tag(self, c, state, action, viewer.user_id, x)
+                    or actor.character_id is not None
+                    and champion_self_tag(
+                        self,
+                        c,
+                        state,
+                        ChampionActor(
+                            kind="pilot", entity=str(actor.owner), incarnation=actor.character_id
+                        ),
+                        x.id,
+                    )
                     or kicked_mentor_tag(actor, x, state)
                     or kicked_has_rule(actor, "girl.princess.objectively-beautiful", "PRINCESS")
                 ]

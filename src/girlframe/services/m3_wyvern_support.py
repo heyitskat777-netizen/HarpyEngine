@@ -9,7 +9,6 @@ from girlframe.engine import m3_wyvern as rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_actors import frame_position, resolve
-from girlframe.engine.m3_girl_runtime_state import has_rule
 from girlframe.engine.m3_leviathan_obsession import require_unlocked
 from girlframe.services.m3_actors import profiles
 from girlframe.services.onboarding import WorkflowError
@@ -95,22 +94,9 @@ def identity_options(
 def identity_requirements(
     game: "GameService", c: Connection, state: GameState, actor: ActorRef
 ) -> dict[str, Any]:
-    from girlframe.engine.m3_trainee import RULE
-    from girlframe.services.m2_choices import ChoiceEngine
-    from girlframe.services.m3_trainee import _relation
-
-    sheet = state.sheets[actor.entity]
-    if not has_rule(sheet, RULE, "NEWGIRL"):
-        return dict(mentor_tags=[])
-    mentor, relation = _relation(game, c, state, actor)
-    tags = [x for x in sheet.tags if x.giver_actor == mentor and x.gm_setter_appointment is None]
-    for tag in tags:
-        ChoiceEngine(game).prove_tag_setter(c, state, int(actor.entity), tag)
-    return dict(
-        mentor_tags=[dict(id=x.id, label=x.label) for x in tags],
-        mentor=mentor.model_dump(mode="json"),
-        relation=relation,
-    )
+    # Trainee's embrace is conditional on choosing its teaching outcome, not a
+    # passive consequence of unrelated erasure (PDF41 / printed39).
+    return dict(mentor_tags=[])
 
 
 def identity_change(
@@ -126,7 +112,6 @@ def identity_change(
     mentor_tags: dict[str, str] | None = None,
 ) -> tuple[GameState, tuple[str, ...]]:
     from girlframe.engine.m3_identity_slots import bind
-    from girlframe.engine.m3_trainee import RULE, erase
     from girlframe.services.m2_choices import ChoiceEngine
 
     if len(set(ids)) != len(ids) or any(
@@ -139,29 +124,14 @@ def identity_change(
         ChoiceEngine(game).unmark(c, changed, sheet, ids, len(ids))
         sheet.revision += 1
     else:
-        assignments = mentor_tags or {}
-        if set(assignments) - set(ids):
-            raise WorkflowError("Assign Mentor Tags only to actual erased Identities")
+        if mentor_tags:
+            raise WorkflowError(
+                "Unrelated Identity erasure does not grant a Trainee teaching embrace"
+            )
         for identity in ids:
-            if has_rule(sheet, RULE, "NEWGIRL"):
-                options = identity_requirements(game, c, changed, actor)
-                available = {x["id"] for x in options["mentor_tags"]}
-                selected = assignments.get(identity)
-                if (
-                    bool(available) != bool(selected)
-                    or selected is not None
-                    and selected not in available
-                ):
-                    raise WorkflowError(
-                        "Choose a genuine original Mentor Tag for each applicable erasure"
-                    )
-                real_tags = tuple(x for x in sheet.tags if x.id in available)
-                sheet, _, _, _ = erase(sheet, identity, selected, real_tags, event + ":" + identity)
-                changed.sheets[actor.entity] = sheet
-            else:
-                require_unlocked(sheet.identities, (identity,))
-                sheet.identities = [x for x in sheet.identities if x.id != identity]
-                sheet.revision += 1
+            require_unlocked(sheet.identities, (identity,))
+            sheet.identities = [x for x in sheet.identities if x.id != identity]
+            sheet.revision += 1
         changed.sheets[actor.entity] = bind(sheet)
     changed.facts.append(
         dict(

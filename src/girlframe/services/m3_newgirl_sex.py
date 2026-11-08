@@ -51,6 +51,17 @@ def _access(game: GameService, c: Connection, viewer: GuildViewer) -> None:
 
 def _contact(game: GameService, c: Connection, state: GameState, value: rules.Session) -> None:
     from girlframe.services.m3_bonded import admit_delegation
+    from girlframe.services.m3_changeling_sex import admit_contact
+
+    if value.changeling_source is not None and value.bonded_source is not None:
+        raise WorkflowError("Keep actual psychic contact separate from Bonded delegation")
+    if value.changeling_source is not None and len(value.partners) != 1:
+        raise WorkflowError("SOURCE_GROUP_BRAINS_REQUIRED: bind each actual psychic counterpart")
+    remote = False
+    if value.changeling_source is not None:
+        remote = admit_contact(
+            game, c, state, value.actor, value.partners[0], rules.RULE, value.changeling_source
+        )
 
     actors = (value.actor, *value.partners)
     if not value.partners or len(set(actors)) != len(actors):
@@ -68,8 +79,11 @@ def _contact(game: GameService, c: Connection, state: GameState, value: rules.Se
             )
         )
         or value.cast.facilitator is None
-        or any(x.inside_frame is not False or x.cell is None or x.vessel_id is None for x in people)
-        or len({x.cell for x in people}) != 1
+        or any(
+            x.vessel_id is None or (not remote and (x.inside_frame is not False or x.cell is None))
+            for x in people
+        )
+        or (not remote and len({x.cell for x in people}) != 1)
         or fingerprint(_cast(game, c, state, value.cast.channel)) != fingerprint(value.cast)
         or any(
             value.controllers.get(x.ref.token) != x.controller
@@ -102,6 +116,20 @@ def _consents(
 
 def prove(game: GameService, c: Connection, state: GameState, identity: str) -> rules.Session:
     value = rules.get(state, identity)
+    if value.changeling_source is not None:
+        from girlframe.services.m3_changeling_sex import prove_source_link
+
+        prove_source_link(
+            game,
+            c,
+            state,
+            value.changeling_source,
+            value.id,
+            value.actor,
+            value.partners[0],
+            rules.RULE,
+        )
+
     from girlframe.services.m3_bonded import prove_delegation
 
     if value.bonded_source is not None:
@@ -129,6 +157,7 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         "proposed_event",
         "proposal",
         "bonded_source",
+        "changeling_source",
     )
     if any(getattr(value, k) != getattr(born, k) for k in stable):
         raise WorkflowError("Recover the original private Newgirl source people and proposal")
@@ -403,19 +432,27 @@ def prepare(
     handler = active_handler(state)
     if handler is None:
         raise WorkflowError("Recover the actual original Handler source")
-    return dict(
-        session=value.id,
-        actor=value.actor.model_dump(mode="json"),
-        partners=[x.model_dump(mode="json") for x in value.partners],
-        cast=value.cast.model_dump(mode="json"),
-        cast_sha256=fingerprint(value.cast),
-        table=sorted(
-            {x.controller for x in value.cast.roles}
-            | ({value.cast.facilitator} if value.cast.facilitator is not None else set())
-        ),
-        handler=handler.model_dump(mode="json"),
-        handler_controller=value.cast.facilitator,
-    ) | ({"bonded_source": value.bonded_source} if value.bonded_source is not None else {})
+    return (
+        dict(
+            session=value.id,
+            actor=value.actor.model_dump(mode="json"),
+            partners=[x.model_dump(mode="json") for x in value.partners],
+            cast=value.cast.model_dump(mode="json"),
+            cast_sha256=fingerprint(value.cast),
+            table=sorted(
+                {x.controller for x in value.cast.roles}
+                | ({value.cast.facilitator} if value.cast.facilitator is not None else set())
+            ),
+            handler=handler.model_dump(mode="json"),
+            handler_controller=value.cast.facilitator,
+        )
+        | ({"bonded_source": value.bonded_source} if value.bonded_source is not None else {})
+        | (
+            {"changeling_source": value.changeling_source}
+            if value.changeling_source is not None
+            else {}
+        )
+    )
 
 
 def bind(state: GameState, action: dict[str, Any], event: str | None = None) -> None:
@@ -697,6 +734,11 @@ def synchronize(game: GameService, c: Connection, action: dict[str, Any], event:
         session=value.id,
     )
 
+    if value.changeling_source is not None:
+        from girlframe.services.m3_changeling_sex import synchronize_session
+
+        synchronize_session(game, c, state, value.id, finalized)
+
 
 def prove_mentor_set(game: GameService, c: Connection, state: GameState, record: Any) -> None:
     value = prove(game, c, state, record.session)
@@ -847,6 +889,7 @@ class NewgirlSexService:
         account: str,
         *,
         bonded_source: str | None = None,
+        changeling_source: str | None = None,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             state = load_state(c, self.store.campaign_id)
@@ -872,6 +915,7 @@ class NewgirlSexService:
                 id=identity,
                 actor=actor,
                 bonded_source=bonded_source,
+                changeling_source=changeling_source,
                 partners=partners,
                 controllers={x.ref.token: x.controller for x in people},
                 vessels={x.ref.token: x.vessel_id or "" for x in people},
@@ -884,6 +928,18 @@ class NewgirlSexService:
             )
             _contact(self.game, c, state, value)
             rules.put(state, value)
+            if changeling_source is not None:
+                from girlframe.services.m3_changeling_sex import bind_source
+
+                bind_source(
+                    self.game,
+                    c,
+                    state,
+                    changeling_source,
+                    value.id,
+                    rules.RULE,
+                    value.proposed_event,
+                )
             if bonded_source is not None:
                 from girlframe.services.m3_bonded import bind_delegation
 
@@ -909,7 +965,8 @@ class NewgirlSexService:
                 revision=revision,
                 account=account,
             )
-            | ({"bonded_source": bonded_source} if bonded_source is not None else {}),
+            | ({"bonded_source": bonded_source} if bonded_source is not None else {})
+            | ({"changeling_source": changeling_source} if changeling_source is not None else {}),
             operation,
         )
 
@@ -974,6 +1031,10 @@ class NewgirlSexService:
                 event_id=event,
                 session=identity,
             )
+            if value.changeling_source is not None:
+                from girlframe.services.m3_changeling_sex import synchronize_session
+
+                synchronize_session(self.game, c, state, value.id, event)
             return dict(id=identity, revision=state.revision, phase=phase)
 
         return self._write(

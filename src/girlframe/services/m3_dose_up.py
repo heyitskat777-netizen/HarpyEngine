@@ -380,6 +380,48 @@ def _roll_source(game: GameService, c: Connection, action: dict[str, Any]) -> tu
         cap = prove_disobey_limit(game, c, load_state(c, game.store.campaign_id), action)
         if cap is not None:
             total = min(total, cap)
+    if action["data"].get("ankou_roll_modifiers"):
+        from girlframe.services.m3_ankou import prove_roll_modifiers
+
+        actual_modifiers = prove_roll_modifiers(
+            game, c, load_state(c, game.store.campaign_id), action
+        )
+        source_ids = {x["source"] for x in actual_modifiers}
+        recorded_modifiers = [
+            x
+            for x in action["data"]["receipt"].get("pre_modifiers", ())
+            if x["source"] in source_ids
+        ]
+        if actual_modifiers != action["data"]["ankou_roll_modifiers"] or [
+            (x["source"], x["amount"]) for x in actual_modifiers
+        ] != [(x["source"], x["amount"]) for x in recorded_modifiers]:
+            raise WorkflowError("Recover the actual consumed Fight/Fawn sources and receipt")
+    if action["data"].get("changeling_flirt"):
+        from girlframe.services.m3_changeling import prove_flirt_modifier
+
+        actual = prove_flirt_modifier(game, c, load_state(c, game.store.campaign_id), action)
+        recorded = sum(
+            x["amount"]
+            for x in action["data"]["receipt"].get("pre_modifiers", ())
+            if x["source"] == "changeling_fingers_flirt"
+        )
+        if actual != recorded:
+            raise WorkflowError("Recover the actual consumed psychic Flirt grant")
+    if action["data"].get("red_queen_modifier"):
+        from girlframe.services.m3_red_queen import prove_personality_modifier
+
+        if (
+            prove_personality_modifier(game, c, load_state(c, game.store.campaign_id), action)
+            != action["data"]["red_queen_modifier"]
+        ):
+            raise WorkflowError("Recover the actual consumed personality modifier")
+    if action["data"].get("red_queen_doll"):
+        from girlframe.services.m3_red_queen import prove_doll_limit
+
+        limit = prove_doll_limit(game, c, load_state(c, game.store.campaign_id), action)
+        if limit is None:
+            raise WorkflowError("Recover the actual consumed Doll source")
+        total = min(total, limit)
     if total != action["data"]["result"]["total"]:
         raise WorkflowError("Recover the actual source roll and applied Tag modifiers")
     return str(event), int(total)

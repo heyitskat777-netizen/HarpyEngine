@@ -35,7 +35,12 @@ class SexService:
         self.game, self.store = game, game.store
 
     def menu(
-        self, viewer: GuildViewer, channel: int, *, bonded_source: str | None = None
+        self,
+        viewer: GuildViewer,
+        channel: int,
+        *,
+        bonded_source: str | None = None,
+        changeling_source: str | None = None,
     ) -> dict[str, Any]:
         with self.store.engine.connect() as c:
             access = Access(self.store)
@@ -43,6 +48,8 @@ class SexService:
             assert access.registry is not None
             access.registry.require_available(RULE)
             state = load_state(c, self.store.campaign_id)
+            if bonded_source is not None and changeling_source is not None:
+                raise WorkflowError("Keep genuine psychic contact separate from Bonded delegation")
             sheet = state.sheets.get(str(viewer.user_id))
             if sheet is None:
                 raise WorkflowError("Use the actual original living Girl")
@@ -65,6 +72,31 @@ class SexService:
                     RULE,
                     bonded_source,
                 )
+            elif changeling_source is not None:
+                from girlframe.services.m3_changeling_sex import (
+                    admit_contact,
+                )
+                from girlframe.services.m3_changeling_sex import (
+                    prove as prove_remote,
+                )
+
+                remote_route = prove_remote(self.game, c, state, changeling_source)
+                if remote_route.initiator.actor != current_ref(
+                    state, viewer.user_id
+                ) or not has_rule(sheet, RULE, "AM"):
+                    raise WorkflowError(
+                        "Only the actual original AM follows her real counterpart's Sex source"
+                    )
+                admit_contact(
+                    self.game,
+                    c,
+                    state,
+                    remote_route.performer,
+                    remote_route.partner,
+                    remote_route.rule,
+                    remote_route.id,
+                )
+                borrowed_target = remote_route.performer
             elif not has_rule(sheet, RULE, "AM"):
                 raise WorkflowError("This no-extra-roll source belongs to the actual original AM")
             actor = current_ref(state, viewer.user_id)
@@ -127,6 +159,11 @@ class SexService:
                 channel=channel,
                 no_additional_roll=True,
                 bonded_source=bonded_source,
+                **(
+                    {"changeling_source": changeling_source}
+                    if changeling_source is not None
+                    else {}
+                ),
             )
 
     def bind_source(

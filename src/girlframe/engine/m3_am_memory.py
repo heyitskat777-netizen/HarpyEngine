@@ -64,6 +64,14 @@ def can_recall(state: GameState, actor: ActorRef, memory: str, *, learned_revisi
     available, actual_losses = recall_state(state, actor, learned_revision)
     if not available:
         return False
+    from girlframe.engine.m3_changeling import can_recall as changeling_recall
+
+    if not changeling_recall(state, actor, learned_revision):
+        return False
+    from girlframe.engine.m3_red_queen import can_recall as court_recall
+
+    if not court_recall(state, actor, memory, learned_revision=learned_revision):
+        return False
     normalized = " ".join(memory.split()).casefold()
     return not any(
         learned_revision <= loss.through_revision

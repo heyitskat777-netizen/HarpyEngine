@@ -73,8 +73,16 @@ def require_world_advancement(state: GameState) -> None:
 
 
 def _world_projection(state: GameState) -> dict[str, Any]:
+    from girlframe.services.m3_red_queen_accusation import official_allegations
+
     assert state.world is not None
     projected = state.world.model_dump(mode="json")
+    for row in projected["locations"]:
+        row["official_allegations"] = official_allegations(state, row["kind"], row["id"])
+    for row in projected["npcs"]:
+        row["official_allegations"] = official_allegations(
+            state, "npc", ActorRef(kind="npc", entity=row["id"])
+        )
     for key, kind in (("npcs", "npc"), ("gorgons", "gorgon"), ("pilots", "external_pilot")):
         for row in projected[key]:
             actor = ActorRef.model_validate(dict(kind=kind, entity=row["id"]))
@@ -216,7 +224,10 @@ class WorldService:
                     ),
                     "locations": [
                         x.model_dump(mode="json", exclude={"blocked_by", "ship", "fallout_sources"})
-                        | {"operational": x.operational}
+                        | {
+                            "operational": x.operational,
+                            "official_allegations": _official_location_claims(state, x.kind, x.id),
+                        }
                         | (
                             {
                                 "ship": {
@@ -648,3 +659,9 @@ class WorldService:
             {"expected": expected, "id": identity, "account": account},
             operation,
         )
+
+
+def _official_location_claims(state: GameState, kind: str, identity: str) -> list[dict[str, Any]]:
+    from girlframe.services.m3_red_queen_accusation import official_allegations
+
+    return official_allegations(state, kind, identity)

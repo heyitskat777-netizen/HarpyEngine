@@ -28,6 +28,7 @@ class RolePunishment(Model):
         "easy_target",
         "vatgrown_plays",
         "prince",
+        "red_queen",
         "trainee",
         "succubus_npc_disobey",
     ]
@@ -73,6 +74,13 @@ class RolePunishment(Model):
             or self.action is None
         ):
             raise ValueError("Preserve the actual NPC refusal and original Handler execution")
+        if self.source_kind == "red_queen" and (
+            self.action is not None
+            or self.source_work is None
+            or self.chooser != self.executor
+            or self.executor.kind != "pilot"
+        ):
+            raise ValueError("Preserve the actual source Court inflictor and unrolled authority")
         if self.source_kind == "trainee" and (
             self.source_work is None
             or self.action is not None

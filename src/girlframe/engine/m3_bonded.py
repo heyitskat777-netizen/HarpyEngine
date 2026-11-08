@@ -17,6 +17,7 @@ SEX_PLAY = "bonded_sex"
 
 
 class Source(Model):
+    changeling_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
     id: str
     kind: Literal["side", "intimacy", "sex"]
     actor: ActorRef

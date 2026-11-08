@@ -384,6 +384,9 @@ class PlayInput(Model):
         default="", max_length=1200, exclude_if=lambda value: not value
     )
     consume_seek_food: bool = Field(default=False, exclude_if=lambda value: not value)
+    ankou_pulse: str | None = Field(
+        default=None, min_length=1, max_length=200, exclude_if=lambda value: value is None
+    )
     prince_exception: str | None = Field(default=None, exclude_if=lambda value: value is None)
     play: str
     context: str = Field(min_length=1, max_length=1200)
@@ -413,6 +416,12 @@ class PlayInput(Model):
 
     @model_validator(mode="after")
     def battle_fields_only(self) -> "PlayInput":
+        if self.ankou_pulse is not None and self.play not in (
+            "all_out_assault",
+            "engage",
+            "put_someone_beneath_you",
+        ):
+            raise ValueError("Use Amygdala only with Assault, Engage or Put Someone Beneath You")
         if self.disposable_heat and self.identity is None:
             raise ValueError("Disposable Psyche removes the actual Identity being marked")
         if self.kicked_puppy_basis and (self.play != "flirt" or self.heat != 0):

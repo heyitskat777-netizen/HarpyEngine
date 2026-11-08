@@ -9,7 +9,7 @@ integration. Most tests run only at the final exact-commit candidate.
 |---|---|---|---|
 | CHANGELING | Malleable, after deferred Wyvern tests freeze | Blank Slate, Fingers in the Brain, Mindfuck, Psych Strings, Web Implant, Body of Clay, Live Reconditioning Module, Psych-Whip | Actual Identity/Tag changes, memory provenance, real body control/required consequences; existing Matrix implementation reused where applicable |
 | The Red Queen | AM worker | Court marks/real performances, Transfer, Consult/Decrees, Panopticon, Judgement, Personality and Memory Extraction/restoration, Accusation and Regiment | Actual Court allocation/reward, source-owned children/Orders/Punishments, private distant recipients, genuine memory/Identity sources |
-| Project Ankou beyond Feedback | Root | Emotional Relay, Fight/Fawn, Obsessive, Processor Core, Amygdala Pulse, Quickchange and Stalker | Existing Feedback source and genuine repeated performance, actual damage provenance, original Bonds/Tags/Identities, temporary Assets, real scene/OffDuty/unlink lifecycle |
+| Project Ankou beyond Feedback | AM worker after frozen Court handoff; root shared integration | Emotional Relay, Fight/Fawn, Obsessive, Processor Core, Amygdala Pulse, Quickchange and Stalker | Existing Feedback source and genuine repeated performance, actual damage provenance, original Bonds/Tags/Identities, temporary Assets, real scene/OffDuty/unlink lifecycle |
 
 Each worker owns only its new engine/service/native/test files. Freeze exact APIs
 and source contracts before shared edits. Preserve original ActorRefs, physical

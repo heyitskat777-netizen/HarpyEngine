@@ -412,6 +412,37 @@ class RecoveryService:
                     released_learning = (
                         release_counter(self.game, c, state, action, key) or released_learning
                     )
+                if cancel and (
+                    action["data"].get("changeling") or action["data"].get("changeling_flirt")
+                ):
+                    from girlframe.services.m3_changeling import (
+                        release_unrolled as release_changeling,
+                    )
+
+                    release_changeling(self.game, c, state, action)
+                    released_learning = True
+                if cancel and action["data"].get("changeling_child"):
+                    from girlframe.services.m3_changeling_effects import (
+                        release_child as release_changeling_child,
+                    )
+
+                    release_changeling_child(self.game, c, state, action)
+                    released_learning = True
+                if cancel and action["data"].get("ankou_effect_child"):
+                    from girlframe.services.m3_ankou_feedback_sequences import (
+                        release_child as release_ankou_effect_child,
+                    )
+
+                    release_ankou_effect_child(self.game, c, state, action)
+                    released_learning = True
+                if cancel and action["data"].get("red_queen_child"):
+                    from girlframe.services.m3_red_queen_support import (
+                        release_child as release_royal_child,
+                    )
+
+                    released_learning = (
+                        release_royal_child(self.game, c, state, action, key) or released_learning
+                    )
                 if cancel and (action["data"].get("wyvern") or action["data"].get("wyvern_child")):
                     from girlframe.services.m3_wyvern import release_unrolled as release_wyvern
 

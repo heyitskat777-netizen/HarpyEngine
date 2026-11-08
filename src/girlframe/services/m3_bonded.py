@@ -130,6 +130,15 @@ def _people(value: rules.Source) -> tuple[ActorRef, ...]:
 
 
 def _contact(game: GameService, c: Connection, state: GameState, value: rules.Source) -> None:
+    from girlframe.services.m3_changeling_sex import admit_contact
+
+    remote = False
+    if value.changeling_source is not None:
+        if value.kind != "sex" or value.target is None:
+            raise WorkflowError("Psychic contact belongs only to this genuine Sex source")
+        remote = admit_contact(
+            game, c, state, value.actor, value.target, rules.SEX, value.changeling_source
+        )
     cast = _cast(game, c, state, value.cast.channel)
     if fingerprint(cast) != fingerprint(value.cast):
         raise WorkflowError("Recover the unchanged genuine source cast")
@@ -148,7 +157,7 @@ def _contact(game: GameService, c: Connection, state: GameState, value: rules.So
             v.custody not in (None, "free") or v.offstage_source for v in views.values()
         ):
             raise WorkflowError("Confirm that these actual original people really are apart")
-    elif (
+    elif not remote and (
         any(v.inside_frame is not False for v in views.values())
         or len({x.cell for x in views.values()}) != 1
     ):
@@ -175,6 +184,15 @@ def _consents(game: GameService, c: Connection, state: GameState, value: rules.S
 
 def prove(game: GameService, c: Connection, state: GameState, identity: str) -> rules.Source:
     value = rules.get(state, identity)
+    if value.changeling_source is not None:
+        from girlframe.services.m3_changeling_sex import prove_source_link
+
+        if value.target is None:
+            raise WorkflowError("Preserve the genuine original psychic counterpart")
+        prove_source_link(
+            game, c, state, value.changeling_source, value.id, value.actor, value.target, rules.SEX
+        )
+
     birth = _history(c, game, value.event)
     born = rules.get(birth, identity)
     stable = (
@@ -194,6 +212,7 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         "account",
         "route",
         "delegated_rule",
+        "changeling_source",
     )
     if any(getattr(value, k) != getattr(born, k) for k in stable):
         raise WorkflowError("Preserve the genuine original Bonded source and people")
@@ -1113,6 +1132,12 @@ def synchronize(game: GameService, c: Connection, action: dict[str, Any], event:
             completion_event=event,
         )
 
+        source = rules.get(state, value.source)
+        if source.changeling_source is not None:
+            from girlframe.services.m3_changeling_sex import synchronize_session
+
+            synchronize_session(game, c, state, source.id, receipt_event)
+
 
 def order_authority(
     game: GameService, c: Connection, state: GameState, issuer: int, target: int, instruction: str
@@ -1307,6 +1332,7 @@ class BondedService:
         route: str = "pair",
         apart: bool = False,
         delegated_rule: str | None = None,
+        changeling_source: str | None = None,
     ) -> dict[str, Any]:
         rule = dict(side=rules.SIDE, intimacy=rules.INTIMACY, sex=rules.SEX).get(kind)
         if rule is None:
@@ -1370,6 +1396,7 @@ class BondedService:
             value = rules.Source.model_validate(
                 dict(
                     id=identity,
+                    changeling_source=changeling_source,
                     kind=kind,
                     actor=actor,
                     pair=actual_pair,
@@ -1390,6 +1417,10 @@ class BondedService:
             )
             _contact(self.game, c, state, value)
             rules.put(state, value)
+            if changeling_source is not None:
+                from girlframe.services.m3_changeling_sex import bind_source
+
+                bind_source(self.game, c, state, changeling_source, value.id, rules.SEX, event)
             self.game.event(
                 c,
                 viewer.user_id,
@@ -1416,6 +1447,11 @@ class BondedService:
                 route=route,
                 apart=apart,
                 delegated_rule=delegated_rule,
+                **(
+                    {"changeling_source": changeling_source}
+                    if changeling_source is not None
+                    else {}
+                ),
             ),
             operation,
             rule,
@@ -1472,6 +1508,10 @@ class BondedService:
                 source=identity,
                 accepted=accept,
             )
+            if value.changeling_source is not None:
+                from girlframe.services.m3_changeling_sex import synchronize_session
+
+                synchronize_session(self.game, c, state, value.id, event)
             return dict(
                 id=identity, revision=state.revision, phase="accepted" if accept else "declined"
             )
@@ -1579,6 +1619,10 @@ class BondedService:
             self.game.event(
                 c, viewer.user_id, key, "m3.bonded_selected", state, event_id=event, source=identity
             )
+            if value.changeling_source is not None:
+                from girlframe.services.m3_changeling_sex import synchronize_session
+
+                synchronize_session(self.game, c, state, value.id, event)
             return dict(
                 id=identity, revision=state.revision, phase=rules.get(state, identity).phase
             )

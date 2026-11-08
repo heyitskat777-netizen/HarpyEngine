@@ -8,6 +8,7 @@ from sqlalchemy import Connection
 from girlframe.engine import p1_unrolled_sex as rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_bonded import Source
+from girlframe.engine.m3_changeling_sex import UnrolledAMSex
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_gender_designation import _current, designation
@@ -19,7 +20,9 @@ if TYPE_CHECKING:
     from girlframe.services.m2_game import GameService
 
 
-def offer(game: "GameService", c: Connection, state: GameState, source: Source, event: str) -> None:
+def offer(
+    game: "GameService", c: Connection, state: GameState, source: Source | UnrolledAMSex, event: str
+) -> None:
     if source.kind != "sex" or source.action is not None or source.target is None:
         return
     for animal, target in ((source.actor, source.target), (source.target, source.actor)):
@@ -33,6 +36,7 @@ def offer(game: "GameService", c: Connection, state: GameState, source: Source, 
             state,
             rules.AnimalGift(
                 id=identity,
+                source_kind="changeling_am" if isinstance(source, UnrolledAMSex) else None,
                 source=source.id,
                 animal=animal,
                 target=target,
@@ -50,40 +54,57 @@ def require_complete(game: "GameService", c: Connection, state: GameState, sourc
 
 
 def tasks(
-    game: "GameService", c: Connection, state: GameState, source: Source, viewer: GuildViewer
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    source: Source | UnrolledAMSex,
+    viewer: GuildViewer,
 ) -> list[dict[str, Any]]:
     if viewer.user_id not in source.controllers.values():
         raise WorkflowError("These actual source gifts belong to their original participants")
-    return [
-        dict(
-            id=x.id,
-            pending=x.tag is None and source.controllers[x.animal.token] == viewer.user_id,
-            waiting=x.tag is None,
-            animal=x.animal.model_dump(mode="json"),
-            tag=x.tag,
+    result = []
+    for gift in rules.gifts(state):
+        if gift.source != source.id:
+            continue
+        prove(game, c, state, gift.id)
+        label = None
+        if gift.tag is not None:
+            from girlframe.engine.m3_mockingbird import actor_tags
+
+            tagged = _history(c, game, gift.tag_event or "")
+            label = next(
+                value.label for value in actor_tags(tagged, gift.target) if value.id == gift.tag
+            )
+        result.append(
+            dict(
+                id=gift.id,
+                pending=gift.tag is None
+                and source.controllers[gift.animal.token] == viewer.user_id,
+                waiting=gift.tag is None,
+                animal=gift.animal.model_dump(mode="json"),
+                target=gift.target.model_dump(mode="json"),
+                tag=gift.tag,
+                tag_label=label,
+                state="owed" if gift.tag is None else "given",
+            )
         )
-        for x in rules.gifts(state)
-        if x.source == source.id
-    ]
+    return result
 
 
 def prove(game: "GameService", c: Connection, state: GameState, identity: str) -> rules.AnimalGift:
-    from girlframe.engine.m3_bonded import get
-    from girlframe.services.m3_bonded import prove as prove_source
-
     gift = next((x for x in rules.gifts(state) if x.id == identity), None)
     if gift is None:
         raise WorkflowError("Recover the genuine original non-rolling Sex gift")
     birth = _history(c, game, gift.event)
     original = next((x for x in rules.gifts(birth) if x.id == identity), None)
-    source = prove_source(game, c, birth, gift.source)
+    source = _source(game, c, birth, gift)
     law = designation(game, c, birth, gift.designation)
     other = _current(game, c, birth, gift.target)
     if (
         original is None
         or any(
             getattr(original, k) != getattr(gift, k)
-            for k in ("id", "source", "animal", "target", "designation", "event")
+            for k in ("id", "source_kind", "source", "animal", "target", "designation", "event")
         )
         or source.kind != "sex"
         or source.action is not None
@@ -100,7 +121,9 @@ def prove(game: "GameService", c: Connection, state: GameState, identity: str) -
     if gift.tag is not None:
         tagged = _history(c, game, gift.tag_event or "")
         saved = next((x for x in rules.gifts(tagged) if x.id == gift.id), None)
-        tag = next((x for x in tagged.sheets[gift.target.entity].tags if x.id == gift.tag), None)
+        from girlframe.engine.m3_mockingbird import actor_tags
+
+        tag = next((x for x in actor_tags(tagged, gift.target) if x.id == gift.tag), None)
         from girlframe.services.m3_dose_up import _audit
 
         _audit(
@@ -110,9 +133,15 @@ def prove(game: "GameService", c: Connection, state: GameState, identity: str) -
             ("m3.unrolled_animal_tag",),
             source.controllers[gift.animal.token],
         )
-        if saved != gift or tag is None or tag.giver_actor != gift.animal:
+        giver = getattr(tag, "giver_actor", None)
+        entity = getattr(tag, "giver_entity", None)
+        if giver is None and isinstance(entity, str):
+            from girlframe.engine.m3_actor_state import ActorRef
+
+            giver = ActorRef.model_validate_json(entity)
+        if saved != gift or tag is None or giver != gift.animal:
             raise WorkflowError("Recover the actual original owned Tag effect")
-    get(state, gift.source)
+    _source(game, c, state, gift)
     return gift
 
 
@@ -123,17 +152,25 @@ def give(
         from girlframe.engine.m3_bonded import SEX
         from girlframe.engine.m3_mockingbird import give_tag
         from girlframe.services.m3_bonded import _access
-        from girlframe.services.m3_bonded import prove as prove_source
         from girlframe.services.p1_source_pause import require_ready
 
-        _access(game, c, viewer, SEX)
         game.unpaused(c)
         state = load_state(c, game.store.campaign_id)
         if state.revision != revision:
             raise WorkflowError("Reopen the actual current source gift")
         gift = prove(game, c, state, identity)
-        source = prove_source(game, c, state, gift.source)
-        require_ready(game, c, state, source.id)
+        source = _source(game, c, state, gift)
+        if gift.source_kind == "changeling_am":
+            from girlframe.engine.m3_changeling_sex import RULES
+            from girlframe.services.m3_access import Access
+
+            gate = Access(game.store)
+            gate.authorize(c, viewer, "plays", director_response=True)
+            assert gate.registry is not None
+            gate.registry.require_available(RULES["AM"])
+        else:
+            _access(game, c, viewer, SEX)
+            require_ready(game, c, state, source.id)
         if (
             gift.tag is not None
             or source.controllers[gift.animal.token] != viewer.user_id
@@ -163,6 +200,10 @@ def give(
             source_id=source.id,
             gift_id=gift.id,
         )
+        if gift.source_kind == "changeling_am":
+            from girlframe.services.m3_changeling_sex import synchronize_am
+
+            synchronize_am(game, c, changed, source.id, event)
         return dict(source=source.id, tag=tag)
 
     return game.store._write(
@@ -173,3 +214,15 @@ def give(
         operation,
         auto_audit=False,
     )
+
+
+def _source(
+    game: "GameService", c: Connection, state: GameState, gift: rules.AnimalGift
+) -> Source | UnrolledAMSex:
+    if gift.source_kind == "changeling_am":
+        from girlframe.services.m3_changeling_sex import prove_am_source
+
+        return prove_am_source(game, c, state, gift.source)
+    from girlframe.services.m3_bonded import prove as prove_bonded
+
+    return prove_bonded(game, c, state, gift.source)

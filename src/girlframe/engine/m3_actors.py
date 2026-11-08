@@ -453,6 +453,30 @@ def resolve(
                     position_sha256=fingerprint(interior),
                 )
             )
+    if actual.vessel_id is None and ref.kind in ("npc", "handler"):
+        from girlframe.engine import m3_changeling as body_source
+
+        is_software = (
+            ref.kind == "npc"
+            and state.world is not None
+            and any(
+                x.id == ref.entity and x.source_kind == "wyvern_wraith" for x in state.world.npcs
+            )
+        )
+        bodies = [
+            x
+            for x in body_source.records(state, body_source.BodyFact)
+            if x.actor == ref and x.kind == ("human_npc" if ref.kind == "npc" else "handler")
+        ]
+        if not is_software and len(bodies) == 1:
+            actual = actual.model_copy(
+                update=dict(
+                    vessel_id=bodies[0].vessel,
+                    source_sha256=hashlib.sha256(
+                        (actual.source_sha256 + fingerprint(bodies[0])).encode()
+                    ).hexdigest(),
+                )
+            )
     travel = offstage_travel(state, ref)
     if travel is None:
         return actual

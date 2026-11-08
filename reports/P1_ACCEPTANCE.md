@@ -84,3 +84,64 @@ interception/whole destruction, and Handler-assessed empty vehicle destruction.
 Worker Ruff/format passed; source SHA256
 `7a7a46f7913a2ecd592f17fd34e82a81c750c4d2ae016718b0b0489fdd464284`.
 **NOT RUN**; include them in the final full P1 regression. No new game smoke.
+
+### Current Frame integration — local minimum checks, unpublished
+
+The owner asked to defer most automated testing until the final P1 candidate.
+Only two normal-flow nodes were run for the Court/Changeling core: native Queen
+mark → Consult → actual Decree/discipline → private reopen, and actual definition
+→ mid Blank Slate → Bond operation → String question → owned answer/counter.
+The final retry passed **2 tests in 5.68s**. The initial two attempts each failed
+both nodes: wrong synthetic interaction channel/dropdown/Heat, plus a real
+standalone event-payload `actor` argument collision. The collision was repaired
+without changing the event's actual human author; fixtures now obey the existing
+guards. No additional tier or lifecycle matrix was run.
+
+Private evidence: `var/p1-court-changeling-minimum-attempt3.xml` and
+`var/p1-court-changeling-minimum-snapshot.json`; both failed attempt logs/XML remain.
+The snapshot captures 42 changed source/test hashes at that point. Later source
+selector, physical-body projection, remote-Sex bridge and Ankou changes are outside
+that smoke evidence. Root's subsequent finite integration checks passed Ruff,
+format and mypy on **28 source files**; logs are under
+`var/p1-court-changeling-root-*-final.log`. These checks preceded the new Ankou
+and remote-Sex shared ports and do not verify those later changes.
+
+Source-owned Bond operations distinguish actual deepening/weakening from restored
+relationship depths, supporting Court Transfer/Personality and Changeling Strings.
+The raw Bond records retain their meaning. Court readback, source-owned child
+performances, actual Orders/discipline work, mark modifiers and current Queen
+reward selection use the existing architecture. Unusual source rules stay explicit.
+All remaining authored normal nodes, full exact-commit regression (including the
+Deep-Brain-Spikes cases), global release checks, independent review and player
+acceptance are **pending**. Bot remains OFF; no deployment or environment publish.
+
+### Ankou / psychic contact minimum integration checks
+
+Focused typing and lint passed on **65 source files**, with actual paths retained
+in `var/p1-ankou-remote-integration-static-paths.json`. Six concrete shared type
+mismatches and one formatting issue were corrected; this was not a global check.
+A later Body/gift/benefit delta has its separately recorded static scope.
+
+Executed the native mid-Processor normal, real remote Oldgen source normal and
+existing saved legacy-roll normal together: **1 failed, 2 passed in 9.29s**.
+The Ankou fixture attempted placements before establishing its canonical world.
+Its fixture now installs that world first; the production placement guard was
+preserved. Reran only that failed node: **1 passed in 3.64s**. The remote and legacy
+nodes were not repeated. Exact XML/logs: `var/p1-ankou-remote-minimum.*` and
+`var/p1-ankou-minimum-attempt2.*`. Frozen Ankou source hashes and APIs are retained
+under `var/p1-ankou-source-snapshot.json` and `var/p1-ankou-api.json`.
+
+The bridge's subsequent AM Animal-gift You/Waiting/native-readback delta passed
+Ruff on five files and mypy on four; its amended real AM/Animal normal is authored
+**NOTRUN**. Ankou's small directional Intense helper passed its scoped lint/types;
+its genuine raw-NPC-Bond cost normal is also **NOTRUN**. NPC Bond code was left
+unchanged because its actual weakening price is not an Intense eligibility check.
+The existing factual Changeling Frame Permission claim is not roll-bound, so no
+new receipt requirement or Handler approval gate was introduced there.
+
+Twenty-seven new Frame registry entries now declare **subset**, with file
+references for authored tests. Those references are not assertions that every
+node ran. All independent-review fields remain pending. Shared body-fact/native
+setup, legacy starting-source reconciliation, further ordinary required-Play and
+NPC/body adapters, full exact-commit regression/global release checks and human
+review still prevent a P1-ready claim. No deployment, restart or environment publish.

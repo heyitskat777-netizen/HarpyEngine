@@ -170,7 +170,7 @@ def specifications(
             )
         elif frame == "THE RED QUEEN":
             try:
-                owner = rules.queen(sheet)
+                owner = rules.queen(sheet, state=state)
                 mode = "queen"
             except ValueError:
                 owner, kind, mode = period.handler, "frame_reward_court", "unresolved_court"

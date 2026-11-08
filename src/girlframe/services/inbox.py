@@ -1306,15 +1306,23 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_ankou import AnkouService
             from girlframe.services.m3_bonded import BondedService
+            from girlframe.services.m3_changeling import ChangelingService
+            from girlframe.services.m3_changeling_sex import ChangelingSexService
             from girlframe.services.m3_consume import _tasks as consume_tasks
             from girlframe.services.m3_prince import PrinceService
+            from girlframe.services.m3_red_queen import RedQueenService
             from girlframe.services.m3_wyvern import _tasks as wyvern_tasks
             from girlframe.services.m3_wyvern_combat import WyvernCombatService
 
             frame_game = GameService(self.store)
             frame_state = load_state(connection, self.store.campaign_id)
             for book, rows in (
+                ("ankou", AnkouService(frame_game)._tasks(connection, viewer)),
+                ("changeling", ChangelingService(frame_game)._tasks(connection, viewer)),
+                ("changeling_sex", ChangelingSexService(frame_game)._tasks(connection, viewer)),
+                ("red_queen", RedQueenService(frame_game)._tasks(connection, viewer)),
                 ("bonded", BondedService(frame_game)._tasks(connection, viewer)),
                 ("prince", PrinceService(frame_game)._tasks(connection, viewer)),
                 ("consume", consume_tasks(frame_game, connection, frame_state, viewer)),

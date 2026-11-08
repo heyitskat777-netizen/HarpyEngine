@@ -39,9 +39,37 @@ def _credit(state: GameState, owner: int, source: str, event: str | None) -> Non
         state.sheets[str(owner)].permissions += 1
 
 
-def queen(sheet: PilotSheet) -> int:
+def queen(sheet: PilotSheet, *, state: GameState | None = None) -> int:
     if official(sheet.frame) != "THE RED QUEEN":
         raise ValueError("The Queen choice needs its actual Red Queen Frame")
+    if state is not None and sheet.character_id:
+        from girlframe.engine import m3_red_queen as court
+        from girlframe.engine.m3_actor_state import ActorRef
+
+        actor = ActorRef(kind="pilot", entity=str(sheet.owner), incarnation=sheet.character_id)
+        current_court = next(
+            (
+                x
+                for x in court.records(state, court.Court)
+                if x.actor == actor and x.frame == court.frame(state, actor)
+            ),
+            None,
+        )
+        if current_court is not None:
+            am = next(
+                (
+                    x
+                    for x in court.records(state, court.CourtAM)
+                    if x.court == current_court.id and x.role == "The Queen"
+                ),
+                None,
+            )
+            if am is None or am.bearer.kind != "pilot":
+                raise ValueError("The actual Queen holder needs its real reward recipient port")
+            target = state.sheets.get(am.bearer.entity)
+            if target is None or target.character_id != am.bearer.incarnation:
+                raise ValueError("Recover the actual original Queen holder, not an account alias")
+            return int(am.bearer.entity)
     if sheet.frame_runtime is not None:
         current = sheet.frame_runtime.court.get("The Queen")
         if current is None:
@@ -273,7 +301,7 @@ def queen_award(
         or frame_owner not in state.order
         or str(frame_owner) not in state.sheets
         or frame.frame_scrapped
-        or queen(frame) != actor
+        or queen(frame, state=eligibility if eligibility is not None else state) != actor
     ):
         raise ValueError("Only the actual Queen AM holder chooses this reward")
     if recipient not in state.order or str(recipient) not in state.sheets:

@@ -709,6 +709,38 @@ class InboxView(discord.ui.View):
             await open_oldgen_sex(
                 interaction, OldgenSexService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_ankou":
+            from girlframe.discord_adapter.m3_ankou import open_ankou
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_ankou import AnkouService
+
+            await open_ankou(
+                interaction, AnkouService(GameService(self.service.store)), item.identity
+            )
+        elif item.task == "m3_changeling_sex":
+            from girlframe.discord_adapter.m3_changeling_sex import open_changeling_sex
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_changeling_sex import ChangelingSexService
+
+            await open_changeling_sex(
+                interaction, ChangelingSexService(GameService(self.service.store)), item.identity
+            )
+        elif item.task == "m3_changeling":
+            from girlframe.discord_adapter.m3_changeling import open_changeling
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_changeling import ChangelingService
+
+            await open_changeling(
+                interaction, ChangelingService(GameService(self.service.store)), item.identity
+            )
+        elif item.task == "m3_red_queen":
+            from girlframe.discord_adapter.m3_red_queen import open_red_queen
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_red_queen import RedQueenService
+
+            await open_red_queen(
+                interaction, RedQueenService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_wyvern_combat":
             from girlframe.discord_adapter.m3_wyvern_combat import open_combat
             from girlframe.services.m2_game import GameService

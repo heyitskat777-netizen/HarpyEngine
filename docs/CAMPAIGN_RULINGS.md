@@ -3665,3 +3665,37 @@ Owner delegated recommended rulings; these remain adjustable and require printed
 - `wyvern-wraith-finite-profile` (Wyvern PDF76/printed74): The source creates actual Frame-bound NPC minds with a genuine Handler-authored supported rules profile and printed pilot bonuses. It does not grant a native AM sheet, body, Heat or branch resources. Original table humans may explicitly take the voice. The printed Handler question remains a real human answer; free text cannot install arbitrary mechanics. Expanded profiles require a versioned mechanical implementation.
 - `wyvern-shield-against-play-scope` (Wyvern PDF77/printed75): Shield blocks actual attacks and hostile directed effects, and all actual protected Asset damage. Mutual source-owned intimacy, exploration attendance and support are not classified as attacks solely because they carry target metadata. New hostile consumers must use the explicit guard. Preserve the distinction between making a Play against someone and doing a mutually confirmed activity with them. Physical source changes end protection through the genuine source observer.
 - `wyvern-pin-and-required-escape` (Wyvern PDF75/printed73): Pin requires actually dealing with the original pinner through a genuine legal counter, actual release or physical source ending. Exploration escape likewise requires an actual completed Play and consequences; prose acknowledgment alone does not free the body. Do not manufacture Helplessness, a second root receipt or a completed-action token. The source pinner may perform an actual release.
+
+## Source correction: Trainee is conditional on teaching
+
+Official rulebook PDF41/printed39 places the Identity erasure and Mentor-Tag
+embrace inside the learner's selected Trainee teaching outcome. It is not an
+automatic consequence of every unrelated Identity erasure. Wyvern Rouse,
+Changeling Blank Slate/Fingers and Red Queen Memory Extraction therefore do not
+force that teaching replacement merely because the affected Girl is Newgirl.
+The dedicated actual-teaching workflow stays intact. This corrects an overly
+broad development interpretation and prevents invented replacement/capacity
+obligations; it does not retroactively rewrite saved effects or history. Actual
+Paired, Limited, sedation and other source protections remain distinct.
+
+### P1 directional Obsessive benefits
+
+Rulebook PDF13/printed11 and PDF23/printed21, with Project Ankou PDF85–87:
+Obsessive's virtual Intense benefit belongs to its holder toward the chosen person.
+It does not create a mutual Bond, change raw depth, grant the other person's desire,
+produce Bond acquisition triggers or pay an NPC Bond weakening cost. Flirt's intimacy
+question checks the responding character's benefit; its real player's confirmation
+and OOC safety remain separate. Existing campaign ±2 Tag treatment remains in force.
+This is a delegated interpretation requiring printed-rule clarity review. A future
+change must preserve actual prior operations and human answers.
+
+### P1 Mindfuck contact and actual non-rolling AM sources
+
+Mindfuck supplies its actual brain connection rather than physical co-location.
+Girl-specific prerequisites, voluntary human responses and mandatory effects still
+apply. An AM's actual no-roll interaction uses separate role-owned performed-scene
+attestations and genuine legal-designation effects; it creates no synthetic Play,
+die receipt or Bonded source. Reset-body brain facts require the actual proved
+hardware/vessel and an authorized factual author; a software label alone creates no
+brain. These source interpretations require clarity review. Existing conditional
+body, group and lineage adapters remain explicitly incomplete.

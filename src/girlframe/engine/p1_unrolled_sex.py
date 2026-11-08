@@ -1,10 +1,17 @@
 """Actual non-rolling Sex sources retain mandatory legal-designation Tag ownership."""
 
+from typing import Literal
+
+from pydantic import Field
+
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model
 
 
 class AnimalGift(Model):
+    source_kind: Literal["changeling_am"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     id: str
     source: str
     animal: ActorRef

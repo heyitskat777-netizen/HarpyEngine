@@ -22,6 +22,7 @@ class Session(Model):
     cast: SceneCast
     registry: str
     bonded_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    changeling_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
     actor_vessel: str
     target_vessel: str
     proposed_event: str
