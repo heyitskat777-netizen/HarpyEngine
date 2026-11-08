@@ -866,3 +866,166 @@ def test_actual_native_eat_sprite_leap_pays_real_asset_then_feeds_once_without_r
     assert result["id"] == identity
     assert state(game).revision == after.revision
     tick(worker, gateway, 6)
+
+
+# Deferred P1 normal; no pytest during the paid-cap-loss source adapter assignment.
+def test_actual_paid_cap_installment_loss_native_regrowth_preserves_receipt_and_new_birth(
+    ledger, tmp_path, monkeypatch
+):
+    import asyncio
+    import json
+
+    from test_mission_ui import current
+
+    from girlframe.discord_adapter.m3_consume import open_choice
+    from girlframe.engine.m3_assets import counts_toward_limit
+    from girlframe.engine.m3_requisition_state import Installation
+    from girlframe.services.m3_consume_regrowth import prove_regrowth
+    from girlframe.services.m3_frame_asset_losses import installment_loss
+    from girlframe.services.m3_requisitions import RequisitionService
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch)
+    acquire(controls, rules.PARTAKE)
+    actor = current_ref(state(game), 2)
+    old = next(x for x in state(game).sheets["2"].assets if x.family == "frame")
+    purchase = RequisitionService(game)
+    # Reach this actual Frame's real cap through paid additions, then explicitly
+    # replace the old component in one further genuine paid installation.
+    index = 0
+    while True:
+        quote = purchase.view(PLAYER)
+        sheet = state(game).sheets["2"]
+        at_cap = (
+            sum(
+                counts_toward_limit(sheet, value)
+                for value in sheet.assets
+                if value.family == "frame"
+            )
+            >= quote["frame_capacity"]
+        )
+        choice = Installation(
+            name="Actual paid plate " + str(index),
+            description="Actual purchased permanent hardware " + str(index),
+            replace=old.id if at_cap else None,
+            account="I actually install this component on my original Frame",
+            trigger_confirmed=True,
+        )
+        args = PLAYER, str(uuid4()), actor, quote["source_sha256"], choice
+        paid = purchase.buy(*args)
+        assert purchase.buy(*args) == paid
+        if at_cap:
+            break
+        index += 1
+    receipt = next(
+        x
+        for x in state(game).requisitions
+        if x.kind == "asset_installment" and x.installation.replace == old.id
+    )
+    assert receipt.actor == actor and receipt.installation.replace == old.id
+    assert not any(x.id == old.id for x in state(game).sheets["2"].assets)
+    frame = rules.frame(state(game), actor)
+    with ledger.engine.connect() as c:
+        loss = installment_loss(game, c, state(game), receipt)
+        assert loss is not None
+        assert loss.asset == old and loss.source_kind == "asset_installment"
+        assert loss.frame == frame
+    girl = asset(game, 2)
+    cockpit(game, "pilot")
+    action = roll(game, worker, gateway, play="dive_deep", heat=0, faces=(4, 5), piloting=True)
+    if any(x["kind"] == "dive_select" for x in game.choices(PLAYER)):
+        answer(
+            game,
+            PLAYER,
+            "dive_select",
+            options=("erase_identity_and_table_question",),
+            text="My actual primary Dive before the optional regrowth",
+        )
+        ordinary = next(x for x in state(game).sheets["2"].identities if not x.protected)
+        answer(
+            game,
+            PLAYER,
+            "dive_effect",
+            fields={"identity": ordinary.id},
+            text="What does this original Frame need?",
+        )
+        for viewer in (PLAYER, OTHER, ADMIN):
+            answer(game, viewer, "dive_table_answer", text="My own actual table answer")
+    row = next(x for x in game.choices(PLAYER) if x["kind"] == "consume_partake")
+    detail = game.decision(PLAYER, row["id"])["detail"]
+    token = rules.identity("missing-frame-installment", receipt.id)
+    assert token in detail["regrow_missing"]
+    replacement = detail["regrow_replacements"][0][0]
+    before = state(game)
+    raw_receipt = game.inspect(PLAYER, action)["receipt"]
+
+    async def native():
+        opened = current(2, int(uuid4().int % 1000000000))
+        opened.channel_id = 900
+        await opened.response.defer(ephemeral=True)
+        await open_choice(opened, game, game.decision(PLAYER, row["id"]))
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(current(3, 99810))
+        form.values.update(
+            option=("regrow",),
+            girl_asset=(girl,),
+            frame_assets=(token,),
+            account="I pay actual Girl damage to regrow my paid-removed feature",
+        )
+        select = current(2, int(uuid4().int % 1000000000))
+        select.channel_id = 900
+        await form.confirm.callback(select)
+        assert form.completed, select.edit_original_response.call_args_list
+        space = select.edit_original_response.call_args.kwargs["view"]
+        space.values["replacement_0"] = (replacement,)
+        submitted = current(2, int(uuid4().int % 1000000000))
+        submitted.channel_id = 900
+        await space.confirm.callback(submitted)
+        assert space.completed, submitted.edit_original_response.call_args_list
+        return str(submitted.id)
+
+    key = asyncio.run(native())
+    born = state(game)
+    game.respond(
+        PLAYER,
+        key,
+        row["id"],
+        row["revision"],
+        ChoiceAnswer(
+            options=("regrow",),
+            fields={
+                "girl_asset": girl,
+                "frame_assets": json.dumps([token]),
+                "regrow_replacements": json.dumps({token: replacement}),
+            },
+            text="I pay actual Girl damage to regrow my paid-removed feature",
+        ),
+    )
+    assert state(game).revision == born.revision
+    after = state(game)
+    regrown = next(
+        x
+        for x in rules.records(after, rules.RegrownFrame)
+        if x.loss_kind == "asset_installment" and x.loss == receipt.id
+    )
+    assert regrown.original == old and regrown.frame == receipt.frame_instance == frame
+    assert regrown.loss_event == receipt.source_event
+    assert regrown.component.id != old.id and regrown.component.void == old.void
+    assert not regrown.component.damaged and regrown.component in after.sheets["2"].assets
+    assert regrown.replacement == replacement
+    assert not any(x.id in (old.id, replacement) for x in after.sheets["2"].assets)
+    assert next(x for x in after.sheets["2"].assets if x.id == girl).damaged
+    assert after.sheets["2"].permissions == before.sheets["2"].permissions
+    assert after.neural_connections == before.neural_connections
+    assert after.placements == before.placements
+    assert receipt in after.requisitions
+    assert game.inspect(PLAYER, action)["receipt"] == raw_receipt
+    with ledger.engine.connect() as c:
+        assert prove_regrowth(game, c, after, regrown.id) == regrown
+        from girlframe.services.m3_consume_regrowth import _selections
+
+        assert token not in {x.token for x in _selections(game, c, after, actor)}
+    assert controls.view(PLAYER, regrown.id)["type"] == "regrowth"
+    with pytest.raises(WorkflowError):
+        controls.view(OTHER, regrown.id)
+    tick(worker, gateway, 6)
+    assert game.inspect(PLAYER, action)["state"] == "complete"

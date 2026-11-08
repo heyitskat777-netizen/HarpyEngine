@@ -16,7 +16,11 @@ from girlframe.engine import m3_bonded_rejection as rules
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_mockingbird import give_tag
 from girlframe.services.m3_actors import profiles
-from girlframe.services.m3_bonded_rejection import BondedRejectionService, prove_finding
+from girlframe.services.m3_bonded_rejection import (
+    BondedRejectionService,
+    prove_finding,
+    prove_rejection_consumption,
+)
 from girlframe.services.m3_recovery import RecoveryService
 from girlframe.services.onboarding import WorkflowError
 
@@ -44,9 +48,7 @@ def submit(form, values, number):
     return asyncio.run(run())
 
 
-def test_real_keep_rejection_unrolled_retry_owned_finding_and_original_high_completion(
-    ledger, tmp_path, monkeypatch
-):
+def pending_rejection(ledger, tmp_path, monkeypatch):
     game, worker, gateway, bonded = actual_man_game(ledger, tmp_path, monkeypatch)
     original_actor = type(gateway).actor
 
@@ -119,6 +121,13 @@ def test_real_keep_rejection_unrolled_retry_owned_finding_and_original_high_comp
     bonded.resolve_man_tag(
         FOUR, str(uuid4()), source, state(game).revision, ChoiceAnswer(options=("reject",))
     )
+    return game, worker, gateway, bonded, source
+
+
+def test_real_keep_rejection_unrolled_retry_owned_finding_and_original_high_completion(
+    ledger, tmp_path, monkeypatch
+):
+    game, worker, gateway, bonded, source = pending_rejection(ledger, tmp_path, monkeypatch)
     service = BondedRejectionService(game)
     account = "I hold my composure under pressure while I directly reject that label"
     form = show(service, source, 89600, account=account)
@@ -206,3 +215,141 @@ def test_real_keep_rejection_unrolled_retry_owned_finding_and_original_high_comp
     assert bonded.view(FOUR, source)["phase"] == "complete"
     assert len(rules.records(state(game), rules.Finding)) == 1
     assert len(rules.records(state(game), rules.Attempt)) == 2
+
+
+def test_actual_received_order_native_refusal_preserves_parent_and_proves_mid_tag_consumption(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred Order normal: actual receiver, resume-only chain and exact child rejection."""
+    game, worker, gateway, bonded, source = pending_rejection(ledger, tmp_path, monkeypatch)
+    service = BondedRejectionService(game)
+    order = game.issue_order(
+        PLAYER, str(uuid4()), 901, 4, "Hold still and stop challenging that label"
+    )
+    parent = order["action_id"]
+    tick(worker, gateway, 3)
+    account = "I actually refuse this received Order to reject that label"
+    form = show(service, source, 89700, account=account)
+    assert all(field.key != "account" for field in form.fields)
+    submit(form, {"play": ("order:" + parent,)}, 89701)
+    request = rules.records(state(game), rules.Request)[0]
+    assert (
+        request.order
+        and request.order.parent == parent
+        and request.order.order == order["order_id"]
+    )
+    with pytest.raises(WorkflowError):
+        service.attach_order(
+            OTHER,
+            str(uuid4()),
+            source,
+            state(game).revision,
+            order["order_id"],
+            parent,
+            "I cannot attach another person's Order",
+        )
+    # The attached receiver still makes the actual ordinary Receive Orders choice.
+    form = submit(show(service, request.id, 89702), {"operation": ("order",)}, 89703)
+    submit(form, {"options": ("disobey",)}, 89704)
+    response = next(x for x in game.choices(FOUR) if x["kind"] == "order_disobey")
+    projected = game.decision(FOUR, response["id"])
+    assert projected["parent"] == parent and projected["body"]["order_id"] == order["order_id"]
+    assert projected["body"]["source_work"] == request.id
+    game.dice = Dice((4, 4))
+    prepared = PlayInput(
+        play="disobey_orders",
+        parent=parent,
+        order_id=order["order_id"],
+        source_work=request.id,
+        context=account,
+        trigger_confirmed=True,
+        heat=0,
+        witnessed=True,
+    )
+    child = game.begin(FOUR, str(uuid4()), 901, state(game).sheets["4"].revision, prepared)[
+        "action_id"
+    ]
+    game.abort(ADMIN, str(uuid4()), parent)
+    recovery = RecoveryService(game)
+    saved = next(x for x in recovery.saved(FOUR) if x["id"] == parent)
+    assert not saved["cancellable"]
+    tick(worker, gateway, 4)
+    with pytest.raises(WorkflowError):
+        recovery.recover(FOUR, str(uuid4()), parent, saved["revision"], cancel=True)
+    recovery.recover(FOUR, str(uuid4()), parent, saved["revision"], cancel=False)
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    receipt = game.inspect(FOUR, child)["receipt"]
+    assert receipt["faces"] == [4, 4] and game.dice.calls == 1
+    assert not rules.records(state(game), rules.Release)
+    answer(game, FOUR, "actor_disobey", options=("reject_tag",), denied=(request.tag,))
+    assert not any(x.id == request.tag for x in state(game).sheets["4"].tags)
+    # This is the real Handler's factual knowledge answer, not a rejection veto.
+    answer(
+        game,
+        ADMIN,
+        "handler_disobey",
+        flag=False,
+        text="The original Handler did not learn this actual refusal",
+    )
+    tick(worker, gateway, 5)
+    assert game.inspect(FOUR, child)["state"] == "complete"
+    assert game.inspect(FOUR, parent)["state"] == "complete"
+    with ledger.engine.connect() as c:
+        original_parent = game.action(c, parent)
+        assert original_parent["data"]["play"] == "receive_orders"
+        assert original_parent["parent_id"] is None and original_parent["data"]["receipt"] is None
+        assert original_parent["data"]["result"]["response"] == "disobey"
+        assert original_parent["data"]["result"]["response_play"] == child
+    data = service.view(FOUR, request.id)
+    assert data["can_conclude"] and data["outcome_options"] == ["yes"]
+    attempt = data["attempts"][-1]
+    revision, sheet_revision = state(game).revision, state(game).sheets["4"].revision
+    with pytest.raises(WorkflowError):
+        service.conclude(
+            FOUR,
+            str(uuid4()),
+            request.id,
+            revision,
+            attempt["id"],
+            False,
+            "The actual consumed Tag cannot be represented as still present",
+        )
+    form = submit(show(service, request.id, 89705), {"operation": ("conclude",)}, 89706)
+    conclusion = "I actually rejected that exact Tag through my completed refusal choice"
+    submit(form, {"achieved": ("yes",), "account": conclusion}, 89707)
+    service.conclude(FOUR, "89707", request.id, revision, attempt["id"], True, conclusion)
+    actual = state(game)
+    finding = rules.records(actual, rules.Finding)[0]
+    with ledger.engine.connect() as c:
+        assert prove_finding(game, c, actual, finding.id).tag_consumed_event
+        assert (
+            prove_rejection_consumption(
+                game,
+                c,
+                actual,
+                finding.id,
+                source=source,
+                resolution=request.resolution,
+                owner=request.owner,
+                tag=request.tag,
+            )
+            == finding.tag_consumed_event
+        )
+    assert finding.tag_consumed_event != finding.event
+    assert actual.sheets["4"].revision == sheet_revision  # No second Tag erasure/resolution.
+    assert game.inspect(FOUR, child)["receipt"] == receipt and game.dice.calls == 1
+    with pytest.raises(WorkflowError):
+        service.view(OTHER, request.id)
+    bonded.choose(
+        PLAYER,
+        str(uuid4()),
+        source,
+        actual.revision,
+        ChoiceAnswer(options=("promise",), text="I actually promise protection"),
+    )
+    bonded.choose(
+        FOUR, str(uuid4()), source, state(game).revision, ChoiceAnswer(text="I give no Tags")
+    )
+    pause_tick(game, gateway)
+    assert bonded.view(FOUR, source)["phase"] == "complete"

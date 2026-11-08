@@ -24,9 +24,9 @@ from girlframe.services.m3_role_punishments import RolePunishmentService
 from girlframe.services.onboarding import WorkflowError
 
 
-def setup(store, tmp_path, monkeypatch, faces, *, native=False, item=False):
+def setup(store, tmp_path, monkeypatch, faces, *, native=False, item=False, extra=()):
     game, worker, gateway = ready(store, tmp_path, monkeypatch, faces)
-    approved(store, game, tmp_path, monkeypatch, extra=(rules.RULE,))
+    approved(store, game, tmp_path, monkeypatch, extra=(rules.RULE, *extra))
     service = SexService(game)
     if item:
         asset = next(x for x in state(game).sheets["2"].assets if x.family == "girl")
@@ -92,9 +92,9 @@ def setup(store, tmp_path, monkeypatch, faces, *, native=False, item=False):
     return game, worker, gateway, service, identity
 
 
-def rolled(store, tmp_path, monkeypatch, faces, *, native=False, item=False):
+def rolled(store, tmp_path, monkeypatch, faces, *, native=False, item=False, extra=()):
     game, worker, gateway, service, identity = setup(
-        store, tmp_path, monkeypatch, faces, native=native, item=item
+        store, tmp_path, monkeypatch, faces, native=native, item=item, extra=extra
     )
     action = game.begin(
         PLAYER,
@@ -232,3 +232,78 @@ def test_low_real_sleep_and_owned_opportunity_then_actual_wake(
     assert rules.get(state(game), identity).wake_event
     assert game.inspect(PLAYER, action)["state"] == "complete"
     assert game.dice.calls == (2 if opportunity == "play" else 1)
+
+
+def test_actual_sleeping_source_native_ordinary_dive_counter_keeps_receipt_and_wake(
+    ledger, tmp_path, monkeypatch
+):
+    """A real non-Keep child uses the counterpart's own Dive and original held parent."""
+    from girlframe.discord_adapter.m2_forms import NativeForm
+    from girlframe.discord_adapter.m3_alpha_sex import open_alpha_choice
+
+    game, worker, gateway, _, identity, parent = rolled(
+        ledger,
+        tmp_path,
+        monkeypatch,
+        (1, 1),
+        extra=(
+            "play.basic.flirt",
+            "core.core.npcs",
+            "core.core.npc-assets",
+            "core.core.npc-tags",
+            "play.basic.dive_deep",
+        ),
+    )
+    original_receipt = game.inspect(PLAYER, parent)["receipt"]
+    answer(game, OTHER, "alpha_sex_low", options=("play",))
+    choice = next(x for x in game.choices(OTHER) if x["kind"] == "alpha_sex_counter_play")
+
+    async def native():
+        interaction = current(3, 98901)
+        interaction.channel_id = 900
+        await interaction.response.defer(ephemeral=True)
+        await open_alpha_choice(interaction, game, choice["id"])
+        form = interaction.edit_original_response.call_args.kwargs["view"]
+        assert isinstance(form, NativeForm)
+        plays = next(x for x in form.fields if x.key == "play")
+        assert "dive_deep" in dict(plays.options) and "check_sensors" in dict(plays.options)
+
+    asyncio.run(native())
+    child = game.begin(
+        OTHER,
+        str(uuid4()),
+        900,
+        state(game).sheets["3"].revision,
+        PlayInput(
+            play="dive_deep",
+            heat=0,
+            parent=parent,
+            context="My actual communion during this one sleeping-source opportunity",
+            trigger_confirmed=True,
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    answer(
+        game,
+        ADMIN,
+        "dive_select",
+        options=("void_and_unmark_all",),
+        text="The actual low Dive uses its printed Handler choice",
+    )
+    asset = next(x for x in state(game).sheets["3"].assets if x.family == "frame" and not x.void)
+    answer(
+        game,
+        OTHER,
+        "dive_effect",
+        fields={"asset": asset.id},
+        text="Actual threads now run through this Frame feature",
+    )
+    assert game.inspect(OTHER, child)["state"] == "complete"
+    assert rules.asleep(state(game), current_ref(state(game), 2))
+    assert rules.get(state(game), identity).phase == "waking"
+    answer(game, PLAYER, "alpha_sex_wake", options=("wake",), text="I actually wake now")
+    tick(worker, gateway, 3)
+    assert game.inspect(PLAYER, parent)["state"] == "complete"
+    assert game.inspect(PLAYER, parent)["receipt"] == original_receipt
+    assert game.dice.calls == 2

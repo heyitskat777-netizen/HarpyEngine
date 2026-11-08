@@ -31,6 +31,17 @@ KINDS = (
     "alpha_sex_wake",
 )
 
+COUNTER_PLAYS = (
+    "keep_your_head",
+    "check_sensors",
+    "engage",
+    "flirt",
+    "disobey_orders",
+    "put_someone_beneath_you",
+    "all_out_assault",
+    "dive_deep",
+)
+
 
 def _copy(state: GameState, changed: GameState) -> None:
     for field in GameState.model_fields:
@@ -692,14 +703,12 @@ def validate_counter_child(
     if (
         row is None
         or actor != value.target
-        or prepared.play != "keep_your_head"
+        or prepared.play not in COUNTER_PLAYS
         or prepared.parent != parent["id"]
-        or prepared.target_actor is not None
-        or prepared.target is not None
         or prepared.source_work
         or value.phase != "sleeping"
     ):
-        raise WorkflowError("Use this actual counterpart's genuine Keep counter")
+        raise WorkflowError("Use this actual counterpart's genuine ordinary counter Play")
     return dict(parent=parent["id"], choice=row["id"], actor=value.target.model_dump(mode="json"))
 
 
@@ -739,7 +748,7 @@ def synchronize_counters(game: GameService, c: Connection, event: str) -> GameSt
             or selection is None
             or ChoiceAnswer.model_validate_json(selection).options != ("play",)
             or child["actor_id"] != value.target.entity
-            or child["data"]["play"] != "keep_your_head"
+            or child["data"]["play"] not in COUNTER_PLAYS
             or child["data"]["character_ids"].get(value.target.entity) != value.target.incarnation
             or receipt is None
             or json.loads(receipt) != child["data"].get("receipt")

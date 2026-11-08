@@ -6889,6 +6889,14 @@ class GameService:
                     if k in ("order_id", "target")
                 },
             }
+            if row["kind"] in ("order_response", "order_disobey"):
+                from girlframe.services.m3_bonded_rejection import order_projection
+
+                rejection_order = order_projection(self, c, viewer, state, action, row)
+                if rejection_order is not None:
+                    result["bonded_rejection_order"] = rejection_order
+                    body["source_work"] = rejection_order["source_work"]
+                    body["context"] = rejection_order["context"]
             if row["kind"] == "order_response":
                 from girlframe.engine.m3_actor_bonds import current_ref as am_order_original
                 from girlframe.engine.m3_am import free as am_free

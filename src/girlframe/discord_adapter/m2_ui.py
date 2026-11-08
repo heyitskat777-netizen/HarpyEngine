@@ -1154,6 +1154,10 @@ async def open_play(
         plays = ("am_scrutinized",)
     if parent and parent["kind"] == "bonded_rejection_child":
         plays = tuple(parent["body"]["allowed"])
+    if parent and parent["kind"] == "alpha_sex_counter_play":
+        from girlframe.services.m3_alpha_sex import COUNTER_PLAYS
+
+        plays = COUNTER_PLAYS
     if parent and parent["kind"] == "red_queen_child":
         plays = (parent["body"]["play"],)
     if parent and parent["kind"] == "ankou_effect_child":
@@ -1501,6 +1505,8 @@ async def open_play(
                 if parent and parent["kind"] in ("wyvern_replacement", "wyvern_pin_response")
                 else parent["body"]["work"]
                 if parent and parent["kind"].startswith("easy_target_child:")
+                else parent["body"].get("source_work")
+                if parent and parent["kind"] == "order_disobey"
                 else parent["body"]["source_work"]
                 if parent
                 and parent["kind"]
@@ -1578,6 +1584,8 @@ async def open_play(
     if parent and parent["kind"] == "bonded_rejection_child":
         form.values["context"] = parent["body"]["context"]
         form.values["play"] = (parent["body"]["play"],)
+    if parent and parent["kind"] == "order_disobey" and parent.get("bonded_rejection_order"):
+        form.values["context"] = parent["body"]["context"]
     form.confirm.label = "Confirm & Roll"
     await reply(interaction, form.text(), form)
 

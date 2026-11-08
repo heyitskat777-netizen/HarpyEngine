@@ -1,4 +1,4 @@
-"""Finite Partake regrowth from proved permanent original same-Frame Budget losses."""
+"""Finite Partake regrowth from explicit Budget and paid same-Frame cap-loss sources."""
 
 import json
 from typing import Any, Literal
@@ -13,8 +13,10 @@ from girlframe.engine.m2 import AssetState, GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_core import install
 from girlframe.engine.m3_janus_storage import effective_assets
+from girlframe.engine.m3_requisition_state import Receipt
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_budget_removal import prove_loss_source
+from girlframe.services.m3_frame_asset_losses import FrameAssetLoss, installment_loss
 from girlframe.services.m3_handler_advancements import _history
 from girlframe.services.onboarding import WorkflowError
 
@@ -25,6 +27,7 @@ class Selection(Model):
     original: AssetState
     loss: str | None = None
     loss_event: str | None = None
+    loss_kind: Literal["asset_installment"] | None = None
     replacement: str | None = None
 
 
@@ -135,23 +138,56 @@ def _selections(
         for asset in sheet.assets
         if asset.family == "frame" and asset.damaged
     ]
-    consumed = {value.loss for value in rules.records(state, rules.RegrownFrame)}
+    consumed = {
+        (value.loss_kind or "budget", value.loss)
+        for value in rules.records(state, rules.RegrownFrame)
+    }
+    losses = []
     for value in budget.losses(state):
         if (
             value.actor != actor
             or value.frame != frame
-            or value.id in consumed
+            or ("budget", value.id) in consumed
             or value.frame_asset.id in present
         ):
             continue
         original = _loss(game, c, state, value)
+        losses.append(
+            FrameAssetLoss(
+                source_kind="budget",
+                id=original.id,
+                actor=original.actor,
+                frame=original.frame,
+                event=original.event,
+                asset=original.frame_asset,
+            )
+        )
+    for receipt in state.requisitions:
+        if (
+            isinstance(receipt, Receipt)
+            and receipt.actor == actor
+            and receipt.frame_instance == frame
+            and receipt.installation.replace is not None
+            and receipt.installation.replace not in present
+            and ("asset_installment", receipt.id) not in consumed
+        ):
+            paid_loss = installment_loss(game, c, state, receipt)
+            if paid_loss is not None:
+                losses.append(paid_loss)
+    for loss in losses:
+        kind: Literal["asset_installment"] | None = (
+            "asset_installment" if loss.source_kind == "asset_installment" else None
+        )
         result.append(
             Selection(
-                token=rules.identity("missing-frame", original.id),
+                token=rules.identity(
+                    "missing-frame-installment" if kind else "missing-frame", loss.id
+                ),
                 kind="missing",
-                original=original.frame_asset,
-                loss=original.id,
-                loss_event=original.event,
+                original=loss.asset,
+                loss=loss.id,
+                loss_event=loss.event,
+                loss_kind=kind,
             )
         )
     return tuple(result)
@@ -177,7 +213,11 @@ def regrowth_options(
 
 def _component(plan: RegrowthPlan, selected: Selection, event: str) -> AssetState:
     return AssetState(
-        id=rules.identity("regrown-frame", plan.action, selected.loss or ""),
+        id=rules.identity(
+            "regrown-frame-installment" if selected.loss_kind else "regrown-frame",
+            plan.action,
+            selected.loss or "",
+        ),
         family="frame",
         name=selected.original.name,
         description=selected.original.description,
@@ -260,7 +300,11 @@ def _install(state: GameState, plan: RegrowthPlan, event: str, *, record: bool) 
             rules.put(
                 changed,
                 rules.RegrownFrame(
-                    id=rules.identity("regrowth", plan.action, selected.loss or ""),
+                    id=rules.identity(
+                        "regrowth-installment" if selected.loss_kind else "regrowth",
+                        plan.action,
+                        selected.loss or "",
+                    ),
                     actor=plan.actor,
                     frame=plan.frame,
                     action=plan.action,
@@ -269,6 +313,7 @@ def _install(state: GameState, plan: RegrowthPlan, event: str, *, record: bool) 
                     receipt=plan.receipt,
                     loss=selected.loss or "",
                     loss_event=selected.loss_event or "",
+                    loss_kind=selected.loss_kind,
                     original=selected.original,
                     component=component,
                     event=event,
@@ -387,7 +432,14 @@ def prove_regrowth(
         source.regrow_replacements,
         historical=True,
     )
-    selected = next((entry for entry in plan.selected if entry.loss == value.loss), None)
+    selected = next(
+        (
+            entry
+            for entry in plan.selected
+            if entry.loss == value.loss and entry.loss_kind == value.loss_kind
+        ),
+        None,
+    )
     if (
         selected is None
         or selected.original != value.original

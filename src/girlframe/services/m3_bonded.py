@@ -403,8 +403,13 @@ def _man_resolution(
             )
         )
         finding_id = json.loads(recorded or "{}").get("bonded_rejection_finding")
+        consumed_event = None
         if finding_id:
-            from girlframe.services.m3_bonded_rejection import prove_finding, prove_request
+            from girlframe.services.m3_bonded_rejection import (
+                prove_finding,
+                prove_rejection_consumption,
+                prove_request,
+            )
 
             finding = prove_finding(game, c, state, finding_id)
             request = prove_request(game, c, state, finding.request)
@@ -420,6 +425,17 @@ def _man_resolution(
                 raise WorkflowError(
                     "Preserve the actual completed rejection Play and owned finding"
                 )
+            if old is None:
+                consumed_event = prove_rejection_consumption(
+                    game,
+                    c,
+                    state,
+                    finding_id,
+                    source=value.id,
+                    resolution=work.id,
+                    owner=work.partner,
+                    tag=work.tag,
+                )
         if (
             decision is None
             or decision.decision != "reject"
@@ -429,9 +445,12 @@ def _man_resolution(
             or performance.partner != work.partner
             or performance.controller != work.controller
             or not performance.account.strip()
-            or old is None
-            or not old.rejection_pending
-            or not _man_reject_allowed(previous, work.partner, old)
+            or consumed_event is None
+            and (
+                old is None
+                or not old.rejection_pending
+                or not _man_reject_allowed(previous, work.partner, old)
+            )
             or any(x.id == work.tag for x in saved.sheets[work.partner.entity].tags)
         ):
             raise WorkflowError("Preserve the actual partner-authored performed rejection")

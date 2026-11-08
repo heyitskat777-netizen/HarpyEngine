@@ -11,10 +11,11 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_bonded as bonded
 from girlframe.engine import m3_bonded_rejection as rules
-from girlframe.engine.m2 import GameState, PlayInput
+from girlframe.engine.m2 import GameState, PlayInput, higher
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import fingerprint, resolve
+from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
@@ -31,6 +32,208 @@ def _hash(value: Any) -> str:
     return hashlib.sha256(
         json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
+
+
+def _order_hash(order: Any) -> str:
+    return _hash(
+        {key: order[key] for key in ("id", "issuer_id", "target_id", "channel_id", "body_json")}
+    )
+
+
+def _order_authority(game: GameService, c: Connection, state: GameState, order: Any) -> None:
+    body = json.loads(order["body_json"])
+    if set(body) - {"text", "gender_designation"}:
+        raise WorkflowError(
+            "ORDER_SOURCE_ADAPTER_REQUIRED: preserve this actual special Order source"
+        )
+    source = False
+    if body.get("gender_designation"):
+        from girlframe.services.m3_gender_designation import valid_order
+
+        source = valid_order(game, c, state, dict(order))
+    if not source and not higher(state, int(order["issuer_id"]), int(order["target_id"])):
+        raise WorkflowError(
+            "The actual issuer needs current superior Status or genuine Man-law authority"
+        )
+
+
+def _order_context(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    request: rules.Request,
+    *,
+    fresh: bool = False,
+    linked: bool = True,
+) -> tuple[dict[str, Any], Any, Any]:
+    context = request.order
+    if context is None or request.play != "disobey_orders":
+        raise WorkflowError("Use the actual existing received Order for this refusal")
+    order = (
+        c.execute(
+            sa.select(t.m2["m2_orders"]).where(
+                t.m2["m2_orders"].c.campaign_id == game.store.campaign_id,
+                t.m2["m2_orders"].c.id == context.order,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    event = (
+        c.execute(
+            sa.select(t.events).where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.id == context.issue_event,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    choice = (
+        c.execute(
+            sa.select(t.m2["m2_choices"]).where(
+                t.m2["m2_choices"].c.campaign_id == game.store.campaign_id,
+                t.m2["m2_choices"].c.id == context.receiver_choice,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    parent = game.action(c, context.parent)
+    payload = json.loads(event["payload_json"]) if event else {}
+    if (
+        order is None
+        or event is None
+        or event["kind"] != "m2.order_issued"
+        or event["actor_id"] != (str(order["issuer_id"]) if order else "")
+        or payload.get("action_id") != parent["id"]
+        or str(order["target_id"]) != request.owner.entity
+        or int(order["channel_id"]) != request.cast.channel
+        or _order_hash(order) != context.order_sha256
+        or parent["data"].get("play") != "receive_orders"
+        or parent.get("parent_id") is not None
+        or str(parent["actor_id"]) != request.owner.entity
+        or parent["data"].get("order_id") != order["id"]
+        or parent["data"].get("order_text") != json.loads(order["body_json"]).get("text")
+        or parent["scene_id"] != request.cast.id
+        or int(parent["channel_id"]) != request.cast.channel
+        or choice is None
+        or choice["action_id"] != parent["id"]
+        or choice["kind"] != "order_response"
+        or str(choice["actor_id"]) != request.owner.entity
+    ):
+        raise WorkflowError(
+            "Preserve the real issuer, received parent, Order and actual receiver choice"
+        )
+    issued = _before(game, c, context.issue_event)
+    actual_issuer = (
+        active_handler(issued)
+        if str(order["issuer_id"]) == str(issued.handler)
+        else current_ref(issued, int(order["issuer_id"]))
+    )
+    if actual_issuer != context.issuer or actual_issuer is None:
+        raise WorkflowError("Never alias the original actual Order issuer to another person")
+    game.action_characters(c, parent, issued)
+    _order_authority(game, c, issued, order)
+    if linked and parent["data"].get("bonded_rejection_order") != dict(
+        request=request.id, source=request.source, order=context.order
+    ):
+        raise WorkflowError("Recover the positive canonical received-Order attachment")
+    if fresh:
+        game.action_characters(c, parent, state)
+        _order_authority(game, c, state, order)
+        current_issuer = (
+            active_handler(state)
+            if context.issuer.kind == "handler"
+            else current_ref(state, int(context.issuer.entity))
+        )
+        if current_issuer != context.issuer:
+            raise WorkflowError("Only this actual original current issuer supplies the Order")
+    return parent, order, choice
+
+
+def _order_response(
+    game: GameService, c: Connection, request: rules.Request, parent: dict[str, Any], choice: Any
+) -> str | None:
+    if choice["state"] != "answered":
+        return None
+    from girlframe.services.m3_dose_up import _response
+
+    event = c.scalar(
+        sa.select(t.events.c.id).where(
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.actor_id == str(request.controller),
+            t.events.c.kind.in_(("m2.choice_resolved", "m3.choice_resolved")),
+            sa.func.json_extract(t.events.c.payload_json, "$.action_id") == parent["id"],
+            sa.func.json_extract(t.events.c.payload_json, "$.choice_id") == choice["id"],
+        )
+    )
+    if event is None:
+        raise WorkflowError("Recover the original receiver's actual canonical response")
+    answer = _response(
+        game, c, parent["id"], choice["id"], event, request.controller, "order_response"
+    )
+    if (
+        len(answer.options) != 1
+        or parent["data"].get("result", {}).get("response") != answer.options[0]
+    ):
+        raise WorkflowError("Preserve the actual receiver's original Order response")
+    return answer.options[0]
+
+
+def _followed_order(
+    game: GameService, c: Connection, state: GameState, request: rules.Request
+) -> bool:
+    if request.order is None:
+        return False
+    parent, _, choice = _order_context(game, c, state, request)
+    answer = _order_response(game, c, request, parent, choice)
+    return bool(
+        answer
+        and answer != "disobey"
+        and parent["state"] == "complete"
+        and not game.pending(c, parent["id"])
+    )
+
+
+def _orders(
+    game: GameService, c: Connection, state: GameState, source: bonded.Source, viewer: GuildViewer
+) -> list[dict[str, Any]]:
+    actions = t.m2["m2_actions"]
+    result = []
+    for token in c.scalars(
+        sa.select(actions.c.id).where(
+            actions.c.campaign_id == game.store.campaign_id,
+            actions.c.scene_id == source.cast.id,
+            actions.c.actor_id == str(viewer.user_id),
+            actions.c.state == "awaiting_choices",
+            sa.func.json_extract(actions.c.body_json, "$.play") == "receive_orders",
+        )
+    ):
+        parent = game.action(c, token)
+        if parent["data"].get("bonded_rejection_order"):
+            continue
+        row = (
+            c.execute(
+                sa.select(t.m2["m2_orders"]).where(
+                    t.m2["m2_orders"].c.campaign_id == game.store.campaign_id,
+                    t.m2["m2_orders"].c.id == parent["data"]["order_id"],
+                    t.m2["m2_orders"].c.state == "awaiting_response",
+                )
+            )
+            .mappings()
+            .first()
+        )
+        if row is None or not any(x["kind"] == "order_response" for x in game.pending(c, token)):
+            continue
+        try:
+            _order_authority(game, c, state, row)
+        except WorkflowError:
+            continue
+        result.append(
+            dict(parent=token, order=row["id"], label="Actual received Order " + row["id"])
+        )
+    return result
 
 
 def _access(game: GameService, c: Connection, viewer: GuildViewer) -> None:
@@ -57,7 +260,12 @@ def _source(
 
 
 def _current(
-    game: GameService, c: Connection, state: GameState, request: rules.Request
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    request: rules.Request,
+    *,
+    consumed_event: str | None = None,
 ) -> bonded.Source:
     source, status = _source(game, c, state, request.source)
     if source.phase != "results" or status["performance"] is not None or not status["pending"]:
@@ -66,6 +274,8 @@ def _current(
         raise WorkflowError("Only the original rejecting person can perform this action")
     _contact(game, c, state, source)
     tag = next((x for x in state.sheets[request.owner.entity].tags if x.id == request.tag), None)
+    if tag is None and consumed_event is not None and request.order is not None:
+        return source
     if (
         tag is None
         or not tag.rejection_pending
@@ -133,7 +343,15 @@ def prove_request(
     request = rules.get(state, rules.Request, identity)
     birth = _history(c, game, request.event)
     source, status = _source(game, c, birth, request.source)
-    _audit(game, c, request.event, ("m3.bonded_rejection_requested",), request.controller)
+    _audit(
+        game,
+        c,
+        request.event,
+        ("m3.bonded_rejection_order_attached",)
+        if request.order
+        else ("m3.bonded_rejection_requested",),
+        request.controller,
+    )
     if (
         request not in rules.records(birth, rules.Request)
         or request.id != rules.identity("request", request.source, request.event)
@@ -147,13 +365,17 @@ def prove_request(
         or not request.account.strip()
         or len(request.account) > 1200
         or request.play not in rules.PLAYS
+        or (request.order is not None) != (request.play == "disobey_orders")
         or request.target is not None
         and not any(x.actor == request.target for x in request.cast.roles)
         or request.play == "flirt"
         and (request.target is None or request.target == request.owner)
     ):
         raise WorkflowError("Preserve the actual original rejection context, owner and source")
-    _family(game, c, birth, request.owner, request.play, request.target)
+    if request.order is not None:
+        _order_context(game, c, birth, request)
+    else:
+        _family(game, c, birth, request.owner, request.play, request.target)
     return request
 
 
@@ -165,13 +387,13 @@ def _action(request: rules.Request, attempt: rules.Attempt, action: dict[str, An
         or str(action["actor_id"]) != request.owner.entity
         or action["scene_id"] != request.cast.id
         or int(action["channel_id"]) != request.cast.channel
-        or action.get("parent_id") is not None
+        or action.get("parent_id") != (request.order.parent if request.order else None)
         or action["data"]["play"] != request.play
         or prepared.source_work != request.id
         or prepared.context != request.account
         or prepared.play != request.play
-        or prepared.parent
-        or prepared.order_id
+        or prepared.parent != (request.order.parent if request.order else None)
+        or prepared.order_id != (request.order.order if request.order else None)
         or prepared.off_duty_id
         or prepared.target_actor != request.target
         or prepared.target
@@ -298,11 +520,110 @@ def completion_ready(
         return False
     if game.pending(c, actual["id"]) or _pending_work(game, c, actual):
         return False
+    request = prove_request(game, c, state, attempt.request)
+    root_id = actual["id"]
+    if request.order is not None:
+        parent, _, choice = _order_context(game, c, state, request)
+        if (
+            _order_response(game, c, request, parent, choice) != "disobey"
+            or parent["state"] != "complete"
+            or game.pending(c, parent["id"])
+            or parent["data"].get("result", {}).get("response_play") != actual["id"]
+            or _pending_work(game, c, parent)
+        ):
+            return False
+        root_id = parent["id"]
     lock = game.lock(c, int(actual["channel_id"]))
-    if lock and lock["action_id"] == actual["id"] and lock["state"] != "released":
+    if lock and lock["action_id"] == root_id and lock["state"] != "released":
         return False
     _roll_source(game, c, actual)
     return True
+
+
+def _consumption(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    request: rules.Request,
+    attempt: rules.Attempt,
+    action: dict[str, Any],
+) -> str | None:
+    if request.order is None:
+        return None
+    _action(request, attempt, action)
+    cached = action["data"].get("choices", {}).get("actor_disobey:" + request.owner.entity, {})
+    if cached.get("options") != ["reject_tag"] or cached.get("denied") != [request.tag]:
+        return None
+    if action["data"].get("result", {}).get("can_disobey") is not True:
+        raise WorkflowError("An unsuccessful refusal cannot supply this Tag consumption")
+    choices = t.m2["m2_choices"]
+    row = (
+        c.execute(
+            sa.select(choices).where(
+                choices.c.campaign_id == game.store.campaign_id,
+                choices.c.action_id == action["id"],
+                choices.c.kind == "actor_disobey",
+                choices.c.actor_id == request.owner.entity,
+                choices.c.state == "answered",
+            )
+        )
+        .mappings()
+        .one()
+    )
+    event = c.scalar(
+        sa.select(t.events.c.id).where(
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.kind.in_(("m2.choice_resolved", "m3.choice_resolved")),
+            t.events.c.actor_id == str(request.controller),
+            sa.func.json_extract(t.events.c.payload_json, "$.action_id") == action["id"],
+            sa.func.json_extract(t.events.c.payload_json, "$.choice_id") == row["id"],
+        )
+    )
+    if event is None:
+        raise WorkflowError("Recover the actual original owner's Tag-rejection choice event")
+    from girlframe.services.m2_choices import ChoiceEngine
+    from girlframe.services.m3_dose_up import _response
+
+    answer = _response(game, c, action["id"], row["id"], event, request.controller, "actor_disobey")
+    before, after = _before(game, c, event), _history(c, game, event)
+    old = next((x for x in before.sheets[request.owner.entity].tags if x.id == request.tag), None)
+    if (
+        answer.options != ("reject_tag",)
+        or answer.denied != (request.tag,)
+        or old is None
+        or not old.marked
+        or not old.rejection_pending
+        or old.scene_used != request.cast.id
+        or before.sheets[request.owner.entity].character_id != request.owner.incarnation
+        or not _man_reject_allowed(before, request.owner, old)
+        or any(x.id == request.tag for x in after.sheets[request.owner.entity].tags)
+    ):
+        raise WorkflowError("Only the exact actual child choice consumes this original source Tag")
+    ChoiceEngine(game).prove_tag_setter(c, before, request.controller, old)
+    return str(event)
+
+
+def prove_rejection_consumption(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    finding_id: str,
+    *,
+    source: str,
+    resolution: str,
+    owner: ActorRef,
+    tag: str,
+) -> str | None:
+    finding = prove_finding(game, c, state, finding_id)
+    request = prove_request(game, c, state, finding.request)
+    if (request.source, request.resolution, request.owner, request.tag) != (
+        source,
+        resolution,
+        owner,
+        tag,
+    ):
+        raise WorkflowError("This actual consumption belongs to another original rejection")
+    return finding.tag_consumed_event if finding.achieved else None
 
 
 def prove_finding(
@@ -323,6 +644,7 @@ def prove_finding(
         request.controller,
     )
     roll_event, _ = _roll_source(game, c, action)
+    consumed = _consumption(game, c, state, request, attempt, action)
     if (
         finding not in rules.records(birth, rules.Finding)
         or finding.id != attempt.id + ":finding"
@@ -337,11 +659,24 @@ def prove_finding(
         or not completion_ready(game, c, state, action)
         or status["performance"] is not None
         or source.phase != "results"
+        or finding.tag_consumed_event != (consumed if finding.achieved else None)
+        or request.order is not None
+        and finding.achieved
+        and action["data"].get("result", {}).get("can_disobey") is not True
     ):
         raise WorkflowError(
             "Preserve the true completed Play, original receipt and owner-authored outcome"
         )
     if finding.achieved:
+        old_tag = next(
+            (x for x in before.sheets[request.owner.entity].tags if x.id == request.tag), None
+        )
+        if consumed is None and (
+            old_tag is None
+            or not old_tag.rejection_pending
+            or not _man_reject_allowed(before, request.owner, old_tag)
+        ):
+            raise WorkflowError("Recover the actual live rejection or exact child consumption")
         performance = next(
             (
                 x
@@ -368,7 +703,8 @@ def prove_finding(
             (x for x in birth.sheets[request.owner.entity].tags if x.id == request.tag), None
         )
         if (
-            old_tag is None
+            consumed is not None
+            or old_tag is None
             or new_tag != old_tag
             or any(
                 x.work == request.resolution for x in bonded.records(birth, bonded.ManTagRejection)
@@ -410,6 +746,13 @@ def source_for_play(
     while token and token not in seen:
         seen.add(token)
         actual = game.action(c, token)
+        attached = actual["data"].get("bonded_rejection_order")
+        if attached:
+            request = prove_request(game, c, state, attached["request"])
+            parent, _, _ = _order_context(game, c, state, request)
+            if parent["id"] != actual["id"]:
+                raise WorkflowError("Use only the original actual received parent")
+            return request.source
         meta = actual["data"].get("bonded_rejection_child")
         if meta:
             attempt = prove_attempt(game, c, state, meta["attempt"])
@@ -419,6 +762,39 @@ def source_for_play(
             return request.source
         token = actual.get("parent_id")
     return None
+
+
+def order_projection(
+    game: GameService,
+    c: Connection,
+    viewer: GuildViewer,
+    state: GameState,
+    parent: dict[str, Any],
+    row: Any,
+) -> dict[str, Any] | None:
+    meta = parent["data"].get("bonded_rejection_order")
+    if not meta:
+        return None
+    request = prove_request(game, c, state, meta["request"])
+    actual, _, _ = _order_context(game, c, state, request)
+    if (
+        actual["id"] != parent["id"]
+        or row["action_id"] != parent["id"]
+        or row["kind"] not in ("order_response", "order_disobey")
+        or str(row["actor_id"]) != request.owner.entity
+        or viewer.user_id != request.controller
+    ):
+        raise WorkflowError("Only the actual receiver opens this original Order continuation")
+    assert request.order is not None
+    return dict(
+        request=request.id,
+        source=request.source,
+        parent=request.order.parent,
+        order=request.order.order,
+        source_work=request.id,
+        context=request.account,
+        receiver_choice=request.order.receiver_choice,
+    )
 
 
 def prepare_child(
@@ -435,6 +811,30 @@ def prepare_child(
     request = prove_request(game, c, state, prepared.source_work or "")
     source = _current(game, c, state, request)
     attempts = _attempts(state, request)
+    if request.order is not None:
+        parent, _, receiver = _order_context(game, c, state, request, fresh=True)
+        if attempts or _order_response(game, c, request, parent, receiver) != "disobey":
+            raise WorkflowError(
+                "Resume the original received chain; no new refusal replaces its choices"
+            )
+        required = next(
+            (
+                x
+                for x in game.pending(c, parent["id"])
+                if x["kind"] == "order_disobey" and str(x["actor_id"]) == request.owner.entity
+            ),
+            None,
+        )
+        lock = game.lock(c, request.cast.channel)
+        if (
+            required is None
+            or json.loads(required["body_json"]).get("order_id") != request.order.order
+            or not lock
+            or lock["action_id"] != parent["id"]
+            or lock["state"] != "held"
+        ):
+            raise WorkflowError("Use the genuine owned Disobey response under its held parent")
+        game.valid_order(c, state, request.controller, request.cast.channel, request.order.order)
     if attempts:
         previous = prove_attempt(game, c, state, attempts[-1].id)
         found = _finding(game, c, state, previous)
@@ -447,8 +847,8 @@ def prepare_child(
         or channel != request.cast.channel
         or prepared.play != request.play
         or prepared.context != request.account
-        or prepared.parent
-        or prepared.order_id
+        or prepared.parent != (request.order.parent if request.order else None)
+        or prepared.order_id != (request.order.order if request.order else None)
         or prepared.off_duty_id
         or prepared.target_actor != request.target
         or prepared.target
@@ -464,6 +864,9 @@ def prepare_child(
 
     require_ready(game, c, state, source.id)
     _family(game, c, state, request.owner, request.play, request.target)
+    if request.order is not None:
+        _order_context(game, c, state, request, fresh=True)
+        game.valid_order(c, state, request.controller, request.cast.channel, request.order.order)
     if request.play == "check_sensors" and not prepared.piloting:
         raise WorkflowError("Use the actual piloted Frame for this Frame Play")
     return dict(
@@ -504,6 +907,9 @@ def pre_roll_child(
     request = prove_request(game, c, state, attempt.request)
     _current(game, c, state, request)
     _family(game, c, state, request.owner, request.play, request.target)
+    if request.order is not None:
+        _order_context(game, c, state, request, fresh=True)
+        game.valid_order(c, state, request.controller, request.cast.channel, request.order.order)
     if (
         viewer.user_id != request.controller
         or _released(game, c, state, attempt)
@@ -519,6 +925,9 @@ def release_unrolled(
     if not meta:
         return False
     attempt = prove_attempt(game, c, state, meta["attempt"])
+    request = prove_request(game, c, state, attempt.request)
+    if request.order is not None:
+        raise WorkflowError("Received Order chains preserve prior responses and can only resume")
     if (
         not event
         or action["state"] != "aborted"
@@ -561,6 +970,158 @@ class BondedRejectionService:
         except ValueError as error:
             raise WorkflowError(str(error)) from None
 
+    def attach_order(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        source: str,
+        revision: int,
+        order_id: str,
+        parent_id: str,
+        account: str,
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            state = load_state(c, self.store.campaign_id)
+            value, status = _source(self.game, c, state, source)
+            if (
+                state.revision != revision
+                or value.phase != "results"
+                or not status["pending"]
+                or status["performance"] is not None
+                or status["work"].partner != current_ref(state, viewer.user_id)
+                or status["work"].controller != viewer.user_id
+                or not account.strip()
+                or len(account.strip()) > 1200
+            ):
+                raise WorkflowError(
+                    "Only the original rejecting owner attaches its actual received Order"
+                )
+            previous = _latest(state, source)
+            if previous is not None and not _followed_order(self.game, c, state, previous):
+                attempts = _attempts(state, previous)
+                found = _finding(self.game, c, state, attempts[-1]) if attempts else None
+                if found is None or found.achieved:
+                    raise WorkflowError("Resume the original actual rejection context")
+            parent = self.game.action(c, parent_id)
+            choice = next(
+                (
+                    x
+                    for x in self.game.pending(c, parent_id)
+                    if x["kind"] == "order_response" and str(x["actor_id"]) == str(viewer.user_id)
+                ),
+                None,
+            )
+            order = (
+                c.execute(
+                    sa.select(t.m2["m2_orders"]).where(
+                        t.m2["m2_orders"].c.campaign_id == self.store.campaign_id,
+                        t.m2["m2_orders"].c.id == order_id,
+                    )
+                )
+                .mappings()
+                .first()
+            )
+            issue_event = c.scalar(
+                sa.select(t.events.c.id).where(
+                    t.events.c.campaign_id == self.store.campaign_id,
+                    t.events.c.kind == "m2.order_issued",
+                    sa.func.json_extract(t.events.c.payload_json, "$.action_id") == parent_id,
+                )
+            )
+            lock = self.game.lock(c, value.cast.channel)
+            if (
+                choice is None
+                or choice["state"] != "pending"
+                or parent["state"] != "awaiting_choices"
+                or order is None
+                or order["state"] != "awaiting_response"
+                or issue_event is None
+                or not lock
+                or lock["state"] != "held"
+                or lock["action_id"] != parent_id
+                or parent["data"].get("bonded_rejection_order")
+            ):
+                raise WorkflowError(
+                    "Wait for the actual received Order and its owned held response"
+                )
+            issued = _before(self.game, c, issue_event)
+            issuer = (
+                active_handler(issued)
+                if str(order["issuer_id"]) == str(issued.handler)
+                else current_ref(issued, int(order["issuer_id"]))
+            )
+            if issuer is None:
+                raise WorkflowError("Recover the actual original issuer")
+            event = str(uuid4())
+            request = rules.Request(
+                id=rules.identity("request", source, event),
+                source=source,
+                resolution=status["work"].id,
+                decision=status["decision"].id,
+                tag=status["work"].tag,
+                owner=status["work"].partner,
+                controller=viewer.user_id,
+                cast=value.cast,
+                play="disobey_orders",
+                account=account.strip(),
+                target=None,
+                event=event,
+                order=rules.OrderContext(
+                    order=order_id,
+                    parent=parent_id,
+                    issue_event=issue_event,
+                    issuer=issuer,
+                    receiver_choice=choice["id"],
+                    order_sha256=_order_hash(order),
+                ),
+            )
+            _current(self.game, c, state, request)
+            _order_context(self.game, c, state, request, fresh=True, linked=False)
+            from girlframe.services.p1_source_pause import require_ready
+
+            require_ready(self.game, c, state, source)
+            pending = (
+                c.execute(
+                    sa.select(t.m2["m2_actions"].c.id).where(
+                        t.m2["m2_actions"].c.campaign_id == self.store.campaign_id,
+                        t.m2["m2_actions"].c.scene_id == value.cast.id,
+                        t.m2["m2_actions"].c.state.not_in(("complete", "aborted")),
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            if pending != [parent_id]:
+                raise WorkflowError("Only this exact actual received parent may overlap the source")
+            rules.put(state, request)
+            parent["data"]["bonded_rejection_order"] = dict(
+                request=request.id, source=source, order=order_id
+            )
+            self.game.save_action(c, parent)
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.bonded_rejection_order_attached",
+                state,
+                event_id=event,
+                source=source,
+                request=request.id,
+                action_id=parent_id,
+                order_id=order_id,
+            )
+            return dict(id=request.id, revision=state.revision)
+
+        return self._write(
+            viewer,
+            key,
+            "m3.bonded_rejection_order_attached",
+            dict(
+                source=source, revision=revision, order=order_id, parent=parent_id, account=account
+            ),
+            operation,
+        )
+
     def request(
         self,
         viewer: GuildViewer,
@@ -583,7 +1144,7 @@ class BondedRejectionService:
                 or status["performance"] is not None
                 or owner != current_ref(state, viewer.user_id)
                 or status["work"].controller != viewer.user_id
-                or play not in rules.PLAYS
+                or play not in rules.BASIC_PLAYS
                 or not account.strip()
                 or len(account.strip()) > 1200
                 or target is not None
@@ -596,7 +1157,7 @@ class BondedRejectionService:
                     "Declare only your real pending rejection and actual legal basic Play"
                 )
             previous = _latest(state, source)
-            if previous:
+            if previous and not _followed_order(self.game, c, state, previous):
                 attempts = _attempts(state, previous)
                 last = _finding(self.game, c, state, attempts[-1]) if attempts else None
                 if last is None or last.achieved:
@@ -663,9 +1224,10 @@ class BondedRejectionService:
         def operation(c: Connection) -> dict[str, Any]:
             state = load_state(c, self.store.campaign_id)
             request = prove_request(self.game, c, state, identity)
-            source = _current(self.game, c, state, request)
             attempt = prove_attempt(self.game, c, state, attempt_id)
             action = self.game.action(c, attempt.action)
+            consumed = _consumption(self.game, c, state, request, attempt, action)
+            source = _current(self.game, c, state, request, consumed_event=consumed)
             if (
                 state.revision != revision
                 or _latest(state, source.id) != request
@@ -677,6 +1239,11 @@ class BondedRejectionService:
                 or not completion_ready(self.game, c, state, action)
                 or not account.strip()
                 or len(account.strip()) > 1200
+                or consumed is not None
+                and not achieved
+                or request.order is not None
+                and achieved
+                and action["data"].get("result", {}).get("can_disobey") is not True
             ):
                 raise WorkflowError(
                     "Only the actual owner assesses its truly completed performed action"
@@ -696,14 +1263,16 @@ class BondedRejectionService:
                 achieved=achieved,
                 account=account.strip(),
                 event=event,
+                tag_consumed_event=consumed if achieved else None,
             )
             if achieved:
                 from girlframe.services.m2_choices import ChoiceEngine
 
                 sheet = state.sheets[request.owner.entity]
-                sheet.tags = [x for x in sheet.tags if x.id != request.tag]
-                sheet.revision += 1
-                ChoiceEngine(self.game).tag_resolved(state, request.controller, request.tag)
+                if consumed is None:
+                    sheet.tags = [x for x in sheet.tags if x.id != request.tag]
+                    sheet.revision += 1
+                    ChoiceEngine(self.game).tag_resolved(state, request.controller, request.tag)
                 bonded.put(
                     state,
                     bonded.ManTagRejection(
@@ -785,6 +1354,26 @@ class BondedRejectionService:
                         }
             latest = _latest(state, source.id) == request
             active = latest and not any(x["finding"] and x["finding"]["achieved"] for x in attempts)
+            order_choice = None
+            order_response = None
+            if request.order is not None:
+                parent, _, received = _order_context(self.game, c, state, request)
+                order_response = _order_response(self.game, c, request, parent, received)
+                order_choice = next(
+                    (
+                        x["id"]
+                        for x in self.game.pending(c, parent["id"])
+                        if x["kind"] in ("order_response", "order_disobey")
+                        and str(x["actor_id"]) == request.owner.entity
+                    ),
+                    None,
+                )
+            consumed = None
+            if last and request.order is not None:
+                attempt = rules.get(state, rules.Attempt, last["id"])
+                consumed = _consumption(
+                    self.game, c, state, request, attempt, self.game.action(c, attempt.action)
+                )
             return dict(
                 id=request.id,
                 revision=state.revision,
@@ -795,7 +1384,28 @@ class BondedRejectionService:
                 target=request.target.model_dump(mode="json") if request.target else None,
                 channel=request.cast.channel,
                 attempts=attempts,
-                can_start=own
+                order_choice=order_choice if own else None,
+                order_response=order_response if own else None,
+                recovery_root=request.order.parent if request.order else None,
+                can_redeclare=own
+                and active
+                and bool(
+                    _followed_order(self.game, c, state, request)
+                    or last
+                    and last["finding"]
+                    and not last["finding"]["achieved"]
+                ),
+                outcome_options=["yes"]
+                if consumed
+                else ["no"]
+                if request.order
+                and last
+                and last["ready"]
+                and self.game.action(c, last["action"])["data"].get("result", {}).get("can_disobey")
+                is not True
+                else ["yes", "no"],
+                can_start=request.order is None
+                and own
                 and active
                 and (
                     last is None
@@ -852,6 +1462,7 @@ class BondedRejectionService:
                         dict(
                             id=value.id,
                             label="Your actual pending Tag rejection",
+                            orders=_orders(self.game, c, state, value, viewer),
                             targets=[
                                 dict(
                                     ref=x.actor.model_dump(mode="json"),

@@ -50,23 +50,44 @@ async def open_bonded_rejection(
             selected = next(
                 (x for x in source["targets"] if x["token"] in values.get("target", ())), None
             )
-            result = await asyncio.to_thread(
-                service.request,
-                viewer_from_interaction(response),
-                str(response.id),
-                source["id"],
-                menu["revision"],
-                values["play"][0],
-                account if account is not None else values["account"],
-                target=ActorRef.model_validate(selected["ref"]) if selected else None,
+            order = next(
+                (x for x in source["orders"] if "order:" + x["parent"] == values["play"][0]), None
             )
+            actual_account = account if account is not None else values["account"]
+            if order:
+                if selected is not None:
+                    raise WorkflowError(
+                        "The actual received Order already has its original receiver"
+                    )
+                result = await asyncio.to_thread(
+                    service.attach_order,
+                    viewer_from_interaction(response),
+                    str(response.id),
+                    source["id"],
+                    menu["revision"],
+                    order["order"],
+                    order["parent"],
+                    actual_account,
+                )
+            else:
+                result = await asyncio.to_thread(
+                    service.request,
+                    viewer_from_interaction(response),
+                    str(response.id),
+                    source["id"],
+                    menu["revision"],
+                    values["play"][0],
+                    actual_account,
+                    target=ActorRef.model_validate(selected["ref"]) if selected else None,
+                )
             await open_bonded_rejection(response, service, result["id"])
 
         fields = [
             Field(
                 "play",
                 "Actual required Play (its own trigger must be true)",
-                tuple(rules.PLAYS.items()),
+                tuple(rules.BASIC_PLAYS.items())
+                + tuple(("order:" + x["parent"], x["label"]) for x in source["orders"]),
             )
         ]
         if account is None:
@@ -103,6 +124,8 @@ async def open_bonded_rejection(
         await asyncio.to_thread(service.view, viewer_from_interaction(current), identity)
 
     summary = rules.PLAYS[data["play"]] + ": " + data["account"]
+    if data["order_response"]:
+        summary += "\nActual receiver response: " + data["order_response"]
     last = data["attempts"][-1] if data["attempts"] else None
     for attempt in data["attempts"]:
         summary += "\nActual attempt " + attempt["action"] + ": " + attempt["state"]
@@ -122,6 +145,10 @@ async def open_bonded_rejection(
         options.append(("start", "Prepare your actual Play with real resources"))
     if data["can_conclude"]:
         options.append(("conclude", "Your factual outcome of the completed action"))
+    if data["order_choice"]:
+        options.append(("order", "Your actual received Order response / required Disobey"))
+    if data["can_redeclare"]:
+        options.append(("redeclare", "Declare another actual rejection action"))
     if (
         last
         and not last["released"]
@@ -151,6 +178,12 @@ async def open_bonded_rejection(
             from girlframe.discord_adapter.m2_ui import open_play
 
             await open_play(response, service.game, parent=data["descriptor"], _pilot=True)
+        elif operation == "order":
+            from girlframe.discord_adapter.m2_ui import open_choice
+
+            await open_choice(response, service.game, data["order_choice"])
+        elif operation == "redeclare":
+            await open_bonded_rejection(response, service, data["source"])
         elif operation == "resume":
             from girlframe.discord_adapter.m2_ui import open_pending
 
@@ -162,7 +195,10 @@ async def open_bonded_rejection(
             saved = await asyncio.to_thread(
                 RecoveryService(service.game).saved, viewer_from_interaction(response)
             )
-            actual = next((x for x in saved if last and x["id"] == last["action"]), None)
+            actual = next(
+                (x for x in saved if last and x["id"] == (data["recovery_root"] or last["action"])),
+                None,
+            )
             if actual is None:
                 raise WorkflowError(
                     "Reopen the actual interrupted source after staff restores chat"
@@ -194,9 +230,14 @@ async def open_bonded_rejection(
                     Field(
                         "achieved",
                         "Did your actual completed action reject this Tag?",
-                        (
-                            ("yes", "Yes: the performed action actually rejected it"),
-                            ("no", "No: the Tag and rejection remain owed"),
+                        tuple(
+                            (
+                                key,
+                                "Yes: actual performed rejection"
+                                if key == "yes"
+                                else "No: the rejection remains owed",
+                            )
+                            for key in data["outcome_options"]
                         ),
                     ),
                     Field("account", "Your factual action and actual outcome", paragraph=True),

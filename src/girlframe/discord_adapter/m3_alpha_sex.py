@@ -8,7 +8,7 @@ import discord
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
-from girlframe.engine.m2 import ChoiceAnswer, PlayInput
+from girlframe.engine.m2 import ChoiceAnswer
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_alpha_sex import SexService
@@ -194,8 +194,12 @@ async def open_alpha_choice(
 
         await open_role_punishment(interaction, RolePunishmentService(game), data["body"]["case"])
         return
+    if data["kind"] == "alpha_sex_counter_play":
+        from girlframe.discord_adapter.m2_ui import open_play
+
+        await open_play(interaction, game, parent=data, _pilot=True)
+        return
     detail = data["alpha_sex"]
-    sheet = None
     if data["kind"] == "alpha_sex_damage":
         fields = [
             Field(
@@ -209,7 +213,7 @@ async def open_alpha_choice(
         if detail["items"]:
             choices.append(("take", "Take one actual accessible held object"))
         if detail["can_counter"]:
-            choices.append(("play", "Make a genuine Keep Your Head Play"))
+            choices.append(("play", "Make a genuine ordinary Play"))
         if detail["can_punish"]:
             choices.append(("punish", "Inflict a real supported Punishment"))
         fields = [Field("opportunity", "Your one opportunity without reprisal", tuple(choices))]
@@ -232,46 +236,9 @@ async def open_alpha_choice(
     elif data["kind"] == "alpha_sex_wake":
         fields = [Field("account", "Actually waking from this source sleep", paragraph=True)]
     else:
-        sheet = await asyncio.to_thread(game.sheet, viewer)
-        from girlframe.discord_adapter.m3_dampener import fields as dampener_fields
-        from girlframe.discord_adapter.m3_dampener import modifier as dampener_modifier
-        from girlframe.services.m3_dampener import DampenerService
-
-        dampener_controls = await dampener_fields(interaction, DampenerService(game))
-        from girlframe.discord_adapter.m3_nightmare import keep_heat, keep_info
-        from girlframe.services.m3_nightmare import NightmareService
-
-        nightmare = await keep_info(interaction, NightmareService(game))
-        fields = [
-            Field("account", "Your genuine counter under this pressure", paragraph=True),
-            Field(
-                "heat",
-                "Heat to spend",
-                tuple((str(n), str(n)) for n in keep_heat(nightmare, sheet["heat"])),
-            ),
-        ] + dampener_controls
+        raise ValueError("Unsupported Alpha source choice")
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
-        if data["kind"] == "alpha_sex_counter_play":
-            assert sheet is not None
-            result = await asyncio.to_thread(
-                game.begin,
-                viewer_from_interaction(current),
-                str(current.id),
-                data["channel"],
-                sheet["revision"],
-                PlayInput(
-                    play="keep_your_head",
-                    heat=int(values["heat"][0]),
-                    dampener_modifier=dampener_modifier(values),
-                    context=values["account"],
-                    trigger_confirmed=True,
-                    parent=data["parent"],
-                ),
-            )
-            return "Actual source counter prepared. Continue its saved choices. " + str(
-                result["action_id"]
-            )
         if data["kind"] == "alpha_sex_damage":
             answer = ChoiceAnswer(options=(values["asset"][0],))
         elif data["kind"] == "alpha_sex_wake":

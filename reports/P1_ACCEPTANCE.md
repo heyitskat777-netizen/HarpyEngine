@@ -555,3 +555,56 @@ and one long native string; only the affected modules were rechecked. New static
 publication preflight follows. Registry/coverage remains RULES_SUBSET; exact-commit
 full regression, independent clarity/code review and human acceptance are pending.
 No bot restart, deployment, environment publication, AI or private-engine writes.
+
+### Received Orders and ordinary Alpha counters
+
+The owner testing policy remains minimum likely-flow checks during development;
+most automation is reserved for the final exact P1 candidate. The active queue
+now separates seven bounded deliverables from preserved historical package
+assignments, and coverage publication metadata is reconciled to d033610.
+
+- `pytest -q tests/rules/test_bonded_rejection.py::test_actual_received_order_native_refusal_preserves_parent_and_proves_mid_tag_consumption tests/rules/test_alpha_sex.py::test_actual_sleeping_source_native_ordinary_dive_counter_keeps_receipt_and_wake`: **1 passed,1 failed/66.85s**. The actual Order normal passed. Alpha's new test imported the wrong native function; no implementation failure was inferred from that import error.
+- Alpha-only retry after import correction: **1 failed/3.05s** because its synthetic policy omitted the existing menu's NPC/Flirt rule approvals. Only this fixture's explicit rules were added; no real release policy was approved.
+- Alpha-only retry with those synthetic approvals: **1 passed/4.17s**. The Order success was not rerun.
+
+Actual received-Order attachment preserves the original Order, issuer/receiver,
+parent, response choice and known roll. The whole receive chain is resume-only;
+a real mid-result rejection of the exact original Tag is proved by its canonical
+child choice. The later owner finding neither requires that consumed Tag to be
+still present nor erases it twice. Child, parent and root chat restoration must
+finish first; a low result that cannot refuse cannot certify successful refusal.
+Special Order producers and changed-context recipes remain explicit adapters.
+
+Alpha's real sleeping-source opportunity now opens the shared ordinary Play
+controls instead of a hardcoded Keep form. Eight finite basic/Heat families use
+actual counterpart resources, targets, receipt and held parent; completion still
+requires the real child and original owned wake. The passing new normal opens the
+native menu and completes a genuine Dive, preserving the original Alpha receipt.
+Own-recipe counters remain unimplemented by this finite adapter. Other families'
+new combinations were not run; original Keep tests are preserved for final P1.
+
+### Paid-installment loss and same-Frame regrowth
+
+`pytest -q tests/rules/test_consume.py::test_actual_paid_cap_installment_loss_native_regrowth_preserves_receipt_and_new_birth` initially failed **1/1.84s** because the new fixture assumed a cap after three purchases. The fixture now queries actual Frame capacity and makes real paid purchases until that cap. The same node alone then **passed1/4.73s**. Existing Budget/Sprite successes were not repeated.
+
+The shared small loss selection contains explicit Budget and paid-installment
+producer proofs. Paid loss requires its original typed receipt, purchase/Marriage
+Flow proof, actual current original Frame and canonical before/after legal cap
+exchange. A valid but ineligible linked/temporary component is not offered;
+broken provenance still fails closed. Regrowth consumes that precise loss once,
+preserves the former feature/Void, charges real costs and gives a new component
+identity without reviving ended occupants. Optional source kind is omitted for
+old Budget records. No shared purchase/removal rewrite or generic rule DSL was
+introduced. Accepted Defeat and other genuine loss producers remain explicit work.
+
+Changed-source preflight: formatting/lint14 Python paths (one unused native import
+removed), mypy11 source paths passed. The installment test alone changed afterward;
+its final static check and publication scan follow. This is not global static or
+full regression. All final P1, independent-review and human acceptance gates remain
+pending; bot OFF, no environment publication or deployment.
+
+Final affected-test formatting/lint passed after the cap fixture correction.
+Registry validation remains477 entries/270 subset/207 unimplemented/440 required/
+0 independently verified. Publication scan:1390 publishable files,40 preserved
+manifest entries,0 findings; whitespace check passed. Reproducible private source
+snapshot/check commands: `var/p1-order-installment-checkpoint-{paths,frozen,checks}.json`.

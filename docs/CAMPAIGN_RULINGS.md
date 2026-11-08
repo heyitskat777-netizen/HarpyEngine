@@ -3752,7 +3752,8 @@ original feature regrows as a new intact component in the same original current
 Frame, retaining Void and consuming its exact loss source once. Preserve actual
 Dive/Girl-Asset costs, capacity/replacement rules and mandatory birth/loss/Void
 consequences. The former component's occupants, custody and physical/control links
-stay ended. The first finite source is canonical Budget removal; expiry, Frame
+stay ended. Finite sources now include canonical Budget removal and an actual paid Asset
+Installment cap exchange, each with its own source proof. Expiry, Frame
 swap, reclassification and temporary grants do not establish permanent stock.
 Other missing-component producers remain implementation work. This delegated
 interpretation requires clarity review; later adjustments preserve source/cost/
@@ -3831,3 +3832,12 @@ an unrolled cancellation preserves source/history and allows a genuine new
 attempt. This extends the existing owner-authored performed rejection with real
 Play proof and requires clarity review. Actual Orders, specialised recipes and
 context/body transitions retain their own source requirements.
+
+The received-Order rejection adapter now proves the actual existing Order,
+receiver and original parent. This chain is resume-only, including an unrolled
+child after the real receiver response. A low result that cannot refuse cannot
+certify refusal. If the real mid child already consumes the original pending Tag,
+the owned outcome binds that canonical consumption event; it does not erase the
+Tag twice or restore it. This clarifies the finite implementation of the existing
+`bonded-play-linked-tag-rejection` ruling and does not grant special Order
+producers or remove their actual authority requirements.

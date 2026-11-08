@@ -2,11 +2,28 @@
 
 Owner authorized continuation2026-11-08. Bot OFF; RULES_SUBSET. Most automated testing deferred to final P1 candidate; only minimum likely-flow smoke during work. No unequal-rule percentages.
 
-Current local frozen delivery: genuine play-linked Tag rejection and actual
-Sprite-paid Eat Bite are integrated with passing likely flows; broader branches
-remain deferred. Root consolidates publication. Next concrete source gaps remain
-real Order/specialised rejection recipes, required own-recipe directions, and
-named ordinary body/asset-source consumers. No percentage from unequal inventory.
+Current published source: d033610 (focused CI42503304802 passed; full regression
+not run). Local received-Order rejection, eight-family ordinary Alpha counter and
+paid-installment regrowth integrations have minimum likely-flow evidence. Next
+finite work: Malleable prepares the genuine Vatgrown travel contract; AM prepares
+accepted-Defeat loss proof. Root owns all shared integration. Existing regrowth
+already supports capacity replacement for a proved loss; no duplicate work.
+
+| Deliverable | Owner | Dependency | Next concrete action | Completion evidence |
+|---|---|---|---|---|
+| Received-Order rejection and paid-installment regrowth | Sources frozen; root integration complete | Actual Order/parent/receiver; canonical paid installation/removal | Preserve minimums for final regression; close only demonstrated failures | Actual Order normal passed in combined1failed/1passed66.85s; paid installment1/4.73s; eight-family Alpha counter actual Dive1/4.17s |
+| Ordinary required-Play continuations | Root after current integration | Existing Princess, Alpha and Ankou real-child adapters | Close named own-recipe directives, own-recipe Alpha counterpart responses and supported nominations using actual resources and parent completion | Current finite restrictions identified; broader normal cases deferred to final run |
+| Vatgrown travel and learning dependencies | Next bounded assignment | Actual movement/chaperone source; learned-Play proof | Produce genuine unchaperoned-travel consequence and named printed learning consumers; reconcile fresh-Vatgrown death entry before assigning new code | Existing Prime/gifts/DNA/Brutalize code preserved; exact missing travel entry confirmed |
+| CONSUME permanent-loss recovery | AM after paid-installment handoff | Genuine surviving same-current-Frame loss | Add accepted-Defeat removal proof to existing regrowth selection; never treat ordinary damage or whole-Frame destruction as missing inventory | Budget loss normal already passed; paid installment active; accepted Defeat next |
+| Resolve remaining ordinary coverage claims | Root, bounded source-specific reconciliation | Existing all-type matrix/current source | Each unresolved claim gets an exact source entry, missing effect and normal reproduction, or implemented/unverified status | Stim removal, Newgirl discipline/protection, AM body/identity, CHANGELING lineage, vehicle aftermath and Strain are unresolved assertions, not blanket deferrals |
+| Freeze human-operated campaign | Root | Ordinary source checklist closed | Run deferred authored normals and mission→social/combat→recovery/Off-Duty→next mission; verify facilitator resume/blockers/roles/delivery/restore; fix demonstrated failures | Existing implementations preserved; integrated verification pending |
+| Final exact-candidate gates and player handoff | Root; independent reviewer; owner/players | Frozen source and disclosed limitations | Full regression including Deep-Brain-Spikes pagination; global static/migration/privacy/restore; independent review; prepare agreed Discord playtest | PENDING; focused CI is not full regression, player success or acceptance |
+
+The current queue groups dependent systems; its rows are not equal-sized tasks or a completion percentage. Mockingbird tiers/gates, Enforcer firearm, Oldgen rewrite, Casualty hardware, NPC/directed Flirt, AM/Bonded no-roll, Man repeat/Paired conversion, Sprite Bite, Wyvern combat and Court/Ankou/CHANGELING normals already have implementation. Preserve their authored deferred checks; do not reopen them as missing systems without a concrete failure.
+
+## Historical package evidence
+
+The table below preserves earlier assignments and scoped results. Its old next-action wording is historical; the bounded queue above is the working view.
 
 | Package | Owner | Dependency | Next action | Evidence/state |
 |---|---|---|---|---|
@@ -57,3 +74,5 @@ Published gameplay checkpoint **d32127c1fa272889c8374acb647845a24b005d71**: [foc
 Published preceding checkpoint **bef7d9ce9f002a9e1b8477e8c95456ddbbe653f9**: [focused CI42495599850](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42495599850) passed. Final full regression remains pending.
 
 Published preceding checkpoint **65b3e2be70742181920c8bd4ffc7632fc9645dc8**: [focused CI42498698473](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42498698473) passed. Full regression remains pending. Untiered no-circuit AM has no own Man11+ outcome; the old blanket adapter gap is reconciled in campaign rulings.
+
+Published **d033610cca7ee37498f171506570d801c8d11045**: [focused CI42503304802](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42503304802) passed; final full regression remains pending.

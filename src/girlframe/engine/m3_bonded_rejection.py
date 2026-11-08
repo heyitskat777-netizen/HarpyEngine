@@ -3,17 +3,30 @@
 from typing import Literal
 from uuid import NAMESPACE_URL, uuid5
 
+from pydantic import Field
+
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
 
-Play = Literal["keep_your_head", "check_sensors", "engage", "flirt", "dive_deep"]
+Play = Literal["keep_your_head", "check_sensors", "engage", "flirt", "dive_deep", "disobey_orders"]
 PLAYS = {
     "keep_your_head": "Keep Your Head",
     "check_sensors": "Check Your Sensors",
     "engage": "Engage",
     "flirt": "Flirt",
     "dive_deep": "Dive Deep",
+    "disobey_orders": "Disobey Orders (actual received Order)",
 }
+BASIC_PLAYS = {key: label for key, label in PLAYS.items() if key != "disobey_orders"}
+
+
+class OrderContext(Model):
+    order: str
+    parent: str
+    issue_event: str
+    issuer: ActorRef
+    receiver_choice: str
+    order_sha256: str
 
 
 class Request(Model):
@@ -29,6 +42,7 @@ class Request(Model):
     account: str
     target: ActorRef | None
     event: str
+    order: OrderContext | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class Attempt(Model):
@@ -59,6 +73,7 @@ class Finding(Model):
     achieved: bool
     account: str
     event: str
+    tag_consumed_event: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 KINDS: dict[type[Model], str] = {
