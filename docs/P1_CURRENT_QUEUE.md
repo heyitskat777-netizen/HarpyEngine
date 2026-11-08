@@ -2,13 +2,14 @@
 
 Owner authorized continuation2026-11-08. Bot OFF; RULES_SUBSET. Most automated testing deferred to final P1 candidate; only minimum likely-flow smoke during work. No unequal-rule percentages.
 
-Current published source: a10fb88 (focused CI42516556438 passed; full regression
-not run). Local distinct-Vatgrown death/reset/noticing and actual prisoner
-breakout/dealing sources are frozen with root-owned shared integration. Two
-minimum normals passed; alternate prisoner handling is authored but deferred.
-Next action: publish this coherent packet, then close named own-recipe required-
-Play and remaining ordinary source consumers. Most automation remains deferred
-to final P1; no whole-P1/full-M3 or independent-review claim.
+Current published source: 8cbd271 (focused CI42519162636 passed; full regression
+not run). Distinct-Vatgrown death/reset/noticing and actual introductory-prisoner
+breakout/dealing sources are published. Two minimum normals passed; alternate
+prisoner handling is authored but deferred. Next read-only contracts: actual AM
+Battery/Storage connection lifetimes (AM) and Ankou-nominated actual native Dose
+Up (Malleable), preserving existing sources. Root owns shared integration.
+Most automation remains deferred to final P1; no whole-P1/full-M3 or independent-
+review claim.
 
 | Deliverable | Owner | Dependency | Next concrete action | Completion evidence |
 |---|---|---|---|---|

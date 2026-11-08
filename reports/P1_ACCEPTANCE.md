@@ -812,3 +812,10 @@ worker/root scopes above. Registry477 entries/272 subset/205 unimplemented/
 440 required/0 independently verified. Repository1406 publishable files/
 40 preserved manifest entries/0 findings; whitespace check passed. Full regression,
 global migration/restore and independent/player gates remain pending; bot OFF.
+
+Published **8cbd27108ae79da155983168d4a95d158aebae19**;
+[focused CI42519162636](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42519162636)
+passed on that exact commit. Full-regression step skipped. The two new minimum
+nodes took2.60s and4.57s locally; this is not a speed comparison or broad test
+result. No further tests run. Next AM connection and Ankou/Dose source contracts
+are read-only, without worker coding release or tests. Bot OFF.

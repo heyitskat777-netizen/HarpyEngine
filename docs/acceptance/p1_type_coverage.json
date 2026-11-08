@@ -1,9 +1,9 @@
 {
   "status": "P1_IMPLEMENTATION_AUTHORIZED_TESTING_PENDING",
-  "published_source": "a10fb88a7813fb4bc1e8d67906d54c0372d48aea",
+  "published_source": "8cbd27108ae79da155983168d4a95d158aebae19",
   "main_merge": "c4550ecbd89bbf84363537e7bdf763c2177a998f",
   "scope": "10Girl labels;10Frame labels representing9official Frame rulesets; JANUS-B uses JANUS",
-  "evidence_note": "Published a10fb88; focused CI42516556438 passed, full skipped. Local actual Vatgrown death→fresh native activation/noticing1/4.57s and prisoner breakout→movement→factual failure1/2.60s are minimum likely-flow evidence. Alternate intervention is authored but unrun. Original full M3/RULES_SUBSET and final full/global/independent/player gates remain pending.",
+  "evidence_note": "Published 8cbd271; focused CI42519162636 passed, full skipped. actual Vatgrown death→fresh native activation/noticing1/4.57s and prisoner breakout→movement→factual failure1/2.60s are minimum likely-flow evidence. Alternate intervention is authored but unrun. Original full M3/RULES_SUBSET and final full/global/independent/player gates remain pending.",
   "rows": [
     {
       "category": "Girl",
