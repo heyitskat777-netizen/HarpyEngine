@@ -1,6 +1,6 @@
 # Current M3 queue
 
-Updated 2026-11-08. Gameplay integration source: `c619b73`; local branch
+Updated 2026-11-08. Gameplay integration source: `f2cbc4f`; local branch
 `codex/integrated-repairs-20261107`. **RULES_SUBSET; bot off.** No deployment,
 environment publication, recovered-engine writes, AI/M4 or Ancillary activation.
 This working list separates upcoming work from completed scoped checkpoints.
@@ -10,8 +10,8 @@ Registry entries and workflows overlap and differ in size; counts are not percen
 
 | Workflow | Owner / state | Dependency | Next concrete action | Completion evidence |
 |---|---|---|---|---|
+| Newgirl Mentor daily workflow | Oldgen agent + root / bounded implementation | Shared original-person mentor proof, actual companion invitations and canonical name producer | Require actual Newgirl attendance in Mentor Off-Duty scenes and Mentor-authored callsign; preserve owned cosmetics | Existing M2 rank/Tags/setup verified as reused; new source contract frozen, no acceptance yet |
 | Newgirl Trainee | AM agent + root / bounded source contract | Genuine original mentor, actual teaching and real duty/Punishment consumers | Implement all three printed teaching choices and corresponding actual duty outcome | Contract/dependency reconciliation next; no acceptance yet |
-| Princess Show Dog | Oldgen agent + root / bounded source implementation | Actual Go-OffDuty source, NPC/Bond/message effects and genuine risk discipline | Hook required period work and both independent printed choices; preserve existing standards work | Relevant source reconciled; no existing Show Dog consumer found; contract/API frozen next |
 | Successor | Root / lifecycle dependency queued | Proven singleton Handler, unranked Girl and actual link-removal gaps | Assign source-bound concurrent junior/full Handler lifecycle and actual threshold consumers; avoid a Gold-Star-only placeholder | Frozen346-word source/dependency contract,12 inspected dependency hashes; no code or acceptance |
 | Remaining required core systems | Root + bounded assignments / open | Existing source inventory and actual consumers | Select the next whole dependency-ready gameplay workflow; keep unsupported branches visible | [Registry](../rules/registry.json), [remaining scope](M3_REMAINING_WORK.md), [acceptance](acceptance/m3_rules.json) |
 | Final integrated candidate | Root / blocked by required gameplay | Frozen full core candidate and complete ordinary workflows | Run final full regression and global static/migration/privacy/contract checks | Pending; focused/segmented results do not substitute |
@@ -25,7 +25,7 @@ active pair. A partial registry entry can still contain required missing branche
 
 | Upcoming workflow | Assignment | Relevant dependency | Next concrete action | Completion evidence |
 |---|---|---|---|---|
-| Remaining Girl workflows | Root queue | Current Oldgen/Vatgrown work; existing mentor, AM and paired-person records | Finish Oldgen/Vatgrown Sex, Newgirl teaching/coordination, Casualty, Bonded and AM source workflows; reconcile Show Dog with existing standards | Pending; existing subset evidence remains scoped |
+| Remaining Girl workflows | Root queue | Current Oldgen/Vatgrown work; existing mentor, AM and paired-person records | Close remaining Oldgen Sex adapters; finish Vatgrown Sex, Newgirl teaching/coordination, Casualty, Bonded and AM source workflows; reconcile Show Dog with existing standards | Pending; existing subset evidence remains scoped |
 | Remaining Frame workflows | Root queue | Actual resources, control, bodies and source consequences | Complete Prince, CONSUME, Wyvern and Changeling workflows and remaining special Requisitions/Frame interactions | Pending; do not restart completed JANUS/Leviathan/Ankou work |
 | Handler playbooks and last advancements | Root queue | Actual Handler persona, owned response/discipline and concurrent-role ports for Successor | Finish source-owned playbook outcomes, Successor lifecycle and Last Resort | Pending; Successor contract identifies concrete role gaps |
 | Remaining Strain and Endgames | Root queue | Consuming playbook/world/lifecycle effects | Implement each outstanding result through its actual consequences and closure, retaining prior table evidence | Pending; scheduling and acknowledgements alone do not complete effects |
@@ -39,6 +39,7 @@ These are implementation evidence, not independent certification or milestone si
 
 | Workflow | Owner / state | Dependency | Next concrete action | Completion evidence |
 |---|---|---|---|---|
+| Princess Show Dog | Oldgen agent + root / committed within scope | Actual Go-OffDuty source, both choice lists, NPC/Bond/message and real risk discipline | `f2cbc4f`; keep broader role/body adapters visible | Integrated9 passed /13.27s; static12 Python/11 source after annotation/local rename only; offline native imports,11 CI cases collected only |
 | Unassuming Doll | AM agent + root / committed within scope | Actual source effects, information, real RolePunishment and source cast exit/return | `c619b73`; remaining Vatgrown and other actual-act/body adapters stay visible | Integrated11 passed /15.73s; coherent static14 Python/13 source; offlineSDK17 commands;13 CI cases collected only |
 | Oldgen Sex Play | Oldgen agent + root / committed within scope | Actual source/receipt/choices, current maxim text and independent recovery | `3e8ef8b`; temporary maxim rewrite/body adapters stay visible | Integrated12 passed /19.20s; coherent static14 Python/13 source; offlineSDK16 commands;14 CI cases collected only |
 | Oldgen maxim/advice | Oldgen agent + root / committed within scope | Genuine source Heat/Tag, ordinary unmark grants and actual listening | `b9c3f13`; Oldgen Sex/other body adapters stay explicit | Integrated8 passed /9.56s; coherent static12 Python/11 source; offlineSDK15 commands;10 CI cases collected only |

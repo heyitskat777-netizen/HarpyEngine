@@ -74,9 +74,23 @@
       "id": "M3-003",
       "title": "Princess Show Dog both extra choices",
       "expected": "Printed second selection/NPC Bond not dropped.",
-      "status": "NOT_RUN",
-      "planned_tests": [],
-      "evidence": []
+      "status": "IN_PROGRESS",
+      "planned_tests": [
+        "tests/rules/test_show_dog.py"
+      ],
+      "evidence": [
+        {
+          "test_name": "Both Show Dog lists, actual risk and source-authorized NPC introduction",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_show_dog.py tests/rules/test_world_service.py::test_npc_control_is_claimed_by_actual_member_and_keeps_private_records_private tests/rules/test_world_service.py::test_handler_cannot_introduce_a_self_controlled_director tests/rules/test_off_duty_cycle.py::test_actual_preparation_owned_rolls_recovery_review_and_world_end_are_resumable tests/rules/test_vatgrown.py::test_low_actual_observer_punishment_real_effect_then_benefit_and_parent_chat_closure tests/test_m2_game.py::test_live_default_gate_and_active_editor_protection --maxfail=1 --junitxml=var/m3-show-dog-integrated.xml",
+          "actual_result": "9 passed in13.27s; final coherent static12 Python/11 source after annotation/local rename only; registry/repository/native offline imports passed;11 CI cases collected only.",
+          "log_or_trace": "var/m3-show-dog-integrated.xml; var/m3-show-dog-union-static.json; var/m3-show-dog-union-source-snapshot.json; var/m3-show-dog-handoff.json",
+          "git_commit": "f2cbc4f093152f2fc9f4be31f6a0b362ebe90d3c",
+          "limitation": "Broader role/body/authority and special NPC source adapters remain required. Focused offline evidence only; final full/independent/human gates pending."
+        }
+      ],
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN"
     },
     {
       "id": "M3-004",
