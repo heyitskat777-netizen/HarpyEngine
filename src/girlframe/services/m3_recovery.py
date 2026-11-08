@@ -119,8 +119,20 @@ def capture(
             if saved is None or json.loads(saved) != receipt:
                 raise WorkflowError("Recover the original immutable roll receipt first.")
     known = any(x["data"].get("receipt") is not None for x in actual.values())
+    feedback_committed = False
+    for action in actual.values():
+        if action["data"].get("ankou_feedback"):
+            from girlframe.services.m3_ankou_feedback import prove as prove_feedback
+
+            source = prove_feedback(
+                game, c, load_state(c, game.store.campaign_id), action["data"]["ankou_feedback"]
+            )
+            if source.action != action["id"]:
+                raise WorkflowError("Preserve the actual interrupted Feedback source.")
+            feedback_committed = True
     cancellable = (
         not known
+        and not feedback_committed
         and len(actual) == 1
         and (
             root["data"]["play"] in (*PLAY_IDS, *HEAT_IDS)
@@ -264,6 +276,10 @@ class RecoveryService:
             ):
                 raise WorkflowError("Recover the actual original interruption source first.")
             if cancel and not snapshot.cancellable:
+                if root["data"].get("ankou_feedback"):
+                    raise WorkflowError(
+                        "Committed Feedback costs and required choices cannot be discarded."
+                    )
                 raise WorkflowError(
                     "Known dice or prior responses cannot be discarded or refunded."
                 )

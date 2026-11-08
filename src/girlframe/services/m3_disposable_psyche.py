@@ -49,6 +49,14 @@ def prepare_disposal(
             "SOURCE_CLONE_DISPOSAL_REQUIRED: remove only an original native Identity"
         )
     rules.admit_removal(state, sheet, identity)
+    from girlframe.engine.m3_ankou_feedback import RULE as feedback_rule
+    from girlframe.engine.m3_ankou_feedback import final_mark
+
+    if final_mark(state, sheet, identity.id):
+        registry = Access(game.store).registry
+        if registry is None:
+            raise WorkflowError("SOURCE_ANKOU_FEEDBACK_REQUIRED: release the actual consumer")
+        registry.require_available(feedback_rule)
 
 
 def prepare_off_duty(game: GameService, state: GameState, owner: int) -> None:
@@ -67,6 +75,9 @@ def record_disposal(
 ) -> None:
     prepared = PlayInput.model_validate_json(json.dumps(action["data"]["prepared"]))
     if not prepared.disposable_heat:
+        return
+    if action["data"].get("ankou_feedback"):
+        link_feedback_disposal(game, c, state, action, event)
         return
     owner = int(action["actor_id"])
     prepare_disposal(game, c, before, owner, prepared)
@@ -132,6 +143,8 @@ def prove_disposal(
     if value is None:
         raise WorkflowError("Recover the actual Disposable Psyche removal")
     action = game.action(c, value.id)
+    if value.commit_event:
+        return prove_feedback_disposal(game, c, state, value, action)
     before, born = _before(game, c, value.event), _history(c, game, value.event)
     event = (
         c.execute(
@@ -176,6 +189,122 @@ def prove_disposal(
     if next(x for x in rules.disposals(scratch) if x.id == value.id) != value:
         raise WorkflowError("Recover the exact original removed Identity and additional Heat")
     return value
+
+
+def record_committed_disposal(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    before: GameState,
+    event: str,
+) -> None:
+    """A real Feedback mark is durable before any dice or later purpose/Asset changes."""
+    prepared = PlayInput.model_validate_json(json.dumps(action["data"]["prepared"]))
+    if not prepared.disposable_heat:
+        return
+    from girlframe.engine.m3_ankou_feedback import get
+
+    value = get(state, action["data"]["ankou_feedback"])
+    owner = int(action["actor_id"])
+    original = before.sheets[str(owner)]
+    entry = next(x for x in original.identities if x.id == prepared.identity)
+    if (
+        value.mark_event != event
+        or value.action != action["id"]
+        or value.prepared != prepared
+        or value.identity != entry
+        or any(x.id == entry.id for x in state.sheets[str(owner)].identities)
+    ):
+        raise WorkflowError("Record only the actual source-bound Ankou Identity removal")
+    rules.put(
+        state,
+        rules.Disposal(
+            id=action["id"],
+            actor=value.actor,
+            identity=entry.model_copy(deep=True),
+            gain=prepared.gain,
+            extra=prepared.disposable_heat,
+            heat_before=original.heat,
+            heat_after=state.sheets[str(owner)].heat,
+            spent=prepared.heat,
+            receipt=None,
+            event=event,
+            commit_event=event,
+        ),
+    )
+
+
+def prove_feedback_disposal(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    value: rules.Disposal,
+    action: dict[str, Any],
+) -> rules.Disposal:
+    from girlframe.services.m3_ankou_feedback import prove
+
+    source = prove(game, c, state, action["data"].get("ankou_feedback", ""))
+    born = next(
+        (x for x in rules.disposals(_history(c, game, source.mark_event)) if x.id == value.id), None
+    )
+    fixed = tuple(k for k in rules.Disposal.model_fields if k not in ("receipt", "roll_event"))
+    if (
+        born is None
+        or any(getattr(born, k) != getattr(value, k) for k in fixed)
+        or value.commit_event != source.mark_event
+        or value.event != source.mark_event
+        or value.identity != source.identity
+        or value.actor != source.actor
+        or value.heat_after != source.heat_committed
+        or value.heat_before != source.heat_before
+        or born.receipt is not None
+        or born.roll_event is not None
+    ):
+        raise WorkflowError(
+            "Preserve the immutable actual pre-RNG removal and original Heat commitment"
+        )
+    if value.receipt is None:
+        if value.roll_event is not None or source.rolled_event is not None:
+            raise WorkflowError("Recover the actual later receipt linkage")
+        return value
+    if (
+        value.roll_event != source.rolled_event
+        or value.receipt != source.receipt
+        or action["data"].get("receipt", {}).get("disposable_psyche") != value.id
+    ):
+        raise WorkflowError(
+            "Prove the actual later roll, without replaying pre-Feedback resource changes"
+        )
+    return value
+
+
+def link_feedback_disposal(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    event: str,
+) -> None:
+    value = next((x for x in rules.disposals(state) if x.id == action["id"]), None)
+    if value is None:
+        raise WorkflowError("Recover the genuine earlier Feedback removal")
+    prove_feedback_disposal(game, c, state, value, action)
+    receipt = action["data"].get("receipt")
+    if (
+        value.receipt
+        or value.roll_event
+        or not receipt
+        or receipt.get("disposable_psyche") != value.id
+    ):
+        raise WorkflowError("Link one actual post-Feedback roll to the original mark commitment")
+    linked = value.model_copy(update=dict(receipt=receipt["id"], roll_event=event))
+    state.facts = [
+        x
+        for x in state.facts
+        if not (x.get("kind") == "disposable_disposal" and x.get("id") == value.id)
+    ]
+    rules.put(state, linked)
 
 
 def _latest(c: Connection, game: GameService, identity: str) -> dict[str, Any]:

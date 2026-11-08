@@ -24,8 +24,10 @@ class Disposal(Model):
     heat_before: int = Field(ge=0)
     heat_after: int = Field(ge=0)
     spent: int = Field(ge=0)
-    receipt: str
+    receipt: str | None
     event: str
+    commit_event: str | None = Field(default=None, exclude_if=lambda x: x is None)
+    roll_event: str | None = Field(default=None, exclude_if=lambda x: x is None)
 
 
 class Trigger(Model):
@@ -92,12 +94,21 @@ def removable(sheet: PilotSheet, identity: IdentityState) -> None:
 def admit_removal(state: GameState, sheet: PilotSheet, identity: IdentityState) -> None:
     removable(sheet, identity)
     if sheet.frame == "PROJECT ANKOU":
-        from girlframe.engine.m3_clone_am import additional_identities
+        from girlframe.engine.m3_ankou_feedback import final_mark
 
-        effective = (*sheet.identities, *additional_identities(state, sheet.owner))
-        if all(x.marked or x.id == identity.id for x in effective):
-            raise ValueError(
-                "SOURCE_ANKOU_FEEDBACK_REQUIRED: complete the actual Feedback consumer first"
+        # Actual publication still requires the service's source-gated Feedback hold;
+        # role publishers retain their unresolved-followup guard.
+        if final_mark(state, sheet, identity.id):
+            from girlframe.engine.m3_actor_state import ActorRef
+            from girlframe.engine.m3_nightmare import current
+
+            if sheet.character_id is None:
+                raise ValueError(
+                    "SOURCE_ANKOU_FEEDBACK_REQUIRED: recover the original native actor"
+                )
+            current(
+                state,
+                ActorRef(kind="pilot", entity=str(sheet.owner), incarnation=sheet.character_id),
             )
 
 

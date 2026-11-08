@@ -924,6 +924,22 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_ankou_feedback import FeedbackService
+
+            for feedback in FeedbackService(GameService(self.store))._tasks(connection, viewer):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, feedback),
+                        prefix="ankou-feedback:",
+                        source="ankou_feedback",
+                        counterpart="Original Ankou and actual selected person",
+                        effect="Resolve the actual Feedback choice or read saved source history.",
+                        details="Other humans own their replies; silence chooses nothing.",
+                        primary="Review Feedback",
+                        task="m3_ankou_feedback",
+                    )
+                )
+
             from girlframe.services.m3_disposable_psyche import PsycheService
 
             for psyche in PsycheService(self.store)._tasks(connection, viewer):

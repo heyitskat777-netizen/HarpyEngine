@@ -578,26 +578,51 @@ def apply(
             or set(occupants) != set(state.order)
         ):
             raise ValueError("Assign every current Girl to one room with at least one other Girl")
-        for room in choice.rooms:
-            for i, first in enumerate(room):
-                for second in room[i + 1 :]:
-                    key = pair_key(first, second)
-                    depth = state.bonds.get(key, 0)
-                    if depth == 2:
-                        from girlframe.engine.m3_actor_bonds import current_ref
-                        from girlframe.engine.m3_leviathan_obsession import allowed_gain
+        from girlframe.engine.m3_actor_bonds import change as change_room_bond
+        from girlframe.engine.m3_actor_bonds import current_ref as room_person
 
-                        for uid in (first, second):
-                            state.sheets[str(uid)].heat += allowed_gain(
-                                state,
-                                current_ref(state, uid),
-                                2,
-                                "Shared room Intense overflow",
-                                source_event or "",
-                            )
-                            state.sheets[str(uid)].revision += 1
-                    else:
-                        state.bonds[key] = depth + 1
+        if source_event is not None:
+            for room in choice.rooms:
+                for i, first in enumerate(room):
+                    for second in room[i + 1 :]:
+                        state = change_room_bond(
+                            state,
+                            room_person(state, first),
+                            room_person(state, second),
+                            1,
+                            source_event,
+                        )
+        else:
+            # Preserve source-free numeric-only reducer calls. An existing
+            # canonical room edge needs the real event, never a second authority.
+            if any(
+                {edge.first, edge.second} == {room_person(state, first), room_person(state, second)}
+                for room in choice.rooms
+                for i, first in enumerate(room)
+                for second in room[i + 1 :]
+                for edge in state.actor_bonds
+            ):
+                raise ValueError("Canonical room Bonds need the actual source event")
+            for room in choice.rooms:
+                for i, first in enumerate(room):
+                    for second in room[i + 1 :]:
+                        key = pair_key(first, second)
+                        depth = state.bonds.get(key, 0)
+                        if depth == 2:
+                            from girlframe.engine.m3_actor_bonds import current_ref
+                            from girlframe.engine.m3_leviathan_obsession import allowed_gain
+
+                            for uid in (first, second):
+                                state.sheets[str(uid)].heat += allowed_gain(
+                                    state,
+                                    current_ref(state, uid),
+                                    2,
+                                    "Shared room Intense overflow",
+                                    source_event or "",
+                                )
+                                state.sheets[str(uid)].revision += 1
+                        else:
+                            state.bonds[key] = depth + 1
         world = world_rules.update(world, rooms=choice.rooms)
     elif rule == "strain.budget.low.6.2":
         fields(choice, {"target", "npc_jobs"})

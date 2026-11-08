@@ -1,12 +1,14 @@
-# Current Princess/Disposable Psyche delivery and affected shared behavior.
-# Previous focused selections remain in Git/full suite; final M3 mode runs all tests.
-tests/rules/test_princess_sex.py
+# Current Ankou Feedback delivery and directly affected existing consumers.
+# Earlier selections stay in Git/full suite; final M3 mode runs all tests.
+tests/rules/test_ankou_feedback.py
 tests/rules/test_disposable_psyche.py
-tests/test_m2_game.py::test_keep_three_tiers_and_handler_ownership
-tests/test_m2_game.py::test_heat_identity_before_roll_and_forced_spend
-tests/rules/test_tag_markers.py::test_new_own_role_cannot_bypass_existing_self_mark_exception_through_owned_npc
-tests/rules/test_gender_designation.py
-# Preserve privacy, pause/restart, delivery isolation and release boundaries.
+tests/rules/test_strain_effects.py::test_room_assignments_cover_every_pilot_and_apply_bond_depth_or_overflow_heat
+tests/rules/test_shared_recovery.py::test_known_root_restores_only_pending_decisions_and_preserves_receipt_spending_and_answers
+tests/rules/test_shared_recovery.py::test_unrolled_cancellation_is_owned_and_allowed_while_paused_without_any_refund
+tests/rules/test_budget_removal.py::test_real_two_owner_native_removal_helpless_defeat_endpoint_and_private_saved_records
+tests/rules/test_supply_drop.py::test_actual_expiry_last_usable_frame_context_requires_real_defeat_before_mission_rewards
+tests/rules/test_supply_drop.py::test_actual_expiry_exposes_full_void_family_and_owned_threshold_blocks_mission
+# Release, privacy, pause/restart and delivery integrity remain explicit.
 tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng
 tests/test_m2_game.py::test_campaign_isolation_and_delivery_uncertainty_no_reroll
 tests/test_m2_game.py::test_live_default_gate_and_active_editor_protection

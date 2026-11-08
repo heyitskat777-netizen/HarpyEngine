@@ -446,10 +446,19 @@ class GameWorker:
                         if source_author is None:
                             raise WorkflowError("Recover this actual child decision author.")
                         author = source_author
+                    roll_key = "m2.confirmed_roll:" + row["id"]
+                    if action["data"].get("ankou_feedback"):
+                        from girlframe.services.m2_state import load_state
+                        from girlframe.services.m3_ankou_feedback import resume_inputs
+
+                        with self.game.store.engine.connect() as c:
+                            committed = resume_inputs(
+                                self.game, c, load_state(c, self.game.store.campaign_id), action
+                            )
+                        if committed is not None:
+                            roll_key = "m3.ankou_resume:" + row["id"] + ":" + committed.commit_event
                     viewer = await gateway.actor(author)
-                    await asyncio.to_thread(
-                        self.game.roll, viewer, "m2.confirmed_roll:" + row["id"], row["id"]
-                    )
+                    await asyncio.to_thread(self.game.roll, viewer, roll_key, row["id"])
             except WorkflowError:
                 continue  # Paused/stale inputs stay recoverable and cannot spend or reroll.
 

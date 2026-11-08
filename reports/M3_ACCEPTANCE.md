@@ -1,5 +1,53 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Ankou Feedback and durable unrolled commitments — 2026-11-08
+
+Extends source `0f4659f`. Native final-Identity marking now saves one genuine
+Identity/Heat commitment before RNG, then requires actual Feedback choices. Its
+fixed source resumes without another mark/debit and uses a distinct stable roll
+key, preserving the earlier cached no-receipt response. Disposable removal links
+the original mark event to the later genuine receipt; old records retain their
+serialization and proof path. No dice or outcome are invented for the interruption.
+
+The owned flows exercise a person-authored purpose/new Identity, a real Bond cut
+and owned Girl Asset, and an actual co-present Frame-Asset tear with 5 Heat and a
+real targeted Flirt child before the original roll resumes. Refusal causes actual
+Helpless and ends the original unrolled Play; real ordinary recovery follows chat
+restoration. Death uses actual archive/career consequences without a fake roll.
+Staff can abort/restore chat while committed costs and Feedback work survive:
+known_roll remains false, cancellation is unavailable, and recovery reopens the
+same required choices. Private counterpart cards omit the Pilot's resources.
+
+The causal Budget room producer now updates canonical Bonds using the real event.
+It previously created a second numeric Bond after Feedback had cut the canonical
+edge. Source-free numeric-only reducer calls retain their behavior; an existing
+canonical room edge requires the actual event. Ordinary tear proof joins the finite
+Asset-loss source protocol. Last-Frame/full-Void and linked hardware paths remain
+guarded before loss until real held-parent continuations exist.
+
+| Executed evidence | Result and scope |
+|---|---|
+| Three distinct native normals | 3 passed /12.49s; `var/m3-ankou-feedback-normal.xml` |
+| Main after final OOC recovery/source guards | 1 passed /8.27s; `var/m3-ankou-feedback-recovery-normal.xml`; overlaps the preceding main, not a fourth scenario |
+| Affected old consumers | First 14 checks: 13 passed/1 failed /24.55s; only legacy room guard failed; narrowed that guard without changing tests, then 1 passed /1.13s in `var/m3-ankou-room-legacy-final.xml` |
+| Coherent changed-file static | Ruff/format for 18 Python files and mypy for 17 source modules passed without drift; `var/m3-ankou-union-static.json`, `var/m3-ankou-union-source-snapshot.json` |
+| Offline SDK registration | Ankou command present; 12 campaign subcommands, typed Order unchanged; no login/network/command execution |
+
+The first gameplay attempt's Budget duplicate-Bond failure is preserved in the
+worker handoff and `var/m3-ankou-feedback-first-attempt.xml`. Final scope/commands
+are in `var/m3-ankou-feedback-contract.json` and `var/m3-ankou-root-evidence.json`.
+These are separate focused runs. They are not a green full regression or remote
+CI result. The earlier failed full baseline and repaired-node evidence remain.
+
+Required gaps: specialised/parented marking, Clone/Relay producers, other body or
+counterpart adapters, linked/protected resources, and last-Frame/full-Void source
+continuations. Girl Insurance prevention and broader conditional combinations
+remain separately unplayed. Two adjustable interpretations need clarity review.
+Registry remains RULES_SUBSET; final full/global/migration/privacy checks,
+independent source review and human acceptance are pending. Bot remains off;
+no deployment, environment publication or private-engine writes.
+
+
 ## Princess source choices and Disposable Psyche — 2026-11-07
 
 Extends gameplay source `99865b0`; bot stays off. These two bounded native workflows

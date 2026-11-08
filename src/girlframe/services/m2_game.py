@@ -1068,6 +1068,9 @@ class GameService:
             from girlframe.services.m3_princess_sex import child_source
 
             princess_child = child_source(self, c, viewer, state, prepared, channel)
+            from girlframe.services.m3_ankou_feedback import prepare_child as prepare_ankou_child
+
+            ankou_child = prepare_ankou_child(self, c, viewer, state, prepared, channel)
             mechanical_owner = (
                 int(princess_child["actor_controller"]) if princess_child else viewer.user_id
             )
@@ -1140,6 +1143,7 @@ class GameService:
                 prepared.source_work is not None
                 and bomb_collar_source is None
                 and princess_child is None
+                and ankou_child is None
                 and prepared.play
                 not in (
                     "alpha_sex",
@@ -1571,6 +1575,7 @@ class GameService:
                             "alpha_counter_play",
                             "alpha_sex_counter_play",
                             "princess_sex_child",
+                            "ankou_feedback_child",
                             "battle_dormant_dive",
                             "battle_dormant_threshold",
                             "mockingbird_void_threshold",
@@ -1586,6 +1591,8 @@ class GameService:
                 )
                 if required is None:
                     raise WorkflowError("Only the required player can make this response Play.")
+                if required["kind"] == "ankou_feedback_child" and ankou_child is None:
+                    raise WorkflowError("Use the actual Feedback source and its fixed target.")
                 if required["kind"] == "princess_sex_child" and princess_child is None:
                     raise WorkflowError("Use this fixed counterpart's actual Princess directive.")
                 if required["kind"] == "secretary_response_play":
@@ -1810,6 +1817,8 @@ class GameService:
                 "result": {},
                 "choices": {},
             }
+            if ankou_child is not None:
+                data["ankou_feedback_child"] = ankou_child
             if princess_child is not None:
                 data["princess_child"] = princess_child
             if princess_sex is not None:
@@ -2198,25 +2207,30 @@ class GameService:
                     if legacy_cast:
                         state.scene_casts.append(source_cast)
                         marriage_cast_saved = True
-            secretary_event = (
+            begin_source_event = (
                 str(uuid4())
-                if secretary_response is not None or princess_child or princess_sex
+                if secretary_response is not None or princess_child or princess_sex or ankou_child
                 else None
             )
+            if ankou_child is not None:
+                from girlframe.services.m3_ankou_feedback import bind_child as bind_ankou_child
+
+                assert begin_source_event is not None
+                bind_ankou_child(self, c, state, action, begin_source_event)
             if princess_child is not None:
                 from girlframe.services.m3_princess_sex import bind_child
 
-                assert secretary_event is not None
-                bind_child(self, c, state, action, secretary_event)
+                assert begin_source_event is not None
+                bind_child(self, c, state, action, begin_source_event)
             if princess_sex is not None:
                 from girlframe.services.m3_princess_sex import bind as bind_princess
 
-                bind_princess(state, action, secretary_event)
+                bind_princess(state, action, begin_source_event)
             if secretary_response is not None:
                 from girlframe.services.m3_secretary import link_response
 
-                assert secretary_event is not None
-                link_response(state, secretary_response["gunpoint"], identity, secretary_event)
+                assert begin_source_event is not None
+                link_response(state, secretary_response["gunpoint"], identity, begin_source_event)
             event = self.event(
                 c,
                 viewer.user_id,
@@ -2237,6 +2251,7 @@ class GameService:
                 or dose_up is not None
                 or princess_sex is not None
                 or princess_child is not None
+                or ankou_child is not None
                 or prepared.disposable_heat
                 or am_scrutinized is not None
                 or am_code is not None
@@ -2255,6 +2270,7 @@ class GameService:
                     or dose_up is not None
                     or princess_sex is not None
                     or princess_child is not None
+                    or ankou_child is not None
                     or am_scrutinized is not None
                     or am_code is not None
                     or appearance_reset
@@ -2262,7 +2278,7 @@ class GameService:
                     or secretary_response is not None
                 )
                 else None,
-                event_id=secretary_event,
+                event_id=begin_source_event,
                 action_id=identity,
                 play=prepared.play,
             )
@@ -2510,6 +2526,9 @@ class GameService:
                 authorize_keep(self, c, state, action)
             if HandlerService(self.store).current(c)[1].handler_id != state.handler:
                 raise WorkflowError("STALE_HANDLER: staff recovery is required.")
+            from girlframe.services.m3_ankou_feedback import resume_inputs
+
+            committed = resume_inputs(self, c, state, action)
             sheet = state.sheets[str(action["actor_id"])]
             if sheet.revision != action["data"]["sheet_revision"]:
                 raise WorkflowError("STALE_SHEET: recover the unrolled action; no dice consumed.")
@@ -2628,44 +2647,51 @@ class GameService:
                 from girlframe.services.m3_refusal import pre_roll as consume_refusal
 
                 refusal_modifiers = consume_refusal(self, c, viewer, state, action)
+            if committed is None:
+                from girlframe.services.m3_ankou_feedback import hold_before_roll
+
+                held_feedback = hold_before_roll(self, c, viewer, state, action, key)
+                if held_feedback is not None:
+                    return held_feedback
             disposal_before = (
                 GameState.model_validate_json(state.model_dump_json())
                 if prepared.disposable_heat
                 else None
             )
-            from girlframe.services.m3_disposable_psyche import prepare_disposal
+            if committed is None:
+                from girlframe.services.m3_disposable_psyche import prepare_disposal
 
-            prepare_disposal(self, c, state, sheet.owner, prepared)
-            if prepared.identity:
-                from girlframe.engine.m3_clone_am import mark_additional
-                from girlframe.services.m3_clone_am import prove_additional
+                prepare_disposal(self, c, state, sheet.owner, prepared)
+                if prepared.identity:
+                    from girlframe.engine.m3_clone_am import mark_additional
+                    from girlframe.services.m3_clone_am import prove_additional
 
-                prove_additional(self, c, state, sheet.owner, prepared.identity)
-                share = mark_additional(
-                    state, sheet, prepared.identity, prepared.gain, prepared.pair_share
-                )
-                if share is None:
-                    share = mark_identity(
-                        sheet,
-                        prepared.identity,
-                        prepared.gain,
-                        prepared.pair_share,
-                        state=state,
-                        disposable_heat=prepared.disposable_heat,
+                    prove_additional(self, c, state, sheet.owner, prepared.identity)
+                    share = mark_additional(
+                        state, sheet, prepared.identity, prepared.gain, prepared.pair_share
                     )
-                if share:
-                    state.sheets[str(sheet.pair)].heat += share
-                    state.sheets[str(sheet.pair)].revision += 1
-            if (
-                m3 is None
-                and (
-                    not action["data"].get("janus")
-                    or action["data"]["janus"].get("mode") == "pandora"
-                )
-                and not prepared.kicked_puppy_basis
-                and not action["data"].get("nightmare_core")
-            ):
-                spend_heat(sheet, prepared.heat)
+                    if share is None:
+                        share = mark_identity(
+                            sheet,
+                            prepared.identity,
+                            prepared.gain,
+                            prepared.pair_share,
+                            state=state,
+                            disposable_heat=prepared.disposable_heat,
+                        )
+                    if share:
+                        state.sheets[str(sheet.pair)].heat += share
+                        state.sheets[str(sheet.pair)].revision += 1
+                if (
+                    m3 is None
+                    and (
+                        not action["data"].get("janus")
+                        or action["data"]["janus"].get("mode") == "pandora"
+                    )
+                    and not prepared.kicked_puppy_basis
+                    and not action["data"].get("nightmare_core")
+                ):
+                    spend_heat(sheet, prepared.heat)
             faces = self.dice.roll()
             if len(faces) != 2 or any(type(x) is not int or not 1 <= x <= 6 for x in faces):
                 raise ValueError("Dice source returned invalid faces")
@@ -2731,6 +2757,8 @@ class GameService:
                 or action["data"].get("dose_up")
                 or action["data"].get("princess_sex")
                 or action["data"].get("princess_child")
+                or action["data"].get("ankou_feedback")
+                or action["data"].get("ankou_feedback_child")
                 or prepared.disposable_heat
                 or action["data"].get("am_scrutinized")
                 or action["data"].get("am_code")
@@ -2817,6 +2845,8 @@ class GameService:
                 if action["data"].get("janus")
                 else None
             )
+            if committed is not None:
+                roll_event_id = roll_event_id or str(uuid4())
             if disposal_before is not None:
                 from girlframe.services.m3_disposable_psyche import record_disposal
 
@@ -2845,6 +2875,11 @@ class GameService:
                 "receipt",
                 {"receipt": receipt, "callsign": sheet.callsign, "play": prepared.play},
             )
+            if committed is not None:
+                from girlframe.services.m3_ankou_feedback import record_roll
+
+                assert roll_event_id is not None
+                record_roll(self, c, state, action, roll_event_id, receipt)
             event = self.event(
                 c,
                 viewer.user_id,
@@ -2865,6 +2900,8 @@ class GameService:
                 or action["data"].get("dose_up")
                 or action["data"].get("princess_sex")
                 or action["data"].get("princess_child")
+                or action["data"].get("ankou_feedback")
+                or action["data"].get("ankou_feedback_child")
                 or prepared.disposable_heat
                 or action["data"].get("am_scrutinized")
                 or action["data"].get("am_code")
@@ -3278,6 +3315,8 @@ class GameService:
                 or action["data"].get("dose_up")
                 or action["data"].get("princess_sex")
                 or action["data"].get("princess_child")
+                or action["data"].get("ankou_feedback")
+                or action["data"].get("ankou_feedback_child")
                 or (action["data"].get("receipt") or {}).get("disposable_psyche")
                 or action["data"].get("am_scrutinized")
                 or action["data"].get("am_code")
@@ -3412,6 +3451,10 @@ class GameService:
                 from girlframe.services.m3_am_scrutinized import synchronize as synchronize_am
 
                 synchronize_am(self, c, action, event)
+            if action["data"].get("ankou_feedback") or action["data"].get("ankou_feedback_child"):
+                from girlframe.services.m3_ankou_feedback import synchronize as synchronize_ankou
+
+                synchronize_ankou(self, c, self.action(c, action["id"]), event)
             if action["data"].get("m3_finished"):
                 from girlframe.services.m3_disposable_psyche import sync_off_duty
 
@@ -4197,6 +4240,19 @@ class GameService:
 
                 return SpriteService(self.store).decision(viewer, choice_id)
             action = self.action(c, row["action_id"])
+            if row["kind"].startswith("ankou_feedback_"):
+                from girlframe.services.m3_ankou_feedback import projection as ankou_projection
+
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    actor=int(action["actor_id"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    play=action["data"]["play"],
+                    ankou_feedback=ankou_projection(
+                        self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                    ),
+                )
             if row["kind"].startswith("princess_sex_"):
                 from girlframe.services.m3_princess_sex import authorize as princess_authorize
                 from girlframe.services.m3_princess_sex import projection as princess_projection

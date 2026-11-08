@@ -115,7 +115,7 @@ def source(
 
             for point in for_family(proof, actor, family):
                 prove_stored_point(game, c, proof, point)
-        if body.get("reason") in ("supply_drop_expiry", "budget_removal"):
+        if body.get("reason") in ("supply_drop_expiry", "budget_removal", "ankou_feedback"):
             from girlframe.services.m3_asset_loss import prove_loss_work
 
             prove_loss_work(game, c, first, body, actor)

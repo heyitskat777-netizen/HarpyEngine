@@ -3534,3 +3534,12 @@ These version1 recommendations require printed-rule clarity review. They preserv
 
 - `disposable_no_available_tags`: At the genuine Go Off-Duty trigger, zero actual owned Tags records zero applicable conversions; any available Tags require the actual one-to-four conversion choice. Source: Disposable Psyche, rulebook PDF38/printed36. The instruction requires existing Tags. Inventing a Tag or an Identity would fabricate resources. Alternative: Block recovery until an unrelated future Tag arrives. Freeze real Tag IDs and source time in mandatory period work. Only actual zero availability resolves applicability; missing producers, stale sources and unresolved Tag debts do not qualify. Future policy changes need versioned work/source handling; never rewrite historical Tag availability or waive existing owed work.
 
+
+## Ankou Feedback — delegated interpretations, 2026-11-08
+
+These version1 recommendations require printed-rule clarity review and preserve existing owner decisions.
+
+- `ankou_bond_psychological_asset`: Rewrite the cut Bond as a psychological Girl Asset using ordinary Asset capacity/protected replacement rules. Source: PDF84/printed82 first bullet. The source is a changed personal relationship; this produces a genuine owned resource without inventing Frame equipment. Alternative: Permit an actual fiction-supported Frame Asset with separate hardware/install proof. Native Girl Asset normal works; no quota/fee/free hardware. Adjustable delegated clarity version1. Version changes explicitly; preserve original source, costs, human replies and any genuine dice. Staff OOC restoration remains available through owned recovery.
+
+- `ankou_refusal_unrolled_interruption`: Explicit actual refusal causes canonical Helpless and terminal source-blocked closure of original unrolled Play, preserving actual mark/Heat costs. Worker releases lock; a genuine ordinary moment-alone recovery permits a new Play. Source: PDF84/printed82 purpose refusal; ordinary Helpless/recovery rules. Current Helpless prohibition and lock invariant prevent resuming a defensive Play or taking a moment alone under its held lock. Alternative: A larger exact Doctor/recovery continuation adapter while the original action remains held. No timeout/silence inference, fake receipt, roll tier or cost refund; private history distinguishes unperformed interrupted Play. Adjustable delegated clarity version1. Version changes explicitly; preserve original source, costs, human replies and any genuine dice. Staff OOC restoration remains available through owned recovery.
+

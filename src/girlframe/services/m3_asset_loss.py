@@ -18,8 +18,8 @@ from girlframe.services.onboarding import WorkflowError
 if TYPE_CHECKING:
     from girlframe.services.m2_game import GameService
 
-Reason = Literal["supply_drop_expiry", "budget_removal"]
-REASONS = ("supply_drop_expiry", "budget_removal")
+Reason = Literal["supply_drop_expiry", "budget_removal", "ankou_feedback"]
+REASONS = ("supply_drop_expiry", "budget_removal", "ankou_feedback")
 
 
 def snapshots(game: "GameService", c: Connection, event: str) -> tuple[GameState, GameState]:
@@ -94,10 +94,18 @@ def create_loss_work(
     in_battle: bool | None = None,
 ) -> list[str]:
     if reason not in REASONS:
-        raise WorkflowError("Use one of the two actual implemented asset-loss sources")
+        raise WorkflowError("Use an actual implemented asset-loss source")
     actual = resolve(
         before, actor, profiles(c, game.store.campaign_id), require_current_profile=False
     )
+    source_action = None
+    if reason == "ankou_feedback":
+        from girlframe.services.m3_ankou_feedback import prove_loss_source
+
+        source = prove_loss_source(game, c, after, event, source_id, actor)
+        if source.get("piloting") != actual.piloting or source.get("in_battle") != in_battle:
+            raise WorkflowError("Preserve this actual Feedback tear's physical source context.")
+        source_action = source["source_action"]
     body = dict(
         reason=reason,
         source_id=source_id,
@@ -105,7 +113,7 @@ def create_loss_work(
         owner=actor.model_dump(mode="json"),
         character=actor.incarnation,
         immediate=True,
-        source_action=None,
+        source_action=source_action,
         piloting=actual.piloting,
         in_battle=in_battle,
     )
@@ -164,6 +172,12 @@ def prove_loss_work(
         from girlframe.services.m3_supply_drop import prove_loss_source as prove_supply_loss
 
         context = prove_supply_loss(game, c, after, event, source_id, actor)
+    elif reason == "ankou_feedback":
+        from girlframe.services.m3_ankou_feedback import prove_loss_source as prove_feedback_loss
+
+        context = prove_feedback_loss(game, c, after, event, source_id, actor)
+        if body.get("source_action") != context.get("source_action"):
+            raise WorkflowError("Preserve the actual held Feedback parent, not an external loss.")
     else:
         from girlframe.services.m3_budget_removal import prove_loss_source as prove_budget_loss
 

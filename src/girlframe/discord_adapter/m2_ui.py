@@ -534,6 +534,11 @@ def answer_values(values: dict[str, Any]) -> ChoiceAnswer:
 
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
     decision = await threaded(lambda: game.decision(viewer_from_interaction(interaction), identity))
+    if decision.get("ankou_feedback") is not None:
+        from girlframe.discord_adapter.m3_ankou_feedback import open_choice as open_ankou_choice
+
+        await open_ankou_choice(interaction, game, identity)
+        return
     if decision.get("princess_sex") is not None:
         from girlframe.discord_adapter.m3_princess_sex import open_choice as open_princess_choice
 
@@ -1903,6 +1908,17 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
             await open_princess(interaction, SexService(game))
         except WorkflowError as exc:
             await interaction.followup.send(str(exc), ephemeral=True)
+
+    @campaign.command(name="ankou", description="Owned Feedback choices and saved source history")
+    async def ankou_controls(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_ankou_feedback import open_feedback
+        from girlframe.services.m3_ankou_feedback import FeedbackService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_feedback(interaction, FeedbackService(game))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
 
     @campaign.command(
         name="psyche", description="Owned Disposable Psyche choices and private history"

@@ -171,6 +171,11 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         sheet = state.sheets.get(str(owner))
         body = json.loads(request["body_json"])
+        if kind.startswith("ankou_feedback_") and action["data"].get("ankou_feedback"):
+            from girlframe.services.m3_ankou_feedback import apply as apply_ankou
+
+            apply_ankou(self.game, c, state, action, request, answer)
+            return
         if kind.startswith("princess_sex_") and action["data"].get("princess_sex"):
             from girlframe.services.m3_princess_sex import apply as apply_princess
 
@@ -1276,8 +1281,21 @@ class ChoiceEngine:
                 "tier": action["data"]["result"].get("tier"),
                 "asset_calamities": action["data"]["result"].get("asset_calamities", []),
                 "forced_presentations": action["data"]["result"].get("forced_presentations", []),
+                **(
+                    {"blocked_before_roll": True}
+                    if action["data"]["result"].get("blocked_before_roll")
+                    else {}
+                ),
             },
         )
+        if action["data"].get("ankou_feedback_child"):
+            from girlframe.services.m3_ankou_feedback import complete_child as complete_ankou
+
+            require(
+                complete_ankou(self.game, c, state, action, action["data"]["response_event"]),
+                "Complete the actual Feedback child and source.",
+            )
+            return
         if action["data"].get("princess_child"):
             from girlframe.services.m3_princess_sex import complete_child
 

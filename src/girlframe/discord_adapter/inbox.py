@@ -657,6 +657,14 @@ class InboxView(discord.ui.View):
             await open_npc_bond_play(
                 interaction, NpcBondPlayService(self.service.store), item.identity
             )
+        elif item.task == "m3_ankou_feedback":
+            from girlframe.discord_adapter.m3_ankou_feedback import open_feedback
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_ankou_feedback import FeedbackService
+
+            await open_feedback(
+                interaction, FeedbackService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_disposable_psyche":
             from girlframe.discord_adapter.m3_disposable_psyche import open_psyche
             from girlframe.services.m3_disposable_psyche import PsycheService

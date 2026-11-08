@@ -6042,6 +6042,38 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "ankou-bond-psychological-asset",
+      "policy_key": "ankou_bond_psychological_asset",
+      "summary": "Rewrite the cut Bond as a psychological Girl Asset using ordinary Asset capacity/protected replacement rules.",
+      "source": "PDF84/printed82 first bullet",
+      "rationale": "The source is a changed personal relationship; this produces a genuine owned resource without inventing Frame equipment.",
+      "alternatives": [
+        "Permit an actual fiction-supported Frame Asset with separate hardware/install proof."
+      ],
+      "implementation_note": "Native Girl Asset normal works; no quota/fee/free hardware. Adjustable delegated clarity version1.",
+      "change_impact": "Version changes explicitly; preserve original source, costs, human replies and any genuine dice. Staff OOC restoration remains available through owned recovery.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "ankou-refusal-unrolled-interruption",
+      "policy_key": "ankou_refusal_unrolled_interruption",
+      "summary": "Explicit actual refusal causes canonical Helpless and terminal source-blocked closure of original unrolled Play, preserving actual mark/Heat costs. Worker releases lock; a genuine ordinary moment-alone recovery permits a new Play.",
+      "source": "PDF84/printed82 purpose refusal; ordinary Helpless/recovery rules",
+      "rationale": "Current Helpless prohibition and lock invariant prevent resuming a defensive Play or taking a moment alone under its held lock.",
+      "alternatives": [
+        "A larger exact Doctor/recovery continuation adapter while the original action remains held."
+      ],
+      "implementation_note": "No timeout/silence inference, fake receipt, roll tier or cost refund; private history distinguishes unperformed interrupted Play. Adjustable delegated clarity version1.",
+      "change_impact": "Version changes explicitly; preserve original source, costs, human replies and any genuine dice. Staff OOC restoration remains available through owned recovery.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -10945,14 +10977,16 @@
         "heading": "Feedback Loop"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_ankou_feedback.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "PROJECT ANKOU",
