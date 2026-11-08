@@ -116,6 +116,13 @@ def _sex(state: GameState, action: dict[str, Any]) -> tuple[ActorRef, ActorRef]:
         if trigger is None or trigger.action != action["id"] or trigger.state != "started":
             raise WorkflowError("Recover the real performed original intimacy trigger")
         return trigger.actor, trigger.parties[0].actor
+    if data.get("stim_sex") and data["play"] == "stim_sex":
+        from girlframe.engine.m3_stim_sex import get as stim_session
+
+        stim = stim_session(state, data["stim_sex"]["session"])
+        if stim.action != action["id"] or not stim.consent_event:
+            raise WorkflowError("Recover the real accepted Stim intimacy source")
+        return stim.actor, stim.target
     if data.get("princess_sex") and data["play"] == "princess_sex":
         from girlframe.engine.m3_princess_sex import get as princess_session
 
@@ -129,7 +136,7 @@ def _sex(state: GameState, action: dict[str, Any]) -> tuple[ActorRef, ActorRef]:
 def man_tag_options(
     game: GameService, c: Connection, state: GameState, action: dict[str, Any], owner: int
 ) -> list[dict[str, Any]]:
-    if action["data"]["play"] not in ("alpha_sex", "mockingbird_sex", "princess_sex"):
+    if action["data"]["play"] not in ("alpha_sex", "mockingbird_sex", "princess_sex", "stim_sex"):
         return []
     actor, partner = _sex(state, action)
     value = _current(game, c, state, actor)
@@ -424,6 +431,8 @@ def _resume(game: GameService, c: Connection, state: GameState, action: dict[str
     if action["data"].pop("gender_sex_deferred", False):
         if action["data"]["play"] == "alpha_sex":
             from girlframe.services.m3_alpha_sex import results
+        elif action["data"]["play"] == "stim_sex":
+            from girlframe.services.m3_stim_sex import results
         elif action["data"]["play"] == "princess_sex":
             from girlframe.services.m3_princess_sex import results
         else:
@@ -435,7 +444,7 @@ def _resume(game: GameService, c: Connection, state: GameState, action: dict[str
             if action["data"]["alpha_sex"]["phase"] != "effects":
                 return
             from girlframe.services.m3_alpha_sex import _finish
-        elif action["data"]["play"] == "princess_sex":
+        elif action["data"]["play"] in ("princess_sex", "stim_sex"):
             # Its actual source choices finish their own phase; a Tag reply does not waive them.
             return
         else:

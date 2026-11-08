@@ -333,6 +333,10 @@ def is_helpless(state: GameState, subject: ActorRef, foe: ActorRef | None = None
 
     if drugged(state, subject):
         return True
+    from girlframe.engine.m3_stim_sex import helpless as stim_helpless
+
+    if stim_helpless(state, subject, foe):
+        return True
     if any(
         x.active
         and _same_body(state, x.subject, subject)

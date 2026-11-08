@@ -534,6 +534,11 @@ def answer_values(values: dict[str, Any]) -> ChoiceAnswer:
 
 async def open_choice(interaction: discord.Interaction, game: GameService, identity: str) -> None:
     decision = await threaded(lambda: game.decision(viewer_from_interaction(interaction), identity))
+    if decision["kind"].startswith("stim_sex_"):
+        from girlframe.discord_adapter.m3_stim_sex import open_choice as open_stim_choice
+
+        await open_stim_choice(interaction, game, decision)
+        return
     if decision.get("ankou_feedback") is not None:
         from girlframe.discord_adapter.m3_ankou_feedback import open_choice as open_ankou_choice
 
@@ -993,6 +998,7 @@ async def open_play(
             "am_just_code",
             "dose_up",
             "princess_sex",
+            "stim_sex",
         )
     )
     if parent and parent["kind"] == "am_code_prepare":
@@ -1908,6 +1914,17 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
             await open_princess(interaction, SexService(game))
         except WorkflowError as exc:
             await interaction.followup.send(str(exc), ephemeral=True)
+
+    @campaign.command(name="stim", description="Voluntary Stim source, drugs and saved effects")
+    async def stim_controls(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_stim_sex import open_stim
+        from girlframe.services.m3_stim_sex import SexService as StimSexService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_stim(interaction, StimSexService(game))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
 
     @campaign.command(name="ankou", description="Owned Feedback choices and saved source history")
     async def ankou_controls(interaction: discord.Interaction) -> None:

@@ -657,6 +657,14 @@ class InboxView(discord.ui.View):
             await open_npc_bond_play(
                 interaction, NpcBondPlayService(self.service.store), item.identity
             )
+        elif item.task == "m3_stim_sex":
+            from girlframe.discord_adapter.m3_stim_sex import open_stim
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_stim_sex import SexService as StimSexService
+
+            await open_stim(
+                interaction, StimSexService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_ankou_feedback":
             from girlframe.discord_adapter.m3_ankou_feedback import open_feedback
             from girlframe.services.m2_game import GameService

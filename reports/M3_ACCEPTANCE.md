@@ -1,5 +1,47 @@
 # M3 acceptance — scoped, implementation not yet certified
 
+## Stim-Blissed Sex Play and source-scoped drug effects — 2026-11-08
+
+Extends source `e12960e`. Separately owned voluntary confirmation precedes the
+actual Heat/roll/Tag pipeline. All printed tiers and both low optional self-drug
+outcomes use their real choosers, genuine Sex receipt and source-owned drug/effect
+records. This does not manufacture a Dose roll or choose fictional consent.
+
+Temporary Helplessness is an independent active-drug predicate, preserving other
+causes. Source Orders use the real actor/target and canonical issuance snapshot;
+expiry stops new source authority and retains genuinely issued Orders. Bond and
+ordinary Tag effects persist. Actual recipient-participated scene closures expire
+only source drug Tags/physiology; converted Identities and owed work survive.
+The native source, owned choice forms, private Inbox/history, generic drug Tag
+proof/self-mark and Gender source routing share the existing architecture.
+
+| Executed evidence | Result |
+|---|---|
+| Frozen four outcomes plus affected Dose/Gender/Orders/Ankou Helpless/pause-replay consumers | 14 passed /28.61s; `var/m3-stim-sex-final-focused.xml` |
+| Coherent changed-file static | Ruff/format for 12 Python files and mypy for 11 source modules pass, no drift; `var/m3-stim-sex-union-static.json`, `var/m3-stim-sex-union-source-snapshot.json` |
+| Earlier worker evidence | Four checks: 2 passed/2 failed; then affected mid/high 2 passed /9.19s. Superseded by the frozen 14-node run, retained in `var/m3-stim-sex-handoff.json` |
+
+The checks exercise actual lower-Status Orders and post-expiry validation, real
+DrugTag modifiers, native Helpless rejection without RNG and post-expiry Keep,
+reciprocal choices, durable Bond/Tag effects, genuine drug self-mark and an actual
+three-Strain Off-Duty/Disposable conversion through period completion. Privacy,
+wrong ownership, stale forms, source receipts and retries remain checked.
+
+Worker fixes use a read-only binding projection from actual existing native sheet
+identity/profile fields, the real actions JSON Play field, and the unchanged
+existing period fixture matching its genuine prior no-Void context. No source,
+work or approval gate was waived. Root fixed a typed event-payload annotation;
+ordinary Orders retain their original payload when this source is absent.
+
+Four interpretations are recorded for clarity review, with the Dose clock policy
+explicitly reused. Full Malleable force-embrace/NPC protection is the next required
+workflow. Other body/controller/ended-person and physiological-removal adapters,
+and broader conditional interactions, remain explicit. Focused checks are not a
+full regression, remote CI, independent rules review or human acceptance. The
+prior failed-full baseline and repaired-node evidence remain separate. Bot stays
+off; no deployment, environment publication or private-engine write.
+
+
 ## Ankou Feedback and durable unrolled commitments — 2026-11-08
 
 Extends source `0f4659f`. Native final-Identity marking now saves one genuine

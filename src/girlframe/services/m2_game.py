@@ -1075,6 +1075,7 @@ class GameService:
                 int(princess_child["actor_controller"]) if princess_child else viewer.user_id
             )
             princess_sex = None
+            stim_sex = None
             m3 = None
             beneath = None
             defeat = None
@@ -1149,6 +1150,7 @@ class GameService:
                     "alpha_sex",
                     "dose_up",
                     "princess_sex",
+                    "stim_sex",
                     "am_scrutinized",
                     "am_just_code",
                 )
@@ -1192,6 +1194,10 @@ class GameService:
                 from girlframe.services.m3_am_scrutinized import prepare as prepare_am
 
                 am_scrutinized = prepare_am(self, c, viewer, state, prepared, channel)
+            if prepared.play == "stim_sex":
+                from girlframe.services.m3_stim_sex import prepare as prepare_stim
+
+                stim_sex = prepare_stim(self, c, viewer, state, prepared, channel)
             if prepared.play == "princess_sex":
                 from girlframe.services.m3_princess_sex import prepare as prepare_princess
 
@@ -1718,6 +1724,7 @@ class GameService:
                     alpha_sex,
                     dose_up,
                     princess_sex,
+                    stim_sex,
                     am_scrutinized,
                     am_code,
                     doctor,
@@ -1821,6 +1828,17 @@ class GameService:
                 data["ankou_feedback_child"] = ankou_child
             if princess_child is not None:
                 data["princess_child"] = princess_child
+            if stim_sex is not None:
+                data["stim_sex"] = stim_sex
+                data["participants"] = list(stim_sex["table"])
+                data["tag_context"] = dict(
+                    actor=stim_sex["actor"],
+                    handler=stim_sex["handler"],
+                    gm_controller=stim_sex["handler_controller"],
+                    table=list(stim_sex["table"]),
+                    cast=stim_sex["cast"],
+                    cast_sha256=stim_sex["cast_sha256"],
+                )
             if princess_sex is not None:
                 from girlframe.engine.m3_actor_state import SceneCast as PrincessCast
                 from girlframe.engine.m3_actors import fingerprint as princess_fingerprint
@@ -2209,7 +2227,11 @@ class GameService:
                         marriage_cast_saved = True
             begin_source_event = (
                 str(uuid4())
-                if secretary_response is not None or princess_child or princess_sex or ankou_child
+                if secretary_response is not None
+                or princess_child
+                or princess_sex
+                or stim_sex
+                or ankou_child
                 else None
             )
             if ankou_child is not None:
@@ -2222,6 +2244,10 @@ class GameService:
 
                 assert begin_source_event is not None
                 bind_child(self, c, state, action, begin_source_event)
+            if stim_sex is not None:
+                from girlframe.services.m3_stim_sex import bind as bind_stim
+
+                bind_stim(state, action, begin_source_event)
             if princess_sex is not None:
                 from girlframe.services.m3_princess_sex import bind as bind_princess
 
@@ -2250,6 +2276,7 @@ class GameService:
                 or alpha_sex is not None
                 or dose_up is not None
                 or princess_sex is not None
+                or stim_sex is not None
                 or princess_child is not None
                 or ankou_child is not None
                 or prepared.disposable_heat
@@ -2269,6 +2296,7 @@ class GameService:
                     or alpha_sex is not None
                     or dose_up is not None
                     or princess_sex is not None
+                    or stim_sex is not None
                     or princess_child is not None
                     or ankou_child is not None
                     or am_scrutinized is not None
@@ -2366,6 +2394,10 @@ class GameService:
             from girlframe.services.m3_gender_designation import valid_order as valid_gender_order
 
             source_authority = valid_gender_order(self, c, state, dict(row)) or source_authority
+        if row is not None and json.loads(row["body_json"]).get("stim_sex"):
+            from girlframe.services.m3_stim_sex import valid_order as valid_stim_order
+
+            source_authority = valid_stim_order(self, c, state, dict(row)) or source_authority
         if row is None or (
             not source_authority and not higher(state, int(row["issuer_id"]), owner)
         ):
@@ -2564,6 +2596,10 @@ class GameService:
 
                 enforcement_pre_roll(self, c, viewer, state, action)
                 action["data"]["enforcement"]["roll_event"] = str(uuid4())
+            if action["data"].get("stim_sex"):
+                from girlframe.services.m3_stim_sex import pre_roll as pre_roll_stim
+
+                pre_roll_stim(self, c, viewer, state, action)
             if action["data"].get("princess_sex"):
                 from girlframe.services.m3_princess_sex import pre_roll as princess_pre_roll
 
@@ -2756,6 +2792,7 @@ class GameService:
                 or action["data"].get("alpha_sex")
                 or action["data"].get("dose_up")
                 or action["data"].get("princess_sex")
+                or action["data"].get("stim_sex")
                 or action["data"].get("princess_child")
                 or action["data"].get("ankou_feedback")
                 or action["data"].get("ankou_feedback_child")
@@ -2899,6 +2936,7 @@ class GameService:
                 or action["data"].get("alpha_sex")
                 or action["data"].get("dose_up")
                 or action["data"].get("princess_sex")
+                or action["data"].get("stim_sex")
                 or action["data"].get("princess_child")
                 or action["data"].get("ankou_feedback")
                 or action["data"].get("ankou_feedback_child")
@@ -3072,6 +3110,11 @@ class GameService:
 
                 Access(self.store).authorize(c, viewer, "strain")
             director_tag_response = False
+            if action["data"].get("stim_sex"):
+                from girlframe.services.m3_stim_sex import authorize as stim_authorize
+
+                stim_authorize(self, c, viewer, action)
+                director_tag_response = True
             if action["data"].get("princess_sex"):
                 from girlframe.services.m3_princess_sex import authorize as princess_authorize
 
@@ -3314,6 +3357,7 @@ class GameService:
                 or action["data"].get("alpha_sex")
                 or action["data"].get("dose_up")
                 or action["data"].get("princess_sex")
+                or action["data"].get("stim_sex")
                 or action["data"].get("princess_child")
                 or action["data"].get("ankou_feedback")
                 or action["data"].get("ankou_feedback_child")
@@ -3548,7 +3592,14 @@ class GameService:
                 if str(viewer.user_id) in state.sheets
                 else None
             )
-            if not higher(state, viewer.user_id, target) and gender_authority is None:
+            from girlframe.services.m3_stim_sex import order_authority as stim_order_authority
+
+            stim_authority = stim_order_authority(self, c, state, viewer.user_id, target)
+            if (
+                not higher(state, viewer.user_id, target)
+                and gender_authority is None
+                and stim_authority is None
+            ):
                 from girlframe.services.m3_am_scrutinized import pilot_order_authority
 
                 am_secret = pilot_order_authority(self, c, state, viewer.user_id, target)
@@ -3590,6 +3641,7 @@ class GameService:
                         | ({"succubus": authority} if authority else {})
                         | ({"gender_designation": gender_authority} if gender_authority else {})
                         | ({"dose_up": dose_order} if dose_order else {})
+                        | ({"stim_sex": stim_authority} if stim_authority else {})
                     ),
                     state="awaiting_response",
                 )
@@ -3652,14 +3704,18 @@ class GameService:
                         campaign_id=self.store.campaign_id, channel_id=str(channel), **values
                     )
                 )
+            order_source_payload: dict[str, Any] = (
+                {"stim_sex": stim_authority} if stim_authority else {}
+            )
             self.event(
                 c,
                 viewer.user_id,
                 key,
                 "m2.order_issued",
-                state if dose_order else None,
+                state if dose_order or stim_authority else None,
                 event_id=order_event,
                 action_id=identity,
+                **order_source_payload,
             )
             return {"action_id": identity, "order_id": order_id}
 
@@ -4153,10 +4209,14 @@ class GameService:
                 ]
             close_event = str(uuid4())
             drugs_changed = False
+            if any(x.get("kind") == "stim_sex_drug" for x in state.facts):
+                from girlframe.services.m3_stim_sex import expire_scene as expire_stim
+
+                drugs_changed = expire_stim(self, c, state, scene, close_event) or drugs_changed
             if any(x.get("kind") == "dose_up_result" for x in state.facts):
                 from girlframe.services.m3_dose_up import expire_scene
 
-                drugs_changed = expire_scene(self, c, state, scene, close_event)
+                drugs_changed = expire_scene(self, c, state, scene, close_event) or drugs_changed
             self.event(
                 c,
                 viewer.user_id,
@@ -4240,6 +4300,21 @@ class GameService:
 
                 return SpriteService(self.store).decision(viewer, choice_id)
             action = self.action(c, row["action_id"])
+            if row["kind"].startswith("stim_sex_"):
+                from girlframe.services.m3_stim_sex import authorize as stim_authorize
+                from girlframe.services.m3_stim_sex import projection as stim_projection
+
+                stim_authorize(self, c, viewer, action)
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    actor=int(action["actor_id"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    play=action["data"]["play"],
+                    detail=stim_projection(
+                        self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                    ),
+                )
             if row["kind"].startswith("ankou_feedback_"):
                 from girlframe.services.m3_ankou_feedback import projection as ankou_projection
 
@@ -4595,6 +4670,7 @@ class GameService:
                 from girlframe.engine.m3_girl_runtime_state import mentor_tag as kicked_mentor_tag
                 from girlframe.services.m3_dose_up import self_tag as drug_self_tag
                 from girlframe.services.m3_kicked_puppy import self_tag as kicked_self_tag
+                from girlframe.services.m3_stim_sex import self_tag as stim_self_tag
 
                 tags = [
                     x.model_dump(mode="json")
@@ -4603,6 +4679,7 @@ class GameService:
                     + collar_tags(state, actor.owner)
                     if kicked_self_tag(self, c, state, action, viewer.user_id, x)
                     or drug_self_tag(self, c, state, action, viewer.user_id, x)
+                    or stim_self_tag(self, c, state, action, viewer.user_id, x)
                     or kicked_mentor_tag(actor, x, state)
                     or kicked_has_rule(actor, "girl.princess.objectively-beautiful", "PRINCESS")
                 ]

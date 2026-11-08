@@ -6074,6 +6074,70 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "stim-high-self-drug-chooser",
+      "policy_key": "stim_high_self_drug_chooser",
+      "summary": "The actor chooses the mandatory high-result self-drug; the counterpart chooses their expressly allocated reciprocal effect.",
+      "source": "Stim-Blissed Sex Play, rulebook PDF39/printed37; Dose Up PDF38/printed36",
+      "rationale": "The high text says the actor drugs herself and allocates only the reciprocal effect to the counterpart; the drug chooser is not separately named.",
+      "alternatives": [
+        "Have the counterpart or Handler choose the high self-drug."
+      ],
+      "implementation_note": "Keep original source participants, actual choices and drug birth; no extra unprinted selector.",
+      "change_impact": "Version future adjustments explicitly; preserve actual original people, receipts, effects, clocks and historical choices.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "stim-order-source-time",
+      "policy_key": "stim_order_source_time",
+      "summary": "A legitimate Order issued under the active drug effect retains source-time validity after expiry; expired effects authorize no new Orders.",
+      "source": "Stim-Blissed Sex Play, rulebook PDF39/printed37; Dose Up PDF38/printed36",
+      "rationale": "Printed authority lasts until drugs wear off. Preserve an already issued genuine instruction and owed response rather than retroactively invalidate its source.",
+      "alternatives": [
+        "Invalidate all unresolved Orders when the drug expires."
+      ],
+      "implementation_note": "Prove the canonical Order event/state/effect and original actor/target. No global rank change or same-account replacement inheritance.",
+      "change_impact": "Version future adjustments explicitly; preserve actual original people, receipts, effects, clocks and historical choices.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "stim-drug-clock-dose-policy",
+      "policy_key": "stim_drug_clock_dose_policy",
+      "summary": "Sex drugs use the existing Dose lifetime policy: default two real recipient-participated scene closures, including the source scene.",
+      "source": "Stim-Blissed Sex Play, rulebook PDF39/printed37; Dose Up PDF38/printed36",
+      "rationale": "The printed note expressly says these drugs function as Dose Up, lasting a scene or two.",
+      "alternatives": [
+        "Configure one scene for future versioned sources."
+      ],
+      "implementation_note": "Reuse dose_participated_scenes_lifetime version1; freeze each actual source duration. Never retroactively rewrite clocks, remove acquired Identities or discard owed work.",
+      "change_impact": "Version future adjustments explicitly; preserve actual original people, receipts, effects, clocks and historical choices.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "stim-physiological-helpless",
+      "policy_key": "stim_physiological_helpless",
+      "summary": "Drug-linked Helplessness is an unqualified physiological condition tied to that actual drug and original vessel, separate from other Helpless causes.",
+      "source": "Stim-Blissed Sex Play, rulebook PDF39/printed37; Dose Up PDF38/printed36",
+      "rationale": "The book says Helpless while drugged without naming an opponent. A separate active-source predicate avoids merging and later clearing unrelated causes.",
+      "alternatives": [
+        "Limit it to the partner, or extend it to any unrelated future intoxication."
+      ],
+      "implementation_note": "Expiry ends only this source condition/authority/drug Tags; preserve permanent causes, Bonds, ordinary Tags, converted Identities and issued Orders.",
+      "change_impact": "Version future adjustments explicitly; preserve actual original people, receipts, effects, clocks and historical choices.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -7866,14 +7930,16 @@
         "heading": "Sex Play"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_stim_sex.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

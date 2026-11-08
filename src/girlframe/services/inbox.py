@@ -924,6 +924,22 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_stim_sex import SexService as StimSexService
+
+            for stim in StimSexService(GameService(self.store))._tasks(connection, viewer):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, stim),
+                        prefix="stim-sex:",
+                        source="stim_sex",
+                        counterpart="Original voluntary participants only",
+                        effect="Read your saved source and resolve actual owned choices.",
+                        details="Expiry preserves genuine Orders and other conditions.",
+                        primary="Review Stim source",
+                        task="m3_stim_sex",
+                    )
+                )
+
             from girlframe.services.m3_ankou_feedback import FeedbackService
 
             for feedback in FeedbackService(GameService(self.store))._tasks(connection, viewer):

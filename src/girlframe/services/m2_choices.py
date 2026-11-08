@@ -83,6 +83,10 @@ class ChoiceEngine:
         from girlframe.services.m3_bomb_collar import prove_tag as prove_collar_tag
 
         prove_collar_tag(self.game, c, state, owner, tag)
+        if tag.id.startswith(("stim-sex-drug:", "stim-sex-effect:")):
+            from girlframe.services.m3_stim_sex import prove_drug_tag as prove_stim_tag
+
+            prove_stim_tag(self.game, c, state, owner, tag)
         if tag.id.startswith("dose-up:"):
             from girlframe.services.m3_dose_up import prove_tag as prove_drug_tag
 
@@ -171,6 +175,14 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         sheet = state.sheets.get(str(owner))
         body = json.loads(request["body_json"])
+        if kind.startswith("stim_sex_") and action["data"].get("stim_sex"):
+            from girlframe.services.m3_stim_sex import apply_choice as apply_stim
+
+            require(
+                apply_stim(self.game, c, state, action, request, answer),
+                "Resolve this exact actual Stim source choice.",
+            )
+            return
         if kind.startswith("ankou_feedback_") and action["data"].get("ankou_feedback"):
             from girlframe.services.m3_ankou_feedback import apply as apply_ankou
 
@@ -867,6 +879,7 @@ class ChoiceEngine:
         from girlframe.services import m3_tag_markers as markers
         from girlframe.services.m3_dose_up import self_tag as drug_self_tag
         from girlframe.services.m3_kicked_puppy import self_tag as kicked_self_tag
+        from girlframe.services.m3_stim_sex import self_tag as stim_self_tag
 
         actor = int(action["actor_id"])
         sheet = state.sheets[str(actor)]
@@ -928,7 +941,8 @@ class ChoiceEngine:
                 )
                 or kicked_self_tag(self.game, c, state, action, owner, tag)
                 or ritual_self_tag(self.game, c, state, action, owner, tag)
-                or drug_self_tag(self.game, c, state, action, owner, tag),
+                or drug_self_tag(self.game, c, state, action, owner, tag)
+                or stim_self_tag(self.game, c, state, action, owner, tag),
                 "Only another player or a printed self-mark exception can mark this Girl Tag.",
             )
             require(
@@ -1153,6 +1167,11 @@ class ChoiceEngine:
             from girlframe.services.m3_am_scrutinized import results as results_am
 
             results_am(self.game, c, state, action)
+            return
+        if action["data"].get("stim_sex"):
+            from girlframe.services.m3_stim_sex import results as results_stim
+
+            results_stim(self.game, c, state, action)
             return
         if action["data"].get("princess_sex"):
             from girlframe.services.m3_princess_sex import results as princess_results
