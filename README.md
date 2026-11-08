@@ -109,7 +109,7 @@ or outside Git. Never delete a populated database to refresh the environment.
 Before upgrading an existing database, make a new private backup, then migrate:
 
 ```bash
-python -m girlframe db backup --dest var/backups/before-0014.db
+python -m girlframe db backup --dest var/backups/before-0016.db
 python -m alembic upgrade head
 python -m alembic check
 ```
@@ -142,6 +142,11 @@ channel preserves historical scene identities; unresolved scene work and known
 recoverable rolls prevent closing their scene. Upgrade preserves existing work and
 does not invent missing scene evidence. Downgrade refuses to discard new scoped
 work. This development migration is not applied to the frozen running bot.
+`0015` adds the durable human-facilitator notice outbox. `0016` adds permission
+snapshots and acknowledgments for actual diceless sources; it creates no gameplay
+Actions or dice receipts. Both preserve existing campaign rows and refuse to
+silently discard populated histories on downgrade. They are development changes;
+the bot remains OFF and no live migration is authorized by source publication.
 `alembic downgrade base` destroys application tables: use only on
 throwaway test databases. Never downgrade real campaign data to roll back code.
 

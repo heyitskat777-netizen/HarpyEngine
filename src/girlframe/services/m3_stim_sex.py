@@ -44,6 +44,8 @@ def _access(game: GameService, c: Connection, viewer: GuildViewer) -> None:
 def _physical_contact(
     game: GameService, c: Connection, state: GameState, value: rules.Session
 ) -> None:
+    from girlframe.services.m3_bonded import admit_delegation
+
     own, other = (
         resolve(state, ref, profiles(c, game.store.campaign_id), require_current_profile=False)
         for ref in (value.actor, value.target)
@@ -59,7 +61,13 @@ def _physical_contact(
         or value.actor == value.target
         or own.controller != value.caster
         or other.controller != value.counterpart
-        or not has_rule(state.sheets[value.actor.entity], rules.RULE, "STIM-BLISSED")
+        or not (
+            has_rule(state.sheets[value.actor.entity], rules.RULE, "STIM-BLISSED")
+            if value.bonded_source is None
+            else admit_delegation(
+                game, c, state, value.actor, value.target, rules.RULE, value.bonded_source
+            )
+        )
         or any(x.inside_frame is not False or x.cell is None for x in (own, other))
         or own.cell != other.cell
         or own.vessel_id != value.actor_vessel
@@ -99,6 +107,11 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
     proposed = _history(c, game, value.proposed_event)
     _audit(game, c, value.proposed_event, ("m3.stim_sex_invited",), value.caster)
     first = rules.get(proposed, identity)
+    from girlframe.services.m3_bonded import prove_delegation
+
+    prove_delegation(
+        game, c, state, value.bonded_source, value.id, value.actor, value.target, rules.RULE
+    )
     stable = (
         "id",
         "actor",
@@ -111,6 +124,7 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         "target_vessel",
         "proposed_event",
         "proposal",
+        "bonded_source",
     )
     if (
         any(getattr(first, key) != getattr(value, key) for key in stable)
@@ -291,7 +305,7 @@ def prepare(
         table=sorted({x.controller for x in value.cast.roles} | {value.cast.facilitator}),
         handler=handler.model_dump(mode="json"),
         handler_controller=value.cast.facilitator,
-    )
+    ) | ({"bonded_source": value.bonded_source} if value.bonded_source is not None else {})
 
 
 def bind(state: GameState, action: dict[str, Any], event: str | None = None) -> None:
@@ -986,6 +1000,8 @@ class SexService:
         target: ActorRef,
         expected: int,
         account: str,
+        *,
+        bonded_source: str | None = None,
     ) -> dict[str, Any]:
         if not account.strip() or len(account) > 1200:
             raise WorkflowError("Describe only your actual voluntary source interaction")
@@ -1005,6 +1021,7 @@ class SexService:
             value = rules.Session(
                 id=str(uuid4()),
                 actor=actor,
+                bonded_source=bonded_source,
                 target=target,
                 caster=viewer.user_id,
                 counterpart=other.controller,
@@ -1019,6 +1036,12 @@ class SexService:
             if not any(x.id == cast.id for x in state.scene_casts):
                 state.scene_casts.append(cast)
             rules.put(state, value)
+            if bonded_source is not None:
+                from girlframe.services.m3_bonded import bind_delegation
+
+                bind_delegation(
+                    self.game, c, state, bonded_source, value.id, rules.RULE, value.proposed_event
+                )
             self.game.event(
                 c,
                 viewer.user_id,
@@ -1039,7 +1062,8 @@ class SexService:
                 target=target.model_dump(mode="json"),
                 expected=expected,
                 account=account,
-            ),
+            )
+            | ({"bonded_source": bonded_source} if bonded_source is not None else {}),
             operation,
             auto_audit=False,
             authorize=lambda c: _access(self.game, c, viewer),

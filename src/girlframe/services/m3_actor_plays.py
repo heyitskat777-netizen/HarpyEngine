@@ -386,6 +386,11 @@ class ActorPlayService:
                 or cast.revision != cast_revision
             ):
                 raise ValueError("STALE_ACTOR: confirm your actual resources and Director first")
+            from girlframe.services.m3_wyvern_combat import require_free
+            from girlframe.services.m3_wyvern_support import require_play_target
+
+            require_free(self.game, c, state, ref)
+            require_play_target(self.game, c, state, prepared)
             if ref.kind == "clone_am":
                 from girlframe.services.m3_clone_am import prove_copy
 
@@ -767,6 +772,13 @@ class ActorPlayService:
         self.authorize(c, viewer, action)
         state = load_state(c, self.store.campaign_id)
         actor = self.validate(c, state, action)
+        from girlframe.services.m3_wyvern_combat import require_free
+        from girlframe.services.m3_wyvern_support import require_play_target
+
+        require_free(self.game, c, state, actor.ref)
+        require_play_target(
+            self.game, c, state, PlayInput.model_validate(action["data"]["prepared"])
+        )
         meta = action["data"]["actor_basic"]
         if action["data"].get("harpy_off_duty"):
             from girlframe.services.m3_harpy_rest import prepare as prepare_rest

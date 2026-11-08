@@ -54,7 +54,11 @@ def prepare(
     if not any(not asset.damaged for asset in acting.assets):
         raise WorkflowError("No actual undamaged owned Asset is available for Engage")
     judge, human, source = _scene_judge(game, c, state, cast)
+    from girlframe.services.m3_wyvern_combat import crushing_options
+
+    wyvern = crushing_options(game, c, state, actor_ref, cast)
     return dict(
+        **({"wyvern_crushing": True} if wyvern["maneuvers"] else {}),
         actor=actor_ref.model_dump(mode="json"),
         target=target.model_dump(mode="json"),
         actor_sha256=acting.source_sha256,
@@ -81,6 +85,13 @@ def pre_roll(game: "GameService", c: Connection, state: GameState, action: dict[
     current = _cast(game, c, state, int(action["channel_id"]))
     if current != cast or fingerprint(cast) != meta["cast_sha256"]:
         raise WorkflowError("STALE_CAST: recover the original battlefield declaration before dice")
+    if meta.get("wyvern_crushing"):
+        from girlframe.services.m3_wyvern_combat import crushing_options
+
+        if not crushing_options(game, c, state, ActorRef.model_validate(meta["actor"]), cast)[
+            "maneuvers"
+        ]:
+            raise WorkflowError("Preserve the actual paid piloted Crushing Bulk source")
     for key in ("actor", "target"):
         actual = resolve(
             state, ActorRef.model_validate(meta[key]), profiles(c, game.store.campaign_id)
@@ -130,7 +141,13 @@ def apply(
         if receipt is None:
             raise WorkflowError("Acquire the actual current source-owned Untouchable Frame first")
     maneuver_answer = answer.model_copy(
-        update={"fields": {k: v for k, v in answer.fields.items() if k != "untouchable_tag"}}
+        update={
+            "fields": {
+                k: v
+                for k, v in answer.fields.items()
+                if k not in ("untouchable_tag", "wyvern_vehicle")
+            }
+        }
     )
     casualty_extra = extra and meta.get("extra_source") == "girl.casualty.no-one-better"
     if casualty_extra:
@@ -142,6 +159,17 @@ def apply(
             or not has_rule(state.sheets[ref.entity], "girl.casualty.no-one-better", "CASUALTY")
         ):
             raise WorkflowError("Preserve the actual Casualty's high Assault extra maneuver")
+    wyvern = False
+    if not extra and meta.get("wyvern_crushing"):
+        from girlframe.services.m3_wyvern_combat import crushing_options
+
+        wyvern = bool(
+            crushing_options(
+                game, c, state, ref, SceneCast.model_validate_json(json.dumps(meta["cast"]))
+            )["maneuvers"]
+        )
+    if "wyvern_vehicle" in answer.fields and (not wyvern or "crush_small" not in answer.options):
+        raise WorkflowError("Choose a vehicle only for the actual Crushing Bulk maneuver")
     maneuvers, damage = rules.select(
         actor,
         action["data"]["result"]["tier"],
@@ -149,6 +177,7 @@ def apply(
         assault_extra=extra,
         casualty_extra=casualty_extra,
         substitute_damage=selected_tag is not None,
+        wyvern_extra=wyvern,
     )
     if meta.get("extra_selected" if extra else "applied"):
         raise WorkflowError("This actual source maneuver choice has already resolved")
@@ -176,6 +205,14 @@ def apply(
         if v not in action["data"].get("sabotage_failed_assets", [])
     }
     for kind, asset in executed.items():
+        if kind in ("encircle", "crush_small"):
+            from girlframe.services.m3_wyvern_combat import apply_maneuver
+
+            meta["followups"].extend(
+                apply_maneuver(
+                    game, c, state, action, row, kind, asset, answer.fields.get("wyvern_vehicle")
+                )
+            )
         effect = rules.Maneuver.model_validate(
             dict(
                 kind=kind,
@@ -189,6 +226,9 @@ def apply(
             )
         )
         state.facts.append(dict(kind="engage_maneuver", body=effect.model_dump_json(), event=event))
+    from girlframe.services.m3_wyvern_combat import release_counter_pin
+
+    release_counter_pin(game, c, state, action, executed, event)
     if extra:
         meta["extra_selected"] = True
         action["data"]["result"]["extra_maneuver"] = executed
@@ -236,7 +276,20 @@ def projection(
         else []
     )
     count = 0 if extra else {"low": 1, "mid": 2, "high": 3}[action["data"]["result"]["tier"]]
+    from girlframe.engine.m2 import MANEUVERS
+    from girlframe.services.m3_wyvern_combat import crushing_options
+
+    meta = action["data"].get("engage") or action["data"]["battle"]
+    wyvern = (
+        crushing_options(
+            game, c, state, ref, SceneCast.model_validate_json(json.dumps(meta["cast"]))
+        )
+        if not extra and meta.get("wyvern_crushing")
+        else dict(maneuvers=[], vehicles=[])
+    )
     return dict(
+        maneuvers=[*MANEUVERS, *wyvern["maneuvers"]],
+        wyvern_vehicles=wyvern["vehicles"],
         minimum=count,
         maximum=1 if extra else count + int(actor.girl == "harpy"),
         assets=[

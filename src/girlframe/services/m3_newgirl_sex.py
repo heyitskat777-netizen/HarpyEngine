@@ -50,12 +50,23 @@ def _access(game: GameService, c: Connection, viewer: GuildViewer) -> None:
 
 
 def _contact(game: GameService, c: Connection, state: GameState, value: rules.Session) -> None:
+    from girlframe.services.m3_bonded import admit_delegation
+
     actors = (value.actor, *value.partners)
     if not value.partners or len(set(actors)) != len(actors):
         raise WorkflowError("Use distinct actual original intimacy participants")
     people = [_native(game, c, state, x) for x in actors]
     if (
-        not has_rule(state.sheets[value.actor.entity], rules.RULE, "NEWGIRL")
+        not (
+            has_rule(state.sheets[value.actor.entity], rules.RULE, "NEWGIRL")
+            if value.bonded_source is None
+            else (
+                len(value.partners) == 1
+                and admit_delegation(
+                    game, c, state, value.actor, value.partners[0], rules.RULE, value.bonded_source
+                )
+            )
+        )
         or value.cast.facilitator is None
         or any(x.inside_frame is not False or x.cell is None or x.vessel_id is None for x in people)
         or len({x.cell for x in people}) != 1
@@ -91,6 +102,19 @@ def _consents(
 
 def prove(game: GameService, c: Connection, state: GameState, identity: str) -> rules.Session:
     value = rules.get(state, identity)
+    from girlframe.services.m3_bonded import prove_delegation
+
+    if value.bonded_source is not None:
+        prove_delegation(
+            game,
+            c,
+            state,
+            value.bonded_source,
+            value.id,
+            value.actor,
+            value.partners[0],
+            rules.RULE,
+        )
     born = rules.get(_history(c, game, value.proposed_event), identity)
     stable = (
         "id",
@@ -104,14 +128,13 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         "mentor_source",
         "proposed_event",
         "proposal",
+        "bonded_source",
     )
     if any(getattr(value, k) != getattr(born, k) for k in stable):
         raise WorkflowError("Recover the original private Newgirl source people and proposal")
     _audit(game, c, value.proposed_event, ("m3.newgirl_sex_proposed",), int(value.actor.entity))
     original = _history(c, game, value.proposed_event)
-    from girlframe.services.m3_mentorship import original_mentors
-
-    mentors, source = original_mentors(game, c, original, value.actor, required_rule=rules.RULE)
+    mentors, source = _source_mentors(game, c, original, value.actor, value.bonded_source)
     if mentors != value.mentors_before or source != value.mentor_source:
         raise WorkflowError("Preserve the actual source-time Mentor lineage")
     responses = _consents(game, c, state, value)
@@ -392,7 +415,7 @@ def prepare(
         ),
         handler=handler.model_dump(mode="json"),
         handler_controller=value.cast.facilitator,
-    )
+    ) | ({"bonded_source": value.bonded_source} if value.bonded_source is not None else {})
 
 
 def bind(state: GameState, action: dict[str, Any], event: str | None = None) -> None:
@@ -822,6 +845,8 @@ class NewgirlSexService:
         partners: tuple[ActorRef, ...],
         revision: int,
         account: str,
+        *,
+        bonded_source: str | None = None,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             state = load_state(c, self.store.campaign_id)
@@ -833,9 +858,7 @@ class NewgirlSexService:
                 or self.game.pending_actions(c)
             ):
                 raise WorkflowError("Use the actual idle scene and human-authored voluntary source")
-            from girlframe.services.m3_mentorship import original_mentors
-
-            mentors, source = original_mentors(self.game, c, state, actor, required_rule=rules.RULE)
+            mentors, source = _source_mentors(self.game, c, state, actor, bonded_source)
             cast = _cast(self.game, c, state, channel)
             if not any(x.id == cast.id for x in state.scene_casts):
                 state.scene_casts.append(cast)
@@ -848,6 +871,7 @@ class NewgirlSexService:
             value = rules.Session(
                 id=identity,
                 actor=actor,
+                bonded_source=bonded_source,
                 partners=partners,
                 controllers={x.ref.token: x.controller for x in people},
                 vessels={x.ref.token: x.vessel_id or "" for x in people},
@@ -860,6 +884,10 @@ class NewgirlSexService:
             )
             _contact(self.game, c, state, value)
             rules.put(state, value)
+            if bonded_source is not None:
+                from girlframe.services.m3_bonded import bind_delegation
+
+                bind_delegation(self.game, c, state, bonded_source, value.id, rules.RULE, event)
             self.game.event(
                 c,
                 viewer.user_id,
@@ -880,7 +908,8 @@ class NewgirlSexService:
                 partners=[x.model_dump(mode="json") for x in partners],
                 revision=revision,
                 account=account,
-            ),
+            )
+            | ({"bonded_source": bonded_source} if bonded_source is not None else {}),
             operation,
         )
 
@@ -1301,3 +1330,21 @@ class NewgirlSexService:
                 if value.phase == "complete"
                 else [],
             )
+
+
+def _source_mentors(
+    game: GameService, c: Connection, state: GameState, actor: ActorRef, bonded_source: str | None
+) -> tuple[tuple[ActorRef, ...], str]:
+    from girlframe.services.m3_mentorship import original_mentors
+
+    if bonded_source is None:
+        return original_mentors(game, c, state, actor, required_rule=rules.RULE)
+    from girlframe.engine import m3_bonded as bonded
+    from girlframe.engine.m3_mentorship import active_mentors
+    from girlframe.services.m3_bonded import admit_delegation
+
+    value = bonded.get(state, bonded_source)
+    if value.target is None:
+        raise WorkflowError("Use the actual delegated counterpart")
+    admit_delegation(game, c, state, actor, value.target, rules.RULE, bonded_source)
+    return active_mentors(state, actor), value.event

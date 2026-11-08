@@ -6650,6 +6650,86 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "bonded-apart-and-authored-replies",
+      "summary": "Bonded Side uses an explicit actual apart trigger rather than equating quadrant inequality with separation. The original Pair authors requested private information, Tags, Orders and appearance changes.",
+      "source": "Bonded PDF58\u201359/printed56\u201357",
+      "rationale": "A shared cell does not prove touch or presence; preserve the printed separate chooser and respondent.",
+      "alternatives": [
+        "Treat controller labels, generic acknowledgments or free text as sufficient mechanical authority."
+      ],
+      "policy_key": "bonded_apart_and_authored_replies",
+      "implementation_note": "Scoped P1 source implementation; authored normal tests include unrun cases. Full regression and independent source/clarity review remain pending.",
+      "change_impact": "Version future interpretations; preserve original people, receipts, costs, private responses and historical effects.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "wyvern-table-voice-and-available-unmarks",
+      "summary": "Any actual source-table human, including the explorer, may contribute an answer. Each selected question needs at least one actual contribution. Optional unmark selectors permit up to the printed benefit among legally available marked slots.",
+      "source": "Wyvern PDF74\u201375/printed72\u201373",
+      "rationale": "Do not force every participant to invent dialogue or invent marks when no legal unmark exists. Erasure costs remain exact.",
+      "alternatives": [
+        "Treat controller labels, generic acknowledgments or free text as sufficient mechanical authority."
+      ],
+      "policy_key": "wyvern_table_voice_and_available_unmarks",
+      "implementation_note": "Scoped P1 source implementation; authored normal tests include unrun cases. Full regression and independent source/clarity review remain pending.",
+      "change_impact": "Version future interpretations; preserve original people, receipts, costs, private responses and historical effects.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "wyvern-wraith-finite-profile",
+      "summary": "The source creates actual Frame-bound NPC minds with a genuine Handler-authored supported rules profile and printed pilot bonuses. It does not grant a native AM sheet, body, Heat or branch resources. Original table humans may explicitly take the voice.",
+      "source": "Wyvern PDF76/printed74",
+      "rationale": "The printed Handler question remains a real human answer; free text cannot install arbitrary mechanics. Expanded profiles require a versioned mechanical implementation.",
+      "alternatives": [
+        "Treat controller labels, generic acknowledgments or free text as sufficient mechanical authority."
+      ],
+      "policy_key": "wyvern_wraith_finite_profile",
+      "implementation_note": "Scoped P1 source implementation; authored normal tests include unrun cases. Full regression and independent source/clarity review remain pending.",
+      "change_impact": "Version future interpretations; preserve original people, receipts, costs, private responses and historical effects.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "wyvern-shield-against-play-scope",
+      "summary": "Shield blocks actual attacks and hostile directed effects, and all actual protected Asset damage. Mutual source-owned intimacy, exploration attendance and support are not classified as attacks solely because they carry target metadata. New hostile consumers must use the explicit guard.",
+      "source": "Wyvern PDF77/printed75",
+      "rationale": "Preserve the distinction between making a Play against someone and doing a mutually confirmed activity with them. Physical source changes end protection through the genuine source observer.",
+      "alternatives": [
+        "Treat controller labels, generic acknowledgments or free text as sufficient mechanical authority."
+      ],
+      "policy_key": "wyvern_shield_against_play_scope",
+      "implementation_note": "Scoped P1 source implementation; authored normal tests include unrun cases. Full regression and independent source/clarity review remain pending.",
+      "change_impact": "Version future interpretations; preserve original people, receipts, costs, private responses and historical effects.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "wyvern-pin-and-required-escape",
+      "summary": "Pin requires actually dealing with the original pinner through a genuine legal counter, actual release or physical source ending. Exploration escape likewise requires an actual completed Play and consequences; prose acknowledgment alone does not free the body.",
+      "source": "Wyvern PDF75/printed73",
+      "rationale": "Do not manufacture Helplessness, a second root receipt or a completed-action token. The source pinner may perform an actual release.",
+      "alternatives": [
+        "Treat controller labels, generic acknowledgments or free text as sufficient mechanical authority."
+      ],
+      "policy_key": "wyvern_pin_and_required_escape",
+      "implementation_note": "Scoped P1 source implementation; authored normal tests include unrun cases. Full regression and independent source/clarity review remain pending.",
+      "change_impact": "Version future interpretations; preserve original people, receipts, costs, private responses and historical effects.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -9252,15 +9332,17 @@
         "heading": "Always By Her Side"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
-      "m2_play_id": null,
+      "test_evidence": [
+        "tests/rules/test_bonded.py"
+      ],
+      "m2_play_id": "bonded_side",
       "module": "core"
     },
     {
@@ -9275,14 +9357,16 @@
         "heading": "Bonded Pair"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_bonded.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -9298,14 +9382,16 @@
         "heading": "Workplace-Inappropriate Intimacy"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_bonded.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },
@@ -9321,15 +9407,17 @@
         "heading": "Sex Play"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
-      "m2_play_id": null,
+      "test_evidence": [
+        "tests/rules/test_bonded.py"
+      ],
+      "m2_play_id": "bonded_sex",
       "module": "core"
     },
     {
@@ -10486,15 +10574,17 @@
         "heading": "A Vast and Tractless Beast"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
-      "m2_play_id": null,
+      "test_evidence": [
+        "tests/rules/test_wyvern.py"
+      ],
+      "m2_play_id": "wyvern_explore",
       "module": "core",
       "frame_playbook": "WYVERN 0.4",
       "frame_class": "legion",
@@ -10605,15 +10695,17 @@
         "heading": "A Heavy Burden"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
-      "m2_play_id": null,
+      "test_evidence": [
+        "tests/rules/test_wyvern.py"
+      ],
+      "m2_play_id": "wyvern_rouse",
       "module": "core",
       "frame_playbook": "WYVERN 0.4",
       "frame_class": "legion",
@@ -10631,14 +10723,16 @@
         "heading": "Leviathan Chassis"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_wyvern.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "WYVERN 0.4",
@@ -10657,14 +10751,16 @@
         "heading": "Crushing Bulk"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_wyvern.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "WYVERN 0.4",
@@ -10683,14 +10779,16 @@
         "heading": "Deep Exploration"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_wyvern.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "WYVERN 0.4",
@@ -10709,14 +10807,16 @@
         "heading": "Renovation Permission Forms"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_wyvern.py"
+      ],
       "m2_play_id": null,
       "module": "core",
       "frame_playbook": "WYVERN 0.4",
@@ -10735,15 +10835,17 @@
         "heading": "Wraith AM"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
-      "m2_play_id": null,
+      "test_evidence": [
+        "tests/rules/test_wyvern.py"
+      ],
+      "m2_play_id": "wyvern_wraith",
       "module": "core",
       "frame_playbook": "WYVERN 0.4",
       "frame_class": "legion",
@@ -10761,15 +10863,17 @@
         "heading": "Protector"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
-      "m2_play_id": null,
+      "test_evidence": [
+        "tests/rules/test_wyvern.py"
+      ],
+      "m2_play_id": "wyvern_protector",
       "module": "core",
       "frame_playbook": "WYVERN 0.4",
       "frame_class": "legion",

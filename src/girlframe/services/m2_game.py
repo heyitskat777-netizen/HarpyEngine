@@ -128,6 +128,24 @@ class GameService:
                 consume_transitions(
                     self, c, load_state(c, self.store.campaign_id), state, event_id, metadata
                 )
+            from girlframe.engine import m3_wyvern as wyvern_rules
+
+            if any(
+                wyvern_rules.records(state, model)
+                for model in (wyvern_rules.Last, wyvern_rules.Pin, wyvern_rules.Shield)
+            ):
+                from girlframe.services.m3_wyvern import stage_unlink
+                from girlframe.services.m3_wyvern_combat import observe
+
+                event_id = event_id or str(uuid4())
+                before = load_state(c, self.store.campaign_id)
+                from girlframe.services.m3_wyvern_support import guard_damage_changes
+
+                guard_damage_changes(self, c, before, state)
+                for last in wyvern_rules.records(state, wyvern_rules.Last):
+                    if not last.unlinked_event:
+                        stage_unlink(self, c, before, state, last.actor, event_id)
+                observe(self, c, before, state, event_id)
             state.revision += 1
             metadata["game_revision"] = state.revision
         if kind.startswith("m3.") and self.store.policy.m3_approval is not None:
@@ -378,6 +396,10 @@ class GameService:
                 for field in GameState.model_fields:
                     setattr(state, field, getattr(sex_state, field))
 
+        if state is not None:
+            from girlframe.services.p1_source_pause import reserve
+
+            reserve(self, c, state)
         return event
 
     def sheet(self, viewer: GuildViewer, owner: int | None = None) -> dict[str, Any]:
@@ -1218,11 +1240,29 @@ class GameService:
             from girlframe.services.m3_consume import prepare_child as consume_child_source
 
             consume_child = consume_child_source(self, c, viewer, state, prepared, channel)
+            from girlframe.services.m3_bonded import child_source as bonded_child_source
+
+            bonded_child = bonded_child_source(self, c, viewer, state, prepared, channel)
+            from girlframe.services.m3_wyvern import prepare_child as wyvern_child_source
+
+            wyvern_child = wyvern_child_source(self, c, viewer, state, prepared, channel)
+            from girlframe.services.m3_wyvern_combat import (
+                prepare_pin_response,
+                prepare_replacement,
+            )
+
+            wyvern_pin_response = prepare_pin_response(self, c, viewer, state, prepared, channel)
+            wyvern_replacement = prepare_replacement(self, c, viewer, state, prepared, channel)
+            from girlframe.services.p1_source_pause import require_clear as require_source_clear
+
+            require_source_clear(self, c, channel, prepared=prepared)
             mechanical_owner = (
                 int(princess_child["actor_controller"]) if princess_child else viewer.user_id
             )
             prince = None
             consume = None
+            bonded = None
+            wyvern = None
             princess_sex = None
             stim_sex = None
             oldgen_sex = None
@@ -1275,6 +1315,19 @@ class GameService:
                 from girlframe.services.m3_prince import prepare as prepare_prince
 
                 prince = prepare_prince(self, c, viewer, state, prepared, channel)
+            elif prepared.play in (
+                "wyvern_explore",
+                "wyvern_rouse",
+                "wyvern_wraith",
+                "wyvern_protector",
+            ):
+                from girlframe.services.m3_wyvern import prepare as prepare_wyvern
+
+                wyvern = prepare_wyvern(self, c, viewer, state, prepared, channel)
+            elif prepared.play in ("bonded_side", "bonded_sex"):
+                from girlframe.services.m3_bonded import prepare as prepare_bonded
+
+                bonded = prepare_bonded(self, c, viewer, state, prepared, channel)
             elif prepared.play in ("consume_eat", "consume_feral"):
                 from girlframe.services.m3_consume import prepare as prepare_consume
 
@@ -1292,6 +1345,12 @@ class GameService:
                 and investment_performance is None
                 and prince_demand_attempt is None
                 and consume_child is None
+                and bonded_child is None
+                and wyvern_child is None
+                and wyvern_pin_response is None
+                and wyvern_replacement is None
+                and bonded is None
+                and wyvern is None
             ):
                 from girlframe.services.m3_void_keep import prepare_keep
 
@@ -1304,6 +1363,12 @@ class GameService:
                 and investment_performance is None
                 and prince_demand_attempt is None
                 and consume_child is None
+                and bonded_child is None
+                and wyvern_child is None
+                and wyvern_pin_response is None
+                and wyvern_replacement is None
+                and bonded is None
+                and wyvern is None
             ):
                 from girlframe.services.m3_battle_dormant import prepare_dive_source
 
@@ -1321,6 +1386,12 @@ class GameService:
                 and investment_performance is None
                 and prince_demand_attempt is None
                 and consume_child is None
+                and bonded_child is None
+                and wyvern_child is None
+                and wyvern_pin_response is None
+                and wyvern_replacement is None
+                and bonded is None
+                and wyvern is None
                 and prepared.play
                 not in (
                     "prince_performer",
@@ -1623,6 +1694,12 @@ class GameService:
                         vatgrown_sex,
                         prince,
                         consume,
+                        bonded,
+                        wyvern,
+                        bonded_child,
+                        wyvern_child,
+                        wyvern_pin_response,
+                        wyvern_replacement,
                         easy_target,
                         easy_target_child,
                         alpha_counter_scope,
@@ -1670,6 +1747,22 @@ class GameService:
                     source_cast = SceneCast.model_validate_json(json.dumps(newgirl_sex["cast"]))
                 elif casualty_sex is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(casualty_sex["cast"]))
+                elif wyvern is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(wyvern["cast"]))
+                elif wyvern_pin_response is not None:
+                    source_cast = SceneCast.model_validate_json(
+                        json.dumps(wyvern_pin_response["cast"])
+                    )
+                elif wyvern_replacement is not None:
+                    source_cast = SceneCast.model_validate_json(
+                        json.dumps(wyvern_replacement["cast"])
+                    )
+                elif wyvern_child is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(wyvern_child["cast"]))
+                elif bonded is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(bonded["cast"]))
+                elif bonded_child is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(bonded_child["cast"]))
                 elif prince is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(prince["cast"]))
                 elif consume is not None:
@@ -1753,6 +1846,16 @@ class GameService:
                 from girlframe.services.p1_consume_hooks import roll_modifiers as consume_modifiers
 
                 consume_modifiers(self, c, state, acting_ref, prepared)
+            from girlframe.services.m3_wyvern_support import wraith_modifiers
+
+            wraith_modifiers(self, c, state, acting_ref, prepared.play)
+            if wyvern_pin_response is None:
+                from girlframe.services.m3_wyvern_combat import require_free
+
+                require_free(self, c, state, acting_ref)
+            from girlframe.services.m3_wyvern_support import require_play_target
+
+            require_play_target(self, c, state, prepared)
             if prepared.play == "disobey_orders":
                 require_freedom(state, acting_ref, "refuse")
             if (
@@ -1826,6 +1929,8 @@ class GameService:
                                 "princess_sex_child",
                                 "ankou_feedback_child",
                                 "consume_child",
+                                "wyvern_child",
+                                "wyvern_replacement",
                                 "consume_order_child",
                                 "easy_target_child",
                                 "battle_dormant_dive",
@@ -1841,11 +1946,19 @@ class GameService:
                         and x["actor_id"]
                         == str(viewer.user_id if princess_child else mechanical_owner)
                         and (easy_target_child is None or x["id"] == easy_target_child["choice"])
+                        and (wyvern_child is None or x["id"] == wyvern_child["choice"])
+                        and (wyvern_replacement is None or x["id"] == wyvern_replacement["choice"])
                     ),
                     None,
                 )
                 if required is None:
                     raise WorkflowError("Only the required player can make this response Play.")
+                if required["kind"] == "wyvern_replacement" and wyvern_replacement is None:
+                    raise WorkflowError(
+                        "Use the genuine incoming Play's original replacement source"
+                    )
+                if required["kind"] == "wyvern_child" and wyvern_child is None:
+                    raise WorkflowError("Use the original Wyvern excursion's actual escape source")
                 if required["kind"].startswith("easy_target_child:") and easy_target_child is None:
                     raise WorkflowError("Use the original actual Easy Target reaction performance")
                 if (
@@ -1989,6 +2102,12 @@ class GameService:
                     newgirl_sex,
                     prince,
                     consume,
+                    bonded,
+                    wyvern,
+                    bonded_child,
+                    wyvern_child,
+                    wyvern_pin_response,
+                    wyvern_replacement,
                     easy_target,
                     vatgrown,
                     oldgen,
@@ -2101,13 +2220,46 @@ class GameService:
                 data["prince_demand_attempt"] = prince_demand_attempt
             if consume_child is not None:
                 data["consume_child"] = consume_child
+            if bonded_child is not None:
+                data["bonded_child"] = bonded_child
+            if wyvern_child is not None:
+                data["wyvern_child"] = wyvern_child
+                data["participants"] = list(wyvern_child["table"])
+                data["tag_context"] = dict(
+                    actor=wyvern_child["actor"],
+                    handler=wyvern_child["handler"],
+                    gm_controller=wyvern_child["handler_controller"],
+                    table=list(wyvern_child["table"]),
+                    cast=wyvern_child["cast"],
+                    cast_sha256=wyvern_child["cast_sha256"],
+                )
+            for counter_name, counter in (
+                ("wyvern_pin_response", wyvern_pin_response),
+                ("wyvern_replacement", wyvern_replacement),
+            ):
+                if counter is not None:
+                    data[counter_name] = counter
+                    data["participants"] = list(counter["table"])
+                    data["tag_context"] = dict(
+                        actor=counter["actor"],
+                        handler=counter["handler"],
+                        gm_controller=counter["handler_controller"],
+                        table=list(counter["table"]),
+                        cast=counter["cast"],
+                        cast_sha256=counter["cast_sha256"],
+                    )
             if prince_mark is not None:
                 data["prince_mark"] = prince_mark
             if prince_demands is not None:
                 data["prince_demands"] = prince_demands
             if prince_flirt is not None:
                 data["prince_flirt"] = prince_flirt
-            for book, scope in (("prince", prince), ("consume", consume)):
+            for book, scope in (
+                ("prince", prince),
+                ("consume", consume),
+                ("bonded", bonded),
+                ("wyvern", wyvern),
+            ):
                 if scope is not None:
                     cast = scope["cast"] if book == "prince" else scope["cast"]
                     data[book] = scope
@@ -2640,6 +2792,12 @@ class GameService:
                 or consume
                 or prince_demand_attempt
                 or consume_child
+                or bonded
+                or wyvern
+                or bonded_child
+                or wyvern_child
+                or wyvern_pin_response
+                or wyvern_replacement
                 or newgirl_sex
                 or easy_target
                 or easy_target_child
@@ -2671,6 +2829,36 @@ class GameService:
 
                 assert begin_source_event is not None
                 bind_consume(state, action, begin_source_event)
+            if wyvern is not None:
+                from girlframe.services.m3_wyvern import bind as bind_wyvern
+
+                assert begin_source_event is not None
+                bind_wyvern(state, action, begin_source_event)
+            if wyvern_pin_response is not None:
+                from girlframe.services.m3_wyvern_combat import bind_pin_response
+
+                assert begin_source_event is not None
+                bind_pin_response(self, c, state, action, begin_source_event)
+            if wyvern_replacement is not None:
+                from girlframe.services.m3_wyvern_combat import bind_replacement
+
+                assert begin_source_event is not None
+                bind_replacement(self, c, state, action, begin_source_event)
+            if wyvern_child is not None:
+                from girlframe.services.m3_wyvern import bind_child as bind_wyvern_child
+
+                assert begin_source_event is not None
+                bind_wyvern_child(self, c, state, action, begin_source_event)
+            if bonded is not None:
+                from girlframe.services.m3_bonded import bind as bind_bonded
+
+                assert begin_source_event is not None
+                bind_bonded(state, action, begin_source_event)
+            if bonded_child is not None:
+                from girlframe.services.m3_bonded import bind_child as bind_bonded_child
+
+                assert begin_source_event is not None
+                bind_bonded_child(self, c, state, action, begin_source_event)
             if consume_child is not None:
                 from girlframe.services.m3_consume import bind_child as bind_consume_child
 
@@ -2752,6 +2940,12 @@ class GameService:
                 or consume is not None
                 or prince_demand_attempt is not None
                 or consume_child is not None
+                or bonded is not None
+                or wyvern is not None
+                or bonded_child is not None
+                or wyvern_child is not None
+                or wyvern_pin_response is not None
+                or wyvern_replacement is not None
                 or newgirl_sex is not None
                 or easy_target is not None
                 or easy_target_child is not None
@@ -2784,6 +2978,12 @@ class GameService:
                     or consume is not None
                     or prince_demand_attempt is not None
                     or consume_child is not None
+                    or bonded is not None
+                    or wyvern is not None
+                    or bonded_child is not None
+                    or wyvern_child is not None
+                    or wyvern_pin_response is not None
+                    or wyvern_replacement is not None
                     or newgirl_sex is not None
                     or easy_target is not None
                     or easy_target_child is not None
@@ -2801,6 +3001,12 @@ class GameService:
                     or consume is not None
                     or prince_demand_attempt is not None
                     or consume_child is not None
+                    or bonded is not None
+                    or wyvern is not None
+                    or bonded_child is not None
+                    or wyvern_child is not None
+                    or wyvern_pin_response is not None
+                    or wyvern_replacement is not None
                     or investment_performance is not None
                 )
                 else None,
@@ -2901,6 +3107,11 @@ class GameService:
             from girlframe.services.m3_stim_sex import valid_order as valid_stim_order
 
             source_authority = valid_stim_order(self, c, state, dict(row)) or source_authority
+        if row is not None and json.loads(row["body_json"]).get("bonded"):
+            from girlframe.services.m3_bonded import valid_order as valid_bonded_order
+
+            body = json.loads(row["body_json"]) | {"id": row["id"]}
+            source_authority = valid_bonded_order(self, c, state, body) or source_authority
         if row is None or (
             not source_authority and not higher(state, int(row["issuer_id"]), owner)
         ):
@@ -3033,6 +3244,12 @@ class GameService:
                 or action["state"] not in ("acquiring", "ready_to_roll")
             ):
                 raise WorkflowError("LOCK_NOT_ACKNOWLEDGED: no dice or Heat were consumed.")
+            if action["data"].get("wyvern_deflected"):
+                from girlframe.services.m3_wyvern_combat import require_incoming_response
+
+                require_incoming_response(
+                    self, c, load_state(c, self.store.campaign_id), action, "roll"
+                )
             if action["data"].get("gorgon_play"):
                 from girlframe.services.m3_gorgon_play import GorgonPlayService
 
@@ -3059,6 +3276,9 @@ class GameService:
             from girlframe.services.p1_facilitator import require_scene_clear
 
             require_scene_clear(self, c, int(action["channel_id"]), action)
+            from girlframe.services.p1_source_pause import require_clear as require_source_clear
+
+            require_source_clear(self, c, int(action["channel_id"]), action=action)
             if (
                 action["data"].get("prince_mark")
                 or action["data"].get("prince_demands")
@@ -3088,6 +3308,30 @@ class GameService:
                 from girlframe.services.m3_prince import pre_roll as pre_roll_prince
 
                 pre_roll_prince(self, c, viewer, state, action)
+            if action["data"].get("wyvern_pin_response"):
+                from girlframe.services.m3_wyvern_combat import pre_roll_pin_response
+
+                pre_roll_pin_response(self, c, viewer, state, action)
+            if action["data"].get("wyvern_replacement"):
+                from girlframe.services.m3_wyvern_combat import pre_roll_replacement
+
+                pre_roll_replacement(self, c, viewer, state, action)
+            if action["data"].get("wyvern_child"):
+                from girlframe.services.m3_wyvern import pre_roll_child as pre_roll_wyvern_child
+
+                pre_roll_wyvern_child(self, c, viewer, state, action)
+            if action["data"].get("wyvern"):
+                from girlframe.services.m3_wyvern import pre_roll as pre_roll_wyvern
+
+                pre_roll_wyvern(self, c, viewer, state, action)
+            if action["data"].get("bonded"):
+                from girlframe.services.m3_bonded import pre_roll as pre_roll_bonded
+
+                pre_roll_bonded(self, c, viewer, state, action)
+            if action["data"].get("bonded_child"):
+                from girlframe.services.m3_bonded import pre_roll_child as pre_roll_bonded_child
+
+                pre_roll_bonded_child(self, c, viewer, state, action)
             if action["data"].get("consume"):
                 from girlframe.services.m3_consume import pre_roll as pre_roll_consume
 
@@ -3300,6 +3544,10 @@ class GameService:
                     and not action["data"].get("nightmare_core")
                 ):
                     spend_heat(sheet, prepared.heat)
+
+            from girlframe.services.m3_wyvern_support import require_play_target
+
+            require_play_target(self, c, state, prepared)
             faces = self.dice.roll()
             if len(faces) != 2 or any(type(x) is not int or not 1 <= x <= 6 for x in faces):
                 raise ValueError("Dice source returned invalid faces")
@@ -3316,8 +3564,17 @@ class GameService:
             from girlframe.services.p1_consume_hooks import roll_modifiers as consume_modifiers
 
             consuming_actor = consume_actor(state, action)
+            if consuming_actor is not None and not action["data"].get("wyvern_pin_response"):
+                from girlframe.services.m3_wyvern_combat import require_free
+
+                require_free(self, c, state, consuming_actor)
             if consuming_actor is not None:
                 pre_modifiers.extend(consume_modifiers(self, c, state, consuming_actor, prepared))
+                from girlframe.services.m3_wyvern_support import wraith_modifiers
+
+                pre_modifiers.extend(
+                    wraith_modifiers(self, c, state, consuming_actor, prepared.play)
+                )
             if action["data"].get("prince_flirt"):
                 pre_modifiers.append({"source": "prince_power_imbalance", "amount": 2})
             if action["data"].get("consume") and action["data"]["consume"].get("basis") is not None:
@@ -3391,6 +3648,12 @@ class GameService:
                 or action["data"].get("consume")
                 or action["data"].get("prince_demand_attempt")
                 or action["data"].get("consume_child")
+                or action["data"].get("bonded")
+                or action["data"].get("wyvern")
+                or action["data"].get("bonded_child")
+                or action["data"].get("wyvern_child")
+                or action["data"].get("wyvern_pin_response")
+                or action["data"].get("wyvern_replacement")
                 or action["data"].get("newgirl_sex")
                 or action["data"].get("easy_target")
                 or action["data"].get("easy_target_child")
@@ -3590,6 +3853,12 @@ class GameService:
                 or action["data"].get("consume")
                 or action["data"].get("prince_demand_attempt")
                 or action["data"].get("consume_child")
+                or action["data"].get("bonded")
+                or action["data"].get("wyvern")
+                or action["data"].get("bonded_child")
+                or action["data"].get("wyvern_child")
+                or action["data"].get("wyvern_pin_response")
+                or action["data"].get("wyvern_replacement")
                 or action["data"].get("newgirl_sex")
                 or action["data"].get("easy_target")
                 or action["data"].get("easy_target_child")
@@ -3781,6 +4050,14 @@ class GameService:
 
                 authorize_prince(self, c, viewer, action)
                 return dict(row)
+            if action["data"].get("wyvern"):
+                from girlframe.services.m3_wyvern import authorize as authorize_wyvern
+
+                authorize_wyvern(self, c, viewer, action)
+            if action["data"].get("bonded"):
+                from girlframe.services.m3_bonded import authorize as authorize_bonded
+
+                authorize_bonded(self, c, viewer, action)
             if action["data"].get("consume") or row["kind"].startswith("consume_"):
                 from girlframe.services.m3_consume import authorize as authorize_consume
 
@@ -3996,6 +4273,10 @@ class GameService:
             if not lock or lock["state"] != "held":
                 raise WorkflowError("SCENE_LOCK_RECOVERY: decisions await a confirmed scene lock.")
             state = load_state(c, self.store.campaign_id)
+            if action["data"].get("wyvern_deflected"):
+                from girlframe.services.m3_wyvern_combat import require_incoming_response
+
+                require_incoming_response(self, c, state, action, row["kind"])
             if not action["data"].get("actor_basic") and not action["data"].get("gorgon_play"):
                 from girlframe.services.m3_battle_dormant import proved_converted_originals
 
@@ -4014,6 +4295,9 @@ class GameService:
             from girlframe.services.p1_facilitator import require_scene_clear
 
             require_scene_clear(self, c, int(action["channel_id"]), action)
+            from girlframe.services.p1_source_pause import require_clear as require_source_clear
+
+            require_source_clear(self, c, int(action["channel_id"]), action=action)
             table = t.m2["m2_choices"]
             c.execute(
                 table.update()
@@ -4090,6 +4374,12 @@ class GameService:
                 or action["data"].get("consume")
                 or action["data"].get("prince_demand_attempt")
                 or action["data"].get("consume_child")
+                or action["data"].get("bonded")
+                or action["data"].get("wyvern")
+                or action["data"].get("bonded_child")
+                or action["data"].get("wyvern_child")
+                or action["data"].get("wyvern_pin_response")
+                or action["data"].get("wyvern_replacement")
                 or action["data"].get("newgirl_sex")
                 or action["data"].get("easy_target")
                 or action["data"].get("easy_target_child")
@@ -4244,6 +4534,47 @@ class GameService:
                 from girlframe.services.m3_princess_sex import synchronize as sync_princess
 
                 sync_princess(self, c, self.action(c, action["id"]), event)
+            from girlframe.services.m3_bonded import synchronize_delegation
+
+            synchronize_delegation(self, c, self.action(c, action["id"]), event)
+            if action["data"].get("wyvern"):
+                from girlframe.services.m3_wyvern import synchronize as sync_wyvern
+
+                sync_wyvern(self, c, self.action(c, action["id"]), event)
+            if action["state"] == "complete" and action["data"].get("wyvern_pin_response"):
+                from girlframe.services.m3_wyvern_combat import complete_pin_response
+
+                complete_pin_response(
+                    self,
+                    c,
+                    load_state(c, self.store.campaign_id),
+                    self.action(c, action["id"]),
+                    event,
+                )
+            if action["state"] == "complete" and action["data"].get("wyvern_replacement"):
+                from girlframe.services.m3_wyvern_combat import complete_replacement
+
+                complete_replacement(
+                    self,
+                    c,
+                    load_state(c, self.store.campaign_id),
+                    self.action(c, action["id"]),
+                    event,
+                )
+            if action["data"].get("wyvern_child") and action["state"] == "complete":
+                from girlframe.services.m3_wyvern import complete_child as complete_wyvern_child
+
+                complete_wyvern_child(
+                    self,
+                    c,
+                    load_state(c, self.store.campaign_id),
+                    self.action(c, action["id"]),
+                    event,
+                )
+            if action["data"].get("bonded") or action["data"].get("bonded_child"):
+                from girlframe.services.m3_bonded import synchronize as sync_bonded
+
+                sync_bonded(self, c, self.action(c, action["id"]), event)
             if action["data"].get("consume_child") and action["state"] == "complete":
                 from girlframe.services.m3_consume import complete_child as complete_consume_child
 
@@ -4365,6 +4696,13 @@ class GameService:
                 raise WorkflowError(
                     "Only a current superior in this scene can issue a direct order."
                 )
+            from girlframe.services.m3_bonded_support import issue_requested_order
+
+            requested = issue_requested_order(
+                self, c, state, viewer, key, channel, target, text, dose_up=dose_up
+            )
+            if requested is not None:
+                return requested
             authority = None
             am_secret = None
             from girlframe.services.m3_gender_designation import (
@@ -4930,6 +5268,9 @@ class GameService:
 
         def operation(c: Connection) -> dict[str, Any]:
             scene = self.scene(c, channel)
+            from girlframe.services.p1_source_pause import require_clear as require_source_clear
+
+            require_source_clear(self, c, channel)
             from girlframe.engine.m3_deep_brain_spikes import require_return
 
             try:
@@ -5150,6 +5491,43 @@ class GameService:
                     play=action["data"]["play"],
                     prince=detail,
                     detail=detail,
+                )
+            if row["kind"].startswith("wyvern_"):
+                from girlframe.services.m3_wyvern import authorize as wyvern_authorize
+                from girlframe.services.m3_wyvern import projection as wyvern_projection
+
+                wyvern_authorize(self, c, viewer, action)
+                detail = (
+                    dict(handler_grant=json.loads(row["body_json"]).get("handler_grant"))
+                    if row["kind"] == "wyvern_handler"
+                    else wyvern_projection(
+                        self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                    )
+                )
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    actor=int(action["actor_id"]),
+                    play=action["data"]["play"],
+                    result=action["data"]["result"],
+                    detail=detail,
+                )
+            if row["kind"].startswith("bonded_"):
+                from girlframe.services.m3_bonded import authorize as bonded_authorize
+                from girlframe.services.m3_bonded import projection as bonded_projection
+
+                bonded_authorize(self, c, viewer, action)
+                detail = bonded_projection(self, c, viewer, action, dict(row))
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    actor=int(action["actor_id"]),
+                    play=action["data"]["play"],
+                    result=action["data"]["result"],
+                    detail=detail,
+                    bonded=detail,
                 )
             if row["kind"].startswith("consume_"):
                 from girlframe.services.m3_consume import projection as consume_projection
@@ -5998,6 +6376,9 @@ class GameService:
     def leave_scene(self, viewer: GuildViewer, key: str, channel: int) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             scene = self.scene(c, channel)
+            from girlframe.services.p1_source_pause import require_clear as require_source_clear
+
+            require_source_clear(self, c, channel)
             state = load_state(c, self.store.campaign_id)
             if any(x.id == scene["id"] and x.open for x in state.scene_casts):
                 raise WorkflowError("Withdraw your actual role through /mission cast.")

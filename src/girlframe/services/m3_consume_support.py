@@ -172,6 +172,10 @@ def context(
 
         assert state.world is not None
         require_layers_clear(next(x for x in state.world.gorgons if x.id == target.entity))
+    if other.vessel_id and other.vessel_id.startswith("wyvern-mind:"):
+        raise WorkflowError(
+            "SOURCE_SOFTWARE_BODY_REQUIRED: a Frame-bound mind is not an edible biological body"
+        )
     vulnerable = (
         is_helpless(state, target, actor)
         or bool(other.core_exposed)

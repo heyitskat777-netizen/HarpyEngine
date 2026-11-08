@@ -71,7 +71,15 @@ def _vatgrown(
 
 
 def _contact(game: GameService, c: Connection, state: GameState, value: rules.Session) -> None:
-    own = _vatgrown(game, c, state, value.actor, rules.SEX)
+    from girlframe.services.m3_bonded import admit_delegation
+
+    own = (
+        _vatgrown(game, c, state, value.actor, rules.SEX)
+        if value.bonded_source is None
+        else _native(game, c, state, value.actor)
+    )
+    if value.bonded_source is not None:
+        admit_delegation(game, c, state, value.actor, value.target, rules.SEX, value.bonded_source)
     other = resolve(
         state, value.target, profiles(c, game.store.campaign_id), require_current_profile=False
     )
@@ -110,6 +118,12 @@ def _contact(game: GameService, c: Connection, state: GameState, value: rules.Se
 
 def prove(game: GameService, c: Connection, state: GameState, identity: str) -> rules.Session:
     value = _get(state, rules.Session, identity)
+    from girlframe.services.m3_bonded import prove_delegation
+
+    if value.bonded_source is not None:
+        prove_delegation(
+            game, c, state, value.bonded_source, value.id, value.actor, value.target, rules.SEX
+        )
     born = _get(_history(c, game, value.proposed_event), rules.Session, identity)
     stable = (
         "id",
@@ -123,6 +137,7 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         "target_vessel",
         "proposed_event",
         "proposal",
+        "bonded_source",
     )
     _event(game, c, value.proposed_event, ("m3.vatgrown_sex_invited",), value.caster)
     if any(getattr(value, x) != getattr(born, x) for x in stable):
@@ -187,6 +202,8 @@ def prepare(
     handler = active_handler(state)
     if handler is None:
         raise WorkflowError("Recover the actual current Handler body")
+    if value.cast.facilitator is None or state.handler is None:
+        raise WorkflowError("Recover the genuine source facilitator and Handler before this Play")
     return dict(
         session=value.id,
         actor=value.actor.model_dump(mode="json"),
@@ -198,7 +215,7 @@ def prepare(
         cast=value.cast.model_dump(mode="json"),
         cast_sha256=fingerprint(value.cast),
         table=sorted({x.controller for x in value.cast.roles} | {state.handler}),
-    )
+    ) | ({"bonded_source": value.bonded_source} if value.bonded_source is not None else {})
 
 
 def bind(state: GameState, action: dict[str, Any], event: str | None = None) -> None:
@@ -1538,6 +1555,8 @@ class VatgrownPlaysService:
         target: ActorRef,
         expected: int,
         account: str,
+        *,
+        bonded_source: str | None = None,
     ) -> dict[str, Any]:
         if not account.strip() or len(account) > 1200:
             raise WorkflowError("Describe only the actual voluntary source proposal")
@@ -1546,7 +1565,15 @@ class VatgrownPlaysService:
             if self.game.pending_actions(c):
                 raise WorkflowError("Finish pending Plays before proposing the actual source")
             actor = current_ref(state, viewer.user_id)
-            own = _vatgrown(self.game, c, state, actor, rules.SEX)
+            own = (
+                _vatgrown(self.game, c, state, actor, rules.SEX)
+                if bonded_source is None
+                else _native(self.game, c, state, actor)
+            )
+            if bonded_source is not None:
+                from girlframe.services.m3_bonded import admit_delegation
+
+                admit_delegation(self.game, c, state, actor, target, rules.SEX, bonded_source)
             other = resolve(
                 state, target, profiles(c, self.store.campaign_id), require_current_profile=False
             )
@@ -1561,6 +1588,7 @@ class VatgrownPlaysService:
             value = rules.Session(
                 id=str(uuid4()),
                 actor=actor,
+                bonded_source=bonded_source,
                 target=target,
                 caster=viewer.user_id,
                 counterpart=other.controller,
@@ -1575,6 +1603,10 @@ class VatgrownPlaysService:
             if scene not in state.scene_casts:
                 state.scene_casts.append(scene)
             rules.put(state, value)
+            if bonded_source is not None:
+                from girlframe.services.m3_bonded import bind_delegation
+
+                bind_delegation(self.game, c, state, bonded_source, value.id, rules.SEX, event)
             if target.kind == "pilot" and has_rule(
                 state.sheets[actor.entity], rules.EXPERIMENT, "VATGROWN"
             ):
@@ -1598,7 +1630,8 @@ class VatgrownPlaysService:
             key,
             "m3.vatgrown_sex_invited",
             expected,
-            dict(channel=channel, target=target.model_dump(mode="json"), account=account),
+            dict(channel=channel, target=target.model_dump(mode="json"), account=account)
+            | ({"bonded_source": bonded_source} if bonded_source is not None else {}),
             operation,
         )
 

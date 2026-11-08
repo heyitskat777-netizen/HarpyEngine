@@ -6,12 +6,14 @@ from girlframe.database.base import Base
 from girlframe.database.m2_schema import define
 from girlframe.database.m3_schema import define as define_m3
 from girlframe.database.p1_schema import define as define_p1
+from girlframe.database.p1_source_schema import define as define_source_pauses
 
 metadata = Base.metadata
 m2 = define(metadata)
 m3 = define_m3(metadata)
 
 p1_notices = define_p1(metadata)
+p1_source_pauses = define_source_pauses(metadata)
 coordination_revisions = sa.Table(
     "creation_coordination_revisions",
     metadata,

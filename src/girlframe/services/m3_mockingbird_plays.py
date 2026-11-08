@@ -137,7 +137,7 @@ def prepare(
         or value.channel != channel
         or value.state != "ready"
         or actual.controller != viewer.user_id
-        or not rules.owns(state, actor, PLAY_RULES[prepared.play])
+        or not _owned_trigger_rule(game, c, state, value)
         or cast.id != value.scene
         or fingerprint(cast) != value.cast_sha256
         or prepared.target is not None
@@ -163,12 +163,35 @@ def prepare(
         )
     )
     source = GameState.model_validate_json(raw) if raw else None
+    if value.bonded_source is not None:
+        from girlframe.services.m3_bonded import prove_delegation
+
+        prove_delegation(
+            game,
+            c,
+            state,
+            value.bonded_source,
+            value.id,
+            value.actor,
+            value.parties[0].actor,
+            PLAY_RULES[value.play],
+        )
+        born = (
+            next((x for x in source.mockingbird.triggers if x.id == value.id), None)
+            if source
+            else None
+        )
+        if born is None or born.bonded_source != value.bonded_source:
+            raise WorkflowError("Preserve the immutable original borrowed Sex source")
     if (
         event is None
         or event["kind"] != "m3.mockingbird_trigger"
         or event["actor_id"] != str(viewer.user_id)
         or source is None
-        or not any(x.id == value.id and x.actor == actor for x in source.mockingbird.triggers)
+        or not any(
+            x.id == value.id and x.actor == actor and x.bonded_source == value.bonded_source
+            for x in source.mockingbird.triggers
+        )
     ):
         raise WorkflowError(
             "SOURCE_MOCKINGBIRD_TRIGGER_MISSING: recover the actual owner declaration"
@@ -233,7 +256,7 @@ def prepare(
         judge_source=judge_source,
         appointment=appointment,
         followups=[],
-    )
+    ) | ({"bonded_source": value.bonded_source} if value.bonded_source is not None else {})
 
 
 def pre_roll(game: "GameService", c: Connection, state: GameState, action: dict[str, Any]) -> None:
@@ -245,8 +268,9 @@ def pre_roll(game: "GameService", c: Connection, state: GameState, action: dict[
     current = _cast(game, c, state, int(action["channel_id"]))
     if (
         value.state != "ready"
+        or value.actor != ref
         or fingerprint(current) != meta["cast_sha256"]
-        or not rules.owns(state, ref, PLAY_RULES[value.play])
+        or not _owned_trigger_rule(game, c, state, value)
     ):
         raise WorkflowError("STALE_MOCKINGBIRD: recover the actual trigger, rule and original cast")
     state.mockingbird = state.mockingbird.model_copy(
@@ -567,6 +591,7 @@ class MockingbirdService:
         account: str,
         *,
         primary: ActorRef | None = None,
+        bonded_source: str | None = None,
     ) -> dict[str, Any]:
         def access(c: Connection) -> None:
             Access(self.store).authorize(c, viewer, "plays", director_response=True)
@@ -583,7 +608,7 @@ class MockingbirdService:
             actual = resolve(state, actor, bound, require_current_profile=False)
             if (
                 actual.controller != viewer.user_id
-                or not rules.owns(state, actor, PLAY_RULES[play])
+                or not _owned_source_rule(self.game, c, state, actor, play, targets, bonded_source)
                 or not targets
                 or len(set(targets)) != len(targets)
                 or actor in targets
@@ -645,6 +670,7 @@ class MockingbirdService:
             identity, event = str(uuid4()), str(uuid4())
             value = Trigger(
                 id=identity,
+                bonded_source=bonded_source,
                 play=play,
                 actor=actor,
                 parties=parties,
@@ -658,6 +684,12 @@ class MockingbirdService:
             state.mockingbird = state.mockingbird.model_copy(
                 update={"triggers": (*state.mockingbird.triggers, value)}
             )
+            if bonded_source is not None:
+                from girlframe.services.m3_bonded import bind_delegation
+
+                bind_delegation(
+                    self.game, c, state, bonded_source, identity, PLAY_RULES[play], event
+                )
             self.game.event(
                 c,
                 viewer.user_id,
@@ -680,7 +712,8 @@ class MockingbirdService:
                 targets=[x.model_dump(mode="json") for x in targets],
                 account=account,
             )
-            | ({"primary": primary.model_dump(mode="json")} if primary is not None else {}),
+            | ({"primary": primary.model_dump(mode="json")} if primary is not None else {})
+            | ({"bonded_source": bonded_source} if bonded_source is not None else {}),
             operation,
             authorize=access,
             auto_audit=False,
@@ -1121,3 +1154,35 @@ def post_synchronize(
     current = game.action(c, action["id"])
     action.clear()
     action.update(current)
+
+
+def _owned_source_rule(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    actor: ActorRef,
+    play: str,
+    targets: tuple[ActorRef, ...],
+    bonded_source: str | None,
+) -> bool:
+    if bonded_source is None:
+        return rules.owns(state, actor, PLAY_RULES[play])
+    if play != SEX or len(targets) != 1:
+        raise WorkflowError("Only this actual single-counterpart Sex source may be borrowed")
+    from girlframe.services.m3_bonded import admit_delegation
+
+    return admit_delegation(game, c, state, actor, targets[0], PLAY_RULES[play], bonded_source)
+
+
+def _owned_trigger_rule(
+    game: "GameService", c: Connection, state: GameState, value: Trigger
+) -> bool:
+    return _owned_source_rule(
+        game,
+        c,
+        state,
+        value.actor,
+        value.play,
+        tuple(x.actor for x in value.parties),
+        value.bonded_source,
+    )

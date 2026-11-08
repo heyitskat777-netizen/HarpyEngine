@@ -3,7 +3,7 @@
 from typing import Literal
 from uuid import NAMESPACE_URL, uuid5
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from girlframe.engine.m2 import GameState, IdentityState, PilotSheet
 from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
@@ -158,6 +158,7 @@ class Finder(Model):
 
 
 class SexSession(Model):
+    bonded_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
     id: str
     actor: ActorRef
     target: ActorRef

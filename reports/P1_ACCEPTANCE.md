@@ -29,3 +29,50 @@ Scoped source integration includes native `/girl` routing to resolve duplicate s
 Checkpoint static/source checks: Ruff and format38 changed Python files; mypy34 source files; registry230 subset/246 unimplemented/476total/439required/0 independently verified; repository1298publishable/40manifest/0findings. These are scoped development checks, not a full regression. Subsequent documentation/CI selection changes contain no runtime edits. CI's interim selection is the new offline command-tree startup smoke; final candidate full mode still discovers every test.
 
 Published prior checkpoints: W0 `1350053398cc2cbf01ca6ca3769328705f6fff02` CI [42451138777](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42451138777) passed; facilitator `c62a65488bf8c1a8f72ce01bc6eab6798222ae8e` CI [42455153874](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42455153874) passed. Those runs do not certify later source work or full P1.
+## Bonded / Wyvern integration in progress
+
+Scope and explicit boundaries: [bounded work order](../docs/work_orders/P1_BONDED_WYVERN.md).
+Bonded source/native workflow remains frozen while root integrates shared physical,
+choice and permission ports. Added standalone diceless-source check:
+`.venv/bin/pytest -q tests/rules/test_bonded.py::test_nonpair_actual_seven_no_roll_pair_not_private_audience --junitxml=var/p1-source-pause-smoke.xml`:
+**1 passed in1.89s**. Actual acquiring→held→closed, original permissions restored,
+real counterpart stop, no added RNG and private original-Pair exclusion. Other
+Bonded normals and source-specific failure/restart cases remain deferred.
+
+After adding Bonded/movement/vehicle routes, actual offline SDK command-tree test
+`tests/rules/test_p1_command_surface.py`: **1 passed in0.82s**, XML
+`var/p1-bonded-wyvern-command-smoke.xml`. No Discord login/sync or deployment.
+Migration0016 is authored; no live migration or final upgrade/restore gate has run.
+
+Wyvern's sole interim mid-Rouse strike attempt failed in2.38s because its fixture
+selected a parked Frame Asset while the actual target body was outside that Frame.
+The actual damage guard correctly rejected that unavailable body resource; the
+fixture is being corrected to select a genuinely available ActorView Asset.
+No guard waiver or full-regression claim. The broader source tests stay authored
+and NOT RUN until the final exact-commit candidate.
+
+Corrected same-node Wyvern smoke: **1 passed in2.18s**, XML
+`var/p1-wyvern-rouse-smoke.xml`; first failed XML retained separately. Target
+selection now uses the genuine current ActorView Asset, preserving the parked
+Frame/body distinction. It covers real Rouse/known receipt/completion, invalid
+Asset rollback, actual strike, canonical consumed-source proof, same-key retry,
+no second use, preserved Enormous/Status and exactly1 dice call. Pin, replacement,
+Shield, exploration and paid branches remain authored NOTRUN. Further shared
+combat work does not inherit this passing result.
+
+Remote verification: prior Prince/CONSUME/AM checkpoint
+`9cdea91b2b8dd1c66355894e08bf8b9dcc209d7b` has successful CI
+[42456286134](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42456286134).
+It is the focused interim selection, and does not cover this uncommitted
+Bonded/Wyvern integration or replace the final full regression.
+
+Coherent integrated source checks after the finite combat/Sprite connections:
+Ruff/format72 changed Python files, mypy68 source files using
+`--follow-imports=silent`, registry242subset/234unimplemented/476total/439required/
+0 independently verified, repository1323publishable/40originalmanifest/0findings,
+and `git diff --check` passed. Exact local source hashes and command log are
+retained under ignored `var/p1-bonded-wyvern-integration-static.json` and
+`var/p1-bonded-wyvern-checkpoint-static.log`. Two formatting-only deltas were in
+root-owned movement/vehicle files; frozen worker sources stayed intact. This is
+scoped static verification, not the final global/full-regression gate. Four
+expected combat test scenarios are being authored separately and have not run.

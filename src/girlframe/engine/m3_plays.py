@@ -29,6 +29,12 @@ HEAT_IDS = (
     "unassuming_doll",
     "prince_performer",
     "consume_eat",
+    "wyvern_explore",
+    "wyvern_rouse",
+    "wyvern_wraith",
+    "wyvern_protector",
+    "bonded_side",
+    "bonded_sex",
 )
 ASSET_IDS = ("defeat",)
 

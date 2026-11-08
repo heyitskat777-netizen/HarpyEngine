@@ -15,11 +15,12 @@ async def open_engage(interaction: discord.Interaction, game: GameService, ident
     data = await asyncio.to_thread(game.decision, viewer_from_interaction(interaction), identity)
     detail = data["engage"]
     assets = tuple((asset["id"], asset["label"]) for asset in detail["assets"])
+    maneuvers = tuple(detail.get("maneuvers", MANEUVERS))
     fields = [
         Field(
             "maneuvers",
             "Choose your battlefield maneuvers",
-            tuple((kind, kind.replace("_", " ").title()) for kind in MANEUVERS),
+            tuple((kind, kind.replace("_", " ").title()) for kind in maneuvers),
             minimum=detail["minimum"],
             maximum=detail["maximum"],
             required=bool(detail["minimum"]),
@@ -32,7 +33,7 @@ async def open_engage(interaction: discord.Interaction, game: GameService, ident
                 minimum=0,
                 required=False,
             )
-            for kind in MANEUVERS
+            for kind in maneuvers
         ],
         Field(
             "text",
@@ -41,6 +42,17 @@ async def open_engage(interaction: discord.Interaction, game: GameService, ident
             required=bool(detail["minimum"]),
         ),
     ]
+    vehicles = detail.get("wyvern_vehicles", [])
+    if vehicles:
+        fields.append(
+            Field(
+                "wyvern_vehicle",
+                "Actual empty vehicle to crush (optional)",
+                tuple((x["id"], x["label"]) for x in vehicles),
+                minimum=0,
+                required=False,
+            )
+        )
     if detail["damage"]:
         substitutions = detail.get("untouchable_tags", [])
         fields.append(
@@ -68,6 +80,8 @@ async def open_engage(interaction: discord.Interaction, game: GameService, ident
         selected_fields = {
             kind: values["asset_" + kind][0] for kind in choices if values.get("asset_" + kind)
         }
+        if "crush_small" in choices and values.get("wyvern_vehicle"):
+            selected_fields["wyvern_vehicle"] = values["wyvern_vehicle"][0]
         if values.get("untouchable_tag"):
             selected_fields["untouchable_tag"] = values["untouchable_tag"][0]
         answer = ChoiceAnswer(

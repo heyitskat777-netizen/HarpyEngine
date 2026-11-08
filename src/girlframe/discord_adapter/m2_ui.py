@@ -566,6 +566,25 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
 
         await open_prince_choice(interaction, game, decision)
         return
+    if decision["kind"] == "wyvern_handler":
+        from girlframe.discord_adapter.m3_handler_plays import open_play as open_handler_play
+        from girlframe.services.m3_handler_plays import HandlerPlayService
+
+        identity = decision["body"].get("handler_grant")
+        if not identity:
+            raise WorkflowError("Recover the actual required Handler Play source")
+        await open_handler_play(interaction, HandlerPlayService(game.store), identity)
+        return
+    if decision["kind"].startswith("wyvern_"):
+        from girlframe.discord_adapter.m3_wyvern import open_choice as open_wyvern_choice
+
+        await open_wyvern_choice(interaction, game, decision)
+        return
+    if decision["kind"].startswith("bonded_"):
+        from girlframe.discord_adapter.m3_bonded import open_choice as open_bonded_choice
+
+        await open_bonded_choice(interaction, game, decision)
+        return
     if decision["kind"].startswith("consume_"):
         from girlframe.discord_adapter.m3_consume import open_choice as open_consume_choice
 
@@ -1379,7 +1398,11 @@ async def open_play(
             or am_source
             or sex_source
             or (
-                parent["body"]["work"]
+                parent["detail"]["danger"]
+                if parent and parent["kind"] == "wyvern_child"
+                else parent["body"]["source_work"]
+                if parent and parent["kind"] in ("wyvern_replacement", "wyvern_pin_response")
+                else parent["body"]["work"]
                 if parent and parent["kind"].startswith("easy_target_child:")
                 else parent["body"]["source_work"]
                 if parent and parent["kind"] in ("consume_child", "consume_order_child")
@@ -2091,6 +2114,32 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         except WorkflowError as error:
             await reply(interaction, str(error))
 
+    @campaign.command(
+        name="move", description="Record permitted movement of your actual body or Frame"
+    )
+    async def move_controls(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_movement import open_movement
+        from girlframe.services.m3_movement import MovementService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_movement(interaction, MovementService(game))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @campaign.command(
+        name="vehicle", description="Read actual regular vehicles; Handler records their facts"
+    )
+    async def vehicle_controls(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_vehicles import open_vehicles
+        from girlframe.services.m3_vehicles import VehicleService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_vehicles(interaction, VehicleService(game))
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
     @campaign.command(name="frame", description="Your current Frame's source-owned controls")
     async def frame_controls(interaction: discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
@@ -2102,6 +2151,11 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
                 from girlframe.services.m3_prince import PrinceService
 
                 await open_prince(interaction, PrinceService(game))
+            elif frame == "WYVERN 0.4":
+                from girlframe.discord_adapter.m3_wyvern import open_wyvern
+                from girlframe.services.m3_wyvern import WyvernService
+
+                await open_wyvern(interaction, WyvernService(game))
             elif frame == "CONSUME":
                 from girlframe.discord_adapter.m3_consume import open_consume
                 from girlframe.services.m3_consume import ConsumeService
@@ -2111,6 +2165,17 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
                 await reply(
                     interaction, "Use this Frame's existing campaign controls and private inbox."
                 )
+        except WorkflowError as error:
+            await reply(interaction, str(error))
+
+    @girl.command(name="bonded", description="Actual Pair, Side and source-owned intimacy")
+    async def bonded_controls(interaction: discord.Interaction) -> None:
+        from girlframe.discord_adapter.m3_bonded import open_bonded
+        from girlframe.services.m3_bonded import BondedService
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await open_bonded(interaction, BondedService(game))
         except WorkflowError as error:
             await reply(interaction, str(error))
 

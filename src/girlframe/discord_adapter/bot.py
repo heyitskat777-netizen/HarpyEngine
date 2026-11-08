@@ -361,10 +361,14 @@ class ReadOnlyDiscordBot(discord.Client):
         from girlframe.discord_adapter.p1_facilitator import DiscordFacilitatorGateway
 
         facilitator_worker = FacilitatorWorker(self.game)
+        from girlframe.delivery.p1_source_pause_worker import SourcePauseWorker
+
+        source_worker = SourcePauseWorker(self.game)
         while not self.is_closed():
             guild = self.get_guild(self.policy.guild_id)
             if guild is not None:
                 try:
+                    await source_worker.tick(DiscordGameGateway(guild, self.game))
                     await worker.tick(DiscordGameGateway(guild, self.game))
                     await facilitator_worker.tick(DiscordFacilitatorGateway(guild, self.game))
                 except Exception:

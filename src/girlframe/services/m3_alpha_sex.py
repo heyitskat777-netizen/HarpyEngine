@@ -63,7 +63,11 @@ def _contact(
     actor: ActorRef,
     target: ActorRef,
     channel: int,
+    *,
+    bonded_source: str | None = None,
 ) -> None:
+    from girlframe.services.m3_bonded import admit_delegation
+
     bound = profiles(c, game.store.campaign_id)
     own, other = resolve(state, actor, bound), resolve(state, target, bound)
     cast = _cast(game, c, state, channel)
@@ -76,7 +80,11 @@ def _contact(
         or other.custody not in (None, "free")
         or target.kind != "pilot"
         or actor == target
-        or not has_rule(state.sheets[actor.entity], rules.RULE, "ALPHA")
+        or not (
+            has_rule(state.sheets[actor.entity], rules.RULE, "ALPHA")
+            if bonded_source is None
+            else admit_delegation(game, c, state, actor, target, rules.RULE, bonded_source)
+        )
         or not any(x.actor == actor and x.controller == own.controller for x in cast.roles)
         or not any(x.actor == target and x.controller == other.controller for x in cast.roles)
         or own.inside_frame is not False
@@ -100,6 +108,11 @@ def _contact(
 def prove(game: GameService, c: Connection, state: GameState, identity: str) -> rules.Session:
     value = rules.get(state, identity)
     original = rules.get(_history(game, c, value.proposed_event), identity)
+    from girlframe.services.m3_bonded import prove_delegation
+
+    prove_delegation(
+        game, c, state, value.bonded_source, value.id, value.actor, value.target, rules.RULE
+    )
     stable = (
         "id",
         "actor",
@@ -110,6 +123,7 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         "registry",
         "proposed_event",
         "proposal",
+        "bonded_source",
     )
     audit = c.execute(
         sa.select(t.events.c.kind, t.events.c.actor_id).where(
@@ -203,7 +217,15 @@ def preview(game: GameService, viewer: GuildViewer, channel: int) -> dict[str, A
                     or value.cast.channel != channel
                 ):
                     continue
-                _contact(game, c, state, value.actor, value.target, channel)
+                _contact(
+                    game,
+                    c,
+                    state,
+                    value.actor,
+                    value.target,
+                    channel,
+                    bonded_source=value.bonded_source,
+                )
                 prove(game, c, state, value.id)
                 ready.append(
                     dict(
@@ -241,7 +263,7 @@ def prepare(
         or not prepared.trigger_confirmed
     ):
         raise WorkflowError("Use this actual accepted voluntary source and original counterpart")
-    _contact(game, c, state, value.actor, value.target, channel)
+    _contact(game, c, state, value.actor, value.target, channel, bonded_source=value.bonded_source)
     if fingerprint(_cast(game, c, state, channel)) != fingerprint(value.cast):
         raise WorkflowError(
             "The accepted source cast changed; establish the actual interaction again"
@@ -260,7 +282,7 @@ def prepare(
         counterpart=value.counterpart,
         phase="unrolled",
         followups=[],
-    )
+    ) | ({"bonded_source": value.bonded_source} if value.bonded_source is not None else {})
 
 
 def bind(state: GameState, action: dict[str, Any]) -> None:
@@ -275,7 +297,15 @@ def pre_roll(
 ) -> None:
     authorize(game, c, viewer, action)
     value = rules.get(state, action["data"]["alpha_sex"]["session"])
-    _contact(game, c, state, value.actor, value.target, int(action["channel_id"]))
+    _contact(
+        game,
+        c,
+        state,
+        value.actor,
+        value.target,
+        int(action["channel_id"]),
+        bonded_source=value.bonded_source,
+    )
     if value.effect_event:
         raise WorkflowError("Resume the actual saved source result; do not reroll")
 
@@ -788,6 +818,8 @@ class SexService:
         target: ActorRef,
         expected: int,
         account: str,
+        *,
+        bonded_source: str | None = None,
     ) -> dict[str, Any]:
         if not account.strip() or len(account) > 1200:
             raise WorkflowError("Describe only your actual voluntary source interaction")
@@ -796,7 +828,7 @@ class SexService:
             self.game.unpaused(c)
             state = load_state(c, self.store.campaign_id)
             actor = current_ref(state, viewer.user_id)
-            _contact(self.game, c, state, actor, target, channel)
+            _contact(self.game, c, state, actor, target, channel, bonded_source=bonded_source)
             if state.revision != expected or self.game.pending_actions(c):
                 raise WorkflowError(
                     "STALE_SOURCE: finish pending Plays and reopen actual source controls"
@@ -807,6 +839,7 @@ class SexService:
             value = rules.Session(
                 id=identity,
                 actor=actor,
+                bonded_source=bonded_source,
                 target=target,
                 caster=viewer.user_id,
                 counterpart=int(target.entity),
@@ -816,6 +849,10 @@ class SexService:
                 proposal=account,
             )
             rules.put(state, value)
+            if bonded_source is not None:
+                from girlframe.services.m3_bonded import bind_delegation
+
+                bind_delegation(self.game, c, state, bonded_source, value.id, rules.RULE, event)
             self.game.event(
                 c,
                 viewer.user_id,
@@ -836,7 +873,8 @@ class SexService:
                 target=target.model_dump(mode="json"),
                 expected=expected,
                 account=account,
-            ),
+            )
+            | ({"bonded_source": bonded_source} if bonded_source is not None else {}),
             operation,
             auto_audit=False,
             authorize=lambda c: _access(self.game, c, viewer),
@@ -867,7 +905,15 @@ class SexService:
                 or self.game.pending_actions(c)
             ):
                 raise WorkflowError("Only the original counterpart owns this current source answer")
-            _contact(self.game, c, state, value.actor, value.target, value.cast.channel)
+            _contact(
+                self.game,
+                c,
+                state,
+                value.actor,
+                value.target,
+                value.cast.channel,
+                bonded_source=value.bonded_source,
+            )
             event = str(uuid4())
             rules.put(
                 state,

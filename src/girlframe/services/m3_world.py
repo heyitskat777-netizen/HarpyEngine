@@ -316,6 +316,8 @@ class WorldService:
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             state = self._state(c, expected)
+            if npc.source_kind is not None:
+                raise WorkflowError("This NPC kind requires its actual source producer")
             if show_dog is not None:
                 from girlframe.services.m3_show_dog import validate_npc_introduction
 

@@ -12,7 +12,16 @@ class Maneuver(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
 
     kind: Literal[
-        "pin", "advance", "drive_back", "reposition", "cover", "shatter", "protect", "lure"
+        "pin",
+        "advance",
+        "drive_back",
+        "reposition",
+        "cover",
+        "shatter",
+        "protect",
+        "lure",
+        "encircle",
+        "crush_small",
     ]
     actor: ActorRef
     opponent: ActorRef
@@ -31,6 +40,7 @@ def select(
     assault_extra: bool = False,
     casualty_extra: bool = False,
     substitute_damage: bool = False,
+    wyvern_extra: bool = False,
 ) -> tuple[dict[str, str], str | None]:
     """Exact human choices, one real owned Asset per maneuver, one optional Harpy extra."""
     if answer.flag is not None or answer.number is not None or answer.member is not None:
@@ -43,7 +53,8 @@ def select(
     else:
         minimum = {"low": 1, "mid": 2, "high": 3}[level]
         maximum = minimum + int(harpy)
-    if not minimum <= len(answer.options) <= maximum or not set(answer.options) <= set(MANEUVERS):
+    allowed = set(MANEUVERS) | ({"encircle", "crush_small"} if wyvern_extra else set())
+    if not minimum <= len(answer.options) <= maximum or not set(answer.options) <= allowed:
         raise ValueError("Choose the exact tier's distinct maneuvers, plus any owned Harpy extra")
     if set(answer.fields) != set(answer.options):
         raise ValueError("Choose one actual Asset for every selected maneuver")

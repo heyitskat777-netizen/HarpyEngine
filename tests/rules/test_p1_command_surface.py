@@ -21,9 +21,10 @@ def test_actual_bot_registers_complete_bounded_private_command_surface(ledger):
             girl = bot.tree.get_command("girl", guild=guild)
             assert campaign.get_command("mentor").parameters
             assert not girl.get_command("mentor").parameters
-            assert campaign.get_command("frame") is not None
+            for name in ("frame", "move", "vehicle"):
+                assert campaign.get_command(name) is not None
             assert bot.tree.get_command("facilitator", guild=guild) is not None
-            for name in ("am", "alpha", "princess", "casualty", "vatgrown"):
+            for name in ("am", "alpha", "princess", "casualty", "vatgrown", "bonded"):
                 assert girl.get_command(name) is not None
             assert not bot.tree.get_commands()
             for command in commands:

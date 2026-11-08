@@ -709,7 +709,30 @@ class InboxView(discord.ui.View):
             await open_oldgen_sex(
                 interaction, OldgenSexService(GameService(self.service.store)), item.identity
             )
-        elif item.task in ("m3_prince", "m3_consume"):
+        elif item.task == "m3_wyvern_combat":
+            from girlframe.discord_adapter.m3_wyvern_combat import open_combat
+            from girlframe.services.m2_game import GameService
+
+            await open_combat(interaction, GameService(self.service.store), item.identity)
+        elif item.task in ("m3_prince", "m3_consume", "m3_bonded", "m3_wyvern"):
+            if item.task == "m3_wyvern":
+                from girlframe.discord_adapter.m3_wyvern import open_wyvern
+                from girlframe.services.m2_game import GameService
+                from girlframe.services.m3_wyvern import WyvernService
+
+                await open_wyvern(
+                    interaction, WyvernService(GameService(self.service.store)), item.identity
+                )
+                return
+            elif item.task == "m3_bonded":
+                from girlframe.discord_adapter.m3_bonded import open_bonded
+                from girlframe.services.m2_game import GameService
+                from girlframe.services.m3_bonded import BondedService
+
+                await open_bonded(
+                    interaction, BondedService(GameService(self.service.store)), item.identity
+                )
+                return
             from girlframe.services.m2_game import GameService
 
             if item.task == "m3_prince":

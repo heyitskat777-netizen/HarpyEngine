@@ -31,6 +31,7 @@ class Party(Model):
 
 
 class Trigger(Model):
+    bonded_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
     id: str = Field(min_length=1)
     play: Literal["mockingbird_person", "mockingbird_sex"]
     actor: ActorRef

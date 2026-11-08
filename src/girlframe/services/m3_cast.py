@@ -25,6 +25,9 @@ class CastService:
         self.actors, self.game, self.store = actors, actors.game, actors.store
 
     def _safe(self, c: Connection, channel: int) -> None:
+        from girlframe.services.p1_source_pause import require_clear
+
+        require_clear(self.game, c, channel)
         lock = self.game.lock(c, channel)
         actions = t.m2["m2_actions"]
         if (

@@ -4955,3 +4955,14 @@ Remaining normal dependencies include Vatgrown DNA/chaperone/death replacement/n
 ## P1 continuation — Prince, CONSUME and AM source checkpoint (2026-11-08)
 
 Historical M3 full completion remains pending; current scope is the approved P1 plan. See `reports/P1_ACCEPTANCE.md` and `docs/work_orders/P1_PRINCE_CONSUME_AM.md`. Four individual minimum smokes passed: Prince1/2.19s, CONSUME1/2.24s, AM1/2.15s and offline command registration1/0.85s. Other authored normals are deferred to final P1, not counted as executed evidence. Remaining ordinary adapters, exact-candidate full regression including DPS pagination, independent review and human acceptance remain pending. No live restart or deployment.
+
+## Current P1 continuation
+
+The owner-approved revised milestone keeps full M3 RULES_SUBSET and its historical
+backlog/gates intact. Current scoped Bonded/Wyvern source integration, exact
+minimum smoke outcomes and deferred cases are recorded in
+[P1 acceptance](P1_ACCEPTANCE.md) and the
+[bounded work order](../docs/work_orders/P1_BONDED_WYVERN.md). These focused results
+are not a full regression or player acceptance. The owner now defers most tests
+to the final P1 candidate, including the required exact-integrated-commit
+Deep-Brain-Spikes native/boundary pagination regression. Bot remains OFF.

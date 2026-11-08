@@ -1555,12 +1555,18 @@ def damage_actor(
     """Trusted consumer port; exact source grant/action, no fictitious GM body or audit event."""
     if not source_action and not source_work:
         raise WorkflowError("Damage needs its actual source Play or source-owned effect grant.")
+    from girlframe.services.m3_wyvern_combat import require_damage_allowed
+
+    require_damage_allowed(game, c, state, target)
     bound = profiles(c, game.store.campaign_id)
     target_view = resolve(state, target, bound, require_current_profile=False)
     if any(x.id == asset_id and x.family == "girl" for x in target_view.assets):
         from girlframe.engine.m3_am import require_harm
 
         require_harm(state, actor, target)
+    from girlframe.engine.m3_wyvern import RousedUse
+    from girlframe.engine.m3_wyvern import records as wyvern_records
+
     grant = next((x for x in state.handler_plays if x.id == source_work), None)
     if grant is not None:
         from girlframe.services.m3_handler_plays import validate_damage_source
@@ -1578,6 +1584,12 @@ def damage_actor(
             or chooser_controller != resource.controller
         ):
             raise WorkflowError("Only actual outstanding nuclear source damage uses this port")
+    elif source_work and any(x.id == source_work for x in wyvern_records(state, RousedUse)):
+        from girlframe.services.m3_wyvern_combat import prove_damage_source
+
+        prove_damage_source(
+            game, c, state, source_work, target, asset_id, event, actor, chooser_controller
+        )
     elif actor is not None:
         frozen_original = False
         if source_action and actor.kind == "pilot" and rules.original_ended(state, actor):
@@ -1713,6 +1725,10 @@ def damage_actor(
 
     scene = game.action(c, source_action)["scene_id"] if source_action else None
     if scene is None and source_work:
+        use = next((x for x in wyvern_records(state, RousedUse) if x.id == source_work), None)
+        if use is not None:
+            scene = use.cast.id
+    if scene is None and source_work:
         work = t.m3["m3_required_work"]
         scene = c.scalar(
             sa.select(work.c.scene_id)
@@ -1758,19 +1774,38 @@ def damage_frame_at_scene(
     target: ActorRef,
     frame_instance: str,
     asset_id: str,
-    source_action: str,
+    source_action: str | None,
     event: str,
     actor: ActorRef,
     chooser_controller: int,
     occurrence: str,
+    source_work: str | None = None,
+    allow_sprite: bool = True,
 ) -> tuple[GameState, tuple[str, ...]]:
     """Actual Snoop damage to a proven current vacant Frame, never its absent Girl."""
     from girlframe.engine.m3_physical import occupied_frame
     from girlframe.services.m3_enforcer_snoop import validate_frame_damage_source
 
-    validate_frame_damage_source(c, game, state, source_action, target, frame_instance, asset_id)
+    use = None
+    if source_action is not None:
+        validate_frame_damage_source(
+            c, game, state, source_action, target, frame_instance, asset_id
+        )
+    else:
+        if source_work is None:
+            raise WorkflowError("A parked Frame strike needs its actual original Roused grant")
+        from girlframe.services.m3_wyvern_combat import prove_damage_source
+
+        use = prove_damage_source(
+            game, c, state, source_work, target, asset_id, event, actor, chooser_controller
+        )
+        if use.target_frame != frame_instance:
+            raise WorkflowError("Preserve the actual selected parked Frame, not another body")
     if target.kind != "pilot":
         raise WorkflowError("The actual assigned Frame port requires its original Pilot owner.")
+    from girlframe.services.m3_wyvern_combat import require_damage_allowed
+
+    require_damage_allowed(game, c, state, target)
     bound = profiles(c, game.store.campaign_id)
     actual = resolve(state, target, bound, require_current_profile=False)
     if actual.frame_instance != frame_instance:
@@ -1780,6 +1815,25 @@ def damage_frame_at_scene(
     body = next((x for x in state.placements if x.actor == target), None)
     if body is None:
         raise WorkflowError("Record actual original cockpit occupancy before damaging this Frame.")
+    if use is not None and allow_sprite:
+        from girlframe.services.m3_sprite import defer
+
+        deferred, interceptions = defer(
+            game,
+            c,
+            state,
+            target=target,
+            asset=asset_id,
+            source_action=None,
+            source_work=source_work,
+            event=event,
+            opponent=actor,
+            chooser=chooser_controller,
+            occurrence=occurrence,
+            target_frame=frame_instance,
+        )
+        if interceptions:
+            return deferred, interceptions
     occupants = [x for x in state.placements if occupied_frame(x) == (target, frame_instance)]
     if occupants:
         if any(x.actor != target for x in occupants):
@@ -1791,12 +1845,13 @@ def damage_frame_at_scene(
             target=target,
             asset_id=asset_id,
             source_action=source_action,
-            source_work=None,
+            source_work=source_work,
             event=event,
             actor=actor,
             chooser_controller=chooser_controller,
             occurrence=occurrence,
-            physical_blow=False,
+            physical_blow=use is not None,
+            allow_sprite=False,
         )
     if body.mode != "outside_frame":
         raise WorkflowError("Prove actual vacancy; missing or passenger facts are not permission.")
@@ -1821,7 +1876,8 @@ def damage_frame_at_scene(
             actor=target.model_dump_json(),
             frame=frame_instance,
             asset=asset_id,
-            source_action=source_action,
+            source_action=source_action or "",
+            **({"source_work": source_work} if source_work is not None else {}),
             event=event,
             occurrence=occurrence,
             disabled=str(
@@ -1837,10 +1893,14 @@ def damage_frame_at_scene(
         damager=actor,
         target=target,
         identity=asset_id,
-        scene=game.action(c, source_action)["scene_id"],
+        scene=game.action(c, source_action)["scene_id"]
+        if source_action
+        else use.cast.id
+        if use
+        else None,
         event=event,
         action=source_action,
-        work=None,
+        work=source_work,
         occurrence=occurrence,
     )
     return changed, ()
@@ -1911,6 +1971,33 @@ def synchronize_damage(game: "GameService", c: Connection, event: str) -> None:
         parent = dict(campaign_id=game.store.campaign_id, campaign_context=True)
         if action:
             parent = dict(campaign_id=game.store.campaign_id, scene_id=action["scene_id"])
+        if action is None and fact.get("source_work"):
+            from girlframe.engine.m3_wyvern import RousedUse
+            from girlframe.engine.m3_wyvern import records as wyvern_records
+            from girlframe.services.m3_wyvern import prove_use
+
+            source_use = next(
+                (x for x in wyvern_records(state, RousedUse) if x.id == fact["source_work"]), None
+            )
+            if source_use is not None:
+                prove_use(game, c, state, source_use.id)
+                parent = dict(campaign_id=game.store.campaign_id, scene_id=source_use.cast.id)
+            else:
+                source_row = (
+                    c.execute(
+                        sa.select(work)
+                        .where(
+                            work.c.campaign_id == game.store.campaign_id,
+                            work.c.id == fact["source_work"],
+                        )
+                        .order_by(work.c.revision.desc())
+                        .limit(1)
+                    )
+                    .mappings()
+                    .first()
+                )
+                if source_row is not None:
+                    parent = dict(source_row)
         actual = resolve(
             state,
             obligation.target,
@@ -2028,12 +2115,20 @@ def complete_damage_work(
         from girlframe.services.m3_handler_plays import complete_damage
 
         complete_damage(game, c, body["source_work"], event, viewer, key)
+    if body.get("source_work"):
+        from girlframe.services.m3_wyvern_combat import complete_damage_work as complete_wyvern
+
+        complete_wyvern(game, c, dict(latest), event, viewer, key)
     if body.get("source_action"):
         action = game.action(c, body["source_action"])
         if action["data"].get("am_scrutinized", {}).get("pilot_damage"):
             from girlframe.services.m3_am_scrutinized import complete_pilot_damage
 
             complete_pilot_damage(game, c, dict(latest), event, viewer, key)
+        elif action["data"].get("consume"):
+            from girlframe.services.m3_consume import synchronize as synchronize_consume
+
+            synchronize_consume(game, c, action, event)
         elif action["data"].get("battle"):
             synchronize(game, c, action, event, viewer, key)
         elif action["data"].get("gorgon_play"):
@@ -2086,6 +2181,9 @@ def complete_damage_work(
             from girlframe.services.m3_easy_target import synchronize as synchronize_easy_child
 
             synchronize_easy_child(game, c, game.action(c, action["id"]), event)
+    from girlframe.services.m3_consume import resume_pending as resume_consume
+
+    resume_consume(game, c, event)
 
 
 def damage_prerequisites(game: "GameService", c: Connection, row: dict[str, Any]) -> None:
@@ -2102,6 +2200,16 @@ def damage_prerequisites(game: "GameService", c: Connection, row: dict[str, Any]
             for x in source.resources
         ):
             raise WorkflowError("Recover the exact original nuclear damage requirement")
+    if body.get("source_work"):
+        from girlframe.engine.m3_wyvern import RousedUse
+        from girlframe.engine.m3_wyvern import records as wyvern_records
+        from girlframe.services.m3_wyvern import prove_use
+
+        source_state = load_state(c, game.store.campaign_id)
+        if any(x.id == body["source_work"] for x in wyvern_records(source_state, RousedUse)):
+            source_use = prove_use(game, c, source_state, body["source_work"])
+            if row["id"] not in source_use.work:
+                raise WorkflowError("Recover the actual Roused strike's original required work")
     aggressive = body.get("requirement", {}).get("details", {}).get("aggressive")
     if aggressive:
         other = latest(game, c, aggressive)

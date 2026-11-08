@@ -19,6 +19,7 @@ class Session(Model):
     counterpart: int
     cast: SceneCast
     registry: str
+    bonded_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
     proposed_event: str
     proposal: str = Field(min_length=1, max_length=1200)
     consent_event: str | None = None

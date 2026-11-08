@@ -120,11 +120,22 @@ class DiscordGameGateway:
                 f"\nReceipt `{receipt['id']}`\nHuman responses pending."
             )
         elif kind == "outcome":
-            label = "interrupted" if payload.get("blocked_before_roll") else "resolved"
+            label = (
+                "replaced"
+                if payload.get("wyvern_replaced")
+                else "interrupted"
+                if payload.get("blocked_before_roll")
+                else "resolved"
+            )
             text = (
                 f"**{clean(payload['callsign'])} — {label}**"
                 f"\n{clean(payload['play'].replace('_', ' '))}"
             )
+            if payload.get("wyvern_replaced"):
+                text += (
+                    "\nThe original Play did not affect the Wyvern. "
+                    "The replacement Play is complete."
+                )
             if payload.get("blocked_before_roll"):
                 text += "\nInterrupted before dice. No roll receipt was created."
             if payload.get("total") is not None:

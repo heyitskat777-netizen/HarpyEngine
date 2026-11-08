@@ -401,6 +401,22 @@ class RecoveryService:
                             )
                             .values(state=item.state, revision=item.revision + 1)
                         )
+                if cancel and (
+                    action["data"].get("wyvern_pin_response")
+                    or action["data"].get("wyvern_replacement")
+                ):
+                    from girlframe.services.m3_wyvern_combat import (
+                        release_unrolled as release_counter,
+                    )
+
+                    released_learning = (
+                        release_counter(self.game, c, state, action, key) or released_learning
+                    )
+                if cancel and (action["data"].get("wyvern") or action["data"].get("wyvern_child")):
+                    from girlframe.services.m3_wyvern import release_unrolled as release_wyvern
+
+                    release_wyvern(self.game, c, state, action, key)
+                    released_learning = True
                 if cancel and action["data"].get("consume_child"):
                     from girlframe.services.m3_consume import release_child
 

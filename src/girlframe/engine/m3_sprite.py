@@ -2,9 +2,11 @@
 
 from typing import Literal
 
+from pydantic import Field
+
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model, ProfileBinding
-from girlframe.engine.m3_actors import resolve
+from girlframe.engine.m3_actors import frame_position, resolve
 
 
 class Candidate(Model):
@@ -21,6 +23,7 @@ class Blow(Model):
     source_action: str | None
     source_work: str | None
     source_event: str
+    target_frame: str | None = Field(default=None, exclude_if=lambda value: value is None)
     occurrence: str
     indirect: bool = False
     effect: Literal["damage", "fatal", "destroy"] = "damage"
@@ -32,11 +35,14 @@ def candidates(
     target: ActorRef,
     opponent: ActorRef | None,
     bindings: tuple[ProfileBinding, ...],
+    *,
+    target_frame: str | None = None,
 ) -> tuple[Candidate, ...]:
     if state.world is None:
         return ()
     target_body = resolve(state, target, bindings, require_current_profile=False)
-    if target_body.cell is None or target_body.offstage_source:
+    target_cell = frame_position(state, target, target_frame) if target_frame else target_body.cell
+    if target_cell is None or target_frame is None and target_body.offstage_source:
         return ()
     result = []
     for sprite in state.world.gorgons:
@@ -47,7 +53,7 @@ def candidates(
         owned = tuple(x.id for x in sprite.assets if not x.damaged)
         if (
             body.cell is not None
-            and body.cell == target_body.cell
+            and body.cell == target_cell
             and not body.offstage_source
             and owned
         ):

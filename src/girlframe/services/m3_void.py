@@ -115,10 +115,21 @@ def source(
 
             for point in for_family(proof, actor, family):
                 prove_stored_point(game, c, proof, point)
-        if body.get("reason") in ("supply_drop_expiry", "budget_removal", "ankou_feedback"):
+        if body.get("reason") in (
+            "supply_drop_expiry",
+            "budget_removal",
+            "ankou_feedback",
+            "consume_partake",
+            "consume_starvation_expiry",
+        ):
             from girlframe.services.m3_asset_loss import prove_loss_work
 
             prove_loss_work(game, c, first, body, actor)
+            return current, body, actor
+        if body.get("reason") == "wyvern_renovation":
+            from girlframe.services.m3_wyvern_support import prove_renovation_void
+
+            prove_renovation_void(game, c, first, body, actor)
             return current, body, actor
         if body.get("reason") == "budget_cleanup":
             from girlframe.services.m3_budget_cleanup import prove_void_source as prove_cleanup
@@ -476,6 +487,14 @@ def complete(
             # These actual loss sources have no synthetic parent Play; source-scoped
             # required work was resolved above by the real owned Void outcome.
             continue
+        elif body.get("reason") == "wyvern_renovation":
+            from girlframe.services.m3_wyvern_support import synchronize as sync_renovation
+
+            sync_renovation(game, c, event)
+        elif body.get("reason") in ("consume_partake", "consume_starvation_expiry"):
+            from girlframe.services.m3_consume import resume_pending
+
+            resume_pending(game, c, event)
         elif body.get("reason") == "budget_cleanup":
             from girlframe.services.m3_budget_cleanup import complete_void as complete_cleanup
 

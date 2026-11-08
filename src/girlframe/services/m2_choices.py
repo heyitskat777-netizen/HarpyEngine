@@ -289,6 +289,23 @@ class ChoiceEngine:
 
             apply_prince(self.game, c, state, action, request, answer)
             return
+        if kind.startswith("wyvern_"):
+            from girlframe.services.m3_wyvern import apply as apply_wyvern
+
+            apply_wyvern(self.game, c, state, action, request, answer)
+            if not self.game.pending(c, action["id"]):
+                self.finish(c, state, action)
+            return
+        if kind.startswith("bonded_"):
+            from girlframe.services.m3_bonded import apply_choice as apply_bonded
+
+            require(
+                apply_bonded(self.game, c, state, action, request, answer),
+                "Use the original owned Bonded choice",
+            )
+            if not self.game.pending(c, action["id"]):
+                self.finish(c, state, action)
+            return
         if kind.startswith("consume_"):
             from girlframe.services.m3_consume import apply as apply_consume
 
@@ -673,6 +690,13 @@ class ChoiceEngine:
             if has_rule(acting, "girl.oldgen.elder-bitch", "OLDGEN") and answer.flag:
                 positives.add("experienced")
             if acting.frame == "WYVERN 0.4" and action["data"]["prepared"]["piloting"]:
+                from girlframe.engine.m3_actor_bonds import current_ref
+                from girlframe.engine.m3_wyvern import CHASSIS
+                from girlframe.services.m3_wyvern import big_enough, require_rule
+
+                actual = current_ref(state, actor)
+                require_rule(self.game, c, state, actual, CHASSIS)
+                require(big_enough(state, actual), "Use the actual original piloted Wyvern chassis")
                 positives.add("big_enough")
             result.update(positive=sorted(positives), negative=sorted(negatives))
             self.game.request(c, action, state.handler, "handler_keep")
@@ -1386,6 +1410,16 @@ class ChoiceEngine:
 
             prince_results(self.game, c, state, action)
             return
+        if action["data"].get("wyvern"):
+            from girlframe.services.m3_wyvern import results as wyvern_results
+
+            wyvern_results(self.game, c, state, action)
+            return
+        if action["data"].get("bonded"):
+            from girlframe.services.m3_bonded import results as bonded_results
+
+            bonded_results(self.game, c, state, action)
+            return
         if action["data"].get("consume"):
             from girlframe.services.m3_consume import results as consume_results
 
@@ -1556,6 +1590,14 @@ class ChoiceEngine:
 
             if not finish_keep(self.game, c, state, action):
                 return
+        from girlframe.services.m3_wyvern import intercept_finish as wyvern_intercept_finish
+
+        if wyvern_intercept_finish(self.game, c, state, action):
+            return
+        from girlframe.services.m3_bonded import intercept_finish as bonded_intercept_finish
+
+        if bonded_intercept_finish(self.game, c, state, action):
+            return
         from girlframe.services.m3_consume import intercept_finish as consume_intercept_finish
         from girlframe.services.m3_consume import offer_partake
 
@@ -1597,6 +1639,11 @@ class ChoiceEngine:
             from girlframe.services.m3_prince import sync_finished
 
             sync_finished(self.game, c, state, action, action["data"]["response_event"])
+        if any(
+            action["data"].get(k)
+            for k in ("bonded_child", "wyvern_child", "wyvern_pin_response", "wyvern_replacement")
+        ):
+            return
         if action["data"].get("consume_child"):
             # Its actual source is completed after this canonical child event exists.
             return

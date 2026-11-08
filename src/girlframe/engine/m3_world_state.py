@@ -154,7 +154,10 @@ class WorldTag(Model):
 
 
 class Npc(PlacedEntity):
-    jobs: tuple[str, ...] = Field(min_length=1)
+    jobs: tuple[str, ...]
+    source_kind: Literal["wyvern_wraith"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     detail: str = Field(min_length=1, max_length=1200)
     controller: Snowflake
     alive: bool = True
@@ -169,6 +172,10 @@ class Npc(PlacedEntity):
 
     @model_validator(mode="after")
     def known_jobs(self) -> "Npc":
+        if (not self.jobs and self.source_kind is None) or (
+            self.source_kind is not None and self.jobs
+        ):
+            raise ValueError("Use printed NPC jobs or the exact source-created Wraith kind")
         if not set(self.jobs) <= set(NPC_JOBS) or len(set(self.jobs)) != len(self.jobs):
             raise ValueError("Choose distinct printed NPC playbooks")
         return self

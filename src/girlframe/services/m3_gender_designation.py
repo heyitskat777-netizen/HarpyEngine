@@ -103,6 +103,13 @@ def valid_order(game: GameService, c: Connection, state: GameState, row: dict[st
 
 def _sex(state: GameState, action: dict[str, Any]) -> tuple[ActorRef, ActorRef]:
     data = action["data"]
+    if data.get("bonded") and data["play"] == "bonded_sex":
+        from girlframe.services.m3_bonded import sex_parties as bonded_sex_parties
+
+        people = bonded_sex_parties(state, action)
+        if len(people) != 2:
+            raise WorkflowError("Recover the actual two-person Bonded Sex source")
+        return people[0], people[1]
     if data.get("casualty_sex") and data["play"] == "casualty_sex":
         from girlframe.services.m3_casualty import sex_parties
 
@@ -185,6 +192,7 @@ def man_tag_options(
         "casualty_sex",
         "vatgrown_sex",
         "newgirl_sex",
+        "bonded_sex",
     ):
         return []
     result: list[dict[str, Any]] = []
@@ -487,7 +495,9 @@ def _resume(game: GameService, c: Connection, state: GameState, action: dict[str
     if game.pending(c, action["id"]):
         return
     if action["data"].pop("gender_sex_deferred", False):
-        if action["data"]["play"] == "alpha_sex":
+        if action["data"]["play"] == "bonded_sex":
+            from girlframe.services.m3_bonded import results
+        elif action["data"]["play"] == "alpha_sex":
             from girlframe.services.m3_alpha_sex import results
         elif action["data"]["play"] == "newgirl_sex":
             from girlframe.services.m3_newgirl_sex import results
@@ -511,6 +521,7 @@ def _resume(game: GameService, c: Connection, state: GameState, action: dict[str
                 return
             from girlframe.services.m3_alpha_sex import _finish
         elif action["data"]["play"] in (
+            "bonded_sex",
             "princess_sex",
             "stim_sex",
             "oldgen_sex",

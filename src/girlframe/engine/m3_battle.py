@@ -5,11 +5,66 @@ import json
 
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import depth, make_helpless
-from girlframe.engine.m3_actor_state import ActorRef, AssetView, ProfileBinding
+from girlframe.engine.m3_actor_state import ActorRef, AssetView, Model, ProfileBinding, SceneCast
 from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_battle_state import Category, FrameExposure, Required
 from girlframe.engine.m3_items import mechanical_assets
 from girlframe.engine.m3_world import damage_gorgon
+
+
+class WyvernDeflection(Model):
+    id: str
+    use: str
+    actor: ActorRef
+    defender: ActorRef
+    frame: str
+    incoming: str
+    original_play: str
+    choice: str
+    receipt: str | None
+    cast: SceneCast
+    event: str
+    child: str | None = None
+    bound_event: str | None = None
+    completed_event: str | None = None
+
+
+class WyvernPinResponse(Model):
+    id: str
+    pin: str
+    actor: ActorRef
+    pinner: ActorRef
+    action: str
+    cast: SceneCast
+    event: str
+    completed_event: str | None = None
+
+
+class WyvernEncirclement(Model):
+    id: str
+    actor: ActorRef
+    target: ActorRef
+    frame: str
+    action: str
+    choice: str
+    asset: str
+    event: str
+    ended_event: str | None = None
+
+
+class WyvernCrush(Model):
+    id: str
+    actor: ActorRef
+    frame: str
+    action: str
+    choice: str
+    asset: str
+    target: ActorRef | None
+    vehicle: str | None
+    event: str
+    work: tuple[str, ...] = ()
+    completed_event: str | None = None
+    outcome: str = "pending"
 
 
 def category(state: GameState, actor: ActorRef) -> Category:
@@ -288,6 +343,11 @@ def damage(
     The service commits returned obligations with the original source event afterward.
     """
     state = GameState.model_validate_json(original.model_dump_json())
+    from girlframe.engine.m3_wyvern import shielded
+
+    if shielded(state, target) is not None:
+        raise ValueError("The actual Shielded recipient's Assets cannot be damaged")
+
     from girlframe.engine.m3_doctor import require_harm_allowed
 
     protection = require_harm_allowed(state, target, opponent)

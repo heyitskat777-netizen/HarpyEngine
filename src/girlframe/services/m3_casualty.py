@@ -1008,6 +1008,8 @@ class CasualtyService:
         target: ActorRef,
         revision: int,
         account: str,
+        *,
+        bonded_source: str | None = None,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             state = load_state(c, self.store.campaign_id)
@@ -1029,6 +1031,7 @@ class CasualtyService:
             value = rules.SexSession(
                 id=identity,
                 actor=actor,
+                bonded_source=bonded_source,
                 target=target,
                 caster=viewer.user_id,
                 counterpart=other.controller,
@@ -1047,6 +1050,10 @@ class CasualtyService:
                     "SOURCE_SEX_CONSEQUENCE_REQUIRED: provide real high-result damage targets"
                 )
             rules.put(state, value)
+            if bonded_source is not None:
+                from girlframe.services.m3_bonded import bind_delegation
+
+                bind_delegation(self.game, c, state, bonded_source, value.id, rules.SEX, event)
             self.game.event(
                 c,
                 viewer.user_id,
@@ -1067,7 +1074,8 @@ class CasualtyService:
                 target=target.model_dump(mode="json"),
                 revision=revision,
                 account=account,
-            ),
+            )
+            | ({"bonded_source": bonded_source} if bonded_source is not None else {}),
             operation,
             rules.SEX,
         )
@@ -1431,10 +1439,18 @@ def _session(state: GameState, identity: str) -> rules.SexSession:
 
 
 def _contact(game: GameService, c: Connection, state: GameState, value: rules.SexSession) -> None:
+    from girlframe.services.m3_bonded import admit_delegation
+
     own, other = (_native(game, c, state, x) for x in (value.actor, value.target))
     if (
         value.actor == value.target
-        or not has_rule(state.sheets[value.actor.entity], rules.SEX, "CASUALTY")
+        or not (
+            has_rule(state.sheets[value.actor.entity], rules.SEX, "CASUALTY")
+            if value.bonded_source is None
+            else admit_delegation(
+                game, c, state, value.actor, value.target, rules.SEX, value.bonded_source
+            )
+        )
         or any(
             x.cell is None or x.inside_frame is not False or x.vessel_id is None
             for x in (own, other)
@@ -1457,6 +1473,12 @@ def prove_sex(
     game: GameService, c: Connection, state: GameState, identity: str
 ) -> rules.SexSession:
     value = _session(state, identity)
+    from girlframe.services.m3_bonded import prove_delegation
+
+    if value.bonded_source is not None:
+        prove_delegation(
+            game, c, state, value.bonded_source, value.id, value.actor, value.target, rules.SEX
+        )
     born = _session(_history(c, game, value.proposed_event), identity)
     if any(
         getattr(value, k) != getattr(born, k)
@@ -1472,6 +1494,7 @@ def prove_sex(
             "registry",
             "proposed_event",
             "proposal",
+            "bonded_source",
         )
     ):
         raise WorkflowError("Preserve the immutable original voluntary Casualty source")
@@ -1589,6 +1612,8 @@ def prepare(
     handler = active_handler(state)
     if handler is None:
         raise WorkflowError("Recover this actual scene's original Handler")
+    if value.cast.facilitator is None:
+        raise WorkflowError("Recover the genuine source facilitator before preparing this Play")
     return dict(
         session=value.id,
         actor=value.actor.model_dump(mode="json"),
@@ -1600,7 +1625,7 @@ def prepare(
         handler=handler.model_dump(mode="json"),
         handler_controller=value.cast.facilitator,
         table=sorted({x.controller for x in value.cast.roles} | {value.cast.facilitator}),
-    )
+    ) | ({"bonded_source": value.bonded_source} if value.bonded_source is not None else {})
 
 
 def bind(state: GameState, action: dict[str, Any], event: str | None = None) -> None:

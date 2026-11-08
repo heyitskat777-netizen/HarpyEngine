@@ -1306,14 +1306,20 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_bonded import BondedService
             from girlframe.services.m3_consume import _tasks as consume_tasks
             from girlframe.services.m3_prince import PrinceService
+            from girlframe.services.m3_wyvern import _tasks as wyvern_tasks
+            from girlframe.services.m3_wyvern_combat import WyvernCombatService
 
             frame_game = GameService(self.store)
             frame_state = load_state(connection, self.store.campaign_id)
             for book, rows in (
+                ("bonded", BondedService(frame_game)._tasks(connection, viewer)),
                 ("prince", PrinceService(frame_game)._tasks(connection, viewer)),
                 ("consume", consume_tasks(frame_game, connection, frame_state, viewer)),
+                ("wyvern", wyvern_tasks(frame_game, connection, frame_state, viewer)),
+                ("wyvern_combat", WyvernCombatService(frame_game)._tasks(connection, viewer)),
             ):
                 for row in rows:
                     actionable = bool(row["pending"])

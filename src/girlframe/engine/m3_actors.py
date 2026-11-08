@@ -105,6 +105,11 @@ def frame_position(
     fallback: tuple[int, int] | None = None,
 ) -> tuple[int, int] | None:
     """Follow one actual Frame body through parking or transformation, never its controller."""
+    from girlframe.engine.m3_wyvern import cargo as carried_frame
+
+    carrying = carried_frame(state, owner, instance)
+    if carrying is not None:
+        return frame_position(state, carrying.actor, carrying.frame)
     from girlframe.engine.m3_am_branch import frame_owner_alias
 
     branch_owner = frame_owner_alias(state, owner, instance)
@@ -390,6 +395,64 @@ def resolve(
                 ).hexdigest(),
             )
         )
+    from girlframe.engine.m3_wyvern import InteriorGuest, Wraith
+    from girlframe.engine.m3_wyvern import records as wyvern_records
+
+    if ref.kind == "npc" and state.world is not None:
+        npc_mind = next(
+            (
+                x
+                for x in state.world.npcs
+                if x.id == ref.entity and x.source_kind == "wyvern_wraith"
+            ),
+            None,
+        )
+        if npc_mind is not None:
+            mind = next(
+                (x for x in reversed(wyvern_records(state, Wraith)) if x.persona == ref), None
+            )
+            if mind is None:
+                raise ValueError("Recover the genuine original Frame-created mind source")
+            mind_cell = frame_position(state, mind.actor, mind.frame)
+            if require_alive and (not mind.active or mind.ended_event or mind_cell is None):
+                raise ValueError("This source mind is not currently unleashed in its actual Frame")
+            actual = actual.model_copy(
+                update=dict(
+                    cell=mind_cell,
+                    alive=actual.alive and mind.active and mind.ended_event is None,
+                    inside_frame=True,
+                    piloting=False,
+                    occupied_frame_instance=mind.frame,
+                    vessel_id="wyvern-mind:" + mind.id,
+                    position_sha256=fingerprint(mind),
+                    source_sha256=hashlib.sha256(
+                        (actual.source_sha256 + fingerprint(mind) + str(mind_cell)).encode()
+                    ).hexdigest(),
+                )
+            )
+    if ref.kind != "pilot":
+        interior = next(
+            (
+                x
+                for x in reversed(wyvern_records(state, InteriorGuest))
+                if x.actor == ref and x.ended_event is None
+            ),
+            None,
+        )
+        if interior is not None:
+            interior_cell = frame_position(state, interior.carrier, interior.frame)
+            actual = actual.model_copy(
+                update=dict(
+                    cell=interior_cell,
+                    inside_frame=True,
+                    piloting=False,
+                    occupied_frame_instance=interior.frame,
+                    source_sha256=hashlib.sha256(
+                        (actual.source_sha256 + fingerprint(interior) + str(interior_cell)).encode()
+                    ).hexdigest(),
+                    position_sha256=fingerprint(interior),
+                )
+            )
     travel = offstage_travel(state, ref)
     if travel is None:
         return actual
@@ -497,6 +560,8 @@ def _resolve(
                 "reign_terror_actual_position",
                 "tracker_initial_handler_position",
                 "consume_handler_position",
+                "ordinary_handler_movement",
+                "wyvern_explorer_return",
                 "ship_base_actual_position",
                 "a_bomb_actual_position",
                 "handler_transport_arrived",

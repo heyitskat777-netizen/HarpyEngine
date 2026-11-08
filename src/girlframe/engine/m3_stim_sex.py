@@ -2,6 +2,8 @@
 
 from typing import Literal
 
+from pydantic import Field
+
 from girlframe.engine.m2 import GameState, TagState
 from girlframe.engine.m3_actor_state import ActorRef, Model, ProfileBinding, SceneCast
 from girlframe.engine.m3_dose_up import DURATION, Component
@@ -19,6 +21,7 @@ class Session(Model):
     counterpart: int
     cast: SceneCast
     registry: str
+    bonded_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
     actor_vessel: str
     target_vessel: str
     proposed_event: str

@@ -68,8 +68,11 @@ def defer(
     occurrence: str,
     indirect: bool = False,
     effect: str = "damage",
+    target_frame: str | None = None,
 ) -> tuple[GameState, tuple[str, ...]]:
-    available = rules.candidates(state, target, opponent, profiles(c, game.store.campaign_id))
+    available = rules.candidates(
+        state, target, opponent, profiles(c, game.store.campaign_id), target_frame=target_frame
+    )
     if not available:
         return state, ()
     identity = str(
@@ -84,6 +87,7 @@ def defer(
             source_action=source_action,
             source_work=source_work,
             source_event=event,
+            target_frame=target_frame,
             occurrence=occurrence,
             indirect=indirect,
             effect=effect,
@@ -540,12 +544,30 @@ class SpriteService:
         state = load_state(c, self.store.campaign_id)
         event = str(uuid4())
         followups: tuple[str, ...] = ()
+        engage_crush: str | None = None
         from girlframe.engine.m3_battle import original_ended
 
-        if original_ended(state, blow.target):
+        if original_ended(state, blow.target) and blow.target_frame is None:
             _finish(self.game, c, row, body | dict(original_ended=prior), prior, viewer, key)
             return
-        if blow.effect == "fatal" and sprite is None:
+        original_action = self.game.action(c, blow.source_action) if blow.source_action else None
+        if (
+            blow.effect == "fatal"
+            and sprite is None
+            and original_action is not None
+            and original_action["data"].get("engage")
+        ):
+            from girlframe.services.m3_wyvern_combat import resolve_crush
+
+            engage_crush = original_action["data"]["engage"].get("wyvern_crush")
+            if not engage_crush:
+                raise WorkflowError("Recover the actual original Crushing Bulk source")
+            append(c, row, prior, body | dict(phase="applying"), "pending")
+            followups = resolve_crush(
+                self.game, c, state, original_action, engage_crush, event, allow_sprite=False
+            )
+            self.game.save_action(c, original_action)
+        elif blow.effect == "fatal" and sprite is None:
             append(c, row, prior, body | dict(phase="applying"), "pending")
             if blow.source_action is None:
                 raise WorkflowError("Recover the actual original fatal Play source.")
@@ -566,7 +588,9 @@ class SpriteService:
             return
         target = sprite or blow.target
         selected = asset if sprite else blow.asset
-        if blow.effect == "destroy" and sprite is None:
+        if engage_crush is not None:
+            pass  # The actual whole-body effect was applied above; no second Asset hit.
+        elif blow.effect == "destroy" and sprite is None:
             from girlframe.services.m3_gorgon_runtime import _destroy
 
             if blow.source_action is None or selected is None:
@@ -585,6 +609,26 @@ class SpriteService:
                 source_work=identity,
             )
             self.game.save_action(c, source_action)
+        elif blow.target_frame is not None and sprite is None:
+            from girlframe.services.m3_battle import damage_frame_at_scene
+
+            if selected is None or blow.opponent is None or blow.chooser is None:
+                raise WorkflowError("Recover the actual parked Frame strike and its original owner")
+            state, followups = damage_frame_at_scene(
+                self.game,
+                c,
+                state,
+                target=blow.target,
+                frame_instance=blow.target_frame,
+                asset_id=selected,
+                source_action=blow.source_action,
+                source_work=blow.source_work,
+                event=event,
+                actor=blow.opponent,
+                chooser_controller=blow.chooser,
+                occurrence="sprite_resolution",
+                allow_sprite=False,
+            )
         else:
             state, followups = damage_actor(
                 self.game,
@@ -610,6 +654,10 @@ class SpriteService:
                     fatal_pending=False,
                     fatal_intercepted=event,
                 )
+            elif action["data"].get("engage"):
+                engage_crush = action["data"]["engage"].get("wyvern_crush")
+                if not engage_crush:
+                    raise WorkflowError("Recover the original intercepted Crushing Bulk source")
             else:
                 action["data"]["gorgon_play"]["fatal_intercepted"] = event
             self.game.save_action(c, action)
@@ -622,6 +670,11 @@ class SpriteService:
                 original=blow.target.model_dump_json(),
             )
         )
+        if engage_crush is not None and sprite is not None:
+            from girlframe.services.m3_wyvern_combat import intercepted_crush
+
+            assert original_action is not None
+            intercepted_crush(self.game, c, state, original_action, engage_crush, event)
         actual = c.scalar(
             sa.select(t.events.c.actor_id).where(
                 t.events.c.campaign_id == self.store.campaign_id, t.events.c.id == prior
@@ -649,6 +702,10 @@ class SpriteService:
         current = latest(self.game, c, identity)
         append(c, current, event, body | dict(phase="waiting", followups=followups), "pending")
         synchronize_damage(self.game, c, event)
+        if engage_crush is not None:
+            from girlframe.services.m3_battle import synchronize_casts
+
+            synchronize_casts(self.game, c, event)
         if not followups:
             _finish(self.game, c, latest(self.game, c, identity), body, event, viewer, key)
 

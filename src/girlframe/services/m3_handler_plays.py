@@ -213,6 +213,20 @@ def request_from_play(
             and action["data"].get("result", {}).get("tier") == "low"
             and targets == (ActorRef.model_validate(meta["actor"]),)
         )
+    elif source_play == "wyvern_protector":
+        from girlframe.engine import m3_wyvern
+
+        original = m3_wyvern.session(state, action["id"])
+        valid = (
+            clause == "wyvern.protector.low"
+            and row is not None
+            and row["kind"] == "wyvern_handler"
+            and row["actor_id"] == str(chooser)
+            and original.total < 8
+            and original.target is not None
+            and targets == (original.target,)
+            and original.handler_controller == chooser
+        )
     elif source_play in ("am_scrutinized", "am_just_code"):
         meta = action["data"].get("am_scrutinized", {})
         code_source = True
@@ -287,7 +301,9 @@ def request_from_play(
                 "A Flirt Handler Play is scoped to the actual two original participants."
             )
     source_human = (
-        action["data"].get("doctor", {}).get("judge")
+        action["data"].get("wyvern", {}).get("handler_controller")
+        if source_play == "wyvern_protector"
+        else action["data"].get("doctor", {}).get("judge")
         if source_play == "doctor_support"
         else action["data"].get("battle", {}).get("handler")
         if source_play == "all_out_assault"
@@ -460,6 +476,10 @@ def _source(c: Connection, game: "GameService", identity: str) -> tuple[GameStat
         from girlframe.services.m3_contaminant_zone import prove_warp
 
         prove_warp(game, c, state, grant)
+    if grant.clause == "wyvern.protector.low":
+        from girlframe.services.m3_wyvern_support import prove_handler_grant
+
+        prove_handler_grant(game, c, state, grant)
     if grant.clause == "ship_base.low":
         from girlframe.services.m3_ship_base import prove_low_grant
 
@@ -546,6 +566,10 @@ def _authority(c: Connection, game: "GameService", state: GameState, grant: Hand
         from girlframe.services.m3_contaminant_zone import prove_warp
 
         prove_warp(game, c, state, grant)
+    if grant.clause == "wyvern.protector.low":
+        from girlframe.services.m3_wyvern_support import prove_handler_grant
+
+        prove_handler_grant(game, c, state, grant)
     if grant.clause == "ship_base.low":
         from girlframe.services.m3_ship_base import prove_low_grant
 
@@ -914,6 +938,11 @@ def finish_callback(
     if grant.source == "required":
         assert grant.source_action is not None and grant.source_choice is not None
         action = game.action(c, grant.source_action)
+        if grant.clause == "wyvern.protector.low":
+            from girlframe.services.m3_wyvern_support import complete_handler_grant
+
+            complete_handler_grant(game, c, grant, event)
+            return
         if action["data"].get("am_scrutinized"):
             from girlframe.services.m3_am_scrutinized import complete_handler
 
@@ -1439,6 +1468,19 @@ class HandlerPlayService:
                 _ordinary_scene_idle(c, self.game)
             if state.revision != expected:
                 raise WorkflowError("The scene changed; reopen the saved Handler Play.")
+            if effect.kind in (
+                "punish",
+                "status",
+                "tag",
+                "damage",
+                "expectation",
+                "tracker_intercept",
+                "tracker_voyeur",
+            ):
+                from girlframe.services.m3_wyvern_combat import require_targetable
+
+                for target in (effect.target,) if effect.target is not None else grant.targets:
+                    require_targetable(self.game, c, state, target)
             if effect.kind in ("expectation", "tracker_intercept"):
                 from girlframe.services.m3_vatgrown import (
                     require_attention as require_doll_attention,
