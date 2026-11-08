@@ -771,3 +771,44 @@ Initial whitespace check identified regenerated CSV CRLF; normalized only its
 line endings and repeated whitespace check. Exact commands/source hashes and
 all failed-node logs retained under ignored `var/p1-cap-entry-checkpoint-*` and
 `var/p1-void-entry-minimum*`. No broad gameplay/regression run.
+
+Published **a10fb88a7813fb4bc1e8d67906d54c0372d48aea**;
+[focused CI42516556438](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42516556438)
+passed on that exact commit. CI full-regression step skipped; no independent or
+player acceptance claim. Next source assignments follow the existing two-worker
+limit with root-owned shared integration and deferred automation.
+
+### Fresh Vatgrown death replacement and source-owned prisoner breakout
+
+Owner testing policy is recorded in AGENTS and DEVELOPMENT_WORKFLOW: workers
+author meaningful normal tests without pytest; root consolidates only minimum
+likely-flow checks, deferring broader automation to the final exact P1 candidate.
+
+- `pytest -q tests/rules/test_vatgrown_death.py::test_actual_vatgrown_death_fresh_native_activation_and_original_other_owned_notice`: **1 passed/4.57s**, first run. Actual Beneath/Defeat death, native fixed Vatgrown draft, fresh starting coordination/review/Status, actual distinct kit, source-bound activation and original-other owned noticing/private saved reopen. Old archive/resources and hardware remain separate; pending notices do not veto activation. No fallback manual roll.
+- `pytest -q tests/rules/test_prisoner_escape.py::test_genuine_npc_custody_native_breakout_actual_movement_then_factual_failure_escalates_once`: **1 passed/2.60s**, first run. Actual World introduction/claimed NPC role, pre-breakout custody denial, exact custody release without movement, real controller native movement and source-known Handler factual failure; natural Rebellion becomes High once.
+- Alternate actual completed Initiative/still-held original NPC dealing normal is authored **NOT RUN**, along with wider role/lifecycle/geometry/custody variants. No passing previous workflow rerun or compatibility sweep.
+
+Root integrates the same canonical activation UUID, fixed positive-source career
+dropdown, real Movement source callback and narrow introductory-custody guard,
+private source Inbox/Strain routes and duplicate-card suppression. Existing
+Helplessness already prevents an ordinary held NPC moving; no new grip framework.
+No NPC dice, inferred capture, copied old Frame, fictional consent or silent chat
+timeout. Issued kit details remain owner/actual-issuer only; noticing respondents
+read their own replies. Paged private readback uses existing MemoryForm/History.
+
+Scope gaps: actual surviving-hardware reassignment, replaced noticing recipients,
+other genuine custody/dealing outcomes and changed scene/body/authority sources
+remain explicit adapters. This first prisoner source does not complete all Strain
+or all NPC dealing. Rulings record defaults, alternatives and clarity-review needs.
+
+Owned AM6 Ruff/format6+mypy5 passed; prisoner4 Ruff/format4+mypy3 passed.
+Root shared6 format passed; Ruff identified one unsorted Inbox import, corrected
+with Ruff fix (0 remaining). Root mypy6 passed. No worker pytest/collection or
+full regression. Exact hashes/commands remain in ignored worker handoffs and
+`var/p1-replacement-prisoner-*`; minimum logs retained separately.
+
+Publication preflight covers24 paths/16 Python/14 source through the disjoint
+worker/root scopes above. Registry477 entries/272 subset/205 unimplemented/
+440 required/0 independently verified. Repository1406 publishable files/
+40 preserved manifest entries/0 findings; whitespace check passed. Full regression,
+global migration/restore and independent/player gates remain pending; bot OFF.

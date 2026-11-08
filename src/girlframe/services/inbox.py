@@ -1319,8 +1319,10 @@ class InboxService:
             from girlframe.services.m3_npc_flirt import NpcFlirtService
             from girlframe.services.m3_off_duty import OffDutyService as EntryPeriods
             from girlframe.services.m3_prince import PrinceService
+            from girlframe.services.m3_prisoner_escape import PrisonerEscapeService
             from girlframe.services.m3_red_queen import RedQueenService
             from girlframe.services.m3_strain import StrainService as EntryStrain
+            from girlframe.services.m3_vatgrown_death import VatgrownDeathService
             from girlframe.services.m3_vatgrown_dna import VatgrownDNAService
             from girlframe.services.m3_vatgrown_travel import VatgrownTravelService
             from girlframe.services.m3_void_frame_entry import VoidFrameEntryService
@@ -1337,10 +1339,17 @@ class InboxService:
                 ("red_queen", RedQueenService(frame_game)._tasks(connection, viewer)),
                 ("npc_flirt", NpcFlirtService(frame_game)._tasks(connection, viewer)),
                 ("vatgrown_dna", VatgrownDNAService(frame_game)._tasks(connection, viewer)),
+                ("vatgrown_death", VatgrownDeathService(frame_game)._tasks(connection, viewer)),
                 ("vatgrown_travel", VatgrownTravelService(frame_game)._tasks(connection, viewer)),
                 (
                     "void_frame_entry",
                     VoidFrameEntryService(
+                        EntryStrain(EntryPeriods(EntryMissions(self.store)))
+                    )._tasks(connection, viewer),
+                ),
+                (
+                    "prisoner_escape",
+                    PrisonerEscapeService(
                         EntryStrain(EntryPeriods(EntryMissions(self.store)))
                     )._tasks(connection, viewer),
                 ),
@@ -3538,8 +3547,14 @@ class InboxService:
                 elif kind == "strain_event":
                     from girlframe.engine.m3_strain_effects import SUPPORTED
 
+                    if any(
+                        item.task == "m3_prisoner_escape" and item.identity == work["id"]
+                        for item in items
+                    ):
+                        continue  # Preserve the authorized source card instead of duplicating it.
                     if json.loads(work["body_json"])["rule_id"] in SUPPORTED | {
-                        "strain.void.low.1.2"
+                        "strain.void.low.1.2",
+                        "strain.rebellion.low.4.2",
                     }:
                         primary, task_name = "Apply Strain consequences", "m3_strain_effect"
                 title = {

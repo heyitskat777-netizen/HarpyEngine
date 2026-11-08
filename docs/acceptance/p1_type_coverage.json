@@ -1,9 +1,9 @@
 {
   "status": "P1_IMPLEMENTATION_AUTHORIZED_TESTING_PENDING",
-  "published_source": "b7cfd10ae0376c8e84aa018edca2d3b4651dc846",
+  "published_source": "a10fb88a7813fb4bc1e8d67906d54c0372d48aea",
   "main_merge": "c4550ecbd89bbf84363537e7bdf763c2177a998f",
   "scope": "10Girl labels;10Frame labels representing9official Frame rulesets; JANUS-B uses JANUS",
-  "evidence_note": "Published b7cfd10; focused CI42511557063 passed, full skipped. Local CONSUME new-Void and own-Partake cap-loss normals2/17.81s and Low Void next-entry normal1/3.83s are scoped evidence. Original full M3/RULES_SUBSET and final full/global/independent/player gates remain pending.",
+  "evidence_note": "Published a10fb88; focused CI42516556438 passed, full skipped. Local actual Vatgrown death→fresh native activation/noticing1/4.57s and prisoner breakout→movement→factual failure1/2.60s are minimum likely-flow evidence. Alternate intervention is authored but unrun. Original full M3/RULES_SUBSET and final full/global/independent/player gates remain pending.",
   "rows": [
     {
       "category": "Girl",
@@ -716,8 +716,8 @@
       "type": "Vatgrown",
       "registry_prefix": "girl.vatgrown.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Published scoped Doll and Experiment/Prime/Sex, real learned Brutalize once, original Investor/payment and Comfort gift;8 source normals passed separately. Local actual first DNA-comparison/Tag/private disclosure normal passed1/2.37s; explicit decline authored but unrun. Local genuine unchaperoned attempt/no-position-change/private disclosure/optional real Handler Punishment and actual source-bound movement normal passed1/2.49s; affected existing Wyvern movement normal passed in combined1failed/1passed3.86s. Local actual Stim-teacher learned Dose Up/native self-dose/consumed-grant readback passed1/3.62s. Earlier source/gift/DNA/Brutalize evidence remains. Local independently authored positive chaperoned journey now commits both actual original movements atomically; native two-PC normal passed1/2.21s, with private receipt/retry and parked Frames preserved.",
-      "missing_before_AI": "Other printed one-use learning families beyond actual Brutalize and Dose Up; genuine death→mandatory distinct Vatgrown/reset/owned notice answers remains missing from generic Career replacement. Real additional source/body and unknown same-cell boundary cases remain explicit; joint travel is not standing supervision. Preserve deferred other companion/mode/mutual branches and final integration/review gates.",
+      "ordinary_workflows_with_evidence": "Published scoped Doll and Experiment/Prime/Sex, real learned Brutalize once, original Investor/payment and Comfort gift;8 source normals passed separately. Local actual first DNA-comparison/Tag/private disclosure normal passed1/2.37s; explicit decline authored but unrun. Local genuine unchaperoned attempt/no-position-change/private disclosure/optional real Handler Punishment and actual source-bound movement normal passed1/2.49s; affected existing Wyvern movement normal passed in combined1failed/1passed3.86s. Local actual Stim-teacher learned Dose Up/native self-dose/consumed-grant readback passed1/3.62s. Earlier source/gift/DNA/Brutalize evidence remains. Local independently authored positive chaperoned journey now commits both actual original movements atomically; native two-PC normal passed1/2.21s, with private receipt/retry and parked Frames preserved. Local actual death now enforces a distinct Vatgrown; fresh coordinated review/Status, genuine new kit, activation and original-other authored private noticing passed1/4.57s. Original archives/resources/hardware remain separate.",
+      "missing_before_AI": "Other printed one-use learning families beyond actual Brutalize and Dose Up; genuine surviving-hardware reassignment after replacement; real additional source/body and unknown same-cell boundary cases. Joint travel is not standing supervision. Native death/fresh reviewed kit/activation/owned noticing is implemented with minimum1/4.57s. Other companion/mode/mutual cases, final integration and independent/player review remain deferred.",
       "later_candidates": "Compound existing Investor/acquisition obligations during exceptional carrier transitions; ordinary death continuity stays BEFORE AI.",
       "code": [
         "src/girlframe/services/m3_vatgrown.py",
@@ -726,13 +726,15 @@
         "src/girlframe/services/m3_vatgrown_dna.py",
         "src/girlframe/services/m3_vatgrown_travel.py",
         "src/girlframe/discord_adapter/m3_vatgrown_travel.py",
-        "src/girlframe/services/m3_learned_plays.py"
+        "src/girlframe/services/m3_learned_plays.py",
+        "src/girlframe/services/m3_vatgrown_death.py"
       ],
       "tests": [
         "tests/rules/test_vatgrown.py",
         "tests/rules/test_vatgrown_plays.py",
         "tests/rules/test_vatgrown_dna.py",
-        "tests/rules/test_vatgrown_travel.py"
+        "tests/rules/test_vatgrown_travel.py",
+        "tests/rules/test_vatgrown_death.py"
       ],
       "rule_inventory": [
         {
@@ -768,7 +770,8 @@
           ],
           "local_test_references": [
             "tests/rules/test_vatgrown_plays.py",
-            "tests/rules/test_vatgrown_offers.py"
+            "tests/rules/test_vatgrown_offers.py",
+            "tests/rules/test_vatgrown_death.py"
           ]
         },
         {
@@ -969,7 +972,8 @@
             "tests/rules/test_alpha_sex.py"
           ],
           "local_test_references": [
-            "tests/rules/test_alpha_sex.py"
+            "tests/rules/test_alpha_sex.py",
+            "tests/rules/test_required_plays.py"
           ]
         }
       ]
@@ -1106,7 +1110,8 @@
             "tests/rules/test_am_sex.py"
           ],
           "local_test_references": [
-            "tests/rules/test_am_sex.py"
+            "tests/rules/test_am_sex.py",
+            "tests/rules/test_bonded_am.py"
           ]
         }
       ]
@@ -1222,7 +1227,8 @@
             "tests/rules/test_bonded.py"
           ],
           "local_test_references": [
-            "tests/rules/test_bonded.py"
+            "tests/rules/test_bonded.py",
+            "tests/rules/test_bonded_am.py"
           ]
         }
       ]
@@ -2717,7 +2723,8 @@
             "tests/rules/test_personal_firearm_service.py",
             "tests/rules/test_items.py",
             "tests/rules/test_frame_swap_service.py",
-            "tests/rules/test_free_personal_firearm_package.py"
+            "tests/rules/test_free_personal_firearm_package.py",
+            "tests/rules/test_replacement_firearm_admission.py"
           ]
         },
         {
@@ -3105,7 +3112,8 @@
             "tests/rules/test_ankou.py"
           ],
           "local_test_references": [
-            "tests/rules/test_ankou.py"
+            "tests/rules/test_ankou.py",
+            "tests/rules/test_required_plays.py"
           ]
         },
         {

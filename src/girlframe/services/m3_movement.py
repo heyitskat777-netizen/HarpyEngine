@@ -119,6 +119,8 @@ def _physical_context(
     elif actor.kind == "npc":
         assert state.world is not None
         npc = next(x for x in state.world.npcs if x.id == actor.entity)
+        if npc.custody_event and "prisoner" in npc.jobs:
+            raise WorkflowError("Resolve this actual Foundation prisoner's custody before moving")
         if npc.source_kind is not None or frame or actual.inside_frame is True:
             raise WorkflowError(
                 "This source body needs its actual carrier or software-access adapter"
@@ -337,6 +339,9 @@ class MovementService:
             event = str(uuid4())
             _apply_context(state, context, event)
             stage_movement(self.game, c, before, state, context, vatgrown_travel, event)
+            from girlframe.services.m3_prisoner_escape import stage_movement as stage_escape
+
+            stage_escape(self.game, c, before, state, context, event)
             self.game.event(
                 c,
                 viewer.user_id,

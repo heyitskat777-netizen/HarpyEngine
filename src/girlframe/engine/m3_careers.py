@@ -383,6 +383,7 @@ def replacement(
     profile_id: str,
     profile_revision: int,
     source_event: str,
+    new_girl: str | None = None,
 ) -> GameState:
     state = GameState.model_validate_json(original.model_dump_json())
     archive = next(
@@ -390,6 +391,10 @@ def replacement(
         None,
     )
     current = binding(state, owner)
+    from girlframe.engine.m3_vatgrown_death import required
+
+    if archive is not None and required(archive) and new_girl != "VATGROWN":
+        raise ValueError("A dead Vatgrown is replaced by a distinct Vatgrown")
     if (
         archive is None
         or archive_for(state, archive.actor) != archive

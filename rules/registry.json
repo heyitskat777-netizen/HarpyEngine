@@ -6979,6 +6979,40 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "vatgrown-distinct-replacement-baseline",
+      "summary": "Death replacement is a distinct Vatgrown with fresh reviewed starting Bonds/Identities/resources and an explicitly issued new physical kit; noticing answers belong to the original other people.",
+      "source": "Rulebook PDF49/printed47 Just an Experiment",
+      "rationale": "The rule resets the person and relationships but does not specify replacement hardware or fictional noticing. Fresh creation plus factual supply and addressed human answers preserves that distinction.",
+      "policy_key": "vatgrown_distinct_replacement_baseline",
+      "alternatives": [
+        "Reuse surviving hardware only through genuine vacant/current-condition/location/reassignment evidence.",
+        "Adopt a different explicit new-character starting-resource policy prospectively."
+      ],
+      "implementation_note": "Use actual death/archive, new incarnation, complete creation coordination/review, actual Handler starting Status and distinct reviewed physical kit issue before activation. No old balances, marks, Frame or private memories automatically transfer. Preserve original hardware/archive; surviving-Frame reassignment requires its own source. Notice questions never block activation or fabricate consent; only actual original recipients author replies.",
+      "change_impact": "Version new-character defaults or equipment policy prospectively. Preserve original archive, new-person review/issue/activation and authored reply events; never resurrect old resources.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "prisoner-breakout-factual-resolution",
+      "summary": "Low Rebellion4.2 releases an actual source-proven Foundation prisoner custody and requires real escape/intervention evidence; the original Handler records an ended undealt attempt before natural Rebellion increases.",
+      "source": "Rulebook PDF147/printed145 Rebellion low die4 column2; PDF142/printed140 Strain severities",
+      "rationale": "The book sets no round deadline or extra roll. Actual custody and performance sources avoid inventing capture, movement, silence-based failure or an above-High severity.",
+      "policy_key": "prisoner_breakout_factual_resolution",
+      "alternatives": [
+        "Add an explicit campaign deadline prospectively after owner choice.",
+        "Extend to other custody/dealing producers only with their real source adapters."
+      ],
+      "implementation_note": "First finite source is a live ordinary NPC with genuine introductory Foundation custody. Breakout ends only that custody, not the physical position or another hold. Actual controller moves through existing guards; completed genuine Enforcer grip may prove dealing. Original Handler failure finding requires actual ended performance evidence and no unresolved intervention/held result. Low becomes High; already High remains High. No automatic recapture, NPC dice, forced Play, fake consent or inferred chat outcome.",
+      "change_impact": "Preserve original custody release, controller, movement/receipt, actual dealing or factual failure and once-only Strain history. Future adapters do not retroactively manufacture performance.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -9233,7 +9267,8 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_vatgrown_plays.py",
-        "tests/rules/test_vatgrown_offers.py"
+        "tests/rules/test_vatgrown_offers.py",
+        "tests/rules/test_vatgrown_death.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -16372,14 +16407,16 @@
         "heading": "Rebellion low: die 4, column 2"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_prisoner_escape.py"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

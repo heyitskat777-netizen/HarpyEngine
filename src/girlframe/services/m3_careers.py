@@ -335,8 +335,11 @@ class CareerService:
         with self.store.engine.connect() as c:
             state, archive = self._archive(c, viewer, identity)
             current = rules.binding(state, viewer.user_id)
+            from girlframe.engine.m3_vatgrown_death import required
+
             return dict(
                 archive=archive.model_dump(mode="json"),
+                vatgrown_death_required=required(archive),
                 game_revision=state.revision,
                 sheet=rules.original_sheet(state, archive.actor).model_dump(mode="json"),
                 can_replace=current is not None
@@ -380,6 +383,9 @@ class CareerService:
             )
             source, character = str(uuid4()), str(uuid4())
             new_revision = profile["revision"] + 1
+            from girlframe.services.m3_vatgrown_death import validate_replacement
+
+            validate_replacement(self.game, c, state, archive, draft)
             changed = rules.replacement(
                 state,
                 identity,
@@ -388,6 +394,17 @@ class CareerService:
                 profile_id=profile["id"],
                 profile_revision=new_revision,
                 source_event=source,
+                new_girl=draft.girl_playbook,
+            )
+            from girlframe.services.m3_vatgrown_death import bind_replacement
+
+            bind_replacement(
+                self.game,
+                c,
+                changed,
+                archive,
+                ActorRef(kind="pilot", entity=str(viewer.user_id), incarnation=character),
+                source,
             )
             public = json.dumps(draft.model_dump(exclude={"notes"}))
             private = json.dumps(dict(notes=draft.notes))

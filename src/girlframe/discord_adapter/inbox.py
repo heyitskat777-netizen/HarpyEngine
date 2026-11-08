@@ -856,6 +856,14 @@ class InboxView(discord.ui.View):
             await open_casualty(
                 interaction, CasualtyService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_vatgrown_death":
+            from girlframe.discord_adapter.m3_vatgrown_death import open_vatgrown_death
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_vatgrown_death import VatgrownDeathService
+
+            await open_vatgrown_death(
+                interaction, VatgrownDeathService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_vatgrown_travel":
             from girlframe.discord_adapter.m3_vatgrown_travel import open_vatgrown_travel
             from girlframe.services.m2_game import GameService
@@ -863,6 +871,20 @@ class InboxView(discord.ui.View):
 
             await open_vatgrown_travel(
                 interaction, VatgrownTravelService(GameService(self.service.store)), item.identity
+            )
+        elif item.task == "m3_prisoner_escape":
+            from girlframe.discord_adapter.m3_prisoner_escape import open_prisoner_escape
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_prisoner_escape import PrisonerEscapeService
+            from girlframe.services.m3_strain import StrainService
+
+            await open_prisoner_escape(
+                interaction,
+                PrisonerEscapeService(
+                    StrainService(OffDutyService(MissionService(self.service.store)))
+                ),
+                item.identity,
             )
         elif item.task == "m3_void_frame_entry":
             from girlframe.discord_adapter.m3_void_frame_entry import open_void_frame_entry

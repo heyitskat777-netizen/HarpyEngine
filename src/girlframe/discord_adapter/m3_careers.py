@@ -150,7 +150,13 @@ async def open_replacement(
         "and relationships are not inherited.",
         [
             Field("callsign", "New callsign"),
-            Field("girl", "Girl playbook", tuple((x, x) for x in GIRL_TYPES)),
+            Field(
+                "girl",
+                "Girl playbook",
+                (("VATGROWN", "VATGROWN"),)
+                if data.get("vatgrown_death_required")
+                else tuple((x, x) for x in GIRL_TYPES),
+            ),
             Field("frame", "Frame playbook", tuple((x, x) for x in FRAME_TYPES)),
             Field("notes", "New private notes", paragraph=True, required=False),
         ],

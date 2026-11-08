@@ -710,8 +710,21 @@ class GameService:
                 pair = pair_key(viewer.user_id, bond.counterpart)
                 if pair not in state.bonds:
                     state.bonds[pair] = 2 if bond.depth == "Intense" else 1
+            from girlframe.engine.m3_actor_bonds import current_ref as activated_actor
+            from girlframe.services.m3_vatgrown_death import stage_activation
+
+            activation_event = str(uuid4())
+            stage_activation(
+                self, c, state, activated_actor(state, viewer.user_id), activation_event
+            )
             self.event(
-                c, viewer.user_id, key, "m2.character_activated", state, owner=viewer.user_id
+                c,
+                viewer.user_id,
+                key,
+                "m2.character_activated",
+                state,
+                event_id=activation_event,
+                owner=viewer.user_id,
             )
             self.store._enqueue_sync(
                 c,

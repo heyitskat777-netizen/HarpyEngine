@@ -70,6 +70,12 @@ async def open_effect(
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.get, viewer, identity)
+    if data["rule_id"] == "strain.rebellion.low.4.2":
+        from girlframe.discord_adapter.m3_prisoner_escape import open_prisoner_escape
+        from girlframe.services.m3_prisoner_escape import PrisonerEscapeService
+
+        await open_prisoner_escape(interaction, PrisonerEscapeService(service.strain), identity)
+        return
     if data["rule_id"] == "strain.void.low.1.2":
         from girlframe.discord_adapter.m3_void_frame_entry import open_void_frame_entry
         from girlframe.services.m3_void_frame_entry import VoidFrameEntryService

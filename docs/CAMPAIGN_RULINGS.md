@@ -3898,3 +3898,29 @@ This delegated interpretation requires clarity review; future adjustments never
 redraw or rewrite past events. Genuine Harpy prerequisites, held-parent rescue
 entry and terminal/body producers remain explicit source adapters, not completed
 by this bounded ordinary cockpit path.
+
+### A distinct Vatgrown after death
+
+`vatgrown-distinct-replacement-baseline` (PDF49/printed47): use genuinely fresh
+Vatgrown creation, newly agreed starting Bonds/Identities and configured starting
+resources, without inheriting the original person's marks, balances, privileges
+or equipment. The actual Handler must issue a distinct reviewed physical kit
+before activation. Preserve surviving original hardware and its sources; reuse
+requires actual vacancy, condition, location and reassignment evidence. Original
+other people privately answer whether they notice; no answer or fictional
+consent is invented, and unanswered noticing does not veto activation. This
+adjustable baseline requires printed-rule clarity review; preserve prior events
+when changing future resource or hardware policy.
+
+### Prisoner breakout and actual failure
+
+`prisoner-breakout-factual-resolution` (PDF147/printed145): begin from a genuine
+held prisoner. The first finite adapter releases only actual introductory
+Foundation custody for a live ordinary NPC; movement and other holds remain
+separate. The real controller performs movement through existing guards. Actual
+completed intervention may establish dealing; otherwise the original Handler
+records factual ended escape with genuine performance evidence. No silence-based
+timeout, invented NPC roll or forced capture Play. Natural Rebellion increases
+Low to High, with High remaining High. Other custody and dealing sources retain
+explicit adapter requirements. This delegated recommendation requires clarity
+review; preserve all actual custody/performance/receipt/Strain history.
