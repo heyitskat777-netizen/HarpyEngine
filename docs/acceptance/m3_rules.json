@@ -1265,6 +1265,31 @@
           "limitation": "Specialised source removals, conditional body/extra Identities remain required; focused evidence only, independent/human review pending."
         }
       ]
+    },
+    {
+      "id": "M3C-OLDGEN-ADVICE-NORMAL-001",
+      "title": "Oldgen actual maxims and all Old Dog advice outcomes",
+      "expected": "Actual chosen base maxim Heat/Tag and source-granted unmark; all advice tiers, real Status and recipient listening, once-only original maxim owner/subject, original-Handler high poor outcome and actual Identity rewrite.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_oldgen.py"
+      ],
+      "related_cases": [
+        "M3-001"
+      ],
+      "evidence": [
+        {
+          "test_name": "Four new printed normal cases and affected existing shared consumers",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_oldgen.py tests/rules/test_standards.py::test_actual_keep_runtime_and_native_ui_respect_borrowed_and_removed_rules tests/rules/test_off_duty_cycle.py::test_actual_preparation_owned_rolls_recovery_review_and_world_end_are_resumable tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng --maxfail=1 --junitxml=var/m3-oldgen-integrated.xml",
+          "actual_result": "8 passed in9.56s; coherent static12 Python/11 source passed without drift; registry/repository and offline SDK passed;10 CI cases collected only.",
+          "log_or_trace": "var/m3-oldgen-integrated.xml; var/m3-oldgen-union-static.json; var/m3-oldgen-union-source-snapshot.json; var/m3-oldgen-handoff.json",
+          "git_commit": "b9c3f1309db98cc6a3cbe9f4460e608c05820159",
+          "limitation": "Oldgen Sex and conditional/non-native adapters remain required. New Off-Duty maxim token is connected but not directly scenario-tested here. Focused checks only; full/independent/human gates pending."
+        }
+      ]
     }
   ],
   "enabled_modules": [

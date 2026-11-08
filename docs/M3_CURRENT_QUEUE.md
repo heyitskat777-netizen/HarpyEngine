@@ -1,6 +1,6 @@
 # Current M3 queue
 
-Updated 2026-11-08. Gameplay integration source: `01c8cfe`; local branch
+Updated 2026-11-08. Gameplay integration source: `b9c3f13`; local branch
 `codex/integrated-repairs-20261107`. **RULES_SUBSET; bot off.** No deployment,
 environment publication, recovered-engine writes, AI/M4 or Ancillary activation.
 This working list separates upcoming work from completed scoped checkpoints.
@@ -10,12 +10,28 @@ Registry entries and workflows overlap and differ in size; counts are not percen
 
 | Workflow | Owner / state | Dependency | Next concrete action | Completion evidence |
 |---|---|---|---|---|
+| Oldgen Sex Play | Oldgen agent + root / active bounded implementation | Actual maxims plus genuine Sex receipt/choices and reciprocal effects | Implement all printed tiers and original-owner maxim rewrite | Prior maxims committed; new source contract next |
 | Successor | Root / lifecycle dependency queued | Proven singleton Handler, unranked Girl and actual link-removal gaps | Assign source-bound concurrent junior/full Handler lifecycle and actual threshold consumers; avoid a Gold-Star-only placeholder | Frozen346-word source/dependency contract,12 inspected dependency hashes; no code or acceptance |
-| Oldgen reinforcement and Old Dog | Oldgen agent + root / active bounded implementation | Genuine maxim ownership, source Heat Play and one-use consumers | Integrate all printed Old Dog tiers, real maxim marking/unmarking and target effects; Oldgen Sex remains separate | Source/API contract in progress; no acceptance yet |
-| Vatgrown passives | AM agent / source reconciliation | Real asset/Identity/Status consumers | Freeze a bounded normal-flow contract and implement dependency-ready effects | No acceptance yet |
+| Vatgrown Unassuming Doll | AM agent + root / active bounded implementation | Real departure/notice effects and owned low consequence | Integrate actual scene exit/re-entry, source effects and all printed normal tiers | Frozen source/dependency contract; no implementation acceptance yet |
 | Remaining required core systems | Root + bounded assignments / open | Existing source inventory and actual consumers | Select the next whole dependency-ready gameplay workflow; keep unsupported branches visible | [Registry](../rules/registry.json), [remaining scope](M3_REMAINING_WORK.md), [acceptance](acceptance/m3_rules.json) |
 | Final integrated candidate | Root / blocked by required gameplay | Frozen full core candidate and complete ordinary workflows | Run final full regression and global static/migration/privacy/contract checks | Pending; focused/segmented results do not substitute |
 | Independent and human acceptance | Independent reviewer + owner/players / pending | Review-ready candidate and stated test checklist | Independent source/clarity review, Discord play-testing and owner milestone review | Not run; no inferred certification or release approval |
+
+## Required follow-on systems
+
+This is the working grouping of the existing required inventory, not a new scope
+or an estimate. Root assigns one dependency-ready workflow at a time after the
+active pair. A partial registry entry can still contain required missing branches.
+
+| Upcoming workflow | Assignment | Relevant dependency | Next concrete action | Completion evidence |
+|---|---|---|---|---|
+| Remaining Girl workflows | Root queue | Current Oldgen/Vatgrown work; existing mentor, AM and paired-person records | Finish Oldgen/Vatgrown Sex, Newgirl teaching/coordination, Casualty, Bonded and AM source workflows; reconcile Show Dog with existing standards | Pending; existing subset evidence remains scoped |
+| Remaining Frame workflows | Root queue | Actual resources, control, bodies and source consequences | Complete Prince, CONSUME, Wyvern and Changeling workflows and remaining special Requisitions/Frame interactions | Pending; do not restart completed JANUS/Leviathan/Ankou work |
+| Handler playbooks and last advancements | Root queue | Actual Handler persona, owned response/discipline and concurrent-role ports for Successor | Finish source-owned playbook outcomes, Successor lifecycle and Last Resort | Pending; Successor contract identifies concrete role gaps |
+| Remaining Strain and Endgames | Root queue | Consuming playbook/world/lifecycle effects | Implement each outstanding result through its actual consequences and closure, retaining prior table evidence | Pending; scheduling and acknowledgements alone do not complete effects |
+| NPC, Gorgon and Harpy workflows | Root queue | Original actors, controller ownership, actual body/resources and map/custody | Finish outstanding source Plays, types and effects; reconcile generic headings against implemented consumers | Pending; no proxy sheets or forged human responses |
+| Shared, physical and situational integration | Root queue | The completed source consumers above | Close required movement/control/recovery/discipline and conditional source ports, including Escape/Captured/Timeskip | Pending; optional Ancillary branches remain disabled |
+| Inventory and acceptance reconciliation | Root queue | Source checklists and actual verified whole workflows | Map existing and new evidence to required branches, resolve unsupported required paths before freezing candidate | Pending; entry counts are not progress percentages |
 
 ## Completed scoped checkpoints
 
@@ -23,6 +39,7 @@ These are implementation evidence, not independent certification or milestone si
 
 | Workflow | Owner / state | Dependency | Next concrete action | Completion evidence |
 |---|---|---|---|---|
+| Oldgen maxim/advice | Oldgen agent + root / committed within scope | Genuine source Heat/Tag, ordinary unmark grants and actual listening | `b9c3f13`; Oldgen Sex/other body adapters stay explicit | Integrated8 passed /9.56s; coherent static12 Python/11 source; offlineSDK15 commands;10 CI cases collected only |
 | Acquisition/proof pilot | AM agent / implemented within scope | Frozen Secretary, Deep-Brain-Spikes and new Tracker source | Reuse the proven core in the next matching acquisition; retain explicit exceptions | Coordinated 8 checks passed; source proof/rollback/retry/private receipt, exact ten-file snapshot |
 | Malleable force-embrace / NPC protection | Malleable agent + root / committed within scope | Genuine altered-at-birth proof, forced replacement and actual NPC procedure | `01c8cfe`; keep specialised source/body consumers visible | Integrated10 passed /19.81s; static12 Python/11 source; offlineSDK14 commands;13 CI cases collected only |
 | Neutral award scenario | Nightmare agent / implemented within scope | Actual Session + performed PR award setup | Reuse the neutral setup for matching upcoming workflows; preserve Secretary API | Same coordinated 8 checks, all modified callers covered; no speed claim |
