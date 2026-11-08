@@ -1319,6 +1319,7 @@ class InboxService:
             from girlframe.services.m3_prince import PrinceService
             from girlframe.services.m3_red_queen import RedQueenService
             from girlframe.services.m3_vatgrown_dna import VatgrownDNAService
+            from girlframe.services.m3_vatgrown_travel import VatgrownTravelService
             from girlframe.services.m3_wyvern import _tasks as wyvern_tasks
             from girlframe.services.m3_wyvern_combat import WyvernCombatService
 
@@ -1332,6 +1333,7 @@ class InboxService:
                 ("red_queen", RedQueenService(frame_game)._tasks(connection, viewer)),
                 ("npc_flirt", NpcFlirtService(frame_game)._tasks(connection, viewer)),
                 ("vatgrown_dna", VatgrownDNAService(frame_game)._tasks(connection, viewer)),
+                ("vatgrown_travel", VatgrownTravelService(frame_game)._tasks(connection, viewer)),
                 ("casualty_replacement", ReplacementService(frame_game)._tasks(connection, viewer)),
                 ("bonded", BondedService(frame_game)._tasks(connection, viewer)),
                 ("bonded_am", BondedAMService(frame_game)._tasks(connection, viewer)),

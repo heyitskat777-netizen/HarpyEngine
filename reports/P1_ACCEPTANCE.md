@@ -608,3 +608,67 @@ Registry validation remains477 entries/270 subset/207 unimplemented/440 required
 0 independently verified. Publication scan:1390 publishable files,40 preserved
 manifest entries,0 findings; whitespace check passed. Reproducible private source
 snapshot/check commands: `var/p1-order-installment-checkpoint-{paths,frozen,checks}.json`.
+
+### Directed Stim cost and accepted Defeat loss
+
+Published preceding checkpoint **fafce935df2038b6299858d4eab7b212d77bff8e**:
+[focused CI42506224033](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42506224033) passed. Full regression was skipped.
+
+- `pytest -q tests/rules/test_princess_sex.py::test_actual_directed_stim_disposal_native_mark_preserves_performer_and_princess_author`: **1 passed/4.77s**. Directed native basic Play now supports actual Stim Disposable Psyche, preserving the actual performer's removed original Identity/Heat and canonical original Princess event author. Existing protected/Paired/AM/Clone restrictions and ordinary source rules remain. Ruff4 and mypy3 source paths passed. Broader ordinary non-Heat disposal adapters remain explicit work.
+- `pytest -q tests/rules/test_consume.py::test_actual_accepted_defeat_component_loss_then_native_same_frame_regrowth`: first **1 failed/3.51s** because the new fixture put forbidden narrative text in the resource-only Beneath details answer. Same-node retry after fixture correction **1 passed/6.84s**. No previous success was rerun.
+
+Accepted Defeat loss uses an actual required Defeat/SQL receipt, original actor,
+real selected alternative, original Handler offer, actual Girl acceptance and
+canonical resolved event. Same surviving current Frame and exact before/after
+named component removal are required. Reuse of the finite loss selection keeps
+Budget/Installment namespaces and omitted optional fields unchanged. Death,
+whole-Frame destruction and new-Void cap replacement are separate producers;
+a generic inventory difference or an unaccepted offer proves no eligible loss.
+
+Static coverage reconciliation also distinguishes existing Dose/Stim scene expiry,
+Easy Target harm/protection/failure and Mentor teaching/shirking consumers from
+actual remaining source adapters. It ran no gameplay tests and is not independent
+review. Historical work-order matrix text is labeled as its planning baseline;
+current JSON/CSV/queue retains the live status and pending acceptance gates.
+
+### Vatgrown learned Dose Up and real travel source
+
+- `pytest -q tests/rules/test_vatgrown_plays.py::test_actual_stim_teacher_learned_once_native_self_dose_uses_only_learner_resources`: first **1 failed/2.79s**. The fixture had not completed the real prerequisite departure; inspection also found the new saved-card form had no required native action field. Added the real action selector and completed the actual departure. Same-node retry **1 passed/3.62s**; no direct-begin bypass.
+- `pytest -q tests/rules/test_vatgrown_travel.py::test_actual_attempt_preserves_position_then_private_disclosure_optional_punishment_and_move tests/rules/test_wyvern_combat.py::test_actual_pin_restricts_real_movement_then_original_owner_native_release`: **1 failed,1 passed/3.86s**. Existing affected movement passed. The new test used the wrong MemoryForm pages API; its readback assertion was corrected.
+- Travel-only retry2: **1 failed/1.93s** exposed actual standalone Vatgrown judgment missing RolePunishment work materialization and source scope. Root added same-transaction synchronization after the canonical judgment and exact validated source scope (actual travel scene; other real campaign violations use campaign scope, without inventing a scene from source text).
+- Travel-only retry3: **1 failed/3.01s** reached actual movement and found the existing Movement first response returned a tuple while JSON same-key retry returned a list. Normalize the response to JSON list; actual movement and event idempotency remain.
+- Travel-only retry4: **1 passed/2.49s**. No passing Wyvern/learned/older normal was rerun.
+
+One-use learning reuses existing generic reservation, roll consumption and recovery;
+the new finite second consumer proves the original actual teacher/source, learner,
+claimed Action, canonical consumed roll and SQL receipt without reviving the grant.
+Native Dose controls/effects and actual learner costs remain. No Stim self-mark,
+Malleable ability or teacher resources are borrowed. Other learned families remain
+explicit adapters.
+
+Travel is an actual unchanged-position proposal, followed by genuine source-bound
+movement only when actually performed. Explicit private disclosure precedes the
+Handler's optional judgment; the real Punishment/effect and exact movement source
+remain auditable. Shared preflight preserves ordinary body/controller/custody/pin/
+lock/cast checks; non-Vatgrown behavior has the affected-consumer evidence above.
+There is no witness/companion framework, invented permission or automatic
+Punishment. Positive joint chaperoned travel and unknown-route/interior geometry
+remain explicit unfinished sources. The delegated endpoint ruling requires clarity
+review. These minimums do not complete P1 or establish full regression/review.
+
+Read-only bounded reconciliation identifies concrete AM resource/vessel/terminal/
+operator guards and CHANGELING reset/pending-controller continuity, while retaining
+existing software/local body/starting-brain implementations. No tests ran in those
+reconciliations; they are not final independent review. Current queue/matrix retains
+these source-specific pending items instead of broad absent-system claims.
+
+Checkpoint preflight covers29 changed paths/22 Python/18 source. Initial all-changed
+Ruff/format21 passed; initial mypy17 found one native movement Any-return error.
+That error and the subsequently changed movement/standalone discipline modules
+were corrected; delta Ruff/format4 and mypy4 passed, preserving the unaffected
+source results. Registry validation remains477 entries/270 subset/207
+unimplemented/440 required/0 independently verified. Repository scan:1394
+publishable files/40 preserved manifest entries/0 findings; whitespace check passed.
+Exact commands, the initial static failure and final source hashes are retained in
+`var/p1-travel-learning-checkpoint-{paths,checks,frozen}.json`. No global/full
+regression, migration or human acceptance is claimed by this scoped preflight.

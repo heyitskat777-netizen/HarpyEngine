@@ -3753,7 +3753,8 @@ Frame, retaining Void and consuming its exact loss source once. Preserve actual
 Dive/Girl-Asset costs, capacity/replacement rules and mandatory birth/loss/Void
 consequences. The former component's occupants, custody and physical/control links
 stay ended. Finite sources now include canonical Budget removal and an actual paid Asset
-Installment cap exchange, each with its own source proof. Expiry, Frame
+Installment cap exchange or a genuinely accepted Defeat alternative, each with
+its own source proof. Expiry, Frame
 swap, reclassification and temporary grants do not establish permanent stock.
 Other missing-component producers remain implementation work. This delegated
 interpretation requires clarity review; later adjustments preserve source/cost/
@@ -3841,3 +3842,18 @@ the owned outcome binds that canonical consumption event; it does not erase the
 Tag twice or restore it. This clarifies the finite implementation of the existing
 `bonded-play-linked-tag-rejection` ruling and does not grant special Order
 producers or remove their actual authority requirements.
+
+### Vatgrown base endpoints and actual travel evidence
+
+`vatgrown-base-endpoint-travel` (PDF49/printed47): use actual known,
+non-destroyed Foundation base Locations for the finite native endpoint boundary.
+A separate Cadre home-base assignment would require its own real producer.
+Record the exact original base/position/proposal evidence. An explicit actual
+unchaperoned attempt changes no position; successful conduct is recorded only
+by genuine movement. Breaking or attempting may lead to an actual source-known
+Handler judgment and Punishment; no generic permission exception or automatic
+Punishment is invented. A different-base route, unknown interior geometry or
+joint foot accompaniment requires real evidence, not mere shared endpoints,
+co-location or a declaration. Existing explicit private disclosure remains the
+knowledge boundary. This delegated recommendation requires clarity review;
+future interpretation changes preserve past source and discipline history.

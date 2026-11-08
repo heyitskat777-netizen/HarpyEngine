@@ -1,10 +1,13 @@
 """Finite actual learned-Play admission and one-roll consumption; source effects stay explicit."""
 
+import json
 from typing import Any
 from uuid import uuid4
 
+import sqlalchemy as sa
 from sqlalchemy import Connection
 
+from girlframe.database import tables as t
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
@@ -13,7 +16,10 @@ from girlframe.engine.m3_learned_play_state import LearnedPlayUse
 from girlframe.services.m2_game import GameService
 from girlframe.services.onboarding import WorkflowError
 
-SUPPORTED = {"girl.alpha.brutalize": ("brutalize", "ALPHA")}
+SUPPORTED = {
+    "girl.alpha.brutalize": ("brutalize", "ALPHA"),
+    "girl.stim-blissed.dose-up": ("dose_up", "STIM-BLISSED"),
+}
 
 
 def _replace(state: GameState, value: LearnedPlayUse) -> None:
@@ -164,4 +170,79 @@ def release_unrolled(
         raise WorkflowError("Recover this original unrolled learning reservation.")
     _prove(game, c, state, value)
     _replace(state, value.model_copy(update={"claimed_action": None}))
+    return True
+
+
+def prove_consumed(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    rule_id: str,
+    roll_event: str,
+) -> bool:
+    """Prove this exact spent lesson; never restore its admission for another roll."""
+    meta = action["data"].get("learned_play")
+    if meta is None:
+        return False
+    from girlframe.services.m3_handler_advancements import _history
+
+    rolled = _history(c, game, roll_event)
+    claimed = _history(c, game, meta["event"])
+    actor = current_ref(rolled, int(action["actor_id"]))
+
+    def saved(source: GameState) -> LearnedPlayUse | None:
+        sheet = source.sheets.get(actor.entity)
+        runtime = sheet.girl_runtime if sheet else None
+        return (
+            next((x for x in runtime.learned_plays if x.id == meta["id"]), None)
+            if runtime
+            else None
+        )
+
+    value, birth, reservation = saved(state), saved(rolled), saved(claimed)
+    receipt = (
+        c.execute(
+            sa.select(t.m2["m2_receipts"]).where(
+                t.m2["m2_receipts"].c.campaign_id == game.store.campaign_id,
+                t.m2["m2_receipts"].c.action_id == action["id"],
+            )
+        )
+        .mappings()
+        .first()
+    )
+    event = (
+        c.execute(
+            sa.select(t.events).where(
+                t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == roll_event
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if (
+        rule_id not in SUPPORTED
+        or meta.get("rule_id") != rule_id
+        or action["data"]["prepared"]["play"] != SUPPORTED[rule_id][0]
+        or value is None
+        or birth is None
+        or reservation is None
+        or value != birth
+        or value.actor != actor
+        or value.rule_id != rule_id
+        or value.claimed_action != action["id"]
+        or value.rolled_event != roll_event
+        or reservation != value.model_copy(update={"rolled_event": None})
+        or receipt is None
+        or json.loads(receipt["body_json"]) != action["data"].get("receipt")
+        or event is None
+        or event["kind"] not in ("m2.rolled", "m3.rolled")
+        or event["actor_id"] != str(action["actor_id"])
+        or json.loads(event["payload_json"]).get("action_id") != action["id"]
+        or json.loads(event["payload_json"]).get("receipt_id") != receipt["id"]
+    ):
+        raise WorkflowError(
+            "Recover this original lesson's actual reservation and consumed receipt"
+        )
+    _prove(game, c, rolled, value)
     return True

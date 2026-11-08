@@ -16,7 +16,11 @@ from girlframe.engine.m3_janus_storage import effective_assets
 from girlframe.engine.m3_requisition_state import Receipt
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_budget_removal import prove_loss_source
-from girlframe.services.m3_frame_asset_losses import FrameAssetLoss, installment_loss
+from girlframe.services.m3_frame_asset_losses import (
+    FrameAssetLoss,
+    defeat_alternative_losses,
+    installment_loss,
+)
 from girlframe.services.m3_handler_advancements import _history
 from girlframe.services.onboarding import WorkflowError
 
@@ -27,7 +31,7 @@ class Selection(Model):
     original: AssetState
     loss: str | None = None
     loss_event: str | None = None
-    loss_kind: Literal["asset_installment"] | None = None
+    loss_kind: Literal["asset_installment", "defeat_alternative"] | None = None
     replacement: str | None = None
 
 
@@ -174,14 +178,24 @@ def _selections(
             paid_loss = installment_loss(game, c, state, receipt)
             if paid_loss is not None:
                 losses.append(paid_loss)
+    losses.extend(
+        value
+        for value in defeat_alternative_losses(game, c, state, actor)
+        if value.asset.id not in present and (value.source_kind, value.id) not in consumed
+    )
     for loss in losses:
-        kind: Literal["asset_installment"] | None = (
-            "asset_installment" if loss.source_kind == "asset_installment" else None
+        kind: Literal["asset_installment", "defeat_alternative"] | None = (
+            loss.source_kind if loss.source_kind != "budget" else None
         )
         result.append(
             Selection(
                 token=rules.identity(
-                    "missing-frame-installment" if kind else "missing-frame", loss.id
+                    "missing-frame-defeat"
+                    if kind == "defeat_alternative"
+                    else "missing-frame-installment"
+                    if kind
+                    else "missing-frame",
+                    loss.id,
                 ),
                 kind="missing",
                 original=loss.asset,
@@ -214,7 +228,11 @@ def regrowth_options(
 def _component(plan: RegrowthPlan, selected: Selection, event: str) -> AssetState:
     return AssetState(
         id=rules.identity(
-            "regrown-frame-installment" if selected.loss_kind else "regrown-frame",
+            "regrown-frame-defeat"
+            if selected.loss_kind == "defeat_alternative"
+            else "regrown-frame-installment"
+            if selected.loss_kind
+            else "regrown-frame",
             plan.action,
             selected.loss or "",
         ),
@@ -301,7 +319,11 @@ def _install(state: GameState, plan: RegrowthPlan, event: str, *, record: bool) 
                 changed,
                 rules.RegrownFrame(
                     id=rules.identity(
-                        "regrowth-installment" if selected.loss_kind else "regrowth",
+                        "regrowth-defeat"
+                        if selected.loss_kind == "defeat_alternative"
+                        else "regrowth-installment"
+                        if selected.loss_kind
+                        else "regrowth",
                         plan.action,
                         selected.loss or "",
                     ),

@@ -269,6 +269,23 @@ async def _sex(
                 for x in data.get("learned", ())
             ]
         )
+        if any(x.get("can_dose") for x in data.get("learned", ())):
+
+            async def dose(current: discord.Interaction, values: dict[str, Any]) -> None:
+                from girlframe.discord_adapter.m3_dose_up import open_dose_up
+                from girlframe.services.m3_dose_up import DoseUpService
+
+                await open_dose_up(current, DoseUpService(service.game.store, service.game))
+
+            form = NativeForm(
+                interaction.user.id,
+                "Actual learned Dose Up",
+                learning + "\nUse your own body and Heat for this one learned Play.",
+                [Field("action", "Actual learned Play", (("dose", "Use actual Dose Up"),))],
+                dose,
+            )
+            await reply(interaction, form.text(), form)
+            return
         await reply(
             interaction,
             "Saved Vatgrown source: "

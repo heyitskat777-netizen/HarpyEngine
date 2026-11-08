@@ -1029,3 +1029,204 @@ def test_actual_paid_cap_installment_loss_native_regrowth_preserves_receipt_and_
         controls.view(OTHER, regrown.id)
     tick(worker, gateway, 6)
     assert game.inspect(PLAYER, action)["state"] == "complete"
+
+
+# Deferred accepted-offer provider normal; root runs the sole minimal node after freeze.
+def test_actual_accepted_defeat_component_loss_then_native_same_frame_regrowth(
+    ledger, tmp_path, monkeypatch
+):
+    import asyncio
+    import json
+
+    from test_mission_ui import current
+
+    from girlframe.discord_adapter.m3_consume import open_choice
+    from girlframe.services.m3_consume_regrowth import prove_regrowth
+    from girlframe.services.m3_frame_asset_losses import defeat_alternative_losses
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch)
+    acquire(controls, rules.PARTAKE)
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "owner_m3_rulings": ledger.policy.owner_m3_rulings.model_copy(
+                update={"beneath_private_choices": "affected_owner"}
+            ),
+        }
+    )
+    with ledger.transaction() as c:
+        canon = state(game)
+        frames = [x for x in canon.sheets["2"].assets if x.family == "frame"]
+        for value in frames[1:]:
+            value.damaged = True
+        last = frames[0].id
+        game.event(c, 1, str(uuid4()), "synthetic.actual_prior_Frame_damage", canon)
+    cockpit(game, "pilot")
+    actor = current_ref(state(game), 2)
+    frame = rules.frame(state(game), actor)
+    game.dice.faces = (1, 1)
+    parent = game.begin(
+        PLAYER,
+        str(uuid4()),
+        900,
+        state(game).sheets["2"].revision,
+        PlayInput(
+            play="put_someone_beneath_you",
+            target=3,
+            heat=0,
+            piloting=True,
+            context="Actual confrontation while piloting my original Frame",
+            trigger_confirmed=True,
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    if game.inspect(PLAYER, parent)["state"] in ("acquiring", "ready_to_roll"):
+        game.roll(PLAYER, str(uuid4()), parent)
+    pass_tags(game)
+    answer(game, OTHER, "beneath_select", options=("damage",), text="My actual counterattack")
+    answer(game, PLAYER, "beneath_details", denied=(last,))
+    assert any(x["kind"] == "beneath_defeat" for x in game.choices(PLAYER))
+    lost = next(x for x in state(game).sheets["2"].assets if x.id == last)
+    assert lost.damaged
+    game.dice.faces = (1, 1)
+    defeat = game.begin(
+        PLAYER,
+        str(uuid4()),
+        900,
+        state(game).sheets["2"].revision,
+        PlayInput(
+            play="defeat",
+            parent=parent,
+            heat=0,
+            piloting=True,
+            context="Actual required Defeat from the real last-Asset counterattack",
+            trigger_confirmed=True,
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    if game.inspect(PLAYER, defeat)["state"] in ("acquiring", "ready_to_roll"):
+        game.roll(PLAYER, str(uuid4()), defeat)
+    pass_tags(game)
+    defeat_receipt = game.inspect(PLAYER, defeat)["receipt"]
+    answer(
+        game,
+        PLAYER,
+        "defeat_select",
+        options=("handler_ruinous_alternative",),
+        text="I ask my actual Handler for the printed alternative",
+    )
+    answer(
+        game,
+        ADMIN,
+        "defeat_alternative",
+        flag=True,
+        fields={"assets": last, "frame_context": "inside"},
+        text="My actual equally ruinous offer permanently removes that named Frame component",
+    )
+    assert any(x.id == last for x in state(game).sheets["2"].assets)
+    offered = next(x for x in game.choices(PLAYER) if x["kind"] == "defeat_accept_alternative")
+    with pytest.raises(WorkflowError):
+        game.respond(
+            OTHER, str(uuid4()), offered["id"], offered["revision"], ChoiceAnswer(flag=True)
+        )
+    answer(
+        game,
+        PLAYER,
+        "defeat_accept_alternative",
+        flag=True,
+        text="My own actual acceptance of that precise offered loss",
+    )
+    assert not any(x.id == last for x in state(game).sheets["2"].assets)
+    assert rules.frame(state(game), actor) == frame and not state(game).sheets["2"].frame_scrapped
+    assert game.inspect(PLAYER, defeat)["state"] == "complete"
+    assert game.inspect(PLAYER, parent)["state"] == "complete"
+    assert game.inspect(PLAYER, defeat)["receipt"] == defeat_receipt
+    with ledger.engine.connect() as c:
+        loss = next(
+            x for x in defeat_alternative_losses(game, c, state(game), actor) if x.asset.id == last
+        )
+        assert loss.source_kind == "defeat_alternative" and loss.asset == lost
+    tick(worker, gateway, 6)
+    girl = asset(game, 2)
+    dive = roll(game, worker, gateway, play="dive_deep", heat=0, faces=(4, 5), piloting=True)
+    if any(x["kind"] == "dive_select" for x in game.choices(PLAYER)):
+        answer(
+            game,
+            PLAYER,
+            "dive_select",
+            options=("erase_identity_and_table_question",),
+            text="My actual primary Dive after the accepted loss",
+        )
+        ordinary = next(x for x in state(game).sheets["2"].identities if not x.protected)
+        answer(
+            game,
+            PLAYER,
+            "dive_effect",
+            fields={"identity": ordinary.id},
+            text="What does this same Frame remember?",
+        )
+        for viewer in (PLAYER, OTHER, ADMIN):
+            answer(game, viewer, "dive_table_answer", text="My actual table answer")
+    row = next(x for x in game.choices(PLAYER) if x["kind"] == "consume_partake")
+    token = rules.identity("missing-frame-defeat", loss.id)
+    assert token in game.decision(PLAYER, row["id"])["detail"]["regrow_missing"]
+    before = state(game)
+    raw_dive, calls = game.inspect(PLAYER, dive)["receipt"], game.dice.calls
+
+    async def native():
+        opened = current(2, int(uuid4().int % 1000000000))
+        opened.channel_id = 900
+        await opened.response.defer(ephemeral=True)
+        await open_choice(opened, game, game.decision(PLAYER, row["id"]))
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(current(3, 99820))
+        form.values.update(
+            option=("regrow",),
+            girl_asset=(girl,),
+            frame_assets=(token,),
+            account="My actual Girl cost regrows this source-proved missing feature",
+        )
+        submitted = current(2, int(uuid4().int % 1000000000))
+        submitted.channel_id = 900
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        return str(submitted.id)
+
+    key = asyncio.run(native())
+    born = state(game)
+    game.respond(
+        PLAYER,
+        key,
+        row["id"],
+        row["revision"],
+        ChoiceAnswer(
+            options=("regrow",),
+            fields={"girl_asset": girl, "frame_assets": json.dumps([token])},
+            text="My actual Girl cost regrows this source-proved missing feature",
+        ),
+    )
+    assert state(game).revision == born.revision
+    regrown = next(
+        x
+        for x in rules.records(born, rules.RegrownFrame)
+        if x.loss_kind == "defeat_alternative" and x.loss == loss.id
+    )
+    assert regrown.original == lost and regrown.frame == frame
+    assert regrown.component.id != last and not regrown.component.damaged
+    assert regrown.component.void == lost.void and regrown.component in born.sheets["2"].assets
+    assert next(x for x in born.sheets["2"].assets if x.id == girl).damaged
+    assert (
+        born.neural_connections == before.neural_connections
+        and born.placements == before.placements
+    )
+    assert game.dice.calls == calls and game.inspect(PLAYER, dive)["receipt"] == raw_dive
+    assert game.inspect(PLAYER, defeat)["receipt"] == defeat_receipt
+    with ledger.engine.connect() as c:
+        assert prove_regrowth(game, c, born, regrown.id) == regrown
+        from girlframe.services.m3_consume_regrowth import _selections
+
+        assert token not in {x.token for x in _selections(game, c, born, actor)}
+    assert controls.view(PLAYER, regrown.id)["type"] == "regrowth"
+    with pytest.raises(WorkflowError):
+        controls.view(OTHER, regrown.id)
+    tick(worker, gateway, 6)
+    assert game.inspect(PLAYER, dive)["state"] == "complete"

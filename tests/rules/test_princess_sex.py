@@ -779,3 +779,68 @@ def test_high_directed_disobey_requires_real_completed_order_ancestry_and_keeps_
         assert actual["parent_id"] == parent and actual["actor_id"] == "3"
         assert actual["data"]["prepared"]["order_id"] == issued["order_id"]
     assert rules.direction(state(game), direction.id).completed_event and game.dice.calls == 1
+
+
+def test_actual_directed_stim_disposal_native_mark_preserves_performer_and_princess_author(
+    ledger, tmp_path, monkeypatch
+):
+    from girlframe.engine import m3_disposable_psyche as psyche
+    from girlframe.services.m3_disposable_psyche import prove_disposal
+
+    game, worker, gateway, service = setup(ledger, tmp_path, monkeypatch)
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(ordinary.RULE, rules.RULE, gender.RULE, psyche.RULE),
+    )
+    # Synthetic initial type only; this is not a playbook-transition command.
+    with ledger.transaction() as c:
+        initial = state(game)
+        initial.sheets["3"].girl = "STIM-BLISSED"
+        game.event(c, 1, str(uuid4()), "synthetic.native_stim_counterpart_prior", initial)
+    identity, parent = roll(game, worker, gateway, service, (6, 6), native=True)
+    pass_tags(game)
+    direction = _directed_native(game, identity, "keep_your_head")
+    original = state(game)
+    marked = next(x for x in original.sheets["3"].identities if not x.marked and not x.protected)
+    parent_receipt = game.inspect(PLAYER, parent)["receipt"]
+    game.dice = Dice((4, 4))
+    child = _prepare_directed_native(
+        game,
+        service,
+        identity,
+        heat=("0",),
+        identity=(marked.id,),
+        gain=("1",),
+        disposable_heat=("3",),
+    )
+    tick(worker, gateway, 3)
+    _pass_directed_tags(game)
+    actual = state(game)
+    assert not any(x.id == marked.id for x in actual.sheets["3"].identities)
+    assert actual.sheets["3"].heat == original.sheets["3"].heat + 4
+    assert actual.sheets["2"].heat == original.sheets["2"].heat
+    with ledger.engine.connect() as c:
+        disposal = prove_disposal(game, c, actual, child)
+        assert disposal.actor == current_ref(original, 3) and disposal.extra == 3
+        event_author = c.scalar(
+            sa.select(t.events.c.actor_id).where(t.events.c.id == disposal.event)
+        )
+        assert event_author == "2"
+    answer(
+        game,
+        PLAYER,
+        "actor_keep",
+        options=("tough", "sexy"),
+        denied=("in_control",),
+    )
+    answer(game, ADMIN, "handler_keep", flag=True, text="Actual Handler judges the real child")
+    tick(worker, gateway, 5)
+    assert game.inspect(PLAYER, child)["state"] == "complete"
+    assert game.inspect(PLAYER, parent)["state"] == "complete"
+    assert rules.direction(state(game), direction.id).completed_event
+    assert game.inspect(PLAYER, parent)["receipt"] == parent_receipt and game.dice.calls == 1
+    with ledger.engine.connect() as c:
+        assert prove_disposal(game, c, state(game), child) == disposal

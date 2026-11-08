@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from sqlalchemy import Connection
 
+from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import is_helpless
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import resolve
@@ -17,6 +18,118 @@ from girlframe.services.m3_actors import ActorService, profiles
 from girlframe.services.m3_missions import MissionService
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
+
+
+def proposal_context(
+    game: GameService,
+    c: Connection,
+    viewer: GuildViewer,
+    state: GameState,
+    channel: int,
+    actor: ActorRef,
+    destination: tuple[int, int],
+    frame: bool,
+    account: str,
+) -> dict[str, Any]:
+    """Prove an actual possible physical proposal without moving any body."""
+    from girlframe.services.m3_physical import PhysicalService
+    from girlframe.services.p1_facilitator import require_scene_clear
+    from girlframe.services.p1_source_pause import require_clear
+
+    Access(game.store).authorize(c, viewer, "world", director_response=True)
+    game.unpaused(c)
+    PhysicalService(game.store)._idle(c)
+    require_clear(game, c, channel)
+    require_scene_clear(game, c, channel)
+    scene = game.scene(c, channel)
+    if (
+        state.world is None
+        or viewer.user_id not in scene["participants"]
+        or not account.strip()
+        or len(account) > 1200
+        or len(destination) != 2
+        or any(type(x) is not int for x in destination)
+        or not state.world.board.contains(destination)
+    ):
+        raise WorkflowError("Choose actual current physical movement within the mapped scene")
+    bound = profiles(c, game.store.campaign_id)
+    actual = resolve(state, actor, bound, require_current_profile=False)
+    if (
+        actual.controller != viewer.user_id
+        or actual.cell is None
+        or actual.offstage_source
+        or actual.custody not in (None, "free")
+        or is_helpless(state, actor)
+        or pinned(state, actor)
+    ):
+        raise WorkflowError("Resolve genuine custody, Helplessness or the source pin before moving")
+    cast = next((x for x in state.scene_casts if x.id == scene["id"] and x.open), None)
+    if cast is not None and not any(
+        x.actor == actor and x.controller == viewer.user_id for x in cast.roles
+    ):
+        raise WorkflowError("Join this actual role in the source scene first")
+    pose = next((x for x in state.placements if x.actor == actor), None)
+    external_pose = next((x for x in state.external_poses if x.actor == actor), None)
+    if actor.kind == "pilot":
+        if (
+            pose is None
+            or pose.custody
+            or pose.incapacitated
+            or pose.subsumed
+            or not pose.vitals_active
+        ):
+            raise WorkflowError("Use the real known free body/Frame placement")
+        if frame:
+            if (
+                actual.piloting is not True
+                or actual.occupied_frame_instance != actual.frame_instance
+                or cargo(state, actor, pose.frame_instance)
+            ):
+                raise WorkflowError(
+                    "Move only the original Frame you actually pilot, after unloading it"
+                )
+        elif actual.inside_frame is not False:
+            raise WorkflowError("Actually exit the cockpit before ordinary movement on foot")
+    elif actor.kind == "npc":
+        assert state.world is not None
+        npc = next(x for x in state.world.npcs if x.id == actor.entity)
+        if npc.source_kind is not None or frame or actual.inside_frame is True:
+            raise WorkflowError(
+                "This source body needs its actual carrier or software-access adapter"
+            )
+    elif actor.kind == "gorgon":
+        pass
+    elif actor.kind == "handler" and not frame and actual.inside_frame is not True:
+        pass
+    elif actor.kind == "external_pilot":
+        if (
+            external_pose is None
+            or frame
+            and external_pose.mode != "piloting"
+            or not frame
+            and external_pose.mode != "outside_frame"
+        ):
+            raise WorkflowError("Retain the actual external body's known cockpit and Frame context")
+    else:
+        raise WorkflowError("This actual body requires its specific movement source adapter")
+    return dict(
+        actor=actor.model_dump(mode="json"),
+        controller=actual.controller,
+        channel=channel,
+        scene=scene["id"],
+        cast=cast.model_dump(mode="json") if cast is not None else None,
+        participants=list(scene["participants"]),
+        origin=list(actual.cell),
+        destination=list(destination),
+        frame=frame,
+        mode=pose.mode if pose is not None else external_pose.mode if external_pose else None,
+        vessel_id=actual.vessel_id,
+        frame_instance=actual.frame_instance,
+        position_sha256=actual.position_sha256,
+        source_sha256=actual.source_sha256,
+        revision=state.revision,
+        account=account,
+    )
 
 
 class MovementService:
@@ -37,6 +150,9 @@ class MovementService:
                 ref = ActorRef.model_validate(choice["ref"])
                 actual = resolve(state, ref, bound, require_current_profile=False)
                 if actual.controller == viewer.user_id and actual.cell is not None:
+                    from girlframe.engine.m3_girl_runtime_state import has_rule
+
+                    sheet = state.sheets.get(ref.entity) if ref.kind == "pilot" else None
                     actors.append(
                         dict(
                             ref=ref.model_dump(mode="json"),
@@ -44,6 +160,10 @@ class MovementService:
                             label=actual.label,
                             cell=actual.cell,
                             piloting=actual.piloting,
+                            vatgrown=bool(
+                                sheet
+                                and has_rule(sheet, "girl.vatgrown.just-an-experiment", "VATGROWN")
+                            ),
                         )
                     )
             return dict(
@@ -65,89 +185,37 @@ class MovementService:
         *,
         frame: bool = False,
         account: str,
+        vatgrown_travel: str | None = None,
     ) -> dict[str, Any]:
         actor = ActorRef.model_validate_json(actor.model_dump_json())
 
         def operation(c: Connection) -> dict[str, Any]:
-            from girlframe.services.m3_physical import PhysicalService
-            from girlframe.services.p1_facilitator import require_scene_clear
-            from girlframe.services.p1_source_pause import require_clear
-
-            Access(self.store).authorize(c, viewer, "world", director_response=True)
-            self.game.unpaused(c)
-            PhysicalService(self.store)._idle(c)
-            require_clear(self.game, c, channel)
-            require_scene_clear(self.game, c, channel)
             state = load_state(c, self.store.campaign_id)
-            scene = self.game.scene(c, channel)
-            if (
-                type(revision) is not int
-                or state.revision != revision
-                or state.world is None
-                or viewer.user_id not in scene["participants"]
-                or not account.strip()
-                or len(account) > 1200
-                or len(destination) != 2
-                or any(type(x) is not int for x in destination)
-                or not state.world.board.contains(destination)
-            ):
+            if type(revision) is not int or state.revision != revision:
                 raise WorkflowError(
                     "Choose actual current physical movement within the mapped scene"
                 )
-            bound = profiles(c, self.store.campaign_id)
-            actual = resolve(state, actor, bound, require_current_profile=False)
-            if (
-                actual.controller != viewer.user_id
-                or actual.cell is None
-                or actual.offstage_source
-                or actual.custody not in (None, "free")
-                or is_helpless(state, actor)
-                or pinned(state, actor)
-            ):
-                raise WorkflowError(
-                    "Resolve genuine custody, Helplessness or the source pin before moving"
-                )
-            cast = next((x for x in state.scene_casts if x.id == scene["id"] and x.open), None)
-            if cast is not None and not any(
-                x.actor == actor and x.controller == viewer.user_id for x in cast.roles
-            ):
-                raise WorkflowError("Join this actual role in the source scene first")
+            context = proposal_context(
+                self.game, c, viewer, state, channel, actor, destination, frame, account
+            )
+            assert state.world is not None
+            from girlframe.services.m3_vatgrown_travel import before_move, stage_movement
+
+            before_move(self.game, c, state, viewer, context, travel=vatgrown_travel)
+            before = GameState.model_validate_json(state.model_dump_json())
             event = str(uuid4())
             if actor.kind == "pilot":
                 pose = next((x for x in state.placements if x.actor == actor), None)
-                if (
-                    pose is None
-                    or pose.custody
-                    or pose.incapacitated
-                    or pose.subsumed
-                    or not pose.vitals_active
-                ):
-                    raise WorkflowError("Use the real known free body/Frame placement")
+                assert pose is not None
                 if frame:
-                    if (
-                        actual.piloting is not True
-                        or actual.occupied_frame_instance != actual.frame_instance
-                        or cargo(state, actor, pose.frame_instance)
-                    ):
-                        raise WorkflowError(
-                            "Move only the original Frame you actually pilot, after unloading it"
-                        )
                     values = dict(frame_cell=destination, girl_cell=destination)
                 else:
-                    if actual.inside_frame is not False:
-                        raise WorkflowError(
-                            "Actually exit the cockpit before ordinary movement on foot"
-                        )
                     values = dict(girl_cell=destination)
                 moved = pose.model_copy(update=values | dict(source_event=event, account=account))
                 moved = type(pose).model_validate_json(moved.model_dump_json())
                 state.placements = [moved if x.actor == actor else x for x in state.placements]
             elif actor.kind == "npc":
                 npc = next(x for x in state.world.npcs if x.id == actor.entity)
-                if npc.source_kind is not None or frame or actual.inside_frame is True:
-                    raise WorkflowError(
-                        "This source body needs its actual carrier or software-access adapter"
-                    )
                 state.world = state.world.model_copy(
                     update=dict(
                         npcs=tuple(
@@ -167,7 +235,7 @@ class MovementService:
                         )
                     )
                 )
-            elif actor.kind == "handler" and not frame and actual.inside_frame is not True:
+            elif actor.kind == "handler":
                 state.facts.append(
                     dict(
                         kind="ordinary_handler_movement",
@@ -179,14 +247,7 @@ class MovementService:
                 )
             elif actor.kind == "external_pilot":
                 external_pose = next((x for x in state.external_poses if x.actor == actor), None)
-                if (
-                    external_pose is None
-                    or (frame and external_pose.mode != "piloting")
-                    or (not frame and external_pose.mode != "outside_frame")
-                ):
-                    raise WorkflowError(
-                        "Retain the actual external body's known cockpit and Frame context"
-                    )
+                assert external_pose is not None
                 update = dict(position_event=event, account=account, girl_cell=destination)
                 if frame:
                     update["frame_cell"] = destination
@@ -198,6 +259,7 @@ class MovementService:
                 raise WorkflowError(
                     "This actual body requires its specific movement source adapter"
                 )
+            stage_movement(self.game, c, before, state, context, vatgrown_travel, event)
             self.game.event(
                 c,
                 viewer.user_id,
@@ -209,7 +271,7 @@ class MovementService:
             )
             return dict(
                 actor=actor.model_dump(mode="json"),
-                destination=destination,
+                destination=list(destination),
                 frame=frame,
                 revision=state.revision,
             )
@@ -224,6 +286,7 @@ class MovementService:
                 frame=frame,
                 revision=revision,
                 account=account,
+                **({"vatgrown_travel": vatgrown_travel} if vatgrown_travel is not None else {}),
             ),
             operation,
             auto_audit=False,

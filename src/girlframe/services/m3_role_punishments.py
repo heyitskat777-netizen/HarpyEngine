@@ -675,6 +675,12 @@ def synchronize(
                 scope = role_scope(c, game, case).model_dump() | dict(
                     campaign_id=game.store.campaign_id
                 )
+            elif case.source_kind == "vatgrown_plays":
+                from girlframe.services.m3_vatgrown_plays import role_scope as vatgrown_role_scope
+
+                scope = vatgrown_role_scope(c, game, case).model_dump() | dict(
+                    campaign_id=game.store.campaign_id
+                )
             elif case.source_kind == "compliance_virus":
                 from girlframe.services.m3_compliance_virus import role_scope
 

@@ -1,7 +1,7 @@
 """Private voluntary source and actual owned Princess intimacy decisions."""
 
 import asyncio
-from typing import Any
+from typing import Any, Literal, cast
 
 import discord
 
@@ -230,6 +230,16 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
                 required=False,
             ),
         ]
+        if child["disposable"]:
+            fields.append(
+                Field(
+                    "disposable_heat",
+                    "Disposable Psyche: remove the actual marked Identity for extra Heat",
+                    (("0", "Do not remove"), ("3", "Remove for +3"), ("4", "Remove for +4")),
+                    minimum=0,
+                    required=False,
+                )
+            )
         if child["play"] == "disobey_orders":
             fields.append(
                 Field(
@@ -327,6 +337,9 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
                     heat=int(values["heat"][0]),
                     identity=next(iter(values.get("identity", ())), None),
                     gain=int(values.get("gain", ("0",))[0]),
+                    disposable_heat=cast(
+                        Literal[0, 3, 4], int(next(iter(values.get("disposable_heat", ())), "0"))
+                    ),
                     trigger_confirmed=True,
                 ),
             )

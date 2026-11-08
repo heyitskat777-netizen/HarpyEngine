@@ -40,7 +40,7 @@ from girlframe.services.m3_world import WorldService
 from girlframe.services.onboarding import WorkflowError
 
 
-def ready(store, tmp_path, monkeypatch):
+def ready(store, tmp_path, monkeypatch, *, teacher="ALPHA"):
     original_seed, original_selected = creation_fixture.seed, game_fixture.selected
 
     def seed_actual(actual_store, viewer=PLAYER, callsign="SYNTH_A", notes="PRIVATE_CANARY"):
@@ -52,15 +52,15 @@ def ready(store, tmp_path, monkeypatch):
             "draft-3",
             0,
             DraftInput(
-                callsign="ACTUAL_ALPHA",
-                girl_playbook="ALPHA",
+                callsign="ACTUAL_" + teacher.replace("-", "_"),
+                girl_playbook=teacher,
                 frame_playbook="JANUS-B",
                 notes=notes,
             ),
         )
 
     def selected_actual(girl="MOCKINGBIRD", frame="JANUS-B"):
-        return original_selected("ALPHA" if girl == "MOCKINGBIRD" else girl, frame)
+        return original_selected(teacher if girl == "MOCKINGBIRD" else girl, frame)
 
     monkeypatch.setattr(creation_fixture, "seed", seed_actual)
     monkeypatch.setattr(game_fixture, "selected", selected_actual)
@@ -70,7 +70,8 @@ def ready(store, tmp_path, monkeypatch):
         game,
         tmp_path,
         monkeypatch,
-        extra=(rules.EXPERIMENT, rules.INVESTMENT, rules.SEX, rules.BRUTALIZE),
+        extra=(rules.EXPERIMENT, rules.INVESTMENT, rules.SEX, rules.BRUTALIZE)
+        + (("girl.stim-blissed.dose-up",) if teacher == "STIM-BLISSED" else ()),
     )
     approval = store.policy.m3_approval
     store.policy = store.policy.model_copy(
@@ -592,3 +593,131 @@ def test_real_initial_investor_lineage_exact_positive_quote_and_voluntary_permis
         controls.accept_investor(*payload) == result
         and state(game).sheets["3"].permissions == saved.sheets["3"].permissions - 2
     )
+
+
+def test_actual_stim_teacher_learned_once_native_self_dose_uses_only_learner_resources(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred P1 normal: genuine learning source, native dose, consumed-source readback."""
+    from test_dose_up import native_choice as dose_choice
+
+    from girlframe.discord_adapter.m3_vatgrown_plays import open_vatgrown_plays
+    from girlframe.engine import m3_dose_up as dosing
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+    from girlframe.services.m3_dose_up import DoseUpService
+    from girlframe.services.m3_dose_up import prove as prove_dose
+    from girlframe.services.m3_learned_plays import prove_consumed
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, teacher="STIM-BLISSED")
+    session, source_action = sex(game, worker, gateway, controls, (5, 5))
+    before_learning = state(game)
+    teacher_identity = before_learning.sheets["3"].identities[1]
+    native_choice(
+        game,
+        OTHER,
+        "vat_sex_learn",
+        identities=(teacher_identity.id,),
+        replacements=(before_learning.sheets["2"].identities[0].id,),
+        play=(dosing.RULE,),
+        account="The actual original Stim teacher selects her own Dose Up for one use",
+    )
+    assert game.inspect(PLAYER, source_action)["state"] == "complete"
+    learned = rules.records(state(game), rules.LearnedPlay)[-1]
+    assert learned.rule_id == dosing.RULE and learned.teacher == current_ref(before_learning, 3)
+    assert controls.view(PLAYER, session)["learned"][0]["can_dose"]
+    assert not controls.view(OTHER, session)["learned"][0]["can_dose"]
+    with pytest.raises(WorkflowError):
+        controls.view(ADMIN, session)
+    # The high source still owns its departure controls until the actual counterpart releases it.
+    controls.send_away(
+        OTHER,
+        str(uuid4()),
+        session,
+        state(game).revision,
+        "The original Stim teacher actually sends the learner away after the lesson",
+    )
+    tick(worker, gateway, 6)
+    before = state(game)
+    teacher = before.sheets["3"].model_copy(deep=True)
+    before_rolls = game.dice.calls
+
+    async def use_native():
+        def interaction():
+            value = current(2, uuid4().int % 1000000000)
+            value.channel_id = 900
+            return value
+
+        opened = interaction()
+        await opened.response.defer(ephemeral=True)
+        await open_vatgrown_plays(opened, controls, session)
+        learned_form = opened.edit_original_response.call_args.kwargs["view"]
+        assert learned_form.title == "Actual learned Dose Up"
+        learned_form.values["action"] = ("dose",)
+        menu_response = interaction()
+        await learned_form.confirm.callback(menu_response)
+        assert learned_form.completed, menu_response.edit_original_response.call_args_list
+        menu = menu_response.edit_original_response.call_args.kwargs["view"]
+        menu.values["action"] = ("self",)
+        form_response = interaction()
+        await menu.confirm.callback(form_response)
+        form = form_response.edit_original_response.call_args.kwargs["view"]
+        form.values.update(heat=("1",), account="I inject the real cocktail into my own body")
+        submitted = interaction()
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        # The exact native retry retains the known Action, without another reservation.
+        await form.confirm.callback(submitted)
+
+    asyncio.run(use_native())
+    with ledger.engine.connect() as c:
+        action = c.scalar(
+            sa.select(t.m2["m2_actions"].c.id).where(
+                t.m2["m2_actions"].c.campaign_id == ledger.campaign_id,
+                sa.func.json_extract(t.m2["m2_actions"].c.body_json, "$.play") == "dose_up",
+            )
+        )
+    assert action is not None and game.dice.calls == before_rolls
+    game.dice.faces = (3, 4)
+    tick(worker, gateway, 3)
+    if game.inspect(PLAYER, action)["receipt"] is None:
+        game.roll(PLAYER, "m2.confirmed_roll:" + action, action)
+    pass_tags(game)
+    dose_choice(game, PLAYER, ("quick", "strong"))
+    actual = state(game)
+    value = dosing.records(actual, dosing.Dose)[-1]
+    assert value.id == action and value.actor == value.target == current_ref(before, 2)
+    assert value.total == 8 and value.heat == 1 and value.duration == 2
+    assert {x for selected in value.selections for x in selected.components} == {"quick", "strong"}
+    assert len(dosing.drug_tags(actual, value.actor)) == 2
+    assert actual.sheets["2"].girl == "VATGROWN"
+    assert actual.sheets["2"].heat == before.sheets["2"].heat - 1
+    assert actual.sheets["2"].identities == before.sheets["2"].identities
+    assert actual.sheets["3"] == teacher
+    assert not has_rule(actual.sheets["2"], dosing.RULE, "STIM-BLISSED")
+    assert not has_rule(actual.sheets["2"], dosing.SELF_RULE, "STIM-BLISSED")
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    with ledger.engine.connect() as c:
+        saved = game.action(c, action)
+        assert prove_consumed(game, c, actual, saved, dosing.RULE, value.roll_event)
+        assert prove_dose(game, c, actual, action) == value
+    dose_service = DoseUpService(ledger, game)
+    assert set(dose_service.view(PLAYER, action)["components"]) == {
+        dosing.LABELS["quick"],
+        dosing.LABELS["strong"],
+    }
+    with pytest.raises(WorkflowError):
+        dose_service.view(OTHER, action)
+    assert not controls.view(PLAYER, session)["learned"][0]["can_dose"]
+    assert game.dice.calls == before_rolls + 1
+    tick(worker, gateway, 6)
+    with pytest.raises(WorkflowError):
+        game.begin(
+            PLAYER,
+            str(uuid4()),
+            900,
+            state(game).sheets["2"].revision,
+            PlayInput(
+                play="dose_up", heat=0, trigger_confirmed=True, context="No second use was granted"
+            ),
+        )
+    assert game.dice.calls == before_rolls + 1

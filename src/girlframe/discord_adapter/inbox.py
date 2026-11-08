@@ -856,6 +856,14 @@ class InboxView(discord.ui.View):
             await open_casualty(
                 interaction, CasualtyService(GameService(self.service.store)), item.identity
             )
+        elif item.task == "m3_vatgrown_travel":
+            from girlframe.discord_adapter.m3_vatgrown_travel import open_vatgrown_travel
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_vatgrown_travel import VatgrownTravelService
+
+            await open_vatgrown_travel(
+                interaction, VatgrownTravelService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_vatgrown_plays":
             from girlframe.discord_adapter.m3_vatgrown_plays import open_vatgrown_plays
             from girlframe.services.m2_game import GameService

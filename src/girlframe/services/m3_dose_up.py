@@ -707,13 +707,16 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
     rolled, total = _roll_source(game, c, action)
     rolled_state = _history(c, game, rolled)
     actor = current_ref(rolled_state, int(action["actor_id"]))
+    from girlframe.services.m3_learned_plays import prove_consumed
+
+    learned = prove_consumed(game, c, rolled_state, action, rules.RULE, rolled)
     meta = action["data"].get("dose_up")
     if (
         meta is None
         or action["data"]["prepared"]["play"] != rules.PLAY
         or value not in rules.records(born, rules.Dose)
         or value.actor != actor
-        or not has_rule(rolled_state.sheets[actor.entity], rules.RULE, "STIM-BLISSED")
+        or not (has_rule(rolled_state.sheets[actor.entity], rules.RULE, "STIM-BLISSED") or learned)
         or value.caster != int(actor.entity)
         or value.roll_event != rolled
         or value.total != total

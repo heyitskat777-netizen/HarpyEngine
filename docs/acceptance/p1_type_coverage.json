@@ -1,9 +1,9 @@
 {
   "status": "P1_IMPLEMENTATION_AUTHORIZED_TESTING_PENDING",
-  "published_source": "d033610cca7ee37498f171506570d801c8d11045",
+  "published_source": "fafce935df2038b6299858d4eab7b212d77bff8e",
   "main_merge": "c4550ecbd89bbf84363537e7bdf763c2177a998f",
   "scope": "10Girl labels;10Frame labels representing9official Frame rulesets; JANUS-B uses JANUS",
-  "evidence_note": "Publication inventory baseline reconciled to d033610; per-rule published/local values retain their scoped implementation status, not independent certification. Focused CI42503304802 passed. Current received-Order, ordinary Alpha counter and paid-installment work has minimum scoped evidence and remains local until published. Final full regression, independent review and player acceptance remain pending.",
+  "evidence_note": "Publication baseline fafce93, focused CI42506224033 passed; full regression skipped. New local source evidence is explicitly labeled and does not certify all ordinary cases. Original full-M3 backlog/RULES_SUBSET and final global/independent/player acceptance gates remain pending.",
   "rows": [
     {
       "category": "Girl",
@@ -260,8 +260,8 @@
       "type": "Stim-Blissed",
       "registry_prefix": "girl.stim-blissed.",
       "status": "Published scoped implementation",
-      "ordinary_workflows_with_evidence": "Dose/drug clocks, Disposable Psyche, Malleable birth/forced embrace/NPC protection and native Sex physiology.",
-      "missing_before_AI": "Remaining ordinary drug-removal/Identity/Tag consumers and applicable Feedback/non-Heat adapters; faithful counterpart resources instead of Pilot proxies.",
+      "ordinary_workflows_with_evidence": "Dose/drug clocks, Disposable Psyche, Malleable birth/forced embrace/NPC protection and native Sex physiology. Static reconciliation at fafce93: Dose Up/Stim Sex expire_scene consumers and Game.scene_close hooks exist; existing expiry/forced embrace tests remain authored. This reconciliation ran no gameplay tests and grants no independent certification. Local real Princess-directed Identity mark/removal now proves original Princess author and actual Stim performer/costs; native normal passed1/4.77s.",
+      "missing_before_AI": "Named non-Heat Disposable Psyche consumers still need their real source adapters (Game.begin explicitly guards non-Heat variants); applicable final-Identity Feedback and counterpart/body dependencies need source-specific verification. Existing scene drug expiry, Malleable, Off-Duty and directed basic-mark removal are implemented; final authored regression and independent review remain pending.",
       "later_candidates": "Compound retained/protected Identity and exceptional carrier combinations.",
       "code": [
         "src/girlframe/services/m3_dose_up.py",
@@ -374,8 +374,8 @@
       "type": "Newgirl",
       "registry_prefix": "girl.newgirl.",
       "status": "Published scoped implementation",
-      "ordinary_workflows_with_evidence": "Trainee; actual Mentor name/companions; Easy Target performance/consequences; Sex and actual Mentor changes.",
-      "missing_before_AI": "Other ordinary Mentor-discipline causes; remaining genuine Easy Target harm/protection/assistance and ordinary counterpart Status/mentorship adapters.",
+      "ordinary_workflows_with_evidence": "Trainee; actual Mentor name/companions; Easy Target performance/consequences; Sex and actual Mentor changes. Static reconciliation: existing Easy Target hurt/real physical-harm/protection/failure and actual Mentor teaching/shirking discipline consumers and authored normals exist; no runtime rerun.",
+      "missing_before_AI": "Precise source boundary: Easy Target prepare_child rejects a genuine non-Pilot performer; native NPC/Handler counterparts require their real source adapter. Existing Pilot harm/protection and Mentor discipline must be verified in final authored regression, rather than treated as absent code. Further ordinary sources require a specific demonstrated entry/effect before new assignment.",
       "later_candidates": "Mentor ending/replacement during an already-pending complex multi-Mentor source.",
       "code": [
         "src/girlframe/services/m3_trainee.py",
@@ -716,19 +716,23 @@
       "type": "Vatgrown",
       "registry_prefix": "girl.vatgrown.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Published scoped Doll and Experiment/Prime/Sex, real learned Brutalize once, original Investor/payment and Comfort gift;8 source normals passed separately. Local actual first DNA-comparison/Tag/private disclosure normal passed1/2.37s; explicit decline authored but unrun.",
-      "missing_before_AI": "actual chaperone travel, ordinary leave/Disobey and learning/favour adapters, distinct fresh Vatgrown creation after genuine death. Home/Retirement/departure authored tests and integrated regression remain pending.",
+      "ordinary_workflows_with_evidence": "Published scoped Doll and Experiment/Prime/Sex, real learned Brutalize once, original Investor/payment and Comfort gift;8 source normals passed separately. Local actual first DNA-comparison/Tag/private disclosure normal passed1/2.37s; explicit decline authored but unrun. Local genuine unchaperoned attempt/no-position-change/private disclosure/optional real Handler Punishment and actual source-bound movement normal passed1/2.49s; affected existing Wyvern movement normal passed in combined1failed/1passed3.86s. Local actual Stim-teacher learned Dose Up/native self-dose/consumed-grant readback passed1/3.62s. Earlier source/gift/DNA/Brutalize evidence remains.",
+      "missing_before_AI": "Positive source-proven joint chaperoned travel; other printed one-use learning families beyond actual Brutalize and Dose Up; fresh-Vatgrown-after-genuine-death entry still needs bounded reconciliation. Distinct-base route/interior geometry cannot be inferred. Preserve deferred authored source/learning/gift normals and final integration/review gates.",
       "later_candidates": "Compound existing Investor/acquisition obligations during exceptional carrier transitions; ordinary death continuity stays BEFORE AI.",
       "code": [
         "src/girlframe/services/m3_vatgrown.py",
         "src/girlframe/services/m3_vatgrown_plays.py",
         "src/girlframe/services/m3_offered_girl_requisitions.py",
-        "src/girlframe/services/m3_vatgrown_dna.py"
+        "src/girlframe/services/m3_vatgrown_dna.py",
+        "src/girlframe/services/m3_vatgrown_travel.py",
+        "src/girlframe/discord_adapter/m3_vatgrown_travel.py",
+        "src/girlframe/services/m3_learned_plays.py"
       ],
       "tests": [
         "tests/rules/test_vatgrown.py",
         "tests/rules/test_vatgrown_plays.py",
-        "tests/rules/test_vatgrown_dna.py"
+        "tests/rules/test_vatgrown_dna.py",
+        "tests/rules/test_vatgrown_travel.py"
       ],
       "rule_inventory": [
         {
@@ -976,7 +980,7 @@
       "registry_prefix": "girl.am.",
       "status": "Published scoped implementation; final P1 gates pending",
       "ordinary_workflows_with_evidence": "Existing Jailbroken, Scrutinized and Just Code/body/backup/records paths retained. New no-additional-roll Sex source readback and native circuit routing: actual Alpha→AM smoke1 passed2.15s. Genuine both-AM no-roll delegated encounter passed native/pause/private completion; original Pair outside scene/audience and no extra Action/dice/resources. Shared native completed readback +old policy consumer2 passed3.54s.",
-      "missing_before_AI": "Reconcile remaining ordinary body/identity consumers and remaining no-roll/body/source boundaries; circuit path uses existing real CodeService sources. Expanded consumer regression and independent review remain pending.",
+      "missing_before_AI": "Concrete ordinary guards: body transfer/Jailbroken reject HeldItem asset-owner, Battery and active Storage sources; local prepared-puppet entry does not admit additional real vessel/Frame sources; terminal/all-Void new-body consequences remain blocked; real Pilot circuit operators lack body/branch/records choices. Conditional other-Frame branch reassignment remains source-specific. Existing identity/memory/backup/records, local body/return, AM Sex and branch normals are implemented and awaiting final verification.",
       "later_candidates": "Exceptional simultaneous branch/body/career transitions after ordinary AM play works.",
       "code": [
         "src/girlframe/services/m3_am_body.py",
@@ -1439,8 +1443,8 @@
       "type": "CONSUME",
       "registry_prefix": "frame.consume.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Original physical hunger/link state, actual Eat/Feral/owned source choices, body/custody/loss/ending support, starvation Tag/Smell/order hooks and paid Requisitions. Genuine-link/midBite smoke1 passed2.24s. Local Budget-loss Partake regrowth preserves exact original hardware history, real costs/capacity and new component identity; normal1 passed7.95s with guarded Opportunity completion repair. Static6/types5 pass. Actual native Sprite Bite interception/real Asset cost/one-time feeding/original receipt preservation now passed; fatal/decline branches unrun. Local paid Asset Installment cap-removal now has exact canonical loss proof and original same-Frame native regrowth; real paid-purchase/Dive/Partake/new-birth normal passed1/4.73s after a fixture cap correction. Existing Budget records/events remain unchanged.",
-      "missing_before_AI": "remaining Sprite fatal/decline normal verification; ordinary body/carrier/linked-Asset consumers; permanent-loss regrowth producers beyond actual Budget removal and paid Asset Installment, starting with accepted Defeat; typed knowledge/free-text boundary; final normal regression. Unsupported adapters stay explicit before costs.",
+      "ordinary_workflows_with_evidence": "Original physical hunger/link state, actual Eat/Feral/owned source choices, body/custody/loss/ending support, starvation Tag/Smell/order hooks and paid Requisitions. Genuine-link/midBite smoke1 passed2.24s. Local Budget-loss Partake regrowth preserves exact original hardware history, real costs/capacity and new component identity; normal1 passed7.95s with guarded Opportunity completion repair. Static6/types5 pass. Actual native Sprite Bite interception/real Asset cost/one-time feeding/original receipt preservation now passed; fatal/decline branches unrun. Local paid Asset Installment cap-removal now has exact canonical loss proof and original same-Frame native regrowth; real paid-purchase/Dive/Partake/new-birth normal passed1/4.73s after a fixture cap correction. Existing Budget records/events remain unchanged. Local accepted Handler Defeat alternative removes actual named same-Frame components; precise canonical loss proof/native regrowth normal passed1/6.84s after fixture-only correction.",
+      "missing_before_AI": "remaining Sprite fatal/decline normal verification; ordinary body/carrier/linked-Asset consumers; permanent-loss regrowth producers beyond actual Budget removal and paid Asset Installment, including new-Void Defeat cap exchange and own Partake cap exchanges; typed knowledge/free-text boundary; final normal regression. Unsupported adapters stay explicit before costs.",
       "later_candidates": "Exceptional targets/body combinations after ordinary consumption; starvation is not deferred.",
       "code": [
         "src/girlframe/engine/frame_setup.py",
@@ -2784,7 +2788,7 @@
       "registry_prefix": "frame.changeling.",
       "status": "Published scoped implementation; final P1 gates pending",
       "ordinary_workflows_with_evidence": "Core Blank Slate/String/owned-question normal passed; actual remote Oldgen source also passed. Code includes Fingers, Clay and paid sources; other normals remain unrun. Local shared body setup and eligible-subject starting repair implemented; real original Pilot import1/2.93s and original NPC evidence-to-String1/3.51s passed.",
-      "missing_before_AI": "Remaining ordinary counterpart/source families and named body/group/lineage consumers; final authored normal regression and independent review. Shared body setup and original native/NPC starting repair have scoped normal evidence; unknown historical or advanced lineage remains an explicit source gap.",
+      "missing_before_AI": "Concrete continuity claims: genuine AM FactoryReset brain lineage is not consumed by old String/owed Question/counter same_brain checks; a genuine NPC control claim can strand an already-pending no-Action question/counter between old and new controllers. Starting owner/Handler/NPC body-facts and verified-subset import routes exist. Source-specific ordinary/exceptional classification and final authored normal verification remain; no blanket type deferral.",
       "later_candidates": "No named ordinary rule approved for deferral; AI narration cannot substitute for mechanics.",
       "code": [
         "src/girlframe/engine/frame_setup.py",

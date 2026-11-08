@@ -38,9 +38,17 @@ def prepare_disposal(
         return
     _gate(game)
     if prepared.parent and game.action(c, prepared.parent)["data"].get("princess_sex"):
-        raise WorkflowError(
-            "SOURCE_DISPOSAL_AUTHOR_REQUIRED: retain the actual Princess child author"
-        )
+        from girlframe.services.m3_princess_sex import _direction
+
+        direction = _direction(game, c, state, prepared.source_work or "")
+        if (
+            direction.actor != current_ref(state, owner)
+            or direction.actor_controller != owner
+            or direction.parent != prepared.parent
+            or direction.play != prepared.play
+            or direction.context != prepared.context
+        ):
+            raise WorkflowError("Preserve the actual directed performer and original mark source")
     actor = current_ref(state, owner)
     sheet = state.sheets[actor.entity]
     identity = next((x for x in sheet.identities if x.id == prepared.identity), None)
@@ -165,6 +173,9 @@ def prove_disposal(
         .mappings()
         .first()
     )
+    from girlframe.services.m3_princess_sex import child_author
+
+    original_author = child_author(game, c, born, action)
     if (
         value not in rules.disposals(born)
         or receipt is None
@@ -173,7 +184,8 @@ def prove_disposal(
         or event["kind"] != "m3.rolled"
         or action["data"]["receipt"].get("ruleset") != RULESET
         or action["data"]["receipt"].get("disposable_psyche") != value.id
-        or event["actor_id"] != str(action["actor_id"])
+        or event["actor_id"]
+        != str(original_author if original_author is not None else action["actor_id"])
         or json.loads(event["payload_json"]).get("action_id") != value.id
         or json.loads(event["payload_json"]).get("receipt_id") != value.receipt
         or value.actor != current_ref(before, int(action["actor_id"]))

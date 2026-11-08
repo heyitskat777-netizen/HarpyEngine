@@ -16,7 +16,9 @@ Use proposed **P1/P2/P3** release names to avoid silently renumbering the histor
 
 **P1 delivery order during P1:** first close the paused integration package below; then implement a small genuine human-escalation vertical slice; then close dependency groups for remaining Girl, Frame, Handler/NPC and shared ordinary flows; finally freeze the review candidate. Reuse completed Alpha, JANUS, Call, Gorgon Leviathan, Budget and newer scoped workflows. Do not delete implemented advanced systems as hypothetical savings.
 
-## All-type coverage matrix
+## Historical proposal matrix and current all-type coverage
+
+This table preserves the original planning baseline; later code is not missing merely because this historical row named it. Current per-type source/verification status is maintained in `../acceptance/p1_type_coverage.json`, `../P1_TYPE_COVERAGE.csv` and the bounded `../P1_CURRENT_QUEUE.md`. Final acceptance criteria above still apply.
 
 Catalog verified against `engine/playbooks.py`: **10 Girl labels and10 Frame labels representing9 official Frames**. JANUS-B uses official JANUS mechanics. Creation/draft/activation infrastructure exists for the catalog, but listing a type does not certify its starting resources or runtime. Each row needs creation/reopen and ordinary-play acceptance; CONSUME's starting ruling alone, Court setup alone and Pair setup alone are insufficient.
 

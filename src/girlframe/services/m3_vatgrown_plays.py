@@ -20,6 +20,7 @@ from girlframe.engine.m3_handler_consequences import active_handler
 from girlframe.engine.m3_identity_slots import replacement_slot
 from girlframe.engine.m3_mockingbird import give_tag
 from girlframe.engine.m3_off_duty import Period
+from girlframe.engine.m3_work_scope import WorkScope
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access, digest
@@ -519,20 +520,22 @@ def apply_choice(
         elif any(answer.fields.get(x) for x in ("identities", "identity", "replacements")):
             raise WorkflowError("Identity data requires its actual selected source effect")
         if "play" in answer.options:
+            from girlframe.services.m3_learned_plays import SUPPORTED, grant
+
+            rule_id = answer.fields.get("play", "")
+            teacher = (
+                state.sheets.get(value.target.entity) if value.target.kind == "pilot" else None
+            )
             if (
-                answer.fields.get("play") != rules.BRUTALIZE
-                or value.target.kind != "pilot"
-                or state.sheets[value.target.entity].girl != "ALPHA"
-                or not has_rule(state.sheets[value.target.entity], rules.BRUTALIZE, "ALPHA")
+                rule_id not in SUPPORTED
+                or teacher is None
+                or teacher.girl != SUPPORTED[rule_id][1]
+                or not has_rule(teacher, rule_id, SUPPORTED[rule_id][1])
             ):
                 raise WorkflowError(
-                    "UNSUPPORTED_LEARNED_PLAY: select this actual Alpha's genuine Brutalize"
+                    "UNSUPPORTED_LEARNED_PLAY: select this original teacher's supported actual Play"
                 )
-            from girlframe.services.m3_learned_plays import grant
-
-            identity = grant(
-                game, c, state, value.actor, value.target, value.id, rules.BRUTALIZE, event
-            )
+            identity = grant(game, c, state, value.actor, value.target, value.id, rule_id, event)
             rules.put(
                 state,
                 rules.LearnedPlay(
@@ -540,7 +543,7 @@ def apply_choice(
                     actor=value.actor,
                     teacher=value.target,
                     session=value.id,
-                    rule_id=rules.BRUTALIZE,
+                    rule_id=rule_id,
                     event=event,
                 ),
             )
@@ -653,6 +656,7 @@ def projection(
     sheet = state.sheets[value.actor.entity]
     teacher = state.sheets.get(value.target.entity) if value.target.kind == "pilot" else None
     from girlframe.engine.m3_leviathan_obsession import require_unlocked
+    from girlframe.services.m3_learned_plays import SUPPORTED
 
     replacements = []
     for identity in sheet.identities:
@@ -671,9 +675,11 @@ def projection(
         identities=[dict(id=x.id, name=x.name) for x in teacher.identities] if teacher else [],
         replacements=replacements,
         required=2 if value.tier in ("mid", "high") else 1,
-        plays=[dict(id=rules.BRUTALIZE, label="Brutalize")]
-        if teacher and teacher.girl == "ALPHA" and has_rule(teacher, rules.BRUTALIZE, "ALPHA")
-        else [],
+        plays=[
+            dict(id=rule, label=play.replace("_", " ").title())
+            for rule, (play, book) in SUPPORTED.items()
+            if teacher and teacher.girl == book and has_rule(teacher, rule, book)
+        ],
         question=json.loads(row["body_json"]).get("question"),
         discipline=value.discipline,
         departed=bool(value.departed_event),
@@ -696,6 +702,8 @@ def synchronize(game: GameService, c: Connection, action: dict[str, Any], event:
 def prove_learned_play(
     game: GameService, c: Connection, state: GameState, identity: str
 ) -> rules.LearnedPlay:
+    from girlframe.services.m3_learned_plays import SUPPORTED
+
     value = _get(state, rules.LearnedPlay, identity)
     born = _history(c, game, value.event)
     source = prove(game, c, state, value.session)
@@ -713,7 +721,7 @@ def prove_learned_play(
         or value.teacher != source.target
         or selection is None
         or selection.fields.get("play") != value.rule_id
-        or value.rule_id != rules.BRUTALIZE
+        or value.rule_id not in SUPPORTED
         or value.teacher.kind != "pilot"
     ):
         raise WorkflowError("Recover the actual source-owned immutable learned Play")
@@ -727,11 +735,11 @@ def prove_learned_play(
         or answer.fields != selection.fields
         or teacher is None
         or teacher.character_id != value.teacher.incarnation
-        or teacher.girl != "ALPHA"
-        or not has_rule(teacher, value.rule_id, "ALPHA")
+        or teacher.girl != SUPPORTED[value.rule_id][1]
+        or not has_rule(teacher, value.rule_id, SUPPORTED[value.rule_id][1])
     ):
         raise WorkflowError(
-            "The actual original Alpha and printed author must supply this one-use Brutalize"
+            "The actual original teacher and printed author must supply this one-use Play"
         )
     return value
 
@@ -904,6 +912,20 @@ def validate_role_case(c: Connection, game: GameService, state: GameState, case:
             )
 
 
+def role_scope(c: Connection, game: GameService, case: Any) -> WorkScope:
+    """Bind standalone discipline to real evidence, never a source string as a scene."""
+    state = load_state(c, game.store.campaign_id)
+    validate_role_case(c, game, state, case)
+    discipline = _get(state, rules.Discipline, case.source_work)
+    violation = prove_violation(game, c, state, discipline.source)
+    if violation.kind == "unchaperoned_attempt":
+        from girlframe.services.m3_vatgrown_travel import prove_violation_source
+
+        source = prove_violation_source(game, c, state, violation)
+        return WorkScope(scene_id=source.proposal.scene)
+    return WorkScope(campaign_context=True)
+
+
 def complete_role_case(c: Connection, game: GameService, case: Any, event: str) -> None:
     state = load_state(c, game.store.campaign_id)
     validate_role_case(c, game, state, case)
@@ -977,7 +999,11 @@ def prove_violation(
                 or performed.effect_event != value.performed_event
             ):
                 raise WorkflowError("Recover the actually accepted and rolled performed source")
-    elif value.kind not in ("relationship_attempt", "relationship", "unchaperoned_attempt"):
+    elif value.kind == "unchaperoned_attempt":
+        from girlframe.services.m3_vatgrown_travel import prove_violation_source
+
+        prove_violation_source(game, c, state, value)
+    elif value.kind not in ("relationship_attempt", "relationship"):
         raise WorkflowError(
             "UNSUPPORTED_VATGROWN_VIOLATION: use an actual supported source producer"
         )
@@ -1561,6 +1587,10 @@ class VatgrownPlaysService:
             self.game.event(
                 c, viewer.user_id, key, name, state, event_id=event, source=result.get("id")
             )
+            if name == "m3.vatgrown_violation_judged" and result.get("punishment"):
+                from girlframe.services.m3_role_punishments import synchronize as sync_punishment
+
+                sync_punishment(self.game, c, None, event)
             if result.get("id"):
                 from girlframe.services.m3_changeling_sex import synchronize_session
 
@@ -2704,6 +2734,7 @@ class VatgrownPlaysService:
                     (x for x in rules.records(state, rules.SideCondition) if x.session == identity),
                     None,
                 )
+                runtime = state.sheets[value.actor.entity].girl_runtime
                 return dict(
                     id=identity,
                     type="sex",
@@ -2716,7 +2747,20 @@ class VatgrownPlaysService:
                         if x.session == identity
                     ],
                     learned=[
-                        dict(rule=x.rule_id, id=x.id)
+                        dict(
+                            rule=x.rule_id,
+                            id=x.id,
+                            can_dose=(
+                                x.rule_id == "girl.stim-blissed.dose-up"
+                                and viewer.user_id == value.caster
+                                and any(
+                                    use.id == x.id
+                                    and use.rolled_event is None
+                                    and use.claimed_action is None
+                                    for use in (runtime.learned_plays if runtime else ())
+                                )
+                            ),
+                        )
                         for x in rules.records(state, rules.LearnedPlay)
                         if x.session == identity
                     ],

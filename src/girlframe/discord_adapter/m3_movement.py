@@ -41,8 +41,41 @@ async def open_movement(interaction: discord.Interaction, service: MovementServi
         ),
         Field("account", "Describe the permitted movement that actually occurred", paragraph=True),
     ]
+    if any(x["vatgrown"] for x in data["actors"]):
+        fields.append(
+            Field(
+                "intent",
+                "Travel or record an attempt first?",
+                (
+                    ("move", "Record actual movement"),
+                    ("unchaperoned", "Record an unchaperoned Vatgrown attempt"),
+                ),
+                minimum=0,
+                required=False,
+            )
+        )
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        if values.get("intent") == ("unchaperoned",):
+            from girlframe.services.m3_vatgrown_travel import VatgrownTravelService
+
+            result = await asyncio.to_thread(
+                VatgrownTravelService(service.game).attempt,
+                viewer_from_interaction(current),
+                str(current.id),
+                data["channel"],
+                data["revision"],
+                choices[values["actor"][0]],
+                (int(values["x"][0]), int(values["y"][0])),
+                frame=values["mode"] == ("frame",),
+                account=values["account"],
+            )
+            return (
+                "Unchaperoned attempt saved; your position has not changed. "
+                "Open your private requests inbox to continue. Reference `"
+                + str(result["id"])
+                + "`."
+            )
         await asyncio.to_thread(
             service.move,
             viewer_from_interaction(current),
