@@ -1,6 +1,6 @@
 # Current M3 queue
 
-Updated 2026-11-08. Gameplay integration source: `3e8ef8b`; local branch
+Updated 2026-11-08. Gameplay integration source: `c619b73`; local branch
 `codex/integrated-repairs-20261107`. **RULES_SUBSET; bot off.** No deployment,
 environment publication, recovered-engine writes, AI/M4 or Ancillary activation.
 This working list separates upcoming work from completed scoped checkpoints.
@@ -10,9 +10,9 @@ Registry entries and workflows overlap and differ in size; counts are not percen
 
 | Workflow | Owner / state | Dependency | Next concrete action | Completion evidence |
 |---|---|---|---|---|
+| Newgirl Trainee | AM agent + root / bounded source contract | Genuine original mentor, actual teaching and real duty/Punishment consumers | Implement all three printed teaching choices and corresponding actual duty outcome | Contract/dependency reconciliation next; no acceptance yet |
 | Princess Show Dog | Oldgen agent + root / bounded source implementation | Actual Go-OffDuty source, NPC/Bond/message effects and genuine risk discipline | Hook required period work and both independent printed choices; preserve existing standards work | Relevant source reconciled; no existing Show Dog consumer found; contract/API frozen next |
 | Successor | Root / lifecycle dependency queued | Proven singleton Handler, unranked Girl and actual link-removal gaps | Assign source-bound concurrent junior/full Handler lifecycle and actual threshold consumers; avoid a Gold-Star-only placeholder | Frozen346-word source/dependency contract,12 inspected dependency hashes; no code or acceptance |
-| Vatgrown Unassuming Doll | AM agent + root / active bounded implementation | Real departure/notice effects and owned low consequence | Integrate actual scene exit/re-entry, source effects and all printed normal tiers | Frozen source/dependency contract; no implementation acceptance yet |
 | Remaining required core systems | Root + bounded assignments / open | Existing source inventory and actual consumers | Select the next whole dependency-ready gameplay workflow; keep unsupported branches visible | [Registry](../rules/registry.json), [remaining scope](M3_REMAINING_WORK.md), [acceptance](acceptance/m3_rules.json) |
 | Final integrated candidate | Root / blocked by required gameplay | Frozen full core candidate and complete ordinary workflows | Run final full regression and global static/migration/privacy/contract checks | Pending; focused/segmented results do not substitute |
 | Independent and human acceptance | Independent reviewer + owner/players / pending | Review-ready candidate and stated test checklist | Independent source/clarity review, Discord play-testing and owner milestone review | Not run; no inferred certification or release approval |
@@ -39,6 +39,7 @@ These are implementation evidence, not independent certification or milestone si
 
 | Workflow | Owner / state | Dependency | Next concrete action | Completion evidence |
 |---|---|---|---|---|
+| Unassuming Doll | AM agent + root / committed within scope | Actual source effects, information, real RolePunishment and source cast exit/return | `c619b73`; remaining Vatgrown and other actual-act/body adapters stay visible | Integrated11 passed /15.73s; coherent static14 Python/13 source; offlineSDK17 commands;13 CI cases collected only |
 | Oldgen Sex Play | Oldgen agent + root / committed within scope | Actual source/receipt/choices, current maxim text and independent recovery | `3e8ef8b`; temporary maxim rewrite/body adapters stay visible | Integrated12 passed /19.20s; coherent static14 Python/13 source; offlineSDK16 commands;14 CI cases collected only |
 | Oldgen maxim/advice | Oldgen agent + root / committed within scope | Genuine source Heat/Tag, ordinary unmark grants and actual listening | `b9c3f13`; Oldgen Sex/other body adapters stay explicit | Integrated8 passed /9.56s; coherent static12 Python/11 source; offlineSDK15 commands;10 CI cases collected only |
 | Acquisition/proof pilot | AM agent / implemented within scope | Frozen Secretary, Deep-Brain-Spikes and new Tracker source | Reuse the proven core in the next matching acquisition; retain explicit exceptions | Coordinated 8 checks passed; source proof/rollback/retry/private receipt, exact ten-file snapshot |

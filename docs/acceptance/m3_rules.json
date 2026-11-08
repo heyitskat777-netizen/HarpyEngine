@@ -1312,6 +1312,28 @@
           "limitation": "Temporary advice-maxim rewrite and non-native/conditional-body adapters remain required. Active Doll edits excluded. Focused only; full/independent/human gates pending."
         }
       ]
+    },
+    {
+      "id": "M3C-DOLL-NORMAL-001",
+      "title": "Unassuming Doll normal outcomes, actual information and source departure",
+      "expected": "Real receipt/choices, quiet and object attention consumers, substantive actual private answer/secret, genuine source exit/reentry retaining known placement, low Tag and actual completed Punishment, fresh effects unaffected by past acts.",
+      "status": "IN_PROGRESS",
+      "automated_status": "PASS_WITHIN_STATED_SCOPE",
+      "independent_review": "PENDING",
+      "human_acceptance": "NOT_RUN",
+      "planned_tests": [
+        "tests/rules/test_vatgrown.py"
+      ],
+      "evidence": [
+        {
+          "test_name": "Four source normal cases plus affected existing consumers",
+          "executed_command": ".venv/bin/pytest -q tests/rules/test_vatgrown.py tests/rules/test_dose_up.py tests/rules/test_handler_plays.py::test_brief_threat_expectation_are_real_owned_saved_facts_not_player_responses tests/rules/test_cast_service.py::test_cast_atomic_rollback_restart_rebuild_and_close_preserve_source_links tests/test_m2_game.py::test_stale_forms_pauses_replay_restart_and_unsupported_no_rng --maxfail=1 --junitxml=var/m3-vatgrown-integrated.xml",
+          "actual_result": "11 passed in15.73s; coherent static14 Python/13 source without drift; registry/repository and offlineSDK17 commands passed;13 CI cases collected only.",
+          "log_or_trace": "var/m3-vatgrown-integrated.xml; var/m3-vatgrown-union-static.json; var/m3-vatgrown-union-source-snapshot.json; var/m3-vatgrown-handoff.json",
+          "git_commit": "c619b735e409d894235bca60ea991356cc706958",
+          "limitation": "Other meaningful actual-act, NPC/body adapters and other Vatgrown rules remain required. Source exit is scene-bound, no global stealth/travel. Active Show Dog edits excluded. Focused evidence only; final full/independent/human gates pending."
+        }
+      ]
     }
   ],
   "enabled_modules": [
