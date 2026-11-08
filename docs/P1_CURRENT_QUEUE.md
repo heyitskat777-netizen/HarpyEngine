@@ -2,6 +2,13 @@
 
 Owner authorized continuation2026-11-08. Bot OFF; RULES_SUBSET. Most automated testing deferred to final P1 candidate; only minimum likely-flow smoke during work. No unequal-rule percentages.
 
+Latest local delivery: Princess-directed actual-NPC Flirt source/shared ports are
+frozen, with one directed native minimum passed. Bonded source-only repeated and
+Paired Tag controls are frozen/static-green with authored tests NOTRUN. Root owns
+integration/publication; no worker or broad regression is running. Next concrete
+ports are the separate rolled Man Paired source and genuine AM/Bonded no-roll
+recipe delegation, with shared-file ownership reserved before assignments.
+
 | Package | Owner | Dependency | Next action | Evidence/state |
 |---|---|---|---|---|
 | W0 Casualty integration | Root; frozen AM source | Existing body/Play/work ports | Preserve authored11normals; repair only concrete integration failures |11 distinct normals passed segmented; final P1 regression pending |
@@ -10,6 +17,7 @@ Owner authorized continuation2026-11-08. Bot OFF; RULES_SUBSET. Most automated t
 | W0 integrated checkpoint | Root | Above scoped source freezes | Published1350053; preserve final normal regression gate |Minimal source/static/native evidence recorded; no repeated combined gameplay run |
 | Human facilitator escalation | Root | Scoped source checkpoint published c62a654 | Preserve real source/receipt and scoped pause; finish delivery/role/restore gate checks at final candidate |Known-source smoke1/1.50s; standalone/role/uncertainty cases deferred; not full acceptance |
 | Bonded ordinary runtime | Source frozen; root integration | Actual Pair/resource/child and diceless pause ports | Preserve authored normal tests for final run; finish named remaining source adapters |Native Side1/2.56s; no-roll permission pause/restore1/1.89s; broader branches NOTRUN |
+| Mockingbird stale closure | Root; static reconciliation complete | Existing low/mid/high +discovery/native source | Preserve corrected contract and existing tests for final integrated regression | d32127c source inspected; no recoding or runtime rerun; independent review pending |
 | AM and remaining Girl consumers | Root | Existing Code/body/identity and actual counterpart sources | AM no-extra-roll source/native smoke passed; finish actual Bonded delegation and remaining ordinary adapters |AM1/2.15s; source consumers and final regression remain pending |
 | Prince/CONSUME source checkpoint | Root; owned sources frozen | Existing source transactions/receipts/body/work | Preserve integrated finite adapters and deferred normal tests; close named CONSUME body/linked-Asset/Sprite/hardware/knowledge ports |Prince1/2.19s, CONSUME1/2.24s; other normals NOTRUN; not whole-Frame closure |
 | Wyvern ordinary runtime | Malleable source; AM combat; root integration | Actual movement/vehicle/Handler/Void ports | Runtime84aaf01 published; four expected combat scenarios authored NOTRUN; preserve named body/vehicle gaps |Source/native static passed; actual Rouse/strike1/2.18s; remaining normals deferred |
@@ -22,8 +30,8 @@ Owner authorized continuation2026-11-08. Bot OFF; RULES_SUBSET. Most automated t
 | Princess directed basic Plays | Source frozen; root integration | Original performer/author, target, Order and Battle scopes | Preserve actual social/combat closure; final four authored family normals remain deferred | Native Flirt passed; actual Assault1/5.49s passed after scoped integration repairs |
 | Casualty missing body hardware | Source frozen; root finance/native/Inbox | Actual original missing non-Brain part and Handler supply/package quote | Preserve installed-component/source proof and final body/finance regression | Link removal→native install/payment→actual repilot1/3.59s passed; wider cases deferred |
 | CONSUME missing Frame regrowth | Source frozen; root completion repair | Actual original same-Frame loss +real Partake costs/capacity/birth | Preserve proved Budget source/new component and deferred other loss producers | Minimum1 passed7.95s; static6/types5 passed; real Opportunity completion repaired; broader source/regression pending |
-| Actual NPC Flirt | Frozen AM/Malleable sources; root integration | Actual cast NPC/controller +Girl receipt +source-owned responses/work | Preserve real private/Court/Order/Tag/recovery ports; finish remaining source families and final regression | Native high Court/performed escape/judged Bond +real injury continuation1 passed4.93s; eight failed-node attempts retained |
-| Bonded optional Man on no-roll permission | Malleable source frozen | Existing genuine no-roll permission +gender source | Preserve finite unmarked/non-Paired adapter and deferred native normal; repeated/Paired resolution still required | Ruff4/types3 passed; new native normal NOTRUN |
+| Actual NPC Flirt and Princess direction | Source/shared ports frozen | Genuine Girl/NPC/caster personas, receipt and source completion | Preserve Court/directive workflows; final broader branches and external completion checks deferred | Ordinary high1/4.93s; directed mid1/6.06s passed; controller/person identity separation proved in likely flow |
+| Bonded source-only Man Tag lifecycle | Malleable source frozen; root integration | Actual law/Pair/Tag/slot and source-owned choice/work | Preserve unmarked, repeated embrace/reject and marking-Pair conversion; final authored normal checks deferred | Ruff/types pass; two native normals NOTRUN; mandatory rejection Play/special-source and separate rolled Paired ports remain |
 | Required Play source families and NPC counterparts | Root: own-recipe and NPC source adapters | Frozen source-owned child routes | Close remaining own-recipe/controlled-resource and actual NPC source adapters without widening authority | Ankou→own Alpha native cancel/retry/effects/pause1/5.63s passed; wider required families and actual NPC counterparts remain required |
 | Native command registration | Root | Existing /girl and /campaign groups | Preserve corrected source routes and final integrated startup check |Original SDK check1/0.85s; new Bonded/movement/vehicle routes1/0.82s; no live sync |
 | Shared routine mission loop | Root | Consuming source workflows |Close ordinary Handler/NPC/Strain/physical/recovery dependencies and actual next-mission completion |Original required full-rule backlog retained |
@@ -44,3 +52,5 @@ projection and bridge changes are not covered by that smoke snapshot and remain
 in the final candidate gate. This does not advance full-regression or review status.
 
 Latest published source checkpoint: **1ca41d742eb63d87331d4ccff8b53c72fcd2feb6**, [focused CI42487897800](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42487897800) passed. Most gameplay cases remain deferred to final P1; no whole-P1/full-M3 claim.
+
+Published gameplay checkpoint **d32127c1fa272889c8374acb647845a24b005d71**: [focused CI42493240071](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42493240071) passed; full regression skipped. Next finite assignments are Princess-directed actual NPC Flirt (AM) and Bonded repeated-Tag no-roll resolution (Malleable); both author tests without worker pytest.

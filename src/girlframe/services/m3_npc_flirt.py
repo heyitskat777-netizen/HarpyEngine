@@ -23,7 +23,7 @@ from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_battle import _cast, _visible
-from girlframe.services.m3_dose_up import _response, _roll_source
+from girlframe.services.m3_dose_up import _roll_source
 from girlframe.services.m3_handler_advancements import _history
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
@@ -90,7 +90,19 @@ def prepare(
     channel: int,
 ) -> dict[str, Any]:
     _access(game, c, viewer)
-    actor = current_ref(state, viewer.user_id)
+    from girlframe.services.m3_princess_performer import acting_owner
+    from girlframe.services.m3_princess_sex import child_source
+
+    owner = acting_owner(game, c, viewer, prepared, state)
+    direction = child_source(game, c, viewer, state, prepared, channel)
+    actor = current_ref(state, owner)
+    if owner != viewer.user_id and (
+        direction is None
+        or direction["actor"] != actor.model_dump(mode="json")
+        or direction["actor_controller"] != owner
+        or direction["author"] != viewer.user_id
+    ):
+        raise WorkflowError("Prove the original Princess direction for this real performer")
     target = prepared.target_actor
     if prepared.play != "flirt" or prepared.target is not None or target is None:
         raise WorkflowError("Flirt as your actual Girl with an actual NPC ActorRef")
@@ -105,10 +117,11 @@ def prepare(
         or girl.offstage_source
         or not npc.alive
         or not _visible(state, target, viewer.user_id)
+        or not _visible(state, target, owner)
         or other.offstage_source
         or not all(
             any(x.actor == ref and x.controller == controller for x in cast.roles)
-            for ref, controller in ((actor, viewer.user_id), (target, npc.controller))
+            for ref, controller in ((actor, owner), (target, npc.controller))
         )
         or not prepared.trigger_confirmed
         or not prepared.context.strip()
@@ -123,7 +136,7 @@ def prepare(
     handler = active_handler(state)
     if handler is None:
         raise WorkflowError("Recover the actual current Handler before this source Play")
-    return dict(
+    meta = dict(
         actor_label=girl.label,
         target_label=other.label,
         handler=handler.model_dump(mode="json"),
@@ -150,6 +163,9 @@ def prepare(
             {x.controller for x in cast.roles} | ({cast.facilitator} if cast.facilitator else set())
         ),
     )
+    if direction is not None:
+        meta["princess_direction"] = direction["direction"]
+    return meta
 
 
 def bind(
@@ -172,8 +188,152 @@ def bind(
             target_sha256=meta["target_sha256"],
             target_position=meta["target_position"],
             event=event,
+            princess_direction=meta.get("princess_direction"),
         ),
     )
+
+
+def _actor_author(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any], value: rules.Session
+) -> int:
+    from girlframe.services.m3_princess_sex import child_author
+
+    author = child_author(game, c, state, action)
+    scope = action["data"].get("princess_child")
+    if value.princess_direction is None:
+        if scope is not None or author is not None:
+            raise WorkflowError("Preserve the original source's explicit directed provenance")
+        return int(value.actor.entity)
+    if scope is None or scope.get("direction") != value.princess_direction or author is None:
+        raise WorkflowError("Prove the exact original Princess child before author override")
+    return author
+
+
+def _row_author(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any], row: dict[str, Any]
+) -> int:
+    from girlframe.services.m3_princess_sex import decision_author
+
+    subject = json.loads(row["body_json"]).get("subject")
+    if row["kind"] in rules.KINDS and subject != action["data"]["npc_flirt"]["actor"]:
+        return int(row["actor_id"])
+    author = decision_author(game, c, state, action, row)
+    return int(row["actor_id"]) if author is None else author
+
+
+def _flirt_roll_source(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    value: rules.Session,
+) -> tuple[str, int]:
+    if value.princess_direction is None:
+        return _roll_source(game, c, action)
+    # Only this positively bound original Princess source separates actor and author.
+    # Never rewrite the Action's actor to make a generic receipt proof accept it.
+    author = _actor_author(game, c, _history(c, game, value.event), action, value)
+    receipt = (
+        c.execute(
+            sa.select(t.m2["m2_receipts"]).where(
+                t.m2["m2_receipts"].c.campaign_id == game.store.campaign_id,
+                t.m2["m2_receipts"].c.action_id == action["id"],
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if receipt is None or json.loads(receipt["body_json"]) != action["data"].get("receipt"):
+        raise WorkflowError("Recover the actual directed NPC Flirt SQL roll receipt")
+    event = c.scalar(
+        sa.select(t.events.c.id).where(
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.kind.in_(("m2.rolled", "m3.rolled")),
+            t.events.c.actor_id == str(author),
+            sa.func.json_extract(t.events.c.payload_json, "$.action_id") == action["id"],
+            sa.func.json_extract(t.events.c.payload_json, "$.receipt_id") == receipt["id"],
+        )
+    )
+    if (
+        event is None
+        or _actor_author(game, c, _history(c, game, str(event)), action, value) != author
+    ):
+        raise WorkflowError("Prove the actual directed NPC Flirt roll and original Princess author")
+    if action["data"].get("prince_mark"):
+        from girlframe.services.m3_prince import prove_mark
+
+        prove_mark(game, c, load_state(c, game.store.campaign_id), action)
+    total = action["data"]["receipt"]["pre_total"] + sum(
+        x["amount"] for x in action["data"]["modifiers"]
+    )
+    from girlframe.engine.m3_gender_designation import man_floor
+
+    minimum = man_floor(action)
+    if minimum is not None:
+        total = max(total, minimum)
+    if action["data"].get("casualty_override"):
+        from girlframe.services.m3_casualty import prove_override
+
+        adjustment = prove_override(game, c, load_state(c, game.store.campaign_id), action)
+        if adjustment is not None:
+            total = max(total, adjustment)
+    if action["data"].get("prince_override"):
+        from girlframe.services.m3_prince import prove_override as prove_prince_override
+
+        adjustment = prove_prince_override(game, c, load_state(c, game.store.campaign_id), action)
+        if adjustment is not None:
+            total = max(total, adjustment)
+    if action["data"].get("consume_disobey_limit"):
+        from girlframe.services.m3_consume import prove_disobey_limit
+
+        cap = prove_disobey_limit(game, c, load_state(c, game.store.campaign_id), action)
+        if cap is not None:
+            total = min(total, cap)
+    if action["data"].get("ankou_roll_modifiers"):
+        from girlframe.services.m3_ankou import prove_roll_modifiers
+
+        actual_modifiers = prove_roll_modifiers(
+            game, c, load_state(c, game.store.campaign_id), action
+        )
+        source_ids = {x["source"] for x in actual_modifiers}
+        recorded_modifiers = [
+            x
+            for x in action["data"]["receipt"].get("pre_modifiers", ())
+            if x["source"] in source_ids
+        ]
+        if actual_modifiers != action["data"]["ankou_roll_modifiers"] or [
+            (x["source"], x["amount"]) for x in actual_modifiers
+        ] != [(x["source"], x["amount"]) for x in recorded_modifiers]:
+            raise WorkflowError("Recover the actual consumed Fight/Fawn sources and receipt")
+    if action["data"].get("changeling_flirt"):
+        from girlframe.services.m3_changeling import prove_flirt_modifier
+
+        actual = prove_flirt_modifier(game, c, load_state(c, game.store.campaign_id), action)
+        recorded = sum(
+            x["amount"]
+            for x in action["data"]["receipt"].get("pre_modifiers", ())
+            if x["source"] == "changeling_fingers_flirt"
+        )
+        if actual != recorded:
+            raise WorkflowError("Recover the actual consumed psychic Flirt grant")
+    if action["data"].get("red_queen_modifier"):
+        from girlframe.services.m3_red_queen import prove_personality_modifier
+
+        if (
+            prove_personality_modifier(game, c, load_state(c, game.store.campaign_id), action)
+            != action["data"]["red_queen_modifier"]
+        ):
+            raise WorkflowError("Recover the actual consumed personality modifier")
+    if action["data"].get("red_queen_doll"):
+        from girlframe.services.m3_red_queen import prove_doll_limit
+
+        limit = prove_doll_limit(game, c, load_state(c, game.store.campaign_id), action)
+        if limit is None:
+            raise WorkflowError("Recover the actual consumed Doll source")
+        total = min(total, limit)
+    if total != action["data"]["result"]["total"]:
+        raise WorkflowError("Recover the actual source roll and applied Tag modifiers")
+    return str(event), int(total)
 
 
 def _source(
@@ -182,9 +342,8 @@ def _source(
     value = rules.get(state, rules.Session, action["id"])
     born = rules.get(_history(c, game, value.event), rules.Session, value.id)
     meta = action["data"].get("npc_flirt", {})
-    _event(
-        game, c, value.event, ("m2.play_confirmed", "m3.play_confirmed"), int(value.actor.entity)
-    )
+    author = _actor_author(game, c, state, action, value)
+    _event(game, c, value.event, ("m2.play_confirmed", "m3.play_confirmed"), author)
     if (
         any(
             getattr(value, k) != getattr(born, k)
@@ -201,10 +360,12 @@ def _source(
                 "target_sha256",
                 "target_position",
                 "event",
+                "princess_direction",
             )
         )
         or born.effect_event is not None
         or born.completed_event is not None
+        or meta.get("princess_direction") != value.princess_direction
         or meta.get("id") != value.id
         or meta.get("actor") != value.actor.model_dump(mode="json")
         or meta.get("target") != value.target.model_dump(mode="json")
@@ -237,7 +398,7 @@ def _source(
     ):
         raise WorkflowError("Preserve the actual original ordinary NPC and controller")
     if value.effect_event:
-        _, total = _roll_source(game, c, action)
+        _, total = _flirt_roll_source(game, c, state, action, value)
         effect = rules.get(_history(c, game, value.effect_event), rules.Session, value.id)
         level = "high" if total >= 11 else "mid" if total >= 8 else "low"
         if effect.effect_event != value.effect_event or value.tier != level:
@@ -252,7 +413,11 @@ def prove(game: GameService, c: Connection, state: GameState, action_id: str) ->
     if value.cancelled_event:
         cancelled = rules.get(_history(c, game, value.cancelled_event), rules.Session, value.id)
         audit = _event(
-            game, c, value.cancelled_event, ("m3.shared_play_recovered",), int(value.actor.entity)
+            game,
+            c,
+            value.cancelled_event,
+            ("m3.shared_play_recovered",),
+            _actor_author(game, c, state, action, value),
         )
         payload = json.loads(audit["payload_json"])
         if (
@@ -306,7 +471,7 @@ def pre_roll(
     value = _source(game, c, state, action)
     npc = _current(game, c, state, value)
     if (
-        viewer.user_id != int(value.actor.entity)
+        viewer.user_id != _actor_author(game, c, state, action, value)
         or value.effect_event
         or value.completed_event
         or value.cancelled_event
@@ -682,6 +847,9 @@ def projection(
         prove_additional(game, c, state, own.owner)
     return dict(
         actor=value.actor.model_dump(mode="json"),
+        actor_label=value.actor_label,
+        actor_author=_actor_author(game, c, state, action, value),
+        directed=value.princess_direction is not None,
         target=value.target.model_dump(mode="json"),
         target_controller=value.controller,
         question=action["data"]["result"].get("question"),
@@ -697,7 +865,7 @@ def projection(
 def _answer_source(
     game: GameService, c: Connection, action: dict[str, Any], event: str, kind: str, author: int
 ) -> tuple[dict[str, Any], ChoiceAnswer]:
-    audit = _event(game, c, event, ("m2.choice_resolved", "m3.choice_resolved"), author)
+    audit = _event(game, c, event, ("m2.choice_resolved", "m3.choice_resolved"))
     payload = json.loads(audit["payload_json"])
     row = (
         c.execute(
@@ -709,16 +877,46 @@ def _answer_source(
         .mappings()
         .first()
     )
+    response = (
+        c.execute(
+            sa.select(t.m2["m2_responses"]).where(
+                t.m2["m2_responses"].c.campaign_id == game.store.campaign_id,
+                t.m2["m2_responses"].c.choice_id == payload.get("choice_id"),
+            )
+        )
+        .mappings()
+        .first()
+    )
     if (
         row is None
+        or response is None
         or row["kind"] != kind
         or row["action_id"] != action["id"]
         or row["actor_id"] != str(author)
         or row["state"] != "answered"
         or payload.get("action_id") != action["id"]
+        or response["event_id"] != event
     ):
         raise WorkflowError("Recover the exact original source choice and its true owned answer")
-    return dict(row), _response(game, c, action["id"], row["id"], event, author, kind)
+    # The row belongs to the actual person; a source-proved Princess may author only
+    # that person's actor decisions. NPC-controller replies never become Girl decisions.
+    from girlframe.services.m3_princess_sex import prove_response_author
+
+    subject = json.loads(row["body_json"]).get("subject")
+    expected_subject = action["data"]["npc_flirt"][
+        "actor" if kind in ("npc_flirt_actor", "npc_flirt_answer") else "target"
+    ]
+    if subject != expected_subject:
+        raise WorkflowError("Preserve the original Girl or NPC subject, not a controller alias")
+    human = (
+        prove_response_author(game, c, _history(c, game, event), action, dict(row), event)
+        if kind in ("npc_flirt_actor", "npc_flirt_answer")
+        else None
+    )
+    expected = author if human is None else human
+    if audit["actor_id"] != str(expected) or response["actor_id"] != str(expected):
+        raise WorkflowError("Preserve the source-proved human author and actual row owner")
+    return dict(row), ChoiceAnswer.model_validate_json(response["answer_json"])
 
 
 def _selected_source(
@@ -988,6 +1186,10 @@ def complete_damage_work(
         work=list(damage.work),
     )
     _complete_court_child(game, c, action["id"], final)
+    if action["data"].get("princess_child"):
+        from girlframe.services.m3_princess_performer import complete_npc_flirt
+
+        complete_npc_flirt(game, c, game.action(c, action["id"]), final)
     return True
 
 
@@ -1298,26 +1500,26 @@ class NpcFlirtService:
         with self.store.engine.connect() as c:
             _access(self.game, c, viewer)
             state = load_state(c, self.store.campaign_id)
-            saved = rules.get(state, rules.Session, identity)
-            if viewer.user_id not in (int(saved.actor.entity), saved.controller):
-                raise WorkflowError(
-                    "Only the original participants see these private source replies"
-                )
             source = prove(self.game, c, state, identity)
-            _selected_source(self.game, c, state, source)
-            if viewer.user_id not in (int(source.actor.entity), source.controller):
+            action = self.game.action(c, identity)
+            author = _actor_author(self.game, c, state, action, source)
+            participants = (int(source.actor.entity), source.controller)
+            if viewer.user_id not in (*participants, author):
                 raise WorkflowError(
-                    "Only the actual original participants see these private replies"
+                    "Only original participants and the proven one-Play author see this source"
                 )
+            # Direction grants no later authority over the performer's voluntary followthrough.
             performances = [
-                x for x in rules.records(state, rules.Performance) if x.action == identity
+                x
+                for x in rules.records(state, rules.Performance)
+                if x.action == identity and (x.kind == "escape" or viewer.user_id in participants)
             ]
             for value in performances:
                 _proof_performance(self.game, c, state, value.id)
             judgments = [
                 prove_judgment(self.game, c, state, x.id)
                 for x in rules.records(state, rules.Judgment)
-                if x.action == identity
+                if x.action == identity and viewer.user_id in participants
             ]
             can_order, order_blocked = False, None
             if viewer.user_id == source.controller:
@@ -1333,6 +1535,8 @@ class NpcFlirtService:
             return dict(
                 can_order=can_order,
                 order_blocked=order_blocked,
+                directed=source.princess_direction is not None,
+                actor_author=author,
                 id=identity,
                 revision=state.revision,
                 source=source.model_dump(mode="json", exclude={"target_json", "registry"}),
@@ -1345,7 +1549,7 @@ class NpcFlirtService:
                 pending=[
                     x
                     for x in self.game.pending(c, identity)
-                    if x["actor_id"] == str(viewer.user_id)
+                    if _row_author(self.game, c, state, action, x) == viewer.user_id
                 ],
             )
 
@@ -1353,10 +1557,14 @@ class NpcFlirtService:
         state = load_state(c, self.store.campaign_id)
         result = []
         for source in rules.records(state, rules.Session):
-            if viewer.user_id not in (int(source.actor.entity), source.controller):
+            action = self.game.action(c, source.id)
+            author = _actor_author(self.game, c, state, action, source)
+            if viewer.user_id not in (int(source.actor.entity), source.controller, author):
                 continue
             own_rows = [
-                x for x in self.game.pending(c, source.id) if x["actor_id"] == str(viewer.user_id)
+                x
+                for x in self.game.pending(c, source.id)
+                if _row_author(self.game, c, state, action, x) == viewer.user_id
             ]
             awaiting = [
                 x
@@ -1544,6 +1752,10 @@ def complete_external(game: GameService, c: Connection, action: dict[str, Any], 
         grant=grant.id,
     )
     _complete_court_child(game, c, actual["id"], final)
+    if actual["data"].get("princess_child"):
+        from girlframe.services.m3_princess_performer import complete_npc_flirt
+
+        complete_npc_flirt(game, c, game.action(c, actual["id"]), final)
     action.clear()
     action.update(game.action(c, actual["id"]))
     return True
@@ -1646,3 +1858,31 @@ def _complete_court_child(game: GameService, c: Connection, action_id: str, even
         from girlframe.services.m3_red_queen_support import complete_child
 
         complete_child(game, c, load_state(c, game.store.campaign_id), action, event)
+
+
+def completion_author(
+    game: GameService, c: Connection, action: dict[str, Any], trigger: str
+) -> int:
+    """Prove only this actual typed delayed NPC closure, before any derived parent closure."""
+    audit = _event(game, c, trigger, ("m3.npc_flirt_completed",))
+    born = _history(c, game, trigger)
+    actual = game.action(c, action["id"])
+    source = prove(game, c, born, action["id"])
+    completion = next(
+        (
+            x
+            for x in rules.records(born, rules.Completion)
+            if x.action == action["id"] and x.event == trigger
+        ),
+        None,
+    )
+    payload = json.loads(audit["payload_json"])
+    if (
+        completion is None
+        or source.completed_event != trigger
+        or payload.get("action_id") != action["id"]
+        or actual["data"].get("receipt") != action["data"].get("receipt")
+        or not str(audit["actor_id"]).isdecimal()
+    ):
+        raise WorkflowError("Prove the actual typed NPC completion and unchanged source receipt")
+    return int(audit["actor_id"])

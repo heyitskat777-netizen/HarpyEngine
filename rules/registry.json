@@ -6857,12 +6857,12 @@
       "alternatives": [
         "Treat the selected 7 as fixed even when the Man marks the actual partner Tag."
       ],
-      "implementation_note": "First finite source accepts only an actual observed unmarked non-Paired Tag and proves immutable original law/person/source/mark. Existing default low and Animal choices remain. Repeated and Paired source-only resolutions are explicit required P1 adapters and reject before mutation.",
+      "implementation_note": "Source-only Bonded supports actual unmarked Tags, partner-owned ordinary repeated embrace/reject and marking-Pair-owned optional conversion into the original protected Paired slot. Actual mandatory-Play rejection, special-source Tag effects and other no-roll families remain explicit required adapters; the rolled Man paired path is separate remaining work.",
       "change_impact": "Preserve original source routes, optional choices, law/Tag history, scene use and actual counterpart authorship when adjusting.",
       "provenance": "owner_approved_campaign_ruling",
       "authority": "delegated_recommendation",
       "clarity_review": true,
-      "revision": 1
+      "revision": 2
     }
   ],
   "entries": [
@@ -8486,7 +8486,7 @@
       "review_reference": null,
       "contract": {
         "trigger": "An actual player-authored printed interaction is declared by its original owner and each real source counterpart explicitly confirms the factual trigger before rolling.",
-        "actor_type": "Actual original owner of native/borrowed or explicitly retained rule; current whole Play remains hard-gated by sex_ready=False.",
+        "actor_type": "Actual original owner of native/borrowed or explicitly retained rule. Current sex_ready() is True; independent source-registry approval remains authoritative.",
         "pre_roll_sources": [
           "Actual original owner/counterpart ActorRefs and controllers",
           "Source trigger attestations and frozen cast/judge/appointment",
@@ -8498,14 +8498,14 @@
           "Separately gated actual Risk payment/finite shift only"
         ],
         "tier_options": {
-          "8-10 implemented subset": [
-            "Starry-Eyed actual Tag plus selected Person capability and actual Bond deepening"
+          "7- source path": [
+            "Actual Helpless result and source-bound exposure discovery; original human witnesses and Handler own conditional Tag decisions."
           ],
-          "11+ implemented target subset": [
-            "Actual normal Handler/NPCDirector physiological Void choices or Handler Girl-rules real Asset facts/review/caster-selection/patient-rewrite/allure"
+          "8-10 source paths": [
+            "Take actual counterpart Void, optional self-written Asset, redirect to another actual supported source, or actual counterpart-authored hiding/suppression."
           ],
-          "7- incomplete": [
-            "Helpless reducer exists, but whole conditional discovery/Handler Tag outcome has not been accepted"
+          "11+ source paths": [
+            "Real source-bound PC/retained Harpy Asset selection and recipient rewrite, ordinary NPC/normal Handler/Director manifestation or treatment, Handler-Girl actual Asset facts; existing all-Void remains factual with no invented inventory."
           ]
         },
         "choice_ownership": "Original caster selects printed mechanical effect and actual source Asset where required; actual original counterpart/judge owns factual confirmation or their own descriptions. Normal Handler/Director owns real knife/drugs/surgery choices. Same-human roles, future NPCs and successor bodies never auto-answer.",
@@ -8518,17 +8518,18 @@
           "Bounded high target port only: real accepted high SEX source and original caster choice inflict actual normal Handler/NPCDirector or actual HandlerGirl Void with correct target-specific owned treatment/Asset mutation; no generic handled acknowledgement."
         ],
         "mandatory_followups": [
-          "Global sex_ready remains False until all actual branches close",
-          "UNIMPLEMENTED: mid take/redirect Void, optional self-written Asset and hide/suppress corruption",
-          "UNIMPLEMENTED: high ordinary PC/Harpy/NPC/saturated target consequence ports",
-          "UNIMPLEMENTED: real exposure/discovery and conditional original Handler Tag, not automatic backend knowledge",
-          "Remaining whole-book retained-role/native/pause/privacy matrix"
+          "Complete actual mandatory Void/threshold/treatment work before source unlock.",
+          "Exposure needs actual addressed witness/discovery and original Handler conditional Tag, never automatic backend knowledge.",
+          "Preserve source-owned caster choice, recipient rewrite and actual original person across native/retained-role paths.",
+          "Final integrated P1 regression and independent rules/clarity review remain pending; unsupported exceptional body/source combinations stay explicit."
         ],
         "handler_or_gm_intervention": "Actual human source choices and authored fiction only; no AI interaction/consent or automatic discovery/Punishment. Physiological source proof requires true high receipt and actual owned response before downstream completion.",
         "test_fixture_ids": [
           "tests/rules/test_mockingbird_sex.py",
           "tests/rules/test_handler_void_service.py",
-          "tests/rules/test_handler_girl_void_service.py"
+          "tests/rules/test_handler_girl_void_service.py",
+          "tests/rules/test_mockingbird_sex_closure.py",
+          "tests/rules/test_mockingbird_communion.py"
         ]
       },
       "dependencies": [
@@ -11437,18 +11438,19 @@
         "target_policy": "Actual original owned visible source targets/resources only; unsupported resources stay gated before effects.",
         "post_roll_effects": [
           "Persist the named actual source-bound effects with immutable original receipts; no generic handled acknowledgment or automatic successor inheritance.",
-          "Remaining boundary: Free compulsory-package PF still requires actual issue/grant/cap consumer; acquired_rules metadata alone is unsupported."
+          "A genuine compulsory replacement package containing Personal Firearm issues one source-bound Girl pistol, with actual owner-confirmed cap replacement, atomically with the exact free Frame replacement."
         ],
         "mandatory_followups": [
           "Actual cap replacement and any real source physical/corruption children.",
-          "UNIMPLEMENTED: free compulsory-package pistol/Girl-cap issuing port. Quote/apply explicitly reject this additional-rule package before effects; paid acquisition remains its distinct supported source."
+          "Preserve original Handler package quote, owner response, source_work/event and cap/loss consequences; final integrated regression and independent review remain pending."
         ],
         "handler_or_gm_intervention": "Actual owned source judge or factual facilitator acts only where the printed workflow needs it; no administrator authority or invented observation.",
         "test_fixture_ids": [
           "tests/rules/test_personal_firearm.py",
           "tests/rules/test_personal_firearm_service.py",
           "tests/rules/test_items.py",
-          "tests/rules/test_frame_swap_service.py"
+          "tests/rules/test_frame_swap_service.py",
+          "tests/rules/test_replacement_firearm_admission.py"
         ]
       },
       "dependencies": [],
@@ -11457,7 +11459,8 @@
         "tests/rules/test_personal_firearm_service.py",
         "tests/rules/test_items.py",
         "tests/rules/test_frame_swap_service.py",
-        "tests/rules/test_free_personal_firearm_package.py"
+        "tests/rules/test_free_personal_firearm_package.py",
+        "tests/rules/test_replacement_firearm_admission.py"
       ],
       "m2_play_id": null,
       "module": "core",

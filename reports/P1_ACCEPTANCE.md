@@ -400,3 +400,67 @@ to its defining module; only that failed module is rechecked. Registry validatio
 passes; repository publication scan1380 files/40 retained manifest entries/0
 findings and diff whitespace pass. Full regression, global release gates and
 independent/human acceptance remain pending.
+
+### Static reconciliation: Mockingbird closure contract
+
+Published `d32127c1fa272889c8374acb647845a24b005d71` has
+`services/m3_mockingbird_plays.py::sex_ready()` returning True and the existing
+low/mid/high routes in `services/m3_mockingbird_sex.py::results/apply/projection`,
+source-owned `m3_mockingbird_discovery.py` and native `m3_mockingbird_sex.py`.
+The registry still described False and unimplemented low/mid/ordinary high ports.
+Those stale descriptions are corrected against the existing code and authored
+`test_mockingbird_sex_closure.py`/`test_mockingbird_communion.py`; no runtime
+implementation was repeated and no new tests were run. This is static source
+evidence only. RULES_SUBSET, pending independent review and final integrated
+regression remain. Existing Git history retains the prior contract; unusual
+body/retention combinations are not silently certified.
+
+Static Enforcer reconciliation at the same d32127c baseline finds the supposedly
+unimplemented free compulsory-package pistol already present: actual owner-
+confirmed `m3_replacement.py` atomically calls the pure Personal Firearm grant
+with frame/source_work/source_event and chosen cap replacement; native package
+review and owner selector are in `discord_adapter/m3_replacement.py`. Original
+quote/owner/event proof is in `m3_enforcer_requisitions.py`;
+`test_replacement_firearm_admission.py::test_reviewed_free_package_only_issues_actual_pistol_after_original_owner_confirmation`
+is already authored. Only stale registry/coverage descriptions changed. No code
+was duplicated and no runtime checks were rerun; final regression/review remain.
+
+### Local follow-on: directed NPC and source-only Tag lifecycle
+
+One additional minimum passed **1 in6.06s**:
+`tests/rules/test_npc_flirt.py::test_actual_princess_directed_mid_native_npc_flirt_keeps_people_resources_and_authors`.
+The real high Princess source selects native Flirt against an actual NPC; the
+performing Girl's actual Identity/Heat and child receipt remain hers. The original
+Princess owns directed actor choices; the actual NPC owns its own response even
+when its controller is the same user as the performing Girl. Both original
+Direction/parent complete; private readback and real canonical SQL authors are
+checked. Earlier attempts were the same failed node only:2.45s missing required
+synthetic NPC detail;2.83s improper cross-user introduction (corrected to actual
+Handler introduction→controller claim→cast join);3.10s missing positive Princess
+source/cast gate; one avoidable stale repeat after an edit script failed;4.60s
+roll proof incorrectly equated actual performer with human author. The final
+source-specific roll proof preserves the raw SQL receipt and modifiers and proves
+the actual Princess author from original birth/roll snapshots. Ordinary Dose
+proof is unchanged. No prior passing normal was rerun.
+
+New delayed NPC damage/Handler→Princess closure has a distinct canonical
+`m3.princess_directed_npc_flirt_completed` event proved from the actual NPC
+completion trigger snapshot, immutable receipt and actual human. Those high
+external branches are implemented/static checked **NOTRUN**; the passing directed
+node is mid. This is not full source-family or lifecycle certification.
+
+Bonded source-only Man now has typed ordinary repeat work/decision/performed
+records, actual partner-owned embrace/reject and private controls. Paired conversion
+is separately source-owned by the actual marking Pair (official PDF58/printed56),
+changes the actual marked Bonded owner's original protected slot, preserves real
+sedation/slot flags and consumes exactly that Tag. Declining a repeated conversion
+returns ordinary resolution to the actual Tag owner. No fake Action/obligation,
+dice, Heat or extra owner veto is added. Two meaningful native normals are
+authored **NOTRUN**; worker Ruff4/types3 pass. Mandatory rejection Play, special
+Tag sources, other no-roll families and the distinct rolled Man Paired integration
+remain required adapters. Existing source and interpretation history stays intact.
+
+Published preceding checkpoint d32127c CI42493240071 explicitly reports focused
+gameplay success and final full-regression step skipped. All current broader
+regression/global release checks, independent review and human acceptance remain
+pending; bot OFF.

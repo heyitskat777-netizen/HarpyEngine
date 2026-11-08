@@ -307,10 +307,17 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
                     parent=child["parent"],
                     source_work=child["source_work"],
                     target=int(child["target"]["entity"])
-                    if child["target"] and child["play"] in ("flirt", "put_someone_beneath_you")
+                    if child["target"]
+                    and child["target"]["kind"] == "pilot"
+                    and child["play"] in ("flirt", "put_someone_beneath_you")
                     else None,
                     target_actor=ActorRef.model_validate(child["target"])
-                    if child["target"] and child["play"] == "engage"
+                    if child["target"]
+                    and (
+                        child["play"] == "engage"
+                        or child["play"] == "flirt"
+                        and child["target"]["kind"] == "npc"
+                    )
                     else None,
                     order_id=child["order_id"],
                     piloting=bool(child["piloting"]),

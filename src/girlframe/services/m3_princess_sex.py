@@ -606,10 +606,17 @@ def _prerequisites(
             )
         ):
             raise WorkflowError("The real target must still belong to this actual source scene")
-        if play in ("flirt", "put_someone_beneath_you") and (
+        if play == "flirt" and target.kind == "npc":
+            from girlframe.services.m3_battle import _visible
+            from girlframe.services.m3_npc_flirt import _npc
+
+            _npc(state, target)
+            if not _visible(state, target, session.counterpart):
+                raise WorkflowError("Use a counterpart visible to the actual performing Girl")
+        elif play in ("flirt", "put_someone_beneath_you") and (
             target.kind != "pilot" or current_ref(state, int(target.entity)) != target
         ):
-            raise WorkflowError("This basic child requires an actual native Girl target adapter")
+            raise WorkflowError("This basic child requires its actual supported target adapter")
         if play == "all_out_assault" and not any(not x.damaged for x in actual.assets):
             raise WorkflowError(
                 "Assault needs an actual opposing undamaged Asset and reviewed opening"
@@ -685,6 +692,8 @@ def directive_options(
 def _prepared_target(value: rules.HighDirection, prepared: PlayInput) -> bool:
     if value.target is None:
         return prepared.target is None and prepared.target_actor is None
+    if value.play == "flirt" and value.target.kind == "npc":
+        return prepared.target is None and prepared.target_actor == value.target
     if value.play in ("flirt", "put_someone_beneath_you"):
         return prepared.target == int(value.target.entity) and prepared.target_actor in (
             None,
@@ -858,6 +867,11 @@ def _direction(
             .mappings()
             .one()
         )
+        if completion_audit["kind"] == "m3.princess_directed_npc_flirt_completed":
+            from girlframe.services.m3_princess_performer import prove_npc_flirt_completion
+
+            prove_npc_flirt_completion(game, c, value, completion_audit)
+            return value
         if completion_audit["kind"] == "m3.princess_directed_battle_completed":
             from girlframe.services.m3_princess_performer import prove_battle_completion
 
@@ -898,7 +912,7 @@ def _direction(
             or audit["actor_id"]
             != str(
                 value.author_controller
-                if choice["actor_id"] == value.actor.entity
+                if _performer_row(value, game.action(c, value.child or ""), dict(choice))
                 else choice["actor_id"]
             )
         ):
@@ -1042,11 +1056,21 @@ def child_author(
     return value.author_controller if value else None
 
 
+def _performer_row(value: rules.HighDirection, action: dict[str, Any], row: dict[str, Any]) -> bool:
+    if row["actor_id"] != value.actor.entity:
+        return False
+    if row["kind"].startswith("npc_flirt_"):
+        return bool(action["data"].get("npc_flirt")) and json.loads(row["body_json"]).get(
+            "subject"
+        ) == value.actor.model_dump(mode="json")
+    return True
+
+
 def decision_author(
     game: GameService, c: Connection, state: GameState, action: dict[str, Any], row: dict[str, Any]
 ) -> int | None:
     value = _bound(game, c, state, action)
-    if value is None or row["actor_id"] != value.actor.entity:
+    if value is None or not _performer_row(value, action, row):
         return None
     if value.completed_event and row["state"] == "pending":
         raise WorkflowError("This completed one-child decision grant has expired")

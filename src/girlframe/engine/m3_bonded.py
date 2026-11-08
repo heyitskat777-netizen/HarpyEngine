@@ -72,6 +72,60 @@ class NoRollManMark(Model):
     label: str
     event: str
     scene: str
+    already_marked: bool = Field(default=False, exclude_if=lambda value: not value)
+
+
+class ManTagResolution(Model):
+    id: str
+    source: str
+    mark: str
+    partner: ActorRef
+    controller: int
+    tag: str
+    event: str
+
+
+class ManTagDecision(Model):
+    id: str
+    work: str
+    partner: ActorRef
+    controller: int
+    decision: Literal["embrace", "reject"]
+    identity: str | None = None
+    replacement: str | None = None
+    event: str
+
+
+class ManTagRejection(Model):
+    id: str
+    work: str
+    partner: ActorRef
+    controller: int
+    account: str = Field(min_length=1, max_length=1200)
+    event: str
+
+
+class ManPairedWork(Model):
+    id: str
+    source: str
+    mark: str
+    owner: ActorRef
+    marker: ActorRef
+    controller: int
+    relation: str
+    paired: str
+    slot: int | None
+    tag: str
+    event: str
+
+
+class ManPairedDecision(Model):
+    id: str
+    work: str
+    marker: ActorRef
+    controller: int
+    convert: bool
+    event: str
 
 
 class Selection(Model):
@@ -165,6 +219,11 @@ KINDS: dict[type[Model], str] = {
     Consent: "bonded_consent",
     Activation: "bonded_activation",
     NoRollManMark: "bonded_no_roll_man_mark",
+    ManTagResolution: "bonded_man_tag_resolution",
+    ManTagDecision: "bonded_man_tag_decision",
+    ManTagRejection: "bonded_man_tag_rejection",
+    ManPairedWork: "bonded_man_paired_work",
+    ManPairedDecision: "bonded_man_paired_decision",
     Selection: "bonded_selection",
     PairHelp: "bonded_pair_help",
     Child: "bonded_child",

@@ -162,3 +162,72 @@ def prove_battle_completion(
         raise WorkflowError("Prove the actual directed battle, source and immutable receipt")
     if int(audit["actor_id"]) != _battle_trigger(game, c, child, payload.get("trigger_event", "")):
         raise WorkflowError("Preserve the actual human battle-completion author")
+
+
+def complete_npc_flirt(
+    game: "GameService", c: Connection, action: dict[str, Any], trigger: str
+) -> None:
+    """Close only a genuine directed NPC Flirt after its canonical external work."""
+    from girlframe.engine import m3_princess_sex as princess
+    from girlframe.services.m2_state import load_state
+    from girlframe.services.m3_npc_flirt import completion_author
+    from girlframe.services.m3_princess_sex import complete_child
+
+    state = load_state(c, game.store.campaign_id)
+    child = game.action(c, action["id"])
+    scope = child["data"].get("princess_child")
+    if not scope or not child["data"].get("npc_flirt") or child["state"] != "complete":
+        return
+    direction = princess.direction(state, scope["direction"])
+    if direction.completed_event:
+        return
+    human = completion_author(game, c, child, trigger)
+    event = str(uuid4())
+    complete_child(game, c, state, child, event)
+    game.event(
+        c,
+        human,
+        event,
+        "m3.princess_directed_npc_flirt_completed",
+        state,
+        event_id=event,
+        action_id=child["id"],
+        parent=direction.parent,
+        direction=direction.id,
+        trigger_event=trigger,
+    )
+
+
+def prove_npc_flirt_completion(
+    game: "GameService", c: Connection, value: "HighDirection", audit: RowMapping
+) -> None:
+    from girlframe.services.m3_npc_flirt import completion_author
+
+    payload = json.loads(audit["payload_json"])
+    child = game.action(c, value.child or "")
+    receipt = c.scalar(
+        sa.select(t.m2["m2_receipts"].c.body_json).where(
+            t.m2["m2_receipts"].c.campaign_id == game.store.campaign_id,
+            t.m2["m2_receipts"].c.action_id == child["id"],
+        )
+    )
+    if (
+        audit["kind"] != "m3.princess_directed_npc_flirt_completed"
+        or payload.get("action_id") != child["id"]
+        or payload.get("parent") != value.parent
+        or payload.get("direction") != value.id
+        or child.get("parent_id") != value.parent
+        or child["actor_id"] != value.actor.entity
+        or (child["data"].get("princess_child") or {}).get("direction") != value.id
+        or not child["data"].get("npc_flirt")
+        or child["data"]["play"] != "flirt"
+        or child["state"] != "complete"
+        or receipt is None
+        or json.loads(receipt) != child["data"].get("receipt")
+        or game.pending(c, child["id"])
+    ):
+        raise WorkflowError("Prove the actual directed NPC Flirt, source and immutable receipt")
+    if int(audit["actor_id"]) != completion_author(
+        game, c, child, payload.get("trigger_event", "")
+    ):
+        raise WorkflowError("Preserve the actual human NPC consequence completion author")

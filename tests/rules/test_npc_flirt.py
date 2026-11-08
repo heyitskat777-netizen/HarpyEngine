@@ -53,7 +53,7 @@ def native_choice(game, viewer, kind, **values):
         await opened.response.defer(ephemeral=True)
         await open_choice(opened, game, game.decision(viewer, row["id"]))
         form = opened.edit_original_response.call_args.kwargs["view"]
-        assert not await form.interaction_check(current(3))
+        assert not await form.interaction_check(current(3 if viewer.user_id != 3 else 2))
         form.values.update(values)
         submitted = current(viewer.user_id)
         await form.confirm.callback(submitted)
@@ -292,3 +292,145 @@ def test_actual_high_native_court_npc_flirt_performed_escape_judged_bond_and_tru
         assert game.action(c, first)["data"]["receipt"] == receipt
     assert court.get(final, court.Mark, mark_id).completed_event == mark_completed
     assert game.dice.calls == 2
+
+
+# One focused likely-flow smoke was run after integration; broader branches remain deferred.
+def test_actual_princess_directed_mid_native_npc_flirt_keeps_people_resources_and_authors(
+    ledger, tmp_path, monkeypatch
+):
+    import sqlalchemy as sa
+    from test_m2_game import Dice
+    from test_princess_sex import (
+        _directed_native,
+        _pass_directed_tags,
+        _prepare_directed_native,
+        roll,
+        setup,
+    )
+
+    from girlframe.database import tables as t
+    from girlframe.engine import m3_princess_sex as princess
+
+    game, worker, gateway, source = setup(ledger, tmp_path, monkeypatch)
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(
+            princess.RULE,
+            rules.RULE,
+            "core.core.npcs",
+            "core.core.npc-assets",
+            "core.core.npc-tags",
+            "npc.npc.public-relations",
+        ),
+    )
+    approval = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "m3_approval": approval.model_copy(
+                update={"subsystems": approval.subsystems | {"world"}}
+            )
+        }
+    )
+    # One human controls two genuinely distinct people. Her NPC reply must never
+    # become the Princess's decision merely because both row owners have UID3.
+    npc = ActorRef(kind="npc", entity="actual-directed-flirt-npc")
+    WorldService(MissionService(ledger)).npc(
+        ADMIN,
+        str(uuid4()),
+        state(game).revision,
+        Npc(
+            id=npc.entity,
+            name="Morgan",
+            detail="Synthetic original directed NPC; not the controller's Girl",
+            jobs=("public_relations",),
+            controller=1,
+            revealed=True,
+            cell=(0, 0),
+        ),
+    )
+    WorldService(MissionService(ledger)).claim_npc(
+        OTHER, str(uuid4()), state(game).revision, npc.entity
+    )
+    cast_change(CastService(ActorService(MissionService(ledger))), OTHER, "join", npc)
+    identity, parent = roll(game, worker, gateway, source, (6, 6), native=True)
+    pass_tags(game)
+    before = state(game)
+    performer = current_ref(before, 3)
+    original_parent_receipt = game.inspect(PLAYER, parent)["receipt"]
+    direction = _directed_native(game, identity, "flirt", target=npc)
+    own = before.sheets["3"]
+    marked = next(x for x in own.identities if not x.marked and not x.protected and not x.paired)
+    heat = own.heat + 3 if own.heat + 3 >= 5 else 3
+    game.dice = Dice((2, 3))
+    child = _prepare_directed_native(
+        game,
+        source,
+        identity,
+        heat=(str(heat),),
+        identity=(marked.id,),
+        gain=("3",),
+    )
+    tick(worker, gateway, 3)
+    if game.inspect(PLAYER, child)["state"] in ("acquiring", "ready_to_roll"):
+        game.roll(PLAYER, str(uuid4()), child)
+    _pass_directed_tags(game)
+    with ledger.engine.connect() as c:
+        action = game.action(c, child)
+        assert action["actor_id"] == "3" and action["parent_id"] == parent
+        assert action["data"]["prepared"]["target"] is None
+        assert action["data"]["prepared"]["target_actor"] == npc.model_dump(mode="json")
+        assert action["data"]["result"]["tier"] == "mid"
+        assert action["data"]["npc_flirt"]["princess_direction"] == direction.id
+        receipt = action["data"]["receipt"]
+    after_roll = state(game)
+    assert after_roll.sheets["3"].heat == own.heat + 3 - heat
+    assert next(x for x in after_roll.sheets["3"].identities if x.id == marked.id).marked
+    assert after_roll.sheets["2"].identities == before.sheets["2"].identities
+    actor_row = next(x for x in game.choices(PLAYER) if x["kind"] == "npc_flirt_actor")
+    assert actor_row["actor_id"] == "3"
+    assert not any(x["id"] == actor_row["id"] for x in game.choices(OTHER))
+    native_choice(game, PLAYER, "npc_flirt_actor", question=("name",))
+    target_row = next(x for x in game.choices(OTHER) if x["kind"] == "npc_flirt_target")
+    assert target_row["actor_id"] == "3"
+    assert not any(x["id"] == target_row["id"] for x in game.choices(PLAYER))
+    native_choice(game, OTHER, "npc_flirt_target", text="PRIVATE_DIRECTED_NPC: Call me Morgan")
+    assert game.inspect(PLAYER, child)["state"] == "complete"
+    assert game.inspect(PLAYER, parent)["state"] == "complete"
+    assert princess.direction(state(game), direction.id).completed_event
+    assert game.inspect(PLAYER, parent)["receipt"] == original_parent_receipt
+    assert game.dice.calls == 1
+    service = NpcFlirtService(game)
+    assert service.view(PLAYER, child)["actor_author"] == 2
+    assert service.view(OTHER, child)["source"]["actor"] == performer.model_dump(mode="json")
+    assert service.view(PLAYER, child)["can_perform"] is False
+    with pytest.raises(WorkflowError):
+        service.view(ADMIN, child)
+    with ledger.engine.connect() as c:
+        assert prove(game, c, state(game), child).princess_direction == direction.id
+        assert game.action(c, child)["data"]["receipt"] == receipt
+        for row, human in ((actor_row, "2"), (target_row, "3")):
+            response = (
+                c.execute(
+                    sa.select(t.m2["m2_responses"]).where(
+                        t.m2["m2_responses"].c.campaign_id == ledger.campaign_id,
+                        t.m2["m2_responses"].c.choice_id == row["id"],
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            assert response["actor_id"] == human
+            assert (
+                c.scalar(
+                    sa.select(t.events.c.actor_id).where(
+                        t.events.c.campaign_id == ledger.campaign_id,
+                        t.events.c.id == response["event_id"],
+                    )
+                )
+                == human
+            )
+    tick(worker, gateway, 8)
+    assert "PRIVATE_DIRECTED_NPC" not in json.dumps(gateway.messages)

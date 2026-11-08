@@ -32,6 +32,7 @@ class Session(Model):
     target_sha256: str
     target_position: str | None
     event: str
+    princess_direction: str | None = Field(default=None, exclude_if=lambda value: value is None)
     effect_event: str | None = None
     phase: str = "active"
     tier: Literal["low", "mid", "high"] | None = None

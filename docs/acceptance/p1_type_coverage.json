@@ -10,8 +10,8 @@
       "type": "Princess",
       "registry_prefix": "girl.princess.",
       "status": "Published scoped implementation",
-      "ordinary_workflows_with_evidence": "Standards and mission consequences; three-tier Sex with actual counterpart child; Show Dog NPC/Bond/message choices. Local seven-family directed basic Play source extension; native directed Flirt passed and actual Assault/declaration/damage/completion passed1/5.49s. Four other new family normals are unrun.",
-      "missing_before_AI": "Own-recipe directive bridge and remaining controlled-resource/NPC/body source adapters; final authored family regression and independent review. Actual Order ancestry remains mandatory; no invented Order or parent.",
+      "ordinary_workflows_with_evidence": "Standards and mission consequences; three-tier Sex with actual counterpart child; Show Dog NPC/Bond/message choices. Local seven-family directed basic Play source extension; native directed Flirt passed and actual Assault/declaration/damage/completion passed1/5.49s. Four other new family normals are unrun. Local directed actual-NPC mid Flirt passed1/6.06s with actual performer resource use, distinct original Princess/NPC authors and Direction/parent completion.",
+      "missing_before_AI": "Own-recipe directive bridge and remaining controlled-resource/body and own-recipe source adapters; final authored family regression and independent review. Actual Order ancestry remains mandatory; no invented Order or parent.",
       "later_candidates": "Exceptional retained-rule or changed-body combinations only after ordinary children work.",
       "code": [
         "src/girlframe/services/m3_princess_sex.py",
@@ -130,8 +130,8 @@
       "type": "Mockingbird",
       "registry_prefix": "girl.mockingbird.",
       "status": "Published scoped implementation",
-      "ordinary_workflows_with_evidence": "Person, Call/communion, Risk and source-owned Sex outcomes including Void take/redirect, witnesses and Handler Tag.",
-      "missing_before_AI": "Reconcile stale closure contract against current code; close any remaining ordinary source/target consequences established by that reconciliation. Missing Sex tiers are NOT an established gap.",
+      "ordinary_workflows_with_evidence": "Person, Call/communion, Risk and source-owned Sex outcomes including Void take/redirect, witnesses and Handler Tag. Static reconciliation at published d32127c confirms sex_ready() True and existing low/mid/high service/native paths, including actual exposure, redirection, self-Asset, recipient rewrite and NPC/Handler/retained Harpy ports; stale closure text corrected. No new runtime test was run.",
+      "missing_before_AI": "Final integrated normal-flow/affected-consumer regression and independent source/clarity review; retain named unsupported exceptional body/retention adapters. The stale False gate and missing low/mid tiers are not current implementation gaps.",
       "later_candidates": "Exceptional retained-rule/carrier/successor-body combinations.",
       "code": [
         "src/girlframe/services/m3_mockingbird_plays.py",
@@ -1106,8 +1106,8 @@
       "type": "Bonded",
       "registry_prefix": "girl.bonded.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Actual Side and Pair-owned replies, source-owned witnessed affection/children, copied Sex rules with original resources, explicit no-roll low result and durable pause. Native Side smoke1/2.56s; no-roll pause and exact permission restore1/1.89s. Local optional unmarked non-Paired Man mark on the genuine no-roll source is implemented; static4/types3 pass; authored native normal NOTRUN.",
-      "missing_before_AI": "Final authored normal regression, remaining repeated/Paired Man source-only Tag resolution, remaining ordinary identity/body/lifecycle adapters and independent source review.",
+      "ordinary_workflows_with_evidence": "Actual Side and Pair-owned replies, source-owned witnessed affection/children, copied Sex rules with original resources, explicit no-roll low result and durable pause. Native Side smoke1/2.56s; no-roll pause and exact permission restore1/1.89s. Local optional unmarked non-Paired Man mark on the genuine no-roll source is implemented; static4/types3 pass; authored native normal NOTRUN. Source-only Man ordinary repeated embrace/reject and marking-Pair Paired-slot conversion are implemented/static checked, two authored native normals NOTRUN.",
+      "missing_before_AI": "Final authored normal regression, mandatory rejection-Play/special-source and separate rolled Man Paired integration, remaining ordinary identity/body/lifecycle adapters and independent source review.",
       "later_candidates": "Compound retained-rule/extra-Identity/dual-cockpit cases after ordinary Pair lifecycle.",
       "code": [
         "src/girlframe/services/m3_bonded.py",
@@ -2532,8 +2532,8 @@
       "type": "The Enforcer",
       "registry_prefix": "frame.enforcer.",
       "status": "Published scoped implementation",
-      "ordinary_workflows_with_evidence": "Conditioning/detention, Initiative/Director judgment, grips/volunteers, Master's Dog, Pavlov, Firearm/free packages, Compliance Virus, Firepower and Snoop.",
-      "missing_before_AI": "Reconcile remaining ordinary role/body/discipline ports and aggregate coverage. Aggregate playbook heading is not another missing mechanic.",
+      "ordinary_workflows_with_evidence": "Conditioning/detention, Initiative/Director judgment, grips/volunteers, Master's Dog, Pavlov, Firearm/free packages, Compliance Virus, Firepower and Snoop. Static reconciliation at d32127c confirms compulsory free Personal Firearm grant/cap native workflow and original package proof already exist; obsolete missing-port contract corrected without recoding or test rerun.",
+      "missing_before_AI": "Final integrated ordinary role/body/discipline and compulsory-package regression, aggregate source review and independent acceptance. No additional named missing ordinary Enforcer mechanic established by this static reconciliation.",
       "later_candidates": "Exceptional source/body combinations after ordinary discipline.",
       "code": [
         "src/girlframe/services/m3_enforcement_initiative.py",

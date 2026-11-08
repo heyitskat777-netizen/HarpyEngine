@@ -164,7 +164,12 @@ async def open_choice(
     await NativeForm(
         interaction.user.id,
         "Actual NPC Flirt response",
-        "Answer only for the actual displayed Girl/NPC role. Safety pause remains available.",
+        (
+            "The original Princess authors this actual Girl's one-Play decision; "
+            "the performing Girl retains her own resources. Safety pause remains available."
+            if data.get("directed") and kind in ("npc_flirt_actor", "npc_flirt_answer")
+            else "Answer for the displayed Girl/NPC role. Safety pause remains available."
+        ),
         fields,
         submit,
     ).present(interaction)

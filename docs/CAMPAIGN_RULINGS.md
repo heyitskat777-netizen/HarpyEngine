@@ -3780,3 +3780,13 @@ the ordinary low route remains. The first finite adapter accepts observed unmark
 non-Paired Tags; repeated/Paired source-only resolution remains required P1 work
 and rejects before costs. This is an adjustable delegated interpretation requiring
 clarity review; preserve source, law/person/Tag history and real scene use.
+
+Bonded Man adapter revision2: ordinary repeated embrace/reject and optional Paired
+conversion are implemented in the source-only Bonded workflow. The official
+Bonded Pair wording (PDF58/printed56) gives the **marking Pair** the conversion
+choice; the marked Bonded person's original protected Paired slot is affected,
+without an extra owner veto. Declining a repeated conversion returns ordinary
+Tag resolution to the actual Tag owner. Required rejection Plays, special-source
+Tags and separate rolled Man Paired integration remain explicit work. Existing
+source records and prior interpretation history are retained; neither new Bonded
+normal has run yet.

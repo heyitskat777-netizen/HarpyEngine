@@ -1803,6 +1803,8 @@ class GameService:
                         doctor,
                         alpha,
                         alpha_sex,
+                        princess_sex,
+                        princess_child,
                         am_scrutinized,
                         am_code,
                         alpha_sex_counter_scope,
@@ -1854,6 +1856,10 @@ class GameService:
                     )
                 elif npc_flirt is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(npc_flirt["cast"]))
+                elif princess_sex is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(princess_sex["cast"]))
+                elif princess_child is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(princess_child["cast"]))
                 elif gorgon_response is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(gorgon_response["cast"]))
                 elif secretary_scope is not None:

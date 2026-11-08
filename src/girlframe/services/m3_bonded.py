@@ -1,7 +1,7 @@
 """Genuine Pair sources, owned human responses and actual Bonded effects."""
 
 import json
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
 
 import sqlalchemy as sa
@@ -9,7 +9,14 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_bonded as rules
-from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput, shift_status, tier
+from girlframe.engine.m2 import (
+    ChoiceAnswer,
+    GameState,
+    IdentityState,
+    PlayInput,
+    shift_status,
+    tier,
+)
 from girlframe.engine.m3_actor_bonds import change, current_ref, set_depth
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_actors import fingerprint, resolve
@@ -28,6 +35,41 @@ from girlframe.services.read_only_bot import GuildViewer
 KINDS = ("bonded_side", "bonded_mid", "bonded_promise", "bonded_reply", "bonded_high", "bonded_low")
 
 
+def _paired_basis(
+    game: GameService, c: Connection, state: GameState, owner: ActorRef, marker: ActorRef
+) -> tuple[IdentityState, str] | None:
+    from girlframe.engine.m3_girl_runtime_state import relation_current
+
+    sheet = state.sheets[owner.entity]
+    paired = [x for x in sheet.identities if x.paired]
+    if not has_rule(sheet, rules.PAIR, "BONDED"):
+        if paired:
+            raise WorkflowError("Recover the actual Bonded source for this protected Paired slot")
+        return None
+    if not relation_current(sheet, "pair", state):
+        raise WorkflowError("Recover the actual current original Pair, not a replacement account")
+    actual, relation = original_pair(game, c, state, owner)
+    if len(paired) != 1:
+        raise WorkflowError("Recover the actual unique protected Paired Identity")
+    return (paired[0], relation) if actual == marker else None
+
+
+def _paired_legal(
+    state: GameState, owner: ActorRef, paired: IdentityState, label: str, duplicates: bool
+) -> bool:
+    from girlframe.engine.m3_leviathan_obsession import require_identity_change, require_unlocked
+
+    try:
+        require_unlocked((paired,), (paired.id,))
+        require_identity_change(state, owner, (paired.id,))
+    except ValueError:
+        return False
+    return duplicates or not any(
+        x.id != paired.id and x.name.casefold() == label.casefold()
+        for x in state.sheets[owner.entity].identities
+    )
+
+
 def _man_options(
     game: GameService, c: Connection, state: GameState, value: rules.Source
 ) -> list[dict[str, str]]:
@@ -39,26 +81,45 @@ def _man_options(
     if law is None or law.gender != "man":
         return []
     other = state.sheets[value.target.entity]
-    from girlframe.engine.m3_girl_runtime_state import relation_current
-
-    if any(x.paired for x in other.identities) or (
-        has_rule(other, rules.PAIR, "BONDED") and relation_current(other, "pair", state)
-    ):
-        return []
+    paired = _paired_basis(game, c, state, value.target, value.actor)
     from girlframe.services.m2_choices import ChoiceEngine
 
     result = []
     for tag in other.tags:
         if (
-            tag.marked
-            or tag.rejection_pending
+            tag.rejection_pending
             or tag.scene_used == value.cast.id
             or int(value.actor.entity) not in tag.observers
+            or (tag.marked or paired is not None)
+            and not _ordinary_repeat(tag.id)
         ):
             continue
-        ChoiceEngine(game).prove_tag_setter(c, state, int(value.target.entity), tag)
+        engine = ChoiceEngine(game)
+        engine.prove_tag_setter(c, state, int(value.target.entity), tag)
+        if tag.marked and not (
+            _man_reject_allowed(state, value.target, tag)
+            or _man_identities(state, value.target)
+            and (
+                engine.duplicate_labels()
+                or not any(x.name.casefold() == tag.label.casefold() for x in other.identities)
+            )
+        ):
+            continue
         result.append(dict(id=tag.id, label=tag.label))
     return result
+
+
+def _ordinary_repeat(identity: str) -> bool:
+    return not identity.startswith(
+        (
+            "bomb-collar:",
+            "cute-uniform:",
+            "stim-sex-drug:",
+            "stim-sex-effect:",
+            "dose-up:",
+            "control-ritual:",
+        )
+    )
 
 
 def _prove_man_mark(
@@ -86,6 +147,9 @@ def _prove_man_mark(
     law = designation(game, c, birth, mark.designation)
     tagged = birth.sheets.get(mark.partner.entity)
     tag = next((x for x in tagged.tags if x.id == mark.tag), None) if tagged else None
+    previous_tag = next(
+        (x for x in before.sheets[mark.partner.entity].tags if x.id == mark.tag), None
+    )
     if (
         mark not in rules.records(birth, rules.NoRollManMark)
         or mark.id != value.id + ":man"
@@ -101,6 +165,8 @@ def _prove_man_mark(
         or not tag.marked
         or tag.scene_used != mark.scene
         or tag.label != mark.label
+        or previous_tag is None
+        or previous_tag.marked != mark.already_marked
     ):
         raise WorkflowError("Preserve the real original Man, partner, law and marked Tag")
     return mark
@@ -116,6 +182,250 @@ def _unrolled_choice(state: GameState, value: rules.Source) -> str:
         for x in rules.records(state, rules.Selection)
     )
     return "bonded_high" if promised else "bonded_promise"
+
+
+def _before(game: GameService, c: Connection, birth: GameState) -> GameState:
+    table = t.m2["m2_state_history"]
+    body = c.scalar(
+        sa.select(table.c.body_json).where(
+            table.c.campaign_id == game.store.campaign_id,
+            table.c.revision == birth.revision - 1,
+        )
+    )
+    if body is None:
+        raise WorkflowError("Recover the actual preceding source state")
+    return GameState.model_validate_json(body)
+
+
+def _man_identities(state: GameState, partner: ActorRef) -> list[IdentityState]:
+    from girlframe.engine.m3_leviathan_obsession import require_identity_change, require_unlocked
+
+    result = []
+    for item in state.sheets[partner.entity].identities:
+        if item.protected or item.paired or item.am_limiter:
+            continue
+        try:
+            require_unlocked((item,), (item.id,))
+            require_identity_change(state, partner, (item.id,))
+        except ValueError:
+            continue
+        result.append(item)
+    return result
+
+
+def _man_reject_allowed(state: GameState, partner: ActorRef, tag: Any) -> bool:
+    from girlframe.engine.m3_beneath import rejection_blocked
+    from girlframe.engine.m3_girl_runtime_state import mentor_tag
+    from girlframe.services.m3_vatgrown_plays import rejection_allowed
+
+    return bool(
+        rejection_allowed(state, partner, tag)
+        and not rejection_blocked(state, int(partner.entity), tag.id)
+        and not mentor_tag(state.sheets[partner.entity], tag, state)
+    )
+
+
+def _paired_resolution(
+    game: GameService, c: Connection, state: GameState, value: rules.Source
+) -> dict[str, Any] | None:
+    mark = _prove_man_mark(game, c, state, value)
+    if mark is None:
+        return None
+    birth = _history(c, game, mark.event)
+    basis = _paired_basis(game, c, _before(game, c, birth), mark.partner, mark.actor)
+    works = [x for x in rules.records(state, rules.ManPairedWork) if x.source == value.id]
+    if basis is None:
+        if works:
+            raise WorkflowError("Only the actual marking Pair has this source conversion choice")
+        return None
+    paired, relation = basis
+    expected = rules.ManPairedWork(
+        id=mark.id + ":paired",
+        source=value.id,
+        mark=mark.id,
+        owner=mark.partner,
+        marker=mark.actor,
+        controller=value.controllers[mark.actor.token],
+        relation=relation,
+        paired=paired.id,
+        slot=paired.slot,
+        tag=mark.tag,
+        event=mark.event,
+    )
+    if works != [expected] or expected not in rules.records(birth, rules.ManPairedWork):
+        raise WorkflowError("Preserve the genuine marking Pair and actual protected source slot")
+    decisions = [x for x in rules.records(state, rules.ManPairedDecision) if x.work == expected.id]
+    if len(decisions) > 1:
+        raise WorkflowError("The actual marking Pair chooses once")
+    decision = decisions[0] if decisions else None
+    if decision is not None:
+        saved = _history(c, game, decision.event)
+        previous = _before(game, c, saved)
+        current = _paired_basis(game, c, previous, expected.owner, expected.marker)
+        old_tag = next(
+            (x for x in previous.sheets[expected.owner.entity].tags if x.id == expected.tag), None
+        )
+        new_tag = next(
+            (x for x in saved.sheets[expected.owner.entity].tags if x.id == expected.tag), None
+        )
+        new_paired = next(
+            (x for x in saved.sheets[expected.owner.entity].identities if x.id == expected.paired),
+            None,
+        )
+        _audit(game, c, decision.event, ("m3.bonded_man_paired_chosen",), expected.controller)
+        if (
+            decision not in rules.records(saved, rules.ManPairedDecision)
+            or decision.id != expected.id + ":decision"
+            or decision.marker != expected.marker
+            or decision.controller != expected.controller
+            or current is None
+            or current[1] != expected.relation
+            or current[0].id != expected.paired
+            or current[0].slot != expected.slot
+            or old_tag is None
+            or not old_tag.marked
+            or old_tag.scene_used != mark.scene
+            or old_tag.rejection_pending
+            or new_paired is None
+        ):
+            raise WorkflowError("Recover the actual marking Pair's canonical owned decision")
+        if decision.convert:
+            from girlframe.services.m2_choices import ChoiceEngine
+
+            actual = current[0].model_copy(
+                update=dict(
+                    name=mark.label,
+                    marked=current[0].id in previous.sheets[expected.owner.entity].sedation_locked,
+                )
+            )
+            if (
+                new_tag is not None
+                or new_paired != actual
+                or not _paired_legal(
+                    previous,
+                    expected.owner,
+                    current[0],
+                    mark.label,
+                    ChoiceEngine(game).duplicate_labels(),
+                )
+            ):
+                raise WorkflowError("Preserve the real Paired conversion, protection and sedation")
+        elif new_paired != current[0] or new_tag != old_tag:
+            raise WorkflowError("Declining leaves the actual marked Tag and Paired slot intact")
+    return dict(
+        work=expected,
+        decision=decision,
+        pending=decision is None,
+        converted=decision is not None and decision.convert,
+    )
+
+
+def _man_resolution(
+    game: GameService, c: Connection, state: GameState, value: rules.Source
+) -> dict[str, Any] | None:
+    mark = _prove_man_mark(game, c, state, value)
+    if mark is None or not mark.already_marked:
+        return None
+    paired = _paired_resolution(game, c, state, value)
+    if paired is not None and (paired["pending"] or paired["converted"]):
+        return None
+    works = [x for x in rules.records(state, rules.ManTagResolution) if x.source == value.id]
+    birth = _history(c, game, mark.event)
+    if len(works) != 1:
+        raise WorkflowError("Recover the actual repeated-Tag source work")
+    work = works[0]
+    if (
+        work not in rules.records(birth, rules.ManTagResolution)
+        or work.id != mark.id + ":resolution"
+        or work.mark != mark.id
+        or work.partner != mark.partner
+        or work.controller != value.controllers[mark.partner.token]
+        or work.tag != mark.tag
+        or work.event != mark.event
+    ):
+        raise WorkflowError("Preserve the original partner's actual Tag-resolution ownership")
+    decisions = [x for x in rules.records(state, rules.ManTagDecision) if x.work == work.id]
+    performances = [x for x in rules.records(state, rules.ManTagRejection) if x.work == work.id]
+    if len(decisions) > 1 or len(performances) > 1:
+        raise WorkflowError("Resolve this exact repeated Tag only once")
+    decision = decisions[0] if decisions else None
+    performance = performances[0] if performances else None
+    if decision:
+        saved = _history(c, game, decision.event)
+        previous = _before(game, c, saved)
+        old = next((x for x in previous.sheets[work.partner.entity].tags if x.id == work.tag), None)
+        new = next((x for x in saved.sheets[work.partner.entity].tags if x.id == work.tag), None)
+        _audit(game, c, decision.event, ("m3.bonded_man_tag_resolved",), work.controller)
+        if (
+            decision not in rules.records(saved, rules.ManTagDecision)
+            or decision.id != work.id + ":decision"
+            or decision.partner != work.partner
+            or decision.controller != work.controller
+            or old is None
+            or not old.marked
+            or old.scene_used != mark.scene
+        ):
+            raise WorkflowError("Recover the original partner's canonical repeated-Tag decision")
+        if decision.decision == "embrace":
+            replaced = next(
+                (x for x in _man_identities(previous, work.partner) if x.id == decision.identity),
+                None,
+            )
+            added = next(
+                (
+                    x
+                    for x in saved.sheets[work.partner.entity].identities
+                    if x.id == decision.replacement
+                ),
+                None,
+            )
+            if (
+                replaced is None
+                or added is None
+                or new is not None
+                or added.name != mark.label
+                or added.slot != replaced.slot
+                or added.marked
+                != (replaced.id in previous.sheets[work.partner.entity].sedation_locked)
+                or any(x.id == replaced.id for x in saved.sheets[work.partner.entity].identities)
+            ):
+                raise WorkflowError(
+                    "Preserve the actual legal Identity replacement and Tag consumption"
+                )
+        elif (
+            decision.identity is not None
+            or decision.replacement is not None
+            or new is None
+            or not new.rejection_pending
+            or not _man_reject_allowed(previous, work.partner, old)
+        ):
+            raise WorkflowError("Preserve the real owed rejection and its source restrictions")
+    if performance:
+        saved = _history(c, game, performance.event)
+        previous = _before(game, c, saved)
+        old = next((x for x in previous.sheets[work.partner.entity].tags if x.id == work.tag), None)
+        _audit(game, c, performance.event, ("m3.bonded_man_tag_rejected",), work.controller)
+        if (
+            decision is None
+            or decision.decision != "reject"
+            or performance not in rules.records(saved, rules.ManTagRejection)
+            or decision not in rules.records(previous, rules.ManTagDecision)
+            or performance.id != work.id + ":performed"
+            or performance.partner != work.partner
+            or performance.controller != work.controller
+            or not performance.account.strip()
+            or old is None
+            or not old.rejection_pending
+            or not _man_reject_allowed(previous, work.partner, old)
+            or any(x.id == work.tag for x in saved.sheets[work.partner.entity].tags)
+        ):
+            raise WorkflowError("Preserve the actual partner-authored performed rejection")
+    return dict(
+        work=work,
+        decision=decision,
+        performance=performance,
+        pending=decision is None or decision.decision == "reject" and performance is None,
+    )
 
 
 def _copy(state: GameState, other: GameState) -> None:
@@ -383,6 +693,8 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
             and value.kind != "intimacy"
         ):
             raise WorkflowError("Unrolled source results never fabricate a Sex receipt")
+        _paired_resolution(game, c, state, value)
+        _man_resolution(game, c, state, value)
     for item in rules.records(state, rules.Selection):
         if item.source != identity:
             continue
@@ -1652,8 +1964,8 @@ class BondedService:
                 x["id"] for x in _man_options(self.game, c, state, value)
             }:
                 raise WorkflowError(
-                    "Choose an actual unused unmarked partner Tag; repeated/Paired marks "
-                    "require their source-only resolution adapter"
+                    "Choose an actual observed unused partner Tag; special "
+                    "conversion/removal sources require their own adapters"
                 )
             event = str(uuid4())
             if man_tag is not None:
@@ -1663,6 +1975,7 @@ class BondedService:
                 assert law is not None and value.target is not None
                 other = state.sheets[value.target.entity]
                 tag = next(x for x in other.tags if x.id == man_tag)
+                paired = _paired_basis(self.game, c, state, value.target, value.actor)
                 rules.put(
                     state,
                     rules.NoRollManMark(
@@ -1675,8 +1988,39 @@ class BondedService:
                         label=tag.label,
                         event=event,
                         scene=value.cast.id,
+                        already_marked=tag.marked,
                     ),
                 )
+                if paired is not None:
+                    rules.put(
+                        state,
+                        rules.ManPairedWork(
+                            id=identity + ":man:paired",
+                            source=identity,
+                            mark=identity + ":man",
+                            owner=value.target,
+                            marker=value.actor,
+                            controller=value.controllers[value.actor.token],
+                            relation=paired[1],
+                            paired=paired[0].id,
+                            slot=paired[0].slot,
+                            tag=tag.id,
+                            event=event,
+                        ),
+                    )
+                if tag.marked:
+                    rules.put(
+                        state,
+                        rules.ManTagResolution(
+                            id=identity + ":man:resolution",
+                            source=identity,
+                            mark=identity + ":man",
+                            partner=value.target,
+                            controller=value.controllers[value.target.token],
+                            tag=tag.id,
+                            event=event,
+                        ),
+                    )
                 tag.marked, tag.scene_used = True, value.cast.id
                 other.revision += 1
             rules.put(
@@ -1756,6 +2100,16 @@ class BondedService:
                 from girlframe.services.p1_unrolled_sex import require_complete
 
                 require_complete(self.game, c, state, identity)
+                paired = _paired_resolution(self.game, c, state, value)
+                if paired is not None and paired["pending"]:
+                    raise WorkflowError(
+                        "The actual marking Pair must choose the Paired conversion first"
+                    )
+                work = _man_resolution(self.game, c, state, value)
+                if work is not None and work["pending"]:
+                    raise WorkflowError(
+                        "Resolve the actual partner's repeated Tag and owed action first"
+                    )
             event = str(uuid4())
             _select(self.game, c, state, value, kind, answer, event, str(uuid4()), None)
             self.game.event(
@@ -1774,6 +2128,292 @@ class BondedService:
             key,
             "m3.bonded_selected",
             dict(id=identity, revision=revision, answer=answer.model_dump(mode="json")),
+            operation,
+        )
+
+    def choose_man_paired(
+        self, viewer: GuildViewer, key: str, identity: str, revision: int, convert: bool
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            state = load_state(c, self.store.campaign_id)
+            value = prove(self.game, c, state, identity)
+            status = _paired_resolution(self.game, c, state, value)
+            if status is None:
+                raise WorkflowError("Recover the actual marking Pair's source-owned choice")
+            work = status["work"]
+            if (
+                state.revision != revision
+                or value.phase != "results"
+                or not status["pending"]
+                or type(convert) is not bool
+                or work.marker != current_ref(state, viewer.user_id)
+                or work.controller != viewer.user_id
+            ):
+                raise WorkflowError("Only the actual original marking Pair chooses yes or no once")
+            from girlframe.services.m2_choices import ChoiceEngine
+            from girlframe.services.p1_source_pause import require_ready
+
+            require_ready(self.game, c, state, identity)
+            _contact(self.game, c, state, value)
+            basis = _paired_basis(self.game, c, state, work.owner, work.marker)
+            sheet = state.sheets[work.owner.entity]
+            tag = next((x for x in sheet.tags if x.id == work.tag), None)
+            if (
+                basis is None
+                or basis[1] != work.relation
+                or basis[0].id != work.paired
+                or basis[0].slot != work.slot
+                or tag is None
+                or not tag.marked
+                or tag.scene_used != value.cast.id
+                or tag.rejection_pending
+            ):
+                raise WorkflowError(
+                    "Preserve the actual Pair relation, protected slot and marked Tag"
+                )
+            engine = ChoiceEngine(self.game)
+            engine.prove_tag_setter(c, state, int(work.owner.entity), tag)
+            if convert:
+                paired = basis[0]
+                if not _paired_legal(
+                    state, work.owner, paired, tag.label, engine.duplicate_labels()
+                ):
+                    raise WorkflowError(
+                        "Preserve actual duplicate-label, Limited and obsession restrictions"
+                    )
+                paired.name = tag.label
+                paired.marked = paired.id in sheet.sedation_locked
+                sheet.tags = [x for x in sheet.tags if x.id != tag.id]
+                sheet.revision += 1
+                engine.tag_resolved(state, int(work.owner.entity), tag.id)
+            event = str(uuid4())
+            rules.put(
+                state,
+                rules.ManPairedDecision(
+                    id=work.id + ":decision",
+                    work=work.id,
+                    marker=work.marker,
+                    controller=viewer.user_id,
+                    convert=convert,
+                    event=event,
+                ),
+            )
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.bonded_man_paired_chosen",
+                state,
+                event_id=event,
+                source=identity,
+            )
+            return dict(id=identity, revision=state.revision, converted=convert)
+
+        return self._write(
+            viewer,
+            key,
+            "m3.bonded_man_paired_chosen",
+            dict(id=identity, revision=revision, convert=convert),
+            operation,
+        )
+
+    def resolve_man_tag(
+        self, viewer: GuildViewer, key: str, identity: str, revision: int, answer: ChoiceAnswer
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            state = load_state(c, self.store.campaign_id)
+            value = prove(self.game, c, state, identity)
+            status = _man_resolution(self.game, c, state, value)
+            if status is None:
+                raise WorkflowError("Recover the actual source-owned repeated Tag")
+            work = status["work"]
+            if (
+                state.revision != revision
+                or value.phase != "results"
+                or status["decision"] is not None
+                or work.partner != current_ref(state, viewer.user_id)
+                or work.controller != viewer.user_id
+                or answer.text
+                or answer.fields
+                or answer.number is not None
+                or answer.member is not None
+                or answer.flag is not None
+            ):
+                raise WorkflowError(
+                    "Only the original affected partner chooses embrace or reject once"
+                )
+            from girlframe.services.m2_choices import ChoiceEngine
+            from girlframe.services.p1_source_pause import require_ready
+
+            require_ready(self.game, c, state, identity)
+            _contact(self.game, c, state, value)
+            sheet = state.sheets[work.partner.entity]
+            tag = next((x for x in sheet.tags if x.id == work.tag), None)
+            if (
+                tag is None
+                or not tag.marked
+                or tag.scene_used != value.cast.id
+                or tag.rejection_pending
+            ):
+                raise WorkflowError("Preserve the actual source-marked partner Tag")
+            engine = ChoiceEngine(self.game)
+            engine.prove_tag_setter(c, state, int(work.partner.entity), tag)
+            event, replaced, replacement = str(uuid4()), None, None
+            decision: Literal["embrace", "reject"]
+            if answer.options == ("embrace",) and len(answer.denied) == 1:
+                replaced = next(
+                    (x for x in _man_identities(state, work.partner) if x.id == answer.denied[0]),
+                    None,
+                )
+                if replaced is None or (
+                    not engine.duplicate_labels()
+                    and any(x.name.casefold() == tag.label.casefold() for x in sheet.identities)
+                ):
+                    raise WorkflowError(
+                        "Choose one actual legal unprotected Identity and preserve label policy"
+                    )
+                replacement = IdentityState(
+                    id=str(uuid4()),
+                    name=tag.label,
+                    slot=replaced.slot,
+                    marked=replaced.id in sheet.sedation_locked,
+                )
+                sheet.identities = [x for x in sheet.identities if x.id != replaced.id] + [
+                    replacement
+                ]
+                if replacement.marked:
+                    sheet.sedation_locked = tuple(
+                        x for x in sheet.sedation_locked if x != replaced.id
+                    ) + (replacement.id,)
+                sheet.tags = [x for x in sheet.tags if x.id != tag.id]
+                engine.tag_resolved(state, int(work.partner.entity), tag.id)
+                decision = "embrace"
+            elif answer.options == ("reject",) and not answer.denied:
+                if not _man_reject_allowed(state, work.partner, tag):
+                    raise WorkflowError(
+                        "Preserve actual setter consent, Mentor and Vatgrown restrictions"
+                    )
+                tag.rejection_pending = True
+                decision = "reject"
+            else:
+                raise WorkflowError(
+                    "Choose embrace with one real Identity, or reject and take actual action"
+                )
+            sheet.revision += 1
+            rules.put(
+                state,
+                rules.ManTagDecision(
+                    id=work.id + ":decision",
+                    work=work.id,
+                    partner=work.partner,
+                    controller=viewer.user_id,
+                    decision=decision,
+                    identity=replaced.id if replaced else None,
+                    replacement=replacement.id if replacement else None,
+                    event=event,
+                ),
+            )
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.bonded_man_tag_resolved",
+                state,
+                event_id=event,
+                source=identity,
+            )
+            return dict(id=identity, revision=state.revision, decision=decision)
+
+        return self._write(
+            viewer,
+            key,
+            "m3.bonded_man_tag_resolved",
+            dict(id=identity, revision=revision, answer=answer.model_dump(mode="json")),
+            operation,
+        )
+
+    def perform_man_rejection(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        revision: int,
+        account: str,
+        *,
+        requires_play: bool = False,
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            state = load_state(c, self.store.campaign_id)
+            value = prove(self.game, c, state, identity)
+            status = _man_resolution(self.game, c, state, value)
+            if status is None:
+                raise WorkflowError("Recover the real pending source-owned rejection")
+            work = status["work"]
+            if (
+                state.revision != revision
+                or value.phase != "results"
+                or work.partner != current_ref(state, viewer.user_id)
+                or work.controller != viewer.user_id
+                or status["decision"] is None
+                or status["decision"].decision != "reject"
+                or status["performance"] is not None
+                or not account.strip()
+                or len(account.strip()) > 1200
+            ):
+                raise WorkflowError(
+                    "Only the actual affected partner records its real performed rejection"
+                )
+            if requires_play:
+                raise WorkflowError(
+                    "REJECTION_PLAY_ADAPTER_REQUIRED: perform the actual mandatory Play; "
+                    "this source account cannot certify it"
+                )
+            from girlframe.services.m2_choices import ChoiceEngine
+            from girlframe.services.p1_source_pause import require_ready
+
+            require_ready(self.game, c, state, identity)
+            _contact(self.game, c, state, value)
+            sheet = state.sheets[work.partner.entity]
+            tag = next((x for x in sheet.tags if x.id == work.tag), None)
+            if (
+                tag is None
+                or not tag.rejection_pending
+                or not _man_reject_allowed(state, work.partner, tag)
+            ):
+                raise WorkflowError("Preserve the actual pending Tag and rejection restrictions")
+            engine = ChoiceEngine(self.game)
+            engine.prove_tag_setter(c, state, int(work.partner.entity), tag)
+            sheet.tags = [x for x in sheet.tags if x.id != tag.id]
+            sheet.revision += 1
+            engine.tag_resolved(state, int(work.partner.entity), tag.id)
+            event = str(uuid4())
+            rules.put(
+                state,
+                rules.ManTagRejection(
+                    id=work.id + ":performed",
+                    work=work.id,
+                    partner=work.partner,
+                    controller=viewer.user_id,
+                    account=account.strip(),
+                    event=event,
+                ),
+            )
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.bonded_man_tag_rejected",
+                state,
+                event_id=event,
+                source=identity,
+            )
+            return dict(id=identity, revision=state.revision, performed=True)
+
+        return self._write(
+            viewer,
+            key,
+            "m3.bonded_man_tag_rejected",
+            dict(id=identity, revision=revision, account=account, requires_play=requires_play),
             operation,
         )
 
@@ -1859,7 +2499,17 @@ class BondedService:
                 elif value.kind == "intimacy":
                     chooser = value.controllers[value.actor.token]
                 elif value.target is not None:
-                    chooser = value.controllers[value.target.token]
+                    paired = _paired_resolution(self.game, c, state, value)
+                    work = _man_resolution(self.game, c, state, value)
+                    chooser = (
+                        paired["work"].controller
+                        if paired and paired["pending"]
+                        else work["work"].controller
+                        if work and work["pending"]
+                        else value.controllers[
+                            _choice_person(value, _unrolled_choice(state, value)).token
+                        ]
+                    )
             result.append(
                 dict(
                     id=value.id,
@@ -1967,7 +2617,89 @@ class BondedService:
             gender = (
                 gender_tasks(self.game, c, state, value, viewer) if value.route == "seven" else []
             )
+            resolution = _man_resolution(self.game, c, state, value)
+            paired_resolution = _paired_resolution(self.game, c, state, value)
+            pending_paired = paired_resolution is not None and paired_resolution["pending"]
+            pending_resolution = resolution is not None and resolution["pending"]
+            resolution_owner = resolution is not None and resolution["work"].partner == person
+            resolution_tag = next(
+                (x for x in own.tags if resolution and x.id == resolution["work"].tag), None
+            )
+            from girlframe.services.m2_choices import ChoiceEngine
+
+            embrace_options = (
+                _man_identities(state, person)
+                if resolution_owner
+                and resolution_tag is not None
+                and (
+                    ChoiceEngine(self.game).duplicate_labels()
+                    or not any(
+                        x.name.casefold() == resolution_tag.label.casefold() for x in own.identities
+                    )
+                )
+                else []
+            )
             return dict(
+                man_paired=(
+                    dict(
+                        id=paired_resolution["work"].id,
+                        state="pending"
+                        if pending_paired
+                        else "converted"
+                        if paired_resolution["converted"]
+                        else "declined",
+                        can_choose=pending_paired and paired_resolution["work"].marker == person,
+                        owner=paired_resolution["work"].owner.model_dump(mode="json"),
+                        marker=paired_resolution["work"].marker.model_dump(mode="json"),
+                        decision=paired_resolution["decision"].model_dump(mode="json")
+                        if paired_resolution["decision"]
+                        else None,
+                        label=next(
+                            x.label
+                            for x in rules.records(state, rules.NoRollManMark)
+                            if x.source == identity
+                        ),
+                    )
+                    if paired_resolution
+                    else None
+                ),
+                man_resolution=(
+                    dict(
+                        id=resolution["work"].id,
+                        tag=resolution["work"].tag,
+                        label=next(
+                            x.label
+                            for x in rules.records(state, rules.NoRollManMark)
+                            if x.source == identity
+                        ),
+                        state="choice"
+                        if resolution["decision"] is None
+                        else "reject_action"
+                        if resolution["pending"]
+                        else "complete",
+                        decision=resolution["decision"].model_dump(
+                            mode="json",
+                            exclude=set() if resolution_owner else {"identity", "replacement"},
+                        )
+                        if resolution["decision"]
+                        else None,
+                        performance=resolution["performance"].model_dump(mode="json")
+                        if resolution["performance"]
+                        else None,
+                        can_resolve=resolution_owner and resolution["decision"] is None,
+                        can_perform=resolution_owner
+                        and resolution["pending"]
+                        and resolution["decision"] is not None,
+                        reject_allowed=bool(
+                            resolution_owner
+                            and resolution_tag
+                            and _man_reject_allowed(state, person, resolution_tag)
+                        ),
+                        identities=[dict(id=x.id, label=x.name) for x in embrace_options],
+                    )
+                    if resolution
+                    else None
+                ),
                 unrolled_gender=gender,
                 pause=pause,
                 id=identity,
@@ -2002,6 +2734,8 @@ class BondedService:
                 and (value.route == "seven" or value.kind == "intimacy"),
                 can_choose=value.phase == "results"
                 and value.action is None
+                and not pending_resolution
+                and not pending_paired
                 and person == _choice_person(value, choice_kind),
                 can_help=value.kind == "side"
                 and value.tier == "low"

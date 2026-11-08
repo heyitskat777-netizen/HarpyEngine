@@ -27,7 +27,9 @@ from girlframe.services.onboarding import WorkflowError
 PEOPLE = {2: PLAYER, 3: OTHER, 4: FOUR}
 
 
-def bonded_game(store, girl="BONDED", frame="THE ENFORCER", faces=(4, 5), *, three=False):
+def bonded_game(
+    store, girl="BONDED", frame="THE ENFORCER", faces=(4, 5), *, three=False, paired_target=False
+):
     from test_creation import selected
     from test_creation_review import ready as creation_ready
     from test_m2_game import Dice
@@ -61,6 +63,74 @@ def bonded_game(store, girl="BONDED", frame="THE ENFORCER", faces=(4, 5), *, thr
     )
     third_draft(store)
     bonds = BondService(store)
+    if paired_target:
+        from girlframe.engine.creation import AssetChoice
+        from girlframe.engine.creation_catalog import CATALOG
+        from girlframe.engine.drafts import DraftInput
+        from girlframe.engine.handler_setup import PilotRef
+        from girlframe.engine.pair_assets import PairNames
+        from girlframe.services.handler_setup import HandlerService
+        from girlframe.services.pair_assets import PairService
+
+        store.save_draft(
+            FOUR,
+            str(uuid4()),
+            store.draft(FOUR)["revision"],
+            DraftInput(
+                callsign="Actual outsider",
+                girl_playbook="BONDED",
+                frame_playbook="THE ENFORCER",
+                notes="OUTSIDER_PRIVATE_NOTES",
+            ),
+        )
+        actual_pair = bonds.propose(
+            FOUR,
+            str(uuid4()),
+            store.draft(FOUR)["revision"],
+            store.draft(PLAYER)["revision"],
+            BondProposal(target_id=2, prompt=0, context="My actual original Pair is this Girl"),
+        )
+        bonds.decide(PLAYER, str(uuid4()), actual_pair["id"], 1, "accept")
+        names = tuple(CATALOG["BONDED"]["assets"][:2])
+        PairService(store).choose(
+            PLAYER, str(uuid4()), actual_pair["id"], 2, 0, PairNames(names=names)
+        )
+        own = creation.get(FOUR)
+        creation.save(
+            FOUR,
+            str(uuid4()),
+            own.revision,
+            store.draft(FOUR)["revision"],
+            selected("BONDED", "THE ENFORCER").model_copy(
+                update={
+                    "shared_tokens": own.draft.shared_tokens,
+                    "pair_source_token": own.draft.pair_source_token,
+                    "pair_asset_descriptions": tuple(
+                        AssetChoice(name=x, description="Actual Pair-authored asset") for x in names
+                    ),
+                }
+            ),
+            expected_pair_token=own.draft.pair_source_token,
+        )
+        own = creation.get(FOUR)
+        review.select_bond(
+            FOUR,
+            str(uuid4()),
+            own.revision,
+            store.draft(FOUR)["revision"],
+            own.draft,
+            actual_pair["id"],
+        )
+        handler = HandlerService(store)
+        handler.rank(
+            ADMIN,
+            str(uuid4()),
+            handler.roster(ADMIN)["revision"],
+            tuple(
+                PilotRef(user_id=x.user_id, character_revision=store.draft(x)["revision"])
+                for x in (PLAYER, OTHER, FOUR)
+            ),
+        )
     personal = bonds.propose(
         OTHER,
         str(uuid4()),
@@ -85,11 +155,17 @@ def bonded_game(store, girl="BONDED", frame="THE ENFORCER", faces=(4, 5), *, thr
     return game, GameWorker(game), Gateway(), game.dice
 
 
-def ready(store, tmp_path, monkeypatch, *, three=False, marks=False, pair_book=None):
+def ready(
+    store, tmp_path, monkeypatch, *, three=False, marks=False, pair_book=None, paired_target=False
+):
     import test_mission_service as fixture
 
     monkeypatch.setattr(
-        fixture, "setup_game", lambda actual, **kwargs: bonded_game(actual, three=three, **kwargs)
+        fixture,
+        "setup_game",
+        lambda actual, **kwargs: bonded_game(
+            actual, three=three, paired_target=paired_target, **kwargs
+        ),
     )
     _, game = service(store, girl="BONDED", frame="THE ENFORCER")
     approved(
@@ -616,23 +692,22 @@ def test_nonpair_actual_seven_no_roll_pair_not_private_audience(ledger, tmp_path
     assert gateway.values == baseline_permissions
 
 
-def test_actual_man_optional_partner_tag_gives_source_only_high_without_dice(
-    ledger, tmp_path, monkeypatch
-):
-    """Deferred P1 normal: genuine legal assignment, source permission and owned high choices."""
+def actual_man_game(ledger, tmp_path, monkeypatch, *, paired_target=False):
+    """Shared real Handler creation, PR Award, acquisition and original Man assignment."""
     from test_gender_designation import acquire, assign
     from test_handler_creation import agree, complete, save
     from test_handler_ordinary import session_native
 
     from girlframe.engine import m3_gender_designation as gender
     from girlframe.engine import m3_handler_ordinary as ordinary
-    from girlframe.engine.m3_mockingbird import give_tag
     from girlframe.services.m3_gender_designation import GenderDesignationService
     from girlframe.services.m3_handler_creation import HandlerCreationService
     from girlframe.services.m3_handler_ordinary import HandlerOrdinaryService
     from girlframe.services.m3_handler_pr import HandlerPRService
 
-    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, three=True)
+    game, worker, gateway, controls = ready(
+        ledger, tmp_path, monkeypatch, three=True, paired_target=paired_target
+    )
     approved(
         ledger,
         game,
@@ -691,6 +766,16 @@ def test_actual_man_optional_partner_tag_gives_source_only_high_without_dice(
     acquisition = acquire(game)
     assign(GenderDesignationService(ledger), acquisition, (current_ref(state(game), 2),), "man")
 
+    return game, worker, gateway, controls
+
+
+def test_actual_man_optional_partner_tag_gives_source_only_high_without_dice(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred P1 normal: genuine legal assignment, source permission and owned high choices."""
+    from girlframe.engine.m3_mockingbird import give_tag
+
+    game, worker, gateway, controls = actual_man_game(ledger, tmp_path, monkeypatch)
     # Only this prior ordinary resource is synthetic; the legal acquisition, source,
     # optional mark, permission delivery, choices and subsequent effects are genuine.
     with ledger.transaction() as c:
@@ -768,6 +853,215 @@ def test_actual_man_optional_partner_tag_gives_source_only_high_without_dice(
     )
     assert actual.order.index(2) + 1 == actual.order.index(4)
     assert depth(actual, current_ref(actual, 2), current_ref(actual, 3)) == old_pair_depth
+    pause_tick(game, gateway)
+    assert gateway.values == permissions
+
+    # In a genuinely new scene, the same actual marked Tag creates owned work.
+    # This is the deferred repeated-Tag normal; it adds no synthetic Action/obligation.
+    game.close_scene(ADMIN, str(uuid4()), 900)
+    game.bind_scene(ADMIN, str(uuid4()), 901)
+    for who in (PLAYER, OTHER, FOUR, ADMIN):
+        game.join_scene(who, str(uuid4()), 901)
+    repeated = controls.propose(
+        PLAYER,
+        str(uuid4()),
+        901,
+        state(game).revision,
+        "sex",
+        "Actual later voluntary intimacy with the same original counterpart",
+        target=current_ref(state(game), 4),
+        route="seven",
+    )["id"]
+    controls.confirm(
+        FOUR,
+        str(uuid4()),
+        repeated,
+        state(game).revision,
+        True,
+        "My actual separate voluntary participation",
+    )
+    original_identities = state(game).sheets["4"].identities
+    chosen = next(
+        x for x in original_identities if not x.protected and not x.paired and not x.am_limiter
+    )
+    before_obligations = state(game).obligations
+    controls.activate(
+        PLAYER,
+        str(uuid4()),
+        repeated,
+        state(game).revision,
+        "Actual later performed intimacy",
+        man_tag="man-no-roll-partner-tag",
+    )
+    assert controls.view(FOUR, repeated)["man_resolution"]["state"] == "choice"
+    assert not controls.view(PLAYER, repeated)["can_choose"]
+    pause_tick(game, gateway)
+    with pytest.raises(WorkflowError):
+        controls.choose(
+            PLAYER,
+            str(uuid4()),
+            repeated,
+            state(game).revision,
+            ChoiceAnswer(options=("promise",), text="No bypass of actual owed Tag work"),
+        )
+    with pytest.raises(WorkflowError):
+        controls.resolve_man_tag(
+            PLAYER,
+            str(uuid4()),
+            repeated,
+            state(game).revision,
+            ChoiceAnswer(options=("embrace",), denied=(chosen.id,)),
+        )
+    before_resolution = state(game).revision
+    form = submit(
+        show(controls, FOUR, repeated, 89120), FOUR, {"operation": ("resolve_man_tag",)}, 89121
+    )
+    submit(form, FOUR, {"decision": ("embrace",), "identity": (chosen.id,)}, 89122)
+    controls.resolve_man_tag(
+        FOUR,
+        "89122",
+        repeated,
+        before_resolution,
+        ChoiceAnswer(options=("embrace",), denied=(chosen.id,)),
+    )
+    actual = state(game)
+    assert actual.obligations == before_obligations
+    assert not any(x.id == "man-no-roll-partner-tag" for x in actual.sheets["4"].tags)
+    assert not any(x.id == chosen.id for x in actual.sheets["4"].identities)
+    replacement = next(
+        x for x in actual.sheets["4"].identities if x.name == "Actual observed counterpart Tag"
+    )
+    assert replacement.slot == chosen.slot
+    assert len(actual.sheets["4"].identities) == len(original_identities)
+    resolved = controls.view(FOUR, repeated)["man_resolution"]
+    assert resolved["state"] == "complete" and resolved["decision"]["replacement"] == replacement.id
+    assert controls.view(PLAYER, repeated)["can_choose"]
+    with pytest.raises(WorkflowError):
+        controls.view(OTHER, repeated)
+    controls.choose(
+        PLAYER,
+        str(uuid4()),
+        repeated,
+        actual.revision,
+        ChoiceAnswer(options=("promise",), text="I actually promise to protect you"),
+    )
+    controls.choose(
+        FOUR,
+        str(uuid4()),
+        repeated,
+        state(game).revision,
+        ChoiceAnswer(text="I choose no further Tags"),
+    )
+    assert controls.view(FOUR, repeated)["phase"] == "complete"
+    assert game.dice.calls == original_calls
+    pause_tick(game, gateway)
+    assert gateway.values == permissions
+
+
+def test_actual_marking_pair_owns_optional_man_conversion_of_original_protected_slot(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred asymmetric Pair normal; no controller alias or extra target veto."""
+    from girlframe.engine.m3_mockingbird import give_tag
+
+    game, worker, gateway, controls = actual_man_game(
+        ledger, tmp_path, monkeypatch, paired_target=True
+    )
+    before = state(game)
+    with ledger.engine.connect() as c:
+        assert original_pair(game, c, before, current_ref(before, 2))[0] == current_ref(before, 3)
+        assert original_pair(game, c, before, current_ref(before, 4))[0] == current_ref(before, 2)
+    # Only the existing Tag/resource context is synthetic. Both original Pair
+    # relationships, the law, source consent, mark and conversion are real sources.
+    with ledger.transaction() as c:
+        actual, event = state(game), str(uuid4())
+        actual = give_tag(
+            actual,
+            (),
+            current_ref(actual, 4),
+            current_ref(actual, 2),
+            "Actual new Paired meaning",
+            "actual-man-paired-tag",
+            event,
+            (2, 4),
+        )
+        game.event(
+            c,
+            2,
+            str(uuid4()),
+            "synthetic.prior_observed_Paired_candidate_Tag",
+            actual,
+            event_id=event,
+        )
+    source = intimate(controls, game, 4, "seven")
+    before = state(game)
+    protected = next(x.model_copy(deep=True) for x in before.sheets["4"].identities if x.paired)
+    other_slots = [x for x in before.sheets["4"].identities if not x.paired]
+    heat = {key: value.heat for key, value in before.sheets.items()}
+    calls = game.dice.calls
+    permissions = {key: dict(value) for key, value in gateway.values.items()}
+    controls.activate(
+        PLAYER,
+        str(uuid4()),
+        source,
+        before.revision,
+        "Actual voluntary intimacy with the Girl whose real Pair I am",
+        man_tag="actual-man-paired-tag",
+    )
+    pause_tick(game, gateway)
+    owner = controls.view(FOUR, source)
+    marker = controls.view(PLAYER, source)
+    assert marker["man_paired"]["can_choose"]
+    assert not owner["man_paired"]["can_choose"] and not owner["can_choose"]
+    assert not marker["can_choose"]
+    with pytest.raises(WorkflowError):
+        controls.choose_man_paired(FOUR, str(uuid4()), source, state(game).revision, False)
+    with pytest.raises(WorkflowError):
+        controls.view(OTHER, source)
+    revision = state(game).revision
+    form = submit(
+        show(controls, PLAYER, source, 89200), PLAYER, {"operation": ("choose_man_paired",)}, 89201
+    )
+    submit(form, PLAYER, {"convert": ("yes",)}, 89202)
+    controls.choose_man_paired(PLAYER, "89202", source, revision, True)
+    actual = state(game)
+    converted = next(x for x in actual.sheets["4"].identities if x.id == protected.id)
+    assert converted.name == "Actual new Paired meaning"
+    assert converted.slot == protected.slot
+    assert converted.paired == protected.paired and converted.protected == protected.protected
+    assert converted.marked == (converted.id in actual.sheets["4"].sedation_locked)
+    assert [x for x in actual.sheets["4"].identities if not x.paired] == other_slots
+    assert len(actual.sheets["4"].identities) == len(before.sheets["4"].identities)
+    assert not any(x.id == "actual-man-paired-tag" for x in actual.sheets["4"].tags)
+    assert controls.view(FOUR, source)["man_paired"]["state"] == "converted"
+    assert controls.view(PLAYER, source)["can_choose"]
+    assert {key: value.heat for key, value in actual.sheets.items()} == heat
+    assert game.dice.calls == calls
+    assert (
+        len(
+            [
+                x
+                for x in rules.records(actual, rules.ManPairedDecision)
+                if x.marker == current_ref(actual, 2)
+            ]
+        )
+        == 1
+    )
+    controls.choose(
+        PLAYER,
+        str(uuid4()),
+        source,
+        actual.revision,
+        ChoiceAnswer(options=("promise",), text="I actually promise to protect her"),
+    )
+    controls.choose(
+        FOUR,
+        str(uuid4()),
+        source,
+        state(game).revision,
+        ChoiceAnswer(text="I choose no Tags to give"),
+    )
+    assert controls.view(FOUR, source)["phase"] == "complete"
     pause_tick(game, gateway)
     assert gateway.values == permissions
 

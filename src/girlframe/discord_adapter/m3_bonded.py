@@ -365,6 +365,16 @@ async def open_bonded(
             + data["man_mark"]["label"]
             + "; source-only 11+ (no dice or Heat)."
         )
+    resolution = data.get("man_resolution")
+    paired = data.get("man_paired")
+    if paired:
+        summary += "\nActual marking Pair's choice: " + paired["label"] + " · " + paired["state"]
+    if resolution:
+        summary += "\nActual repeated Tag: " + resolution["label"] + " · " + resolution["state"]
+        if resolution["decision"]:
+            summary += " · original partner chose " + resolution["decision"]["decision"]
+        if resolution["performance"]:
+            summary += "\nActual performed rejection: " + resolution["performance"]["account"]
     if data.get("delegation"):
         summary += "\nActual delegated source: " + data["delegation"]["session"]
         if data["delegation"].get("action"):
@@ -381,6 +391,12 @@ async def open_bonded(
     )
     if data.get("unrolled_gender"):
         options.append(("unrolled_gender", "Actual Animal Tag source / waiting state"))
+    if resolution and resolution["can_resolve"]:
+        options.append(("resolve_man_tag", "Your actual repeated Tag: embrace or reject"))
+    if resolution and resolution["can_perform"]:
+        options.append(("perform_man_rejection", "Your actual performed rejection action"))
+    if paired and paired["can_choose"]:
+        options.append(("choose_man_paired", "Your marking-Pair choice: make her Paired Identity"))
     for flag, label in (
         ("confirm", "Your own voluntary participation response"),
         ("roll", "Actual source Play"),
@@ -428,6 +444,110 @@ async def open_bonded(
                 context=data["account"],
                 channel=data["channel"],
             )
+            return None
+        if operation == "resolve_man_tag":
+            assert resolution is not None
+            choices = (
+                [("embrace", "Embrace as a real replacement Identity")]
+                if resolution["identities"]
+                else []
+            )
+            if resolution["reject_allowed"]:
+                choices.append(("reject", "Reject: owe an actual rejection action"))
+            fields = [Field("decision", "Your actual repeated-Tag choice", tuple(choices))]
+            if resolution["identities"]:
+                fields.append(
+                    Field(
+                        "identity",
+                        "If embracing: your actual legal Identity slot",
+                        tuple((x["id"], x["label"]) for x in resolution["identities"]),
+                        minimum=0,
+                        required=False,
+                    )
+                )
+
+            async def resolve(response: discord.Interaction, answer: dict[str, Any]) -> str:
+                await asyncio.to_thread(
+                    service.resolve_man_tag,
+                    viewer_from_interaction(response),
+                    str(response.id),
+                    identity,
+                    data["revision"],
+                    ChoiceAnswer(
+                        options=answer["decision"],
+                        denied=answer.get("identity", ()),
+                    ),
+                )
+                return "Your actual decision is saved. Reopen the source for any owed action."
+
+            form = NativeForm(current.user.id, "Your actual repeated Tag", summary, fields, resolve)
+            await reply(current, form.text(), form)
+            return None
+        if operation == "choose_man_paired":
+
+            async def choose_paired(response: discord.Interaction, answer: dict[str, Any]) -> str:
+                await asyncio.to_thread(
+                    service.choose_man_paired,
+                    viewer_from_interaction(response),
+                    str(response.id),
+                    identity,
+                    data["revision"],
+                    answer["convert"][0] == "yes",
+                )
+                return "Your actual marking-Pair decision is saved. Reopen the source."
+
+            form = NativeForm(
+                current.user.id,
+                "Your actual marking-Pair choice",
+                summary,
+                [
+                    Field(
+                        "convert",
+                        "Make this actual Tag her new Paired Identity?",
+                        (
+                            ("yes", "Yes: turn this Tag into her actual Paired Identity"),
+                            ("no", "No: keep her Paired Identity and marked Tag"),
+                        ),
+                    ),
+                ],
+                choose_paired,
+            )
+            await reply(current, form.text(), form)
+            return None
+        if operation == "perform_man_rejection":
+
+            async def perform(response: discord.Interaction, answer: dict[str, Any]) -> str:
+                await asyncio.to_thread(
+                    service.perform_man_rejection,
+                    viewer_from_interaction(response),
+                    str(response.id),
+                    identity,
+                    data["revision"],
+                    answer["account"],
+                    requires_play=answer["trigger"][0] == "requires_play",
+                )
+                return "Your actual performed rejection is saved. Reopen the original source."
+
+            form = NativeForm(
+                current.user.id,
+                "Your actual rejection action",
+                summary,
+                [
+                    Field(
+                        "trigger",
+                        "Does this action require a mandatory Play?",
+                        (
+                            ("no_roll", "Actually performed; no mandatory Play triggered"),
+                            ("requires_play", "Requires an actual Play; keep this source pending"),
+                        ),
+                    ),
+                    Field(
+                        "account", "Your actual performed action rejecting this Tag", paragraph=True
+                    ),
+                ],
+                perform,
+            )
+            await reply(current, form.text(), form)
             return None
         if operation == "child":
             await open_child(current, service.game, data["child"]["id"])
