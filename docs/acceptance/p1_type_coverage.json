@@ -1,9 +1,9 @@
 {
   "status": "P1_IMPLEMENTATION_AUTHORIZED_TESTING_PENDING",
-  "published_source": "8cbd27108ae79da155983168d4a95d158aebae19",
+  "published_source": "c12534dbc78d6242b949f7d0e4a88bdfe1f181f3",
   "main_merge": "c4550ecbd89bbf84363537e7bdf763c2177a998f",
   "scope": "10Girl labels;10Frame labels representing9official Frame rulesets; JANUS-B uses JANUS",
-  "evidence_note": "Published 8cbd271; focused CI42519162636 passed, full skipped. actual Vatgrown death→fresh native activation/noticing1/4.57s and prisoner breakout→movement→factual failure1/2.60s are minimum likely-flow evidence. Alternate intervention is authored but unrun. Original full M3/RULES_SUBSET and final full/global/independent/player gates remain pending.",
+  "evidence_note": "Published c12534d focused CI42519739188 passed, full skipped. Local native Ankou-required self-Dose1/4.53s and same-NPC control handover1/3.39s are scoped minimum evidence. AM endpoint implementation separate and not staged in this packet. All final P1 regression/global/independent/player gates remain pending.",
   "rows": [
     {
       "category": "Girl",
@@ -260,7 +260,7 @@
       "type": "Stim-Blissed",
       "registry_prefix": "girl.stim-blissed.",
       "status": "Published scoped implementation",
-      "ordinary_workflows_with_evidence": "Dose/drug clocks, Disposable Psyche, Malleable birth/forced embrace/NPC protection and native Sex physiology. Static reconciliation at fafce93: Dose Up/Stim Sex expire_scene consumers and Game.scene_close hooks exist; existing expiry/forced embrace tests remain authored. This reconciliation ran no gameplay tests and grants no independent certification. Local real Princess-directed Identity mark/removal now proves original Princess author and actual Stim performer/costs; native normal passed1/4.77s.",
+      "ordinary_workflows_with_evidence": "Dose/drug clocks, Disposable Psyche, Malleable birth/forced embrace/NPC protection and native Sex physiology. Static reconciliation at fafce93: Dose Up/Stim Sex expire_scene consumers and Game.scene_close hooks exist; existing expiry/forced embrace tests remain authored. This reconciliation ran no gameplay tests and grants no independent certification. Local real Princess-directed Identity mark/removal now proves original Princess author and actual Stim performer/costs; native normal passed1/4.77s. Actual Ankou-nominated native self-Dose now uses owned source/costs/drugs; native recovery/relink/real effect/private pause completion1/4.53s.",
       "missing_before_AI": "Named non-Heat Disposable Psyche consumers still need their real source adapters (Game.begin explicitly guards non-Heat variants); applicable final-Identity Feedback and counterpart/body dependencies need source-specific verification. Existing scene drug expiry, Malleable, Off-Duty and directed basic-mark removal are implemented; final authored regression and independent review remain pending.",
       "later_candidates": "Compound retained/protected Identity and exceptional carrier combinations.",
       "code": [
@@ -324,7 +324,8 @@
             "tests/rules/test_dose_up.py"
           ],
           "local_test_references": [
-            "tests/rules/test_dose_up.py"
+            "tests/rules/test_dose_up.py",
+            "tests/rules/test_required_plays.py"
           ]
         },
         {
@@ -2797,8 +2798,8 @@
       "type": "CHANGELING",
       "registry_prefix": "frame.changeling.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Core Blank Slate/String/owned-question normal passed; actual remote Oldgen source also passed. Code includes Fingers, Clay and paid sources; other normals remain unrun. Local shared body setup and eligible-subject starting repair implemented; real original Pilot import1/2.93s and original NPC evidence-to-String1/3.51s passed.",
-      "missing_before_AI": "Concrete continuity claims: genuine AM FactoryReset brain lineage is not consumed by old String/owed Question/counter same_brain checks; a genuine NPC control claim can strand an already-pending no-Action question/counter between old and new controllers. Starting owner/Handler/NPC body-facts and verified-subset import routes exist. Source-specific ordinary/exceptional classification and final authored normal verification remain; no blanket type deferral.",
+      "ordinary_workflows_with_evidence": "Core Blank Slate/String/owned-question normal passed; actual remote Oldgen source also passed. Code includes Fingers, Clay and paid sources; other normals remain unrun. Local shared body setup and eligible-subject starting repair implemented; real original Pilot import1/2.93s and original NPC evidence-to-String1/3.51s passed. Local same-NPC canonical control claim now transfers an owed question to the actual new controller after real role withdrawal/join; native answer/private replay1/3.39s. Original BrainRef/controller/authorship remains immutable.",
+      "missing_before_AI": "Genuine FactoryReset same-brain actor lineage remains required for old Strings and owed choices. Same-NPC current-author continuation is implemented. Preserve starting body/import routes; finish source-specific ordinary dependencies and deferred normals/regression/independent review.",
       "later_candidates": "No named ordinary rule approved for deferral; AI narration cannot substitute for mechanics.",
       "code": [
         "src/girlframe/engine/frame_setup.py",
@@ -2813,7 +2814,8 @@
         "tests/rules/test_frame_reward_service.py",
         "tests/rules/test_changeling.py",
         "tests/rules/test_changeling_sex.py",
-        "tests/rules/test_body_facts.py"
+        "tests/rules/test_body_facts.py",
+        "tests/rules/test_changeling_continuity.py"
       ],
       "rule_inventory": [
         {
@@ -2893,7 +2895,8 @@
             "tests/rules/test_changeling.py"
           ],
           "local_test_references": [
-            "tests/rules/test_changeling.py"
+            "tests/rules/test_changeling.py",
+            "tests/rules/test_changeling_continuity.py"
           ]
         },
         {
@@ -3018,7 +3021,7 @@
       "type": "Project Ankou",
       "registry_prefix": "frame.ankou.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Existing final-Identity Feedback retained. New native mid-Processor/resources/private reopen/unlink normal passed; candidate includes Relay, Fawn, Obsessive and paid sources. Other new normals unrun.",
+      "ordinary_workflows_with_evidence": "Existing final-Identity Feedback retained. New native mid-Processor/resources/private reopen/unlink normal passed; candidate includes Relay, Fawn, Obsessive and paid sources. Other new normals unrun. Local required native Stim self-Dose is the second finite own-recipe consumer beside Alpha, with real costs/drugs/recovery/nomination and pause completion1/4.53s.",
       "missing_before_AI": "Ordinary source-family and NPC child/nominee continuations; final authored lifecycle normals and exact-commit regression, independent/player review.",
       "later_candidates": "Exceptional carrier/counterpart combinations after the ordinary playbook. Feedback is not the whole Frame.",
       "code": [

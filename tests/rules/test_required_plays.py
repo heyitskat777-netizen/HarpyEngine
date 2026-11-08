@@ -265,3 +265,141 @@ def test_actual_nomination_native_alpha_consent_cancel_retry_effects_and_pause_r
     assert {k[0] + k[1]: v for k, v in gateway.values.items()} == json.loads(
         json.dumps(gateway.original)
     )
+
+
+def test_actual_nomination_native_stim_self_dose_cancel_relink_drugs_and_pause_restore(
+    ledger, tmp_path, monkeypatch
+):
+    """Authored P1 normal; genuine nomination, own Dose, real costs and cocktail choices."""
+    from girlframe.discord_adapter.m3_dose_up import open_choice as open_dose_choice
+    from girlframe.engine import m3_dose_up as dose
+    from girlframe.engine.m3_actor_bonds import set_depth
+    from girlframe.services.m3_dose_up import DoseUpService
+    from girlframe.services.m3_dose_up import prove as prove_dose
+
+    _, game = service(ledger, girl="STIM-BLISSED", frame=ankou.FRAME)
+    approved(ledger, game, tmp_path, monkeypatch, extra=(ankou.RELAY, dose.RULE))
+    with ledger.transaction() as c:
+        actual = state(game)
+        actual.world = initial()
+        actual = place(place(actual, 2, mode="outside_frame"), 3, mode="outside_frame")
+        actual.sheets["2"].heat = 3
+        event = str(uuid4())
+        # Explicit synthetic initial campaign relationship, not an Alpha entitlement or result.
+        actual = set_depth(actual, current_ref(actual, 2), current_ref(actual, 3), 2, event)
+        game.event(c, 1, event, "synthetic.initial_native_stim_ankou_intense_relationship", actual)
+    worker, gateway = GameWorker(game), Gateway()
+    controls, required = AnkouService(game), RequiredPlayService(game)
+    relay = controls.activate_relay(
+        PLAYER,
+        str(uuid4()),
+        900,
+        state(game).revision,
+        ("speech", "touch"),
+        "I activate my actual original Frame's Emotional Relay",
+    )["id"]
+    controls.choose_consequence(
+        ADMIN,
+        str(uuid4()),
+        state(game).revision,
+        relay,
+        "nominees",
+        "The actual original Intense partner nominates an actual Play",
+    )
+    nomination = next(
+        x
+        for x in ankou.records(state(game), ankou.Task)
+        if x.source == relay and x.kind == "nominate" and x.actor == current_ref(state(game), 3)
+    )
+    offered = controls.view(OTHER, nomination.id)["nomination_options"]
+    assert dose.PLAY in offered and alpha.PLAY not in offered
+    controls.choose_task(
+        OTHER,
+        str(uuid4()),
+        state(game).revision,
+        nomination.id,
+        dose.PLAY,
+        "I nominate her genuine own Dose Up without choosing her cocktail or spending her Heat",
+    )
+    task = next(
+        x
+        for x in ankou.records(state(game), ankou.Task)
+        if x.source == relay and x.kind == "perform"
+    )
+    asyncio.run(SourcePauseWorker(game).tick(gateway))
+    with ledger.engine.connect() as c:
+        assert projection(game, c, task.id)["state"] == "held"
+        assert not game.pending_actions(c)
+    with pytest.raises(WorkflowError):
+        required.menu(OTHER, task.id)
+    native(lambda i: open_required(i, game, task.id), operation=("self_dose",))
+    first = rules.records(state(game))[-1]
+    assert first.rule == dose.RULE and first.actor == first.target
+    assert not alpha.sessions(state(game))
+    assert not dose.records(state(game), dose.Contact)
+    assert not dose.records(state(game), dose.Dose)
+
+    def start():
+        dose_menu = native(lambda i: open_required(i, game, task.id), operation=("play",))
+        form = submit(dose_menu, action=("self",))
+        submit(form, heat=("1",), account="I actually self-inject my own combat cocktail")
+        with ledger.engine.connect() as c:
+            action = game.action(c, game.lock(c, 900)["action_id"])
+        selected = rules.records(state(game))[-1]
+        assert action["data"]["prepared"]["source_work"] == selected.recipe
+        assert action["data"]["dose_up"]["required_recipe"] == selected.recipe
+        assert action["data"]["dose_up"]["contact"] is None
+        assert action["data"]["ankou_effect_child"]["id"] == task.id
+        return action["id"]
+
+    abandoned = start()
+    before, calls = state(game), game.dice.calls
+    game.abort(ADMIN, str(uuid4()), abandoned)
+    tick(worker, gateway, 5)
+    recovery = RecoveryService(game)
+    saved = next(x for x in recovery.saved(PLAYER) if x["id"] == abandoned)
+    assert saved["cancellable"] and not saved["rolled"]
+    key = str(uuid4())
+    cancelled = recovery.recover(PLAYER, key, abandoned, saved["revision"], cancel=True)
+    assert recovery.recover(PLAYER, key, abandoned, saved["revision"], cancel=True) == cancelled
+    assert rules.get(state(game), first.id).retired_event
+    assert state(game).sheets["2"].heat == before.sheets["2"].heat
+    assert game.dice.calls == calls and not dose.records(state(game), dose.Dose)
+    assert not ankou.get(state(game), ankou.Task, task.id).completed_event
+    revision, key = state(game).revision, str(uuid4())
+    linked = required.link_self_dose(PLAYER, key, task.id, revision)
+    assert required.link_self_dose(PLAYER, key, task.id, revision) == linked
+    assert linked["id"] != first.id and linked["recipe"] != first.recipe
+    assert len(rules.self_dose_recipes(state(game))) == 2
+    action = start()
+    game.dice.faces = (3, 4)
+    tick(worker, gateway, 3)
+    if game.inspect(PLAYER, action)["state"] != "tag_window":
+        game.roll(PLAYER, str(uuid4()), action)
+    pass_tags(game)
+    row = next(x for x in game.choices(PLAYER) if x["kind"] == "dose_up_components")
+    decision = game.decision(PLAYER, row["id"])
+    native(lambda i: open_dose_choice(i, game, decision), components=("quick", "strong"))
+    actual = state(game)
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    assert actual.sheets["2"].heat == before.sheets["2"].heat - 1
+    assert len(dose.drug_tags(actual, current_ref(actual, 2))) == 2
+    assert ankou.get(actual, ankou.Task, task.id).completed_event
+    assert required.menu(PLAYER, task.id)["completed"]
+    with ledger.engine.connect() as c:
+        actual_dose = prove_dose(game, c, actual, action)
+        assert actual_dose.actor == actual_dose.target == first.actor
+        assert actual_dose.contact is None and actual_dose.order is None
+        assert actual_dose.total == 8 and actual_dose.heat == 1
+        assert prove(game, c, actual, linked["id"]).completed_event
+    assert game.dice.calls == calls + 1
+    assert DoseUpService(ledger, game).view(PLAYER, action)["components"]
+    with pytest.raises(WorkflowError):
+        DoseUpService(ledger, game).view(OTHER, action)
+    tick(worker, gateway, 5)
+    asyncio.run(SourcePauseWorker(game).tick(gateway))
+    with ledger.engine.connect() as c:
+        assert projection(game, c, task.id)["state"] == "closed"
+    assert {k[0] + k[1]: v for k, v in gateway.values.items()} == json.loads(
+        json.dumps(gateway.original)
+    )

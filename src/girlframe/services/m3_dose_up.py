@@ -229,6 +229,20 @@ def order_source(
     return value
 
 
+def self_recipe_context(
+    game: GameService, c: Connection, state: GameState, actor: ActorRef, cast: SceneCast
+) -> tuple[str | None, str | None]:
+    """Real native owned-source context; this does not grant Dose or create contact."""
+    actual = _operator(game, c, state, actor)
+    if (
+        state.sheets[actor.entity].girl != "STIM-BLISSED"
+        or _cast(game, c, state, cast.channel) != cast
+        or not any(x.actor == actor and x.controller == int(actor.entity) for x in cast.roles)
+    ):
+        raise WorkflowError("Use the actual native Stim's own original source scene")
+    return actual.position_sha256, actual.vessel_id
+
+
 def prepare(
     game: GameService,
     c: Connection,
@@ -255,6 +269,7 @@ def prepare(
         raise WorkflowError("Use the original available Dose Up actor and ordinary source scene")
     target = prepared.target_actor or actor
     reach = None
+    required_recipe = None
     if target != actor:
         reach = contact(game, c, state, prepared.source_work or "")
         if (reach.actor, reach.target, reach.cast.channel) != (actor, target, channel):
@@ -265,7 +280,19 @@ def prepare(
         if prepared.order_id:
             raise WorkflowError("The printed Order component override is for self-dosing")
     elif prepared.source_work:
-        raise WorkflowError("Self-dose uses the actual original body without a foreign contact")
+        from girlframe.services.m3_required_plays import self_dose_for_play
+
+        required_recipe = self_dose_for_play(game, c, state, prepared)
+        if required_recipe is None:
+            raise WorkflowError("Self-dose uses the actual original body without a foreign contact")
+        position, vessel = self_recipe_context(game, c, state, actor, cast)
+        if (
+            required_recipe.actor != actor
+            or required_recipe.cast != cast
+            or required_recipe.actor_position != position
+            or required_recipe.actor_vessel != vessel
+        ):
+            raise WorkflowError("Reopen this actual own self-Dose in its original body and scene")
     other = _native(game, c, state, target)
     source_order = (
         order_source(game, c, state, actor, prepared.order_id) if prepared.order_id else None
@@ -273,7 +300,7 @@ def prepare(
     if source_order is not None and source_order.cast != cast:
         raise WorkflowError("Use the actual followed dosing Order in its original scene")
     assert cast.facilitator is not None
-    return dict(
+    result = dict(
         actor=actor.model_dump(mode="json"),
         target=target.model_dump(mode="json"),
         caster=actual.controller,
@@ -288,6 +315,9 @@ def prepare(
         phase="unrolled",
         selections=[],
     )
+    if required_recipe is not None:
+        result["required_recipe"] = required_recipe.id
+    return result
 
 
 def pre_roll(
@@ -297,7 +327,7 @@ def pre_roll(
     expected = prepare(game, c, viewer, state, prepared, int(action["channel_id"]))
     meta = action["data"]["dose_up"]
     if any(
-        meta.get(key) != expected[key]
+        meta.get(key) != expected.get(key)
         for key in (
             "actor",
             "target",
@@ -310,6 +340,7 @@ def pre_roll(
             "contact",
             "order",
             "chooser",
+            "required_recipe",
         )
     ):
         raise WorkflowError("Recover the unchanged actual Dose Up source before spending or RNG")
@@ -741,6 +772,21 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         or value.order != meta["order"]
     ):
         raise WorkflowError("Recover the actual original Dose Up actor, receipt and source context")
+    if meta.get("required_recipe"):
+        from girlframe.services.m3_required_plays import self_dose_for_play
+
+        recipe = self_dose_for_play(
+            game, c, state, PlayInput.model_validate(action["data"]["prepared"])
+        )
+        if (
+            recipe is None
+            or recipe.id != meta["required_recipe"]
+            or recipe.actor != value.actor
+            or recipe.target != value.target
+            or value.contact is not None
+            or value.order is not None
+        ):
+            raise WorkflowError("Preserve the exact actual nominated self-Dose recipe")
     _scene_ends(game, c, state, value)
     chooser = value.caster
     if value.order is not None:

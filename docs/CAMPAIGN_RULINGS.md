@@ -3924,3 +3924,14 @@ timeout, invented NPC roll or forced capture Play. Natural Rebellion increases
 Low to High, with High remaining High. Other custody and dealing sources retain
 explicit adapter requirements. This delegated recommendation requires clarity
 review; preserve all actual custody/performance/receipt/Strain history.
+
+### Actual NPC control and pending psychic choices
+
+`same-npc-pending-choice-controller` (PDF82/printed80): an actual canonical NPC
+control claim may hand unfulfilled same-brain choices to the current controller.
+Preserve original BrainRefs, questions, String spending and source authors. Prove
+the unchanged NPC and brain; old human withdraws stale OOC casting and the new
+human joins the original role before answering. Private tasks follow actual
+current authority. No new String, NPC Girl reciprocal right or automatic answer
+is granted. FactoryReset actor lineage remains separate. This delegated
+interpretation requires clarity review; future changes preserve earlier events.

@@ -1,4 +1,4 @@
-"""A finite required-context adapter; Alpha keeps its own source, costs and consent."""
+"""Finite required context; each real recipe retains its own costs and consent."""
 
 import json
 from typing import Any
@@ -10,6 +10,7 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine import m3_alpha_sex as alpha
 from girlframe.engine import m3_ankou as ankou
+from girlframe.engine import m3_dose_up as dose
 from girlframe.engine import m3_required_plays as rules
 from girlframe.engine.m2 import GameState, PlayInput
 from girlframe.engine.m3_actor_bonds import current_ref, depth
@@ -37,13 +38,19 @@ def nomination_options(
     registry = Access(game.store).registry
     if sheet is None or sheet.character_id != nominee.incarnation or registry is None:
         return ()
-    if not has_rule(sheet, alpha.RULE, "ALPHA"):
-        return ()
-    try:
-        registry.require_available(alpha.RULE)
-    except ValueError:
-        return ()
-    return (alpha.PLAY,)
+    result = []
+    for rule, play, girl in (
+        (alpha.RULE, alpha.PLAY, "ALPHA"),
+        (dose.RULE, dose.PLAY, "STIM-BLISSED"),
+    ):
+        if not has_rule(sheet, rule, girl) or (play == dose.PLAY and sheet.girl != girl):
+            continue
+        try:
+            registry.require_available(rule)
+        except ValueError:
+            continue
+        result.append(play)
+    return tuple(result)
 
 
 def _task(game: GameService, c: Connection, state: GameState, source: str) -> ankou.Task:
@@ -76,7 +83,7 @@ def _task(game: GameService, c: Connection, state: GameState, source: str) -> an
     if (
         not peers
         or value.options != tuple(dict.fromkeys(choices))
-        or alpha.PLAY not in value.options
+        or not {alpha.PLAY, dose.PLAY}.intersection(value.options)
     ):
         raise WorkflowError("Use only the actual printed nominees' supported offered Play")
     return value
@@ -136,16 +143,30 @@ def _birth(game: GameService, c: Connection, state: GameState, identity: str) ->
             raise WorkflowError(
                 "Preserve the actual unrolled cancellation and original linked reservation"
             )
-        released_recipe = alpha.get(_history(c, game, release.event), value.recipe)
-        original_recipe = alpha.get(_history(c, game, value.event), value.recipe)
-        if (
-            released_recipe.phase != "accepted"
-            or released_recipe.action is not None
-            or released_recipe.consent_event != original_recipe.consent_event
-        ):
-            raise WorkflowError(
-                "Cancellation preserves the original accepted source without performed effects"
-            )
+        if value.rule == alpha.RULE:
+            released_recipe = alpha.get(_history(c, game, release.event), value.recipe)
+            original_recipe = alpha.get(_history(c, game, value.event), value.recipe)
+            if (
+                released_recipe.phase != "accepted"
+                or released_recipe.action is not None
+                or released_recipe.consent_event != original_recipe.consent_event
+            ):
+                raise WorkflowError(
+                    "Cancellation preserves the original accepted source without performed effects"
+                )
+        else:
+            original_dose = rules.self_dose_recipe(_history(c, game, value.event), value.recipe)
+            if (
+                rules.self_dose_recipe(_history(c, game, release.event), value.recipe)
+                != original_dose
+            ):
+                raise WorkflowError("Preserve the original self-Dose recipe after cancellation")
+            cancelled = game.action(c, release.action)
+            if cancelled["data"].get("receipt") or any(
+                x.id == release.action
+                for x in dose.records(_history(c, game, release.event), dose.Dose)
+            ):
+                raise WorkflowError("An actually rolled or applied Dose cannot be cancelled")
     if value.retired_event and (
         not value.releases
         or value.releases[-1].event != value.retired_event
@@ -168,30 +189,75 @@ def _active(game: GameService, c: Connection, state: GameState) -> tuple[rules.R
     return tuple(x for x in values if x.retired_event is None)
 
 
+def _prove_self_dose(
+    game: GameService, c: Connection, state: GameState, value: rules.RequiredLink
+) -> rules.SelfDoseRecipe:
+    recipe = rules.self_dose_recipe(state, value.recipe)
+    born = _history(c, game, value.event)
+    original = rules.self_dose_recipe(born, value.recipe)
+    sheet = born.sheets.get(value.actor.entity)
+    if (
+        recipe != original
+        or recipe.event != value.event
+        or recipe.source != value.source
+        or recipe.actor != value.actor
+        or recipe.target != value.target
+        or recipe.target != recipe.actor
+        or recipe.cast != value.cast
+        or sheet is None
+        or sheet.character_id != value.actor.incarnation
+        or sheet.girl != "STIM-BLISSED"
+        or not has_rule(sheet, dose.RULE, "STIM-BLISSED")
+    ):
+        raise WorkflowError("Recover the actual immutable native owned self-Dose source")
+    return recipe
+
+
+def self_dose_for_play(
+    game: GameService, c: Connection, state: GameState, prepared: PlayInput
+) -> rules.SelfDoseRecipe | None:
+    value = link_for_play(game, c, state, prepared)
+    if value is None:
+        return None
+    if (
+        value.rule != dose.RULE
+        or prepared.order_id
+        or prepared.target_actor not in (None, value.actor)
+    ):
+        raise WorkflowError("Use the actual self-Dose recipe without a foreign Contact or Order")
+    return _prove_self_dose(game, c, state, value)
+
+
 def prove(game: GameService, c: Connection, state: GameState, identity: str) -> rules.RequiredLink:
     from girlframe.services.m3_alpha_sex import prove as prove_alpha
 
     value = _birth(game, c, state, identity)
     task = _task(game, c, state, value.source)
-    recipe = prove_alpha(game, c, state, value.recipe)
-    if (
-        value.actor != task.actor
-        or value.cast != task.cast
-        or recipe.actor != value.actor
-        or recipe.target != value.target
-        or fingerprint(recipe.cast) != fingerprint(value.cast)
-        or recipe.bonded_source is not None
-        or recipe.changeling_source is not None
-    ):
-        raise WorkflowError(
-            "Use this actual actor's own Alpha source; no borrowed or psychic authority"
-        )
+    if value.actor != task.actor or value.cast != task.cast:
+        raise WorkflowError("Preserve the original nominated actor and source cast")
+    if value.rule == dose.RULE:
+        own_dose = _prove_self_dose(game, c, state, value)
+        if dose.PLAY not in task.options or own_dose.target != value.actor:
+            raise WorkflowError("Use only the actual nominated owned self-Dose")
+    else:
+        recipe = prove_alpha(game, c, state, value.recipe)
+        if (
+            alpha.PLAY not in task.options
+            or recipe.actor != value.actor
+            or recipe.target != value.target
+            or fingerprint(recipe.cast) != fingerprint(value.cast)
+            or recipe.bonded_source is not None
+            or recipe.changeling_source is not None
+        ):
+            raise WorkflowError(
+                "Use this actual actor's own Alpha source; no borrowed or psychic authority"
+            )
     if value.bound_event:
         bound = rules.get(_history(c, game, value.bound_event), identity)
         if (
             bound.action != value.action
             or bound.bound_event != value.bound_event
-            or recipe.action != value.action
+            or (value.rule == alpha.RULE and alpha.get(state, value.recipe).action != value.action)
             or task.child != value.action
         ):
             raise WorkflowError("Preserve the exact single real bound recipe Action")
@@ -212,8 +278,10 @@ def link_for_play(
     candidates = [x for x in _active(game, c, state) if x.recipe == prepared.source_work]
     if not candidates:
         return None
-    if len(candidates) != 1 or prepared.play != alpha.PLAY:
-        raise WorkflowError("Use the exact linked Alpha recipe and required context")
+    if len(candidates) != 1 or prepared.play != (
+        dose.PLAY if candidates[0].rule == dose.RULE else alpha.PLAY
+    ):
+        raise WorkflowError("Use the exact linked own recipe and required context")
     return prove(game, c, state, candidates[0].id)
 
 
@@ -248,9 +316,14 @@ def for_play(
         or current_ref(state, viewer.user_id) != value.actor
     ):
         raise WorkflowError("Only the original actual actor performs this unbound required source")
-    from girlframe.services.m3_alpha_sex import prepare as prepare_alpha
+    if value.rule == dose.RULE:
+        from girlframe.services.m3_dose_up import prepare as prepare_dose
 
-    prepare_alpha(game, c, viewer, state, prepared, channel)
+        prepare_dose(game, c, viewer, state, prepared, channel)
+    else:
+        from girlframe.services.m3_alpha_sex import prepare as prepare_alpha
+
+        prepare_alpha(game, c, viewer, state, prepared, channel)
     from girlframe.services.m3_ankou_feedback_sequences import prepare_child
 
     meta = prepare_child(game, c, viewer, state, prepared, channel)
@@ -272,10 +345,14 @@ def _action(value: rules.RequiredLink, action: dict[str, Any]) -> None:
     if (
         action["id"] != value.action
         or action.get("parent_id") is not None
-        or action["data"]["play"] != alpha.PLAY
+        or action["data"]["play"] != (dose.PLAY if value.rule == dose.RULE else alpha.PLAY)
         or actual_action_actor(action) != value.actor
         or action["data"].get("prepared", {}).get("source_work") != value.recipe
-        or action["data"].get("alpha_sex", {}).get("session") != value.recipe
+        or (
+            action["data"].get("dose_up", {}).get("required_recipe") != value.recipe
+            if value.rule == dose.RULE
+            else action["data"].get("alpha_sex", {}).get("session") != value.recipe
+        )
         or meta.get("id") != value.source
         or meta.get("required_link") != value.id
         or meta.get("recipe") != value.recipe
@@ -333,9 +410,17 @@ def completion_ready(
             raise WorkflowError("Recover the actual bound required source")
         return True
     value = prove(game, c, state, candidates[0].id)
-    recipe = alpha.get(state, value.recipe)
+    if value.rule == dose.RULE:
+        if action["data"].get("dose_up", {}).get("phase") != "complete":
+            return False
+        from girlframe.services.m3_dose_up import prove as prove_dose
+
+        actual_dose = prove_dose(game, c, state, action["id"])
+        ready = actual_dose.actor == value.actor and actual_dose.target == value.target
+    else:
+        ready = alpha.get(state, value.recipe).phase == "complete"
     return bool(
-        recipe.phase == "complete"
+        ready
         and action["state"] == "complete"
         and action["data"].get("receipt")
         and not game.pending(c, action["id"])
@@ -425,6 +510,8 @@ class RequiredPlayService:
             from girlframe.services.m3_alpha_sex import _contact
             from girlframe.services.m3_alpha_sex import prove as prove_alpha
 
+            if alpha.PLAY not in task.options:
+                raise WorkflowError("Alpha was not offered by these actual nominators")
             own = prove_alpha(self.game, c, state, recipe)
             if (
                 own.phase != "accepted"
@@ -475,6 +562,74 @@ class RequiredPlayService:
             authorize=lambda c: _access(self.game, c, viewer),
         )
 
+    def link_self_dose(
+        self, viewer: GuildViewer, key: str, source: str, revision: int
+    ) -> dict[str, Any]:
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            state = load_state(c, self.store.campaign_id)
+            task = self._owner(c, viewer, state, source)
+            if state.revision != revision:
+                raise WorkflowError("STALE_REQUIRED_PLAY: reopen the actual source")
+            if (
+                task.completed_event
+                or task.child
+                or dose.PLAY not in task.options
+                or dose.PLAY not in nomination_options(self.game, c, state, task.actor)
+                or any(x.source == source for x in _active(self.game, c, state))
+            ):
+                raise WorkflowError("Select only an actual pending owned nominated self-Dose")
+            from girlframe.services.m3_dose_up import self_recipe_context
+            from girlframe.services.p1_source_pause import require_ready
+
+            position, vessel = self_recipe_context(self.game, c, state, task.actor, task.cast)
+            require_ready(self.game, c, state, task.id)
+            event, recipe_id = str(uuid4()), str(uuid4())
+            recipe = rules.SelfDoseRecipe(
+                id=recipe_id,
+                source=source,
+                actor=task.actor,
+                target=task.actor,
+                cast=task.cast,
+                event=event,
+                actor_position=position,
+                actor_vessel=vessel,
+            )
+            rules.put_self_dose_recipe(state, recipe)
+            value = rules.RequiredLink(
+                id=rules.identity(source, recipe_id, event),
+                source=source,
+                recipe=recipe_id,
+                rule="girl.stim-blissed.dose-up",
+                actor=task.actor,
+                target=task.actor,
+                cast=task.cast,
+                event=event,
+            )
+            rules.put(state, value)
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.required_play_linked",
+                state,
+                event_id=event,
+                source=source,
+                recipe=recipe_id,
+                link=value.id,
+            )
+            return dict(id=value.id, source=source, recipe=recipe_id, revision=state.revision)
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.required_play_linked",
+            dict(source=source, revision=revision, self_dose=True),
+            operation,
+            auto_audit=False,
+            authorize=lambda c: _access(self.game, c, viewer),
+        )
+
     def menu(self, viewer: GuildViewer, source: str) -> dict[str, Any]:
         with self.store.engine.connect() as c:
             state = load_state(c, self.store.campaign_id)
@@ -487,7 +642,7 @@ class RequiredPlayService:
 
             accepted = []
             invitations = []
-            for recipe in alpha.sessions(state):
+            for recipe in alpha.sessions(state) if alpha.PLAY in task.options else ():
                 if (
                     recipe.actor != task.actor
                     or recipe.cast.id != task.cast.id
@@ -515,6 +670,11 @@ class RequiredPlayService:
 
             return dict(
                 source=source,
+                self_dose=(
+                    dose.PLAY in task.options
+                    and dose.PLAY in nomination_options(self.game, c, state, task.actor)
+                ),
+                alpha_offered=alpha.PLAY in task.options,
                 revision=state.revision,
                 actor=task.actor.model_dump(mode="json"),
                 channel=task.cast.channel,
@@ -552,22 +712,24 @@ def release_unrolled(
             t.m2["m2_receipts"].c.action_id == action["id"],
         )
     )
-    recipe = alpha.get(state, value.recipe)
     if (
         not event
         or value.completed_event
         or action["data"].get("receipt")
         or receipt is not None
         or not value.bound_event
-        or recipe.phase != "active"
-        or recipe.action != action["id"]
-        or recipe.effect_event is not None
     ):
-        raise WorkflowError(
-            "Cancel only this genuine unrolled source; preserve every known receipt and effect"
-        )
+        raise WorkflowError("Cancel only a genuine unrolled source, preserving known receipts")
+    if value.rule == alpha.RULE:
+        recipe = alpha.get(state, value.recipe)
+        if recipe.phase != "active" or recipe.action != action["id"] or recipe.effect_event:
+            raise WorkflowError("Preserve every actual Alpha effect")
+        alpha.put(state, recipe.model_copy(update={"action": None, "phase": "accepted"}))
+    elif action["data"].get("dose_up", {}).get("phase") != "unrolled" or any(
+        x.id == action["id"] for x in dose.records(state, dose.Dose)
+    ):
+        raise WorkflowError("Preserve every actual Dose effect")
     release = rules.Release(action=action["id"], bound_event=value.bound_event, event=event)
-    alpha.put(state, recipe.model_copy(update={"action": None, "phase": "accepted"}))
     rules.put(
         state,
         value.model_copy(

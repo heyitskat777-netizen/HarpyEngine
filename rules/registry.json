@@ -7013,6 +7013,22 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "same-npc-pending-choice-controller",
+      "summary": "A real NPC control claim hands unfulfilled same-brain choices to the actual current controller after actual source-scene casting; immutable original authors and eligibility remain.",
+      "source": "Rulebook PDF82/printed80 Psych Strings/Fingers; canonical NPC control-claim and explicit OOC casting",
+      "rationale": "Changing a human role controller does not replace the NPC brain or authorize that former controller to answer. Historical BrainRefs are provenance, not a permanent permission grant.",
+      "policy_key": "same_npc_pending_choice_controller",
+      "alternatives": [
+        "Require a separate explicit controller-handover operation while keeping the same historical sources."
+      ],
+      "implementation_note": "Prove canonical same-NPC controller-only before/after claim and same live BrainRef. Old human withdraws stale OOC casting; new human explicitly joins original source role. Then current controller authors pending choices through existing service. Private current-role tasks/readback follow actual authority. No new String, invented human-NPC reciprocal choice, fake viewer or old record rewrite. FactoryReset actor continuity remains a separate port.",
+      "change_impact": "Preserve old questions, String spending, source controllers and canonical answer-event author. Future handover policy changes never rewrite prior answers.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -8768,7 +8784,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_dose_up.py"
+        "tests/rules/test_dose_up.py",
+        "tests/rules/test_required_plays.py"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -11885,7 +11902,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_changeling.py"
+        "tests/rules/test_changeling.py",
+        "tests/rules/test_changeling_continuity.py"
       ],
       "m2_play_id": null,
       "module": "core",

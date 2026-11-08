@@ -49,7 +49,11 @@ async def open_choice(
 
 
 async def open_dose_up(
-    interaction: discord.Interaction, service: DoseUpService, identity: str | None = None
+    interaction: discord.Interaction,
+    service: DoseUpService,
+    identity: str | None = None,
+    *,
+    required_link: str | None = None,
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     if identity is not None:
@@ -72,14 +76,34 @@ async def open_dose_up(
         await reply(interaction, text)
         return
     channel = int(interaction.channel_id or 0)
+    required = None
+    if required_link is not None:
+        from girlframe.services.m3_required_plays import RequiredPlayService
+
+        required_data = await asyncio.to_thread(
+            RequiredPlayService(service.game).view, viewer, required_link
+        )
+        required = required_data["link"]
+        if (
+            required is None
+            or required["id"] != required_link
+            or required["rule"] != "girl.stim-blissed.dose-up"
+            or required["action"]
+            or required_data["completed"]
+            or channel != required_data["channel"]
+        ):
+            from girlframe.services.onboarding import WorkflowError
+
+            raise WorkflowError("Reopen the actual original pending self-Dose source")
     data = await asyncio.to_thread(service.menu, viewer, channel)
     options: list[tuple[str, str]] = []
     if data["can_dose"]:
         options.append(("self", "Dose yourself"))
-    if data["targets"]:
+    if required is None and data["targets"]:
         options.append(("contact", "Record actual close vein reach"))
-    options.extend(("other:" + x["id"], "Dose " + x["label"]) for x in data["contacts"])
-    options.extend(("history:" + x["id"], x["label"]) for x in data["history"])
+    if required is None:
+        options.extend(("other:" + x["id"], "Dose " + x["label"]) for x in data["contacts"])
+        options.extend(("history:" + x["id"], x["label"]) for x in data["history"])
     if not options:
         await reply(
             interaction, "No current source-owned Dose Up controls or private history here."
@@ -138,7 +162,7 @@ async def open_dose_up(
                 ),
                 Field("account", "Your actual dosing trigger", paragraph=True),
             ]
-            if selected == "self" and data["orders"]:
+            if selected == "self" and data["orders"] and required is None:
                 fields.append(
                     Field(
                         "order",
@@ -162,8 +186,14 @@ async def open_dose_up(
                         heat=int(answer["heat"][0]),
                         context=answer["account"],
                         trigger_confirmed=True,
-                        source_work=source["id"] if source else None,
-                        target_actor=ActorRef.model_validate(source["target"]) if source else None,
+                        source_work=required["recipe"]
+                        if required
+                        else source["id"]
+                        if source
+                        else None,
+                        target_actor=ActorRef.model_validate(required["target"])
+                        if required
+                        else (ActorRef.model_validate(source["target"]) if source else None),
                         order_id=order if order != "none" else None,
                     ),
                 )

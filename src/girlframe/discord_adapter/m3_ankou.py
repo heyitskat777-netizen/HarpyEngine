@@ -902,7 +902,7 @@ async def _child(
             ],
             choose,
         )
-    elif selected == "alpha_sex":
+    elif selected in ("alpha_sex", "dose_up"):
         from girlframe.discord_adapter.m3_required_plays import open_required
 
         await open_required(interaction, game, parent["body"]["source_work"])

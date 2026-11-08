@@ -279,13 +279,15 @@ async def _saved(
                 )
             ]
         elif any(
-            x["answer_event"] is None and x["answerer"]["controller"] == interaction.user.id
+            x["answer_event"] is None
+            and x.get("current_answerer", x["answerer"]["controller"]) == interaction.user.id
             for x in shown.get("questions", ())
         ):
             unanswered = [
                 x
                 for x in shown["questions"]
-                if x["answer_event"] is None and x["answerer"]["controller"] == interaction.user.id
+                if x["answer_event"] is None
+                and x.get("current_answerer", x["answerer"]["controller"]) == interaction.user.id
             ]
             fields = [
                 Field(

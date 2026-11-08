@@ -458,6 +458,84 @@ def _live(
     return actual
 
 
+def _choice_controller(
+    game: GameService, c: Connection, state: GameState, expected: rules.BrainRef
+) -> int:
+    """Continue an unchanged NPC brain through its real controller claim.
+
+    Historical BrainRefs and event authors stay immutable. This accepts neither
+    another actor nor a new brain merely because a human account is shared.
+    """
+    if expected.actor.kind != "npc" or state.world is None:
+        return expected.controller
+    npc = next((x for x in state.world.npcs if x.id == expected.actor.entity), None)
+    if npc is None or not npc.alive or npc.controller == expected.controller:
+        return expected.controller
+    actual = _live(game, c, state, expected)
+    claims = c.execute(
+        sa.select(t.events)
+        .where(
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.kind == "m3.npc_control_claimed",
+        )
+        .order_by(t.events.c.seq.desc())
+    ).mappings()
+    claim = next(
+        (x for x in claims if json.loads(x["payload_json"]).get("entity_id") == npc.id),
+        None,
+    )
+    if claim is None or claim["actor_id"] != str(actual.controller):
+        raise WorkflowError("Recover this original NPC's actual controller-claim source")
+    after = _history(c, game, claim["id"])
+    history = t.m2["m2_state_history"]
+    raw = c.scalar(
+        sa.select(history.c.body_json)
+        .join(t.events, history.c.event_id == t.events.c.id)
+        .where(
+            history.c.campaign_id == game.store.campaign_id,
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.seq < claim["seq"],
+        )
+        .order_by(t.events.c.seq.desc())
+        .limit(1)
+    )
+    before = GameState.model_validate_json(raw) if raw else None
+    old = (
+        next((x for x in before.world.npcs if x.id == npc.id), None)
+        if before and before.world
+        else None
+    )
+    new = next((x for x in after.world.npcs if x.id == npc.id), None) if after.world else None
+    if (
+        old is None
+        or new is None
+        or new.controller != actual.controller
+        or new != old.model_copy(update={"controller": actual.controller})
+        or not rules.same_brain(_brain(game, c, after, expected.actor), expected)
+    ):
+        raise WorkflowError("Preserve the actual same-brain NPC controller handover")
+    return actual.controller
+
+
+def _owned_brain_choice(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    viewer: GuildViewer,
+    brain: rules.BrainRef,
+    scene: SceneCast,
+) -> None:
+    controller = _choice_controller(game, c, state, brain)
+    _owned(game, c, state, viewer, brain.actor, controller)
+    _live(game, c, state, brain)
+    if controller != brain.controller:
+        current = next((x for x in state.scene_casts if x.id == scene.id and x.open), None)
+        if current is None or not any(
+            role.actor == brain.actor and role.controller == controller for role in current.roles
+        ):
+            raise WorkflowError("Join this actual NPC role in the original source scene first")
+
+
 def _blank_finish(
     game: GameService,
     c: Connection,
@@ -1429,8 +1507,7 @@ class ChangelingService:
         def operation(c: Connection, state: GameState, event: str) -> dict[str, Any]:
             value = rules.record(state, rules.Question, identity)
             use = prove_fingers(self.game, c, state, value.source)
-            _owned(self.game, c, state, viewer, value.answerer.actor, value.answerer.controller)
-            _live(self.game, c, state, value.answerer)
+            _owned_brain_choice(self.game, c, state, viewer, value.answerer, use.cast)
             if value.answer_event:
                 raise WorkflowError(
                     "Preserve the actual original answer rather than overwriting it"
@@ -1461,8 +1538,7 @@ class ChangelingService:
     ) -> dict[str, Any]:
         def operation(c: Connection, state: GameState, event: str) -> dict[str, Any]:
             use = prove_fingers(self.game, c, state, identity)
-            _owned(self.game, c, state, viewer, use.target, use.subject.controller)
-            _live(self.game, c, state, use.subject)
+            _owned_brain_choice(self.game, c, state, viewer, use.subject, use.cast)
             if (
                 not rules.reciprocal(use.subject)
                 or use.main_event is None
@@ -1533,8 +1609,7 @@ class ChangelingService:
     ) -> dict[str, Any]:
         def operation(c: Connection, state: GameState, event: str) -> dict[str, Any]:
             use = prove_fingers(self.game, c, state, identity)
-            _owned(self.game, c, state, viewer, use.target, use.subject.controller)
-            _live(self.game, c, state, use.subject)
+            _owned_brain_choice(self.game, c, state, viewer, use.subject, use.cast)
             if use.kind != "damage" or use.main_event:
                 raise WorkflowError("The actual affected person chooses their own real Asset once")
             changed, work = support.force_damage(self.game, c, state, use, asset, event)
@@ -2299,8 +2374,7 @@ class ChangelingService:
 
             use = prove_fingers(self.game, c, state, identity)
             view = _born(self.game, c, state, rules.EyeView, identity, {"ended_event"})
-            _owned(self.game, c, state, viewer, use.target, use.subject.controller)
-            _live(self.game, c, state, use.subject)
+            _owned_brain_choice(self.game, c, state, viewer, use.subject, use.cast)
             actual = resolve(
                 state,
                 use.target,
@@ -2350,8 +2424,7 @@ class ChangelingService:
     ) -> dict[str, Any]:
         def operation(c: Connection, state: GameState, event: str) -> dict[str, Any]:
             use = prove_fingers(self.game, c, state, identity)
-            _owned(self.game, c, state, viewer, use.target, use.subject.controller)
-            _live(self.game, c, state, use.subject)
+            _owned_brain_choice(self.game, c, state, viewer, use.subject, use.cast)
             if (
                 use.kind != "sex"
                 or use.consent_event
@@ -2413,20 +2486,21 @@ class ChangelingService:
                     )
                 )
         for question in rules.records(state, rules.Question):
-            if viewer.user_id not in (question.asker_controller, question.answerer.controller):
+            answerer = _choice_controller(self.game, c, state, question.answerer)
+            if viewer.user_id not in (question.asker_controller, answerer):
                 continue
             result.append(
                 dict(
                     id=question.id,
                     revision=state.revision,
                     label="Psychic question",
-                    pending=question.answer_event is None
-                    and viewer.user_id == question.answerer.controller,
+                    pending=question.answer_event is None and viewer.user_id == answerer,
                     phase="pending" if question.answer_event is None else "resolved",
                 )
             )
         for use in rules.records(state, rules.Fingers):
-            if viewer.user_id not in (use.controllers[use.actor.token], use.subject.controller):
+            subject_controller = _choice_controller(self.game, c, state, use.subject)
+            if viewer.user_id not in (use.controllers[use.actor.token], subject_controller):
                 if not (use.kind == "fry" and viewer.user_id == use.handler_controller):
                     continue
             actionable = (
@@ -2435,11 +2509,11 @@ class ChangelingService:
                     use.kind == "fry"
                     and viewer.user_id == use.handler_controller
                     or use.kind == "damage"
-                    and viewer.user_id == use.subject.controller
+                    and viewer.user_id == subject_controller
                 )
                 or use.main_event is not None
                 and not use.counter_closed_event
-                and viewer.user_id == use.subject.controller
+                and viewer.user_id == subject_controller
                 and rules.reciprocal(use.subject)
             )
             result.append(
@@ -2619,49 +2693,53 @@ class ChangelingService:
                     if x.session == value.id
                 ]
             elif isinstance(value, rules.Question):
-                if viewer.user_id not in (value.asker_controller, value.answerer.controller):
+                answerer = _choice_controller(self.game, c, state, value.answerer)
+                result["answerer_controller"] = answerer
+                if viewer.user_id not in (value.asker_controller, answerer):
                     raise WorkflowError(
                         "Only the actual addressed humans read this private question"
                     )
                 prove_fingers(self.game, c, state, value.source)
-                result["actionable"] = (
-                    value.answer_event is None and viewer.user_id == value.answerer.controller
-                )
+                result["actionable"] = value.answer_event is None and viewer.user_id == answerer
             elif isinstance(value, rules.Fingers):
+                subject_controller = _choice_controller(self.game, c, state, value.subject)
+                result["subject_controller"] = subject_controller
                 if viewer.user_id not in (
                     value.controllers[value.actor.token],
-                    value.subject.controller,
+                    subject_controller,
                 ) and not (value.kind == "fry" and viewer.user_id == value.handler_controller):
                     raise WorkflowError("Only actual source humans read this private use")
                 prove_fingers(self.game, c, state, value.id)
                 result["effect"] = support.effect_detail(self.game, c, state, value)
                 result["observe"] = (
                     value.kind == "sight"
-                    and viewer.user_id == value.subject.controller
+                    and viewer.user_id == subject_controller
                     and not result["effect"]["body"]["ended_event"]
                 )
                 result["consent"] = (
                     value.kind == "sex"
-                    and viewer.user_id == value.subject.controller
+                    and viewer.user_id == subject_controller
                     and value.consent_event is None
                     and value.sex_event is None
                 )
                 result["questions"] = [
                     x.model_dump(mode="json")
+                    | {"current_answerer": _choice_controller(self.game, c, state, x.answerer)}
                     for x in rules.records(state, rules.Question)
                     if x.source == value.id
-                    and viewer.user_id in (x.asker_controller, x.answerer.controller)
+                    and viewer.user_id
+                    in (x.asker_controller, _choice_controller(self.game, c, state, x.answerer))
                 ]
                 result["counter"] = (
                     value.main_event is not None
                     and value.counter_closed_event is None
                     and rules.reciprocal(value.subject)
-                    and viewer.user_id == value.subject.controller
+                    and viewer.user_id == subject_controller
                 )
                 result["damage"] = (
                     value.kind == "damage"
                     and value.main_event is None
-                    and viewer.user_id == value.subject.controller
+                    and viewer.user_id == subject_controller
                 )
                 result["fry"] = (
                     value.kind == "fry"

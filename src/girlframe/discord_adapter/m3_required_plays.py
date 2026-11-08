@@ -8,6 +8,7 @@ import discord
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
+from girlframe.engine import m3_dose_up as dose
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_required_plays import RequiredPlayService
@@ -22,20 +23,29 @@ async def open_required(
     options: list[tuple[str, str]] = []
     if not data["completed"]:
         if link is None:
-            options.append(("invite", "Propose an actual voluntary Alpha source"))
+            if data["alpha_offered"]:
+                options.append(("invite", "Propose an actual voluntary Alpha source"))
+            if data["self_dose"]:
+                options.append(("self_dose", "Select your actual own self-Dose recipe"))
             options += [("link:" + x["id"], x["label"]) for x in data["accepted"]]
         elif link["action"]:
-            options.append(("resume", "Resume the actual prepared Alpha Play"))
+            options.append(("resume", "Resume the actual prepared nominated Play"))
         else:
-            options.append(("play", "Prepare the selected Alpha Play with real resources"))
+            options.append(("play", "Prepare the selected nominated Play with real resources"))
     if data["pause"].get("retry"):
         options.append(("retry", "Retry actual scene permission handling"))
     summary = (
-        "The nominated performance remains owed until its real Alpha outcomes finish. "
+        "The nominated performance remains owed until its real source outcomes finish. "
         "The actual counterpart confirms their own source through Alpha controls or Requests. "
         "Invitations and selection perform no Play and infer no consent. "
         + f"Scene permissions: {data['pause']['state']}."
     )
+    if not data["alpha_offered"]:
+        summary = (
+            "The actual nominated self-Dose remains owed until its real cocktail outcomes finish. "
+            "Selecting a recipe spends no Heat and creates no drug or Contact. "
+            + f"Scene permissions: {data['pause']['state']}."
+        )
     if data["completed"]:
         summary = "The actual nominated performance is complete. " + summary
     if data["invitations"]:
@@ -57,6 +67,15 @@ async def open_required(
             from girlframe.services.m3_alpha_sex import SexService
 
             await open_alpha(current, SexService(game))
+        elif selected == "self_dose":
+            await asyncio.to_thread(
+                service.link_self_dose,
+                viewer_from_interaction(current),
+                str(current.id),
+                source_id,
+                data["revision"],
+            )
+            await open_required(current, game, source_id)
         elif selected.startswith("link:"):
             await asyncio.to_thread(
                 service.link,
@@ -69,6 +88,14 @@ async def open_required(
             await open_required(current, game, source_id)
         elif selected == "play":
             assert link is not None
+            if link["rule"] == dose.RULE:
+                from girlframe.discord_adapter.m3_dose_up import open_dose_up
+                from girlframe.services.m3_dose_up import DoseUpService
+
+                await open_dose_up(
+                    current, DoseUpService(game.store, game), required_link=link["id"]
+                )
+                return None
             from girlframe.discord_adapter.m3_bonded import _play
 
             await _play(
@@ -96,7 +123,7 @@ async def open_required(
 
     form = NativeForm(
         interaction.user.id,
-        "Nominated Alpha performance",
+        "Nominated own-source performance",
         summary,
         [Field("operation", "Your actual source controls", tuple(options))],
         choose,

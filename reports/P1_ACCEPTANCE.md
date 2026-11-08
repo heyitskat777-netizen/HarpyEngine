@@ -819,3 +819,23 @@ passed on that exact commit. Full-regression step skipped. The two new minimum
 nodes took2.60s and4.57s locally; this is not a speed comparison or broad test
 result. No further tests run. Next AM connection and Ankou/Dose source contracts
 are read-only, without worker coding release or tests. Bot OFF.
+
+### Required native self-Dose and actual NPC pending-choice handover
+
+- `pytest -q tests/rules/test_required_plays.py::test_actual_nomination_native_stim_self_dose_cancel_relink_drugs_and_pause_restore`: first1failed/1.61s, fixture inspected raw nominator Task.options instead of actual service nomination_options. Test-only correction; same-node **1passed/4.53s**. Actual Relay/owned nomination/native self-recipe, real unrolled recovery/relink, own Heat/components/drugs and source/pause closure. Old Alpha serialization/defaults/events preserved. Other recipients, borrowed sources and other recipes remain explicit.
+- `pytest -q tests/rules/test_changeling_continuity.py::test_real_npc_claim_hands_pending_question_to_current_role_without_rewriting_history`: first1failed/2.75s, fixture omitted actual old-human OOC role withdrawal required before new join. Test-only correction; same-node **1passed/3.39s**. Actual original NPC/String/question, canonical controller claim, old-owner denial, actual cast handover, native current-person answer/private retry and canonical current answer author; historical BrainRef/controller/source remains unchanged. Human NPC gains no printed reciprocal right. FactoryReset brain lineage remains a separate ordinary port.
+
+Worker Dose6 Ruff/mypy5 pass after initial import and exact-literal typing fixes;
+no worker pytest/collection. Root CHANGELING3 Ruff/format+mypy2 pass, then
+changed-test2/native Ankou1 delta Ruff/format3+mypy1 pass. Only the two new failed
+nodes were rerun; old Alpha and other existing successes remain deferred.
+AM endpoint6/root Jailbroken work is active, disjoint and excluded from this
+publication packet. No full/global regression, independent/player acceptance,
+deployment or bot restart. Original RULES_SUBSET and final P1 gates retained.
+
+Scoped packet:16 paths/10 Python/8 source through the disjoint static scopes
+above. Registry477/272 subset/205 unimplemented/440 required/0 independently
+verified; repository working-source scan1407 files/40 preserved manifest/0
+findings, including the separately active AM files. Packet whitespace passed.
+Exact selected hashes/checks retained in `var/p1-dose-controller-*`; this is not
+a full-regression snapshot or independent rules review.
