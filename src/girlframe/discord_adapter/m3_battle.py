@@ -694,6 +694,9 @@ async def open_npc_damage(
     if data["can_take"] and data["items"]:
         options.append(("take_item", "Take an actual held object"))
 
+    if "allowed_effects" in data:
+        options = [x for x in options if x[0] in data["allowed_effects"]]
+
     async def select(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         effect = values["effect"][0]
         fields = [Field("account", "Describe the actual consequence", paragraph=True)]

@@ -359,6 +359,12 @@ async def open_bonded(
         return
     data = await asyncio.to_thread(service.view, viewer, identity)
     summary = "Your actual " + data["kind"] + " source: " + data["phase"] + ". " + data["account"]
+    if data.get("man_mark"):
+        summary += (
+            "\nActual Man partner-Tag mark: "
+            + data["man_mark"]["label"]
+            + "; source-only 11+ (no dice or Heat)."
+        )
     if data.get("delegation"):
         summary += "\nActual delegated source: " + data["delegation"]["session"]
         if data["delegation"].get("action"):
@@ -432,6 +438,17 @@ async def open_bonded(
             await open_delegated(current, service.game, identity)
             return None
         fields = [Field("account", "Your actual words / performed factual account", paragraph=True)]
+        if operation == "activate" and data.get("man_tags"):
+            fields.insert(
+                0,
+                Field(
+                    "man_tag",
+                    "Optional Man mark: actual partner Tag for 11+ (otherwise take 7-)",
+                    tuple((x["id"], x["label"]) for x in data["man_tags"]),
+                    minimum=0,
+                    required=False,
+                ),
+            )
         if operation == "confirm":
             fields.insert(
                 0,
@@ -442,15 +459,27 @@ async def open_bonded(
                 ),
             )
         if operation == "choose":
-            fields.insert(
-                0,
-                Field(
-                    "options",
-                    "Your actual printed outcome",
-                    tuple(tuple(x) for x in data["options"]),
-                ),
-            )
-            if data["identities"]:
+            if data["options"]:
+                fields.insert(
+                    0,
+                    Field(
+                        "options",
+                        "Your actual printed outcome",
+                        tuple(tuple(x) for x in data["options"]),
+                    ),
+                )
+            if data["choice_kind"] == "bonded_high" and data["tags"]:
+                fields.append(
+                    Field(
+                        "tags",
+                        "Any of your actual Tags to give him; none is allowed",
+                        tuple((x["id"], x["label"]) for x in data["tags"]),
+                        minimum=0,
+                        maximum=len(data["tags"]),
+                        required=False,
+                    )
+                )
+            if data["choice_kind"] == "bonded_low" and data["identities"]:
                 fields.append(
                     Field(
                         "identities",
@@ -506,9 +535,20 @@ async def open_bonded(
                     int(detail["target"]["entity"]),
                     detail["account"],
                 )
+            elif operation == "activate":
+                tags = answer.get("man_tag", ())
+                await asyncio.to_thread(
+                    service.activate,
+                    who,
+                    key,
+                    identity,
+                    data["revision"],
+                    answer["account"],
+                    man_tag=tags[0] if tags else None,
+                )
             else:
                 await asyncio.to_thread(
-                    service.activate if operation == "activate" else service.help,
+                    service.help,
                     who,
                     key,
                     identity,

@@ -8,16 +8,71 @@ import sqlalchemy as sa
 from sqlalchemy import Connection
 
 from girlframe.database import tables as t
+from girlframe.engine import m3_battle_npc as npc_rules
+from girlframe.engine.m2 import GameState
+from girlframe.engine.m3_actor_bonds import is_helpless
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_battle_state import Required
 from girlframe.engine.m3_physical import interrupt_journeys
 from girlframe.engine.m3_world_state import WorldTag
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
+from girlframe.services.m3_actors import profiles
+from girlframe.services.m3_handler_advancements import _history
 from girlframe.services.m3_medical import MedicalService
 from girlframe.services.onboarding import OnboardingStore, WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
+
+
+def prove_flirt_self_damage(
+    game: GameService, c: Connection, state: GameState, identity: str
+) -> npc_rules.FlirtSelfDamage:
+    from girlframe.engine import m3_npc_flirt as flirt_rules
+    from girlframe.services.m3_npc_flirt import prove_escape_damage
+
+    value = npc_rules.self_damage(state, identity)
+    born = _history(c, game, value.event)
+    original = npc_rules.self_damage(born, identity)
+    damage = prove_escape_damage(game, c, state, value.action, value.event)
+    session = flirt_rules.get(state, flirt_rules.Session, value.action)
+    if (
+        value != original
+        or value.id != npc_rules.escape_damage_id(damage.id)
+        or value.cast != session.cast
+        or session.target != value.npc
+        or session.controller != value.controller
+        or value.npc.kind != "npc"
+        or damage.id != value.damage
+        or damage.npc != value.npc
+        or damage.controller != value.controller
+        or damage.choice != value.choice
+        or damage.work != (value.id,)
+        or not any(
+            role.actor == value.npc and role.controller == value.controller
+            for role in value.cast.roles
+        )
+    ):
+        raise WorkflowError("Preserve the actual NPC, human chooser and genuine escape self-cost")
+    return value
+
+
+def _self_can_move(game: GameService, c: Connection, state: GameState, target: ActorRef) -> bool:
+    actual = resolve(
+        state,
+        target,
+        profiles(c, game.store.campaign_id),
+        require_alive=False,
+        require_current_profile=False,
+    )
+    return (
+        actual.alive
+        and actual.cell is not None
+        and actual.custody is None
+        and actual.offstage_source is None
+        and not is_helpless(state, target)
+    )
 
 
 class NpcDamageService:
@@ -87,6 +142,25 @@ class NpcDamageService:
             raise WorkflowError(
                 "SOURCE_NPC_DAMAGE_MISSING: recover the actual printed damage source."
             )
+        if (required.details.get("source_kind") == npc_rules.SELF_SOURCE) != (
+            body.get("source_kind") == npc_rules.SELF_SOURCE
+        ):
+            raise WorkflowError("Preserve the exact finite NPC self-damage source type")
+        if body.get("source_kind") == npc_rules.SELF_SOURCE:
+            if state is None:
+                raise WorkflowError("Recover the actual NPC self-cost birth")
+            source = prove_flirt_self_damage(self.game, c, state, row["id"])
+            if (
+                required.target != source.npc
+                or required.opponent != source.npc
+                or required.details.get("source_kind") != npc_rules.SELF_SOURCE
+                or required.details.get("source_damage") != source.damage
+                or body.get("source_action") != source.action
+                or body.get("source_choice") != source.choice
+                or body.get("source_damage") != source.damage
+                or row["owner_id"] != str(source.controller)
+            ):
+                raise WorkflowError("Do not substitute a Girl attacker or unrelated damage source")
         return required.target, required.opponent
 
     def get(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
@@ -144,7 +218,16 @@ class NpcDamageService:
                 locations=[dict(id=x.id, name=x.name, cell=x.cell) for x in state.world.locations]
                 if state.world
                 else [],
-                can_take=attacker is not None,
+                can_take=attacker is not None
+                and (body.get("source_kind") != npc_rules.SELF_SOURCE or attacker != target),
+                self_damage=body.get("source_kind") == npc_rules.SELF_SOURCE,
+                allowed_effects=tuple(
+                    effect
+                    for effect in npc_rules.SELF_EFFECTS
+                    if effect != "move" or _self_can_move(self.game, c, state, target)
+                )
+                if body.get("source_kind") == npc_rules.SELF_SOURCE
+                else ("injure_tag", "take_item", "move", "advantage", "kill"),
                 can_harm=can_harm,
                 effect=body.get("effect"),
                 replacements=replacements,
@@ -172,7 +255,7 @@ class NpcDamageService:
             if row["state"] == "resolved" or row["revision"] != revision:
                 raise WorkflowError("STALE_NPC_DAMAGE: reopen the original consequence.")
             if body.get("phase", "choose") != "choose" or row["owner_id"] != str(viewer.user_id):
-                raise WorkflowError("The actual attacker owns this printed damage choice.")
+                raise WorkflowError("The actual printed chooser owns this damage consequence.")
             if (
                 effect not in ("injure_tag", "take_item", "move", "advantage", "kill")
                 or not account.strip()
@@ -190,6 +273,11 @@ class NpcDamageService:
                 raise WorkflowError("Only a real received Asset can require an owned replacement.")
             target, attacker = self._proof(c, row)
             state = load_state(c, self.store.campaign_id)
+            self_cost = body.get("source_kind") == npc_rules.SELF_SOURCE
+            if self_cost and effect not in npc_rules.SELF_EFFECTS:
+                raise WorkflowError(
+                    "A self-cost needs actual injury, death or a real different-cell move"
+                )
             npc = (
                 next((x for x in state.world.npcs if x.id == target.entity and x.alive), None)
                 if state.world
@@ -242,6 +330,17 @@ class NpcDamageService:
                     raise WorkflowError(
                         "Choose the actual campaign destination for this forced move."
                     )
+                if self_cost and (
+                    not _self_can_move(self.game, c, state, target)
+                    or destination.cell
+                    == resolve(
+                        state,
+                        target,
+                        profiles(c, self.store.campaign_id),
+                        require_current_profile=False,
+                    ).cell
+                ):
+                    raise WorkflowError("The actual free NPC must really move to a different cell")
                 npc = npc.model_copy(update={"cell": destination.cell})
             elif effect == "kill":
                 from girlframe.engine.m3_battle import end_actor_casts
@@ -278,6 +377,7 @@ class NpcDamageService:
                     effect=effect,
                     event=event,
                     account=account,
+                    **({"source_kind": npc_rules.SELF_SOURCE} if self_cost else {}),
                 )
             )
             phase = "optional_tag" if effect in ("take_item", "move", "advantage") else "done"

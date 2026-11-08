@@ -616,6 +616,162 @@ def test_nonpair_actual_seven_no_roll_pair_not_private_audience(ledger, tmp_path
     assert gateway.values == baseline_permissions
 
 
+def test_actual_man_optional_partner_tag_gives_source_only_high_without_dice(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred P1 normal: genuine legal assignment, source permission and owned high choices."""
+    from test_gender_designation import acquire, assign
+    from test_handler_creation import agree, complete, save
+    from test_handler_ordinary import session_native
+
+    from girlframe.engine import m3_gender_designation as gender
+    from girlframe.engine import m3_handler_ordinary as ordinary
+    from girlframe.engine.m3_mockingbird import give_tag
+    from girlframe.services.m3_gender_designation import GenderDesignationService
+    from girlframe.services.m3_handler_creation import HandlerCreationService
+    from girlframe.services.m3_handler_ordinary import HandlerOrdinaryService
+    from girlframe.services.m3_handler_pr import HandlerPRService
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, three=True)
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(*rules.RULES, ordinary.RULE, gender.RULE),
+    )
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "m3_approval": ledger.policy.m3_approval.model_copy(
+                update={
+                    "subsystems": ledger.policy.m3_approval.subsystems
+                    | {"world", "discipline", "playbooks"}
+                }
+            ),
+            "owner_m3_rulings": ledger.policy.owner_m3_rulings.model_copy(
+                update={"handler_creation": "owned_shared_choices_preserve_existing"}
+            ),
+        }
+    )
+    creation = HandlerCreationService(ledger)
+    save(creation, complete(creation, "Scientist"))
+    agree(creation)
+    data = creation.view(ADMIN)
+    creation.activate(ADMIN, str(uuid4()), data["revision"], data["game_revision"], True)
+    session_native(HandlerOrdinaryService(ledger), "Actual Man designation source Session", 89100)
+    pr = HandlerPRService(ledger)
+    identity = pr.plan(
+        ADMIN,
+        str(uuid4()),
+        state(game).revision,
+        "Actual Foundation public feature",
+        "Actual hosted interview and Cadre photographs",
+        (current_ref(state(game), 2),),
+    )["id"]
+    for who, hosting in ((ADMIN, True), (PLAYER, False)):
+        pr.activity(
+            who,
+            str(uuid4()),
+            identity,
+            state(game).revision,
+            "I actually hosted" if hosting else "I actually participated in the public feature",
+            hosting=hosting,
+        )
+    pr.submit_result(
+        ADMIN, str(uuid4()), identity, state(game).revision, "Actual feature performed"
+    )
+    pr.resolve(
+        ADMIN,
+        str(uuid4()),
+        identity,
+        state(game).revision,
+        True,
+        "The actual public feature succeeded",
+    )
+    acquisition = acquire(game)
+    assign(GenderDesignationService(ledger), acquisition, (current_ref(state(game), 2),), "man")
+
+    # Only this prior ordinary resource is synthetic; the legal acquisition, source,
+    # optional mark, permission delivery, choices and subsequent effects are genuine.
+    with ledger.transaction() as c:
+        actual, event = state(game), str(uuid4())
+        actual = give_tag(
+            actual,
+            (),
+            current_ref(actual, 4),
+            current_ref(actual, 2),
+            "Actual observed counterpart Tag",
+            "man-no-roll-partner-tag",
+            event,
+            (2, 4),
+        )
+        game.event(c, 2, str(uuid4()), "synthetic.prior_observed_Tag", actual, event_id=event)
+    source = intimate(controls, game, 4, "seven")
+    before = state(game)
+    heat = {key: sheet.heat for key, sheet in before.sheets.items()}
+    old_pair_depth = depth(before, current_ref(before, 2), current_ref(before, 3))
+    original_calls = game.dice.calls
+    permissions = {key: dict(value) for key, value in gateway.values.items()}
+    owner = controls.view(PLAYER, source)
+    assert owner["man_tags"] == [
+        {"id": "man-no-roll-partner-tag", "label": "Actual observed counterpart Tag"}
+    ]
+    with pytest.raises(WorkflowError):
+        controls.view(OTHER, source)
+    form = submit(
+        show(controls, PLAYER, source, 89110), PLAYER, {"operation": ("activate",)}, 89111
+    )
+    assert any(field.key == "man_tag" for field in form.fields)
+    key_revision = state(game).revision
+    submit(
+        form,
+        PLAYER,
+        {"man_tag": ("man-no-roll-partner-tag",), "account": "Actual voluntary performed intimacy"},
+        89112,
+    )
+    # Retry of the real native operation replays the canonical result, including its mark.
+    controls.activate(
+        PLAYER,
+        "89112",
+        source,
+        key_revision,
+        "Actual voluntary performed intimacy",
+        man_tag="man-no-roll-partner-tag",
+    )
+    actual = state(game)
+    assert rules.get(actual, source).action is None
+    assert rules.get(actual, source).tier == "high"
+    assert len([x for x in rules.records(actual, rules.NoRollManMark) if x.source == source]) == 1
+    assert next(x for x in actual.sheets["4"].tags if x.id == "man-no-roll-partner-tag").marked
+    assert {key: sheet.heat for key, sheet in actual.sheets.items()} == heat
+    assert game.dice.calls == original_calls
+    pause_tick(game, gateway)
+    with pytest.raises(WorkflowError):
+        controls.choose(
+            FOUR, str(uuid4()), source, actual.revision, ChoiceAnswer(options=("promise",))
+        )
+    form = submit(show(controls, PLAYER, source, 89113), PLAYER, {"operation": ("choose",)}, 89114)
+    submit(form, PLAYER, {"options": ("promise",), "account": "I promise to protect you"}, 89115)
+    assert not controls.view(PLAYER, source)["can_choose"]
+    counterpart = controls.view(FOUR, source)
+    assert counterpart["can_choose"] and counterpart["choice_kind"] == "bonded_high"
+    form = submit(show(controls, FOUR, source, 89116), FOUR, {"operation": ("choose",)}, 89117)
+    submit(
+        form, FOUR, {"tags": ("man-no-roll-partner-tag",), "account": "I give my actual Tag"}, 89118
+    )
+    actual = state(game)
+    assert controls.view(PLAYER, source)["phase"] == "complete"
+    assert controls.view(FOUR, source)["man_mark"]["label"] == "Actual observed counterpart Tag"
+    assert any(
+        x.label == "Actual observed counterpart Tag" and x.giver_actor == current_ref(actual, 4)
+        for x in actual.sheets["2"].tags
+    )
+    assert actual.order.index(2) + 1 == actual.order.index(4)
+    assert depth(actual, current_ref(actual, 2), current_ref(actual, 3)) == old_pair_depth
+    pause_tick(game, gateway)
+    assert gateway.values == permissions
+
+
 def test_delegated_alpha_actual_other_partner_source_no_persona_copy(ledger, tmp_path, monkeypatch):
     from girlframe.services.m3_alpha_sex import SexService
 

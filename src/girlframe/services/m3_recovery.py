@@ -430,6 +430,15 @@ class RecoveryService:
 
                     release_changeling_child(self.game, c, state, action)
                     released_learning = True
+                if cancel and action["data"].get("npc_flirt"):
+                    from girlframe.services.m3_npc_flirt import (
+                        release_unrolled as release_npc_flirt,
+                    )
+
+                    released_learning = (
+                        release_npc_flirt(self.game, c, state, action, recovery_event)
+                        or released_learning
+                    )
                 if cancel and action["data"].get("ankou_effect_child"):
                     from girlframe.services.m3_required_plays import (
                         release_unrolled as release_required_play,

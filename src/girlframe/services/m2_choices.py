@@ -102,6 +102,10 @@ class ChoiceEngine:
         from girlframe.engine.m3_control_ritual import remove
 
         remove(state, owner, tag)
+        from girlframe.engine.m3_actor_bonds import current_ref
+        from girlframe.services.m3_npc_flirt import tag_resolved as npc_flirt_tag_resolved
+
+        npc_flirt_tag_resolved(state, current_ref(state, owner), tag)
         for item in state.obligations:
             if (
                 item.owner == owner
@@ -285,6 +289,14 @@ class ChoiceEngine:
         actor = int(action["actor_id"])
         sheet = state.sheets.get(str(owner))
         body = json.loads(request["body_json"])
+        if kind.startswith("npc_flirt_") and action["data"].get("npc_flirt"):
+            from girlframe.services.m3_npc_flirt import apply_choice as apply_npc_flirt
+
+            require(
+                apply_npc_flirt(self.game, c, state, action, request, answer),
+                "Resolve this exact source-owned NPC Flirt choice",
+            )
+            return
         if kind.startswith("vat_doll_") and action["data"].get("vatgrown"):
             from girlframe.services.m3_vatgrown import apply_choice as apply_doll
 
@@ -1084,6 +1096,15 @@ class ChoiceEngine:
             from girlframe.services.m3_gender_designation import order_no
 
             order_no(self.game, c, state, action, answer)
+            if answer.options == ("disobey",) and action["data"].get("npc_order"):
+                from girlframe.services.m3_npc_orders import (
+                    _allow_refusal,
+                )
+                from girlframe.services.m3_npc_orders import (
+                    order as npc_original_order,
+                )
+
+                _allow_refusal(self.game, c, state, npc_original_order(self.game, c, action))
             if answer.options == ("disobey",):
                 from girlframe.engine.m3_actor_bonds import current_ref as am_original
                 from girlframe.engine.m3_am import require_freedom
@@ -1459,6 +1480,11 @@ class ChoiceEngine:
 
     def results(self, c: Connection, state: GameState, action: dict[str, Any]) -> None:
         self.set_total(action)
+        if action["data"].get("npc_flirt"):
+            from girlframe.services.m3_npc_flirt import results as npc_flirt_results
+
+            npc_flirt_results(self.game, c, state, action)
+            return
         if any(
             x["kind"] in ("ankou_interrupt", "ankou_interrupt_child")
             for x in self.game.pending(c, action["id"])
@@ -1721,6 +1747,11 @@ class ChoiceEngine:
                 return
         if consume_intercept_finish(self.game, c, state, action):
             return
+        if action["data"].get("npc_flirt"):
+            from girlframe.services.m3_npc_flirt import intercept_finish as npc_flirt_finish
+
+            if npc_flirt_finish(self.game, c, state, action):
+                return
         from girlframe.services.m3_mockingbird import intercept_finish
 
         if intercept_finish(self.game, c, state, action):

@@ -61,6 +61,7 @@ def _access(
         "broken": RULE,
         "am_secret": "girl.am.scrutinized",
         "secretary": "handler-advancement.handler-advancement.secretary",
+        "npc_flirt": "play.basic.flirt",
     }[origin_kind]
     access.registry.require_available(rule)
 
@@ -90,6 +91,7 @@ def source(
                 "broken": "npc_broken_order",
                 "am_secret": "npc_am_secret_order",
                 "secretary": "npc_secretary_order",
+                "npc_flirt": "npc_flirt_order",
             }[value.origin_kind]
             and x.get("id") == value.id
         ),
@@ -97,7 +99,13 @@ def source(
     )
     actual = resolve(state, value.issuer, profiles(c, game.store.campaign_id))
     recipient = resolve(state, value.target, profiles(c, game.store.campaign_id))
-    if value.origin_kind == "secretary":
+    if value.origin_kind == "npc_flirt":
+        from girlframe.services.m3_npc_flirt import cannot_refuse
+
+        condition_invalid = (
+            cannot_refuse(game, c, original, value.target, value.issuer) != value.condition
+        )
+    elif value.origin_kind == "secretary":
         from girlframe.services.m3_secretary import prove_order
 
         prove_order(game, c, state, value)
@@ -192,7 +200,16 @@ def prepare(
         raise WorkflowError("Only this original Pilot may refuse this exact NPC order")
     if channel != value.cast.channel:
         raise WorkflowError("Use the actual original NPC Order scene")
+    _allow_refusal(game, c, state, value)
     return value.model_dump(mode="json")
+
+
+def _allow_refusal(game: GameService, c: Connection, state: GameState, value: rules.Order) -> None:
+    if value.origin_kind == "npc_flirt":
+        from girlframe.services.m3_npc_flirt import cannot_refuse
+
+        if cannot_refuse(game, c, state, value.target, value.issuer) is not None:
+            raise WorkflowError("Resolve the actual NPC-given Tag before refusing this NPC")
 
 
 def valid_order(
@@ -217,6 +234,7 @@ def valid_order(
         or channel != value.cast.channel
     ):
         raise WorkflowError("Use only this original recipient's actual refused NPC Order")
+    _allow_refusal(game, c, state, value)
     parent = game.action(c, value.action)
     if parent["data"].get("npc_order") != value.model_dump(mode="json"):
         raise WorkflowError("Recover the original NPC Order action")
@@ -237,9 +255,16 @@ class NpcOrderService:
     def __init__(self, game: GameService):
         self.game, self.store = game, game.store
 
-    def preview(self, viewer: GuildViewer, channel: int, target: int) -> dict[str, Any]:
+    def preview(
+        self,
+        viewer: GuildViewer,
+        channel: int,
+        target: int,
+        *,
+        origin_kind: rules.Origin = "broken",
+    ) -> dict[str, Any]:
         with self.store.engine.connect() as c:
-            _access(self.game, c, viewer)
+            _access(self.game, c, viewer, origin_kind)
             state = load_state(c, self.store.campaign_id)
             cast = _cast(self.game, c, state, channel)
             if str(target) not in state.sheets:
@@ -252,7 +277,14 @@ class NpcOrderService:
                 if role.actor.kind != "npc" or role.controller != viewer.user_id:
                     continue
                 try:
-                    found = _condition(self.game, c, state, role.actor, recipient)
+                    if origin_kind == "npc_flirt":
+                        from girlframe.services.m3_npc_flirt import cannot_refuse
+
+                        condition_id = cannot_refuse(self.game, c, state, recipient, role.actor)
+                        if condition_id is None:
+                            continue
+                    else:
+                        condition_id = _condition(self.game, c, state, role.actor, recipient).id
                 except (ValueError, WorkflowError):
                     continue
                 if not any(x.actor == recipient for x in cast.roles):
@@ -261,7 +293,7 @@ class NpcOrderService:
                     dict(
                         ref=role.actor.model_dump(mode="json"),
                         label=resolve(state, role.actor, ()).label,
-                        condition=found.id,
+                        condition=condition_id,
                     )
                 )
             return dict(revision=state.revision, issuers=issuers)
@@ -278,7 +310,7 @@ class NpcOrderService:
         *,
         origin_kind: rules.Origin = "broken",
     ) -> dict[str, Any]:
-        if origin_kind not in ("broken", "am_secret", "secretary"):
+        if origin_kind not in ("broken", "am_secret", "secretary", "npc_flirt"):
             raise WorkflowError("Use only an implemented actual NPC order source")
         if not text.strip() or len(text) > 1200:
             raise WorkflowError("State the actual direct order in 1–1200 characters")
@@ -294,7 +326,13 @@ class NpcOrderService:
                 kind="pilot", entity=str(target), incarnation=state.sheets[str(target)].character_id
             )
             principal = None
-            if origin_kind == "secretary":
+            if origin_kind == "npc_flirt":
+                from girlframe.services.m3_npc_flirt import cannot_refuse
+
+                condition_id = cannot_refuse(self.game, c, state, recipient, issuer)
+                if condition_id is None:
+                    raise WorkflowError("Use the actual NPC-given unresolved Tag source")
+            elif origin_kind == "secretary":
                 from girlframe.services.m3_secretary import order_authority
 
                 authority = order_authority(self.game, c, state, issuer, recipient, viewer.user_id)
@@ -423,6 +461,7 @@ class NpcOrderService:
                         "broken": "npc_broken_order",
                         "am_secret": "npc_am_secret_order",
                         "secretary": "npc_secretary_order",
+                        "npc_flirt": "npc_flirt_order",
                     }[origin_kind],
                     id=identity,
                     body=value.model_dump_json(),

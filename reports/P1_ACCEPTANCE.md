@@ -329,3 +329,74 @@ Final target checks passed. Registry:477 entries,270 subset/207 unimplemented,
 1375 publishable files,40 manifest entries,0 findings. These static/contract
 checks are not full gameplay regression. Initial check logs are retained under
 `var/p1-source-checkpoint-*`; target rerun scope is stored separately.
+
+Published frozen source **1ca41d742eb63d87331d4ccff8b53c72fcd2feb6**;
+[focused CI42487897800](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42487897800)
+passed. Full regression was not selected. The current follow-on assignment is
+source-proved missing Frame-component regrowth; NPC-target Flirt remains in
+compact contract review. No deployment, main merge or environment publication.
+
+### Local follow-on: permanent component regrowth and NPC interaction integration
+
+CONSUME Budget-loss regrowth: the single new likely flow
+`tests/rules/test_consume.py::test_actual_budget_loss_regrows_original_frame_feature_as_new_component_once`
+passed **1 in7.95s**. It uses actual Budget removal, original same-Frame loss, real
+Dive and table answers, Girl damage, new component identity, private history and
+retry/second-use protection. First attempt failed3.65s on an omitted piloting
+fixture declaration. Second failed6.54s on a real missing standalone Opportunity
+completion callback. A mistaken primary-choice ordering change failed4.57s; it
+was reverted. The actual repair invokes existing guarded finish after the optional
+effect only when no real response remains. Only the failed node was rerun.
+The earlier unrun Partake scenario's same known piloting declaration was corrected
+without executing it. Static6 and applicable types5 pass. Commands, hashes and
+all attempts remain in ignored `var/p1-consume-regrowth-integrated.json` and
+`var/p1-consume-regrowth-minimum*.txt`. These are local checks, not an integrated
+full regression or independent acceptance. Other permanent loss producers, body
+variants and pending external-work completion remain final/source gates.
+
+Actual NPC Flirt and real NPC self-damage integration are active. The self-cost
+source3 is frozen (Ruff/types3 pass; no worker pytest), with genuine NPC-controlled
+injury/death/movement rather than self-transfer/advantage. Root shared ports use
+actual source-owned private Inbox, response authorization, original Tag refusal
+authority, Handler completion and unrolled recovery. Root lint11 and applicable
+types7 pass after formatting/import fixes. A high normal and broader authored
+branches have not yet run. Registry validation passes at477 entries,270 subset,
+207 unimplemented,440 required,0 independently verified. Counts are inventory,
+not completion percentages. Bot remains OFF. Final exact-commit full regression
+including Deep-Brain-Spikes pagination, privacy/migration/restore, independent
+review and human tests remain pending.
+
+NPC interaction minimum now passes **1 in4.93s**:
+`tests/rules/test_npc_flirt.py::test_actual_high_native_court_npc_flirt_performed_escape_judged_bond_and_true_self_damage`.
+Actual original Court work → native Girl/NPC Flirt → owned question/answer → actual
+NPC job/move performance → private proof → performed followthrough/NPC judgment
+and Bond change; a second genuine Flirt pays actual NPC-controlled injury before
+completion. The actual NPC controller has no Girl sheet. Court closes only on
+canonical child completion. Private access and original receipt/retry/control
+behavior are exercised within this normal, not as a separate expanded matrix.
+Eight preceding attempts are retained, all on the same failed node:1.83s missing
+synthetic world approval;2.31s own Court work incorrectly blocked its actual child;
+2.53s fixture skipped confirmation in the supported acquiring state;2.51s source
+binding was not persisted;4.56s strict JSON cast conversion;4.77s diagnostic replay
+of that same validation error;5.65s model-only fingerprint incorrectly received a
+receipt dictionary;5.10s fixture expected bare NPC ID instead of canonical ActorRef
+Tag attribution. Production corrections preserve unrelated work guards, canonical
+events, actual actors and privacy; diagnostic details stayed synthetic/local.
+No successful gameplay node was rerun. Broader tiers/Handler/owed-Tag, cancellation,
+body/source combinations and final exact-commit regression remain unrun.
+
+Bonded optional source-only Man mark is locally implemented with immutable actual
+law/Tag/person proof, original high-result choice ownership, no extra dice or Heat,
+and one authored native test **NOTRUN**:
+`tests/rules/test_bonded.py::test_actual_man_optional_partner_tag_gives_source_only_high_without_dice`.
+Worker Ruff4/types3 pass. Only observed unmarked non-Paired Tags are supported in
+this finite adapter; repeated/Paired source-only resolution remains required P1
+work and fails before mutation. Adjustable interpretation is recorded in campaign
+rulings/registry. No whole-Man or whole-Bonded completion claim.
+
+Checkpoint preflight: Ruff/format29 Python paths pass; applicable types26 initially
+failed solely on a private imported-symbol re-export in Court. Import corrected
+to its defining module; only that failed module is rechecked. Registry validation
+passes; repository publication scan1380 files/40 retained manifest entries/0
+findings and diff whitespace pass. Full regression, global release gates and
+independent/human acceptance remain pending.

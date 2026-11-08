@@ -13,7 +13,8 @@ from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput
 from girlframe.engine.m3_actor_bonds import change, current_ref, is_helpless
 from girlframe.engine.m3_actor_state import ActorRef, SceneCast
 from girlframe.engine.m3_actors import fingerprint, resolve
-from girlframe.engine.m3_assets import can_replace_at_limit
+from girlframe.engine.m3_assets import can_replace_at_limit, counts_toward_limit, frame_capacity
+from girlframe.engine.m3_budget_removal import blocked
 from girlframe.engine.m3_frame_state import SuppliedAsset
 from girlframe.engine.m3_handler_consequences import active_handler, same_handler_body
 from girlframe.engine.m3_intracadre_marriage import available, debit
@@ -320,6 +321,11 @@ def projection(
             and x.kind == ("partake" if kind == "consume_partake" else "time_eat")
         )
         sheet = state.sheets[offer.actor.entity]
+        regrowth: tuple[dict[str, str], ...] = ()
+        if kind == "consume_partake":
+            from girlframe.services.m3_consume_regrowth import regrowth_options
+
+            regrowth = regrowth_options(game, c, state, offer.actor, action)
         return dict(
             options=[("pass", "Decline"), ("give", "Mark an Identity and give Just Meat")]
             if kind == "consume_time_eat"
@@ -331,8 +337,23 @@ def projection(
             ],
             identities=[(x.id, x.name) for x in sheet.identities if not x.marked],
             girl_assets=[(x.id, x.name) for x in sheet.assets if x.family == "girl"],
-            frame_assets=[
-                (x.id, x.name) for x in sheet.assets if x.family == "frame" and x.damaged
+            frame_assets=[(row["id"], row["label"]) for row in regrowth],
+            regrow_missing=[row["id"] for row in regrowth if row["kind"] == "missing"],
+            regrow_free=max(
+                0,
+                frame_capacity(sheet, state)
+                - sum(
+                    counts_toward_limit(sheet, asset)
+                    for asset in sheet.assets
+                    if asset.family == "frame"
+                ),
+            ),
+            regrow_replacements=[
+                (asset.id, asset.name)
+                for asset in sheet.assets
+                if asset.family == "frame"
+                and can_replace_at_limit(sheet, asset)
+                and asset.id not in blocked(state, offer.actor)
             ],
             frame_replacements=[
                 (x.id, x.name)
@@ -411,6 +432,10 @@ def apply(
     kind = row["kind"]
     if kind in ("consume_time_eat", "consume_partake"):
         _apply_opportunity(game, c, state, action, row, answer)
+        if not game.pending(c, action["id"]):
+            from girlframe.services.m2_choices import ChoiceEngine
+
+            ChoiceEngine(game).finish(c, state, action)
         return
     source = _source(game, c, state, action)
     if (
@@ -865,6 +890,7 @@ def _apply_opportunity(
             "new_asset",
             "appearance",
             "replace_frame",
+            "regrow_replacements",
         }:
             raise WorkflowError("Choose one actual printed Let Us Partake effect")
         supplied = (
@@ -875,6 +901,12 @@ def _apply_opportunity(
         frames = tuple(json.loads(answer.fields.get("frame_assets", "[]")))
         if any(not isinstance(x, str) for x in frames) or len(set(frames)) != len(frames):
             raise WorkflowError("Select distinct actual Frame Assets")
+        replacements = json.loads(answer.fields.get("regrow_replacements", "{}"))
+        if not isinstance(replacements, dict) or any(
+            not isinstance(key, str) or not isinstance(value, str)
+            for key, value in replacements.items()
+        ):
+            raise WorkflowError("Choose actual source-matched Frame cap replacements")
         changed, work = support.partake(
             game,
             c,
@@ -888,6 +920,7 @@ def _apply_opportunity(
             new_asset=supplied,
             appearance=answer.fields.get("appearance", ""),
             replace_frame=answer.fields.get("replace_frame"),
+            regrow_replacements=replacements,
         )
         _copy(state, changed)
         rules.put(
@@ -903,6 +936,7 @@ def _apply_opportunity(
                 event=event,
                 work=work,
                 replaced_frame=answer.fields.get("replace_frame"),
+                regrow_replacements=replacements,
             ),
         )
     rules.put(state, source.model_copy(update={"completed_event": event}))
@@ -1855,6 +1889,28 @@ class ConsumeService:
         with self.store.engine.connect() as c:
             self.game.authorize(c, viewer, game=False)
             state = load_state(c, self.store.campaign_id)
+            regrowth = next(
+                (
+                    value
+                    for value in rules.records(state, rules.RegrownFrame)
+                    if value.id == identity
+                ),
+                None,
+            )
+            if regrowth is not None:
+                if viewer.user_id != int(regrowth.actor.entity):
+                    raise WorkflowError(
+                        "Only the original source owner reads this regrowth history"
+                    )
+                from girlframe.services.m3_consume_regrowth import prove_regrowth
+
+                proved = prove_regrowth(self.game, c, state, identity)
+                return dict(
+                    id=identity,
+                    type="regrowth",
+                    revision=state.revision,
+                    source=proved.model_dump(mode="json"),
+                )
             permit = next(
                 (x for x in rules.records(state, rules.PermitRequest) if x.id == identity), None
             )
@@ -1974,4 +2030,15 @@ def _tasks(
                     and not rules.session(state, consumed.session).vulnerable,
                 )
             )
+    tasks.extend(
+        dict(
+            id=value.id,
+            revision=state.revision,
+            label="Actual regrown Frame component",
+            phase="resolved",
+            pending=False,
+        )
+        for value in rules.records(state, rules.RegrownFrame)
+        if viewer.user_id == int(value.actor.entity)
+    )
     return tasks

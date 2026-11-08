@@ -577,6 +577,11 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
 
         await open_changeling(interaction, ChangelingService(game), decision["detail"]["source"])
         return
+    if decision["kind"].startswith("npc_flirt_"):
+        from girlframe.discord_adapter.m3_npc_flirt import open_choice as open_npc_flirt_choice
+
+        await open_npc_flirt_choice(interaction, game, decision)
+        return
     if decision["kind"].startswith("changeling_"):
         from girlframe.discord_adapter.m3_changeling import open_choice as open_changeling_choice
 
@@ -1207,14 +1212,19 @@ async def open_play(
     from girlframe.services.m3_nightmare import NightmareService
 
     nightmare = await nightmare_info(interaction, NightmareService(game))
+    npc_flirt_targets: dict[str, Any] = {}
+    if approval is not None and "plays" in approval.subsystems and "flirt" in plays:
+        from girlframe.services.m3_npc_flirt import NpcFlirtService
+
+        rows = await threaded(lambda: NpcFlirtService(game).targets(viewer, channel))
+        npc_flirt_targets = {"npc:" + x["ref"]["entity"]: x for x in rows}
     fields = [
         menu("play", "Choose a Play", plays),
         Field(
             "target",
             "Target for Flirt or Put Someone Beneath You",
-            tuple(
-                (str(x), scene["labels"][str(x)]) for x in scene["pilots"] if x != viewer.user_id
-            ),
+            tuple((str(x), scene["labels"][str(x)]) for x in scene["pilots"] if x != viewer.user_id)
+            + tuple((key, "NPC: " + row["label"]) for key, row in npc_flirt_targets.items()),
             0,
             1,
             required=False,
@@ -1357,6 +1367,13 @@ async def open_play(
         play = one(values, "play")
         identity = one(values, "identity")
         target_actor = None
+        selected_target = one(values, "target")
+        if selected_target in npc_flirt_targets:
+            from girlframe.engine.m3_actor_state import ActorRef
+
+            if play != "flirt":
+                raise WorkflowError("Use this actual NPC target for Flirt")
+            target_actor = ActorRef.model_validate(npc_flirt_targets[selected_target]["ref"])
         if play == "enforcement_initiative":
             from girlframe.engine.m3_actor_state import ActorRef
 
@@ -1447,7 +1464,9 @@ async def open_play(
             and parent["kind"] == "red_queen_child"
             and parent["body"]["target"]["kind"] == "pilot"
             else int(one(values, "target"))
-            if play in ("flirt", "put_someone_beneath_you") and one(values, "target")
+            if play in ("flirt", "put_someone_beneath_you")
+            and one(values, "target")
+            and one(values, "target") not in npc_flirt_targets
             else None,
             piloting=one(values, "piloting") == "yes",
             witnessed=one(values, "witnessed") == "yes",

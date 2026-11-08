@@ -1323,6 +1323,15 @@ class GameService:
             mechanical_owner = (
                 int(princess_child["actor_controller"]) if princess_child else viewer.user_id
             )
+            from girlframe.services.m3_npc_flirt import prepare as prepare_npc_flirt
+
+            npc_flirt = (
+                prepare_npc_flirt(self, c, viewer, state, prepared, channel)
+                if prepared.play == "flirt"
+                and prepared.target_actor is not None
+                and prepared.target_actor.kind == "npc"
+                else None
+            )
             prince = None
             consume = None
             bonded = None
@@ -1707,6 +1716,7 @@ class GameService:
                         x
                         for x in (
                             virus_order_work,
+                            red_queen_child["work"] if red_queen_child else None,
                             bomb_collar_source["work"] if bomb_collar_source else None,
                         )
                         if x
@@ -1820,6 +1830,7 @@ class GameService:
                         npc_order_scope,
                         gorgon_response,
                         secretary_scope,
+                        npc_flirt,
                     )
                 )
                 and not scoped_defeat
@@ -1841,6 +1852,8 @@ class GameService:
                     source_cast, _ = CastService(ActorService(MissionService(self.store)))._current(
                         c, state, channel
                     )
+                elif npc_flirt is not None:
+                    source_cast = SceneCast.model_validate_json(json.dumps(npc_flirt["cast"]))
                 elif gorgon_response is not None:
                     source_cast = SceneCast.model_validate_json(json.dumps(gorgon_response["cast"]))
                 elif secretary_scope is not None:
@@ -2282,15 +2295,21 @@ class GameService:
                     am_code,
                     doctor,
                     princess_child,
+                    npc_flirt,
                 )
             ):
                 raise WorkflowError("This implemented Play does not take a fictional actor target.")
-            if prepared.play in (
-                "flirt",
-                "put_someone_beneath_you",
-                "old_dog_new_pups",
-                "unassuming_doll",
-            ) and not (vatgrown is not None and prepared.target_actor is not None):
+            if (
+                prepared.play
+                in (
+                    "flirt",
+                    "put_someone_beneath_you",
+                    "old_dog_new_pups",
+                    "unassuming_doll",
+                )
+                and npc_flirt is None
+                and not (vatgrown is not None and prepared.target_actor is not None)
+            ):
                 if (
                     prepared.target == mechanical_owner
                     or str(prepared.target) not in state.sheets
@@ -2386,6 +2405,27 @@ class GameService:
             }
             if prince_demand_attempt is not None:
                 data["prince_demand_attempt"] = prince_demand_attempt
+            if npc_flirt is not None:
+                from girlframe.engine.m3_handler_consequences import active_handler as flirt_handler
+
+                source_handler = flirt_handler(state)
+                if source_handler is None:
+                    raise WorkflowError("Recover this Flirt's actual original Handler")
+                data["npc_flirt"] = npc_flirt
+                data["participants"] = list(npc_flirt["table"])
+                data["character_ids"] = {
+                    role["actor"]["entity"]: role["actor"]["incarnation"]
+                    for role in npc_flirt["cast"]["roles"]
+                    if role["actor"]["kind"] == "pilot"
+                }
+                data["tag_context"] = dict(
+                    actor=npc_flirt["actor"],
+                    handler=source_handler.model_dump(mode="json"),
+                    gm_controller=state.handler,
+                    table=list(npc_flirt["table"]),
+                    cast=npc_flirt["cast"],
+                    cast_sha256=npc_flirt["cast_sha256"],
+                )
             if consume_child is not None:
                 data["consume_child"] = consume_child
             if bonded_child is not None:
@@ -3008,6 +3048,7 @@ class GameService:
                 or oldgen_sex
                 or casualty_sex
                 or vatgrown_sex
+                or npc_flirt
                 or prince
                 or consume
                 or prince_demand_attempt
@@ -3107,6 +3148,12 @@ class GameService:
 
                 assert begin_source_event is not None
                 bind_ankou_effect_child(self, c, state, action, begin_source_event)
+            if npc_flirt is not None:
+                from girlframe.services.m3_npc_flirt import bind as bind_npc_flirt
+
+                assert begin_source_event is not None
+                bind_npc_flirt(self, c, state, action, begin_source_event)
+                self.save_action(c, action)
             if begin_source_event is not None:
                 from girlframe.services.m3_required_plays import bind_action as bind_required_play
 
@@ -3223,6 +3270,7 @@ class GameService:
                 or oldgen_sex is not None
                 or casualty_sex is not None
                 or vatgrown_sex is not None
+                or npc_flirt is not None
                 or prince is not None
                 or consume is not None
                 or prince_demand_attempt is not None
@@ -3272,6 +3320,7 @@ class GameService:
                     or oldgen_sex is not None
                     or casualty_sex is not None
                     or vatgrown_sex is not None
+                    or npc_flirt is not None
                     or prince is not None
                     or consume is not None
                     or prince_demand_attempt is not None
@@ -3306,6 +3355,7 @@ class GameService:
                     or marriage_cast_saved
                     or secretary_response is not None
                     or claimed_learned
+                    or npc_flirt is not None
                     or prince is not None
                     or consume is not None
                     or prince_demand_attempt is not None
@@ -3605,6 +3655,11 @@ class GameService:
             state = load_state(c, self.store.campaign_id)
             self.action_characters(c, action, state)
             from girlframe.services.p1_facilitator import require_scene_clear
+
+            if action["data"].get("npc_flirt"):
+                from girlframe.services.m3_npc_flirt import pre_roll as pre_roll_npc_flirt
+
+                pre_roll_npc_flirt(self, c, viewer, state, action)
 
             require_scene_clear(self, c, int(action["channel_id"]), action)
             from girlframe.services.p1_source_pause import require_clear as require_source_clear
@@ -4126,6 +4181,7 @@ class GameService:
                 or action["data"].get("am_scrutinized")
                 or action["data"].get("am_code")
                 or action["data"].get("npc_order")
+                or action["data"].get("npc_flirt")
                 or action["data"].get("dampener")
                 or action["data"].get("kicked_puppy")
                 or action["data"].get("nightmare_core")
@@ -4355,6 +4411,7 @@ class GameService:
                 or action["data"].get("am_scrutinized")
                 or action["data"].get("am_code")
                 or action["data"].get("npc_order")
+                or action["data"].get("npc_flirt")
                 or action["data"].get("dampener")
                 or action["data"].get("kicked_puppy")
                 or action["data"].get("nightmare_core")
@@ -4527,6 +4584,11 @@ class GameService:
 
                 Access(self.store).authorize(c, viewer, "strain")
             director_tag_response = False
+            if action["data"].get("npc_flirt"):
+                from girlframe.services.m3_npc_flirt import authorize as authorize_npc_flirt
+
+                authorize_npc_flirt(self, c, viewer, action)
+                return dict(row)
             if row["kind"] == "prince_bad_girl":
                 from girlframe.services.m3_access import Access
 
@@ -4900,6 +4962,7 @@ class GameService:
                 or action["data"].get("am_scrutinized")
                 or action["data"].get("am_code")
                 or action["data"].get("npc_order")
+                or action["data"].get("npc_flirt")
                 or action["data"].get("gorgon_play")
                 else "m2.choice_resolved",
                 state,
@@ -5042,6 +5105,10 @@ class GameService:
                 from girlframe.services.m3_princess_sex import synchronize as sync_princess
 
                 sync_princess(self, c, self.action(c, action["id"]), event)
+            if action["data"].get("npc_flirt"):
+                from girlframe.services.m3_npc_flirt import synchronize as sync_npc_flirt
+
+                sync_npc_flirt(self, c, self.action(c, action["id"]), event)
             from girlframe.services.m3_bonded import synchronize_delegation
 
             synchronize_delegation(self, c, self.action(c, action["id"]), event)
@@ -6000,6 +6067,21 @@ class GameService:
 
                 return SpriteService(self.store).decision(viewer, choice_id)
             action = self.action(c, row["action_id"])
+            if row["kind"].startswith("npc_flirt_") and action["data"].get("npc_flirt"):
+                from girlframe.services.m3_npc_flirt import authorize as npc_flirt_authorize
+                from girlframe.services.m3_npc_flirt import projection as npc_flirt_projection
+
+                npc_flirt_authorize(self, c, viewer, action)
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    actor=int(action["actor_id"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    play=action["data"]["play"],
+                    npc_flirt=npc_flirt_projection(
+                        self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                    ),
+                )
             if row["kind"] in ("oldgen_write_maxim", "oldgen_low_maxim", "oldgen_listen"):
                 from girlframe.services.m3_oldgen import detail as oldgen_detail
 

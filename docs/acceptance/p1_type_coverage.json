@@ -975,7 +975,7 @@
       "type": "AM",
       "registry_prefix": "girl.am.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Existing Jailbroken, Scrutinized and Just Code/body/backup/records paths retained. New no-additional-roll Sex source readback and native circuit routing: actual Alpha\u2192AM smoke1 passed2.15s.",
+      "ordinary_workflows_with_evidence": "Existing Jailbroken, Scrutinized and Just Code/body/backup/records paths retained. New no-additional-roll Sex source readback and native circuit routing: actual Alpha→AM smoke1 passed2.15s.",
       "missing_before_AI": "Reconcile remaining ordinary body/identity consumers and Bonded no-roll delegation; circuit path uses existing real CodeService sources. Expanded consumer regression and independent review remain pending.",
       "later_candidates": "Exceptional simultaneous branch/body/career transitions after ordinary AM play works.",
       "code": [
@@ -1106,8 +1106,8 @@
       "type": "Bonded",
       "registry_prefix": "girl.bonded.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Actual Side and Pair-owned replies, source-owned witnessed affection/children, copied Sex rules with original resources, explicit no-roll low result and durable pause. Native Side smoke1/2.56s; no-roll pause and exact permission restore1/1.89s.",
-      "missing_before_AI": "Final authored normal regression, optional Man mark on explicit no-roll source, remaining ordinary identity/body/lifecycle adapters and independent source review.",
+      "ordinary_workflows_with_evidence": "Actual Side and Pair-owned replies, source-owned witnessed affection/children, copied Sex rules with original resources, explicit no-roll low result and durable pause. Native Side smoke1/2.56s; no-roll pause and exact permission restore1/1.89s. Local optional unmarked non-Paired Man mark on the genuine no-roll source is implemented; static4/types3 pass; authored native normal NOTRUN.",
+      "missing_before_AI": "Final authored normal regression, remaining repeated/Paired Man source-only Tag resolution, remaining ordinary identity/body/lifecycle adapters and independent source review.",
       "later_candidates": "Compound retained-rule/extra-Identity/dual-cockpit cases after ordinary Pair lifecycle.",
       "code": [
         "src/girlframe/services/m3_bonded.py",
@@ -1431,8 +1431,8 @@
       "type": "CONSUME",
       "registry_prefix": "frame.consume.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Original physical hunger/link state, actual Eat/Feral/owned source choices, body/custody/loss/ending support, starvation Tag/Smell/order hooks and paid Requisitions. Genuine-link/midBite smoke1 passed2.24s.",
-      "missing_before_AI": "Sprite Eat continuation; ordinary body/carrier/linked-Asset consumers; destroyed-hardware regrowth producer; typed knowledge/free-text boundary; final normal regression. Unsupported adapters stay explicit before costs.",
+      "ordinary_workflows_with_evidence": "Original physical hunger/link state, actual Eat/Feral/owned source choices, body/custody/loss/ending support, starvation Tag/Smell/order hooks and paid Requisitions. Genuine-link/midBite smoke1 passed2.24s. Local Budget-loss Partake regrowth preserves exact original hardware history, real costs/capacity and new component identity; normal1 passed7.95s with guarded Opportunity completion repair. Static6/types5 pass.",
+      "missing_before_AI": "Sprite Eat continuation; ordinary body/carrier/linked-Asset consumers; permanent-loss regrowth producers beyond actual Budget removal; typed knowledge/free-text boundary; final normal regression. Unsupported adapters stay explicit before costs.",
       "later_candidates": "Exceptional targets/body combinations after ordinary consumption; starvation is not deferred.",
       "code": [
         "src/girlframe/engine/frame_setup.py",
@@ -1526,12 +1526,12 @@
         },
         {
           "id": "frame.consume.human-hound",
-          "title": "\u2018Human\u2019 Hound",
+          "title": "‘Human’ Hound",
           "source": {
             "document": "rulebook",
             "pdf_page": 66,
             "printed_page": 64,
-            "heading": "\u2018Human\u2019 Hound"
+            "heading": "‘Human’ Hound"
           },
           "published_implementation": "subset",
           "local_implementation": "subset",
@@ -2638,12 +2638,12 @@
         },
         {
           "id": "frame.enforcer.masters-dog",
-          "title": "Master\u2019s Dog",
+          "title": "Master’s Dog",
           "source": {
             "document": "rulebook",
             "pdf_page": 79,
             "printed_page": 77,
-            "heading": "Master\u2019s Dog"
+            "heading": "Master’s Dog"
           },
           "published_implementation": "subset",
           "local_implementation": "subset",
@@ -2659,12 +2659,12 @@
         },
         {
           "id": "frame.enforcer.pavlovs-soldier",
-          "title": "Pavlov\u2019s Soldier",
+          "title": "Pavlov’s Soldier",
           "source": {
             "document": "rulebook",
             "pdf_page": 79,
             "printed_page": 77,
-            "heading": "Pavlov\u2019s Soldier"
+            "heading": "Pavlov’s Soldier"
           },
           "published_implementation": "subset",
           "local_implementation": "subset",
@@ -3212,8 +3212,8 @@
       "type": "The Red Queen",
       "registry_prefix": "frame.red-queen.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Native Queen/Consult/Decree/discipline/private reopen normal passed. Candidate includes real marks, Orders, memory, accusation and Court reward ownership; remaining authored normals unrun.",
-      "missing_before_AI": "Actual NPC forced-Flirt/remaining body and source-family adapters; final authored normals, exact-commit regression and independent/player review.",
+      "ordinary_workflows_with_evidence": "Native Queen/Consult/Decree/discipline/private reopen normal passed. Candidate includes real marks, Orders, memory, accusation and Court reward ownership; remaining authored normals unrun. Local native forced Flirt with an actual ordinary NPC, real performed escape/judged Bond, and actual NPC injury continuation passed1/4.93s; source/control/privacy preserved.",
+      "missing_before_AI": "Remaining nonordinary NPC/body and source-family adapters; final authored normals, exact-commit regression and independent/player review.",
       "later_candidates": "Exceptional Court/body combinations after ordinary Court agency/transfer/memory mechanics.",
       "code": [
         "src/girlframe/services/shared_setup.py",
@@ -3255,12 +3255,12 @@
         },
         {
           "id": "frame.red-queen.queens-court",
-          "title": "Queen\u2019s Court",
+          "title": "Queen’s Court",
           "source": {
             "document": "rulebook",
             "pdf_page": 88,
             "printed_page": 86,
-            "heading": "Queen\u2019s Court"
+            "heading": "Queen’s Court"
           },
           "published_implementation": "subset",
           "local_implementation": "subset",

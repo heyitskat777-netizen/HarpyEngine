@@ -6813,6 +6813,56 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "consume-regrown-missing-component",
+      "summary": "A source-proven missing original same-Frame feature regrows as a new intact component, retaining Void and consuming that exact loss; ended old links or occupants are not restored.",
+      "source": "Rulebook PDF66/printed64 Let Us Partake; canonical original same-Frame Asset loss",
+      "rationale": "Regrowth needs actual former inventory and real Dive/Girl-Asset cost. Reusing old component identity could revive ended physical/control state; removing Void would invent purification.",
+      "policy_key": "consume_regrown_missing_component",
+      "alternatives": [
+        "Reinsert old component IDs and automatically reactivate former minds, passengers or links.",
+        "Create arbitrary former inventory or remove Void without a rule source."
+      ],
+      "implementation_note": "Initial finite adapter uses genuine Budget-removal Loss, current original actor/Frame, capacity/legal replacement and existing birth/loss/Void consequences. Other permanent-loss producers remain explicit implementation work; expiry, swap, reclassification and temporary grants are not stock.",
+      "change_impact": "Version future source interpretation changes; retain original Asset/loss history, new births, source costs, consumed losses and actual occupants/control endings.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "npc-flirt-conversation-self-cost",
+      "summary": "An NPC escaping Flirt through a Conversation Play performs an actual supported NPC job/move with an addressed account; self-damage uses the actual NPC controller and a genuine injury, death or different-cell movement consequence.",
+      "source": "Printed Flirt and core NPC rules; play.basic.flirt / core.core.npcs / core.core.npc-assets / core.core.npc-tags",
+      "rationale": "NPCs use actual narrative jobs/moves instead of invented Girl dice, Heat or Identities. Self-transfer or self-advantage would pay no real damage cost.",
+      "policy_key": "npc_flirt_conversation_self_cost",
+      "alternatives": [
+        "Invent an NPC Girl sheet or second dice receipt.",
+        "Treat a paid NPC Bond Request as a free escape or convert self-cost into no-op self-transfer."
+      ],
+      "implementation_note": "Keep the original Girl Action/receipt and original NPC controller; stage real choice work and prove canonical completion. Only supported NPC narrative performances are offered; other source families stay visible required adapters.",
+      "change_impact": "Preserve original source choices, NPC and Girl identities, performances, receipt, costs and completion history when adjusting the interpretation.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
+    },
+    {
+      "id": "bonded-no-roll-man-mark",
+      "summary": "The Man may optionally mark an actual partner Tag on the source-only Bonded take-7 route; the printed always/11+ exception gives the genuine high result without inventing dice or Heat.",
+      "source": "Bonded Sex and Handler gender designation Man; existing gender Tag source",
+      "rationale": "Apply the explicit always exception to the selected no-roll source while preserving the actual counterpart, ownership and costs.",
+      "policy_key": "bonded_no_roll_man_mark",
+      "alternatives": [
+        "Treat the selected 7 as fixed even when the Man marks the actual partner Tag."
+      ],
+      "implementation_note": "First finite source accepts only an actual observed unmarked non-Paired Tag and proves immutable original law/person/source/mark. Existing default low and Animal choices remain. Repeated and Paired source-only resolutions are explicit required P1 adapters and reject before mutation.",
+      "change_impact": "Preserve original source routes, optional choices, law/Tag history, scene use and actual counterpart authorship when adjusting.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -7713,7 +7763,9 @@
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_npc_flirt.py"
+      ],
       "m2_play_id": "flirt",
       "module": "core"
     },

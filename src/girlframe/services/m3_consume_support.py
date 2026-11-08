@@ -752,6 +752,7 @@ def partake(
     new_asset: SuppliedAsset | None = None,
     appearance: str = "",
     replace_frame: str | None = None,
+    regrow_replacements: dict[str, str] | None = None,
 ) -> tuple[GameState, tuple[str, ...]]:
     actual = game.action(c, action)
     if (
@@ -760,6 +761,8 @@ def partake(
         or actual["actor_id"] != actor.entity
     ):
         raise WorkflowError("Let Us Partake requires the actual original committed Dive Deep")
+    if option != "regrow" and regrow_replacements:
+        raise WorkflowError("Cap replacements belong only to actual selected regrowth")
     before = GameState.model_validate_json(state.model_dump_json())
     sheet = state.sheets[actor.entity]
     selected = next((x for x in sheet.assets if x.id == girl_asset and x.family == "girl"), None)
@@ -780,19 +783,15 @@ def partake(
             or replace_frame
         ):
             raise WorkflowError(
-                "Damage one intact Girl Asset and regrow up to two actual damaged Frame Assets"
+                "Damage one intact Girl Asset and regrow up to two actual Frame Assets"
             )
-        if not set(frame_assets) <= {
-            x.id for x in sheet.assets if x.family == "frame" and x.damaged
-        }:
-            raise WorkflowError(
-                "Regrow the actual damaged Frame Assets rather than inventing hardware"
-            )
+        from girlframe.services.m3_consume_regrowth import apply_regrowth, prepare_regrowth
+
+        plan = prepare_regrowth(
+            game, c, state, actor, actual, frame_assets, regrow_replacements or {}
+        )
         state, owed = damage(game, c, state, actor, girl_asset, event, action)
-        sheet = state.sheets[actor.entity]
-        for asset in sheet.assets:
-            if asset.id in frame_assets:
-                asset.damaged = False
+        state = apply_regrowth(game, c, state, plan, event)
     elif option == "excrete":
         if (
             new_asset is None
@@ -854,7 +853,7 @@ def partake(
         )
     else:
         raise WorkflowError("Choose one actual printed Let Us Partake effect")
-    sheet.revision += 1
+    state.sheets[actor.entity].revision += 1
     owed += _loss_ids(game, c, before, state, actor, "consume_partake", event)
     state.facts.append(
         dict(

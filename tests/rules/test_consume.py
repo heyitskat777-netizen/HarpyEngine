@@ -99,6 +99,7 @@ def roll(
     faces=(3, 4),
     heat=1,
     source_work=None,
+    piloting=False,
 ):
     game.dice.faces = faces
     action = game.begin(
@@ -111,6 +112,7 @@ def roll(
             target_actor=target,
             heat=heat,
             source_work=source_work,
+            piloting=piloting,
             context="I actually lunge at this person"
             if play == "consume_eat"
             else "I actually succumb to this impulse"
@@ -415,7 +417,7 @@ def test_actual_dive_partake_changes_real_assets_or_original_appearance(
         next(x for x in canon.sheets["2"].assets if x.id == frame).damaged = True
         game.event(c, 1, str(uuid4()), "synthetic.actual_prior_frame_damage", canon)
     cockpit(game, "pilot")
-    action = roll(game, worker, gateway, play="dive_deep", heat=0, faces=(4, 5))
+    action = roll(game, worker, gateway, play="dive_deep", heat=0, faces=(4, 5), piloting=True)
     fields = {"girl_asset": girl}
     if option == "regrow":
         fields["frame_assets"] = json.dumps([frame])
@@ -506,3 +508,243 @@ def test_real_cannibal_target_hierarchy_then_original_voluntary_two_permission_r
     )
     with pytest.raises(WorkflowError):
         controls.view(OTHER, request)
+
+
+def test_actual_budget_loss_regrows_original_frame_feature_as_new_component_once(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred: genuine permanent loss -> real Dive/price -> new source-owned hardware."""
+    import asyncio
+    import json
+    from types import SimpleNamespace
+
+    from test_strain import facts
+    from test_strain_service import D6
+
+    from girlframe.discord_adapter import m3_consume as native
+    from girlframe.engine import m3_budget_removal as budget
+    from girlframe.services.m3_budget_removal import RemovalService
+    from girlframe.services.m3_consume_regrowth import prove_regrowth
+    from girlframe.services.m3_off_duty import OffDutyService
+    from girlframe.services.m3_strain import StrainService
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch)
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(rules.STARVATION, rules.EAT, *rules.REQUISITIONS, budget.RULE),
+    )
+    approval = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "m3_approval": approval.model_copy(
+                update={"subsystems": approval.subsystems | {"strain"}}
+            )
+        }
+    )
+    acquire(controls, rules.PARTAKE)
+    # Initial damage is a fixture fact; the later missing inventory comes only from real Budget.
+    with ledger.transaction() as c:
+        current = state(game)
+        for sheet in current.sheets.values():
+            [value for value in sheet.assets if value.family == "frame"][-1].damaged = True
+        game.event(c, 1, str(uuid4()), "synthetic.existing_frame_repair_needs", current)
+    strain = StrainService(OffDutyService(MissionService(ledger)), dice=D6(6))
+    strain.configure(
+        ADMIN, str(uuid4()), state(game).revision, "disaster_management", frozenset({"budget"})
+    )
+    period = strain.periods.begin(ADMIN, str(uuid4()))["id"]
+    strain.prepare(
+        ADMIN,
+        str(uuid4()),
+        period,
+        1,
+        state(game).revision,
+        facts(
+            no_girl_void=True,
+            at_least_half_have_void=False,
+            frame_full_or_all_frames_some_repairs=True,
+        ),
+    )
+    while True:
+        request = next(
+            value
+            for value in state(game).strain.requests
+            if value.track == "budget" and (value.kind == "endgame" or value.severity == "high")
+        )
+        if request.kind == "endgame":
+            break
+        strain.roll(ADMIN, str(uuid4()), request.id, 1, state(game).revision)
+        strain.choose(ADMIN, str(uuid4()), request.id, 2, state(game).revision, 2)
+    strain.choose(ADMIN, str(uuid4()), request.id, 1, state(game).revision, 4, endgame=True)
+    work = request.id + ":effect"
+    removal = RemovalService(ledger)
+    for viewer in (PLAYER, OTHER):
+        current = state(game)
+        actor = current_ref(current, viewer.user_id)
+        removal.review_context(
+            ADMIN,
+            str(uuid4()),
+            work,
+            actor,
+            current.revision,
+            inside_frame=False,
+            piloting=False,
+            in_battle=False,
+            opponent=None,
+            opponent_known=True,
+            account="Actual original outside body and nonbattle Frame",
+        )
+        sheet = state(game).sheets[str(viewer.user_id)]
+        selected_girl = next(value for value in sheet.assets if value.family == "girl")
+        selected_frame = next(
+            value for value in sheet.assets if value.family == "frame" and value.damaged
+        )
+        removal.remove(
+            viewer,
+            str(uuid4()),
+            work,
+            state(game).revision,
+            selected_girl.id,
+            selected_frame.id,
+            "My actual compulsory Budget loss",
+        )
+    removal.finish(ADMIN, str(uuid4()), work, state(game).revision)
+    original_actor = current_ref(state(game), 2)
+    loss = next(value for value in budget.losses(state(game)) if value.actor == original_actor)
+    assert not any(value.id == loss.frame_asset.id for value in state(game).sheets["2"].assets)
+    girl = asset(game, 2)
+    cockpit(game, "pilot")
+    action = roll(game, worker, gateway, play="dive_deep", heat=0, faces=(4, 5), piloting=True)
+    # Preserve the genuine primary Dive, including actual table authors, before optional Partake.
+    if any(value["kind"] == "dive_select" for value in game.choices(PLAYER)):
+        answer(
+            game,
+            PLAYER,
+            "dive_select",
+            options=("erase_identity_and_table_question",),
+            text="I actually let go of this self-definition",
+        )
+        ordinary = next(
+            value for value in state(game).sheets["2"].identities if not value.protected
+        )
+        answer(
+            game,
+            PLAYER,
+            "dive_effect",
+            fields={"identity": ordinary.id},
+            text="What holds this Frame together?",
+        )
+        for viewer in (PLAYER, OTHER, ADMIN):
+            answer(
+                game,
+                viewer,
+                "dive_table_answer",
+                text="Actual table answer by " + str(viewer.user_id),
+            )
+    choice = next(value for value in game.choices(PLAYER) if value["kind"] == "consume_partake")
+    detail = game.decision(PLAYER, choice["id"])["detail"]
+    token = rules.identity("missing-frame", loss.id)
+    assert token in detail["regrow_missing"] and token in dict(detail["frame_assets"])
+    before = state(game)
+    with pytest.raises(WorkflowError):
+        game.respond(
+            PLAYER,
+            str(uuid4()),
+            choice["id"],
+            choice["revision"],
+            ChoiceAnswer(
+                options=("regrow",),
+                fields={"girl_asset": girl, "frame_assets": '["unproved-former-inventory"]'},
+                text="This cannot spend the Girl cost without actual original hardware evidence",
+            ),
+        )
+    assert state(game) == before
+    request = (
+        PLAYER,
+        "actual-budget-partake-regrowth",
+        choice["id"],
+        choice["revision"],
+        ChoiceAnswer(
+            options=("regrow",),
+            fields={"girl_asset": girl, "frame_assets": json.dumps([token])},
+            text="I pay actual Girl damage to regrow my actual missing Frame feature",
+        ),
+    )
+    game.respond(*request)
+    game.respond(*request)
+    born = state(game)
+    regrown = next(
+        value for value in rules.records(born, rules.RegrownFrame) if value.loss == loss.id
+    )
+    assert regrown.original == loss.frame_asset and regrown.frame == loss.frame
+    assert regrown.component.id != loss.frame_asset.id
+    assert regrown.component.void == loss.frame_asset.void and not regrown.component.damaged
+    assert regrown.component in born.sheets["2"].assets
+    assert next(value for value in born.sheets["2"].assets if value.id == girl).damaged
+    assert len(born.sheets["2"].assets) == len(before.sheets["2"].assets) + 1
+    assert (
+        born.neural_connections == before.neural_connections
+        and born.placements == before.placements
+    )
+    with ledger.engine.connect() as c:
+        assert prove_regrowth(game, c, born, regrown.id) == regrown
+    assert controls.view(PLAYER, regrown.id)["type"] == "regrowth"
+    with pytest.raises(WorkflowError):
+        controls.view(ADMIN, regrown.id)
+    tick(worker, gateway, 6)
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    # A later genuine Dive cannot consume the same immutable loss a second time.
+    later = roll(game, worker, gateway, play="dive_deep", heat=0, faces=(4, 5), piloting=True)
+    if any(value["kind"] == "dive_select" for value in game.choices(PLAYER)):
+        answer(
+            game,
+            PLAYER,
+            "dive_select",
+            options=("erase_identity_and_table_question",),
+            text="A later actual Dive",
+        )
+        ordinary = next(
+            value for value in state(game).sheets["2"].identities if not value.protected
+        )
+        answer(
+            game, PLAYER, "dive_effect", fields={"identity": ordinary.id}, text="What changes next?"
+        )
+        for viewer in (PLAYER, OTHER, ADMIN):
+            answer(
+                game,
+                viewer,
+                "dive_table_answer",
+                text="Actual later answer by " + str(viewer.user_id),
+            )
+    later_choice = next(
+        value for value in game.choices(PLAYER) if value["kind"] == "consume_partake"
+    )
+    assert token not in game.decision(PLAYER, later_choice["id"])["detail"]["regrow_missing"]
+    choose(game, PLAYER, "consume_partake", "pass")
+    assert game.inspect(PLAYER, later)["state"] == "complete"
+    captured = []
+    monkeypatch.setattr(native, "viewer_from_interaction", lambda interaction: PLAYER)
+
+    async def reply(interaction, text, view=None):
+        captured.append(view)
+
+    monkeypatch.setattr(native, "reply", reply)
+    asyncio.run(
+        native.open_consume(
+            SimpleNamespace(user=SimpleNamespace(id=2), channel_id=999), controls, regrown.id
+        )
+    )
+    assert native.clean(loss.frame_asset.name) in "".join(page.body for page in captured[0].pages)
+    assert (
+        len(
+            [
+                value
+                for value in rules.records(state(game), rules.RegrownFrame)
+                if value.loss == loss.id
+            ]
+        )
+        == 1
+    )

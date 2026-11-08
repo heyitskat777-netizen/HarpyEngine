@@ -3744,3 +3744,39 @@ is explicit, not inferred free supply. Existing Marriage payment/Flow convention
 stay in force, including their actual financial approval at quoted0. This is an
 adjustable delegated recommendation requiring clarity review; preserve original
 quotes, loss/component history, human authorship and once-only payment/installation.
+
+### CONSUME regrowth of a missing Frame component
+
+`consume-regrown-missing-component` (PDF66/printed64): an actually proved missing
+original feature regrows as a new intact component in the same original current
+Frame, retaining Void and consuming its exact loss source once. Preserve actual
+Dive/Girl-Asset costs, capacity/replacement rules and mandatory birth/loss/Void
+consequences. The former component's occupants, custody and physical/control links
+stay ended. The first finite source is canonical Budget removal; expiry, Frame
+swap, reclassification and temporary grants do not establish permanent stock.
+Other missing-component producers remain implementation work. This delegated
+interpretation requires clarity review; later adjustments preserve source/cost/
+component history and do not invent purification or former inventory.
+
+### NPC Flirt: Conversation escape and genuine self-cost
+
+`npc-flirt-conversation-self-cost`: an actual NPC performs a supported narrative
+job/move and supplies an addressed substantive account on the original Flirt
+choice. This creates no Girl sheet, extra dice receipt or free paid Bond Request.
+For the printed self-damage alternative, the actual NPC controller chooses a real
+injury/Tag, death or legal move to a different cell; self-transfer and self-advantage
+pay no cost and are excluded. Preserve actual Girl costs, receipt, NPC identity,
+private responses and pending work. This delegated interpretation of Flirt/core
+NPC rules requires clarity review. Unsupported Conversation sources remain
+explicit work rather than silently supplied fictional effects.
+
+### Bonded source-only take7 and the Man's optional Tag mark
+
+`bonded-no-roll-man-mark`: apply the printed Man's always/11+ exception when
+he chooses to mark a real partner Tag on Bonded's explicit no-roll take7 route.
+This resolves the actual high source result, with original counterpart choice
+ownership, and creates no dice, Heat or substitute person. Without that choice
+the ordinary low route remains. The first finite adapter accepts observed unmarked
+non-Paired Tags; repeated/Paired source-only resolution remains required P1 work
+and rejects before costs. This is an adjustable delegated interpretation requiring
+clarity review; preserve source, law/person/Tag history and real scene use.

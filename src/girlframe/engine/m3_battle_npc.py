@@ -5,6 +5,12 @@ Only moves with wholly conversational effects are listed here. Mechanical moves
 use their own real resource services and are not mislabelled narrative damage.
 """
 
+from typing import Literal
+from uuid import NAMESPACE_URL, uuid5
+
+from girlframe.engine.m2 import GameState
+from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
+
 NARRATIVE = {
     "base_personnel": ("Keep things running", 189),
     "civilian": ("Avoid eye contact", 189),
@@ -27,3 +33,35 @@ NARRATIVE = {
     "scientist": ("Justify your actions", 191),
     "smuggler": ("Sneer", 191),
 }
+
+
+# A Flirt escape price is the NPC's own real consequence, not a second attack.
+SELF_SOURCE = "npc_flirt_escape"
+SELF_EFFECTS = ("injure_tag", "move", "kill")
+
+
+def escape_damage_id(damage: str) -> str:
+    return str(uuid5(NAMESPACE_URL, "npc-flirt-escape-damage:" + damage))
+
+
+class FlirtSelfDamage(Model):
+    id: str
+    source_kind: Literal["npc_flirt_escape"] = "npc_flirt_escape"
+    damage: str
+    action: str
+    choice: str
+    npc: ActorRef
+    controller: int
+    cast: SceneCast
+    event: str
+
+
+def self_damage(state: GameState, identity: str) -> FlirtSelfDamage:
+    values = [
+        FlirtSelfDamage.model_validate_json(value["body"])
+        for value in state.facts
+        if value.get("kind") == "npc_flirt_self_damage" and value.get("id") == identity
+    ]
+    if len(values) != 1:
+        raise ValueError("Recover the exact actual NPC Flirt self-cost")
+    return values[0]

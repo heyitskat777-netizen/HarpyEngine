@@ -3,6 +3,8 @@
 from typing import Literal
 from uuid import NAMESPACE_URL, uuid5
 
+from pydantic import Field
+
 from girlframe.engine.m2 import AssetState, GameState, TagState
 from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
 from girlframe.engine.m3_privileges import suspended
@@ -139,6 +141,25 @@ class Partaking(Model):
     event: str
     work: tuple[str, ...] = ()
     replaced_frame: str | None = None
+    regrow_replacements: dict[str, str] = Field(
+        default_factory=dict, exclude_if=lambda value: not value
+    )
+
+
+class RegrownFrame(Model):
+    id: str
+    actor: ActorRef
+    frame: str
+    action: str
+    opportunity: str
+    choice: str
+    receipt: str
+    loss: str
+    loss_event: str
+    original: AssetState
+    component: AssetState
+    event: str
+    replacement: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class Erasure(Model):
@@ -213,6 +234,7 @@ KINDS = {
     Reaffirmation: "consume_reaffirmation",
     CannibalPermit: "consume_permit",
     Partaking: "consume_partaking",
+    RegrownFrame: "consume_regrown_frame",
     Erasure: "consume_erasure",
     Opportunity: "consume_opportunity",
     PermitRequest: "consume_permit_request",
@@ -231,6 +253,7 @@ type Source = (
     | Reaffirmation
     | CannibalPermit
     | Partaking
+    | RegrownFrame
     | Erasure
     | Opportunity
     | PermitRequest

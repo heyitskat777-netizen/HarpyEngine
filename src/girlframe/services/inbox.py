@@ -1313,6 +1313,7 @@ class InboxService:
             from girlframe.services.m3_changeling import ChangelingService
             from girlframe.services.m3_changeling_sex import ChangelingSexService
             from girlframe.services.m3_consume import _tasks as consume_tasks
+            from girlframe.services.m3_npc_flirt import NpcFlirtService
             from girlframe.services.m3_prince import PrinceService
             from girlframe.services.m3_red_queen import RedQueenService
             from girlframe.services.m3_vatgrown_dna import VatgrownDNAService
@@ -1327,6 +1328,7 @@ class InboxService:
                 ("changeling", ChangelingService(frame_game)._tasks(connection, viewer)),
                 ("changeling_sex", ChangelingSexService(frame_game)._tasks(connection, viewer)),
                 ("red_queen", RedQueenService(frame_game)._tasks(connection, viewer)),
+                ("npc_flirt", NpcFlirtService(frame_game)._tasks(connection, viewer)),
                 ("vatgrown_dna", VatgrownDNAService(frame_game)._tasks(connection, viewer)),
                 ("casualty_replacement", ReplacementService(frame_game)._tasks(connection, viewer)),
                 ("bonded", BondedService(frame_game)._tasks(connection, viewer)),

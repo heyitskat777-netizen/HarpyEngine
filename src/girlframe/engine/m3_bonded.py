@@ -60,6 +60,20 @@ class Activation(Model):
     account: str
 
 
+class NoRollManMark(Model):
+    """The actual Man's optional partner-Tag mark, without a fabricated roll."""
+
+    id: str
+    source: str
+    actor: ActorRef
+    partner: ActorRef
+    designation: str
+    tag: str
+    label: str
+    event: str
+    scene: str
+
+
 class Selection(Model):
     id: str
     source: str
@@ -150,6 +164,7 @@ KINDS: dict[type[Model], str] = {
     Source: "bonded_source",
     Consent: "bonded_consent",
     Activation: "bonded_activation",
+    NoRollManMark: "bonded_no_roll_man_mark",
     Selection: "bonded_selection",
     PairHelp: "bonded_pair_help",
     Child: "bonded_child",

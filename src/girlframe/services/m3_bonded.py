@@ -28,6 +28,96 @@ from girlframe.services.read_only_bot import GuildViewer
 KINDS = ("bonded_side", "bonded_mid", "bonded_promise", "bonded_reply", "bonded_high", "bonded_low")
 
 
+def _man_options(
+    game: GameService, c: Connection, state: GameState, value: rules.Source
+) -> list[dict[str, str]]:
+    from girlframe.services.m3_gender_designation import _current
+
+    if value.kind != "sex" or value.route != "seven" or value.target is None:
+        return []
+    law = _current(game, c, state, value.actor)
+    if law is None or law.gender != "man":
+        return []
+    other = state.sheets[value.target.entity]
+    from girlframe.engine.m3_girl_runtime_state import relation_current
+
+    if any(x.paired for x in other.identities) or (
+        has_rule(other, rules.PAIR, "BONDED") and relation_current(other, "pair", state)
+    ):
+        return []
+    from girlframe.services.m2_choices import ChoiceEngine
+
+    result = []
+    for tag in other.tags:
+        if (
+            tag.marked
+            or tag.rejection_pending
+            or tag.scene_used == value.cast.id
+            or int(value.actor.entity) not in tag.observers
+        ):
+            continue
+        ChoiceEngine(game).prove_tag_setter(c, state, int(value.target.entity), tag)
+        result.append(dict(id=tag.id, label=tag.label))
+    return result
+
+
+def _prove_man_mark(
+    game: GameService, c: Connection, state: GameState, value: rules.Source
+) -> rules.NoRollManMark | None:
+    marks = [x for x in rules.records(state, rules.NoRollManMark) if x.source == value.id]
+    if not marks:
+        return None
+    if len(marks) != 1 or value.effect_event is None or value.action is not None:
+        raise WorkflowError("Preserve the one actual source-only Man mark")
+    mark = marks[0]
+    birth = _history(c, game, mark.event)
+    history = t.m2["m2_state_history"]
+    previous = c.scalar(
+        sa.select(history.c.body_json).where(
+            history.c.campaign_id == game.store.campaign_id,
+            history.c.revision == birth.revision - 1,
+        )
+    )
+    if previous is None:
+        raise WorkflowError("Recover the actual pre-mark partner Tag source")
+    before = GameState.model_validate_json(previous)
+    from girlframe.services.m3_gender_designation import _current, designation
+
+    law = designation(game, c, birth, mark.designation)
+    tagged = birth.sheets.get(mark.partner.entity)
+    tag = next((x for x in tagged.tags if x.id == mark.tag), None) if tagged else None
+    if (
+        mark not in rules.records(birth, rules.NoRollManMark)
+        or mark.id != value.id + ":man"
+        or mark.actor != value.actor
+        or mark.partner != value.target
+        or mark.event != value.effect_event
+        or mark.scene != value.cast.id
+        or law.actor != value.actor
+        or law.gender != "man"
+        or _current(game, c, before, value.actor) != law
+        or dict(id=mark.tag, label=mark.label) not in _man_options(game, c, before, value)
+        or tag is None
+        or not tag.marked
+        or tag.scene_used != mark.scene
+        or tag.label != mark.label
+    ):
+        raise WorkflowError("Preserve the real original Man, partner, law and marked Tag")
+    return mark
+
+
+def _unrolled_choice(state: GameState, value: rules.Source) -> str:
+    if value.kind == "intimacy":
+        return "bonded_intimacy"
+    if value.tier != "high":
+        return "bonded_low"
+    promised = any(
+        x.source == value.id and x.kind == "bonded_promise"
+        for x in rules.records(state, rules.Selection)
+    )
+    return "bonded_high" if promised else "bonded_promise"
+
+
 def _copy(state: GameState, other: GameState) -> None:
     for name in GameState.model_fields:
         setattr(state, name, getattr(other, name))
@@ -284,10 +374,11 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
             not in rules.records(_history(c, game, activation.event), rules.Activation)
         ):
             raise WorkflowError("Preserve the actual performed diceless source and its author")
+        man = _prove_man_mark(game, c, state, value)
         if (
             effect.effect_event != value.effect_event
             or effect.tier != value.tier
-            or (value.route == "seven" and value.tier != "low")
+            or (value.route == "seven" and value.tier != ("high" if man else "low"))
             or value.route != "seven"
             and value.kind != "intimacy"
         ):
@@ -740,10 +831,15 @@ def _select(
         if _ready_to_close(state, value):
             _complete(state, value, event)
     elif kind == "bonded_promise":
-        if options != ("promise",) or answer.denied or action is None:
+        if (
+            options != ("promise",)
+            or answer.denied
+            or (action is None and _prove_man_mark(game, c, state, value) is None)
+        ):
             raise WorkflowError("Author your actual promise to protect her")
         rules.put(state, selection)
-        game.request(c, action, value.controllers[value.pair.token], "bonded_high", {})
+        if action is not None:
+            game.request(c, action, value.controllers[value.pair.token], "bonded_high", {})
     elif kind == "bonded_high":
         assert value.target is not None
         tags = {x.id: x for x in state.sheets[value.target.entity].tags}
@@ -770,7 +866,7 @@ def _select(
         rules.put(state, selection)
         from girlframe.services.m3_bonded_support import place_above
 
-        place_above(state, value.actor, value.pair)
+        place_above(state, value.actor, value.target)
         _complete(state, value, event)
     elif kind == "bonded_low":
         if len(options) != 1:
@@ -1526,7 +1622,14 @@ class BondedService:
         )
 
     def activate(
-        self, viewer: GuildViewer, key: str, identity: str, revision: int, account: str
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        revision: int,
+        account: str,
+        *,
+        man_tag: str | None = None,
     ) -> dict[str, Any]:
         def operation(c: Connection) -> dict[str, Any]:
             state = load_state(c, self.store.campaign_id)
@@ -1545,7 +1648,37 @@ class BondedService:
                     "Record the actual performed affection or confirmed unrolled7 source"
                 )
             _contact(self.game, c, state, value)
+            if man_tag is not None and man_tag not in {
+                x["id"] for x in _man_options(self.game, c, state, value)
+            }:
+                raise WorkflowError(
+                    "Choose an actual unused unmarked partner Tag; repeated/Paired marks "
+                    "require their source-only resolution adapter"
+                )
             event = str(uuid4())
+            if man_tag is not None:
+                from girlframe.services.m3_gender_designation import _current
+
+                law = _current(self.game, c, state, value.actor)
+                assert law is not None and value.target is not None
+                other = state.sheets[value.target.entity]
+                tag = next(x for x in other.tags if x.id == man_tag)
+                rules.put(
+                    state,
+                    rules.NoRollManMark(
+                        id=identity + ":man",
+                        source=identity,
+                        actor=value.actor,
+                        partner=value.target,
+                        designation=law.id,
+                        tag=tag.id,
+                        label=tag.label,
+                        event=event,
+                        scene=value.cast.id,
+                    ),
+                )
+                tag.marked, tag.scene_used = True, value.cast.id
+                other.revision += 1
             rules.put(
                 state,
                 rules.Activation(
@@ -1562,7 +1695,11 @@ class BondedService:
                     update=dict(
                         phase="results",
                         effect_event=event,
-                        tier="low" if value.route == "seven" else None,
+                        tier="high"
+                        if man_tag is not None
+                        else "low"
+                        if value.route == "seven"
+                        else None,
                     )
                 ),
             )
@@ -1585,7 +1722,12 @@ class BondedService:
             viewer,
             key,
             "m3.bonded_activated",
-            dict(id=identity, revision=revision, account=account),
+            dict(
+                id=identity,
+                revision=revision,
+                account=account,
+                **({"man_tag": man_tag} if man_tag else {}),
+            ),
             operation,
             rules.PAIR,
         )
@@ -1597,7 +1739,7 @@ class BondedService:
             state = load_state(c, self.store.campaign_id)
             value = prove(self.game, c, state, identity)
             _access(self.game, c, viewer, rules.INTIMACY if value.kind == "intimacy" else rules.SEX)
-            kind = "bonded_intimacy" if value.kind == "intimacy" else "bonded_low"
+            kind = _unrolled_choice(state, value)
             person = _choice_person(value, kind)
             if (
                 state.revision != revision
@@ -1811,7 +1953,7 @@ class BondedService:
                 (x for x in rules.records(state, rules.Child) if x.source == identity), None
             )
             orders = [x for x in _unbound_orders(state, value) if x.controller == viewer.user_id]
-            low_person = value.target if value.kind == "sex" else value.actor
+            choice_kind = _unrolled_choice(state, value)
             own = state.sheets[person.entity]
             from girlframe.services.p1_source_pause import projection as pause_projection
 
@@ -1833,6 +1975,16 @@ class BondedService:
                 kind=value.kind,
                 phase=value.phase,
                 route=value.route,
+                tier=value.tier,
+                choice_kind=choice_kind,
+                man_tags=_man_options(self.game, c, state, value)
+                if value.phase == "accepted" and person == value.actor
+                else [],
+                man_mark=(
+                    mark.model_dump(mode="json")
+                    if (mark := _prove_man_mark(self.game, c, state, value))
+                    else None
+                ),
                 delegated_rule=value.delegated_rule,
                 account=value.account,
                 actor=value.actor.model_dump(mode="json"),
@@ -1850,18 +2002,15 @@ class BondedService:
                 and (value.route == "seven" or value.kind == "intimacy"),
                 can_choose=value.phase == "results"
                 and value.action is None
-                and person == (value.actor if value.kind == "intimacy" else low_person),
+                and person == _choice_person(value, choice_kind),
                 can_help=value.kind == "side"
                 and value.tier == "low"
                 and person == value.pair
                 and not any(x.source == identity for x in rules.records(state, rules.PairHelp)),
-                options=list(
-                    projection_options(
-                        state,
-                        value,
-                        "bonded_intimacy" if value.kind == "intimacy" else "bonded_low",
-                    ).items()
-                ),
+                options=list(projection_options(state, value, choice_kind).items()),
+                tags=[dict(id=x.id, label=x.label) for x in own.tags]
+                if choice_kind == "bonded_high" and person == value.target
+                else [],
                 identities=[
                     dict(id=x.id, label=x.name)
                     for x in own.identities

@@ -2077,6 +2077,88 @@ def require_director_helpless(
     return changed, (identity,)
 
 
+def npc_flirt_escape(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    choice_id: str,
+    event: str,
+) -> tuple[GameState, tuple[str, ...]]:
+    """Only the original NPC's genuine selected Flirt escape grants this self-cost."""
+    from girlframe.engine import m3_battle_npc as npc_rules
+    from girlframe.services.m3_npc_flirt import validate_pending_escape_damage
+
+    scope = validate_pending_escape_damage(game, c, state, action, choice_id, event)
+    target = ActorRef.model_validate(scope["target"])
+    source_actor = ActorRef.model_validate(scope["actor"])
+    scene = SceneCast.model_validate_json(json.dumps(scope["cast"]))
+    actual = resolve(
+        state, target, profiles(c, game.store.campaign_id), require_current_profile=False
+    )
+    if (
+        scope["action"] != action["id"]
+        or scope["source_event"] != event
+        or scope["source_choice"] != choice_id
+        or scope["physical_blow"] is not False
+        or source_actor != target
+        or target.kind != "npc"
+        or actual.rules != "npc"
+        or actual.controller != scope["chooser"]
+    ):
+        raise WorkflowError("Use only the actual original NPC's genuine escape self-cost")
+    identity = npc_rules.escape_damage_id(scope["id"])
+    source = npc_rules.FlirtSelfDamage(
+        id=identity,
+        damage=scope["id"],
+        action=action["id"],
+        choice=choice_id,
+        npc=target,
+        controller=scope["chooser"],
+        cast=scene,
+        event=event,
+    )
+    changed = GameState.model_validate_json(state.model_dump_json())
+    prior = next(
+        (
+            value
+            for value in changed.facts
+            if value.get("kind") == "npc_flirt_self_damage" and value.get("id") == identity
+        ),
+        None,
+    )
+    if prior is not None:
+        if npc_rules.self_damage(changed, identity) != source:
+            raise WorkflowError("Preserve the original actual NPC damage source")
+        return changed, (identity,)
+    required = Required(
+        kind="npc_damage",
+        target=target,
+        opponent=target,
+        source_pdf=15,
+        details={"source_kind": npc_rules.SELF_SOURCE, "source_damage": source.damage},
+    )
+    changed.facts.append(
+        dict(kind="npc_flirt_self_damage", id=identity, body=source.model_dump_json())
+    )
+    changed.facts.append(
+        dict(
+            kind="battle_damage_stage",
+            id=identity,
+            stamp=identity,
+            event=event,
+            source_action=action["id"],
+            source_work="",
+            chooser=str(source.controller),
+            source_kind=npc_rules.SELF_SOURCE,
+            source_choice=choice_id,
+            source_damage=source.damage,
+            requirement=required.model_dump_json(),
+        )
+    )
+    return changed, (identity,)
+
+
 def synchronize_damage(game: "GameService", c: Connection, event: str) -> None:
     """Materialize only staged facts present in the immutable actual event's canonical history."""
     raw = c.scalar(
@@ -2157,6 +2239,23 @@ def synchronize_damage(game: "GameService", c: Connection, event: str) -> None:
 
             materialize_sprite(game, c, fact, obligation, body, parent, action, event)
             continue
+        if obligation.kind == "npc_damage" and fact.get("source_kind") == "npc_flirt_escape":
+            from girlframe.services.m3_battle_npc import prove_flirt_self_damage
+
+            source = prove_flirt_self_damage(game, c, state, fact["id"])
+            if (
+                obligation.target != source.npc
+                or obligation.opponent != source.npc
+                or source.action != source_action
+                or owner != source.controller
+            ):
+                raise WorkflowError("Keep the real NPC self-cost and original controller")
+            body.update(
+                source_kind="npc_flirt_escape",
+                source_choice=source.choice,
+                source_damage=source.damage,
+                damage_source_event=source.event,
+            )
         if obligation.kind == "npc_damage":
             source_handler, source_appointment = MedicalService(game.store)._handler(c)
             body.update(handler=source_handler, appointment=source_appointment)
@@ -2239,6 +2338,16 @@ def complete_damage_work(
             )
             .values(state="completed_by_work", revision=choices.c.revision + 1)
         )
+    if body.get("source_kind") == "npc_flirt_escape":
+        from girlframe.services.m3_battle_npc import prove_flirt_self_damage
+        from girlframe.services.m3_npc_flirt import complete_damage_work as complete_flirt_escape
+
+        source = prove_flirt_self_damage(game, c, state, row["id"])
+        if body.get("source_action") != source.action or not complete_flirt_escape(
+            game, c, dict(latest), event
+        ):
+            raise WorkflowError("Complete only this actual NPC Flirt self-cost source")
+        return
     if body.get("source_work"):
         from girlframe.services.m3_sprite import complete_children
 

@@ -731,6 +731,14 @@ class InboxView(discord.ui.View):
                 CasualtyReplacementService(GameService(self.service.store)),
                 item.identity,
             )
+        elif item.task == "m3_npc_flirt":
+            from girlframe.discord_adapter.m3_npc_flirt import open_npc_flirt
+            from girlframe.services.m2_game import GameService
+            from girlframe.services.m3_npc_flirt import NpcFlirtService
+
+            await open_npc_flirt(
+                interaction, NpcFlirtService(GameService(self.service.store)), item.identity
+            )
         elif item.task == "m3_vatgrown_dna":
             from girlframe.discord_adapter.m3_vatgrown_dna import open_vatgrown_dna
             from girlframe.services.m2_game import GameService

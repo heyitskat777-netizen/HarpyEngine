@@ -7,13 +7,16 @@ from typing import Any
 import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
+from girlframe.discord_adapter.ledger import clean
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
+from girlframe.discord_adapter.m3_memory_pages import MemoryForm, MemoryHistory
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine import m3_consume as rules
 from girlframe.engine.m2 import ChoiceAnswer, PlayInput
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_consume import ConsumeService
+from girlframe.services.onboarding import WorkflowError
 
 
 async def open_choice(
@@ -84,7 +87,7 @@ async def open_choice(
             fields.append(
                 Field(
                     "replace_frame",
-                    "Only if at cap: actual Frame Asset to replace",
+                    "If excreting at cap: Frame Asset to replace",
                     tuple(tuple(x) for x in data["frame_replacements"]),
                     minimum=0,
                     required=False,
@@ -117,7 +120,7 @@ async def open_choice(
         )
     )
 
-    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         option = values.get("option", ())
         selected = option[0] if option else None
         supplied: dict[str, str] = {}
@@ -132,7 +135,64 @@ async def open_choice(
             if values.get("girl_asset"):
                 supplied["girl_asset"] = values["girl_asset"][0]
             if selected == "regrow":
-                supplied["frame_assets"] = json.dumps(list(values.get("frame_assets", ())))
+                chosen = tuple(values.get("frame_assets", ()))
+                supplied["frame_assets"] = json.dumps(list(chosen))
+                missing = [token for token in chosen if token in data["regrow_missing"]]
+                at_cap = missing[data["regrow_free"] :]
+                if at_cap:
+                    replacements = tuple(
+                        (key, label)
+                        for key, label in data["regrow_replacements"]
+                        if key not in chosen
+                    )
+                    if len(replacements) < len(at_cap):
+                        raise WorkflowError(
+                            "Make actual legal Frame space before selecting this regrowth"
+                        )
+
+                    async def access(response: discord.Interaction) -> None:
+                        await asyncio.to_thread(
+                            game.decision, viewer_from_interaction(response), decision["id"]
+                        )
+
+                    async def replace(
+                        response: discord.Interaction, answers: dict[str, Any]
+                    ) -> str:
+                        mapping = {
+                            token: answers["replacement_" + str(index)][0]
+                            for index, token in enumerate(at_cap)
+                        }
+                        fields = supplied | {"regrow_replacements": json.dumps(mapping)}
+                        await asyncio.to_thread(
+                            game.respond,
+                            viewer_from_interaction(response),
+                            str(response.id),
+                            decision["id"],
+                            decision["revision"],
+                            ChoiceAnswer(
+                                options=tuple(option), fields=fields, text=values["account"]
+                            ),
+                        )
+                        return "The actual Girl cost and source-proved regrowth are saved."
+
+                    form = MemoryForm(
+                        current.user.id,
+                        "Actual Frame space",
+                        "Choose a distinct actual non-Void replacement "
+                        "for each component at the cap.",
+                        [
+                            Field(
+                                "replacement_" + str(index),
+                                "Replace for " + dict(data["frame_assets"])[token],
+                                replacements,
+                            )
+                            for index, token in enumerate(at_cap)
+                        ],
+                        replace,
+                        authorize=access,
+                    )
+                    await reply(current, form.text(), form)
+                    return None
             elif selected == "excrete":
                 supplied["new_asset"] = json.dumps(
                     dict(
@@ -249,6 +309,29 @@ async def open_consume(
                 acquire_permit,
             )
             await reply(interaction, form.text(), form)
+            return
+        if saved["type"] == "regrowth":
+
+            async def read(current: discord.Interaction) -> None:
+                await asyncio.to_thread(service.view, viewer_from_interaction(current), identity)
+
+            history = MemoryHistory(
+                interaction.user.id,
+                "\n".join(
+                    (
+                        "**Your actual regrown Frame component**",
+                        "Original missing feature: " + clean(source["original"]["name"]),
+                        "New intact component: " + clean(source["component"]["name"]),
+                        clean(source["component"]["description"]),
+                        "Void: " + ("retained" if source["component"]["void"] else "no"),
+                        "Original loss: " + clean(source["loss_event"]),
+                        "Regrowth source: " + clean(source["event"]),
+                        "Old physical links and occupants were not restored.",
+                    )
+                ),
+                read,
+            )
+            await reply(interaction, history.text(), history)
             return
         if saved["type"] == "mouth":
             if source["ended_event"]:

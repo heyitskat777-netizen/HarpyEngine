@@ -154,10 +154,16 @@ def mark_effect(
         raise WorkflowError("Apply only the actual printed source-owned Court effect")
     if not any(x.actor == mark.counterpart for x in mark.cast.roles):
         raise WorkflowError("Use an actually present counterpart for the required legal Play")
-    if mark.kind == "flirt" and mark.counterpart.kind != "pilot":
-        raise WorkflowError(
-            "SOURCE_PORT_REQUIRED: this exact forced NPC Flirt needs its real adapter"
-        )
+    if mark.kind == "flirt":
+        if mark.counterpart.kind == "npc":
+            from girlframe.services.m3_battle import _visible
+            from girlframe.services.m3_npc_flirt import _npc
+
+            _npc(state, mark.counterpart)
+            if not _visible(state, mark.counterpart, int(mark.target.entity)):
+                raise WorkflowError("Use a counterpart visible to the actual commanded Girl")
+        elif mark.counterpart.kind != "pilot":
+            raise WorkflowError("SOURCE_PORT_REQUIRED: preserve this actual counterpart's rules")
     actual = resolve(
         state, mark.target, profiles(c, game.store.campaign_id), require_current_profile=False
     )
@@ -256,6 +262,7 @@ def prepare_child(
     return dict(
         id=mark.id,
         child=value.id,
+        work=value.work,
         actor=value.actor.model_dump(mode="json"),
         target=value.target.model_dump(mode="json"),
         play=value.play,

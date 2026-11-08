@@ -993,7 +993,11 @@ def finish_callback(
         if not game.pending(c, action["id"]):
             from girlframe.services.m2_choices import ChoiceEngine
 
-            if action["data"].get("clone_flirt"):
+            if action["data"].get("npc_flirt"):
+                from girlframe.services.m3_npc_flirt import complete_external
+
+                complete_external(game, c, action, event)
+            elif action["data"].get("clone_flirt"):
                 from girlframe.services.m3_actor_plays import ActorPlayService
 
                 ActorPlayService(game).finish(c, load_state(c, game.store.campaign_id), action)
