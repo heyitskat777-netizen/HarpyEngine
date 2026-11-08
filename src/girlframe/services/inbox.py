@@ -1306,6 +1306,28 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.p1_facilitator import FacilitatorService
+
+            for ruling in FacilitatorService(GameService(self.store)).tasks(viewer):
+                items.append(
+                    InboxItem(
+                        "facilitator:" + ruling["id"],
+                        "facilitator",
+                        ruling["id"],
+                        ruling["revision"],
+                        "facilitator",
+                        ruling["label"],
+                        "Designated human facilitator and original owners",
+                        "pending" if ruling["pending"] else "waiting",
+                        bool(ruling["pending"]),
+                        False,
+                        "Finish the original required actions and choices before resuming.",
+                        "Private request details remain with their original owners.",
+                        "Open private request",
+                        task="p1_facilitator",
+                    )
+                )
+
             from girlframe.services.m3_politician_bribery import BriberyService
 
             for bribery in BriberyService(self.store)._tasks(connection, viewer):

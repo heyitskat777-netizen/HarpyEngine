@@ -247,6 +247,12 @@ class GameWorker:
                 root = next((x for x in rows if x["id"] == lock["action_id"]), None)
                 if root is None or root["state"] not in ("complete", "aborted"):
                     continue
+                from girlframe.services.p1_facilitator import pending as adjudications
+
+                if root["state"] == "complete" and adjudications(
+                    self.game, c, int(lock["channel_id"])
+                ):
+                    continue
                 ids = {root["id"]}
                 while True:
                     expanded = ids | {x["id"] for x in rows if x["parent_id"] in ids}

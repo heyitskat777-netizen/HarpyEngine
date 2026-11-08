@@ -445,7 +445,10 @@ async def open_discipline(
 
         instructions = "Your Paired Identity grants five Heat. You alone choose how much to share."
     else:
-        raise WorkflowError("UNSUPPORTED_RULE: this follow-up needs its specific resolver.")
+        from girlframe.discord_adapter.p1_facilitator import open_missing_work
+
+        await open_missing_work(interaction, service.game, identity)
+        return
     form = NativeForm(viewer.user_id, "Required discipline response", instructions, fields, submit)
     await reply(interaction, form.text(), form)
 

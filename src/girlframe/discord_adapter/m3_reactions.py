@@ -11,7 +11,6 @@ from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.m3_punishments import Picker
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.services.m3_reactions import ReactionService
-from girlframe.services.onboarding import WorkflowError
 
 KINDS = ("doctor_obsolescence", "princess_mission_end", "doctor_frame_replacement")
 
@@ -105,7 +104,10 @@ async def open_reaction(
                 "the final mission rewards."
             )
     else:
-        raise WorkflowError("This reaction needs its specific supported resolver.")
+        from girlframe.discord_adapter.p1_facilitator import open_missing_work
+
+        await open_missing_work(interaction, service.game, identity)
+        return
     form = NativeForm(
         viewer.user_id, "Mission-end reaction — " + data["callsign"], instructions, fields, submit
     )

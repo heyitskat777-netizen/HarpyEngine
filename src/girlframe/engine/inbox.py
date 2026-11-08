@@ -14,6 +14,7 @@ CATEGORIES = (
     "missions",
     "off_duty",
     "world",
+    "facilitator",
 )
 
 

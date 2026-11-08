@@ -239,6 +239,9 @@ async def open_work(
             )
             return "Endgame selected once. Resolve its actual effects before advancing."
     else:
-        raise WorkflowError("Resume this task through its specific supported resolver.")
+        from girlframe.discord_adapter.p1_facilitator import open_missing_work
+
+        await open_missing_work(interaction, service.game, identity)
+        return
     form = NativeForm(viewer.user_id, "Strain preparation", instructions, fields, submit)
     await reply(interaction, form.text(), form)

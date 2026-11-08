@@ -28,6 +28,9 @@ def viewer_from_interaction(interaction: discord.Interaction[discord.Client]) ->
         user_id=interaction.user.id,
         guild_id=interaction.guild_id,
         is_member=member,
+        role_ids=frozenset(role.id for role in interaction.user.roles)
+        if isinstance(interaction.user, discord.Member)
+        else frozenset(),
         is_administrator=(
             interaction.user.guild_permissions.administrator
             if isinstance(interaction.user, discord.Member)
@@ -187,6 +190,9 @@ class ReadOnlyDiscordBot(discord.Client):
 
             assert self.game is not None
             register_game(self.tree, policy.guild_id, self.game)
+            from girlframe.discord_adapter.p1_facilitator import register_facilitator
+
+            register_facilitator(self.tree, policy.guild_id, self.game)
             from girlframe.discord_adapter.m3_missions import register_missions
             from girlframe.services.m3_missions import MissionService
 
@@ -345,11 +351,16 @@ class ReadOnlyDiscordBot(discord.Client):
 
         assert self.game is not None
         worker = GameWorker(self.game)
+        from girlframe.delivery.p1_facilitator_worker import FacilitatorWorker
+        from girlframe.discord_adapter.p1_facilitator import DiscordFacilitatorGateway
+
+        facilitator_worker = FacilitatorWorker(self.game)
         while not self.is_closed():
             guild = self.get_guild(self.policy.guild_id)
             if guild is not None:
                 try:
                     await worker.tick(DiscordGameGateway(guild, self.game))
+                    await facilitator_worker.tick(DiscordFacilitatorGateway(guild, self.game))
                 except Exception:
                     pass  # Durable jobs remain pending; never log provider/private payloads.
             await asyncio.sleep(5)

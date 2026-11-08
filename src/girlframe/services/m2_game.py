@@ -1120,6 +1120,12 @@ class GameService:
 
         def operation(c: Connection) -> dict[str, Any]:
             self.unpaused(c)
+            from girlframe.services.p1_facilitator import require_scene_clear
+
+            if prepared.parent is None:
+                require_scene_clear(self, c, channel)
+            else:
+                require_scene_clear(self, c, channel, self.action(c, prepared.parent))
             state = load_state(c, self.store.campaign_id)
             from girlframe.services.m3_oldgen import require_listened
 
@@ -2887,6 +2893,9 @@ class GameService:
                 raise WorkflowError("This action is diceless.")
             state = load_state(c, self.store.campaign_id)
             self.action_characters(c, action, state)
+            from girlframe.services.p1_facilitator import require_scene_clear
+
+            require_scene_clear(self, c, int(action["channel_id"]), action)
             if action["data"].get("void_keep"):
                 from girlframe.services.m3_void_keep import authorize_keep
 
@@ -3748,6 +3757,9 @@ class GameService:
 
                 if rituals(state):
                     Access(self.store).authorize(c, viewer, "strain")
+            from girlframe.services.p1_facilitator import require_scene_clear
+
+            require_scene_clear(self, c, int(action["channel_id"]), action)
             table = t.m2["m2_choices"]
             c.execute(
                 table.update()

@@ -20,6 +20,7 @@ CATEGORY_LABELS = {
     "missions": "Mission offers & consequences",
     "off_duty": "Off-Duty, recovery & Strain",
     "world": "World & NPC roles",
+    "facilitator": "Human adjudication",
     "plays": "Pending Plays",
     "bonds": "Starting Bonds",
     "mentors": "Mentor coordination",
@@ -707,6 +708,15 @@ class InboxView(discord.ui.View):
 
             await open_oldgen_sex(
                 interaction, OldgenSexService(GameService(self.service.store)), item.identity
+            )
+        elif item.task == "p1_facilitator":
+            from girlframe.discord_adapter.p1_facilitator import (
+                open_request as open_facilitator_request,
+            )
+            from girlframe.services.m2_game import GameService
+
+            await open_facilitator_request(
+                interaction, GameService(self.service.store), item.identity
             )
         elif item.task == "m3_casualty":
             from girlframe.discord_adapter.m3_casualty import open_casualty

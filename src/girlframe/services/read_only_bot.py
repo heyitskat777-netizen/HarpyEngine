@@ -15,6 +15,7 @@ class GuildViewer:
     guild_id: int | None
     is_member: bool
     is_administrator: bool
+    role_ids: frozenset[int] = frozenset()
 
 
 class CommandDenied(RuntimeError):

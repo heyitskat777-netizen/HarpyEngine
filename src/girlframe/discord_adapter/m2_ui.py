@@ -810,7 +810,12 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         return
     fields = choice_fields(decision)
     if not fields:
-        raise WorkflowError("UNSUPPORTED_RULE: this response requires staff review.")
+        from girlframe.discord_adapter.p1_facilitator import open_missing_source
+
+        await open_missing_source(
+            interaction, game, "action", decision["action_id"], "choice:" + decision["kind"]
+        )
+        return
 
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         from girlframe.discord_adapter.m3_tag_markers import bind_answer
