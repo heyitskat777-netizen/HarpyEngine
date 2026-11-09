@@ -428,10 +428,6 @@ def apply(
 
     value = rules.session(state, action["data"]["am_code"]["maintenance"])
     event = action["data"]["response_event"]
-    if value.operator.kind == "pilot" and request["kind"] == "am_code_branch":
-        raise WorkflowError(
-            "SOURCE_OPERATOR_ADAPTER_REQUIRED: actual GM records/branch source is unavailable"
-        )
     if request["kind"] == "am_code_branch":
         from girlframe.services.m3_am_branch import apply as apply_branch
 
@@ -647,8 +643,6 @@ def projection(
 
 
 def ready_options(value: rules.Maintenance) -> tuple[str, ...]:
-    if value.operator.kind == "pilot":
-        return ("identities", "backup", "body") + (("records",) if value.records_access else ())
     return ("identities", "backup", "body", "branch") + (
         ("records",) if value.records_access else ()
     )

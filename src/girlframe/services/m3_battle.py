@@ -369,10 +369,15 @@ def prepare(
     acting = resolve(state, declaration.actor, bound, require_current_profile=False)
     target = resolve(state, declaration.target, bound, require_current_profile=False)
     if prepared.play == "all_out_assault" and declaration.actor.kind == "pilot":
-        from girlframe.engine.m3_girl_runtime_state import has_rule
+        from girlframe.services.m3_learned_plays import (
+            NO_ONE_BETTER,
+            available,
+            permanent_no_one_better,
+        )
 
-        if has_rule(
-            state.sheets[declaration.actor.entity], "girl.casualty.no-one-better", "CASUALTY"
+        if (
+            permanent_no_one_better(state, declaration.actor)
+            or available(game, c, state, declaration.actor, NO_ONE_BETTER) is not None
         ):
             registry = Access(game.store).registry
             if registry is None:
@@ -544,6 +549,10 @@ def pre_roll(game: "GameService", c: Connection, state: GameState, action: dict[
         (context.declaration.actor, context.declaration.actor_sha256),
         (context.declaration.target, context.declaration.target_sha256),
     ):
+        if action["data"].get("learned_no_one_better"):
+            from girlframe.services.m3_learned_plays import triggered_resource_sha
+
+            old_sha = triggered_resource_sha(game, c, state, action, ref, old_sha)
         if rules.resource_sha(state, ref, bound) != old_sha:
             raise WorkflowError("STALE_BATTLE: actual combat resources changed before dice.")
     from girlframe.engine.m3_budget_sabotage import matching as trapped_assets
@@ -568,25 +577,33 @@ def _refs(action: dict[str, Any]) -> tuple[ActorRef, ActorRef]:
     return tuple(ActorRef.model_validate_json(json.dumps(meta[x])) for x in ("actor", "target"))  # type: ignore[return-value]
 
 
-def results(game: "GameService", c: Connection, action: dict[str, Any]) -> None:
+def results(
+    game: "GameService", c: Connection, action: dict[str, Any], *, state: GameState | None = None
+) -> None:
     from girlframe.services.m3_enforcer_firepower import results_firepower
 
     if results_firepower(game, c, action):
         return
     meta = action["data"]["battle"]
     level = action["data"]["result"]["tier"]
+    learned_extra = False
+    if action["data"].get("learned_no_one_better"):
+        from girlframe.services.m3_learned_plays import resolve_no_one_better
+
+        state = state if state is not None else load_state(c, game.store.campaign_id)
+        learned_extra = resolve_no_one_better(
+            game, c, state, action, action["data"].get("response_event", "")
+        )
     if (
         action["data"]["play"] == "all_out_assault"
         and level == "high"
         and not meta.get("extra_started")
     ):
-        from girlframe.engine.m3_girl_runtime_state import has_rule
+        from girlframe.services.m3_learned_plays import permanent_no_one_better
 
-        state = load_state(c, game.store.campaign_id)
+        state = state if state is not None else load_state(c, game.store.campaign_id)
         actor, _ = _refs(action)
-        if actor.kind == "pilot" and has_rule(
-            state.sheets[actor.entity], "girl.casualty.no-one-better", "CASUALTY"
-        ):
+        if permanent_no_one_better(state, actor) or learned_extra:
             from girlframe.services.m3_engage import start_assault_extra
 
             meta["extra_source"] = "girl.casualty.no-one-better"
@@ -705,6 +722,15 @@ def projection(
             if k in ("maximum", "work_id", "grant_id")
         },
     )
+    if action["data"].get("learned_no_one_better"):
+        from girlframe.services.m3_learned_plays import consumed_no_one_better
+
+        detail["learned_rider"] = (
+            "No One Better: spent once for this genuine high Assault; "
+            "the learner's own Assets and ordinary Assault costs remain."
+            if consumed_no_one_better(game, c, state, action)
+            else "No One Better did not trigger on this receipt; the lesson remains unused."
+        )
     if request["kind"] == "battle_target_damage":
         detail["assets"] = [x for x in detail["assets"] if x["id"] in meta.get("fixed_assets", [])]
     if request["kind"] == "battle_counter_play":
@@ -2832,11 +2858,50 @@ class BattleService:
                 )
                 if direction is not None and viewer.user_id == direction.author_controller:
                     princess_child = child_projection(self.game, c, state, direction.id)
+            rider: dict[str, Any] | None = None
+            if viewer.user_id == value.owner and value.declaration.play == "all_out_assault":
+                from girlframe.services.m3_learned_plays import (
+                    NO_ONE_BETTER,
+                    available,
+                    consumed_no_one_better,
+                )
+
+                rows = c.scalars(
+                    sa.select(t.m2["m2_actions"].c.id).where(
+                        t.m2["m2_actions"].c.campaign_id == self.store.campaign_id,
+                        sa.func.json_extract(t.m2["m2_actions"].c.body_json, "$.battle.context")
+                        == identity,
+                    )
+                ).all()
+                for action_id in rows:
+                    action = self.game.action(c, action_id)
+                    if action["data"].get("learned_no_one_better", {}).get("resolved_event"):
+                        spent = consumed_no_one_better(self.game, c, state, action)
+                        rider = dict(
+                            action=action_id,
+                            state=action["state"],
+                            text="No One Better was spent once on this high Assault."
+                            if spent
+                            else "No One Better did not trigger; its lesson was released.",
+                        )
+                if (
+                    rider is None
+                    and available(self.game, c, state, value.declaration.actor, NO_ONE_BETTER)
+                    is not None
+                ):
+                    rider = dict(
+                        text=(
+                            "Starting this Assault reserves your No One Better lesson. "
+                            "Only a final 11+ spends it. Lower results keep their actual costs "
+                            "and release the lesson."
+                        )
+                    )
             return dict(
                 context=value.model_dump(mode="json"),
                 channel=int(channel) if channel else None,
                 revision=state.revision,
                 princess_child=princess_child,
+                **({"learned_rider": rider} if rider is not None else {}),
                 source_work=value.source_work
                 or (
                     c.scalar(

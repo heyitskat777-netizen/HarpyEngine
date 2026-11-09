@@ -78,7 +78,7 @@ def prove(
         .where(
             responses.c.campaign_id == game.store.campaign_id,
             responses.c.event_id == value.event,
-            responses.c.actor_id == str(value.controller),
+            responses.c.actor_id == str(maintenance.controller),
             choices.c.kind == "am_code_branch",
             choices.c.action_id == value.action,
         )
@@ -91,6 +91,12 @@ def prove(
         or maintenance.operator != value.operator
         or preparation.maintenance != value.maintenance
         or preparation.spec.vessel != value.vessel
+        or value.controller
+        != (
+            int(preparation.fact_author.entity)
+            if preparation.fact_author
+            else maintenance.controller
+        )
         or answer is None
         or json.loads(answer).get("options") != [preparation.id]
         or game.action(c, value.action)["data"]["result"]["tier"] not in ("mid", "high")
@@ -157,14 +163,16 @@ def projection(
 ) -> dict[str, Any]:
     from girlframe.engine.m3_am_body import bodies, preparations
 
+    available = [
+        dict(id=x.id, label=x.spec.label)
+        for x in preparations(state)
+        if x.maintenance == value.id
+        and not any(b.vessel == x.spec.vessel for b in bodies(state))
+        and not x.spec.mind_assets
+    ]
     return dict(
-        bodies=[
-            dict(id=x.id, label=x.spec.label)
-            for x in preparations(state)
-            if x.maintenance == value.id
-            and not any(b.vessel == x.spec.vessel for b in bodies(state))
-            and not x.spec.mind_assets
-        ]
+        bodies=available,
+        waiting_for_handler=value.operator.kind == "pilot" and not available,
     )
 
 
@@ -189,6 +197,14 @@ def apply(
     prep = prove_preparation(game, c, state, answer.options[0])
     if prep.operator != value.operator or prep.controller != value.controller:
         raise WorkflowError("Use this actual original operator's prepared vessel")
+    if value.operator.kind == "pilot":
+        from girlframe.engine.m3_handler_consequences import same_handler_body
+
+        if prep.fact_author is None or not same_handler_body(state, prep.fact_author):
+            raise WorkflowError("Use the actual original Handler's branch hardware source")
+    from girlframe.engine.m3_identity_slots import bind as bind_identity_slots
+
+    state.sheets[value.actor.entity] = bind_identity_slots(state.sheets[value.actor.entity])
     born = rules.create(state, value, prep.id, action["data"]["response_event"])
     code.put(state, value.model_copy(update=dict(branch=born.id)))
 

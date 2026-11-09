@@ -3176,6 +3176,16 @@ class GameService:
                 begin_source_event = action["data"]["learned_play"]["event"]
                 action["data"]["sheet_revision"] = state.sheets[str(mechanical_owner)].revision
                 self.save_action(c, action)
+            from girlframe.services.m3_learned_plays import reserve_triggered
+
+            triggered_learning = reserve_triggered(
+                self, c, state, action, begin_source_event or str(uuid4())
+            )
+            if triggered_learning:
+                begin_source_event = action["data"]["learned_no_one_better"]["event"]
+                action["data"]["sheet_revision"] = state.sheets[str(mechanical_owner)].revision
+                self.save_action(c, action)
+                claimed_learned = True
             if prince_demand_attempt is not None:
                 from girlframe.services.m3_prince import bind_exception
 
@@ -3994,6 +4004,10 @@ class GameService:
                 self.valid_order(
                     c, state, int(action["actor_id"]), int(action["channel_id"]), prepared.order_id
                 )
+            if action["data"].get("learned_no_one_better"):
+                from girlframe.services.m3_learned_plays import pre_roll_triggered
+
+                pre_roll_triggered(self, c, state, action)
             if action["data"].get("am_code"):
                 from girlframe.services.m3_am_code import pre_roll as pre_roll_am_code
 

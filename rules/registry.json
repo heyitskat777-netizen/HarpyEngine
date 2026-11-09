@@ -7078,6 +7078,22 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "vatgrown-triggered-no-one-better-lesson",
+      "summary": "A one-use learned No One Better lesson is consumed when its actual final 11+ Assault trigger activates, using the learner's real resources and existing extra Engage source.",
+      "source": "Rulebook PDF44/printed42 No One Better; PDF50/printed48 Vatgrown Sex Play.",
+      "rationale": "The learned Play triggers on an actual 11+ Assault; an ordinary lower Assault does not yet perform that learned rider. Learning the rule grants no Casualty anatomy, repair benefit, extra Attack roll or free resource.",
+      "policy_key": "vatgrown_triggered_no_one_better_lesson",
+      "alternatives": [
+        "Spend the lesson at the first underlying Assault roll even if its printed trigger does not occur."
+      ],
+      "implementation_note": "Reserve the exact original lesson against a genuine Assault. Activate once only after final real Tag-adjusted 11+ result; retain the source proof for its held extra maneuver. Release only an exact canonically proved untriggered reservation, without refunding underlying Heat, costs or receipt; preserve abort/resume and actual unrolled cancellation semantics. Ordinary five learned claims keep their existing behavior.",
+      "change_impact": "Preserve original lesson, teacher, encounter, actual receipts and acquired source proofs. Version future consumption-policy changes; do not revive consumed lessons or refund committed underlying Plays.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [

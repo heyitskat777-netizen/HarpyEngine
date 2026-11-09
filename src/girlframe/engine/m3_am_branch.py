@@ -232,6 +232,9 @@ def create(state: GameState, value: Maintenance, preparation: str, event: str) -
         raise ValueError(
             "Use one actual empty vessel; coupled/mental-resource sources require their own ports"
         )
+    if value.operator.kind == "pilot" and source.fact_author is None:
+        raise ValueError("Use the actual original Handler's prepared branch hardware")
+    controller = int(source.fact_author.entity) if source.fact_author else value.controller
     hardware._ordinary(state, value.actor, source.spec.assets)
     identity = str(uuid4())
     npc_ref = ActorRef(kind="npc", entity="am-branch:" + identity)
@@ -252,7 +255,7 @@ def create(state: GameState, value: Maintenance, preparation: str, event: str) -
         original=value.actor,
         operator=value.operator,
         owner=value.owner,
-        controller=value.controller,
+        controller=controller,
         npc=npc_ref,
         preparation=source.id,
         vessel=source.spec.vessel,
@@ -285,7 +288,7 @@ def create(state: GameState, value: Maintenance, preparation: str, event: str) -
         cell=source.cell,
         jobs=("guard",),
         detail="Actual prepared AM branch, classified as an unarmed Guard by its original Handler",
-        controller=value.controller,
+        controller=controller,
         revealed=True,
     )
     state.world = state.world.model_copy(update=dict(npcs=state.world.npcs + (introduced,)))

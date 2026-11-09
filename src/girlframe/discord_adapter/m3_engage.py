@@ -104,7 +104,8 @@ async def open_engage(interaction: discord.Interaction, game: GameService, ident
         interaction.user.id,
         "Your battlefield maneuvers",
         "Select an actual owned Asset for every selected maneuver. "
-        "Describe circumstances; these choices do not invent movement between map cells.",
+        "Describe circumstances; these choices do not invent movement between map cells."
+        + ("\n" + detail["learned_rider"] if detail.get("learned_rider") else ""),
         fields,
         submit,
     ).present(interaction)

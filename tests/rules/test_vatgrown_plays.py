@@ -1,6 +1,7 @@
 """Remaining Vatgrown printed normals with actual source actors and consumers."""
 
 import asyncio
+import json
 from uuid import uuid4
 
 import pytest
@@ -1473,3 +1474,266 @@ def test_actual_mockingbird_teacher_learned_person_native_trigger_cancel_receipt
         person.get(ADMIN, conversation.id)
     assert game.dice.calls == calls + 1
     assert len(state(game).mockingbird.conversations) == 1
+
+
+def test_actual_casualty_lesson_native_high_assault_extra_maneuver_costs_once_and_readback(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred: actual rolled Assault rider; no Casualty anatomy or independent roll."""
+    from girlframe.discord_adapter.m3_battle import open_context
+    from girlframe.discord_adapter.m3_engage import open_engage
+    from girlframe.engine import m3_casualty as casualty
+    from girlframe.engine.m3_actors import resolve
+    from girlframe.engine.m3_battle_state import Declaration
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+    from girlframe.engine.m3_physical_state import CockpitAction
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_battle import BattleService
+    from girlframe.services.m3_learned_plays import available, consumed_no_one_better
+    from girlframe.services.m3_physical import PhysicalService
+    from girlframe.services.m3_recovery import RecoveryService
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, teacher="CASUALTY")
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(
+            rules.EXPERIMENT,
+            rules.INVESTMENT,
+            rules.SEX,
+            casualty.BETTER,
+        ),
+    )
+    session, lesson_action = sex(
+        game,
+        worker,
+        gateway,
+        controls,
+        (5, 5),
+        counterpart_account="The actual Casualty teacher voluntarily confirms this source",
+    )
+    before = state(game)
+    learner, teacher = current_ref(before, 2), current_ref(before, 3)
+    native_choice(
+        game,
+        OTHER,
+        "vat_sex_learn",
+        identities=(before.sheets["3"].identities[1].id,),
+        replacements=(before.sheets["2"].identities[0].id,),
+        play=(casualty.BETTER,),
+        account="I teach No One Better once, not my reconstructed body or parts",
+    )
+    lesson = rules.records(state(game), rules.LearnedPlay)[-1]
+    assert (
+        lesson.actor == learner and lesson.teacher == teacher and lesson.rule_id == casualty.BETTER
+    )
+    assert game.inspect(PLAYER, lesson_action)["state"] == "complete"
+    controls.send_away(
+        OTHER,
+        str(uuid4()),
+        session,
+        state(game).revision,
+        "The original counterpart actually ends the required stay",
+    )
+    tick(worker, gateway, 6)
+    assert state(game).sheets["2"].girl == "VATGROWN"
+    assert not has_rule(state(game).sheets["2"], casualty.GOD, "CASUALTY")
+    assert not has_rule(state(game).sheets["2"], casualty.BARELY, "CASUALTY")
+
+    # Genuine cockpit operations retain each original Frame and actual body.
+    physical = PhysicalService(ledger)
+    for viewer, actor in ((PLAYER, learner), (OTHER, teacher)):
+        with ledger.engine.connect() as c:
+            pose = resolve(state(game), actor, profiles(c, ledger.campaign_id)).position_sha256
+        physical.operate(
+            viewer,
+            str(uuid4()),
+            state(game).revision,
+            CockpitAction(
+                actor=actor,
+                operation="pilot",
+                expected_position=pose,
+                confirmed=True,
+                account="I actually enter and pilot my own original Frame for this battlefield",
+            ),
+            channel=900,
+        )
+    battle = BattleService(ledger)
+
+    def declaration():
+        data = battle.preview(PLAYER, 900)
+        acting = next(x for x in data["actors"] if x["ref"] == learner.model_dump(mode="json"))
+        target = next(x for x in data["actors"] if x["ref"] == teacher.model_dump(mode="json"))
+        actual = state(game)
+        own_frames = {
+            x.id for x in actual.sheets["2"].assets if x.family == "frame" and not x.damaged
+        }
+        other_frames = {
+            x.id for x in actual.sheets["3"].assets if x.family == "frame" and not x.damaged
+        }
+        own = next(x for x in acting["assets"] if x["id"] in own_frames)
+        opposing = next(x for x in target["assets"] if x["id"] in other_frames)
+        value = Declaration.model_validate_json(
+            json.dumps(
+                dict(
+                    play="all_out_assault",
+                    actor=acting["ref"],
+                    target=target["ref"],
+                    attacking_asset=own["id"],
+                    target_asset=opposing["id"],
+                    actor_sha256=acting["sha256"],
+                    target_sha256=target["sha256"],
+                    account="I take this real opening with my own existing Frame Asset",
+                )
+            )
+        )
+        offered = battle.propose(PLAYER, str(uuid4()), data["revision"], 900, value)
+        battle.confirm(
+            ADMIN,
+            str(uuid4()),
+            state(game).revision,
+            offered["id"],
+            opening=True,
+            reach=True,
+            outside_permission=False,
+            indirect=False,
+            evidence="Actual declared opening and reach in this battlefield",
+        )
+        return offered["id"], own["id"], opposing["id"]
+
+    async def start_native(context):
+        opened = current(2, uuid4().int % 1000000000)
+        opened.channel_id = 900
+        await opened.response.defer(ephemeral=True)
+        await open_context(opened, battle, context)
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(current(3, uuid4().int % 1000000000))
+        form.values.update(identity=("none",), gain=("0",), pair_share=("0",), heat=("1",))
+        submitted = current(2, uuid4().int % 1000000000)
+        submitted.channel_id = 900
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+
+    context, _, _ = declaration()
+    asyncio.run(start_native(context))
+    with ledger.engine.connect() as c:
+        abandoned = game.action(c, game.lock(c, 900)["action_id"])
+    assert abandoned["data"]["learned_no_one_better"]["id"] == lesson.id
+    calls, heat = game.dice.calls, state(game).sheets["2"].heat
+    game.abort(ADMIN, str(uuid4()), abandoned["id"])
+    tick(worker, gateway, 5)
+    recovery = RecoveryService(game)
+    saved = next(x for x in recovery.saved(PLAYER) if x["id"] == abandoned["id"])
+    assert saved["cancellable"] and not saved["rolled"]
+    recovery.recover(PLAYER, str(uuid4()), abandoned["id"], saved["revision"], cancel=True)
+    assert game.dice.calls == calls and state(game).sheets["2"].heat == heat
+    with ledger.engine.connect() as c:
+        value = available(game, c, state(game), learner, casualty.BETTER)
+        assert value and value.id == lesson.id and value.claimed_action is None
+
+    context, own_asset, opposing_asset = declaration()
+    asyncio.run(start_native(context))
+    with ledger.engine.connect() as c:
+        action = game.action(c, game.lock(c, 900)["action_id"])
+    assert "learned_play" not in action["data"]
+    assert action["data"]["learned_no_one_better"]["id"] == lesson.id
+    game.dice.faces = (5, 5)
+    tick(worker, gateway, 3)
+    if game.inspect(PLAYER, action["id"])["receipt"] is None:
+        game.roll(PLAYER, str(uuid4()), action["id"])
+    pass_tags(game)
+    assert state(game).sheets["2"].heat == heat - 1 and game.dice.calls == calls + 1
+    extra = next(x for x in game.choices(PLAYER) if x["kind"] == "engage_assault_extra")
+    assert "spent lesson" in game.decision(PLAYER, extra["id"])["engage"]["learned_rider"]
+
+    async def maneuver():
+        opened = current(2, uuid4().int % 1000000000)
+        opened.channel_id = 900
+        await opened.response.defer(ephemeral=True)
+        await open_engage(opened, game, extra["id"])
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            maneuvers=("cover",),
+            asset_cover=(own_asset,),
+            text="Actual cover established with my own existing Frame Asset",
+        )
+        submitted = current(2, uuid4().int % 1000000000)
+        submitted.channel_id = 900
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+
+    asyncio.run(maneuver())
+
+    def finish_assault(identity, paid_asset, *, expect_defeat=False):
+        for viewer in (ADMIN, PLAYER, OTHER):
+            answer(
+                game,
+                viewer,
+                "battle_assault_table",
+                flag=False,
+                text="This actual opposing Asset has no vast advantage",
+            )
+        answer(game, ADMIN, "battle_handler", options=("damage_actor_asset",))
+        answer(game, PLAYER, "battle_actor_damage", fields={"asset": paid_asset})
+        if expect_defeat:
+            assert game.inspect(PLAYER, identity)["state"] == "awaiting_choices"
+            owed = [
+                row
+                for viewer in (PLAYER, OTHER)
+                for row in game.choices(viewer)
+                if row["kind"] == "battle_defeat" and row["action_id"] == identity
+            ]
+            assert {row["actor_id"] for row in owed} == {"2", "3"}
+            assert len(owed) == 2
+            with ledger.engine.connect() as c:
+                assert game.lock(c, 900)["action_id"] == identity
+            return
+        assert game.inspect(PLAYER, identity)["state"] == "complete"
+        tick(worker, gateway, 5)
+
+    finish_assault(action["id"], own_asset)
+    actual = state(game)
+    assert next(x for x in actual.sheets["2"].assets if x.id == own_asset).damaged
+    assert next(x for x in actual.sheets["3"].assets if x.id == opposing_asset).damaged
+    maneuvers = [json.loads(x["body"]) for x in actual.facts if x.get("kind") == "engage_maneuver"]
+    assert any(x["kind"] == "cover" and x["source_action"] == action["id"] for x in maneuvers)
+    with ledger.engine.connect() as c:
+        completed = game.action(c, action["id"])
+        assert consumed_no_one_better(game, c, actual, completed)
+        assert available(game, c, actual, learner, casualty.BETTER) is None
+        spent = next(x for x in actual.sheets["2"].girl_runtime.learned_plays if x.id == lesson.id)
+        assert spent.rolled_event == completed["data"]["learned_no_one_better"]["resolved_event"]
+    assert not has_rule(actual.sheets["2"], casualty.BETTER, "CASUALTY")
+    receipt = game.inspect(PLAYER, action["id"])["receipt"]
+
+    async def private_reopen():
+        opened = current(2, uuid4().int % 1000000000)
+        opened.channel_id = 999
+        await opened.response.defer(ephemeral=True)
+        await open_context(opened, battle, context)
+        assert "spent once" in str(opened.edit_original_response.call_args)
+
+    asyncio.run(private_reopen())
+    with pytest.raises(WorkflowError):
+        battle.context(OTHER, context)
+    second_context, second_asset, _ = declaration()
+    asyncio.run(start_native(second_context))
+    with ledger.engine.connect() as c:
+        second = game.action(c, game.lock(c, 900)["action_id"])
+    assert "learned_no_one_better" not in second["data"]
+    game.dice.faces = (5, 5)
+    tick(worker, gateway, 3)
+    if game.inspect(PLAYER, second["id"])["receipt"] is None:
+        game.roll(PLAYER, str(uuid4()), second["id"])
+    pass_tags(game)
+    assert not any(x["kind"] == "engage_assault_extra" for x in game.choices(PLAYER))
+    # Both real two-Asset Frames are now exhausted. Their actual Defeat work
+    # remains owed; a reuse check must not invent resources or skip those Plays.
+    finish_assault(second["id"], second_asset, expect_defeat=True)
+    assert game.inspect(PLAYER, action["id"])["receipt"] == receipt
+    assert game.dice.calls == calls + 2 and state(game).sheets["2"].girl == "VATGROWN"

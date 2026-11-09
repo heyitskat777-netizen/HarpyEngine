@@ -17,6 +17,14 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
     data = await asyncio.to_thread(game.decision, viewer_from_interaction(interaction), identity)
     detail = data["am_code"]
     bodies = detail["branch"]["bodies"]
+    if detail["branch"].get("waiting_for_handler"):
+        await reply(
+            interaction,
+            "Your actual branch choice remains pending. The original Handler must record "
+            "a real empty local processing vessel through the saved hardware preparation task. "
+            "Reopen this choice after that factual source is ready; no new roll or consent reply.",
+        )
+        return
     if not bodies:
         from girlframe.discord_adapter.m3_am_body import open_prepare
         from girlframe.services.m3_am_body import BodyService

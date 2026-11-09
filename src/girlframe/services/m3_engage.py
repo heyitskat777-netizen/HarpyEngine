@@ -165,12 +165,18 @@ def apply(
     )
     casualty_extra = extra and meta.get("extra_source") == "girl.casualty.no-one-better"
     if casualty_extra:
-        from girlframe.engine.m3_girl_runtime_state import has_rule
+        from girlframe.services.m3_learned_plays import (
+            consumed_no_one_better,
+            permanent_no_one_better,
+        )
 
         if (
             ref.kind != "pilot"
             or action["data"]["result"]["tier"] != "high"
-            or not has_rule(state.sheets[ref.entity], "girl.casualty.no-one-better", "CASUALTY")
+            or not (
+                permanent_no_one_better(state, ref)
+                or consumed_no_one_better(game, c, state, action)
+            )
         ):
             raise WorkflowError("Preserve the actual Casualty's high Assault extra maneuver")
     wyvern = False
@@ -248,7 +254,7 @@ def apply(
         action["data"]["result"]["extra_maneuver"] = executed
         from girlframe.services.m3_battle import results as battle_results
 
-        battle_results(game, c, action)
+        battle_results(game, c, action, state=state)
     else:
         meta["applied"] = True
         action["data"]["result"].update(maneuvers=executed, damaged=[damage] if damage else [])
@@ -301,7 +307,17 @@ def projection(
         if not extra and meta.get("wyvern_crushing")
         else dict(maneuvers=[], vehicles=[])
     )
+    learned = extra and bool(action["data"].get("learned_no_one_better"))
+    if learned:
+        from girlframe.services.m3_learned_plays import consumed_no_one_better
+
+        learned = consumed_no_one_better(game, c, state, action)
     return dict(
+        **(
+            {"learned_rider": "No One Better: actual spent lesson, one extra Engage option"}
+            if learned
+            else {}
+        ),
         maneuvers=[*MANEUVERS, *wyvern["maneuvers"]],
         wyvern_vehicles=wyvern["vehicles"],
         minimum=count,

@@ -1,5 +1,6 @@
 """Finite actual learned-Play admission and one-roll consumption; source effects stay explicit."""
 
+import hashlib
 import json
 from typing import Any
 from uuid import uuid4
@@ -10,19 +11,60 @@ from sqlalchemy import Connection
 from girlframe.database import tables as t
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_bonds import current_ref
-from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_girl_runtime_state import GirlRuntime, has_rule
 from girlframe.engine.m3_learned_play_state import LearnedPlayUse
 from girlframe.services.m2_game import GameService
 from girlframe.services.onboarding import WorkflowError
 
+NO_ONE_BETTER = "girl.casualty.no-one-better"
 SUPPORTED = {
     "girl.alpha.brutalize": ("brutalize", "ALPHA"),
     "girl.stim-blissed.dose-up": ("dose_up", "STIM-BLISSED"),
     "girl.oldgen.old-dog-new-pups": ("old_dog_new_pups", "OLDGEN"),
     "girl.newgirl.easy-target": ("easy_target", "NEWGIRL"),
     "girl.mockingbird.bad-at-being-a-person": ("mockingbird_person", "MOCKINGBIRD"),
+    NO_ONE_BETTER: ("all_out_assault", "CASUALTY"),
 }
+
+
+def lesson_label(rule_id: str, play: str) -> str:
+    return (
+        "No One Better (high Assault extra maneuver)"
+        if rule_id == NO_ONE_BETTER
+        else play.replace("_", " ").title()
+    )
+
+
+class NoOneBetterResolution(Model):
+    action: str
+    lesson: str
+    actor: ActorRef
+    begin_event: str
+    roll_event: str
+    receipt_sha256: str
+    modifiers_sha256: str
+    total: int
+    triggered: bool
+    event: str
+
+
+def _digest(value: Any) -> str:
+    return hashlib.sha256(
+        json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+
+
+def permanent_no_one_better(state: GameState, actor: ActorRef) -> bool:
+    sheet = state.sheets.get(actor.entity) if actor.kind == "pilot" else None
+    if sheet is None or sheet.character_id != actor.incarnation:
+        return False
+    runtime = sheet.girl_runtime or GirlRuntime()
+    return has_rule(
+        sheet.model_copy(update={"girl_runtime": runtime.model_copy(update={"learned_plays": ()})}),
+        NO_ONE_BETTER,
+        "CASUALTY",
+    )
 
 
 def _replace(state: GameState, value: LearnedPlayUse) -> None:
@@ -113,7 +155,9 @@ def available(
             from girlframe.services.m3_handler_advancements import _history
 
             action = game.action(c, value.claimed_action)
-            meta = action["data"].get("learned_play", {})
+            meta = action["data"].get(
+                "learned_no_one_better" if rule_id == NO_ONE_BETTER else "learned_play", {}
+            )
             born = _history(c, game, meta.get("event", ""))
             saved = born.sheets.get(actor.entity)
             original = saved.girl_runtime if saved else None
@@ -138,7 +182,10 @@ def claim(
     event: str,
 ) -> bool:
     play = action["data"]["play"]
-    rule = next((rule for rule, (name, _) in SUPPORTED.items() if name == play), None)
+    rule = next(
+        (rule for rule, (name, _) in SUPPORTED.items() if name == play and rule != NO_ONE_BETTER),
+        None,
+    )
     if rule is None:
         return False
     actor = current_ref(state, int(action["actor_id"]))
@@ -218,6 +265,275 @@ def release_unrolled(
         raise WorkflowError("Recover this original unrolled learning reservation.")
     _prove(game, c, state, value)
     _replace(state, value.model_copy(update={"claimed_action": None}))
+    return True
+
+
+def reserve_triggered(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any], event: str
+) -> bool:
+    """Reserve the one finite rider; ordinary Assault needs no lesson entitlement."""
+    if action["data"]["play"] != "all_out_assault" or not action["data"].get("battle"):
+        return False
+    actor = ActorRef.model_validate(action["data"]["battle"]["actor"])
+    if actor.kind != "pilot" or permanent_no_one_better(state, actor):
+        return False
+    value = available(game, c, state, actor, NO_ONE_BETTER, action["id"])
+    if value is None:
+        return False
+    if actor != current_ref(state, int(action["actor_id"])) or not event:
+        raise WorkflowError("Reserve only the actual original learner's declared Assault")
+    if action["data"].get("learned_no_one_better"):
+        raise WorkflowError("Reuse this Assault's original one-use rider reservation")
+    from girlframe.engine.m3_battle import resource_sha
+    from girlframe.services.m3_actors import profiles
+
+    bound = profiles(c, game.store.campaign_id)
+    before = resource_sha(state, actor, bound)
+    _replace(state, value.model_copy(update={"claimed_action": action["id"]}))
+    action["data"]["learned_no_one_better"] = dict(
+        id=value.id,
+        rule_id=NO_ONE_BETTER,
+        event=event,
+        resource_before=before,
+        resource_after=resource_sha(state, actor, bound),
+    )
+    return True
+
+
+def _triggered_reservation(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any]
+) -> LearnedPlayUse:
+    from girlframe.services.m3_handler_advancements import _history
+
+    meta = action["data"]["learned_no_one_better"]
+    actor = ActorRef.model_validate(action["data"]["battle"]["actor"])
+    born = _history(c, game, meta["event"])
+    sheet = state.sheets.get(actor.entity)
+    original = born.sheets.get(actor.entity)
+    current = sheet.girl_runtime if sheet else None
+    runtime = original.girl_runtime if original else None
+    value = (
+        next((x for x in current.learned_plays if x.id == meta["id"]), None) if current else None
+    )
+    reservation = (
+        next((x for x in runtime.learned_plays if x.id == meta["id"]), None) if runtime else None
+    )
+    confirmed = (
+        c.execute(
+            sa.select(t.events).where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.id == meta["event"],
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if (
+        value is None
+        or reservation is None
+        or confirmed is None
+        or confirmed["kind"] != "m3.play_confirmed"
+        or json.loads(confirmed["payload_json"]).get("action_id") != action["id"]
+        or action["data"]["play"] != "all_out_assault"
+        or action["data"]["prepared"]["play"] != "all_out_assault"
+        or meta.get("rule_id") != NO_ONE_BETTER
+        or actor.kind != "pilot"
+        or actor.entity != str(action["actor_id"])
+        or value.actor != actor
+        or value.rule_id != NO_ONE_BETTER
+        or reservation
+        != value.model_copy(update={"claimed_action": action["id"], "rolled_event": None})
+    ):
+        raise WorkflowError("Recover this exact original lesson's canonical Assault reservation")
+    _prove(game, c, born, reservation)
+    _prove(game, c, state, value)
+    return value
+
+
+def pre_roll_triggered(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any]
+) -> None:
+    if not action["data"].get("learned_no_one_better"):
+        return
+    value = _triggered_reservation(game, c, state, action)
+    if (
+        value.actor != current_ref(state, int(action["actor_id"]))
+        or value.claimed_action != action["id"]
+        or value.rolled_event is not None
+        or action["data"]["learned_no_one_better"].get("resolved_event")
+        or action["data"].get("receipt")
+    ):
+        raise WorkflowError("Use only this original unrolled learner reservation before costs")
+
+
+def triggered_resource_sha(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    actor: ActorRef,
+    original: str,
+) -> str:
+    """Only the exact canonical reservation may change its own pre-roll resource hash."""
+    meta = action["data"].get("learned_no_one_better")
+    if meta is None or actor.model_dump(mode="json") != action["data"]["battle"]["actor"]:
+        return original
+    from girlframe.engine.m3_battle import resource_sha
+    from girlframe.services.m3_actor_history import snapshot_profiles
+    from girlframe.services.m3_handler_advancements import _history
+
+    _triggered_reservation(game, c, state, action)
+    born = _history(c, game, meta["event"])
+    actual = resource_sha(born, actor, snapshot_profiles(c, game.store.campaign_id, born))
+    if meta.get("resource_before") != original or meta.get("resource_after") != actual:
+        raise WorkflowError(
+            "Preserve the original declaration and exact reservation resource change"
+        )
+    return str(actual)
+
+
+def release_triggered_unrolled(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any]
+) -> bool:
+    if not action["data"].get("learned_no_one_better"):
+        return False
+    pre_roll_triggered(game, c, state, action)
+    value = _triggered_reservation(game, c, state, action)
+    _replace(state, value.model_copy(update={"claimed_action": None}))
+    return True
+
+
+def _resolution(state: GameState, action: str) -> NoOneBetterResolution | None:
+    rows = [
+        x
+        for x in state.facts
+        if x.get("kind") == "learned_no_one_better_resolution" and x.get("id") == action
+    ]
+    if not rows:
+        return None
+    if len(rows) != 1:
+        raise WorkflowError("Preserve one actual final rider result per original Assault")
+    return NoOneBetterResolution.model_validate_json(rows[0]["body"])
+
+
+def resolve_no_one_better(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any], event: str
+) -> bool:
+    """Stage only after all actual modifiers; canonical proof is required on later use."""
+    meta = action["data"].get("learned_no_one_better")
+    if meta is None:
+        return False
+    if meta.get("resolved_event"):
+        if meta.get("triggered"):
+            return consumed_no_one_better(game, c, state, action)
+        _prove_resolution(game, c, state, action)
+        return False
+    value = _triggered_reservation(game, c, state, action)
+    if value.claimed_action != action["id"] or value.rolled_event is not None or not event:
+        raise WorkflowError("Resolve only this exact held one-use Assault rider")
+    if game.pending(c, action["id"]):
+        raise WorkflowError("Finish actual Tag choices before resolving the high Assault trigger")
+    from girlframe.services.m3_dose_up import _roll_source
+
+    rolled, total = _roll_source(game, c, action)
+    resolution = NoOneBetterResolution(
+        action=action["id"],
+        lesson=value.id,
+        actor=value.actor,
+        begin_event=meta["event"],
+        roll_event=rolled,
+        receipt_sha256=_digest(action["data"]["receipt"]),
+        modifiers_sha256=_digest(action["data"]["modifiers"]),
+        total=total,
+        triggered=total >= 11,
+        event=event,
+    )
+    if _resolution(state, action["id"]) is not None:
+        raise WorkflowError("This actual Assault rider already has its original resolution")
+    _replace(
+        state,
+        value.model_copy(
+            update=({"rolled_event": event} if resolution.triggered else {"claimed_action": None})
+        ),
+    )
+    meta.update(
+        resolved_event=event,
+        roll_event=rolled,
+        final_total=total,
+        triggered=resolution.triggered,
+    )
+    state.facts.append(
+        dict(
+            kind="learned_no_one_better_resolution",
+            id=action["id"],
+            body=resolution.model_dump_json(),
+        )
+    )
+    return resolution.triggered
+
+
+def _prove_resolution(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any]
+) -> NoOneBetterResolution:
+    from girlframe.services.m3_dose_up import _roll_source
+    from girlframe.services.m3_handler_advancements import _history
+
+    meta = action["data"]["learned_no_one_better"]
+    saved = _resolution(state, action["id"])
+    if saved is None or saved.event != meta.get("resolved_event"):
+        raise WorkflowError("Recover the actual final No One Better trigger decision")
+    born = _history(c, game, saved.event)
+    rolled, total = _roll_source(game, c, action)
+    event = (
+        c.execute(
+            sa.select(t.events).where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.id == saved.event,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if (
+        _resolution(born, action["id"]) != saved
+        or event is None
+        or event["kind"] not in ("m2.choice_resolved", "m3.choice_resolved")
+        or json.loads(event["payload_json"]).get("action_id") != action["id"]
+        or saved.lesson != meta["id"]
+        or saved.begin_event != meta["event"]
+        or saved.roll_event != rolled
+        or saved.total != total
+        or saved.receipt_sha256 != _digest(action["data"]["receipt"])
+        or saved.modifiers_sha256 != _digest(action["data"]["modifiers"])
+        or saved.triggered != (total >= 11)
+        or saved.triggered != meta.get("triggered")
+        or meta.get("roll_event") != rolled
+        or meta.get("final_total") != total
+    ):
+        raise WorkflowError("Preserve the actual canonical Assault receipt and final trigger")
+    at_resolution = _triggered_reservation(game, c, born, action)
+    if saved.triggered:
+        if (
+            at_resolution.claimed_action != action["id"]
+            or at_resolution.rolled_event != saved.event
+        ):
+            raise WorkflowError("Only this exact high Assault consumed this source lesson")
+    elif at_resolution.claimed_action is not None or at_resolution.rolled_event is not None:
+        raise WorkflowError("A lower actual Assault releases only its own unused reservation")
+    return saved
+
+
+def consumed_no_one_better(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any]
+) -> bool:
+    if not action["data"].get("learned_no_one_better"):
+        return False
+    saved = _prove_resolution(game, c, state, action)
+    if not saved.triggered:
+        return False
+    current = _triggered_reservation(game, c, state, action)
+    if current.claimed_action != action["id"] or current.rolled_event != saved.event:
+        raise WorkflowError("Preserve the actual spent lesson for this held high Assault")
     return True
 
 

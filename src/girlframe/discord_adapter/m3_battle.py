@@ -183,6 +183,16 @@ async def open_context(
     source = await asyncio.to_thread(
         service.context, viewer_from_interaction(interaction), identity
     )
+    if source.get("learned_rider", {}).get("action"):
+        rider = source["learned_rider"]
+        await reply(
+            interaction,
+            rider["text"]
+            + " Actual Assault: "
+            + rider["state"]
+            + ". Pending owned choices remain in your requests.",
+        )
+        return
     if source["channel"] is None:
         await reply(
             interaction,
@@ -314,7 +324,8 @@ async def open_context(
         form = NativeForm(
             interaction.user.id,
             "Start confirmed battle",
-            "Opening and reach are source-confirmed.",
+            "Opening and reach are source-confirmed. "
+            + source.get("learned_rider", {}).get("text", ""),
             [
                 Field(
                     "identity",
@@ -634,7 +645,7 @@ async def open_battle(interaction: discord.Interaction, game: GameService, ident
     form = NativeForm(
         interaction.user.id,
         "Battle: your actual choice",
-        "Only the printed source owner may answer.",
+        "Only the printed source owner may answer. " + detail.get("learned_rider", ""),
         fields,
         submit,
     )

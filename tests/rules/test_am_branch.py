@@ -366,3 +366,303 @@ def test_actual_branch_npc_counter_then_owned_takeover_and_current_girl_play(
     with ledger.engine.connect() as c:
         assert "PRIVATE_" not in str(list(c.scalars(sa.select(t.events.c.payload_json))))
     assert game.rebuild() > 0 and state(game) == final
+
+
+def test_actual_pilot_native_branch_handler_npc_then_original_owner_takeover(
+    ledger, tmp_path, monkeypatch
+):
+    from test_m2_game import Gateway
+    from test_mission_service import service as actual_service
+    from test_world import initial
+
+    from girlframe.delivery.m2_worker import GameWorker
+    from girlframe.discord_adapter.m3_am_code import open_code
+    from girlframe.engine.drafts import DraftInput
+    from girlframe.services.inbox import InboxService
+
+    seed, selected = test_creation_review.seed, test_m2_game.selected
+
+    def actual_seed(store, viewer=PLAYER):
+        if viewer != OTHER:
+            return seed(store, viewer)
+        store.join(viewer, "join-3")
+        store.save_draft(
+            viewer,
+            "draft-3",
+            0,
+            DraftInput(
+                callsign="Actual Pilot operator",
+                girl_playbook="ALPHA",
+                frame_playbook="JANUS-B",
+                notes="PRIVATE_OPERATOR_NOT_BRANCH_MEMORY",
+            ),
+        )
+
+    monkeypatch.setattr(test_creation_review, "seed", actual_seed)
+    monkeypatch.setattr(test_m2_game, "selected", lambda *_: selected("ALPHA", "JANUS-B"))
+    _, game = actual_service(ledger, girl="AM", frame="THE ENFORCER")
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(am.RULE, code.RULE, "girl.alpha.brutalize", "npc.npc.guard"),
+    )
+    with ledger.transaction() as c:
+        canon = state(game)
+        canon.world = initial()
+        canon = place(place(canon, 2, mode="outside_frame"), 3, mode="outside_frame")
+        canon.facts.append(dict(kind="synthetic_private_memory", body=CANARY))
+        game.event(c, 1, str(uuid4()), "synthetic.actual_branch_original_circuit_bodies", canon)
+    service = CodeService(game)
+    original, operator = current_ref(state(game), 2), current_ref(state(game), 3)
+    candidate = next(
+        x
+        for x in service.menu(PLAYER, 900)["operators"]
+        if x["ref"] == operator.model_dump(mode="json")
+    )
+    interaction_id = 987000
+
+    def interaction(human):
+        nonlocal interaction_id
+        interaction_id += 1
+        result = current(human, interaction_id)
+        result.channel_id = 900
+        return result
+
+    async def contact(human, operation, values):
+        owner = interaction(human)
+        await owner.response.defer(ephemeral=True)
+        await open_code(owner, service, channel=900)
+        menu = owner.edit_original_response.call_args.kwargs["view"]
+        menu.values.update(source=(operation,))
+        chosen = interaction(human)
+        await menu.confirm.callback(chosen)
+        form = chosen.edit_original_response.call_args.kwargs["view"]
+        form.values.update(values)
+        actual = interaction(human)
+        await form.confirm.callback(actual)
+        assert form.completed, str(actual.edit_original_response.call_args)
+
+    asyncio.run(
+        contact(
+            2,
+            "operator:" + candidate["id"],
+            dict(account="Actual original Pilot touching my real circuits"),
+        )
+    )
+    maintenance = code.sessions(state(game))[0]
+    asyncio.run(
+        contact(
+            3,
+            "confirm:" + maintenance.id,
+            dict(account="My actual hands have physical access to this same AM"),
+        )
+    )
+    maintenance = code.session(state(game), maintenance.id)
+    worker, gateway = GameWorker(game), Gateway()
+    tick(worker, gateway, 3)
+    game.dice.faces = (4, 5)
+    action = game.begin(
+        PLAYER,
+        str(uuid4()),
+        900,
+        state(game).sheets["2"].revision,
+        PlayInput(
+            play=code.PLAY,
+            parent=maintenance.root,
+            source_work=maintenance.id,
+            target_actor=operator,
+            heat=0,
+            trigger_confirmed=True,
+            context="Actual original Pilot circuit work creating an independent branch",
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    for viewer in (PLAYER, OTHER, ADMIN):
+        if any(x["kind"] == "tag_window" for x in game.choices(viewer)):
+            answer(game, viewer, "tag_window", options=("pass",))
+
+    async def selection(human, kind, values):
+        viewer = {1: ADMIN, 2: PLAYER, 3: OTHER}[human]
+        row = next(x for x in game.choices(viewer) if x["kind"] == kind)
+        owner = interaction(human)
+        await owner.response.defer(ephemeral=True)
+        await open_choice(owner, game, row["id"])
+        form = owner.edit_original_response.call_args.kwargs["view"]
+        form.values.update(values)
+        actual = interaction(human)
+        await form.confirm.callback(actual)
+        assert form.completed, str(actual.edit_original_response.call_args)
+        return row, str(actual.id)
+
+    asyncio.run(selection(3, "am_code_options", dict(options=("branch",))))
+    pending = next(x for x in game.choices(OTHER) if x["kind"] == "am_code_branch")
+    before = state(game)
+    old_sheet = before.sheets["2"].model_copy(deep=True)
+    calls = game.dice.calls
+
+    async def waiting():
+        pilot = interaction(3)
+        await pilot.response.defer(ephemeral=True)
+        await open_choice(pilot, game, pending["id"])
+        assert "original Handler must record" in str(pilot.edit_original_response.call_args)
+
+    asyncio.run(waiting())
+    assert any(
+        x.identity == maintenance.id and x.incoming for x in InboxService(ledger).items(ADMIN)
+    )
+    assert not BodyService(game).menu(OTHER)["preparations"]
+
+    async def prepare():
+        owner = interaction(1)
+        await owner.response.defer(ephemeral=True)
+        await open_prepare(owner, BodyService(game), maintenance.id)
+        form = owner.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            vessel="actual-pilot-selected-branch-hardware",
+            label="Actual independent AM branch",
+            source="Actual supplied local empty puppet with sufficient independent processor",
+            processing=("yes",),
+            unoccupied=("yes",),
+            medical=("fit",),
+            mind_assets=(),
+            assets=(
+                "Branch arm | Actual supplied actuator | intact | clear\n"
+                "Branch skin | Actual supplied covering | intact | clear"
+            ),
+        )
+        actual = interaction(1)
+        await form.confirm.callback(actual)
+        assert form.completed, str(actual.edit_original_response.call_args)
+
+    asyncio.run(prepare())
+    preparation = next(
+        x for x in bodies.preparations(state(game)) if x.maintenance == maintenance.id
+    )
+    assert preparation.fact_author is not None
+    assert preparation.controller == 3 and preparation.fact_author.entity == "1"
+    row, response_key = asyncio.run(
+        selection(
+            3,
+            "am_code_branch",
+            dict(body=(preparation.id,), account="Actual independent branch birth"),
+        )
+    )
+    assert game.respond(
+        OTHER,
+        response_key,
+        row["id"],
+        row["revision"],
+        ChoiceAnswer(options=(preparation.id,), text="Actual independent branch birth"),
+    )
+    born = state(game)
+    value = rules.branches(born)[0]
+    assert value.operator == operator and value.controller == 1
+    original_after = born.sheets["2"]
+    assert original_after.model_dump(exclude={"identities", "revision"}) == old_sheet.model_dump(
+        exclude={"identities", "revision"}
+    )
+    assert [x.slot for x in original_after.identities] == [0, 1, 2, 3]
+    assert [x.model_dump(exclude={"slot"}) for x in original_after.identities] == [
+        x.model_dump(exclude={"slot"}) for x in old_sheet.identities
+    ]
+    assert game.dice.calls == calls == 1
+    with ledger.engine.connect() as c:
+        assert prove(game, c, born, value.id) == value
+        assert resolve(born, value.npc, profiles(c, ledger.campaign_id)).controller == 1
+    assert CANARY not in value.model_dump_json()
+    branch = BranchService(game)
+    with pytest.raises(WorkflowError):
+        branch.view(OTHER, value.id)
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    tick(worker, gateway, 5)
+
+    cast_target(game, value.npc)
+    guard = GuardService(game)
+    guard.assess(
+        ADMIN,
+        str(uuid4()),
+        900,
+        value.npc,
+        operator,
+        state(game).revision,
+        True,
+        "Actual independent branch is an unarmed Guard",
+    )
+    game.dice.faces = (1, 1)
+    attack = game.begin(
+        OTHER,
+        str(uuid4()),
+        900,
+        state(game).sheets["3"].revision,
+        PlayInput(
+            play="brutalize",
+            target_actor=value.npc,
+            heat=0,
+            trigger_confirmed=True,
+            context="Actual Alpha confronts the independent branch Guard",
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    for viewer in (PLAYER, OTHER, ADMIN):
+        if any(x["kind"] == "tag_window" for x in game.choices(viewer)):
+            answer(game, viewer, "tag_window", options=("pass",))
+    answer(game, ADMIN, "alpha_low", options=("counter_broken",))
+    counter = next(x for x in game.choices(ADMIN) if x["kind"] == "alpha_counter_play")
+    own = guard.counter(ADMIN, attack, counter["id"])
+    guard.perform_counter(
+        ADMIN,
+        str(uuid4()),
+        attack,
+        counter["id"],
+        own["revision"],
+        "interpose",
+        "Actual branch independently interposes",
+    )
+    answer(game, OTHER, "alpha_npc_mercy", options=("spare",))
+    assert game.inspect(OTHER, attack)["state"] == "complete"
+    tick(worker, gateway, 5)
+
+    async def takeover():
+        handler = interaction(1)
+        await handler.response.defer(ephemeral=True)
+        await open_branch(handler, branch, value.id)
+        form = handler.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            position=("0",),
+            account="Actual colocated unoccupied original Enforcer assigned to branch",
+        )
+        actual = interaction(1)
+        await form.confirm.callback(actual)
+        assert form.completed, str(actual.edit_original_response.call_args)
+        owner = interaction(2)
+        await owner.response.defer(ephemeral=True)
+        await open_branch(owner, branch, value.id)
+        form = owner.edit_original_response.call_args.kwargs["view"]
+        form.values.update(takeover=("yes",))
+        actual = interaction(2)
+        await form.confirm.callback(actual)
+        assert form.completed, str(actual.edit_original_response.call_args)
+
+    asyncio.run(takeover())
+    final = state(game)
+    completed = rules.get(final, value.id)
+    assert completed.resulting_actor == current_ref(final, 2) != original
+    assert any(
+        x.id == completed.archive and x.actor == original and x.ending == "am_branch_terminated"
+        for x in final.career_archives
+    )
+    assert rules.current_body(final, current_ref(final, 2)).vessel == preparation.spec.vessel
+    assert not any(x.id == value.npc.entity for x in final.world.npcs)
+    assert final.sheets["2"].heat == final.sheets["2"].permissions == 0
+    with ledger.engine.connect() as c:
+        assert prove(game, c, final, value.id) == completed
+
+    async def reopen():
+        owner = interaction(2)
+        await owner.response.defer(ephemeral=True)
+        await open_branch(owner, branch, value.id)
+        assert "original mind remains terminated" in str(owner.edit_original_response.call_args)
+
+    asyncio.run(reopen())

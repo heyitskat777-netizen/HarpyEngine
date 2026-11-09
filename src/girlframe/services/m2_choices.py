@@ -1658,7 +1658,7 @@ class ChoiceEngine:
         if play in ("all_out_assault", "go_for_the_core") and action["data"].get("battle"):
             from girlframe.services.m3_battle import results as battle_results
 
-            battle_results(self.game, c, action)
+            battle_results(self.game, c, action, state=state)
             return
         if play == "enforcement_initiative" and action["data"].get("enforcement"):
             from girlframe.services.m3_enforcement_initiative import results as enforcement_results

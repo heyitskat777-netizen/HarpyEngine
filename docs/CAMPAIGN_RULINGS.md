@@ -3980,3 +3980,21 @@ There is no separate printed “Girl Storage” rule: this refers to bodily Asse
 under **Void Storage**. The book does not explain the combined AM relay case; this
 delegated recommendation needs clarity review. Preserve earlier contact, gain,
 component, possession and occupancy records when adjusting future policy.
+
+
+### Vatgrown learns a printed triggered rider
+
+`vatgrown-triggered-no-one-better-lesson` (PDF44/printed42; PDF50/printed48):
+reserve the actual one-use lesson against the learner's genuine Assault, and use
+it once when the final real result is11+ and No One Better activates its existing
+extra Engage option. A lower underlying Assault does not perform that printed
+rider: release only the exact untriggered reservation with canonical receipt
+proof, preserving real Heat/costs/receipt. Staff abort/resume retains a known-roll
+reservation; true unrolled cancellation uses existing recovery validation.
+Learning creates no Casualty parts, repair benefit, extra attack roll or free
+resource. The existing five ordinary learned Play consumers retain their behavior.
+
+The book does not spell out learning a result-triggered rider. This delegated
+recommendation needs clarity review; alternative: spend the lesson on the first
+underlying Assault regardless of result. Version future changes and preserve
+original lesson/teacher/source/receipt histories, without reviving consumed uses.

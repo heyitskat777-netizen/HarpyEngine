@@ -1228,3 +1228,58 @@ Final scoped preflight21 paths/15 Python/13 source: Ruff/format/types, whitespac
 registry and planning PASS. Registry477/273 subset/204 unimplemented/440 required/
 0 verified; repository1419 publishable files/40 manifest entries/0 findings.
 These source/minimum checks are not the final full P1 regression.
+
+
+## Pilot Branch and learned No One Better
+
+Base0c97a8f380e982d47c14ceef05b34269b2f6f358 is published; focused
+CI42537845338 PASS/full regression skipped. Bot OFF; RULES_SUBSET/0 verified.
+
+Pilot Branch uses the original Handler's proved hardware facts/NPC control while
+retaining the real Pilot operator's option and canonical SQL response ownership.
+The pending native choice explains the Handler preparation requirement; the actual
+Body inbox preparation task now admits Branch as well as BODY. Existing Guard,
+actual Enforcer assignment and original-owner takeover/archive remain real. No
+new Branch model fields/default bytes or fabricated NPC/circuit consent. At genuine
+branch birth, the existing slot binder normalizes legacy ordinary Identities;
+IDs/names/marks/resources remain unchanged and coupled/mental guards still apply.
+
+Learned No One Better is the actual printed high-Assault rider, not a standalone
+Play. Teacher menu uses its real rule name. Exact lesson reservation, underlying
+Assault resources/receipt and final Tag-adjusted11+ activate the existing extra
+Engage source once. Independent source proof binds permitted reservation resource
+before/after hashes, preserving Battle stale-state guards. Held effects prove the
+canonical consumed source. Known lower result releases only its actual untriggered
+reservation without Heat/cost/receipt refund; unrolled cancellation uses actual
+recovery. Generic five claims/defaults unchanged, including ordinary Assault
+without a lesson. Native private context/extra choice shows actual lesson status.
+Delegated trigger-consumption interpretation recorded with clarity review pending.
+
+Minimum commands (pytest -q --tb=short):
+- `tests/rules/test_am_branch.py::test_actual_pilot_native_branch_handler_npc_then_original_owner_takeover`
+- `tests/rules/test_vatgrown_plays.py::test_actual_casualty_lesson_native_high_assault_extra_maneuver_costs_once_and_readback`
+
+Root first started Branch before the new shared helper landed:1failed/2.39s at
+ImportError before gameplay. No behavior was exercised; both dependencies were
+then frozen. Consolidated first run2failed/9.83s: Branch exposed legacy four
+ordinary Identities with missing stable slots; source birth now uses existing
+binder. Learning completed its first whole flow but fixture expected its second
+Assault to complete after exhausting both real Frames. Corrected test asserts
+the two genuine owned Defeat requests and held source lock, without adding fake
+Assets, skipping Defeat or growing a second lifecycle scenario. Same failed-node
+consolidated retry **2passed/11.64s**. No old successful node rerun.
+
+Branch normal covers actual Pilot choice, original Handler facts/NPC Guard, real
+assignment, original-owner takeover/private reopen. Learning normal covers real
+Casualty lesson, own physical resources/native unrolled cancel/fresh declaration,
+real high extra cover, actual Assault costs/effects/completion, private/spent
+readback and second true high with no extra entitlement/actual required Defeat.
+Lower-result release, additional source/rollback variants and existing affected
+consumer normals remain final regression checks. Scoped static result and exact
+packet hashes/logs recorded under var/p1-branch-learning-*. Full final P1 regression,
+global static/migration/privacy/restore, independent and human gates remain pending.
+
+Final scoped packet22 paths/16 Python/14 source: Ruff/format/types/whitespace,
+registry and planning PASS. Registry477/273 subset/204 unimplemented/440 required/
+0 verified; repository1419 publishable files/40 manifest entries/0 findings.
+No additional gameplay matrix or old success reruns; full P1 regression pending.

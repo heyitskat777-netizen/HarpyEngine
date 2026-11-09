@@ -758,7 +758,7 @@ class BodyService:
         for value in code.sessions(state):
             if (
                 value.operator.kind == "pilot"
-                and "body" in value.selected_options
+                and bool({"body", "branch"} & set(value.selected_options))
                 and value.phase == "active"
                 and not value.body_swap
                 and _source_handler(self.game, c, value).entity == str(viewer.user_id)

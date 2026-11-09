@@ -656,7 +656,7 @@ def projection(
     sheet = state.sheets[value.actor.entity]
     teacher = state.sheets.get(value.target.entity) if value.target.kind == "pilot" else None
     from girlframe.engine.m3_leviathan_obsession import require_unlocked
-    from girlframe.services.m3_learned_plays import SUPPORTED
+    from girlframe.services.m3_learned_plays import SUPPORTED, lesson_label
 
     replacements = []
     for identity in sheet.identities:
@@ -676,7 +676,7 @@ def projection(
         replacements=replacements,
         required=2 if value.tier in ("mid", "high") else 1,
         plays=[
-            dict(id=rule, label=play.replace("_", " ").title())
+            dict(id=rule, label=lesson_label(rule, play))
             for rule, (play, book) in SUPPORTED.items()
             if teacher and teacher.girl == book and has_rule(teacher, rule, book)
         ],
