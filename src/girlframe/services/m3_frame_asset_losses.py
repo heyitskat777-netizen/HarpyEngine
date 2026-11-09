@@ -32,6 +32,8 @@ class FrameAssetLoss(Model):
         "partake_regrowth",
         "supply_drop_cap",
         "sup_dive_cap",
+        "modular_recovery",
+        "sup_risk_cap",
     ]
     id: str
     actor: ActorRef
@@ -838,6 +840,289 @@ def sup_dive_losses(
             result.append(
                 FrameAssetLoss(
                     source_kind="sup_dive_cap",
+                    id=grown.asset,
+                    actor=actor,
+                    frame=grown.frame,
+                    event=grown.event,
+                    asset=old,
+                )
+            )
+    return tuple(result)
+
+
+def modular_recovery_losses(
+    game: GameService, c: Connection, state: GameState, actor: ActorRef
+) -> tuple[FrameAssetLoss, ...]:
+    """Only actual owner-authored Off-Duty Modular recovery, not every repair fact."""
+    from girlframe.engine import m3_modular as modular
+    from girlframe.engine.m3_off_duty import Period
+    from girlframe.services.m3_dose_up import _roll_source
+    from girlframe.services.m3_modular import entitlement
+
+    history = t.m3["m3_off_duty_history"]
+    candidates = [
+        x
+        for x in state.facts
+        if x.get("kind") == "modular_repair"
+        and x.get("actor") == actor.model_dump_json()
+        and x.get("period")
+        and not x.get("source")
+    ]
+    result = []
+    for period in {x["period"] for x in candidates}:
+        rows = c.execute(
+            sa.select(history.c.body_json, history.c.revision, history.c.event_id, t.events)
+            .join(
+                t.events,
+                sa.and_(
+                    t.events.c.campaign_id == history.c.campaign_id,
+                    t.events.c.id == history.c.event_id,
+                ),
+            )
+            .where(
+                history.c.campaign_id == game.store.campaign_id,
+                history.c.id == period,
+                t.events.c.kind == "m3.off_duty_recovered",
+                t.events.c.actor_id == actor.entity,
+            )
+        ).mappings()
+        for row in rows:
+            event = row["event_id"]
+            before, born = snapshots(game, c, event)
+            if not _surviving_frame(state, before, born, actor):
+                continue
+            facts = [
+                x
+                for x in born.facts
+                if x.get("kind") == "modular_repair"
+                and x.get("period") == period
+                and x.get("actor") == actor.model_dump_json()
+                and not x.get("source")
+                and x not in before.facts
+            ]
+            if not facts:
+                continue
+            if any(x not in candidates for x in facts):
+                raise WorkflowError("Preserve the original canonical Modular recovery selections")
+            previous = c.scalar(
+                sa.select(history.c.body_json).where(
+                    history.c.campaign_id == game.store.campaign_id,
+                    history.c.id == period,
+                    history.c.revision == row["revision"] - 1,
+                )
+            )
+            recovered = Period.model_validate_json(row["body_json"])
+            earlier = Period.model_validate_json(previous) if previous else None
+            progress = recovered.progress.get(actor.entity)
+            old_progress = earlier.progress.get(actor.entity) if earlier else None
+            receipt = entitlement(game, c, born, actor)
+            if (
+                earlier is None
+                or earlier.phase != "active"
+                or recovered.phase != "active"
+                or recovered.character_ids.get(actor.entity) != actor.incarnation
+                or earlier.character_ids != recovered.character_ids
+                or progress is None
+                or old_progress is None
+                or old_progress.recovered
+                or not progress.recovered
+                or progress.roll is None
+                or progress.roll != old_progress.roll
+                or progress.action_id is None
+                or progress.action_id != old_progress.action_id
+                or json.loads(row["payload_json"]).get("period_id") != period
+                or receipt is None
+                or any(x.get("purchase") != receipt.id for x in facts)
+                or len({x["old"] for x in facts}) != len(facts)
+            ):
+                raise WorkflowError("Recover the actual owned paid Modular Off-Duty recovery")
+            action = game.action(c, progress.action_id)
+            _roll_source(game, c, action)
+            bound = action["data"].get("character_ids") or game.legacy_action_bindings(c, action)
+            if (
+                action["actor_id"] != actor.entity
+                or bound.get(actor.entity) != actor.incarnation
+                or action["data"].get("play") != "go_off_duty"
+                or action["data"].get("prepared", {}).get("off_duty_id") != period
+            ):
+                raise WorkflowError("Recover the exact original completed Off-Duty Play")
+            intermediate = GameState.model_validate_json(born.model_dump_json())
+            intermediate.facts = [x for x in intermediate.facts if x not in facts]
+            replacements = []
+            originals = []
+            for fact in facts:
+                old = next(
+                    (x for x in before.sheets[actor.entity].assets if x.id == fact["old"]), None
+                )
+                new = next(
+                    (x for x in born.sheets[actor.entity].assets if x.id == fact["new"]), None
+                )
+                if (
+                    old is None
+                    or not old.damaged
+                    or new is None
+                    or new.damaged
+                    or old.id == new.id
+                    or any(x.id == old.id for x in born.sheets[actor.entity].assets)
+                    or any(x.id == new.id for x in before.sheets[actor.entity].assets)
+                ):
+                    raise WorkflowError(
+                        "Recover the exact repaired old and newly authored hardware"
+                    )
+                intermediate.sheets[actor.entity].assets = [
+                    old.model_copy(update={"damaged": False}) if x.id == new.id else x
+                    for x in intermediate.sheets[actor.entity].assets
+                ]
+                replacements.append(
+                    modular.Replacement(asset=old.id, name=new.name, description=new.description)
+                )
+                originals.append(old)
+            try:
+                modular.replace_repaired(
+                    intermediate,
+                    actor,
+                    before.sheets[actor.entity],
+                    tuple(replacements),
+                    period,
+                )
+            except ValueError as error:
+                raise WorkflowError(
+                    "Recover the actual legal Modular repair: " + str(error)
+                ) from None
+            if intermediate.sheets[actor.entity].assets != born.sheets[actor.entity].assets or any(
+                fact not in intermediate.facts for fact in facts
+            ):
+                raise WorkflowError("Preserve the original pure Modular repair replacement")
+            for old in originals:
+                if _eligible(before, actor, old):
+                    result.append(
+                        FrameAssetLoss(
+                            source_kind="modular_recovery",
+                            id=consume.identity("modular-recovery", period, actor.token, old.id),
+                            actor=actor,
+                            frame=consume.frame(born, actor),
+                            event=event,
+                            asset=old,
+                        )
+                    )
+    return tuple(result)
+
+
+def sup_risk_losses(
+    game: GameService, c: Connection, state: GameState, actor: ActorRef
+) -> tuple[FrameAssetLoss, ...]:
+    """A paid Sup exchange at an actual owned Risk Factor SQL response, never Grown alone."""
+    from girlframe.engine import m3_mockingbird as risk
+    from girlframe.engine import m3_sup as sup
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_dose_up import _roll_source
+    from girlframe.services.m3_sup import prove_growth
+
+    result = []
+    actions = t.m2["m2_actions"]
+    for grown in sup.growths(state):
+        if grown.actor != actor or grown.choice.family != "frame" or not grown.choice.replace:
+            continue
+        if (
+            c.scalar(
+                sa.select(actions.c.id).where(
+                    actions.c.campaign_id == game.store.campaign_id, actions.c.id == grown.action
+                )
+            )
+            is None
+        ):
+            continue
+        action = game.action(c, grown.action)
+        meta = action["data"].get("risk_factor")
+        if not meta or (meta.get("payment") or {}).get("event") != grown.event:
+            continue  # Other actual Sup source families need their own positive adapters.
+        payment = risk.RiskPayment.model_validate(meta["payment"])
+        if payment.learned_source is not None:
+            continue
+        before, born = snapshots(game, c, grown.event)
+        if not _surviving_frame(state, before, born, actor):
+            continue
+        _roll_source(game, c, action)
+        bound = action["data"].get("character_ids") or game.legacy_action_bindings(c, action)
+        answer = _response(
+            game,
+            c,
+            action["id"],
+            meta["choice"],
+            grown.event,
+            "mockingbird_risk",
+            int(actor.entity),
+        )
+        fact = dict(
+            kind="mockingbird_risk_paid",
+            action=action["id"],
+            event=grown.event,
+            actor=actor.model_dump_json(),
+            body=payment.model_dump_json(),
+        )
+        if (
+            grown not in sup.growths(born)
+            or prove_growth(game, c, born, actor, grown.event) != grown
+            or grown.frame != consume.frame(state, actor)
+            or action["actor_id"] != actor.entity
+            or bound.get(actor.entity) != actor.incarnation
+            or meta.get("actor") != actor.model_dump(mode="json")
+            or not risk.owns(before, actor, risk.RISK)
+            or payment.actor != actor
+            or payment.action != action["id"]
+            or payment.asset != grown.asset
+            or payment.family != "frame"
+            or payment.total_before != meta["before"]
+            or payment.total_after != answer.number
+            or payment.account != grown.description
+            or fact not in born.facts
+            or fact in before.facts
+            or answer.text != grown.description
+            or answer.options
+            or answer.denied
+            or answer.member is not None
+            or answer.flag is not None
+            or answer.fields
+            != dict(
+                sup_name=grown.choice.name, sup_family="frame", sup_replace=grown.choice.replace
+            )
+        ):
+            raise WorkflowError("Prove the original owned Risk payment and exact paid Sup choice")
+        old = next(
+            (x for x in before.sheets[actor.entity].assets if x.id == grown.choice.replace), None
+        )
+        if old is None or any(x.id == old.id for x in born.sheets[actor.entity].assets):
+            raise WorkflowError(
+                "The actual Risk Sup cap exchange must remove its original component"
+            )
+        try:
+            expected, _, exact_payment = risk.risk(
+                before,
+                profiles(c, game.store.campaign_id),
+                actor,
+                action["id"],
+                grown.event,
+                "",
+                grown.description,
+                payment.total_before,
+                payment.total_after,
+                piloting=bool(action["data"].get("prepared", {}).get("piloting")),
+                growth=grown.choice,
+            )
+        except ValueError as error:
+            raise WorkflowError(
+                "Recover the actual legal Risk Sup exchange: " + str(error)
+            ) from None
+        if (
+            exact_payment != payment
+            or grown not in sup.growths(expected)
+            or expected.sheets[actor.entity].assets != born.sheets[actor.entity].assets
+        ):
+            raise WorkflowError("Preserve the original pure Risk Sup component exchange")
+        if _eligible(before, actor, old):
+            result.append(
+                FrameAssetLoss(
+                    source_kind="sup_risk_cap",
                     id=grown.asset,
                     actor=actor,
                     frame=grown.frame,

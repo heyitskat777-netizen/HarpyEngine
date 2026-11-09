@@ -1,4 +1,4 @@
-"""Private entry for four supported learned Sex Plays."""
+"""Private entry for six supported learned Sex Plays."""
 
 import asyncio
 from typing import Any
@@ -20,6 +20,8 @@ RULES = (
     "girl.stim-blissed.sex-play",
     "girl.alpha.sex-play",
     "girl.mockingbird.sex-play",
+    "girl.oldgen.sex-play",
+    "girl.newgirl.sex-play",
 )
 
 
@@ -66,6 +68,16 @@ async def open_learned_sex(
             if actor is None:
                 raise WorkflowError("Reopen the lesson with your active character.")
             await open_book(current, game, actor_ref=actor, learned_source=lesson)
+        elif row["rule_id"] == RULES[4]:
+            from girlframe.discord_adapter.m3_oldgen_sex import open_oldgen_sex
+            from girlframe.services.m3_oldgen_sex import OldgenSexService
+
+            await open_oldgen_sex(current, OldgenSexService(game), learned_source=lesson)
+        elif row["rule_id"] == RULES[5]:
+            from girlframe.discord_adapter.m3_newgirl_sex import open_newgirl_sex
+            from girlframe.services.m3_newgirl_sex import NewgirlSexService
+
+            await open_newgirl_sex(current, NewgirlSexService(game), learned_source=lesson)
         else:
             raise WorkflowError("This lesson is waiting for its Play controls.")
 

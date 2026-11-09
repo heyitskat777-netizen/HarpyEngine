@@ -30,6 +30,8 @@ SOURCES = {
     "girl.princess.sex-play": ("princess_sex", "PRINCESS", "m3.princess_sex"),
     "girl.stim-blissed.sex-play": ("stim_sex", "STIM-BLISSED", "m3.stim_sex"),
     "girl.alpha.sex-play": ("alpha_sex", "ALPHA", "m3.alpha_sex"),
+    "girl.oldgen.sex-play": ("oldgen_sex", "OLDGEN", "m3.oldgen_sex"),
+    "girl.newgirl.sex-play": ("newgirl_sex", "NEWGIRL", "m3.newgirl_sex"),
     "girl.mockingbird.sex-play": ("mockingbird_sex", "MOCKINGBIRD", "m3.mockingbird_trigger"),
 }
 
@@ -54,6 +56,14 @@ def _session(state: GameState, value: LearnedSexLink) -> Any:
         from girlframe.services.m3_mockingbird_plays import _trigger
 
         return _trigger(state, value.session)
+    if value.rule_id == "girl.oldgen.sex-play":
+        from girlframe.engine.m3_oldgen_sex import get as oldgen_get
+
+        return oldgen_get(state, value.session)
+    if value.rule_id == "girl.newgirl.sex-play":
+        from girlframe.engine.m3_newgirl_sex import get as newgirl_get
+
+        return newgirl_get(state, value.session)
     from girlframe.engine.m3_stim_sex import get as stim_get
 
     return stim_get(state, value.session)
@@ -179,6 +189,45 @@ def reserve_trigger_invitation(
     return value.id
 
 
+def reserve_partner_invitation(
+    game: "GameService", c: Connection, state: GameState, session: Any, lesson: str
+) -> str:
+    """Reserve an actual Newgirl Session, never synthesize its target/consent fields."""
+    if len(session.partners) != 1 or not admit_offer(
+        game, c, state, session.actor, "girl.newgirl.sex-play", lesson
+    ):
+        raise WorkflowError("Select your actual free lesson and one real original partner")
+    value = LearnedSexLink(
+        id="learned-sex:" + session.id,
+        lesson=lesson,
+        rule_id="girl.newgirl.sex-play",
+        session=session.id,
+        actor=session.actor,
+        target=session.partners[0],
+        cast_sha256=fingerprint(session.cast),
+        proposed_event=session.proposed_event,
+    )
+    put_learned_sex_link(state, value)
+    return value.id
+
+
+def _newgirl_consents(state: GameState) -> Any:
+    from girlframe.engine.m3_newgirl_sex import Consent, records
+
+    return records(state, Consent)
+
+
+def _partner_consent(state: GameState, value: LearnedSexLink) -> Any:
+    answers = [
+        x
+        for x in _newgirl_consents(state)
+        if x.session == value.session and x.person == value.target
+    ]
+    if len(answers) != 1:
+        raise WorkflowError("Recover the real original partner's separate consent record")
+    return answers[0]
+
+
 def prove(game: "GameService", c: Connection, state: GameState, identity: str) -> LearnedSexLink:
     value = get(state, identity)
     if value.rule_id not in SOURCES:
@@ -199,32 +248,48 @@ def prove(game: "GameService", c: Connection, state: GameState, identity: str) -
     )
     grant = _grant(game, c, proposed, value)
     mockingbird = value.rule_id == "girl.mockingbird.sex-play"
-    original_invitation = (
-        first.state == "proposed"
-        and first.action is None
-        and first.play == "mockingbird_sex"
-        and len(first.parties) == 1
-        and first.parties[0].actor == value.target
-        and first.parties[0].decision == "pending"
-        and first.parties[0].event is None
-        and first.actor == value.actor
-        and first.source_event == value.proposed_event
-        and first.cast_sha256 == value.cast_sha256
-        and first.learned_sex_source == value.id
-        and first.learned_source is None
-        and any(
-            x.id == first.scene and x.open and fingerprint(x) == value.cast_sha256
-            for x in proposed.scene_casts
+    newgirl = value.rule_id == "girl.newgirl.sex-play"
+    if mockingbird:
+        original_invitation = (
+            first.state == "proposed"
+            and first.action is None
+            and first.play == "mockingbird_sex"
+            and len(first.parties) == 1
+            and first.parties[0].actor == value.target
+            and first.parties[0].decision == "pending"
+            and first.parties[0].event is None
+            and first.actor == value.actor
+            and first.source_event == value.proposed_event
+            and first.cast_sha256 == value.cast_sha256
+            and first.learned_sex_source == value.id
+            and first.learned_source is None
+            and any(
+                x.id == first.scene and x.open and fingerprint(x) == value.cast_sha256
+                for x in proposed.scene_casts
+            )
         )
-        if mockingbird
-        else first.phase == "invited"
-        and first.consent_event is None
-        and first.learned_source == value.id
-        and first.actor == value.actor
-        and first.target == value.target
-        and first.proposed_event == value.proposed_event
-        and fingerprint(first.cast) == value.cast_sha256
-    )
+    elif newgirl:
+        original_invitation = (
+            first.phase == "invited"
+            and first.action is None
+            and len(first.partners) == 1
+            and first.partners[0] == value.target
+            and first.actor == value.actor
+            and first.proposed_event == value.proposed_event
+            and first.learned_source == value.id
+            and fingerprint(first.cast) == value.cast_sha256
+            and not any(x.session == value.session for x in _newgirl_consents(proposed))
+        )
+    else:
+        original_invitation = (
+            first.phase == "invited"
+            and first.consent_event is None
+            and first.learned_source == value.id
+            and first.actor == value.actor
+            and first.target == value.target
+            and first.proposed_event == value.proposed_event
+            and fingerprint(first.cast) == value.cast_sha256
+        )
     if (
         any(getattr(value, k) != getattr(born, k) for k in stable)
         or any(
@@ -277,7 +342,7 @@ def prove(game: "GameService", c: Connection, state: GameState, identity: str) -
     payload = {"trigger" if mockingbird else "session": value.session}
     audit(
         value.proposed_event,
-        (prefix if mockingbird else prefix + "_invited",),
+        (prefix if mockingbird else prefix + "_proposed" if newgirl else prefix + "_invited",),
         value.actor.entity,
         **payload,
     )
@@ -308,7 +373,13 @@ def prove(game: "GameService", c: Connection, state: GameState, identity: str) -
     if value.consent_event is not None:
         consent = audit(
             value.consent_event,
-            ("m3.mockingbird_trigger_attested" if mockingbird else prefix + "_consent",),
+            (
+                "m3.mockingbird_trigger_attested"
+                if mockingbird
+                else prefix + "_confirmed"
+                if newgirl
+                else prefix + "_consent",
+            ),
             str(first.parties[0].controller) if mockingbird else value.target.entity,
             **(
                 dict(
@@ -322,21 +393,28 @@ def prove(game: "GameService", c: Connection, state: GameState, identity: str) -
         )
         saved = get(consent, identity)
         actual = _session(consent, value)
+        if mockingbird:
+            actual_answer = (
+                actual.parties[0].event == value.consent_event
+                and actual.parties[0].decision == ("accepted" if value.accepted else "declined")
+                and actual.state == ("ready" if value.accepted else "declined")
+            )
+        elif newgirl:
+            answer = _partner_consent(consent, value)
+            actual_answer = (
+                answer.event == value.consent_event
+                and answer.accepted == value.accepted
+                and answer.controller == int(value.target.entity)
+                and actual.phase == ("accepted" if value.accepted else "declined")
+            )
+        else:
+            actual_answer = actual.consent_event == value.consent_event and actual.phase == (
+                "accepted" if value.accepted else "declined"
+            )
         if (
             saved.consent_event != value.consent_event
             or saved.accepted != value.accepted
-            or (
-                (
-                    actual.parties[0].event != value.consent_event
-                    or actual.parties[0].decision != ("accepted" if value.accepted else "declined")
-                    or actual.state != ("ready" if value.accepted else "declined")
-                )
-                if mockingbird
-                else (
-                    actual.consent_event != value.consent_event
-                    or actual.phase != ("accepted" if value.accepted else "declined")
-                )
-            )
+            or not actual_answer
         ):
             raise WorkflowError("Keep the actual counterpart's own confirmation or refusal")
     if value.action is not None:
@@ -360,7 +438,9 @@ def prove(game: "GameService", c: Connection, state: GameState, identity: str) -
                 if mockingbird
                 else session.phase != "active"
                 if value.rule_id == "girl.alpha.sex-play"
-                else session.bound_event != value.bound_event
+                else (
+                    session.bound_event != value.bound_event or newgirl and session.phase != "bound"
+                )
             )
             or claimed.claimed_action != value.action
             or claimed.rolled_event is not None
@@ -484,6 +564,36 @@ def record_consent(
     )
 
 
+def record_partner_consent(
+    game: "GameService", c: Connection, state: GameState, session: Any, event: str
+) -> None:
+    if session.learned_source is None:
+        return
+    value = prove(game, c, state, session.learned_source)
+    answer = _partner_consent(state, value)
+    if (
+        value.consent_event is not None
+        or value.released_event is not None
+        or answer.event != event
+        or answer.controller != session.controllers[value.target.token]
+    ):
+        raise WorkflowError("Preserve the original partner's actual own consent event")
+    put_learned_sex_link(
+        state,
+        value.model_copy(
+            update=dict(
+                consent_event=event,
+                accepted=answer.accepted,
+                **(
+                    dict(released_event=event, released_kind="declined")
+                    if not answer.accepted
+                    else {}
+                ),
+            )
+        ),
+    )
+
+
 def record_trigger_consent(
     game: "GameService", c: Connection, state: GameState, trigger: Any, accepted: bool, event: str
 ) -> None:
@@ -535,7 +645,7 @@ def source_id(action: dict[str, Any]) -> str | None:
     data = action["data"]
     values = [
         meta["learned_source"]
-        for key in ("princess_sex", "stim_sex", "alpha_sex")
+        for key in ("princess_sex", "stim_sex", "alpha_sex", "oldgen_sex", "newgirl_sex")
         if (meta := data.get(key)) and meta.get("learned_source")
     ]
     if data.get("mockingbird", {}).get("learned_sex_source"):
@@ -569,7 +679,10 @@ def bind_action(
             if value.rule_id == "girl.mockingbird.sex-play"
             else session.phase != "active"
             if value.rule_id == "girl.alpha.sex-play"
-            else session.bound_event != event
+            else (
+                session.bound_event != event
+                or (value.rule_id == "girl.newgirl.sex-play" and session.phase != "bound")
+            )
         )
         or str(action["actor_id"]) != value.actor.entity
         or grant.claimed_action is not None

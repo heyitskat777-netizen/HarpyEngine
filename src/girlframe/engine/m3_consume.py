@@ -177,6 +177,8 @@ class RegrownFrame(Model):
             "partake_regrowth",
             "supply_drop_cap",
             "sup_dive_cap",
+            "modular_recovery",
+            "sup_risk_cap",
         ]
         | None
     ) = Field(default=None, exclude_if=lambda value: value is None)

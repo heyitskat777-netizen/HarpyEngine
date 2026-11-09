@@ -48,8 +48,12 @@ transformed-body and cross-class cases require their own bounded classification.
 Oldgen has no blanket starting-Maxim prerequisite: its low rewrite is optional,
 as is mid unmarking; unavailable optional targets do not justify fabricated
 Maxims. Newgirl Sex may create an actual Mentor relationship without a previous
-Mentor. The next bounded adapters must preserve real assignment/discovery
-consequences without copying teacher roles or granting the whole Trainee passive.
+Mentor. Both source-bound adapters are now implemented: actual Oldgen low/no-Maxim optional
+decline and Newgirl mid/no-respect real created Mentor normals passed. No teacher
+roles or whole Trainee passive are copied. Remaining exact Sex providers are
+Casualty, Vatgrown, AM and Bonded, plus actual Mockingbird/Newgirl group Links.
+Next: Vatgrown native acquisition history and genuine nonnative one-use consumer;
+AM requires its actual no-roll performance/gift use event, never a fake receipt.
 
 Higher Standard, Just The Way Things Are, Trainee/Mentor, Malleable, Barely A Girl/
 Wounded God, Experiment/Prime Investment and Pair/Intimacy are setup, diceless,

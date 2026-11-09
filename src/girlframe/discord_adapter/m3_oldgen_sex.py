@@ -13,6 +13,7 @@ from girlframe.engine.m2 import ChoiceAnswer, PlayInput
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_oldgen_sex import OldgenSexService
+from girlframe.services.onboarding import WorkflowError
 
 DISCLOSURE = (
     "Confirm only your own actual voluntary interaction. Oldgen's source-owned effects can "
@@ -39,17 +40,22 @@ async def open_choice(
             Field(
                 "effects",
                 "Your own optional low result",
-                (("rewrite", "Rewrite an actual owned maxim"), ("decline", "Decline")),
-            ),
-            Field(
-                "maxim",
-                "Actual owned maxim if rewriting",
-                tuple(data["rewrite"]),
-                minimum=0,
-                required=False,
-            ),
-            Field("text", "Actual rewritten maxim", paragraph=True, required=False),
+                (("rewrite", "Rewrite an actual owned maxim"), ("decline", "Decline"))
+                if data["rewrite"]
+                else (("decline", "No owned maxim to rewrite — decline"),),
+            )
         ]
+        if data["rewrite"]:
+            fields += [
+                Field(
+                    "maxim",
+                    "Actual owned maxim if rewriting",
+                    tuple(data["rewrite"]),
+                    minimum=0,
+                    required=False,
+                ),
+                Field("text", "Actual rewritten maxim", paragraph=True, required=False),
+            ]
     else:
         fields = [
             Field(
@@ -93,7 +99,11 @@ async def open_choice(
 
 
 async def open_oldgen_sex(
-    interaction: discord.Interaction, service: OldgenSexService, identity: str | None = None
+    interaction: discord.Interaction,
+    service: OldgenSexService,
+    identity: str | None = None,
+    *,
+    learned_source: str | None = None,
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     channel = int(interaction.channel_id or 0)
@@ -175,6 +185,8 @@ async def open_oldgen_sex(
         await reply(interaction, form.text(), form)
         return
     data = await asyncio.to_thread(service.menu, viewer, channel)
+    if learned_source is not None and learned_source not in {x["id"] for x in data["lessons"]}:
+        raise WorkflowError("Reopen your actual available learned Oldgen source")
     options = [("invite", "Propose your actual voluntary source")] if data["targets"] else []
     options.extend((x["id"], "Your saved interaction: " + x["phase"]) for x in data["sessions"])
     if not options:
@@ -199,6 +211,7 @@ async def open_oldgen_sex(
                 ActorRef.model_validate(target["ref"]),
                 data["revision"],
                 answer["account"],
+                learned_source=next(iter(answer.get("lesson", ())), learned_source),
             )
             return "Saved. The actual counterpart answers the voluntary source invitation."
 
@@ -213,7 +226,18 @@ async def open_oldgen_sex(
                     tuple((x["token"], x["label"]) for x in data["targets"]),
                 ),
                 Field("account", "Your actual voluntary interaction", paragraph=True),
-            ],
+            ]
+            + (
+                [
+                    Field(
+                        "lesson",
+                        "One actual lesson for this source",
+                        tuple((x["id"], x["label"]) for x in data["lessons"]),
+                    )
+                ]
+                if data["lessons"]
+                else []
+            ),
             invite,
         )
         await reply(current, form.text(), form)

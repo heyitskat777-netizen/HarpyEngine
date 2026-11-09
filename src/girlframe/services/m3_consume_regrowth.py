@@ -21,8 +21,10 @@ from girlframe.services.m3_frame_asset_losses import (
     defeat_alternative_losses,
     defeat_void_losses,
     installment_loss,
+    modular_recovery_losses,
     partake_losses,
     sup_dive_losses,
+    sup_risk_losses,
     supply_drop_losses,
 )
 from girlframe.services.m3_handler_advancements import _history
@@ -44,6 +46,8 @@ class Selection(Model):
             "partake_regrowth",
             "supply_drop_cap",
             "sup_dive_cap",
+            "modular_recovery",
+            "sup_risk_cap",
         ]
         | None
     ) = None
@@ -209,7 +213,9 @@ def _selections(
         defeat_void_losses,
         partake_losses,
         supply_drop_losses,
+        modular_recovery_losses,
         sup_dive_losses,
+        sup_risk_losses,
     ):
         losses.extend(
             value
@@ -226,6 +232,8 @@ def _selections(
                 "partake_regrowth",
                 "supply_drop_cap",
                 "sup_dive_cap",
+                "modular_recovery",
+                "sup_risk_cap",
             ]
             | None
         ) = loss.source_kind if loss.source_kind != "budget" else None

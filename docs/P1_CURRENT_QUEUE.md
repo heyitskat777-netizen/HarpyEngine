@@ -2,27 +2,25 @@
 
 Owner authorized continuation2026-11-08. Bot OFF; RULES_SUBSET. Most automated testing deferred to final P1 candidate; only minimum likely-flow smoke during work. No unequal-rule percentages.
 
-Current published source: **5a2577359b0ad11bcbb72cd3dd63baf7ec6a507a**
-([focused CI42557842616](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42557842616)
-passed; full regression skipped). Princess/Stim lesson sources, historical grant
-proof repair and real private patrol-Harpy encounter are published. P1 gates pending.
+Current published source: **7ca8f03a109dd372d18701ec6a9061a41161a58a**
+([focused CI42560377871](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42560377871)
+passed; full regression skipped). Alpha/Mockingbird lessons and regular occupied
+vehicle destruction are published. Full P1 and actual human gates remain pending.
 
-Active assignments (shared checkout; maximum two implementation workers):
+Current bounded assignments (shared checkout; maximum two implementation workers):
 
 | Workflow | Owner | Dependency | Next action | Evidence |
 |---|---|---|---|---|
-| Learned Alpha/Mockingbird Sex pair | Malleable12 +root7 frozen | Existing finite source helper, real Alpha Session and Mock Trigger/Party evidence | Publish two genuine source adapters and positive consumed-source pure effects; no fake Alpha bound_event or Person metadata reuse | Two real mid native normals passed in3/10.44s failed-only retry; original event/metadata preserved |
-| Occupied regular-vehicle Crushing Bulk | AM4 frozen; root native label/ruling | Existing real assessment/Engage/rule/owned cost/receipt/destruction | Admit assessed occupied/unknown regular objects; preserve people and separate harm rules | Actual native occupied-object normal passed in3/10.44s after genuine staged-proof timing fix |
-| Final human-operated journey | Root authored test | Ordinary source checklist closed | Run mission→Play→discipline→Strain→OffDuty/recovery→next mission on final candidate |Authored NOT RUN; final full/global/migration/privacy/restore/review/human gates pending |
+| Learned Oldgen/Newgirl Sex pair | Complete; Malleable10 + root3 | Existing finite actual source lifecycle | Preserve final broader branches; next Vatgrown native history/nonnative Sex | Both real native minimums passed; no fake Mentor/Maxim or passive |
+| CONSUME Modular/Risk Sup losses | Complete; AM4 | Actual owner-authored OffDuty recovery or canonical Risk payment/Sup growth | Next genuine quoted/Doctor/Supply repair and other Sup source families | Both native minimums passed after fixture corrections; no invented M2 choice or generic inventory-diff authority |
+| Final human-operated journey | Root authored test | Ordinary source checklist closed | Run mission→Play→discipline→Strain→OffDuty/recovery→next mission on final candidate |Authored NOT RUN; full/global/migration/privacy/restore/review/human gates pending |
 
-Current packet3 new normals passed in3/10.44s after initial3failed6.26s (root canonical begin event, test opener, genuine staged proof fixes). Next bounded read-only contracts: Oldgen/Newgirl optional-source effects and OffDuty Modular/Risk Sup losses.
-
-Last published packet: Princess +patrol +SDK first3passed1failed15.08s; failed-only
-Stim1passed4.91s after true historical grant proof repair. Earlier successes not
-rerun. Existing Harpy endings and carrier following were reconciled, not rebuilt.
-Doll history, learned Ankou committed Feedback and combined daily mode remain
-explicit final verification. No automatic old-Frame inheritance or unprinted
-regular-vehicle occupant harm is inferred.
+Last published packet: initial3failed6.26s, failed-only3passed10.44s after canonical
+begin-event allocation, fixture opener name and genuine staged answered-choice
+proof fixes. No earlier successes rerun. Oldgen optional rewrite/unmark and
+Newgirl-created Mentor come from exact printed text; no pre-existing resource
+may be fabricated. Doll history, learned Ankou committed Feedback and combined
+daily mode remain explicit final verification.
 
 | Deliverable | Owner | Dependency | Next concrete action | Completion evidence |
 |---|---|---|---|---|
@@ -31,7 +29,7 @@ regular-vehicle occupant harm is inferred.
 | Vatgrown travel and learning dependencies | Next bounded assignment | Actual movement/chaperone source; learned-Play proof | Travel attempt/conduct and learned Dose Up are implemented. Positive joint travel now implemented. Actual death→distinct fresh reviewed Vatgrown/kit/activation/owned noticing is now implemented. Learned Old Dog/Easy Target consumers now implemented beside Brutalize/Dose; advice normal passed. Actual learned Mockingbird conversation now1/4.90s. Next are named remaining source queue in P1_LEARNED_SOURCE_QUEUE.md after implemented providers, Easy Target minimum passed2-node run ; reviewed fresh equipment is the accepted replacement baseline, with no printed automatic old-Frame inheritance; no copied old Frame | Actual joint travel1/2.21s; unchaperoned1/2.49s; learnedDose1/3.62s; learned native advice1/4.30s; learned native Easy Target passed in2/7.26s; actual native death→new activation→own noticing1/4.57s. Other variants deferred |
 | CONSUME permanent-loss recovery | AM after paid-installment handoff | Genuine surviving same-current-Frame loss | Accepted-Defeat alternative loss proof is implemented; preserve its new normal. New-Void Defeat and own-Partake excretion/regrowth cap-loss adapters now implemented; preserve their two normals. SupplyDrop/Sup actual cap displacement is the next finite source packet. Ordinary native/NPC/Gorgon swallowed-carrier following already exists; linked hardware remains source-specific. Never infer stock from ordinary damage or whole-Frame destruction | Budget and paid-installment normals preserved; accepted Defeat native normal1/6.84s; new-Void+Partake two normals2/17.81s; other producers explicit |
 | Ordinary body and identity source continuity | AM worker/Root after current publication | Actual body, career, Frame and psychic source proofs | Pilot Code BODY/Records/Branch implemented; terminal body and actual piloted-target last-Frame Scrutinized consequences implemented; final verification remains; CHANGELING pre-reset Whip/accepted AM source continuity implemented; remaining rolled/performer-specific source boundaries explicit. Connected Code Swap/return binding is now implemented separately from intrinsic Route. No broad type deferral | Intrinsic AM route1/4.81s, original unplug/replug1/6.08s, actual FactoryReset continuity1/10.64s; additional source boundaries in type matrix |
-| Ordinary world and forced consequences | Root after source-local adapters | Actual combat/custody/movement/gain and source-owned work | Low Void patrol-Harpy encounter source is active; existing Harpy rescue/capture/death/shutdown/extraction consumers already exist. Occupied regular-vehicle Crushing Bulk reconciliation is next: book prescribes object destruction and no automatic occupant outcome; no regular-vehicle occupant binding exists. Remaining remaining custody/dealing and special Fuel body/site endpoints; retain repair/endgame source requirements | Fuel NPC Void/site capture1/2.90s; original death/destruction1/2.72s; actual prisoner breakout1/2.60s; further authored checks deferred |
+| Ordinary world and forced consequences | Root after source-local adapters | Actual combat/custody/movement/gain and source-owned work | Low Void patrol-Harpy encounter source is implemented; existing Harpy rescue/capture/death/shutdown/extraction consumers already exist. Occupied regular-vehicle Crushing Bulk reconciliation is implemented: book prescribes object destruction and no automatic occupant outcome; no regular-vehicle occupant binding exists. Remaining remaining custody/dealing and special Fuel body/site endpoints; retain repair/endgame source requirements | Fuel NPC Void/site capture1/2.90s; original death/destruction1/2.72s; actual prisoner breakout1/2.60s; further authored checks deferred |
 | Ordinary NPC and specialised counterpart performances | Root/Malleable after controlled Dose | Actual printed performer, body/resources, controller and required parent | Actual NPC Easy Target hurt is implemented; close named use/protect/Handler and remaining Oldgen/Princess/Alpha/Ankou source adapters; keep distinctions between nomination, controlled direction and sleeping counter | Actual NPC/directed Flirt already passed; live control handover1/3.39s; direct advice nominee1/3.32s; no invented universal NPC roll |
 
 | Freeze human-operated campaign | Root | Ordinary source checklist closed | Run deferred authored normals and mission→social/combat→recovery/Off-Duty→next mission; verify facilitator resume/blockers/roles/delivery/restore; fix demonstrated failures | Existing implementations preserved; integrated verification pending |

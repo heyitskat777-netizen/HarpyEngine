@@ -1606,8 +1606,10 @@ def _elective_dive(game, worker, gateway):
     return identity
 
 
-def _elective_partake(game, worker, gateway):
+def _elective_partake(game, worker, gateway, *, decline_risk=False):
     action = _elective_dive(game, worker, gateway)
+    if decline_risk:
+        answer(game, PLAYER, "mockingbird_risk")
     answer(
         game,
         PLAYER,
@@ -1861,5 +1863,267 @@ def test_actual_paid_sup_dive_cap_loss_then_native_partake_regrowth_keeps_void_b
     assert controls.view(PLAYER, component.id)["type"] == "regrowth"
     with pytest.raises(WorkflowError):
         controls.view(OTHER, component.id)
+    tick(worker, gateway, 6)
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+
+
+def test_actual_modular_off_duty_replacement_then_native_partake_regrows_original_hardware(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred: a genuine paid recovery replaces hardware without losing its regrowth source."""
+    import asyncio
+
+    import test_strain_effect_service
+    import test_strain_service
+    from test_mission_ui import current
+    from test_off_duty_cycle import activate, call, finish_routine, movement, prepared, roll_for
+    from test_strain_service import ready as strain_ready
+
+    from girlframe.discord_adapter.m3_off_duty_cycle import open_action
+    from girlframe.engine import m3_modular as modular
+    from girlframe.engine.m3_off_duty import RecoveryChoice
+    from girlframe.services.m3_access import Access
+    from girlframe.services.m3_consume_regrowth import _selections, prove_regrowth
+    from girlframe.services.m3_frame_asset_losses import modular_recovery_losses
+    from girlframe.services.m3_modular import ModularService
+
+    monkeypatch.setattr(
+        test_strain_service,
+        "service",
+        lambda store, frame: service(store, girl="OLDGEN", frame="CONSUME"),
+    )
+    monkeypatch.setattr(
+        test_strain_effect_service,
+        "ready",
+        lambda store, face: strain_ready(store, face=face, frame="CONSUME"),
+    )
+    cycle, game, period = prepared(ledger)
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(rules.STARVATION, rules.EAT, *rules.REQUISITIONS, modular.RULE),
+    )
+    cycle.missions.access = Access(ledger)
+    with ledger.transaction() as c:
+        canon = state(game)
+        canon = place(place(canon, 2, mode="outside_frame"), 3, mode="outside_frame")
+        canon.sheets["2"].permissions = 20
+        canon.sheets["2"].heat = 1
+        original = next(
+            x for x in canon.sheets["2"].assets if x.family == "frame" and x.intrinsic is None
+        )
+        original.damaged = True
+        old = original.model_copy(deep=True)
+        game.event(c, 1, str(uuid4()), "synthetic.actual_prior_damaged_modular_hardware", canon)
+    controls = ConsumeService(game)
+    acquire(controls, rules.PARTAKE)
+    modular_service = ModularService(game)
+    offer = modular_service.menu(PLAYER)
+    actor = ActorRef.model_validate(offer["actor"])
+    paid = modular_service.buy(
+        PLAYER,
+        str(uuid4()),
+        offer["revision"],
+        actor,
+        offer["frame"],
+        "I genuinely pay for the LEGION repair source graft",
+        "Actual additional modular fitting",
+        "Actual newly acquired fitting, separate from the damaged old component",
+        offer["donors"][0],
+    )
+    activate(cycle, game, period)
+    recovery_action = roll_for(cycle, game, period, PLAYER, (2, 2))
+    call(cycle, game, PLAYER, period, "scene", None, (), "")
+    receipt = game.inspect(PLAYER, recovery_action)["receipt"]
+
+    async def recover():
+        opened = current(2, 992100)
+        opened.channel_id = 900
+        await opened.response.defer(ephemeral=True)
+        await open_action(opened, cycle, period, "recover")
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values.update(repairs=("yes",), modular_assets=(old.id,))
+        form.values["modular_name:" + old.id] = "Actual repaired-source replacement fitting"
+        form.values["modular_description:" + old.id] = "Actual new hardware replacing the old part"
+        submitted = current(2, 992101)
+        submitted.channel_id = 900
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+
+    asyncio.run(recover())
+    assert game.inspect(PLAYER, recovery_action)["receipt"] == receipt
+    born = state(game)
+    fact = next(
+        x for x in born.facts if x.get("kind") == "modular_repair" and x.get("old") == old.id
+    )
+    assert fact["period"] == period and fact["purchase"] == paid["id"]
+    replacement = next(x for x in born.sheets["2"].assets if x.id == fact["new"])
+    assert not replacement.damaged and old.id not in {x.id for x in born.sheets["2"].assets}
+    with ledger.engine.connect() as c:
+        loss = next(
+            x for x in modular_recovery_losses(game, c, born, actor) if x.asset.id == old.id
+        )
+        assert loss.asset == old and loss.frame == rules.frame(born, actor)
+    roll_for(cycle, game, period, OTHER, (4, 4))
+    call(cycle, game, OTHER, period, "scene", None, (), "")
+    call(cycle, game, OTHER, period, "recover", RecoveryChoice())
+    finish_routine(cycle, game, period)
+    call(cycle, game, ADMIN, period, "finish", movement(game))
+    worker, gateway = GameWorker(game), Gateway()
+    cockpit(game, "pilot")
+    action, row = _elective_partake(game, worker, gateway)
+    token = rules.identity("missing-frame-modular-recovery", loss.id)
+    assert token in game.decision(PLAYER, row["id"])["detail"]["regrow_missing"]
+    before, calls = state(game), game.dice.calls
+    receipt = game.inspect(PLAYER, action)["receipt"]
+    girl = next(x.id for x in before.sheets["2"].assets if x.family == "girl" and not x.damaged)
+    _native_actual_cap_partake(game, row, girl=girl, token=token)
+    final = state(game)
+    regrown = next(
+        x
+        for x in rules.records(final, rules.RegrownFrame)
+        if x.loss_kind == "modular_recovery" and x.loss == loss.id
+    )
+    assert regrown.original == old and regrown.loss_event == loss.event
+    assert regrown.component.id not in (old.id, replacement.id)
+    assert next(x for x in final.sheets["2"].assets if x.id == replacement.id) == replacement
+    assert next(x for x in final.sheets["2"].assets if x.id == girl).damaged
+    assert final.sheets["2"].permissions == before.sheets["2"].permissions
+    assert game.dice.calls == calls and game.inspect(PLAYER, action)["receipt"] == receipt
+    with ledger.engine.connect() as c:
+        assert prove_regrowth(game, c, final, regrown.id) == regrown
+        assert token not in {x.token for x in _selections(game, c, final, actor)}
+    with pytest.raises(WorkflowError):
+        controls.view(OTHER, regrown.id)
+    assert controls.view(PLAYER, regrown.id)["type"] == "regrowth"
+    tick(worker, gateway, 6)
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+
+
+def test_actual_native_risk_sup_cap_exchange_then_partake_regrowth_preserves_original_roll(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred: only the real Risk payment proves this second Sup gain-source family."""
+    import asyncio
+    import sys
+
+    from test_mission_ui import current
+    from test_sup import purchase as buy_sup
+
+    from girlframe.discord_adapter.m3_mockingbird import open_mockingbird
+    from girlframe.discord_adapter.m3_sup import GROW
+    from girlframe.engine import m3_mockingbird as mockingbird
+    from girlframe.engine import m3_sup as sup
+    from girlframe.services.m3_consume_regrowth import _selections, prove_regrowth
+    from girlframe.services.m3_frame_asset_losses import sup_risk_losses
+
+    original_service = service
+    monkeypatch.setattr(
+        sys.modules[__name__],
+        "service",
+        lambda store, **kwargs: original_service(store, girl="MOCKINGBIRD", frame="CONSUME"),
+    )
+    game, worker, gateway, controls, actor, old = _elective_regrowth_ready(
+        ledger, tmp_path, monkeypatch
+    )
+    paid = buy_sup(game, tmp_path, monkeypatch)
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(rules.STARVATION, rules.EAT, *rules.REQUISITIONS, sup.RULE, mockingbird.RISK),
+    )
+    cockpit(game, "pilot")
+    game.dice.faces = (1, 2)
+    incoming = game.begin(
+        PLAYER,
+        str(uuid4()),
+        900,
+        state(game).sheets["2"].revision,
+        PlayInput(
+            play="keep_your_head",
+            heat=0,
+            piloting=True,
+            context="I really resist this incoming threat inside my own Frame",
+            trigger_confirmed=True,
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    assert game.inspect(PLAYER, incoming)["receipt"]
+    pass_tags(game)
+    row = next(x for x in game.choices(PLAYER) if x["kind"] == "mockingbird_risk")
+    receipt, calls = game.inspect(PLAYER, incoming)["receipt"], game.dice.calls
+
+    async def grow():
+        opened = current(2, 992200)
+        opened.channel_id = 900
+        await opened.response.defer(ephemeral=True)
+        await open_mockingbird(opened, game, row["id"])
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values.update(total=("9",), asset=(GROW,))
+        selected = current(2, 992201)
+        selected.channel_id = 900
+        await form.confirm.callback(selected)
+        assert form.completed, selected.edit_original_response.call_args_list
+        growth = selected.edit_original_response.call_args.kwargs["view"]
+        growth.values.update(
+            name="Actual Risk-grown Void plate",
+            family=("frame",),
+            replace=(old.id,),
+            description="PRIVATE_RISK_SUP actual organic corrupted plate born for this payment",
+        )
+        submitted = current(2, 992202)
+        submitted.channel_id = 900
+        await growth.confirm.callback(submitted)
+        assert growth.completed, submitted.edit_original_response.call_args_list
+        saved = state(game)
+        await growth.confirm.callback(submitted)
+        assert state(game) == saved
+
+    asyncio.run(grow())
+    grown = next(x for x in sup.growths(state(game)) if x.action == incoming)
+    assert grown.purchase == paid.id and grown.choice.replace == old.id
+    assert game.inspect(PLAYER, incoming)["receipt"] == receipt and game.dice.calls == calls
+    assert game.inspect(PLAYER, incoming)["state"] != "complete"
+    with ledger.engine.connect() as c:
+        loss = next(x for x in sup_risk_losses(game, c, state(game), actor) if x.id == grown.asset)
+        assert loss.asset == old and loss.event == grown.event
+    answer(game, PLAYER, "actor_keep", options=("in_control", "vicious"), denied=("desperate",))
+    answer(game, ADMIN, "handler_keep", flag=True, text="The actual defense is sufficient")
+    tick(worker, gateway, 6)
+    assert game.inspect(PLAYER, incoming)["state"] == "complete"
+    action, row = _elective_partake(game, worker, gateway, decline_risk=True)
+    detail = game.decision(PLAYER, row["id"])["detail"]
+    token = rules.identity("missing-frame-sup-risk-cap", grown.asset)
+    assert token in detail["regrow_missing"]
+    replacement = next(x[0] for x in detail["regrow_replacements"] if x[0] != grown.asset)
+    before, calls = state(game), game.dice.calls
+    receipt = game.inspect(PLAYER, action)["receipt"]
+    girl = next(x.id for x in before.sheets["2"].assets if x.family == "girl" and not x.damaged)
+    _native_actual_cap_partake(game, row, girl=girl, token=token, replacement=replacement)
+    final = state(game)
+    regrown = next(
+        x
+        for x in rules.records(final, rules.RegrownFrame)
+        if x.loss_kind == "sup_risk_cap" and x.loss == grown.asset
+    )
+    assert regrown.original == old and regrown.loss_event == grown.event
+    assert regrown.component.id not in (old.id, grown.asset, replacement)
+    assert next(x for x in final.sheets["2"].assets if x.id == grown.asset).void
+    assert next(x for x in final.sheets["2"].assets if x.id == girl).damaged
+    assert game.dice.calls == calls and game.inspect(PLAYER, action)["receipt"] == receipt
+    assert final.sheets["2"].permissions == before.sheets["2"].permissions
+    with ledger.engine.connect() as c:
+        assert prove_regrowth(game, c, final, regrown.id) == regrown
+        assert token not in {x.token for x in _selections(game, c, final, actor)}
+    with pytest.raises(WorkflowError):
+        controls.view(OTHER, regrown.id)
+    assert controls.view(PLAYER, regrown.id)["type"] == "regrowth"
     tick(worker, gateway, 6)
     assert game.inspect(PLAYER, action)["state"] == "complete"

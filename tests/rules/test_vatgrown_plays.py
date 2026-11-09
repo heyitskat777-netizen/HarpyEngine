@@ -4055,3 +4055,384 @@ def test_actual_learned_mockingbird_sex_native_withdraw_attest_mid_starry_and_he
     assert not has_rule(actual.sheets["2"], mockingbird.PERSON, "MOCKINGBIRD")
     assert "PRIVATE_LEARNED_MOCK" not in json.dumps(gateway.messages)
     tick(worker, gateway, 6)
+
+
+def test_actual_learned_oldgen_sex_without_maxims_native_optional_low_decline_and_private_source(
+    ledger, tmp_path, monkeypatch
+):
+    from girlframe.discord_adapter.m3_oldgen_sex import open_choice, open_oldgen_sex
+    from girlframe.engine import m3_oldgen as maxims
+    from girlframe.engine import m3_oldgen_sex as oldgen
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+    from girlframe.services.m3_learned_sex import lessons, prove
+    from girlframe.services.m3_oldgen_sex import OldgenSexService
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, teacher="OLDGEN")
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(rules.EXPERIMENT, rules.INVESTMENT, rules.SEX, rules.BRUTALIZE, oldgen.RULE),
+    )
+    lesson = _learn_daily_source(game, worker, gateway, controls, oldgen.RULE)
+    learner, target = current_ref(state(game), 2), current_ref(state(game), 3)
+    assert not maxims.base_maxims(state(game), 2)
+    assert not maxims.rewritable_maxims(state(game), 2)
+    service = OldgenSexService(game)
+    link = _native_learned_sex_invitation(game, lesson, target)
+    _native_learned_sex_card(
+        game,
+        service,
+        open_oldgen_sex,
+        link.session,
+        OTHER,
+        accept=("yes",),
+        account="PRIVATE_LEARNED_OLDGEN I confirm my own actual voluntary source",
+    )
+    before, calls = state(game), game.dice.calls
+    game.dice.faces = (2, 2)
+    _native_learned_sex_card(
+        game,
+        service,
+        open_oldgen_sex,
+        link.session,
+        PLAYER,
+        heat=("1",),
+        account="Our actual accepted source does not require a nonexistent Maxim",
+    )
+    with ledger.engine.connect() as c:
+        action = game.lock(c, 900)["action_id"]
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    raw = game.inspect(PLAYER, action)["receipt"]
+    row = next(x for x in game.choices(OTHER) if x["kind"] == "oldgen_sex_rewrite")
+    with pytest.raises(WorkflowError):
+        game.decision(PLAYER, row["id"])
+
+    async def decline_optional():
+        opened = _learned_sex_interaction(3)
+        await opened.response.defer(ephemeral=True)
+        await open_choice(opened, game, game.decision(OTHER, row["id"]))
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert dict(next(x for x in form.fields if x.key == "effects").options).keys() == {
+            "decline"
+        }
+        assert not any(x.key == "maxim" for x in form.fields)
+        form.values["effects"] = ("decline",)
+        sent = _learned_sex_interaction(3)
+        await form.confirm.callback(sent)
+        assert form.completed, sent.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(sent)
+        assert state(game) == saved
+
+    asyncio.run(decline_optional())
+    actual = state(game)
+    assert oldgen.get(actual, link.session).phase == "complete"
+    assert not oldgen.records(actual, oldgen.Effect)
+    selected = oldgen.records(actual, oldgen.Selection)[-1]
+    assert selected.options == ("decline",) and selected.controller == 3 and selected.maxim is None
+    assert not maxims.base_maxims(actual, 2) and not maxims.rewritable_maxims(actual, 2)
+    assert actual.sheets["2"].assets == before.sheets["2"].assets
+    assert actual.sheets["2"].identities == before.sheets["2"].identities
+    assert actual.sheets["2"].heat == before.sheets["2"].heat - 1 and game.dice.calls == calls + 1
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    assert game.inspect(PLAYER, action)["receipt"] == raw
+    with ledger.engine.connect() as c:
+        used = prove(game, c, actual, link.id)
+        assert used.action == action and used.roll_event
+        assert not lessons(game, c, actual, learner, oldgen.RULE)
+    with pytest.raises(WorkflowError):
+        service.view(ADMIN, link.session)
+    assert service.view(PLAYER, link.session)["proposal"].startswith("PRIVATE_LEARNED_SEX")
+    assert actual.sheets["2"].girl == "VATGROWN"
+    assert not has_rule(actual.sheets["2"], oldgen.RULE, "OLDGEN")
+    assert "PRIVATE_LEARNED_OLDGEN" not in json.dumps(gateway.messages)
+    tick(worker, gateway, 6)
+
+
+def _actual_newgirl_teacher_vatgrown_sex_learner(ledger, tmp_path, monkeypatch):
+    """Reuse the genuine Newgirl/mentor/callsign and Vatgrown creation baseline."""
+    from m3_policy_scenario import configure_m3_fixture
+    from test_creation import selected
+    from test_creation_review import ready as creation_ready
+    from test_m2_game import Dice
+
+    from girlframe.engine import m3_newgirl_sex as newgirl
+    from girlframe.engine.creation_details import DesireChoice, NpcInvestor
+    from girlframe.engine.m2 import ReleaseApproval
+    from girlframe.engine.m2_registry import registry_digest
+    from girlframe.services.creation_coordination import CoordinationService
+    from girlframe.services.creation_review import CreationReviewService
+    from girlframe.services.m2_game import GameService
+
+    review, creation, _ = creation_ready(
+        ledger, girl="NEWGIRL", frame="THE ENFORCER", other_girl="VATGROWN"
+    )
+    coordination = CoordinationService(ledger)
+    request = coordination.propose(
+        ADMIN,
+        str(uuid4()),
+        3,
+        "vatgrown_handler",
+        coordination.prepare(ADMIN, 3, "vatgrown_handler"),
+        DesireChoice(slots=(1,)),
+    )
+    coordination.decide(OTHER, str(uuid4()), request["id"], 1, "accept")
+    current_draft = creation.get(OTHER)
+    learner = selected("VATGROWN", "JANUS-B")
+    learner = learner.model_copy(
+        update=dict(
+            shared_tokens=current_draft.draft.shared_tokens,
+            girl_details=GirlDetails(
+                investors=tuple(
+                    NpcInvestor(npc_slot=x.slot, desires=DesireChoice(slots=(0,)))
+                    for x in learner.npc_bonds
+                )
+            ),
+        )
+    )
+    creation.save(OTHER, str(uuid4()), current_draft.revision, 1, learner)
+    other_review = CreationReviewService(ledger)
+    incoming = next(x for x in other_review.get(OTHER).sheet.bonds if not x.outgoing)
+    current_draft = creation.get(OTHER)
+    other_review.select_bond(
+        OTHER, str(uuid4()), current_draft.revision, 1, current_draft.draft, incoming.id
+    )
+    ledger.policy = ledger.policy.model_copy(
+        update=dict(
+            owner_intense_tag_bonus=2,
+            m2_approval=ReleaseApproval(
+                registry_sha256=registry_digest(),
+                reviewer="synthetic test only",
+                reference="fixture, not certification",
+            ),
+        )
+    )
+    game = GameService(ledger, dice=Dice((5, 5)))
+    for viewer in (PLAYER, OTHER):
+        saved = review.get(viewer)
+        review.save(viewer, str(uuid4()), saved.saved_revision, saved.fingerprint)
+        saved = review.get(viewer)
+        assert saved.sheet.ready_for_rules_review
+        game.activate(viewer, str(uuid4()), saved.fingerprint)
+    configure_m3_fixture(ledger)
+    acquisition = approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(rules.EXPERIMENT, rules.INVESTMENT, rules.SEX, newgirl.RULE),
+    )
+    approval = ledger.policy.m3_approval
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "m3_approval": approval.model_copy(
+                update={"subsystems": approval.subsystems | {"world", "playbooks"}}
+            )
+        }
+    )
+    with ledger.transaction() as c:
+        actual = state(game)
+        actual.world = initial()
+        actual = place(place(actual, 2, mode="outside_frame"), 3, mode="outside_frame")
+        actual.sheets["3"].heat = 4
+        for sheet in actual.sheets.values():
+            for asset in sheet.assets:
+                asset.void = False
+        game.event(c, 1, str(uuid4()), "synthetic.actual_original_learning_bodies", actual)
+    game.bind_scene(ADMIN, str(uuid4()), 900)
+    for viewer in (PLAYER, OTHER, ADMIN):
+        game.join_scene(viewer, str(uuid4()), 900)
+    world = WorldService(MissionService(ledger, acquisition.registry))
+    investor = Npc(
+        id="original-vatgrown-sex-investor",
+        name="Original learner scientist",
+        jobs=("scientist",),
+        controller=1,
+        cell=(0, 0),
+        revealed=True,
+        detail="The actual saved starting learner Investor",
+    )
+    world.npc(ADMIN, str(uuid4()), state(game).revision, investor)
+    slot = state(game).sheets["3"].review.creation.npc_bonds[0].slot
+    world.import_starting_npc(OTHER, str(uuid4()), state(game).revision, slot, investor.id)
+    return game, GameWorker(game), Gateway(), VatgrownPlaysService(game)
+
+
+def test_actual_learned_newgirl_sex_empty_mentor_native_mid_no_respect_installs_real_relationship(
+    ledger, tmp_path, monkeypatch
+):
+    from girlframe.discord_adapter.m3_learned_sex import open_learned_sex
+    from girlframe.discord_adapter.m3_newgirl_sex import open_choice, open_newgirl_sex
+    from girlframe.engine import m3_newgirl_sex as newgirl
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+    from girlframe.engine.m3_learned_play_state import learned_sex_links
+    from girlframe.engine.m3_mentorship import active_mentors, current_set
+    from girlframe.services.m3_learned_sex import lessons, prove
+    from girlframe.services.m3_newgirl_sex import NewgirlSexService, prove_mentor_set
+
+    game, worker, gateway, controls = _actual_newgirl_teacher_vatgrown_sex_learner(
+        ledger, tmp_path, monkeypatch
+    )
+    teacher, learner = current_ref(state(game), 2), current_ref(state(game), 3)
+    assert state(game).sheets["2"].callsign == "MENTOR_NAME"
+    assert active_mentors(state(game), teacher) == (learner,)
+    assert not active_mentors(state(game), learner)
+    source = controls.invite(
+        OTHER,
+        str(uuid4()),
+        900,
+        teacher,
+        state(game).revision,
+        "The original Vatgrown proposes her own actual voluntary learning source",
+    )["id"]
+    controls.respond(
+        PLAYER,
+        str(uuid4()),
+        source,
+        state(game).revision,
+        True,
+        "The genuine native Newgirl confirms her own original participation",
+    )
+    taught_action = game.begin(
+        OTHER,
+        str(uuid4()),
+        900,
+        state(game).sheets["3"].revision,
+        PlayInput(
+            play=rules.PLAY,
+            source_work=source,
+            heat=1,
+            trigger_confirmed=True,
+            context="Our actual original source teaches this native Newgirl Play",
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    actual = state(game)
+    native_choice(
+        game,
+        PLAYER,
+        "vat_sex_learn",
+        identities=(actual.sheets["2"].identities[1].id,),
+        replacements=(actual.sheets["3"].identities[0].id,),
+        play=(newgirl.RULE,),
+        account="The actual Newgirl offers her own Sex Play for one genuine use",
+    )
+    lesson = rules.records(state(game), rules.LearnedPlay)[-1]
+    assert lesson.actor == learner and lesson.teacher == teacher
+    assert game.inspect(OTHER, taught_action)["state"] == "complete"
+    controls.send_away(
+        PLAYER,
+        str(uuid4()),
+        source,
+        state(game).revision,
+        "The actual source counterpart ends the learner's required stay",
+    )
+    tick(worker, gateway, 6)
+    service = NewgirlSexService(game)
+
+    async def invite_native():
+        opened = _learned_sex_interaction(3)
+        await opened.response.defer(ephemeral=True)
+        await open_learned_sex(opened, game, identity=lesson.id)
+        menu = opened.edit_original_response.call_args.kwargs["view"]
+        menu.values["source"] = ("invite",)
+        response = _learned_sex_interaction(3)
+        await menu.confirm.callback(response)
+        form = response.edit_original_response.call_args.kwargs["view"]
+        assert "current Mentors: none" in form.text()
+        form.values.update(
+            partners=(teacher.token,),
+            lesson=(lesson.id,),
+            account="PRIVATE_LEARNED_NEWGIRL Our actual independent voluntary source",
+        )
+        sent = _learned_sex_interaction(3)
+        await form.confirm.callback(sent)
+        assert form.completed, sent.edit_original_response.call_args_list
+
+    asyncio.run(invite_native())
+    link = learned_sex_links(state(game))[-1]
+    session = newgirl.get(state(game), link.session)
+    assert not session.mentors_before and session.mentor_source == session.proposed_event
+    assert not newgirl.records(state(game), newgirl.Consent)
+    with pytest.raises(WorkflowError):
+        service.view(ADMIN, link.session)
+
+    def native_operation(viewer, operation, **values):
+        async def perform():
+            opened = _learned_sex_interaction(viewer.user_id)
+            await opened.response.defer(ephemeral=True)
+            await open_newgirl_sex(opened, service, link.session)
+            menu = opened.edit_original_response.call_args.kwargs["view"]
+            menu.values["operation"] = (operation,)
+            response = _learned_sex_interaction(viewer.user_id)
+            await menu.confirm.callback(response)
+            form = response.edit_original_response.call_args.kwargs["view"]
+            form.values.update(values)
+            sent = _learned_sex_interaction(viewer.user_id)
+            await form.confirm.callback(sent)
+            assert form.completed, sent.edit_original_response.call_args_list
+
+        asyncio.run(perform())
+
+    native_operation(
+        PLAYER, "confirm", accept=("yes",), account="My own actual source confirmation"
+    )
+    consent = newgirl.records(state(game), newgirl.Consent)[-1]
+    assert consent.person == teacher and consent.controller == 2 and consent.accepted
+    before, calls = state(game), game.dice.calls
+    bond = depth(before, learner, teacher)
+    game.dice.faces = (3, 4)
+    native_operation(OTHER, "roll", heat=("1",), account="Our actual confirmed learned source")
+    with ledger.engine.connect() as c:
+        action = game.lock(c, 900)["action_id"]
+    tick(worker, gateway, 3)
+    pass_tags(game)
+
+    def native_result(viewer, kind, **values):
+        async def choose():
+            row = next(x for x in game.choices(viewer) if x["kind"] == kind)
+            opened = _learned_sex_interaction(viewer.user_id)
+            await opened.response.defer(ephemeral=True)
+            await open_choice(opened, game, game.decision(viewer, row["id"]))
+            form = opened.edit_original_response.call_args.kwargs["view"]
+            form.values.update(values)
+            sent = _learned_sex_interaction(viewer.user_id)
+            await form.confirm.callback(sent)
+            assert form.completed, sent.edit_original_response.call_args_list
+
+        asyncio.run(choose())
+
+    native_result(OTHER, "newgirl_sex_ask", text="Do you actually respect me?")
+    native_result(
+        PLAYER, "newgirl_sex_respect", options=("no",), text="My own actual lack of respect"
+    )
+    actual = state(game)
+    assert newgirl.get(actual, link.session).phase == "complete"
+    relation = current_set(actual, learner)
+    assert relation and relation.learner == learner and relation.mentors == (teacher,)
+    assert relation.session == link.session and relation.reason == "newgirl_sex_replacement"
+    assert active_mentors(actual, learner) == (teacher,)
+    assert depth(actual, learner, teacher) == bond
+    assert actual.order == before.order
+    assert actual.sheets["3"].heat == before.sheets["3"].heat - 1 and game.dice.calls == calls + 1
+    assert game.inspect(OTHER, action)["state"] == "complete"
+    raw = game.inspect(OTHER, action)["receipt"]
+    with ledger.engine.connect() as c:
+        prove_mentor_set(game, c, actual, relation)
+        assert not any(x["pending"] for x in service._tasks(c, OTHER))
+        assert prove(game, c, actual, link.id).roll_event
+        assert not lessons(game, c, actual, learner, newgirl.RULE)
+    saved = service.view(OTHER, link.session)
+    assert saved["mentors"] == [teacher.model_dump(mode="json")]
+    assert saved["proposal"].startswith("PRIVATE_LEARNED_NEWGIRL")
+    assert actual.sheets["3"].girl == "VATGROWN"
+    assert not has_rule(actual.sheets["3"], newgirl.RULE, "NEWGIRL")
+    assert not has_rule(actual.sheets["3"], "girl.newgirl.trainee", "NEWGIRL")
+    assert not has_rule(actual.sheets["3"], "girl.newgirl.mentor", "NEWGIRL")
+    assert game.inspect(OTHER, action)["receipt"] == raw
+    assert "PRIVATE_LEARNED_NEWGIRL" not in json.dumps(gateway.messages)
+    tick(worker, gateway, 6)

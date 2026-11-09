@@ -12,6 +12,7 @@ from girlframe.engine.m2 import ChoiceAnswer, PlayInput
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_newgirl_sex import NewgirlSexService
+from girlframe.services.onboarding import WorkflowError
 
 
 async def open_choice(
@@ -64,12 +65,18 @@ async def open_choice(
 
 
 async def open_newgirl_sex(
-    interaction: discord.Interaction, service: NewgirlSexService, identity: str | None = None
+    interaction: discord.Interaction,
+    service: NewgirlSexService,
+    identity: str | None = None,
+    *,
+    learned_source: str | None = None,
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     channel = int(interaction.channel_id or 0)
     if identity is None:
         data = await asyncio.to_thread(service.menu, viewer, channel)
+        if learned_source is not None and learned_source not in {x["id"] for x in data["lessons"]}:
+            raise WorkflowError("Reopen your actual available Newgirl lesson")
         options = (
             [("invite", "Propose actual voluntary intimacy with original Girls")]
             if data["partners"]
@@ -101,6 +108,7 @@ async def open_newgirl_sex(
                     partners,
                     data["revision"],
                     answer["account"],
+                    learned_source=next(iter(answer.get("lesson", ())), learned_source),
                 )
                 return "Actual source proposed; each original person must confirm: " + str(
                     result["id"]
@@ -110,7 +118,10 @@ async def open_newgirl_sex(
                 current.user.id,
                 "Actual Newgirl intimacy source",
                 "Choose actual people together here. Each human confirms only their own "
-                "voluntary participation; no fictional dialogue or consent is inferred.",
+                "voluntary participation; no fictional dialogue or consent is inferred. "
+                + "Your actual current Mentors: "
+                + (", ".join(data["mentor_names"]) or "none")
+                + ". No pre-existing Mentor is required.",
                 [
                     Field(
                         "partners",
@@ -120,10 +131,21 @@ async def open_newgirl_sex(
                             for x in data["partners"]
                         ),
                         minimum=1,
-                        maximum=len(data["partners"]),
+                        maximum=1 if learned_source is not None else len(data["partners"]),
                     ),
                     Field("account", "Your actual voluntary source proposal", paragraph=True),
-                ],
+                ]
+                + (
+                    [
+                        Field(
+                            "lesson",
+                            "One actual lesson for this source",
+                            tuple((x["id"], x["label"]) for x in data["lessons"]),
+                        )
+                    ]
+                    if data["lessons"]
+                    else []
+                ),
                 invite,
             )
             await reply(current, form.text(), form)

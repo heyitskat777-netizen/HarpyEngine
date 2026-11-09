@@ -15,6 +15,7 @@ EffectKind = Literal["tag", "status", "unmark", "bond", "helpless", "rewrite"]
 
 
 class Session(Model):
+    learned_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
     id: str
     actor: ActorRef
     target: ActorRef

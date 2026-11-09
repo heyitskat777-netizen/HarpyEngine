@@ -1750,3 +1750,43 @@ Commands/hash snapshot `var/p1-sex-pair-vehicle-*`. Source ID helper is a finite
 dispatch extraction for actual consumers, with authorization retained in each
 rule service. No test-speed claim. Full final P1/global/migration/privacy/restore/
 independent/human gates remain pending; bot OFF and no live deployment.
+
+
+## Learned Oldgen/Newgirl and Modular/Risk Sup losses — active
+
+Base7ca8f03a109dd372d18701ec6a9061a41161a58a published;
+[focused CI42560377871](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42560377871)
+PASS/full regression skipped. Malleable10 source-specific role/consent adapters;
+AM4 actual recovery/payment loss proof; root3 finite picker/runtime/Inbox.
+Oldgen PDF47/45 says counterpart CAN rewrite; optional unmarking/rewrite does
+not justify a blanket initial-Maxim prerequisite. Newgirl PDF42/40 may create
+a real Mentor through its Play; no prior Mentor/teacher relationship is copied.
+Current canonical source dispatch/bind/consume/recovery reuse actual adapters.
+Modular recovery uses its true standalone event/period history, not invented
+M2 choice; Risk Sup uses actual payment/growth/receipt. Normals authored without
+execution; minimum after source freezes, full candidate gates pending.
+
+Current four-node minimum: initial **2passed2failed11.99s**, failed-only two
+**1passed1failed11.57s**, final failed-only Risk **1passed6.70s**. Artifacts
+`var/p1-oldgen-newgirl-loss-minimum{,-retry,-retry2}.txt/xml`. Oldgen and
+Newgirl passed first; Modular and Risk failures were synthetic setup omissions
+of actual native Starvation/Risk approvals, then an actual optional Risk choice
+on the later Dive. Fixture now genuinely declines that optional choice; source
+guards, traits, receipts and first paid Risk remain intact. No successful nodes
+rerun. All four have focused passing evidence, not a full regression.
+
+Completed actual no-Maxim optional decline/private lesson; actual Newgirl question/
+no-respect/new Mentor/private source; actual paid Modular OffDuty repair/replacement
+and original-component Partake regrowth; actual paid Sup native Risk cap exchange/
+original Keep and later Partake regrowth, preserving original receipt and newborn.
+Other Sex tiers/groups, quoted/Doctor/Supply Modular variants, other Sup gain
+sources and linked hardware lifetimes remain explicitly queued; no broad claims.
+Next finite learning source is Vatgrown native acquisition history/nonnative use.
+Final full/global/migration/privacy/restore/independent/player gates remain pending.
+
+Scoped packet22 paths/17 Python/15 source: Ruff/format/mypy, registry, original
+planning and repository PASS; registry477/274 subset/203 unimplemented/440 required/
+0 verified, repository1428 publishable files/40 manifest/0 findings. Whitespace
+initially caught CSV CRLF from root writer; normalized to existing LF, delta
+whitespace PASS. No semantic gameplay change or repeated successful test.
+Frozen paths/hashes/commands: `var/p1-oldgen-newgirl-loss-*`. Bot OFF.
