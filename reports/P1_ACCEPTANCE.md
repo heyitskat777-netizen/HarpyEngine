@@ -1529,3 +1529,65 @@ registry and planning PASS. Registry477/273 subset/204 unimplemented/440 require
 Root campaign-loop test remains authored NOT RUN. Successful prior gameplay
 nodes were not repeated. Exact final P1 full regression/global static/migration/
 privacy/restore, independent source review and real human acceptance are pending.
+
+
+## Learned Call and live CHANGELING packet — active
+
+Base **b9b6ce59802f21ad5153f93df7a4799c21c3585f** published;
+[focused CI42549702864](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42549702864)
+PASS, full regression skipped. Exact source ownership: Malleable Call7; AM live
+CHANGELING7; root Call5 shared entry/native/recovery/runtime exclusion plus
+registry/evidence. Workers author normals without pytest/collection. Root Call5
+Ruff/format PASS; runtime checks deferred until both source packets frozen.
+
+Learned Call root minimum:
+`pytest -q --tb=short tests/rules/test_vatgrown_plays.py::test_actual_learned_call_native_classification_guest_and_gorgon_keep_original_sources`.
+Initial1failed4.73s: new fixture called nonexistent `RecoveryService.get`; corrected
+to the actual `saved()` lookup. Worker reviewed only this node's concrete API
+calls; no runtime change. Failed-node retry **1passed10.33s**. Logs/JUnit
+`var/p1-call-minimum{,-retry}.txt/xml`. Genuine unrolled cancellation/reselection,
+actual classification Dive, distinct second lesson/high Dive, native consenting
+guest/owned real effect and actual Gorgon/controller reply preserve source,
+receipt, current resources, once-only use and privacy. Holding supplies no global
+Call; original owner selects one lesson, first real extra-option choice spends,
+same original Dive retains capability through its genuine held work. Native/old
+events unchanged. Worker7 scoped static PASS; root5 Ruff/format PASS; final scoped
+integration and full P1 gates still pending. Earlier successful nodes not rerun.
+
+Concrete root shared CHANGELING port adds engine/service `p1_unrolled_sex`: only
+actual CHANGELING AM sources resolve private current participants through the
+existing canonical same-Brain proof. Original role tokens/controllers remain
+immutable. Omitted optional gift-role provenance records a changed actual
+recipient at source-effect birth; omitted optional Tag endpoint provenance records
+any subsequent real recipient/giver change. Historical proof reads the actual
+birth and Tag-event authority. Existing Bonded/default paths retain original
+records and controllers. No new legal designation or Animal status is granted.
+Root2 Ruff/format/mypy PASS; actual new source/gift runtime normal pending.
+
+CHANGELING root minimum:
+`pytest -q --tb=short tests/rules/test_changeling_continuity.py::test_actual_pending_whip_and_accepted_am_sex_continue_only_through_proved_reset_brain`.
+Initial1failed1.25s: OTHER's fixture profile still used the default Girl book while
+its draft selected AM. Test-only startup correction supplies actual `other_girl=AM`
+through the existing creation helper. Failed-node retry **1passed16.80s**; logs/
+JUnit `var/p1-live-continuity-minimum{,-retry}.txt/xml`. Before pytest, root's
+hash-check runner initially used the wrong handoff key; corrected to `sha256`,
+no test had executed. Actual paid Whip/Mindfuck, pre-reset owed damage and
+accepted real AM remote source, genuine fourth-Limiter FactoryReset, current
+NPC component selection/real conversion/work, independent current NPC/AM factual
+performances and actual PR/Award/legal Animal3 gift to reset NPC all close
+privately with original source/authors preserved. Old-controller rejection and
+retry asserted. No fake NPC AM entitlement, universal actor alias or new Gender
+status. Worker7 scoped static PASS. Existing String/question test unchanged.
+Ordinary rolled recipe/actual Girl-performer reset and lost-entitlement consumers
+remain explicit source boundaries; current reset producer is NPC-only. Default/
+Bonded gift consumers are preserved but not rerun now; final regression covers
+these shared changes. Full P1/global/independent/human gates remain pending.
+
+Final scoped packet28 paths/21 Python/19 source: Ruff/format/types/whitespace,
+registry/planning/repository PASS. Registry477/273 subset/204 unimplemented/
+440 required/**0 independently verified**. Repository1422 publishable files/
+40 original manifest entries/0 findings. Two genuinely new source normals passed
+on their failed-node-only fixture retries; no prior successful nodes rerun.
+Snapshots/check commands under `var/p1-call-continuity-*`. Full exact-candidate
+P1 regression, global static/migration/privacy/restore, independent review and
+human acceptance remain pending. Bot OFF; no live source deployment.

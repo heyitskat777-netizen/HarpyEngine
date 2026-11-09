@@ -32,8 +32,23 @@ def enabled(state: GameState, actor: ActorRef) -> bool:
     return True
 
 
-def options(state: GameState, actor: ActorRef) -> tuple[str, ...]:
-    return (CLASSIFY, BOARD, RELAY) if enabled(state, actor) else ()
+def options(
+    state: GameState,
+    actor: ActorRef,
+    *,
+    game: "GameService | None" = None,
+    c: Connection | None = None,
+    action: dict[str, Any] | None = None,
+) -> tuple[str, ...]:
+    if enabled(state, actor):
+        return (CLASSIFY, BOARD, RELAY)
+    if game is not None and c is not None and action is not None:
+        from girlframe.services.m3_learned_plays import call_lesson_entitled
+
+        if call_lesson_entitled(game, c, state, action):
+            load_registry().require_available(rules.CALL)
+            return (CLASSIFY, BOARD, RELAY)
+    return ()
 
 
 def effect(state: GameState, actor: ActorRef, answer: ChoiceAnswer) -> dict[str, Any]:
@@ -66,6 +81,9 @@ def apply(
 ) -> Outcome:
     selected = action["data"]["dive"]["steps"][step]
     data = selected["effect"]
+    from girlframe.services.m3_learned_plays import prove_call_lesson
+
+    learned = prove_call_lesson(game, c, state, action)
     changed, followups = classify(
         state,
         profiles(c, game.store.campaign_id),
@@ -76,6 +94,7 @@ def apply(
         step=step,
         event=action["data"]["response_event"],
         account=selected["account"],
+        learned_use=learned,
     )
     changed.facts.append(
         dict(
@@ -100,12 +119,17 @@ def _family(value: str) -> Literal["girl", "frame"]:
 
 
 def prove_classification_void(
+    game: "GameService",
+    c: Connection,
     state: GameState,
     actor: ActorRef,
     action: dict[str, Any],
     body: dict[str, Any],
     answer: ChoiceAnswer,
 ) -> None:
+    from girlframe.services.m3_learned_plays import prove_call_lesson
+
+    learned = prove_call_lesson(game, c, state, action)
     event = body["source_event"]
     fact = next(
         (
@@ -123,7 +147,10 @@ def prove_classification_void(
     if (
         fact is None
         or selected["option"] != CLASSIFY
-        or not rules.owns(state, actor, rules.CALL)
+        or not (
+            rules.owns(state, actor, rules.CALL)
+            or (learned is not None and learned.used and learned.actor == actor)
+        )
         or set(selected["effect"]["moves"]) != set(answer.options)
         or selected["effect"]["replaced"] != list(answer.denied)
     ):

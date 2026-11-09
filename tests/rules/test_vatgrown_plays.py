@@ -2685,3 +2685,302 @@ def test_actual_unused_risk_defense_other_dive_source_native_keep_and_original_c
     asyncio.run(reopen())
     assert "defensive_risk_use" not in void.get(ADMIN, work)
     tick(worker, gateway, 6)
+
+
+def test_actual_learned_call_native_classification_guest_and_gorgon_keep_original_sources(
+    ledger, tmp_path, monkeypatch
+):
+    from girlframe.discord_adapter.m2_ui import open_choice, open_play
+    from girlframe.discord_adapter.m3_mockingbird_communion import open_call
+    from girlframe.engine.m3_actor_state import ActorRef
+    from girlframe.engine.m3_actors import resolve
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+    from girlframe.engine.m3_learned_play_state import call_lesson_uses
+    from girlframe.engine.m3_mockingbird import CALL
+    from girlframe.engine.m3_physical_state import CockpitAction
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_learned_plays import prepare_call_lessons, prove_call_lesson
+    from girlframe.services.m3_mockingbird_communion import CallService
+    from girlframe.services.m3_physical import PhysicalService
+    from girlframe.services.m3_recovery import RecoveryService
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, teacher="MOCKINGBIRD")
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(rules.EXPERIMENT, rules.INVESTMENT, rules.SEX, rules.BRUTALIZE, CALL),
+    )
+    world = WorldService(MissionService(ledger))
+    world.reveal(
+        ADMIN,
+        str(uuid4()),
+        state(game).revision,
+        "secret",
+        "The actual original Cadre encounters the nearby original Gorgon",
+    )
+    learner = current_ref(state(game), 2)
+    teacher = current_ref(state(game), 3)
+
+    def learn():
+        session, source = sex(
+            game,
+            worker,
+            gateway,
+            controls,
+            (5, 5),
+            counterpart_account="The real Mockingbird voluntarily offers this one-use Call lesson",
+        )
+        before = state(game)
+        replacement = before.sheets["2"].identities[0]
+        retained = {
+            x.name.casefold() for x in before.sheets["2"].identities if x.id != replacement.id
+        }
+        identity = next(
+            x for x in before.sheets["3"].identities if x.name.casefold() not in retained
+        )
+        native_choice(
+            game,
+            OTHER,
+            "vat_sex_learn",
+            identities=(identity.id,),
+            replacements=(replacement.id,),
+            play=(CALL,),
+            account="I teach the whole Call of the Void once, not my body or Frame",
+        )
+        lesson = rules.records(state(game), rules.LearnedPlay)[-1]
+        assert game.inspect(PLAYER, source)["state"] == "complete"
+        controls.send_away(
+            OTHER,
+            str(uuid4()),
+            session,
+            state(game).revision,
+            "The real teacher ends the actual source stay",
+        )
+        tick(worker, gateway, 6)
+        assert not has_rule(state(game).sheets["2"], CALL, "MOCKINGBIRD")
+        return lesson
+
+    def interaction(user=2):
+        opened = current(user, uuid4().int % 1000000000)
+        opened.channel_id = 900
+        return opened
+
+    async def begin(lesson):
+        opened = interaction()
+        await opened.response.defer(ephemeral=True)
+        await open_play(opened, game)
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            play=("dive_deep",),
+            learned_call=(lesson.id,),
+            trigger=("yes",),
+            heat=("0",),
+            gain=("0",),
+            pair_share=("0",),
+            piloting=("no",),
+            witnessed=("no",),
+            context="I explicitly offer this lesson for my actual Dive",
+        )
+        sent = interaction()
+        await form.confirm.callback(sent)
+        assert form.completed, (
+            sent.response.send_message.call_args_list,
+            sent.edit_original_response.call_args_list,
+        )
+        with ledger.engine.connect() as c:
+            return game.lock(c, 900)["action_id"]
+
+    async def choose(viewer, kind, **values):
+        row = next(x for x in game.choices(viewer) if x["kind"] == kind)
+        opened = interaction(viewer.user_id)
+        await opened.response.defer(ephemeral=True)
+        await open_choice(opened, game, row["id"])
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values.update(values)
+        sent = interaction(viewer.user_id)
+        await form.confirm.callback(sent)
+        assert form.completed, (
+            sent.response.send_message.call_args_list,
+            sent.edit_original_response.call_args_list,
+        )
+        return row
+
+    first = learn()
+    # A true unrolled cancellation releases only the reservation, not a spent
+    # source. The real new confirmation below selects that same lesson again.
+    calls = game.dice.calls
+    abandoned = asyncio.run(begin(first))
+    game.abort(ADMIN, str(uuid4()), abandoned)
+    tick(worker, gateway, 5)
+    recovery = RecoveryService(game)
+    saved = next(x for x in recovery.saved(PLAYER) if x["id"] == abandoned)
+    recovery.recover(PLAYER, str(uuid4()), abandoned, saved["revision"], cancel=True)
+    assert game.dice.calls == calls
+    with ledger.engine.connect() as c:
+        assert prepare_call_lessons(game, c, state(game), learner, "dive_deep")[0]["id"] == first.id
+    tick(worker, gateway, 5)
+    first_dive = asyncio.run(begin(first))
+    game.dice.faces = (4, 4)
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    original = state(game).sheets["2"].model_copy(deep=True)
+    girl = next(x for x in original.assets if x.family == "girl")
+    frame = next(x for x in original.assets if x.family == "frame")
+    raw = game.inspect(PLAYER, first_dive)["receipt"]
+    asyncio.run(
+        choose(
+            PLAYER,
+            "dive_select",
+            option=("call_reclassify_assets",),
+            account="I move these original components between their real source families",
+        )
+    )
+    asyncio.run(choose(PLAYER, "dive_effect", moves=(girl.id, frame.id)))
+    after = state(game).sheets["2"]
+    assert next(x.family for x in after.assets if x.id == girl.id) == "frame"
+    assert next(x.family for x in after.assets if x.id == frame.id) == "girl"
+    assert [(x.id, x.void, x.damaged, x.description) for x in after.assets] == [
+        (x.id, x.void, x.damaged, x.description) for x in original.assets
+    ]
+    assert game.inspect(PLAYER, first_dive)["state"] == "complete"
+    assert game.inspect(PLAYER, first_dive)["receipt"] == raw and game.dice.calls == calls + 1
+    with ledger.engine.connect() as c:
+        assert (
+            prove_call_lesson(game, c, state(game), game.action(c, first_dive)).lesson == first.id
+        )
+        assert not prepare_call_lessons(game, c, state(game), learner, "dive_deep")
+    tick(worker, gateway, 6)
+
+    second = learn()
+    assert second.id != first.id
+    with ledger.engine.connect() as c:
+        pose = resolve(state(game), learner, profiles(c, ledger.campaign_id)).position_sha256
+    PhysicalService(ledger).operate(
+        PLAYER,
+        str(uuid4()),
+        state(game).revision,
+        CockpitAction(
+            actor=learner,
+            operation="sit",
+            expected_position=pose,
+            confirmed=True,
+            account="I actually enter my original co-located cockpit",
+        ),
+        channel=900,
+    )
+    second_dive = asyncio.run(begin(second))
+    game.dice.faces = (6, 6)
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    raw = game.inspect(PLAYER, second_dive)["receipt"]
+    calls = game.dice.calls
+    asyncio.run(
+        choose(
+            PLAYER,
+            "dive_select",
+            option=("call_cockpit_guest",),
+            account="I invite this actual original person into my actual cockpit",
+        )
+    )
+    asyncio.run(
+        choose(
+            PLAYER,
+            "dive_effect",
+            target=(teacher.token,),
+            account="My invitation is voluntary and refers to our real co-located bodies",
+        )
+    )
+    communion = CallService(game)
+    guest_call = state(game).mockingbird.calls[-1]
+    assert guest_call.actor == learner and guest_call.guest == teacher
+    assert game.inspect(PLAYER, second_dive)["state"] != "complete"
+
+    async def reply(viewer, identity, **values):
+        opened = interaction(viewer.user_id)
+        await opened.response.defer(ephemeral=True)
+        await open_call(opened, communion, identity)
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(interaction(2 if viewer == OTHER else 3))
+        form.values.update(values)
+        sent = interaction(viewer.user_id)
+        await form.confirm.callback(sent)
+        assert form.completed, sent.edit_original_response.call_args_list
+        return form
+
+    asyncio.run(
+        reply(
+            OTHER,
+            guest_call.id,
+            decision=("accept",),
+            account="I actually accept and board this original cockpit",
+        )
+    )
+    with ledger.engine.connect() as c:
+        aboard = resolve(state(game), teacher, profiles(c, ledger.campaign_id))
+        carrier = resolve(state(game), learner, profiles(c, ledger.campaign_id))
+    assert aboard.inside_frame and aboard.occupied_frame_instance == carrier.frame_instance
+    cost = next(x for x in state(game).sheets["3"].assets if x.family == "girl" and not x.void)
+    communion.respond(
+        OTHER,
+        str(uuid4()),
+        guest_call.id,
+        communion.get(OTHER, guest_call.id)["revision"],
+        "effect",
+        dict(
+            option="void_and_unmark_all",
+            asset=cost.id,
+            description="The real guest chooses her own actual Void cost",
+            account="My own choice uses my resources, not the learner's",
+        ),
+    )
+    assert next(x for x in state(game).sheets["3"].assets if x.id == cost.id).void
+    # The genuine high Dive's Handler choice uses the same held lesson, not
+    # another lesson or an invented permission from the Gorgon.
+    asyncio.run(
+        choose(
+            ADMIN,
+            "dive_select",
+            option=("call_gorgon_relay",),
+            account="The actual Frame relays communion to the actual nearby Gorgon",
+        )
+    )
+    gorgon = ActorRef(kind="gorgon", entity="secret")
+    asyncio.run(
+        choose(
+            PLAYER,
+            "dive_effect",
+            target=(gorgon.token,),
+            account="PRIVATE_LEARNED_CALL What do you actually want from this place?",
+        )
+    )
+    relay = state(game).mockingbird.calls[-1]
+    assert relay.source_action == second_dive and relay.guest == gorgon
+    assert communion.get(OTHER, relay.id)["message"] == ""
+    asyncio.run(
+        reply(
+            ADMIN,
+            relay.id,
+            decision=("accept",),
+            account="PRIVATE_GORGON_REPLY The real controller authors this reply",
+        )
+    )
+    assert game.inspect(PLAYER, second_dive)["state"] == "complete"
+    assert game.inspect(PLAYER, second_dive)["receipt"] == raw and game.dice.calls == calls
+    uses = call_lesson_uses(state(game))
+    assert [x.lesson for x in uses] == [first.id, second.id] and all(x.used for x in uses)
+    assert communion.get(PLAYER, relay.id)["answer"].startswith("PRIVATE_GORGON_REPLY")
+    with ledger.engine.connect() as c:
+        assert (
+            prove_call_lesson(game, c, state(game), game.action(c, first_dive)).lesson == first.id
+        )
+        assert (
+            prove_call_lesson(game, c, state(game), game.action(c, second_dive)).lesson == second.id
+        )
+        assert not prepare_call_lessons(game, c, state(game), learner, "dive_deep")
+    assert state(game).sheets["2"].girl == "VATGROWN"
+    assert not has_rule(state(game).sheets["2"], CALL, "MOCKINGBIRD")
+    assert "PRIVATE_LEARNED_CALL" not in json.dumps(gateway.messages)
+    assert "PRIVATE_GORGON_REPLY" not in json.dumps(gateway.messages)
+    tick(worker, gateway, 6)

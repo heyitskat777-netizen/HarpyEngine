@@ -2,7 +2,7 @@
 
 import json
 from typing import TYPE_CHECKING, Any
-from uuid import NAMESPACE_URL, uuid5
+from uuid import NAMESPACE_URL, uuid4, uuid5
 
 import sqlalchemy as sa
 from sqlalchemy import Connection
@@ -185,7 +185,16 @@ def prepare(
         if not HandlerService(game.store)._member(c, uid):
             raise WorkflowError("Recover the actual table human's campaign membership.")
     cast_npcs = tuple(x.actor.entity for x in cast.roles if x.actor.kind == "npc")
-    if not available_options(state, actor, cast_npcs):
+    from girlframe.services.m3_learned_plays import prepare_call_lessons
+
+    selected_call = prepared.learned_call
+    if not available_options(state, actor, cast_npcs) and not (
+        selected_call is not None
+        and any(
+            item["id"] == selected_call
+            for item in prepare_call_lessons(game, c, state, actor, prepared.play)
+        )
+    ):
         raise WorkflowError("No printed Dive effect can apply to the actual resources or scene.")
     handler, appointment = MedicalService(game.store)._handler(c)
     assert game.store.policy.m3_approval is not None
@@ -295,7 +304,14 @@ def _groups(action: dict[str, Any]) -> tuple[Any, ...]:
     return tuple(plan("dive_deep", Context(total=action["data"]["result"]["total"])).groups)
 
 
-def _next(game: "GameService", c: Connection, state: GameState, action: dict[str, Any]) -> None:
+def _next(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    *,
+    completion_event: str | None = None,
+) -> None:
     from girlframe.services.m2_choices import ChoiceEngine
 
     meta = action["data"]["dive"]
@@ -353,6 +369,9 @@ def _next(game: "GameService", c: Connection, state: GameState, action: dict[str
     action["data"]["result"]["dive_steps"] = [
         dict(option=x["option"], choice_owner=x["chooser"]) for x in meta["steps"]
     ]
+    from girlframe.services.m3_learned_plays import finish_call_unused
+
+    finish_call_unused(game, c, state, action, completion_event or action["data"]["response_event"])
     if action["data"].get("actor_basic"):
         from girlframe.services.m3_actor_plays import ActorPlayService
 
@@ -398,7 +417,7 @@ def projection(
         step=step, level=action["data"]["result"]["tier"], table=meta["table"]
     )
     if request["kind"] == "dive_select":
-        data["options"] = available_options(state, actor, npcs)
+        data["options"] = available_options(state, actor, npcs, game=game, c=c, action=action)
         from girlframe.services.m3_mockingbird_communion import BOARD, RELAY, candidates
 
         data["options"] = tuple(
@@ -474,7 +493,13 @@ def projection(
 
 
 def available_options(
-    state: GameState, actor: ActorRef, cast_npcs: tuple[str, ...] = ()
+    state: GameState,
+    actor: ActorRef,
+    cast_npcs: tuple[str, ...] = (),
+    *,
+    game: "GameService | None" = None,
+    c: Connection | None = None,
+    action: dict[str, Any] | None = None,
 ) -> tuple[str, ...]:
     try:
         actual_assets, actual_identities = rules.resources(state, actor)
@@ -511,7 +536,7 @@ def available_options(
             values.remove("locked_cockpit_extraction_requires_frame_consent")
     from girlframe.services.m3_mockingbird_call import options as call_options
 
-    values.extend(call_options(state, actor))
+    values.extend(call_options(state, actor, game=game, c=c, action=action))
     return tuple(values)
 
 
@@ -660,7 +685,8 @@ def apply(
         actor, _, npcs = _context(action)
         if (
             len(answer.options) != 1
-            or answer.options[0] not in available_options(state, actor, npcs)
+            or answer.options[0]
+            not in available_options(state, actor, npcs, game=game, c=c, action=action)
             or not answer.text.strip()
         ):
             raise WorkflowError(
@@ -682,6 +708,11 @@ def apply(
                 account=answer.text,
                 source_choice=request["id"],
             )
+        )
+        from girlframe.services.m3_learned_plays import consume_call_selection
+
+        consume_call_selection(
+            game, c, state, action, request, answer.options[0], action["data"]["response_event"]
         )
         _request_effect(game, c, action, step)
         return
@@ -948,7 +979,15 @@ def complete_void_continuation(
         .values(state="completed_by_work", revision=choices.c.revision + 1)
     )
     actual["completed_event"] = event
-    _next(game, c, state, action)
+    learned_release_event = (
+        str(uuid4())
+        if (
+            action["data"].get("learned_call")
+            and not action["data"]["learned_call"].get("resolved_event")
+        )
+        else None
+    )
+    _next(game, c, state, action, completion_event=learned_release_event)
     game.save_action(c, action)
     prior_index = c.scalar(
         sa.select(sa.func.max(t.events.c.event_index)).where(
@@ -964,6 +1003,7 @@ def complete_void_continuation(
         key,
         "m3.dive_void_completed",
         state,
+        event_id=learned_release_event,
         action_id=action["id"],
         work_id=work_id,
         event_index=1 if prior_index is None else prior_index + 1,
@@ -1086,6 +1126,8 @@ def prove_void_source(
 
             assert original is not None
             prove_classification_void(
+                game,
+                c,
                 original,
                 actor,
                 action,

@@ -10,6 +10,7 @@ from girlframe.engine.m3_assets import counts_toward_limit
 from girlframe.engine.m3_core import Followup
 from girlframe.engine.m3_dive import resources
 from girlframe.engine.m3_harpy_resources import HarpyResource
+from girlframe.engine.m3_learned_play_state import CallLessonUse, call_lesson_uses
 from girlframe.engine.m3_mockingbird import CALL, owns
 
 
@@ -24,9 +25,21 @@ def classify(
     step: int,
     event: str,
     account: str,
+    learned_use: CallLessonUse | None = None,
 ) -> tuple[GameState, tuple[Followup, ...]]:
     if (
-        not owns(original, actor, CALL)
+        not (
+            owns(original, actor, CALL)
+            or (
+                learned_use is not None
+                and learned_use in call_lesson_uses(original)
+                and learned_use.used
+                and learned_use.actor == actor
+                and learned_use.action == action
+                and learned_use.step is not None
+                and learned_use.step <= step
+            )
+        )
         or not action
         or not event
         or not account.strip()

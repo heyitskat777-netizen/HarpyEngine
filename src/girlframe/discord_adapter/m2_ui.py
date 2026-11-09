@@ -1308,9 +1308,9 @@ async def open_play(
                 ),
             )
         )
-    from girlframe.services.m3_learned_plays import prepare_keep_riders
+    from girlframe.services.m3_learned_plays import prepare_call_lessons, prepare_keep_riders
 
-    def learned_options() -> tuple[tuple[str, str], ...]:
+    def learned_options() -> dict[str, tuple[tuple[str, str], ...]]:
         from girlframe.engine.m3_actor_bonds import current_ref
         from girlframe.services.m2_state import load_state
 
@@ -1323,15 +1323,34 @@ async def open_play(
                 if selected_play in plays
                 for row in prepare_keep_riders(game, connection, current, actor, selected_play)
             }
-            return tuple((row["id"], row["label"]) for row in rows.values())
+            calls = (
+                prepare_call_lessons(game, connection, current, actor, "dive_deep")
+                if "dive_deep" in plays
+                else ()
+            )
+            return dict(
+                keep=tuple((row["id"], row["label"]) for row in rows.values()),
+                call=tuple((row["id"], row["label"]) for row in calls),
+            )
 
     lessons = await threaded(learned_options)
-    if lessons:
+    if lessons["keep"]:
         fields.append(
             Field(
                 "learned_keep_rider",
                 "Optional learned Keep or Flirt ability — use one lesson",
-                lessons,
+                lessons["keep"],
+                minimum=0,
+                maximum=1,
+                required=False,
+            )
+        )
+    if lessons["call"]:
+        fields.append(
+            Field(
+                "learned_call",
+                "Optional Call of the Void lesson — use on this Dive",
+                lessons["call"],
                 minimum=0,
                 maximum=1,
                 required=False,
@@ -1521,6 +1540,7 @@ async def open_play(
             **prince_values(values),
             consume_seek_food=one(values, "consume_seek_food") == "yes",
             learned_keep_rider=one(values, "learned_keep_rider") or None,
+            learned_call=one(values, "learned_call") or None,
             ankou_pulse=selected_pulse(values),
             play=play,
             context=values["context"],

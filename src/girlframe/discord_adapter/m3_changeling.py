@@ -262,7 +262,9 @@ async def _saved(
                     )
                 )
         elif shown.get("damage"):
-            fields = [Field("asset", "Your actual Asset to damage", tuple(shown["assets"]))]
+            fields = [
+                Field("asset", "Your current actual body's Asset to damage", tuple(shown["assets"]))
+            ]
         elif shown.get("fry"):
             fields = [
                 Field(

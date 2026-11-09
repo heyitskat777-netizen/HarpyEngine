@@ -120,6 +120,28 @@ class RiskLessonUse(Model):
     work: tuple[str, ...] = ()
 
 
+class CallLessonUse(Model):
+    action: str
+    lesson: str
+    actor: ActorRef
+    begin_event: str
+    roll_event: str
+    receipt_sha256: str
+    event: str
+    used: bool
+    choice: str | None = None
+    option: str | None = None
+    step: int | None = None
+
+
+def call_lesson_uses(state: "GameState") -> tuple[CallLessonUse, ...]:
+    return tuple(
+        CallLessonUse.model_validate_json(x["body"])
+        for x in state.facts
+        if x.get("kind") == "learned_call_use"
+    )
+
+
 class DefensiveRiskUse(Model):
     id: str
     lesson: str

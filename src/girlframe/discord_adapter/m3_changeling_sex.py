@@ -145,7 +145,11 @@ async def _am(
     data = await asyncio.to_thread(service.view_am, viewer_from_interaction(interaction), identity)
     source = data["body"]
     lines = ["Actual AM source: " + source["phase"], clean(source["account"])]
-    lines.extend(clean(value["account"]) for value in data["performances"])
+    lines.extend(
+        ("Current same-Brain person: " if value.get("performed_by") else "Actual source role: ")
+        + clean(value["account"])
+        for value in data["performances"]
+    )
     for gift in data["unrolled_gender"]:
         if gift["state"] == "given":
             lines.append("Mandatory Animal Tag given: " + clean(gift["tag_label"]))
@@ -165,9 +169,9 @@ async def _am(
         fields = [
             Field(
                 "person",
-                "Your actual performed role",
+                "Your actual current performed role",
                 tuple(
-                    (ActorRef.model_validate(value).token, "Original " + value["kind"])
+                    (ActorRef.model_validate(value).token, "Actual " + value["kind"])
                     for value in data["perform"]
                 ),
             ),

@@ -2783,7 +2783,7 @@ class ChangelingService:
                 if result["damage"]:
                     actual = resolve(
                         state,
-                        value.target,
+                        _live(self.game, c, state, value.subject).actor,
                         profiles(c, self.store.campaign_id),
                         require_current_profile=False,
                     )

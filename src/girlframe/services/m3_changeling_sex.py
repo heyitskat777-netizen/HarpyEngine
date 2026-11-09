@@ -1,5 +1,6 @@
 """Genuine psychic contact into existing owned Girl Sex sources, never borrowed outcomes."""
 
+import json
 from typing import Any, Literal, cast
 from uuid import uuid4
 
@@ -17,11 +18,50 @@ from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access
 from girlframe.services.m3_actors import profiles
-from girlframe.services.m3_changeling import _live, prove_fingers, require_rule, settle_fingers
+from girlframe.services.m3_changeling import (
+    _live,
+    _owned_brain_choice,
+    prove_fingers,
+    require_rule,
+    settle_fingers,
+)
 from girlframe.services.m3_dose_up import _cast, _roll_source
 from girlframe.services.m3_handler_advancements import _history
 from girlframe.services.onboarding import WorkflowError
 from girlframe.services.read_only_bot import GuildViewer
+
+
+def current_participant(
+    game: GameService, c: Connection, state: GameState, original: mental.BrainRef
+) -> mental.BrainRef:
+    """A source role follows only its positively proved same physical Brain."""
+    return _live(game, c, state, original)
+
+
+def _role_brain(value: rules.Link, role: ActorRef) -> mental.BrainRef:
+    brain = next((x for x in (value.initiator, value.counterpart) if x.actor == role), None)
+    if brain is None:
+        raise WorkflowError("Keep the original actual psychic source role")
+    return brain
+
+
+def _participants(
+    game: GameService, c: Connection, state: GameState, value: rules.Link
+) -> dict[str, mental.BrainRef]:
+    return {
+        x.actor.token: current_participant(game, c, state, x)
+        for x in (value.initiator, value.counterpart)
+    }
+
+
+def am_participants(
+    game: GameService, c: Connection, state: GameState, source: rules.UnrolledAMSex
+) -> dict[str, mental.BrainRef]:
+    """Current endpoints keyed by immutable source roles; no AM/Gender entitlement transfer."""
+    prove_source_link(
+        game, c, state, source.link, source.id, source.actor, source.target, rules.RULES["AM"]
+    )
+    return _participants(game, c, state, prove(game, c, state, source.link))
 
 
 def _consent(game: GameService, c: Connection, state: GameState, use: mental.Fingers) -> None:
@@ -34,10 +74,12 @@ def _consent(game: GameService, c: Connection, state: GameState, use: mental.Fin
         .mappings()
         .first()
     )
+    scope = _history(c, game, str(row["id"])) if row else None
     if (
         row is None
+        or scope is None
         or row["kind"] != "m3.changeling_sex_consented"
-        or row["actor_id"] != str(use.subject.controller)
+        or row["actor_id"] != str(current_participant(game, c, scope, use.subject).controller)
     ):
         raise WorkflowError(
             "Preserve the original actual counterpart's separate voluntary acceptance"
@@ -490,17 +532,14 @@ class ChangelingSexService:
         state = load_state(c, self.store.campaign_id)
         rows = []
         for value in rules.records(state):
-            if viewer.user_id not in (value.initiator.controller, value.counterpart.controller):
+            people = _participants(self.game, c, state, value)
+            if viewer.user_id not in {x.controller for x in people.values()}:
                 continue
             pending = value.session is None and viewer.user_id == value.controller
             if value.session and not value.completed_event:
                 source = _source(self.game, c, state, value)
                 phase = source.state if value.rule == rules.RULES["MOCKINGBIRD"] else source.phase
-                partner = (
-                    value.initiator.controller
-                    if value.partner == value.initiator.actor
-                    else value.counterpart.controller
-                )
+                partner = people[value.partner.token].controller
                 pending = (
                     phase in ("invited", "proposed")
                     and viewer.user_id == partner
@@ -509,7 +548,7 @@ class ChangelingSexService:
                 )
                 if isinstance(source, rules.UnrolledAMSex) and phase == "accepted":
                     pending = any(
-                        source.controllers[actor.token] == viewer.user_id
+                        people[actor.token].controller == viewer.user_id
                         and not any(
                             performance.source == source.id and performance.actor == actor
                             for performance in rules.performances(state)
@@ -546,7 +585,10 @@ class ChangelingSexService:
                 None,
             )
             use = prove_fingers(self.game, c, state, value.use if value else identity)
-            if viewer.user_id not in (use.brain.controller, use.subject.controller):
+            people = tuple(
+                current_participant(self.game, c, state, x) for x in (use.brain, use.subject)
+            )
+            if viewer.user_id not in {x.controller for x in people}:
                 raise WorkflowError(
                     "Only the original actual psychic participants read this private source"
                 )
@@ -696,11 +738,10 @@ class ChangelingSexService:
         def operation(c: Connection) -> dict[str, Any]:
             state = load_state(c, self.store.campaign_id)
             source = prove_am_source(self.game, c, state, identity)
-            actual = resolve(
-                state,
-                source.target,
-                profiles(c, self.store.campaign_id),
-                require_current_profile=False,
+            link = prove(self.game, c, state, source.link)
+            actual = current_participant(self.game, c, state, _role_brain(link, source.target))
+            _owned_brain_choice(
+                self.game, c, state, viewer, _role_brain(link, source.target), source.cast
             )
             if actual.controller != viewer.user_id:
                 raise WorkflowError(
@@ -710,7 +751,7 @@ class ChangelingSexService:
             if (
                 state.revision != revision
                 or source.phase != "invited"
-                or viewer.user_id != source.controllers[source.target.token]
+                or viewer.user_id != actual.controller
                 or type(accepted) is not bool
                 or not account.strip()
                 or len(account) > 1200
@@ -763,9 +804,31 @@ class ChangelingSexService:
             state = load_state(c, self.store.campaign_id)
             source = prove_am_source(self.game, c, state, identity)
             link = prove(self.game, c, state, source.link)
-            actual = resolve(
-                state, actor, profiles(c, self.store.campaign_id), require_current_profile=False
+            people = _participants(self.game, c, state, link)
+            performer = people[source.actor.token]
+            own = state.sheets.get(source.actor.entity) if source.actor.kind == "pilot" else None
+            if (
+                performer.actor != source.actor
+                or own is None
+                or own.character_id != source.actor.incarnation
+                or own.girl != "AM"
+                or not has_rule(own, rules.RULES["AM"], "AM")
+            ):
+                raise WorkflowError(
+                    "SOURCE_CURRENT_AM_PERFORMER_REQUIRED: no reset NPC inherits the Girl rule"
+                )
+            role = next(
+                (
+                    original
+                    for original in (source.actor, source.target)
+                    if people[original.token].actor == actor
+                ),
+                None,
             )
+            if role is None:
+                raise WorkflowError("Use the actual current person for this original source role")
+            actual = people[role.token]
+            _owned_brain_choice(self.game, c, state, viewer, _role_brain(link, role), source.cast)
             if actual.controller != viewer.user_id:
                 raise WorkflowError(
                     "The actual original role's current human authors its performance"
@@ -773,8 +836,7 @@ class ChangelingSexService:
             if (
                 state.revision != revision
                 or source.phase != "accepted"
-                or actor not in (source.actor, source.target)
-                or source.controllers.get(actor.token) != viewer.user_id
+                or actual.vessel != source.vessels.get(role.token)
                 or not account.strip()
                 or len(account) > 1200
                 or self.game.pending_actions(c)
@@ -785,7 +847,7 @@ class ChangelingSexService:
             _live(self.game, c, state, link.initiator)
             _live(self.game, c, state, link.counterpart)
             if any(
-                value.source == identity and value.actor == actor
+                value.source == identity and value.actor == role
                 for value in rules.performances(state)
             ):
                 raise WorkflowError(
@@ -795,9 +857,10 @@ class ChangelingSexService:
             rules.put_am(
                 state,
                 rules.AMPerformance(
-                    id=identity + ":" + actor.token,
+                    id=identity + ":" + role.token,
                     source=identity,
-                    actor=actor,
+                    actor=role,
+                    performed_by=actor if actor != role else None,
                     controller=viewer.user_id,
                     account=account,
                     event=event,
@@ -812,6 +875,9 @@ class ChangelingSexService:
                 from girlframe.services.p1_unrolled_sex import offer
 
                 offer(self.game, c, state, source, event)
+            provenance: dict[str, Any] = (
+                {"source_role": role.model_dump(mode="json")} if actor != role else {}
+            )
             self.game.event(
                 c,
                 viewer.user_id,
@@ -821,6 +887,7 @@ class ChangelingSexService:
                 event_id=event,
                 source=identity,
                 person=actor.model_dump(mode="json"),
+                **provenance,
             )
             synchronize_am(self.game, c, state, identity, event)
             return dict(id=identity, revision=state.revision)
@@ -843,7 +910,8 @@ class ChangelingSexService:
             Access(self.store).authorize(c, viewer, "plays", director_response=True)
             state = load_state(c, self.store.campaign_id)
             source = prove_am_source(self.game, c, state, identity)
-            if viewer.user_id not in source.controllers.values():
+            people = _participants(self.game, c, state, prove(self.game, c, state, source.link))
+            if viewer.user_id not in {x.controller for x in people.values()}:
                 raise WorkflowError(
                     "Only actual original source humans read these private accounts"
                 )
@@ -856,14 +924,15 @@ class ChangelingSexService:
                 body=source.model_dump(mode="json"),
                 performances=[value.model_dump(mode="json") for value in performed],
                 can_answer=source.phase == "invited"
-                and viewer.user_id == source.controllers[source.target.token],
+                and viewer.user_id == people[source.target.token].controller,
                 perform=[
-                    actor.model_dump(mode="json")
+                    people[actor.token].actor.model_dump(mode="json")
                     for actor in (source.actor, source.target)
                     if source.phase == "accepted"
-                    and source.controllers[actor.token] == viewer.user_id
+                    and people[actor.token].controller == viewer.user_id
                     and not any(value.actor == actor for value in performed)
                 ],
+                current_participants=[x.model_dump(mode="json") for x in people.values()],
                 unrolled_gender=tasks(self.game, c, state, source, viewer),
             )
 
@@ -1073,11 +1142,18 @@ def prove_am_source(
             .mappings()
             .first()
         )
-        answered = rules.am_source(_history(c, game, source.consent_event), identity)
+        answered_state = _history(c, game, source.consent_event)
+        answered = rules.am_source(answered_state, identity)
+        consent_subject = current_participant(
+            game,
+            c,
+            answered_state,
+            _role_brain(prove(game, c, answered_state, source.link), source.target),
+        )
         if (
             consent is None
             or consent["kind"] != "m3.changeling_am_consented"
-            or consent["actor_id"] != str(source.controllers[source.target.token])
+            or consent["actor_id"] != str(consent_subject.controller)
             or answered.consent_event != source.consent_event
             or answered.phase not in ("accepted", "declined")
             or source.phase == "declined"
@@ -1090,9 +1166,15 @@ def prove_am_source(
     if len({value.actor for value in performances}) != len(performances):
         raise WorkflowError("Each actual role supplies its own actual performance once")
     for value in performances:
+        scope = _history(c, game, value.event)
+        current = current_participant(
+            game, c, scope, _role_brain(prove(game, c, scope, source.link), value.actor)
+        )
         if (
             value.actor not in (source.actor, source.target)
-            or value.controller != source.controllers[value.actor.token]
+            or value.controller != current.controller
+            or (value.performed_by or value.actor) != current.actor
+            or current.vessel != source.vessels[value.actor.token]
             or not value.account.strip()
             or value not in rules.performances(_history(c, game, value.event))
         ):
@@ -1110,6 +1192,8 @@ def prove_am_source(
             event is None
             or event["kind"] != "m3.changeling_am_performed"
             or event["actor_id"] != str(value.controller)
+            or json.loads(event["payload_json"]).get("person")
+            != current.actor.model_dump(mode="json")
         ):
             raise WorkflowError("A performance account is not an inferred consent or generic ack")
     if source.effect_event and (

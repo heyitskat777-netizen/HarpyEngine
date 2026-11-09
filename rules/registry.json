@@ -7179,6 +7179,23 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "vatgrown-call-source-scope",
+      "policy_key": "vatgrown_call_source_scope",
+      "summary": "A selected Call of the Void lesson is spent on the first actual extra-option choice and remains bound to that original Dive and its genuine consequences.",
+      "source": "Rulebook PDF35/printed33 Call of the Void; PDF50/printed48 Vatgrown Sex Play.",
+      "rationale": "One use of a Play that adds Dive options is one deliberately selected Dive capability. A known ordinary roll alone need not spend a lesson when none of its additional options is actually used.",
+      "alternatives": [
+        "Consume the selected lesson at the raw Dive roll even when no extra option is chosen.",
+        "Charge another lesson for every additional option or guest continuation."
+      ],
+      "implementation_note": "Original owner explicitly selects at most one actual lesson at begin. Bind original actor, Action/begin and real receipt; first actual extra-option choice consumes once through its true chooser. Preserve this entitlement for existing actual classification, consenting guest and nearby Gorgon branches of the same Dive, including held effects. Ordinary-only completion releases the unused source, genuine unrolled recovery releases reservation, and no real rolled costs are refunded. Holding never grants global Call, teacher hardware or invented counterpart consent.",
+      "change_impact": "Preserve original native effects, private session fields, old events and source receipts; never spend two lessons, resurrect consumed ones or extend an old use to another Dive.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -8709,7 +8726,8 @@
         "tests/rules/test_mockingbird_assets.py",
         "tests/rules/test_mockingbird_call.py",
         "tests/rules/test_call_actual_harpy.py",
-        "tests/rules/test_call_guest_handler_girl.py"
+        "tests/rules/test_call_guest_handler_girl.py",
+        "tests/rules/test_vatgrown_plays.py::test_actual_learned_call_native_classification_guest_and_gorgon_keep_original_sources"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -12083,7 +12101,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_changeling.py"
+        "tests/rules/test_changeling.py",
+        "tests/rules/test_changeling_continuity.py::test_actual_pending_whip_and_accepted_am_sex_continue_only_through_proved_reset_brain"
       ],
       "m2_play_id": null,
       "module": "core",
@@ -12225,7 +12244,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_changeling.py"
+        "tests/rules/test_changeling.py",
+        "tests/rules/test_changeling_continuity.py::test_actual_pending_whip_and_accepted_am_sex_continue_only_through_proved_reset_brain"
       ],
       "m2_play_id": null,
       "module": "core",

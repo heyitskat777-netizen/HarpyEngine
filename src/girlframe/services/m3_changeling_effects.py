@@ -566,12 +566,14 @@ def force_damage(
     event: str,
 ) -> tuple[GameState, tuple[str, ...]]:
     from girlframe.services.m3_battle import damage_actor
+    from girlframe.services.m3_changeling import _live
 
     _use(game, c, state, use, event)
     if use.kind != "damage" or use.main_event:
         raise WorkflowError("Use the actual pending forced self-damage source")
+    subject = _live(game, c, state, use.subject)
     actual = resolve(
-        state, use.target, profiles(c, game.store.campaign_id), require_current_profile=False
+        state, subject.actor, profiles(c, game.store.campaign_id), require_current_profile=False
     )
     if not any(item.id == asset and not item.damaged for item in actual.assets):
         raise WorkflowError("The actual affected person chooses one real undamaged owned Asset")
@@ -579,9 +581,9 @@ def force_damage(
     value = rules.ForcedDamage(
         id=use.id,
         use=use.id,
-        target=use.target,
+        target=subject.actor,
         asset=asset,
-        controller=use.subject.controller,
+        controller=subject.controller,
         event=event,
     )
     rules.put(changed, value)
@@ -589,14 +591,14 @@ def force_damage(
         game,
         c,
         changed,
-        target=use.target,
+        target=subject.actor,
         asset_id=asset,
         source_action=None,
         source_work=use.id,
         event=event,
         actor=use.actor,
         opponent=use.actor,
-        chooser_controller=use.subject.controller,
+        chooser_controller=subject.controller,
         occurrence="changeling_forced_self_damage",
         physical_blow=False,
     )
@@ -623,12 +625,55 @@ def prove_damage_source(
         born = rules.record(_history(c, game, value.event), rules.ForcedDamage, identity)
         if born != value:
             raise WorkflowError("Preserve the actual selected damage source and owed work")
+    from girlframe.services.m3_changeling import _live
+
+    # Resolve authority at this actual choice's birth, before any lethal conversion.
+    sequence = c.scalar(
+        sa.select(t.events.c.seq).where(
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.id == value.event,
+        )
+    )
+    scope = state
+    if sequence is not None:
+        born = rules.record(_history(c, game, value.event), rules.ForcedDamage, identity)
+        if born != value:
+            raise WorkflowError("Preserve the actual immutable selected damage and work")
+        history = t.m2["m2_state_history"]
+        raw = c.scalar(
+            sa.select(history.c.body_json)
+            .join(
+                t.events,
+                history.c.event_id == t.events.c.id,
+            )
+            .where(
+                history.c.campaign_id == game.store.campaign_id,
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.seq < sequence,
+            )
+            .order_by(t.events.c.seq.desc())
+            .limit(1)
+        )
+        if raw is None:
+            raise WorkflowError("Recover the actual pre-damage brain and owned resources")
+        scope = GameState.model_validate_json(raw)
+    subject = _live(game, c, scope, use.subject)
+    from girlframe.services.m3_actor_history import snapshot_profiles
+
+    actual = resolve(
+        scope,
+        subject.actor,
+        snapshot_profiles(c, game.store.campaign_id, scope),
+        require_current_profile=False,
+    )
     if (
         use.kind != "damage"
+        or not any(x.id == value.asset and not x.damaged for x in actual.assets)
+        or value.target != subject.actor
         or value.target != target
         or value.asset != asset
         or actor != use.actor
-        or chooser != use.subject.controller
+        or chooser != subject.controller
         or value.controller != chooser
     ):
         raise WorkflowError(

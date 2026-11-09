@@ -16,10 +16,14 @@ class AnimalGift(Model):
     source: str
     animal: ActorRef
     target: ActorRef
+    animal_role: ActorRef | None = Field(default=None, exclude_if=lambda value: value is None)
+    target_role: ActorRef | None = Field(default=None, exclude_if=lambda value: value is None)
     designation: str
     event: str
     tag: str | None = None
     tag_event: str | None = None
+    tag_animal: ActorRef | None = Field(default=None, exclude_if=lambda value: value is None)
+    tag_target: ActorRef | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 def gifts(state: GameState) -> tuple[AnimalGift, ...]:

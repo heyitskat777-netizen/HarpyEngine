@@ -3,6 +3,8 @@
 from typing import Literal
 from uuid import NAMESPACE_URL, uuid5
 
+from pydantic import Field
+
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
 from girlframe.engine.m3_changeling import BrainRef
@@ -95,6 +97,7 @@ class AMPerformance(Model):
     id: str
     source: str
     actor: ActorRef
+    performed_by: ActorRef | None = Field(default=None, exclude_if=lambda value: value is None)
     controller: int
     account: str
     event: str

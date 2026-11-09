@@ -377,6 +377,9 @@ class GameState(Model):
 
 
 class PlayInput(Model):
+    learned_call: str | None = Field(
+        default=None, min_length=1, max_length=100, exclude_if=lambda value: value is None
+    )
     learned_keep_rider: str | None = Field(
         default=None, min_length=1, max_length=100, exclude_if=lambda value: value is None
     )

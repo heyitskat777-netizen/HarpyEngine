@@ -235,13 +235,27 @@ class CallService:
                 x.id == value.id and x.source_event == value.source_event
                 for x in source.mockingbird.calls
             )
-            or not mockingbird.owns(source, value.actor, mockingbird.CALL)
+            or not self._call_owned(c, source, action, value.actor)
             or int(response["actor_id"]) != value.controller
         ):
             raise WorkflowError(
                 "SOURCE_CALL_MISSING: prove the actual owned Dive choice and receipt"
             )
         return value, action
+
+    def _call_owned(
+        self,
+        c: Connection,
+        state: GameState,
+        action: dict[str, Any],
+        actor: ActorRef,
+    ) -> bool:
+        if mockingbird.owns(state, actor, mockingbird.CALL):
+            return True
+        from girlframe.services.m3_learned_plays import prove_call_lesson
+
+        use = prove_call_lesson(self.game, c, state, action)
+        return bool(use is not None and use.used and use.actor == actor)
 
     def _roles(self, c: Connection, state: GameState, value: CallSession) -> dict[int, ActorRef]:
         result = {value.controller: value.actor}

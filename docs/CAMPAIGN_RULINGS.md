@@ -4080,3 +4080,17 @@ an adjustable duration interpretation; the book gives no fixed duration. Broader
 off-scene failure or invented automatic protection are alternatives, not current
 implementation. This extends the earlier physical-failure provider without
 rewriting its records. Delegated recommendation; printed clarity review pending.
+
+
+## P1 learned Call of the Void use
+
+`vatgrown-call-source-scope` (Call PDF35/printed33; Sex learning PDF50/printed48):
+The original learner explicitly selects at most one lesson for a genuine Dive.
+Its first actual additional-option choice consumes once; the entitlement stays
+with that same Dive and its actual guest/Gorgon/classification consequences.
+Ordinary-only completion leaves the lesson unused; genuine unrolled cancellation
+releases the reservation. Known rolls and real costs are retained. Holding grants
+no passive Call, teacher hardware or counterpart consent. Consuming at the raw
+roll even without an extra choice is the alternative interpretation; charging
+again for each consequent choice would split one use. Delegated recommendation,
+printed clarity review pending. Preserve old events and native source behavior.

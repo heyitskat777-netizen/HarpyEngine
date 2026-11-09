@@ -14,10 +14,12 @@ from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_girl_runtime_state import GirlRuntime, has_rule
 from girlframe.engine.m3_learned_play_state import (
+    CallLessonUse,
     DefensiveRiskUse,
     HoundStatusUse,
     LearnedPlayUse,
     RiskLessonUse,
+    call_lesson_uses,
     defensive_risk_uses,
     hound_status_uses,
     put_defensive_risk,
@@ -35,6 +37,8 @@ ITCHING = "girl.alpha.itching-for-a-fight"
 ELDER = "girl.oldgen.elder-bitch"
 HOUND = "girl.alpha.nothing-more-than-a-hound"
 RISK = "girl.mockingbird.risk-factor"
+CALL = "girl.mockingbird.call-of-the-void"
+CALL_OPTIONS = ("call_reclassify_assets", "call_cockpit_guest", "call_gorgon_relay")
 KEEP_RIDERS = (BEAUTIFUL, ITCHING, ELDER)
 SUPPORTED = {
     "girl.alpha.brutalize": ("brutalize", "ALPHA"),
@@ -50,6 +54,8 @@ SUPPORTED = {
 
 
 def lesson_label(rule_id: str, play: str) -> str:
+    if rule_id == CALL:
+        return "Call of the Void (one actual Dive's extra options)"
     if rule_id == RISK:
         return "Risk Factor (paid shift and its own Void ward)"
     if rule_id == HOUND:
@@ -69,7 +75,7 @@ def lesson_label(rule_id: str, play: str) -> str:
 
 def lesson_book(rule_id: str) -> str | None:
     """The finite Status lesson has no invented underlying Play ID."""
-    if rule_id == RISK:
+    if rule_id in (RISK, CALL):
         return "MOCKINGBIRD"
     return "ALPHA" if rule_id == HOUND else SUPPORTED[rule_id][1] if rule_id in SUPPORTED else None
 
@@ -84,6 +90,8 @@ def teacher_lessons(sheet: Any) -> tuple[dict[str, str], ...]:
         result.append(dict(id=HOUND, label=lesson_label(HOUND, "")))
     if sheet.girl == "MOCKINGBIRD" and has_rule(sheet, RISK, "MOCKINGBIRD"):
         result.append(dict(id=RISK, label=lesson_label(RISK, "")))
+    if sheet.girl == "MOCKINGBIRD" and has_rule(sheet, CALL, "MOCKINGBIRD"):
+        result.append(dict(id=CALL, label=lesson_label(CALL, "")))
     return tuple(result)
 
 
@@ -219,7 +227,7 @@ def available(
             continue
         _prove(game, c, state, value)
         if value.claimed_action is not None:
-            if rule_id in (HOUND, RISK):
+            if rule_id in (HOUND, RISK, CALL):
                 raise WorkflowError("This lesson is spent only by its actual owned source choice")
             from girlframe.services.m3_handler_advancements import _history
 
@@ -2028,3 +2036,373 @@ def prove_consumed(
         )
     _prove(game, c, rolled, value)
     return True
+
+
+def prepare_call_lessons(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    actor: ActorRef,
+    play: str,
+) -> tuple[dict[str, str], ...]:
+    if actor.kind != "pilot" or play != "dive_deep":
+        return ()
+    sheet = state.sheets.get(actor.entity)
+    if sheet is None or sheet.character_id != actor.incarnation:
+        return ()
+    runtime = sheet.girl_runtime or GirlRuntime()
+    native = sheet.model_copy(
+        update={"girl_runtime": runtime.model_copy(update={"learned_plays": ()})}
+    )
+    if has_rule(native, CALL, "MOCKINGBIRD"):
+        return ()
+    result = []
+    for value in runtime.learned_plays:
+        if (
+            value.rule_id == CALL
+            and value.actor == actor
+            and value.rolled_event is None
+            and value.claimed_action is None
+        ):
+            _prove(game, c, state, value)
+            result.append(dict(id=value.id, rule_id=CALL, label=lesson_label(CALL, play)))
+    return tuple(result)
+
+
+def reserve_call_lesson(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    event: str,
+) -> bool:
+    identity = action["data"]["prepared"].get("learned_call")
+    if identity is None:
+        return False
+    actor = current_ref(state, int(action["actor_id"]))
+    if (
+        identity
+        not in {
+            x["id"] for x in prepare_call_lessons(game, c, state, actor, action["data"]["play"])
+        }
+        or action["data"].get("learned_call")
+        or not event
+    ):
+        raise WorkflowError("Select one actual unused Call lesson for your genuine Dive")
+    runtime = state.sheets[actor.entity].girl_runtime
+    assert runtime is not None
+    value = next(x for x in runtime.learned_plays if x.id == identity)
+    _replace(state, value.model_copy(update=dict(claimed_action=action["id"])))
+    action["data"]["learned_call"] = dict(id=identity, event=event)
+    return True
+
+
+def _call_reservation(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+) -> LearnedPlayUse:
+    from girlframe.services.m3_handler_advancements import _history
+
+    meta = action["data"]["learned_call"]
+    born = _history(c, game, meta["event"])
+    actor = current_ref(born, int(action["actor_id"]))
+    initial = born.sheets[actor.entity].girl_runtime
+    sheet = state.sheets.get(actor.entity)
+    runtime = sheet.girl_runtime if sheet and sheet.character_id == actor.incarnation else None
+    original = (
+        next((x for x in initial.learned_plays if x.id == meta["id"]), None) if initial else None
+    )
+    value = (
+        next((x for x in runtime.learned_plays if x.id == meta["id"]), None) if runtime else None
+    )
+    event = (
+        c.execute(
+            sa.select(t.events).where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.id == meta["event"],
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if (
+        value is None
+        or original is None
+        or event is None
+        or value.actor != actor
+        or value.rule_id != CALL
+        or action["data"]["play"] != "dive_deep"
+        or action["data"]["prepared"].get("learned_call") != value.id
+        or action["data"].get("dive", {}).get("actor") != actor.model_dump(mode="json")
+        or event["kind"] not in ("m2.play_confirmed", "m3.play_confirmed")
+        or json.loads(event["payload_json"]).get("action_id") != action["id"]
+        or original != value.model_copy(update=dict(claimed_action=action["id"], rolled_event=None))
+    ):
+        raise WorkflowError("Prove this original learner's exact authorized Call reservation")
+    _prove(game, c, born, original)
+    _prove(game, c, state, value)
+    return value
+
+
+def pre_roll_call_lesson(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+) -> None:
+    if not action["data"].get("learned_call"):
+        return
+    value = _call_reservation(game, c, state, action)
+    if (
+        value.actor != current_ref(state, int(action["actor_id"]))
+        or value.claimed_action != action["id"]
+        or value.rolled_event is not None
+        or action["data"].get("receipt")
+        or action["data"]["learned_call"].get("resolved_event")
+    ):
+        raise WorkflowError("Use your original unrolled Call lesson reservation")
+
+
+def release_call_unrolled(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+) -> bool:
+    if not action["data"].get("learned_call"):
+        return False
+    pre_roll_call_lesson(game, c, state, action)
+    value = _call_reservation(game, c, state, action)
+    _replace(state, value.model_copy(update=dict(claimed_action=None)))
+    return True
+
+
+def _call_use(state: GameState, action: dict[str, Any]) -> CallLessonUse | None:
+    values = [x for x in call_lesson_uses(state) if x.action == action["id"]]
+    if len(values) > 1:
+        raise WorkflowError("A genuine Dive has one actual selected Call source use")
+    return values[0] if values else None
+
+
+def prove_call_lesson(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+) -> CallLessonUse | None:
+    meta = action["data"].get("learned_call")
+    if meta is None:
+        return None
+    value = _call_reservation(game, c, state, action)
+    use = _call_use(state, action)
+    if use is None:
+        if (
+            value.claimed_action != action["id"]
+            or value.rolled_event is not None
+            or meta.get("resolved_event")
+        ):
+            raise WorkflowError("Preserve the real unused Call reservation")
+        _keep_raw_roll(game, c, action)
+        return None
+    from girlframe.services.m3_handler_advancements import _history
+
+    born = _history(c, game, use.event)
+    resolved_value = _call_reservation(game, c, born, action)
+    audit = (
+        c.execute(
+            sa.select(t.events).where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.id == use.event,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    payload = json.loads(audit["payload_json"]) if audit else {}
+    if (
+        _call_use(born, action) != use
+        or use.lesson != value.id
+        or use.actor != value.actor
+        or use.begin_event != meta["event"]
+        or use.event != meta.get("resolved_event")
+        or use.used != meta.get("used")
+        or use.roll_event != _keep_raw_roll(game, c, action)
+        or use.receipt_sha256 != _keep_receipt(game, c, action)
+        or resolved_value.claimed_action != (action["id"] if use.used else None)
+        or resolved_value.rolled_event != (use.event if use.used else None)
+        or audit is None
+        or audit["kind"]
+        not in (
+            "m2.choice_resolved",
+            "m3.choice_resolved",
+            "m3.dive_void_completed",
+        )
+        or payload.get("action_id") != action["id"]
+    ):
+        raise WorkflowError("Preserve the actual selected Call source and canonical receipt")
+    if use.used:
+        from girlframe.services.m3_dive import _groups, _handler_controller
+
+        choice = (
+            c.execute(
+                sa.select(t.m2["m2_choices"]).where(
+                    t.m2["m2_choices"].c.campaign_id == game.store.campaign_id,
+                    t.m2["m2_choices"].c.id == use.choice,
+                )
+            )
+            .mappings()
+            .first()
+        )
+        response = (
+            c.execute(
+                sa.select(t.m2["m2_responses"]).where(
+                    t.m2["m2_responses"].c.campaign_id == game.store.campaign_id,
+                    t.m2["m2_responses"].c.choice_id == use.choice,
+                )
+            )
+            .mappings()
+            .first()
+        )
+        selected = action["data"]["dive"]["steps"][use.step] if use.step is not None else {}
+        group = _groups(action)[use.step] if use.step is not None else None
+        chooser = (
+            int(action["actor_id"])
+            if group is not None and group.owner == "actor"
+            else _handler_controller(action["data"]["dive"])
+        )
+        if (
+            choice is None
+            or response is None
+            or use.option not in CALL_OPTIONS
+            or choice["kind"] != "dive_select"
+            or choice["action_id"] != action["id"]
+            or json.loads(choice["body_json"]).get("step") != use.step
+            or payload.get("choice_id") != use.choice
+            or response["event_id"] != use.event
+            or response["actor_id"] != choice["actor_id"]
+            or audit["actor_id"] != choice["actor_id"]
+            or ChoiceAnswer.model_validate_json(response["answer_json"]).options != (use.option,)
+            or selected.get("option") != use.option
+            or selected.get("source_choice") != use.choice
+            or selected.get("chooser") != int(choice["actor_id"])
+            or int(choice["actor_id"]) != chooser
+            or any(x["option"] in CALL_OPTIONS for x in action["data"]["dive"]["steps"][: use.step])
+        ):
+            raise WorkflowError("Prove the actual printed chooser's first real Call option")
+    elif (
+        use.choice is not None
+        or use.option is not None
+        or use.step is not None
+        or any(x["option"] in CALL_OPTIONS for x in action["data"]["dive"]["steps"])
+    ):
+        raise WorkflowError("An unused Call lesson has no performed extra option")
+    return use
+
+
+def call_lesson_entitled(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+) -> bool:
+    if not action["data"].get("learned_call"):
+        return False
+    value = _call_reservation(game, c, state, action)
+    use = prove_call_lesson(game, c, state, action)
+    return bool(use.used if use is not None else value.claimed_action == action["id"])
+
+
+def consume_call_selection(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    request: dict[str, Any],
+    option: str,
+    event: str,
+) -> None:
+    if not action["data"].get("learned_call") or option not in CALL_OPTIONS:
+        return
+    value = _call_reservation(game, c, state, action)
+    previous = _call_use(state, action)
+    if previous is not None:
+        if not previous.used or prove_call_lesson(game, c, state, action) != previous:
+            raise WorkflowError("Keep this Dive's true held Call entitlement")
+        return
+    step = json.loads(request["body_json"])["step"]
+    selected = action["data"]["dive"]["steps"][step]
+    row = (
+        c.execute(
+            sa.select(t.m2["m2_choices"]).where(
+                t.m2["m2_choices"].c.campaign_id == game.store.campaign_id,
+                t.m2["m2_choices"].c.id == request["id"],
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if (
+        value.claimed_action != action["id"]
+        or value.rolled_event is not None
+        or request["kind"] != "dive_select"
+        or row is None
+        or row["state"] != "answered"
+        or row["revision"] != request["revision"] + 1
+        or row["action_id"] != action["id"]
+        or row["actor_id"] != request["actor_id"]
+        or selected["option"] != option
+        or selected["source_choice"] != request["id"]
+        or action["data"].get("response_event") != event
+    ):
+        raise WorkflowError(
+            "Consume only the actual authorized source's first selected Call option"
+        )
+    use = CallLessonUse(
+        action=action["id"],
+        lesson=value.id,
+        actor=value.actor,
+        begin_event=action["data"]["learned_call"]["event"],
+        roll_event=_keep_raw_roll(game, c, action),
+        receipt_sha256=_keep_receipt(game, c, action),
+        event=event,
+        used=True,
+        choice=request["id"],
+        option=option,
+        step=step,
+    )
+    _replace(state, value.model_copy(update=dict(rolled_event=event)))
+    state.facts.append(dict(kind="learned_call_use", id=action["id"], body=use.model_dump_json()))
+    action["data"]["learned_call"].update(resolved_event=event, used=True)
+
+
+def finish_call_unused(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    event: str,
+) -> None:
+    if not action["data"].get("learned_call") or _call_use(state, action) is not None:
+        return
+    value = _call_reservation(game, c, state, action)
+    if (
+        value.claimed_action != action["id"]
+        or value.rolled_event is not None
+        or any(x["option"] in CALL_OPTIONS for x in action["data"]["dive"]["steps"])
+    ):
+        raise WorkflowError("Release only this completed Dive's genuinely unused Call lesson")
+    use = CallLessonUse(
+        action=action["id"],
+        lesson=value.id,
+        actor=value.actor,
+        begin_event=action["data"]["learned_call"]["event"],
+        roll_event=_keep_raw_roll(game, c, action),
+        receipt_sha256=_keep_receipt(game, c, action),
+        event=event,
+        used=False,
+    )
+    _replace(state, value.model_copy(update=dict(claimed_action=None)))
+    state.facts.append(dict(kind="learned_call_use", id=action["id"], body=use.model_dump_json()))
+    action["data"]["learned_call"].update(resolved_event=event, used=False)
