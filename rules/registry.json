@@ -4320,8 +4320,8 @@
       ],
       "policy_key": "am_foundation_records_owned_knowledge",
       "clarity_review": true,
-      "revision": 1,
-      "implementation_note": "Named source/role scope only; unavailable dossiers, actors, physical contexts and other source ports remain implementation gaps. No independent or release approval.",
+      "revision": 2,
+      "implementation_note": "Independent actual Pilot operator requests the intended subject; original Handler prepares the complete fictional dossier in a separate private source event before RNG. Actual result and Records selection are still required before private file access. Operator owns one question; original Handler owns its honest answer. Preserve legacy same-human NPC source events. Existing complete <=1200 dossier bound remains an implementation limit, not a rule or substitute summary.",
       "change_impact": "Current implementation is bounded to genuinely complete <=1200 dossiers and original same-human GM/operator roles; larger/independent-role sources remain implementation gaps, not house rules restricting the printed scope."
     },
     {

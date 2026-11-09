@@ -44,6 +44,15 @@ async def open_code(
         if x["phase"] == "proposed" and x["controller"] == viewer.user_id
     ]
     options += [
+        ("records_request:" + x["id"], "Request intended Foundation-record subject")
+        for x in data["sessions"]
+        if x["phase"] == "proposed"
+        and x["controller"] == viewer.user_id
+        and x["operator"]["kind"] == "pilot"
+        and not x["records"]
+    ]
+    options += [("records_prepare:" + x["id"], x["label"]) for x in data["records_prepare"]]
+    options += [
         ("document:" + x["id"], "Read learned record: " + x["label"]) for x in data["documents"]
     ]
     options += [
@@ -79,6 +88,47 @@ async def open_code(
 
     async def choose(current: discord.Interaction, values: dict[str, Any]) -> str | None:
         operation, identity = values["source"][0].split(":", 1)
+        if operation == "records_prepare":
+            from girlframe.discord_adapter.m3_am_records import open_records_source
+            from girlframe.services.m3_am_records import RecordsService
+
+            await open_records_source(current, RecordsService(service.game), identity)
+            return None
+        if operation == "records_request":
+            from girlframe.services.m3_am_records import RecordsService
+
+            async def request_subject(actual: discord.Interaction, answer: dict[str, Any]) -> str:
+                subject = next(x for x in data["subjects"] if x["token"] == answer["subject"][0])
+                await asyncio.to_thread(
+                    RecordsService(service.game).request,
+                    viewer_from_interaction(actual),
+                    str(actual.id),
+                    identity,
+                    data["revision"],
+                    ActorRef.model_validate(subject["ref"]),
+                )
+                return (
+                    "Your intended subject is saved; "
+                    "the original Handler prepares the factual file."
+                )
+
+            form = NativeForm(
+                current.user.id,
+                "Intended Foundation-record subject",
+                "Choose whose actual complete records you intend to learn. The original Handler "
+                "must prepare the full factual file before circuit confirmation and RNG. "
+                "Selecting Records after the result remains your own choice.",
+                [
+                    Field(
+                        "subject",
+                        "Actual known subject",
+                        tuple((x["token"], x["label"]) for x in data["subjects"]),
+                    )
+                ],
+                request_subject,
+            )
+            await reply(current, form.text(), form)
+            return None
         if operation == "response":
             value = next(x for x in data["sessions"] if x["id"] == identity)
             await reply(
@@ -139,7 +189,7 @@ async def open_code(
                     + tuple((x["token"], x["label"]) for x in data["subjects"]),
                 ),
             )
-        elif session and session["records"]:
+        elif session and session["records"] and session["operator"]["kind"] != "pilot":
             source_fields.extend(
                 [
                     Field("reference", "Actual complete Foundation file/reference", paragraph=True),
@@ -255,7 +305,7 @@ async def open_code(
                 "Only the authenticated GM may attest completeness; "
                 "do not summarize, truncate, or import private notes. "
                 "If the complete file exceeds 1200 characters, this source is unavailable. "
-                if session and session["records"]
+                if session and session["records"] and session["operator"]["kind"] != "pilot"
                 else ""
             )
             + "Confirm real physical access between these original bodies; "

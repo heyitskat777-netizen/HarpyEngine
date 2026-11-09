@@ -1160,3 +1160,71 @@ normalized to existing LF. Registry477/273 subset/204 unimplemented/440 required
 Typed callback repair changed only the two new memory buttons to an explicit
 Button subclass; no extra gameplay rerun. Full final P1 regression remains pending.
 Exact scoped hashes and logs: `var/p1-body-memory-counter-*`.
+
+
+## Independent Pilot Records and actual NPC Easy Target harm
+
+Basee9be9ed8d59acb279aa4a99f7eec2ac9b408bb98 is published; focused
+CI42536747299 PASS, full regression skipped. Bot OFF; RULES_SUBSET/0 independently
+verified; no deployment or human acceptance.
+
+### Pilot Records
+
+Actual Pilot requests an intended subject; original Handler authors complete
+fictional dossier/reference in a separate canonical private event. Factual
+preparation follows existing pre-RNG protocol without granting early knowledge or
+a subject veto. Actual Code result and selected option grant the Pilot its private
+complete file/one question; original Handler separately answers honestly. Source
+proof binds request/preparation/receipt/choice and original Handler body/appointment.
+Existing same-human NPC event/default paths retained; no new synthetic consent,
+free sheet disclosure or private-note import. Existing complete<=1200 source bound
+remains explicit; larger dossiers are a separate implementation gap. Source-specific
+authorization adds only the proved owed original Handler answer. Existing typed
+Inbox helper formats the service-authorized preparation task; no inbox rewrite.
+Delegated knowledge/timing ruling updated revision2, clarity review pending.
+
+`tests/rules/test_am_records.py::test_actual_pilot_native_records_original_handler_file_question_and_private_reopen`:
+initial1failed/3.64s: fixture's global Tag helper expected an absent GM window;
+actual cast is2/3. Corrected to answer actual pending windows. Retry1failed/3.39s:
+root's added assertion expected inspect to expose result before completion, which
+it intentionally does not. Synthetic DB showed actual completed roll/mid9 receipt;
+assertion changed to actual receipt faces. Retry2 **1passed/4.35s**. These were test
+assumptions; no production roll/proof change. Full native request→Handler Inbox
+file→actual result/Records→private complete file/question→separate answer/reopen,
+wrong reader/retry and one original roll. No old successful node rerun.
+
+### Actual NPC Easy Target hurt
+
+Actual NPC controller owns its Tag/urge/performed bodily account. Original Handler
+binds the actual supported injury; actual Newgirl selects her own legal Girl Asset.
+A typed source proof feeds trusted damage without fake PC Action, invented RNG or
+resource grant. Source waits for genuine newly damaged Girl Asset/Harm and resolved
+required work, then the Newgirl chooses real NPC Punishment. Parent waits for its
+actual execution. Separate source audiences and current original actor/body remain
+mandatory; default Reaction serialization unchanged. Ordinary NPC use/protect,
+Handler performer and unusual source/body endings remain explicit adapters.
+
+Root shared ports route only the positive original injury marker and typed Hurt
+source. Actual canonical response is inserted before post-response proof/resume.
+Battle required-work completion calls the exact source; existing Sprite/Defeat
+work remains real. Genuine Sprite resolution now preserves physical_blow=True,
+so a declined interception can record real physical Harm. Interception itself
+does not prove harm or earn Punishment; source reopens if harm did not occur.
+Existing Sprite/Defeat/full privacy/retry normals remain deferred final checks.
+
+`tests/rules/test_easy_target.py::test_actual_npc_hurt_native_injury_newgirl_punishment_and_real_completion`:
+**1passed/4.43s first run**. Native original NPC urge/performance, actual Handler
+validation, Newgirl injury choice, true damage/Harm, original Newgirl quality-time
+Punishment selection, actual NPC/Handler scene/execution and real WorldTag/Bond/
+parent completion; private reopen/retry, no extra PC resource/dice use.
+
+Worker scoped Ruff/format/types PASS. Integrated15 Python/13 source preflight
+found only root Inbox label length and missing existing typed-row cast; repaired.
+Affected Inbox Ruff/format/types and test formatting PASS. No expanded gameplay
+matrix; full exact-candidate regression/global checks/independent/player review
+still pending. Exact selected hashes/logs retained under var/p1-records-npc-*.
+
+Final scoped preflight21 paths/15 Python/13 source: Ruff/format/types, whitespace,
+registry and planning PASS. Registry477/273 subset/204 unimplemented/440 required/
+0 verified; repository1419 publishable files/40 manifest entries/0 findings.
+These source/minimum checks are not the final full P1 regression.

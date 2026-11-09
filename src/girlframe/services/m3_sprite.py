@@ -661,6 +661,7 @@ class SpriteService:
                 chooser_controller=blow.chooser,
                 occurrence="sprite_resolution",
                 indirect=blow.indirect,
+                physical_blow=True,
                 allow_sprite=False,
             )
         if consume is not None and not (consume == "kill" and sprite is None):

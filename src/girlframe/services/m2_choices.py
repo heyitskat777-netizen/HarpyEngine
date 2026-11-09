@@ -383,6 +383,15 @@ class ChoiceEngine:
 
             apply_newgirl_sex(self.game, c, state, action, request, answer)
             return
+        if (
+            kind == "battle_target_damage"
+            and action["data"].get("easy_target")
+            and json.loads(request["body_json"]).get("easy_target_npc_hurt")
+        ):
+            from girlframe.services.m3_easy_target import apply_npc_hurt_damage
+
+            apply_npc_hurt_damage(self.game, c, state, action, request, answer)
+            return
         if kind.startswith("easy_target_") and action["data"].get("easy_target"):
             from girlframe.services.m3_easy_target import apply as apply_easy_target
 

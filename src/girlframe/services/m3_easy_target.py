@@ -504,7 +504,11 @@ def apply(
         if urge == "cohort" and (not primary or primary == rules.identity(source.id, actor)):
             raise WorkflowError("Choose the actual other person's primary reaction")
         if urge not in ("pass", "contempt", "cohort") and (
-            not answer.fields.get("play") or not answer.fields.get("context", "").strip()
+            (
+                not answer.fields.get("play")
+                and not (urge == "hurt" and actor.kind == "npc" and performer == actor)
+            )
+            or not answer.fields.get("context", "").strip()
         ):
             raise WorkflowError("Bind an appropriate real implemented Play and its actual trigger")
         value = rules.Reaction(
@@ -545,10 +549,41 @@ def apply(
             ).controller
             _request(game, c, action, owner, "easy_target_child", value)
         elif kind == "easy_target_child":
-            raise WorkflowError(
-                "REQUIRED_ACTUAL_PERFORMANCE: finish the genuine child Play "
-                "and its actual consequences"
-            )
+            if _npc_hurt_reaction(value):
+                if answer.options or answer.fields or answer.flag is not None:
+                    raise WorkflowError("Record only this actual NPC's performed bodily action")
+                _npc_hurt_context(game, c, state, value)
+                if any(
+                    x.reaction == value.id and not x.completed_event
+                    for x in rules.records(state, rules.NpcHurt)
+                ):
+                    raise WorkflowError("Finish the actual outstanding NPC injury first")
+                hurt = rules.NpcHurt(
+                    id=str(uuid4()),
+                    reaction=value.id,
+                    session=value.session,
+                    actor=value.actor,
+                    controller=value.controller,
+                    target=source.actor,
+                    handler=source.handler,
+                    cast=_cast(game, c, state, source.cast.channel),
+                    choice=row["id"],
+                    account=answer.text.strip(),
+                    event=event,
+                )
+                rules.put(state, hurt)
+                game.request(
+                    c,
+                    action,
+                    source.caster,
+                    "battle_target_damage",
+                    dict(easy_target_npc_hurt=hurt.id, work=value.id),
+                )
+            else:
+                raise WorkflowError(
+                    "REQUIRED_ACTUAL_PERFORMANCE: finish the genuine child Play "
+                    "and its actual consequences"
+                )
         elif kind == "easy_target_bond":
             if (
                 answer.flag is None
@@ -651,6 +686,490 @@ def apply(
 
 
 apply_choice = apply
+
+
+def _npc_hurt_reaction(value: rules.Reaction) -> bool:
+    return (
+        value.urge == "hurt"
+        and value.actor.kind == "npc"
+        and value.performer == value.actor
+        and value.play is None
+    )
+
+
+def _npc_hurt_context(
+    game: GameService, c: Connection, state: GameState, value: rules.Reaction
+) -> rules.Session:
+    """Current physical performance authority; never a grant of a PC Play."""
+    prove(game, c, state, value.id)
+    parent = game.action(c, value.session)
+    source = _session(game, c, state, parent)
+    if (
+        not _npc_hurt_reaction(value)
+        or not rules.settled(state, source)
+        or not value.validation_event
+        or value.child
+        or value.performance_event
+        or value.completed_event
+        or parent["state"] in ("complete", "aborted")
+        or current_ref(state, source.caster) != source.actor
+        or active_handler(state) != source.handler
+        or state.handler != source.handler_controller
+    ):
+        raise WorkflowError("Use this actual unperformed original NPC hurt source")
+    validation_row = next(
+        (
+            x
+            for x in c.execute(
+                sa.select(t.m2["m2_choices"]).where(
+                    t.m2["m2_choices"].c.campaign_id == game.store.campaign_id,
+                    t.m2["m2_choices"].c.action_id == source.id,
+                    t.m2["m2_choices"].c.kind == "easy_target_validate:" + value.actor.token,
+                )
+            ).mappings()
+            if json.loads(x["body_json"]).get("work") == value.id
+        ),
+        None,
+    )
+    if validation_row is None:
+        raise WorkflowError("Recover the original Handler's actual injury validation")
+    validation = _response(
+        game,
+        c,
+        source.id,
+        validation_row["id"],
+        value.validation_event,
+        source.handler_controller,
+        "easy_target_validate:" + value.actor.token,
+    )
+    if validation.flag is not True or not validation.text.strip():
+        raise WorkflowError("Preserve the original Handler's actual supported-injury account")
+    bound = profiles(c, game.store.campaign_id)
+    actor = resolve(state, value.actor, bound, require_current_profile=False)
+    target = _native(game, c, state, source.actor)
+    npc = (
+        next((x for x in state.world.npcs if x.id == value.actor.entity), None)
+        if state.world
+        else None
+    )
+    if (
+        npc is None
+        or npc.source_kind == "wyvern_wraith"
+        or actor.rules != "npc"
+        or not actor.alive
+        or actor.controller != value.controller
+        or actor.offstage_source is not None
+        or actor.custody not in (None, "free")
+        or target.inside_frame is not False
+        or actor.cell is None
+        or actor.cell != target.cell
+    ):
+        raise WorkflowError("Use the actual free present NPC and the original exposed Girl body")
+    scene = _cast(game, c, state, source.cast.channel)
+    departed = {
+        x.actor
+        for x in rules.records(state, rules.Reaction)
+        if x.session == source.id and x.departure_event
+    }
+    if (
+        scene.id != source.cast.id
+        or not scene.open
+        or scene.facilitator != source.cast.facilitator
+        or scene.roles != tuple(x for x in source.cast.roles if x.actor not in departed)
+    ):
+        raise WorkflowError("Preserve the actual original bodily-performance scene and controllers")
+    if any(
+        x.session == source.id and x.urge == "cohort" and x.primary == value.id
+        for x in rules.records(state, rules.Reaction)
+    ):
+        raise WorkflowError(
+            "REQUIRED_NPC_HURT_COHORT_ADAPTER: actual non-roll assistance is not a Tag roll"
+        )
+    return source
+
+
+def prove_npc_hurt(
+    game: GameService, c: Connection, state: GameState, identity: str
+) -> rules.NpcHurt:
+    hurt = _get(state, rules.NpcHurt, identity)
+    born = _history(c, game, hurt.event)
+    original = _get(born, rules.NpcHurt, identity)
+    value = prove(game, c, born, hurt.reaction)
+    source = _session(game, c, born, game.action(c, hurt.session))
+    immutable = (
+        "id",
+        "reaction",
+        "session",
+        "actor",
+        "controller",
+        "target",
+        "handler",
+        "cast",
+        "choice",
+        "account",
+        "event",
+    )
+    if (
+        any(getattr(hurt, key) != getattr(original, key) for key in immutable)
+        or not _npc_hurt_reaction(value)
+        or value.session != hurt.session
+        or value.actor != hurt.actor
+        or value.controller != hurt.controller
+        or hurt.target != source.actor
+        or hurt.handler != source.handler
+        or not value.validation_event
+    ):
+        raise WorkflowError("Recover the exact original actual NPC hurt performance")
+    answer = _response(
+        game,
+        c,
+        source.id,
+        hurt.choice,
+        hurt.event,
+        hurt.controller,
+        "easy_target_child:" + value.actor.token,
+    )
+    if (
+        answer.text.strip() != hurt.account
+        or answer.options
+        or answer.fields
+        or answer.flag is not None
+    ):
+        raise WorkflowError("Preserve the actual NPC controller's original performance account")
+    # Historical body proof grants no current account or scene authority.
+    from girlframe.services.m3_actor_history import snapshot_profiles
+
+    bound = snapshot_profiles(c, game.store.campaign_id, born)
+    actor = resolve(born, hurt.actor, bound, require_current_profile=False)
+    target = resolve(born, hurt.target, bound, require_current_profile=False)
+    if (
+        actor.rules != "npc"
+        or not actor.alive
+        or actor.controller != hurt.controller
+        or actor.offstage_source is not None
+        or actor.custody not in (None, "free")
+        or not target.alive
+        or target.inside_frame is not False
+        or actor.cell is None
+        or actor.cell != target.cell
+        or hurt.cast not in born.scene_casts
+        or hurt.cast.id != source.cast.id
+        or not any(
+            x.actor == hurt.actor and x.controller == hurt.controller for x in hurt.cast.roles
+        )
+    ):
+        raise WorkflowError("Prove the original real bodies, controller and source scene at birth")
+    if hurt.damage_event:
+        damaged = _get(_history(c, game, hurt.damage_event), rules.NpcHurt, hurt.id)
+        if (
+            hurt.asset != damaged.asset
+            or hurt.asset_choice != damaged.asset_choice
+            or hurt.damage_event != damaged.damage_event
+            or hurt.work != damaged.work
+        ):
+            raise WorkflowError("Preserve this actual injury and every original damage obligation")
+    elif hurt.asset or hurt.asset_choice or hurt.work:
+        raise WorkflowError("A real selected injury needs its canonical damage event")
+    return hurt
+
+
+def _npc_damage_row(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any], row: dict[str, Any]
+) -> rules.NpcHurt:
+    identity = json.loads(row["body_json"]).get("easy_target_npc_hurt")
+    hurt = prove_npc_hurt(game, c, state, identity or "")
+    source = _get(state, rules.Session, hurt.session)
+    if (
+        row["kind"] != "battle_target_damage"
+        or row["action_id"] != hurt.session
+        or action["id"] != hurt.session
+        or row["actor_id"] != str(source.caster)
+        or json.loads(row["body_json"]).get("work") != hurt.reaction
+        or hurt.damage_event
+        or hurt.completed_event
+    ):
+        raise WorkflowError("The actual original Newgirl owns this exact bodily injury selection")
+    _npc_hurt_context(game, c, state, _get(state, rules.Reaction, hurt.reaction))
+    return hurt
+
+
+def npc_hurt_damage_projection(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any], row: dict[str, Any]
+) -> dict[str, Any]:
+    hurt = _npc_damage_row(game, c, state, action, row)
+    actual = _native(game, c, state, hurt.target)
+    return dict(
+        kind="battle_target_damage",
+        target=hurt.target.model_dump(mode="json"),
+        assets=[
+            dict(id=x.id, name=x.name)
+            for x in actual.assets
+            if x.family == "girl" and not x.damaged
+        ],
+    )
+
+
+def apply_npc_hurt_damage(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    row: dict[str, Any],
+    answer: ChoiceAnswer,
+) -> None:
+    hurt = _npc_damage_row(game, c, state, action, row)
+    legal = npc_hurt_damage_projection(game, c, state, action, row)
+    if (
+        set(answer.fields) != {"asset"}
+        or answer.fields["asset"] not in {x["id"] for x in legal["assets"]}
+        or answer.options
+        or answer.text
+        or answer.flag is not None
+        or answer.denied
+        or answer.number is not None
+        or answer.member is not None
+    ):
+        raise WorkflowError("Select one actual legal undamaged Girl Asset through its owned choice")
+    event = action["data"]["response_event"]
+    hurt = hurt.model_copy(
+        update=dict(
+            asset=answer.fields["asset"],
+            asset_choice=row["id"],
+            damage_event=event,
+        )
+    )
+    rules.put(state, hurt)
+    # Publish only the actual pending response state within this transaction;
+    # canonical response/history are still required for later readback.
+    game.save_action(c, action)
+    from girlframe.services.m3_battle import damage_actor
+
+    changed, work = damage_actor(
+        game,
+        c,
+        state,
+        target=hurt.target,
+        asset_id=hurt.asset,
+        source_action=hurt.session,
+        source_work=hurt.id,
+        event=event,
+        actor=hurt.actor,
+        opponent=hurt.actor,
+        chooser_controller=hurt.controller,
+        occurrence="easy_target_npc_hurt:" + hurt.id,
+        physical_blow=True,
+    )
+    _copy(state, changed)
+    rules.put(state, hurt.model_copy(update=dict(work=work)))
+    _finish(game, c, state, action)
+
+
+def prove_npc_hurt_damage(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    hurt_id: str,
+    target: ActorRef,
+    asset: str | None,
+    event: str,
+    actor: ActorRef | None,
+    chooser_controller: int | None,
+) -> rules.NpcHurt:
+    hurt = _get(state, rules.NpcHurt, hurt_id)
+    selected_asset = hurt.asset
+    if selected_asset is None or hurt.asset_choice is None or hurt.damage_event is None:
+        raise WorkflowError("Prove the actual target-owned Girl Asset injury first")
+    staged = (
+        hurt.damage_event == event
+        and c.scalar(
+            sa.select(t.events.c.id).where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.id == event,
+            )
+        )
+        is None
+    )
+    # Birth must already be canonical even when the actual injury is being staged.
+    birth = _get(_history(c, game, hurt.event), rules.NpcHurt, hurt.id)
+    if staged:
+        prove_npc_hurt(game, c, _history(c, game, hurt.event), hurt.id)
+        if any(
+            getattr(hurt, key) != getattr(birth, key)
+            for key in (
+                "id",
+                "reaction",
+                "session",
+                "actor",
+                "controller",
+                "target",
+                "handler",
+                "cast",
+                "choice",
+                "account",
+                "event",
+            )
+        ):
+            raise WorkflowError("Preserve the canonical NPC performance before actual injury")
+        value = _get(state, rules.Reaction, hurt.reaction)
+        source = _npc_hurt_context(game, c, state, value)
+        row = (
+            c.execute(
+                sa.select(t.m2["m2_choices"]).where(
+                    t.m2["m2_choices"].c.campaign_id == game.store.campaign_id,
+                    t.m2["m2_choices"].c.id == hurt.asset_choice,
+                )
+            )
+            .mappings()
+            .first()
+        )
+        action = game.action(c, hurt.session)
+        selected = (
+            action["data"].get("choices", {}).get("battle_target_damage:" + str(source.caster))
+        )
+        if (
+            row is None
+            or row["state"] != "answered"
+            or row["action_id"] != hurt.session
+            or row["actor_id"] != str(source.caster)
+            or json.loads(row["body_json"]).get("easy_target_npc_hurt") != hurt.id
+            or action["data"].get("response_event") != event
+            or selected != ChoiceAnswer(fields={"asset": selected_asset}).model_dump(mode="json")
+        ):
+            raise WorkflowError(
+                "Prove the actual current target-owned injury response before effects"
+            )
+    else:
+        prove_npc_hurt(game, c, state, hurt.id)
+        if not hurt.damage_event or not hurt.asset_choice:
+            raise WorkflowError("Recover the real original NPC injury selection")
+        source = _get(_history(c, game, hurt.damage_event), rules.Session, hurt.session)
+        selected_answer = _response(
+            game,
+            c,
+            hurt.session,
+            hurt.asset_choice,
+            hurt.damage_event,
+            source.caster,
+            "battle_target_damage",
+        )
+        if selected_answer != ChoiceAnswer(fields={"asset": selected_asset}):
+            raise WorkflowError("Preserve the real Newgirl's exact selected injury")
+    if (
+        hurt.target != target
+        or hurt.asset != asset
+        or hurt.actor != actor
+        or hurt.controller != chooser_controller
+        or hurt.completed_event
+    ):
+        raise WorkflowError("Only this actual NPC performance grants this exact bodily injury")
+    return hurt
+
+
+def synchronize_npc_hurt(
+    game: GameService, c: Connection, action: dict[str, Any], event: str
+) -> None:
+    if not action["data"].get("easy_target"):
+        return
+    from girlframe.services.m3_battle import synchronize_damage
+
+    synchronize_damage(game, c, event)
+    state = load_state(c, game.store.campaign_id)
+    for hurt in rules.records(state, rules.NpcHurt):
+        if hurt.session != action["id"] or not hurt.damage_event or hurt.completed_event:
+            continue
+        _complete_npc_hurt(game, c, hurt, event)
+
+
+def _complete_npc_hurt(game: GameService, c: Connection, hurt: rules.NpcHurt, event: str) -> bool:
+    state = load_state(c, game.store.campaign_id)
+    hurt = prove_npc_hurt(game, c, state, hurt.id)
+    if hurt.completed_event:
+        return True
+    work = t.m3["m3_required_work"]
+    for identity in hurt.work:
+        row = (
+            c.execute(
+                sa.select(work)
+                .where(
+                    work.c.campaign_id == game.store.campaign_id,
+                    work.c.id == identity,
+                )
+                .order_by(work.c.revision.desc())
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
+        if row is None or row["state"] != "resolved":
+            return False
+    parent = game.action(c, hurt.session)
+    value = prove(game, c, state, hurt.reaction)
+    if value.performance_event or value.completed_event:
+        raise WorkflowError("Preserve the original single committed NPC hurt consequence")
+    harm = next(
+        (
+            x
+            for x in rules.records(state, rules.Harm)
+            if (
+                x.target == hurt.target
+                and x.opponent == hurt.actor
+                and x.source_work in (hurt.id, *hurt.work)
+                and x.source_action == hurt.session
+            )
+        ),
+        None,
+    )
+    effect_event = str(uuid4())
+    rules.put(state, hurt.model_copy(update=dict(completed_event=effect_event)))
+    if harm is None:
+        # A real intercepted blow never proves bodily hurt or a Punishment entitlement.
+        if not hurt.work:
+            raise WorkflowError("Complete actual bodily harm or its real interception first")
+        _request(game, c, parent, value.controller, "easy_target_child", value)
+    else:
+        value = value.model_copy(
+            update=dict(
+                performance_event=hurt.event,
+                consequence_event=effect_event,
+                harm=harm.id,
+            )
+        )
+        rules.put(state, value)
+        _consequence(game, c, state, parent, value, effect_event)
+    _finish(game, c, state, parent)
+    game.save_action(c, parent)
+    game.event(
+        c,
+        hurt.controller,
+        "easy-target-npc-hurt:" + hurt.id,
+        "m3.easy_target_npc_hurt_completed",
+        state,
+        event_id=effect_event,
+        work=hurt.reaction,
+        hurt=hurt.id,
+        source_event=event,
+        harmed=harm is not None,
+    )
+    if harm is not None:
+        from girlframe.services.m3_role_punishments import synchronize as sync_punishment
+
+        sync_punishment(game, c, parent, effect_event)
+    return True
+
+
+def complete_npc_hurt_work(
+    game: GameService, c: Connection, row: dict[str, Any], event: str
+) -> bool:
+    body = json.loads(row["body_json"])
+    identity = body.get("source_work")
+    state = load_state(c, game.store.campaign_id)
+    hurt = next((x for x in rules.records(state, rules.NpcHurt) if x.id == identity), None)
+    if hurt is None:
+        return False
+    if body.get("source_action") != hurt.session or row["id"] not in hurt.work:
+        raise WorkflowError("Complete only this original NPC hurt's exact damage work")
+    _complete_npc_hurt(game, c, hurt, event)
+    return True
 
 
 def _close(
@@ -1144,6 +1663,8 @@ def projection(
     ]
     return dict(
         kind=row["kind"].split(":")[0],
+        npc_reactor=bool(body.get("actor", {}).get("kind") == "npc"),
+        npc_hurt=bool(value and _npc_hurt_reaction(value)),
         roles=roles,
         urges=rules.choices(source) + (("pass",) if source.total >= 11 else ()),
         work=value.model_dump(mode="json") if value else None,
@@ -1222,6 +1743,11 @@ class EasyTargetService:
                 revision=state.revision,
                 work=value.model_dump(mode="json"),
                 source=source.model_dump(mode="json"),
+                npc_hurt=[
+                    prove_npc_hurt(self.game, c, state, x.id).model_dump(mode="json")
+                    for x in rules.records(state, rules.NpcHurt)
+                    if x.reaction == identity
+                ],
                 can_failure_tag=bool(
                     value.failure
                     and not value.completed_event

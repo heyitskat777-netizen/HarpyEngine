@@ -88,3 +88,49 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
         submit,
     )
     await reply(interaction, form.text(), form)
+
+
+async def open_records_source(
+    interaction: discord.Interaction, service: RecordsService, identity: str
+) -> None:
+    data = await asyncio.to_thread(
+        service.view_source, viewer_from_interaction(interaction), identity
+    )
+    if not data["can_prepare"]:
+        await reply(interaction, "Original Handler dossier source saved: " + data["phase"])
+        return
+
+    async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
+        await asyncio.to_thread(
+            service.prepare_document,
+            viewer_from_interaction(current),
+            str(current.id),
+            identity,
+            data["revision"],
+            values["document"],
+            values["reference"],
+            values["complete"] == ("yes",),
+        )
+        return (
+            "Complete factual dossier saved. Its original Pilot may confirm actual circuit access."
+        )
+
+    form = NativeForm(
+        interaction.user.id,
+        "Prepare actual Foundation records: " + data["subject"],
+        "Original Handler only: supply ALL actually recorded redacted/unredacted information. "
+        "Do not import private player notes or invent subject consent. Current complete-file "
+        "limit is 1200 characters; larger files require the separate document adapter. "
+        "The operator learns this file only after actually choosing Records on a legal result.",
+        [
+            Field("reference", "Actual complete file/reference", paragraph=True),
+            Field("document", "Complete unredacted file (max1200)", paragraph=True),
+            Field(
+                "complete",
+                "All actually recorded information is included",
+                (("yes", "Yes, complete and unredacted"),),
+            ),
+        ],
+        submit,
+    )
+    await reply(interaction, form.text(), form)

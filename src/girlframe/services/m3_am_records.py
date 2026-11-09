@@ -124,6 +124,49 @@ def prepare(
     )
 
 
+def prove_request_binding(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    maintenance: code.Maintenance,
+) -> rules.Access:
+    from girlframe.services.m3_am_scrutinized import _history
+
+    value = rules.access(state, maintenance.records_access or "")
+    born_state = _history(game, c, value.requested_event)
+    born = rules.access(born_state, value.id)
+    source = code.session(born_state, maintenance.id)
+    audit = (
+        c.execute(
+            sa.select(t.events).where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.id == value.requested_event,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    payload = json.loads(audit["payload_json"]) if audit else {}
+    if (
+        maintenance.operator.kind != "pilot"
+        or born.learner != maintenance.operator
+        or born.controller != maintenance.controller
+        or born.maintenance != maintenance.id
+        or born.phase != "requested"
+        or source.phase != "proposed"
+        or source.confirmed_event
+        or source.records_access != value.id
+        or source.operator != maintenance.operator
+        or audit is None
+        or audit["kind"] != "m3.am_records_requested"
+        or audit["actor_id"] != str(maintenance.controller)
+        or payload.get("maintenance") != maintenance.id
+        or payload.get("records") != value.id
+    ):
+        raise WorkflowError("Prove the actual original Pilot's intended-subject request")
+    return value
+
+
 def prove(game: GameService, c: Connection, state: GameState, identity: str) -> rules.Access:
     from girlframe.services.m3_am_scrutinized import _history
 
@@ -132,6 +175,16 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
     frozen = ("id", "maintenance", "subject", "label", "learner", "controller", "requested_event")
     if any(getattr(value, x) != getattr(original, x) for x in frozen):
         raise WorkflowError("Recover the exact original requested subject/learner")
+    pilot = value.learner.kind == "pilot"
+    if pilot:
+        prove_request_binding(game, c, state, code.session(state, value.maintenance))
+    if (
+        value.granted_event
+        or value.question_event
+        or value.answer_event
+        or value.phase in ("prepared", "granted", "answered")
+    ) and not value.prepared_event:
+        raise WorkflowError("Recover the actual complete pre-RNG dossier source")
     if value.prepared_event:
         ready = rules.access(_history(game, c, value.prepared_event), identity)
         event = c.execute(
@@ -142,7 +195,7 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         ).first()
         if (
             event is None
-            or event.kind != "m3.am_code_confirmed"
+            or event.kind != ("m3.am_records_prepared" if pilot else "m3.am_code_confirmed")
             or event.actor_id != str(value.gm)
             or any(
                 getattr(value, x) != getattr(ready, x)
@@ -155,6 +208,18 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
             raise WorkflowError(
                 "Recover the actual complete source-Handler dossier, not a later summary"
             )
+        if pilot:
+            from girlframe.engine.m3_handler_consequences import same_handler_body
+            from girlframe.services.m3_am_body import _appointment_at, _source_handler
+
+            prepared_state = _history(game, c, value.prepared_event)
+            handler = _source_handler(game, c, code.session(prepared_state, value.maintenance))
+            if (
+                value.gm != int(handler.entity)
+                or not same_handler_body(prepared_state, handler)
+                or _appointment_at(game, c, value.prepared_event, handler) != value.appointment
+            ):
+                raise WorkflowError("Preserve the original real Handler's dossier source context")
     if value.granted_event:
         saved = rules.access(_history(game, c, value.granted_event), identity)
         responses = t.m2["m2_responses"]
@@ -224,11 +289,29 @@ def ready(game: GameService, c: Connection, state: GameState, value: code.Mainte
         record = prove(game, c, state, value.records_access)
         if (
             record.phase != "prepared"
-            or record.prepared_event != value.confirmed_event
+            or (record.learner.kind != "pilot" and record.prepared_event != value.confirmed_event)
             or record.maintenance != value.id
             or record.learner != value.operator
         ):
             raise WorkflowError("Prepare the actual complete dossier before this source can roll")
+        if record.learner.kind == "pilot":
+            events = t.events
+            prepared_seq = c.scalar(
+                sa.select(events.c.seq).where(
+                    events.c.campaign_id == game.store.campaign_id,
+                    events.c.id == record.prepared_event,
+                )
+            )
+            confirmed_seq = c.scalar(
+                sa.select(events.c.seq).where(
+                    events.c.campaign_id == game.store.campaign_id,
+                    events.c.id == value.confirmed_event,
+                )
+            )
+            if not prepared_seq or not confirmed_seq or prepared_seq >= confirmed_seq:
+                raise WorkflowError(
+                    "The actual Handler dossier must precede real circuit confirmation"
+                )
 
 
 def grant(state: GameState, value: code.Maintenance, event: str) -> None:
@@ -270,6 +353,8 @@ def apply(
     ):
         raise WorkflowError("Write the actual one question or the honest source-Handler answer")
     if row["kind"] == "am_code_records_question":
+        if row["actor_id"] != str(record.controller):
+            raise WorkflowError("Only the actual original operator asks this question")
         if record.phase != "granted" or record.question_event or answer.flag is not None:
             raise WorkflowError("The actual operator asks exactly one original question")
         rules.put(state, record.model_copy(update=dict(question=answer.text, question_event=event)))
@@ -283,13 +368,20 @@ def apply(
 
     human, appointment = MedicalService(game.store)._handler(c)
     if (
-        human != record.gm
+        row["actor_id"] != str(record.gm)
+        or human != record.gm
         or appointment != record.appointment
         or not record.question_event
         or record.answer_event
         or record.phase != "granted"
     ):
         raise WorkflowError("Use the original actual records-Handler and unanswered question")
+    if record.learner.kind == "pilot":
+        from girlframe.engine.m3_handler_consequences import same_handler_body
+        from girlframe.services.m3_am_body import _source_handler
+
+        if not same_handler_body(state, _source_handler(game, c, value)):
+            raise WorkflowError("Only the actual original Handler answers this records source")
     rules.put(
         state,
         record.model_copy(
@@ -321,6 +413,195 @@ def projection(
 class RecordsService:
     def __init__(self, game: GameService):
         self.game, self.store = game, game.store
+
+    def request(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        maintenance: str,
+        expected: int,
+        subject: ActorRef,
+    ) -> dict[str, Any]:
+        def change(c: Connection) -> dict[str, Any]:
+            from girlframe.services.m3_am_code import actual, source
+
+            self.game.unpaused(c)
+            state = load_state(c, self.store.campaign_id)
+            value = source(self.game, c, state, maintenance)
+            actual(self.game, c, state, value)
+            if (
+                viewer.user_id != value.controller
+                or value.operator.kind != "pilot"
+                or value.phase != "proposed"
+                or value.records_access
+                or state.revision != expected
+                or self.game.pending_actions(c)
+            ):
+                raise WorkflowError(
+                    "The actual Pilot requests one intended subject before confirmation"
+                )
+            event = str(uuid4())
+            identity = request(self.game, c, state, value, subject, event)
+            code.put(state, value.model_copy(update=dict(records_access=identity)))
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.am_records_requested",
+                state,
+                event_id=event,
+                maintenance=value.id,
+                records=identity,
+            )
+            return dict(id=identity)
+
+        from girlframe.services.m3_am_code import access
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.am_records_request",
+            dict(
+                maintenance=maintenance,
+                expected=expected,
+                subject=subject.model_dump(mode="json"),
+            ),
+            change,
+            auto_audit=False,
+            authorize=lambda c: access(self.game, c, viewer),
+        )
+
+    def prepare_document(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        expected: int,
+        document: str,
+        reference: str,
+        complete: bool,
+    ) -> dict[str, Any]:
+        def change(c: Connection) -> dict[str, Any]:
+            from girlframe.engine.m3_handler_consequences import same_handler_body
+            from girlframe.services.m3_am_body import _source_handler
+            from girlframe.services.m3_am_code import source
+            from girlframe.services.m3_medical import MedicalService
+
+            self.game.unpaused(c)
+            state = load_state(c, self.store.campaign_id)
+            record = prove(self.game, c, state, identity)
+            value = source(self.game, c, state, record.maintenance)
+            handler = _source_handler(self.game, c, value)
+            human, appointment = MedicalService(self.store)._handler(c)
+            if (
+                record.learner.kind != "pilot"
+                or record.phase != "requested"
+                or value.phase != "proposed"
+                or value.confirmed_event
+                or viewer.user_id != human
+                or human != int(handler.entity)
+                or not same_handler_body(state, handler)
+                or state.revision != expected
+                or complete is not True
+                or not document.strip()
+                or len(document) > 1200
+                or not reference.strip()
+                or len(reference) > 1200
+            ):
+                raise WorkflowError(
+                    "The original Handler supplies the complete actual unredacted file"
+                )
+            event = str(uuid4())
+            rules.put(
+                state,
+                record.model_copy(
+                    update=dict(
+                        phase="prepared",
+                        prepared_event=event,
+                        gm=human,
+                        appointment=appointment,
+                        document=document,
+                        reference=reference,
+                    )
+                ),
+            )
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.am_records_prepared",
+                state,
+                event_id=event,
+                records=identity,
+                maintenance=value.id,
+            )
+            return dict(id=identity)
+
+        from girlframe.services.m3_am_code import access
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.am_records_prepare",
+            dict(
+                id=identity,
+                expected=expected,
+                document=document,
+                reference=reference,
+                complete=complete,
+            ),
+            change,
+            auto_audit=False,
+            authorize=lambda c: access(self.game, c, viewer),
+        )
+
+    def view_source(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
+        from girlframe.services.m3_am_body import _source_handler
+        from girlframe.services.m3_am_code import access
+
+        with self.store.engine.connect() as c:
+            access(self.game, c, viewer)
+            state = load_state(c, self.store.campaign_id)
+            record = prove(self.game, c, state, identity)
+            maintenance = code.session(state, record.maintenance)
+            handler = _source_handler(self.game, c, maintenance)
+            if viewer.user_id != int(handler.entity):
+                raise WorkflowError(
+                    "This factual dossier source belongs to its actual original Handler"
+                )
+            return dict(
+                id=identity,
+                revision=state.revision,
+                subject=record.label,
+                phase=record.phase,
+                can_prepare=record.phase == "requested",
+                document=record.document,
+                reference=record.reference,
+            )
+
+    def _tasks(self, c: Connection, viewer: GuildViewer) -> list[dict[str, Any]]:
+        from girlframe.services.m3_am_body import _source_handler
+
+        self.game.authorize(c, viewer, game=False)
+        state = load_state(c, self.store.campaign_id)
+        result = []
+        for record in rules.records(state):
+            if record.learner.kind != "pilot" or record.phase != "requested":
+                continue
+            maintenance = code.session(state, record.maintenance)
+            if _source_handler(self.game, c, maintenance).entity == str(viewer.user_id):
+                prove(self.game, c, state, record.id)
+                result.append(
+                    dict(
+                        kind="am_records_prepare",
+                        id=record.id,
+                        revision=state.revision,
+                        phase="requested",
+                        pending=True,
+                        label="Prepare actual Pilot Foundation dossier",
+                    )
+                )
+        return result
 
     def document(self, viewer: GuildViewer, identity: str) -> dict[str, Any]:
         with self.store.engine.connect() as c:

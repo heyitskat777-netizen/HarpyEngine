@@ -5204,6 +5204,11 @@ class GameService:
                     event_id=event,
                 )
             )
+            if action["data"].get("easy_target"):
+                from girlframe.services.m3_easy_target import synchronize_npc_hurt
+
+                synchronize_npc_hurt(self, c, self.action(c, action["id"]), event)
+                action = self.action(c, action["id"])
             if action["data"].get("alpha_sex_counter_source"):
                 from girlframe.services.m3_alpha_sex import synchronize_counters as sex_counters
 
@@ -6437,6 +6442,25 @@ class GameService:
                     channel=int(action["channel_id"]),
                     play=action["data"]["play"],
                     detail=newgirl_sex_projection(
+                        self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                    ),
+                )
+            if (
+                row["kind"] == "battle_target_damage"
+                and action["data"].get("easy_target")
+                and json.loads(row["body_json"]).get("easy_target_npc_hurt")
+            ):
+                from girlframe.services.m3_easy_target import authorize as easy_target_authorize
+                from girlframe.services.m3_easy_target import npc_hurt_damage_projection
+
+                easy_target_authorize(self, c, viewer, action)
+                return dict(row) | dict(
+                    body=json.loads(row["body_json"]),
+                    actor=int(action["actor_id"]),
+                    parent=action["id"],
+                    channel=int(action["channel_id"]),
+                    play=action["data"]["play"],
+                    battle=npc_hurt_damage_projection(
                         self, c, load_state(c, self.store.campaign_id), action, dict(row)
                     ),
                 )

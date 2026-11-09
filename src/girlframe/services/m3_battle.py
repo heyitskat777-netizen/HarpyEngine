@@ -1625,6 +1625,8 @@ def damage_actor(
     from girlframe.engine.m3_ankou import records as ankou_records
     from girlframe.engine.m3_changeling import Fingers as ChangelingFingers
     from girlframe.engine.m3_changeling import records as changeling_records
+    from girlframe.engine.m3_easy_target import NpcHurt
+    from girlframe.engine.m3_easy_target import records as easy_target_records
     from girlframe.engine.m3_wyvern import RousedUse
     from girlframe.engine.m3_wyvern import records as wyvern_records
 
@@ -1679,6 +1681,12 @@ def damage_actor(
             != resolve(state, touch.actor, bound, require_current_profile=False).controller
         ):
             raise WorkflowError("Damage only the original Relay user's selected real Asset")
+    elif source_work and any(x.id == source_work for x in easy_target_records(state, NpcHurt)):
+        from girlframe.services.m3_easy_target import prove_npc_hurt_damage
+
+        prove_npc_hurt_damage(
+            game, c, state, source_work, target, asset_id, event, actor, chooser_controller
+        )
     elif actor is not None:
         frozen_original = False
         if source_action and actor.kind == "pilot" and rules.original_ended(state, actor):
@@ -2388,6 +2396,10 @@ def complete_damage_work(
             from girlframe.services.m3_enforcement_initiative import complete_director_consequence
 
             complete_director_consequence(game, c, action, dict(latest), event, viewer, key)
+        elif action["data"].get("easy_target") and body.get("source_work"):
+            from girlframe.services.m3_easy_target import complete_npc_hurt_work
+
+            complete_npc_hurt_work(game, c, dict(latest), event)
         elif action["data"].get("newgirl_sex"):
             from girlframe.services.m3_newgirl_sex import synchronize as synchronize_newgirl_sex
 

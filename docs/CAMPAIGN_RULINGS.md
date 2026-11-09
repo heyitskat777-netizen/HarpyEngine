@@ -3084,7 +3084,7 @@ Rationale: The option names the operator as choice owner and grants record knowl
 
 Alternatives: Give the AM or subject an automatic transcript.; Allow an invented summary to stand for all recorded information.
 
-Change impact: Current implementation is bounded to genuinely complete <=1200 dossiers and original same-human GM/operator roles; larger/independent-role sources remain implementation gaps, not house rules restricting the printed scope.
+Change impact (P1 revision2): Independent Pilot operator and original Handler are now separate source roles. The actual Pilot requests the intended subject and the Handler supplies the complete fictional dossier in its own private event before RNG; later actual result/Records selection alone grants private access. This factual preparation timing follows the existing source protocol and grants no subject veto, consent or early access. The operator owns the one question; the original Handler supplies its separate honest answer. Existing same-human NPC source records remain valid. Genuinely complete <=1200 dossiers remain the existing implementation bound; larger-dossier support remains a named gap, not a house rule restricting printed records. Preserve old source events and privately granted knowledge when changing this interpretation.
 
 ### `budget-storage-owned-warning-then-firing`
 

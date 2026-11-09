@@ -20,6 +20,13 @@ async def open_choice(
         decision = await asyncio.to_thread(
             game.decision, viewer_from_interaction(interaction), decision
         )
+    if decision["kind"] == "battle_target_damage" and decision.get("body", {}).get(
+        "easy_target_npc_hurt"
+    ):
+        from girlframe.discord_adapter.m3_battle import open_battle
+
+        await open_battle(interaction, game, decision["id"])
+        return
     detail = decision.get("detail") or decision["easy_target"]
     kind = detail["kind"]
     if kind == "easy_target_child":
@@ -31,7 +38,7 @@ async def open_choice(
                 "positive Tag modifier. This obligation closes only when it is applied.",
             )
             return
-        if work["urge"] == "hurt":
+        if work["urge"] == "hurt" and not detail.get("npc_hurt"):
             from girlframe.discord_adapter.m3_battle import open_declaration
             from girlframe.services.m3_battle import BattleService
 
@@ -45,10 +52,11 @@ async def open_choice(
             )
             await open_declaration(interaction, BattleService(game.store), parent=parent)
             return
-        from girlframe.discord_adapter.m2_ui import open_play
+        if not detail.get("npc_hurt"):
+            from girlframe.discord_adapter.m2_ui import open_play
 
-        await open_play(interaction, game, parent=decision)
-        return
+            await open_play(interaction, game, parent=decision)
+            return
     fields: list[Field] = []
     if kind == "easy_target_select":
         fields.append(
@@ -139,6 +147,8 @@ async def open_choice(
         specific = {x: values[x][0] for x in ("primary", "play") if values.get(x)}
         if values.get("context"):
             specific["context"] = values["context"]
+        if kind == "easy_target_react" and detail.get("npc_reactor") and options == ("hurt",):
+            specific.pop("play", None)
         await asyncio.to_thread(
             game.respond,
             viewer_from_interaction(current),
@@ -157,7 +167,16 @@ async def open_choice(
     form = NativeForm(
         interaction.user.id,
         "Easy Target",
-        "Actual fictional urge and performed consequences; OOC pause remains available.",
+        (
+            "Record the actual NPC's bodily action you performed. The original Newgirl "
+            "then selects the actual Girl Asset injury; physical interception and all "
+            "ordinary consequences remain real. This is not a PC Play or a roll."
+            if kind == "easy_target_child" and detail.get("npc_hurt")
+            else "Validate the actual supported one-Asset bodily injury and physical source; "
+            "this account cannot invent harm, an NPC roll, or damage an inaccessible body."
+            if kind == "easy_target_validate" and detail.get("npc_hurt")
+            else "Actual fictional urge and performed consequences; OOC pause remains available."
+        ),
         fields,
         submit,
     )
@@ -204,6 +223,14 @@ async def open_easy_target(
             await open_choice(interaction, service.game, shown["pending"][0]["id"])
             return
         work = shown["work"]
+        history = "".join(
+            "\nNPC performance: "
+            + x["account"]
+            + "\nInjury: "
+            + (x["asset"] or "waiting for actual owned selection")
+            + ("; actual attempt resolved" if x["completed_event"] else "; pending")
+            for x in shown.get("npc_hurt", ())
+        )
         await reply(
             interaction,
             work["urge"]
@@ -217,7 +244,8 @@ async def open_easy_target(
                     if work["protection_event"]
                     else "Waiting for actual required performance"
                 )
-            ),
+            )
+            + history,
         )
         return
     data = await asyncio.to_thread(service.menu, viewer, int(interaction.channel_id or 0))

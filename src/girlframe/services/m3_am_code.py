@@ -64,11 +64,20 @@ def _prove_maintenance(
         "frame",
         "cell",
         "order_scope",
-        "records_access",
         "new_operator",
     )
     if any(getattr(value, x) != getattr(old, x) for x in stable):
         raise WorkflowError("Recover the actual original maintenance participants/body source")
+    if value.records_access != old.records_access:
+        from girlframe.services.m3_am_records import prove_request_binding
+
+        if (
+            old.records_access is not None
+            or value.operator.kind != "pilot"
+            or not value.records_access
+        ):
+            raise WorkflowError("Preserve the original intended-record source")
+        prove_request_binding(game, c, state, value)
     if value.new_operator:
         if value.discovery:
             raise WorkflowError("Preserve the actual first-time circuit source")
@@ -234,8 +243,28 @@ def authorize(
     meta = action["data"]["am_code"]
     value = source(game, c, state, meta["maintenance"])
     actual(game, c, state, value)
-    if viewer.user_id not in meta["table"] or value.action != action["id"]:
-        raise WorkflowError("Only the actual original maintenance table owns this source")
+    record_answer = False
+    if value.records_access:
+        from girlframe.services.m3_am_records import prove as prove_records
+
+        record = prove_records(game, c, state, value.records_access)
+        choices = t.m2["m2_choices"]
+        record_answer = bool(
+            record.gm == viewer.user_id
+            and record.question_event
+            and record.phase == "granted"
+            and c.scalar(
+                sa.select(choices.c.id).where(
+                    choices.c.campaign_id == game.store.campaign_id,
+                    choices.c.action_id == action["id"],
+                    choices.c.actor_id == str(viewer.user_id),
+                    choices.c.kind == "am_code_records_answer",
+                    choices.c.state == "pending",
+                )
+            )
+        )
+    if value.action != action["id"] or (viewer.user_id not in meta["table"] and not record_answer):
+        raise WorkflowError("Only the actual source table or its owed original Handler answers")
 
 
 def prepare(
@@ -399,11 +428,7 @@ def apply(
 
     value = rules.session(state, action["data"]["am_code"]["maintenance"])
     event = action["data"]["response_event"]
-    if value.operator.kind == "pilot" and request["kind"] in (
-        "am_code_branch",
-        "am_code_records_question",
-        "am_code_records_answer",
-    ):
+    if value.operator.kind == "pilot" and request["kind"] == "am_code_branch":
         raise WorkflowError(
             "SOURCE_OPERATOR_ADAPTER_REQUIRED: actual GM records/branch source is unavailable"
         )
@@ -623,7 +648,7 @@ def projection(
 
 def ready_options(value: rules.Maintenance) -> tuple[str, ...]:
     if value.operator.kind == "pilot":
-        return ("identities", "backup", "body")
+        return ("identities", "backup", "body") + (("records",) if value.records_access else ())
     return ("identities", "backup", "body", "branch") + (
         ("records",) if value.records_access else ()
     )
@@ -977,17 +1002,30 @@ class CodeService:
             event, identity_root = str(uuid4()), str(uuid4())
             if value.records_access:
                 from girlframe.services.m3_am_records import prepare as prepare_records
+                from girlframe.services.m3_am_records import prove as prove_records
 
-                prepare_records(
-                    self.game,
-                    c,
-                    state,
-                    value,
-                    event,
-                    records_document,
-                    records_reference,
-                    records_complete,
-                )
+                if value.operator.kind == "pilot":
+                    record = prove_records(self.game, c, state, value.records_access)
+                    if (
+                        record.phase != "prepared"
+                        or records_document is not None
+                        or records_reference is not None
+                        or records_complete
+                    ):
+                        raise WorkflowError(
+                            "The original Handler prepares the complete dossier separately"
+                        )
+                else:
+                    prepare_records(
+                        self.game,
+                        c,
+                        state,
+                        value,
+                        event,
+                        records_document,
+                        records_reference,
+                        records_complete,
+                    )
             elif records_document is not None or records_reference is not None or records_complete:
                 raise WorkflowError("This actual maintenance has no records request")
             scene = self.game.scene(c, value.cast.channel)
@@ -1185,7 +1223,7 @@ class CodeService:
                 if viewer.user_id in (x.owner, x.controller) and x.cast.channel == channel
             ]
             from girlframe.engine.m3_am_records import records as saved_records
-            from girlframe.services.m3_am_records import subjects
+            from girlframe.services.m3_am_records import RecordsService, subjects
 
             documents = []
             for record in saved_records(state):
@@ -1218,6 +1256,7 @@ class CodeService:
                 sessions=values,
                 subjects=subjects(self.game, c, state),
                 documents=documents,
+                records_prepare=RecordsService(self.game)._tasks(c, viewer),
                 backups=saved_backups,
             )
 

@@ -357,6 +357,146 @@ def test_mid_hurt_real_body_damage_actual_newgirl_selected_and_executed_punishme
     assert controls.view(PLAYER, work)["work"]["completed_event"]
 
 
+def test_actual_npc_hurt_native_injury_newgirl_punishment_and_real_completion(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred: an actual NPC performs without a PC Action, resource grant or roll."""
+    from girlframe.discord_adapter.m3_easy_target import open_choice, open_easy_target
+    from girlframe.services.m3_easy_target import prove_npc_hurt
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, mixed=True)
+    npc = ActorRef(kind="npc", entity="bystander")
+    identity = source(game, worker, gateway, selected=npc)
+    work = rules.identity(identity, npc)
+    calls = game.dice.calls
+    original_receipt = game.inspect(PLAYER, identity)["receipt"]
+    original_resources = state(game).sheets["3"].model_copy(deep=True)
+
+    async def native(user, row, values, interaction_id):
+        opened = current(user, interaction_id)
+        opened.channel_id = 900
+        await opened.response.defer(ephemeral=True)
+        await open_choice(
+            opened, game, game.decision({1: ADMIN, 2: PLAYER, 3: OTHER}[user], row["id"])
+        )
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values.update(values)
+        submitted = current(user, interaction_id + 1)
+        submitted.channel_id = 900
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+
+    reaction = next(x for x in game.choices(OTHER) if x["kind"] == "easy_target_react:" + npc.token)
+    asyncio.run(
+        native(
+            3,
+            reaction,
+            dict(
+                urge=("hurt",),
+                context="I strike her actual exposed body with my fists",
+                account="PRIVATE_NPC_URGE My actual NPC chooses bodily hurt",
+            ),
+            99100,
+        )
+    )
+    actual = rules.get(state(game), rules.Reaction, work)
+    assert actual.performer == npc and actual.play is None
+    validation = next(
+        x for x in game.choices(ADMIN) if x["kind"] == "easy_target_validate:" + npc.token
+    )
+    asyncio.run(
+        native(
+            1,
+            validation,
+            dict(
+                yes=("yes",),
+                account="I adjudicate this real fists strike as one actual Girl Asset injury",
+            ),
+            99110,
+        )
+    )
+    perform = next(x for x in game.choices(OTHER) if x["kind"] == "easy_target_child:" + npc.token)
+    before = state(game)
+    asyncio.run(
+        native(
+            3,
+            perform,
+            dict(
+                account="PRIVATE_NPC_PERFORMANCE I actually hit her exposed body with my fists",
+            ),
+            99120,
+        )
+    )
+    hurt = rules.records(state(game), rules.NpcHurt)[-1]
+    assert hurt.actor == npc and hurt.controller == 3 and hurt.target == current_ref(state(game), 2)
+    assert not hurt.damage_event and not rules.records(state(game), rules.Harm)
+    assert all(
+        x.damaged == y.damaged
+        for x, y in zip(before.sheets["2"].assets, state(game).sheets["2"].assets, strict=True)
+    )
+    row = next(x for x in game.choices(PLAYER) if x["kind"] == "battle_target_damage")
+    with pytest.raises(WorkflowError):
+        game.decision(OTHER, row["id"])
+    asset = game.decision(PLAYER, row["id"])["battle"]["assets"][0]["id"]
+    asyncio.run(native(2, row, dict(asset=(asset,)), 99130))
+    actual = state(game)
+    assert next(x for x in actual.sheets["2"].assets if x.id == asset).damaged
+    assert actual.sheets["3"] == original_resources and game.dice.calls == calls
+    reaction = rules.get(actual, rules.Reaction, work)
+    assert reaction.harm and reaction.performance_event and not reaction.completed_event
+    assert game.inspect(PLAYER, identity)["state"] != "complete"
+    with ledger.engine.connect() as c:
+        saved = prove_npc_hurt(game, c, actual, hurt.id)
+        assert saved.asset == asset and saved.completed_event and saved.asset_choice == row["id"]
+        harm = rules.get(actual, rules.Harm, reaction.harm)
+        assert (
+            harm.opponent == npc and harm.source_work == hurt.id and harm.source_action == identity
+        )
+    case = next(x for x in actual.role_punishments if x.id == reaction.consequence)
+    assert case.subject == npc and case.chooser == current_ref(actual, 2)
+    assert case.executor == current_ref(actual, 1) and case.source_work == work
+    role = RolePunishmentService(game)
+
+    def change(viewer, **values):
+        return role.change(
+            viewer, str(uuid4()), case.id, role.get(viewer, case.id)["revision"], **values
+        )
+
+    details = Details(kind="quality_time", tag="The actual Newgirl's chosen NPC consequence")
+    change(
+        PLAYER, instruction=Instruction(kind=details.kind, details_json=details.model_dump_json())
+    )
+    change(ADMIN, scene="The actual Handler carries out the chosen NPC quality-time scene")
+    change(OTHER, attest=True)
+    change(
+        ADMIN, execute=True, account="I actually perform the original Newgirl's chosen consequence"
+    )
+    actual = state(game)
+    tagged = next(x for x in actual.world.npcs if x.id == npc.entity)
+    assert any(x.label == details.tag for x in tagged.tags)
+    assert depth(actual, npc, current_ref(actual, 1)) > 0
+    assert controls.view(PLAYER, work)["work"]["completed_event"]
+    assert game.inspect(PLAYER, identity)["state"] == "complete"
+    assert (
+        game.inspect(PLAYER, identity)["receipt"] == original_receipt and game.dice.calls == calls
+    )
+    with pytest.raises(WorkflowError):
+        controls.view(GuildViewer(9, 200, True, False), work)
+
+    async def reopen():
+        opened = current(3, 99150)
+        opened.channel_id = 999
+        await opened.response.defer(ephemeral=True)
+        await open_easy_target(opened, controls, work)
+        shown = str(opened.edit_original_response.call_args)
+        assert hurt.account in shown and asset in shown
+
+    asyncio.run(reopen())
+
+
 def test_high_each_actual_person_optional_cohort_real_assistance_and_exact_departure(
     ledger, tmp_path, monkeypatch
 ):

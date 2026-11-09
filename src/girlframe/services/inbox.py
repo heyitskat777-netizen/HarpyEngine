@@ -2146,6 +2146,22 @@ class InboxService:
                     )
                 )
 
+            from girlframe.services.m3_am_records import RecordsService
+
+            for record in RecordsService(GameService(self.store))._tasks(connection, viewer):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, record),
+                        prefix="am-records:",
+                        source="am_records_prepare",
+                        counterpart="Original circuit Handler",
+                        effect="Prepare the intended subject's fictional Foundation dossier.",
+                        details="Access requires the actual Code result and Records choice.",
+                        primary="Prepare Foundation records",
+                        task="m3_am_records_source",
+                    )
+                )
+
             from girlframe.services.m3_am_code import CodeService
 
             for maintenance in CodeService(GameService(self.store))._tasks(connection, viewer):

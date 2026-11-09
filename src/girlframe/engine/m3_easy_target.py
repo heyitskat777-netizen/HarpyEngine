@@ -68,10 +68,32 @@ class Harm(Model):
     after: str
 
 
+class NpcHurt(Model):
+    """One actual NPC bodily performance, followed by a real owned injury choice."""
+
+    id: str
+    reaction: str
+    session: str
+    actor: ActorRef
+    controller: int
+    target: ActorRef
+    handler: ActorRef
+    cast: SceneCast
+    choice: str
+    account: str
+    event: str
+    asset: str | None = None
+    asset_choice: str | None = None
+    damage_event: str | None = None
+    work: tuple[str, ...] = ()
+    completed_event: str | None = None
+
+
 KINDS: dict[type[Model], str] = {
     Session: "easy_target_session",
     Reaction: "easy_target_reaction",
     Harm: "easy_target_harm",
+    NpcHurt: "easy_target_npc_hurt",
 }
 
 
