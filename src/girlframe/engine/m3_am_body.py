@@ -74,6 +74,7 @@ class Swap(Model):
     event: str
     returned_event: str | None = None
     carried_items: tuple[str, ...] = Field(default=(), exclude_if=lambda value: not value)
+    neural_route: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class Conveyance(Model):
@@ -387,6 +388,7 @@ def transfer(
     *,
     carried_items: tuple[str, ...] = (),
     carry_account: str | None = None,
+    neural_route: str | None = None,
 ) -> Swap:
     old = _pose(state, value.actor)
     source = next((x for x in preparations(state) if x.id == preparation), None)
@@ -420,7 +422,17 @@ def transfer(
     portable = carried_assets(state, value.actor, carried_items)
     if set(source.spec.mind_assets) & {x.id for x in portable}:
         raise ValueError("A physical object cannot follow the mind without actual conveyance")
-    _ordinary(state, value.actor, mind + source.spec.assets + portable, carried_items=carried_items)
+    from girlframe.engine.m3_am_neural_route import retained_mental_assets
+
+    retained = retained_mental_assets(state, value.actor, neural_route) if neural_route else ()
+    _ordinary(
+        state,
+        value.actor,
+        mind + source.spec.assets + portable + retained,
+        carried_items=carried_items,
+        neural_route=neural_route,
+        destination=source.spec.vessel,
+    )
     if carried_items and (not carry_account or not carry_account.strip()):
         raise ValueError("Record actual physical conveyance before changing occupied bodies")
     old_body = _body(
@@ -441,6 +453,7 @@ def transfer(
         + list(mind)
         + list(source.spec.assets)
         + list(portable)
+        + list(retained)
     )
     sheet.medical_state = source.spec.medical
     sheet.revision += 1
@@ -479,6 +492,7 @@ def transfer(
         new_vessel=new.vessel_id,
         mind_assets=source.spec.mind_assets,
         carried_items=carried_items,
+        neural_route=neural_route,
         original_pose=old,
         active_pose=new,
         event=event,
@@ -557,6 +571,11 @@ def return_to_origin(
     sheet = state.sheets[value.actor.entity]
     prep = next(x for x in preparations(state) if x.id == value.preparation)
     portable = carried_assets(state, value.actor, carried_items)
+    from girlframe.engine.m3_am_neural_route import retained_mental_assets
+
+    retained = (
+        retained_mental_assets(state, value.actor, value.neural_route) if value.neural_route else ()
+    )
     if (
         value.returned_event
         or not event
@@ -567,13 +586,25 @@ def return_to_origin(
         or pose.girl_cell != old.cell
         or old.occupant is not None
         or {x.id for x in sheet.assets if x.family == "girl"}
-        != set(value.mind_assets) | {x.id for x in prep.spec.assets} | {x.id for x in portable}
+        != (
+            set(value.mind_assets)
+            | {x.id for x in prep.spec.assets}
+            | {x.id for x in portable}
+            | {x.id for x in retained}
+        )
     ):
         raise ValueError(
             "Return only while this actual original pair is still hooked up and colocated"
         )
     mind = tuple(x for x in sheet.assets if x.id in value.mind_assets)
-    _ordinary(state, value.actor, mind + old.assets + portable, carried_items=carried_items)
+    _ordinary(
+        state,
+        value.actor,
+        mind + old.assets + portable + retained,
+        carried_items=carried_items,
+        neural_route=value.neural_route,
+        destination=old.vessel,
+    )
     if carried_items and (not carry_account or not carry_account.strip()):
         raise ValueError("Record actual physical conveyance on this return too")
     put(
@@ -593,6 +624,7 @@ def return_to_origin(
         + list(mind)
         + list(old.assets)
         + list(portable)
+        + list(retained)
     )
     sheet.medical_state = old.medical
     sheet.revision += 1

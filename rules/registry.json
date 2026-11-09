@@ -7094,6 +7094,23 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "vatgrown-selected-keep-rider-use",
+      "summary": "One explicitly selected learned Keep rider supplies only its real effect for that actual Play; unused Beautiful Flirt permission is released unless its own Tag actually wins and applies.",
+      "source": "Rulebook PDF32/printed30 Objectively Beautiful; PDF46/printed44 Elder Bitch; PDF52/printed50 Itching For A Fight; PDF50/printed48 Vatgrown Sex Play.",
+      "rationale": "A one-use learned passive needs a deliberate use boundary. Holding a lesson does not grant an indefinite passive or consume several lessons silently. Keep performs the selected rider with its real receipt; Beautiful's Flirt option is exercised through an actual own-Tag adjustment.",
+      "policy_key": "vatgrown_selected_keep_rider_use",
+      "alternatives": [
+        "Activate and spend every held passive lesson automatically on the next eligible roll.",
+        "Spend Beautiful on Flirt even if its proposed own Tag does not apply."
+      ],
+      "implementation_note": "Select at most one exact original lesson at native preparation. Keep commits its selected source with the actual receipt, including when Elder's optional experienced choice is declined. Beautiful Flirt commits only its actual winning own-Tag mark/modifier; an unused permission releases only that source reservation at real Tag-window closure, without changing Heat/cost/receipt. Preserve source ownership, actual marker discussion, protected/Paired Tag work, true unrolled cancellation and canonical retry. Native/permanent passives remain unchanged.",
+      "change_impact": "Preserve prior grants, original lesson/teacher/receipt events and published No One Better records. Do not revive spent sources or refund committed underlying Plays when changing future policy.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [

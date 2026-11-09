@@ -601,7 +601,7 @@ class ChoiceEngine:
                 x["kind"] == "tag_window" and x["state"] == "pending"
                 for x in self.game.pending(c, action["id"])
             ):
-                self.close_tag_window(c, state, action)
+                self.close_tag_window(c, state, action, closing_choice=request["id"])
             return
         acting = state.sheets[str(actor)]
         if kind == "tag_resolution":
@@ -732,7 +732,16 @@ class ChoiceEngine:
             from girlframe.services.m3_nightmare import automatic as nightmare_automatic
 
             pavlov = keep_extras(self.game, c, state, action, answer)
-            automatic = keep_automatic(acting) | pavlov | nightmare_automatic(action)
+            learned_rule = None
+            if action["data"].get("learned_keep_rider"):
+                from girlframe.services.m3_learned_plays import keep_rider_rule
+
+                learned_rule = keep_rider_rule(self.game, c, state, action)
+            automatic = (
+                keep_automatic(acting, learned_rule=learned_rule)
+                | pavlov
+                | nightmare_automatic(action)
+            )
             if level == "mid":
                 picks(answer.options, set(TRAITS), 2)
                 picks(answer.denied, set(TRAITS) - set(answer.options) - automatic, 1)
@@ -753,7 +762,10 @@ class ChoiceEngine:
                 else set(answer.denied)
             )
             positives |= automatic
-            if has_rule(acting, "girl.oldgen.elder-bitch", "OLDGEN") and answer.flag:
+            if (
+                has_rule(acting, "girl.oldgen.elder-bitch", "OLDGEN")
+                or learned_rule == "girl.oldgen.elder-bitch"
+            ) and answer.flag:
                 positives.add("experienced")
             if acting.frame == "WYVERN 0.4" and action["data"]["prepared"]["piloting"]:
                 from girlframe.engine.m3_actor_bonds import current_ref
@@ -1221,6 +1233,11 @@ class ChoiceEngine:
                 1,
             )
             tag = next(x for x in available_tags if x.id == answer.denied[0])
+            learned_rule = None
+            if action["data"].get("learned_keep_rider"):
+                from girlframe.services.m3_learned_plays import active_keep_rider_rule
+
+                learned_rule = active_keep_rider_rule(self.game, c, state, action)
             reign = propose_reign(self.game, c, state, action, owner, tag)
             if not reign:
                 self.prove_tag_setter(c, state, actor, tag)
@@ -1229,7 +1246,10 @@ class ChoiceEngine:
                 or owner != actor
                 or mentor_tag(sheet, tag, state)
                 or (
-                    has_rule(sheet, "girl.princess.objectively-beautiful", "PRINCESS")
+                    (
+                        has_rule(sheet, "girl.princess.objectively-beautiful", "PRINCESS")
+                        or learned_rule == "girl.princess.objectively-beautiful"
+                    )
                     and action["data"]["play"] == "flirt"
                 )
                 or kicked_self_tag(self.game, c, state, action, owner, tag)
@@ -1270,7 +1290,14 @@ class ChoiceEngine:
             assert marker is not None
             markers.capture(self.game, c, state, action, marker)
 
-    def close_tag_window(self, c: Connection, state: GameState, action: dict[str, Any]) -> None:
+    def close_tag_window(
+        self,
+        c: Connection,
+        state: GameState,
+        action: dict[str, Any],
+        *,
+        closing_choice: str | None = None,
+    ) -> None:
         from girlframe.engine.m3_tag_markers import modifier
         from girlframe.services import m3_tag_markers as markers
 
@@ -1442,6 +1469,24 @@ class ChoiceEngine:
                     "amount": amount,
                 }
             )
+            if (
+                person == actor
+                and action["data"].get("learned_keep_rider")
+                and action["data"]["play"] == "flirt"
+            ):
+                from girlframe.services.m3_learned_plays import apply_beautiful_mark
+
+                require(closing_choice is not None, "Recover the actual closing Tag response")
+                assert closing_choice is not None
+                apply_beautiful_mark(
+                    self.game,
+                    c,
+                    state,
+                    action,
+                    tag,
+                    action["data"]["response_event"],
+                    choice=closing_choice,
+                )
             self.set_total(action)
             from girlframe.services.m3_easy_target import observe_assistance
 
@@ -1488,6 +1533,10 @@ class ChoiceEngine:
         action["data"]["result"].update(total=total, tier=tier(total))
 
     def results(self, c: Connection, state: GameState, action: dict[str, Any]) -> None:
+        if action["data"].get("learned_keep_rider") and action["data"]["play"] == "flirt":
+            from girlframe.services.m3_learned_plays import finish_beautiful_flirt
+
+            finish_beautiful_flirt(self.game, c, state, action, action["data"]["response_event"])
         self.set_total(action)
         if action["data"].get("npc_flirt"):
             from girlframe.services.m3_npc_flirt import results as npc_flirt_results

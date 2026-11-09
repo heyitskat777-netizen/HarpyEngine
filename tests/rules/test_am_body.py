@@ -726,3 +726,300 @@ def test_actual_spinal_unplug_body_move_return_and_reviewed_replug(ledger, tmp_p
     assert {x["phase"] for x in readback["connections"]} == {"unplugged", "connected"}
     assert next(x for x in readback["connections"] if x["id"] == replacement)["error"] is None
     assert next(x for x in state(game).neural_connections if x.id == contact).ended_event
+
+
+def test_actual_native_connected_code_swap_preserves_original_jack_and_hooked_return(
+    ledger, tmp_path, monkeypatch
+):
+    import test_requisition_service
+    from test_enforcer_requisitions import approved
+    from test_frame_control import exposed_core
+    from test_janus_battery import start as start_battery
+    from test_m2_game import Gateway, start
+    from test_mission_service import service as campaign
+    from test_world import initial
+
+    from girlframe.delivery.m2_worker import GameWorker
+    from girlframe.discord_adapter.m3_am_body import open_body
+    from girlframe.discord_adapter.m3_am_neural_route import open_code_route
+    from girlframe.discord_adapter.m3_frame_control import open_connection
+    from girlframe.engine import m3_am as am
+    from girlframe.engine import m3_am_neural_route as routes
+    from girlframe.engine import m3_janus_storage as storage
+    from girlframe.engine.m3_janus import BATTERY, CORE
+    from girlframe.engine.m3_janus_link import has_mental_channel
+    from girlframe.engine.m3_janus_requisitions import STORAGE
+    from girlframe.services.m3_am_code import CodeService
+    from girlframe.services.m3_am_neural_route import RouteService, prove_route
+    from girlframe.services.m3_frame_control import FrameControlService
+    from girlframe.services.m3_janus_play import BatteryService
+    from girlframe.services.m3_janus_requisitions import JanusRequisitionService
+
+    selected = test_creation_review.selected
+
+    def real_assets(girl="MOCKINGBIRD", frame="JANUS-B"):
+        actual = selected(girl, frame)
+        if girl == "AM":
+            return actual.model_copy(
+                update=dict(
+                    girl_assets=(
+                        AssetChoice(
+                            name="Doll-Joints", description="Actual original physical joints"
+                        ),
+                        AssetChoice(
+                            name="Perfect Affect", description="Actual original expression hardware"
+                        ),
+                    )
+                )
+            )
+        return actual
+
+    monkeypatch.setattr(test_creation_review, "selected", real_assets)
+    monkeypatch.setattr(
+        test_requisition_service,
+        "service",
+        lambda store, frame: campaign(store, girl="AM", frame=frame),
+    )
+    game, actor, core = exposed_core(ledger, tmp_path, monkeypatch)
+    approved(
+        ledger, game, tmp_path, monkeypatch, extra=(CORE, BATTERY, STORAGE, am.RULE, code.RULE)
+    )
+    with ledger.transaction() as c:
+        canon = state(game)
+        canon.world = initial()
+        canon = place(place(canon, 2, mode="outside_frame"), 3, mode="outside_frame")
+        game.event(c, 1, str(uuid4()), "synthetic.actual_connected_code_bodies", canon)
+    service, body = CodeService(game), BodyService(game)
+    operator = current_ref(state(game), 3)
+    maintenance = service.propose_operator(
+        PLAYER,
+        "actual-connected-code-proposal",
+        900,
+        operator,
+        state(game).revision,
+        "Actual Pilot has physical access to my original circuits",
+    )["id"]
+    assert code.session(state(game), maintenance).root is None
+    original_pose = next(x for x in state(game).placements if x.actor == actor)
+    original_asset = next(
+        x for x in state(game).sheets["2"].assets if x.family == "girl" and not x.void
+    )
+
+    async def prepare():
+        owner = current(1, 996001)
+        await owner.response.defer(ephemeral=True)
+        await open_prepare(owner, body, maintenance)
+        form = owner.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            vessel="actual-code-relay-destination",
+            label="Actual Code prepared puppet",
+            source="Actual supplied local empty puppet with independent requisite processor",
+            processing=("yes",),
+            unoccupied=("yes",),
+            medical=("fit",),
+            mind_assets=(),
+            assets="Real arm | Actual supplied actuator | intact | clear",
+        )
+        actual = current(1, 996002)
+        await form.confirm.callback(actual)
+        assert form.completed, str(actual.edit_original_response.call_args)
+
+    asyncio.run(prepare())
+    preparation = next(x for x in bodies.preparations(state(game)) if x.maintenance == maintenance)
+    assert preparation.fact_author and preparation.controller == 3
+    contact = FrameControlService(game)
+    connection = contact.propose(
+        PLAYER,
+        "actual-code-spinal-contact",
+        900,
+        actor,
+        core,
+        "My actual original jack reaches the same exposed Core",
+    )["id"]
+    contact.decide(
+        ADMIN,
+        "actual-code-contact-reviewed",
+        connection,
+        state(game).revision,
+        True,
+        "Original actual endpoint and physical neural contact reviewed",
+    )
+    assert code.session(state(game), maintenance).root is None
+    acquisition = JanusRequisitionService(game)
+    menu = acquisition.menu(PLAYER)
+    acquisition.buy_rule(
+        PLAYER,
+        "actual-code-relay-storage",
+        menu["source_sha256"],
+        STORAGE,
+        "Actual paid original Frame Void Storage",
+    )
+    worker, gateway = GameWorker(game), Gateway()
+    game.dice.faces = (2, 2)
+    battery = start_battery(game, core)
+    tick(worker, gateway, 3)
+    assert game.inspect(PLAYER, battery)["receipt"]
+    pass_tags(game)
+    answer(
+        game,
+        PLAYER,
+        "janus_select",
+        options=("cognition", "question"),
+        text="PRIVATE_CODE_RELAY_CORE_QUESTION",
+    )
+    answer(game, OTHER, "janus_answer", text="PRIVATE_CODE_RELAY_CORE_ANSWER")
+    tick(worker, gateway, 4)
+    link = next(x for x in state(game).battery_links if x.source_action == battery)
+    mental = next(
+        x
+        for x in state(game).sheets["2"].assets
+        if x.battery_asset and x.battery_asset.link == link.id
+    )
+    game.dice.faces = (4, 5)
+    dive = start(game, play="dive_deep")
+    tick(worker, gateway, 3)
+    assert game.inspect(PLAYER, dive)["receipt"]
+    pass_tags(game)
+    answer(game, PLAYER, "dive_select", options=("void_and_unmark_all",), text="Actual communion")
+    answer(
+        game,
+        PLAYER,
+        "dive_effect",
+        fields={"asset": original_asset.id, "storage": "yes"},
+        text="Actual stored Void changes this exact original physical component",
+    )
+    tick(worker, gateway, 4)
+    point = storage.points(state(game))[0]
+    route_service = RouteService(game)
+    before = state(game)
+    calls = game.dice.calls
+
+    async def source_fact():
+        owner = current(2, 996003)
+        await owner.response.defer(ephemeral=True)
+        await open_code_route(owner, route_service, preparation.id)
+        form = owner.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(current(3))
+        form.values.update(
+            account=(
+                "My actual original hardware remains powered at its fixed jack. Its real relay "
+                "continues through this already prepared independent processor, "
+                "without moving the jack."
+            )
+        )
+        actual = current(2, 996004)
+        await form.confirm.callback(actual)
+        assert form.completed, str(actual.edit_original_response.call_args)
+
+    asyncio.run(source_fact())
+    route = routes.records(state(game))[0]
+    assert route.code_maintenance == maintenance and route.moves == ()
+    assert state(game).sheets == before.sheets and game.dice.calls == calls
+    service.confirm(
+        OTHER,
+        "actual-code-real-operator-confirmation",
+        maintenance,
+        state(game).revision,
+        "My actual hands operate the same original AM circuits",
+    )
+    root = code.session(state(game), maintenance).root
+    tick(worker, gateway, 3)
+    game.dice.faces = (4, 5)
+    action = game.begin(
+        PLAYER,
+        str(uuid4()),
+        900,
+        state(game).sheets["2"].revision,
+        PlayInput(
+            play=code.PLAY,
+            parent=root,
+            source_work=maintenance,
+            target_actor=operator,
+            heat=0,
+            trigger_confirmed=True,
+            context="Actual connected Code body transfer",
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    for human in (PLAYER, OTHER, ADMIN):
+        if any(x["kind"] == "tag_window" for x in game.choices(human)):
+            answer(game, human, "tag_window", options=("pass",))
+    answer(game, OTHER, "am_code_options", options=("body",))
+
+    async def swap():
+        row = next(x for x in game.choices(OTHER) if x["kind"] == "am_code_body")
+        owner = current(3, 996005)
+        await owner.response.defer(ephemeral=True)
+        await open_choice(owner, game, row["id"])
+        form = owner.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            body=(preparation.id,),
+            neural_route=(route.id,),
+            account="Actual original Pilot performs this real connected Code swap",
+        )
+        actual = current(3, 996006)
+        await form.confirm.callback(actual)
+        assert form.completed, str(actual.edit_original_response.call_args)
+
+    asyncio.run(swap())
+    changed = state(game)
+    actual_swap = bodies.swap(changed, code.session(changed, maintenance).body_swap)
+    assert actual_swap.controller == 3 and actual_swap.neural_route == route.id
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    assert sum(x.id == mental.id for x in changed.sheets["2"].assets) == 1
+    assert original_asset.id not in {x.id for x in changed.sheets["2"].assets}
+    assert has_mental_channel(changed, actor, core)
+    message = (
+        PLAYER,
+        "actual-code-relay-message",
+        link.id,
+        changed.revision,
+        actor,
+        "PRIVATE_MESSAGE_THROUGH_ACTUAL_CODE_RELAY",
+    )
+    messages = BatteryService(game)
+    assert messages.send(*message) == messages.send(*message)
+    parked = next(
+        x
+        for x in body.view(PLAYER, actual_swap.id)["bodies"]
+        if x["vessel"] == original_pose.vessel_id
+    )
+    assert next(x for x in parked["assets"] if x["id"] == original_asset.id)["void"]
+    assert point in storage.active(changed, actor)
+    with ledger.engine.connect() as c:
+        assert prove_route(game, c, changed, route.id).moves[0].swap == actual_swap.id
+        assert prove(game, c, changed, actual_swap.id) == actual_swap
+    tick(worker, gateway, 5)
+
+    async def return_and_unplug():
+        owner = current(2, 996007)
+        await owner.response.defer(ephemeral=True)
+        await open_body(owner, body, actual_swap.id)
+        form = owner.edit_original_response.call_args.kwargs["view"]
+        form.values.update(operation=("return",))
+        actual = current(2, 996008)
+        await form.confirm.callback(actual)
+        assert form.completed, str(actual.edit_original_response.call_args)
+        owner = current(2, 996009)
+        await owner.response.defer(ephemeral=True)
+        await open_connection(owner, contact, connection)
+        form = owner.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            account="Returned to my actual original body, I physically unplug my jack"
+        )
+        actual = current(2, 996010)
+        await form.confirm.callback(actual)
+        assert form.completed, str(actual.edit_original_response.call_args)
+
+    asyncio.run(return_and_unplug())
+    final = state(game)
+    saved = routes.get(final, route.id)
+    assert len(saved.moves) == 2 and saved.moves[-1].vessel == original_pose.vessel_id
+    assert not bodies.spinal_links(final, actor) and routes.active_route(final, actor) is None
+    assert mental.id not in {x.id for x in final.sheets["2"].assets}
+    assert storage.points(final) == (point,) and point not in storage.active(final, actor)
+    assert not next(x for x in final.sheets["2"].assets if x.id == original_asset.id).void
+    assert game.dice.calls == calls + 1
+    with ledger.engine.connect() as c:
+        assert prove_route(game, c, final, route.id) == saved
+    assert "PRIVATE_CODE_RELAY_CORE_ANSWER" not in str(route_service.view(PLAYER, route.id))

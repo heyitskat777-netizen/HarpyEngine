@@ -497,6 +497,13 @@ class RecoveryService:
                     released_learning = (
                         release_triggered_unrolled(self.game, c, state, action) or released_learning
                     )
+                if cancel and action["data"].get("learned_keep_rider"):
+                    from girlframe.services.m3_learned_plays import release_keep_rider_unrolled
+
+                    released_learning = (
+                        release_keep_rider_unrolled(self.game, c, state, action)
+                        or released_learning
+                    )
                 del action["data"]["shared_recovery"]
                 self.game.save_action(c, action, state="aborted" if cancel else saved.state)
             if not cancel:

@@ -68,7 +68,11 @@ async def open_code(
 
     hardware = await asyncio.to_thread(BodyService(service.game).menu, viewer)
     pilot_sources = {x["id"] for x in data["sessions"] if x["operator"]["kind"] == "pilot"}
-    if any(x["id"] not in pilot_sources for x in hardware["preparations"]) or hardware["swaps"]:
+    if (
+        any(x["id"] not in pilot_sources for x in hardware["preparations"])
+        or hardware["swaps"]
+        or hardware.get("code_continuity")
+    ):
         options.append(("body:menu", "Actual AM bodies and hooked return"))
     from girlframe.services.m3_am_branch import BranchService
 

@@ -19,7 +19,8 @@ class Endpoint(Model):
 
 
 class Move(Model):
-    occupancy: str
+    occupancy: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    swap: str | None = Field(default=None, exclude_if=lambda value: value is None)
     previous: str
     vessel: str
     event: str
@@ -37,6 +38,7 @@ class Route(Model):
     event: str
     account: str = Field(min_length=1, max_length=1200)
     moves: tuple[Move, ...] = ()
+    code_maintenance: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def original_source(self) -> "Route":
@@ -47,7 +49,22 @@ class Route(Model):
             or len({x.connection for x in self.endpoints}) != len(self.endpoints)
             or any(x.vessel != self.from_vessel for x in self.endpoints)
             or not self.account.strip()
-            or len({x.occupancy for x in self.moves}) != len(self.moves)
+            or (
+                self.code_maintenance is None
+                and (
+                    any(x.occupancy is None or x.swap is not None for x in self.moves)
+                    or len({x.occupancy for x in self.moves}) != len(self.moves)
+                )
+            )
+            or (
+                self.code_maintenance is not None
+                and (
+                    len(self.moves) > 2
+                    or any(x.swap is None or x.occupancy is not None for x in self.moves)
+                    or len({x.swap for x in self.moves}) > 1
+                    or len({x.event for x in self.moves}) != len(self.moves)
+                )
+            )
         ):
             raise ValueError("Keep the actual original AM, fixed interfaces and each genuine move")
         previous = self.from_vessel
@@ -100,6 +117,8 @@ def _available(state: GameState, value: Route) -> bool:
     pose = next((x for x in state.placements if x.actor == value.actor), None)
     if pose is None or pose.vessel_id != value.current_vessel:
         return False
+    if value.code_maintenance is not None and len(value.moves) == 2:
+        return False  # Actual Code return ends the remote relay; the physical jack stays unchanged.
     if not _connected(state, value):
         return False
     if pose.vessel_id == value.from_vessel:
@@ -145,6 +164,32 @@ def validate_move(state: GameState, actor: ActorRef, destination: str, route_id:
         )
     if not value.moves and destination != value.destination:
         raise ValueError("Use the genuine initially prepared destination of this source")
+    if value.code_maintenance is not None:
+        from girlframe.engine import m3_am_code as code
+
+        source = code.session(state, value.code_maintenance)
+        ready = next((x for x in bodies.preparations(state) if x.id == value.preparation), None)
+        if ready is None or ready.maintenance != source.id or source.actor != actor:
+            raise ValueError("Use the actual Code source's original hardware")
+        if not value.moves:
+            if (
+                source.phase != "active"
+                or "body" not in source.selected_options
+                or not source.action
+                or source.body_swap
+                or any(x.vessel == destination for x in bodies.bodies(state))
+            ):
+                raise ValueError("Only the actual selected Code Body option authorizes this move")
+        else:
+            swap = bodies.swap(state, value.moves[0].swap or "")
+            if (
+                destination != value.from_vessel
+                or swap.returned_event
+                or swap.neural_route != value.id
+                or not bodies.connection(state, swap.id).connected
+            ):
+                raise ValueError("Use only this original Code Swap's genuinely hooked return")
+        return value
     if destination not in dict(occupancy.available(state, actor)):
         raise ValueError("Use actual available processing-capable hardware, not an invented body")
     return value
@@ -196,6 +241,32 @@ def stage_move(
         update=dict(
             moves=value.moves
             + (Move(occupancy=occupancy, previous=previous, vessel=vessel, event=event),)
+        )
+    )
+    bodies.put(
+        state, "am_neural_route", value.id, Route.model_validate_json(changed.model_dump_json())
+    )
+
+
+def stage_code_move(
+    state: GameState, route_id: str, swap_id: str, event: str, *, returning: bool = False
+) -> None:
+    value, actual = get(state, route_id), bodies.swap(state, swap_id)
+    previous = actual.new_vessel if returning else actual.original_vessel
+    vessel = actual.original_vessel if returning else actual.new_vessel
+    if (
+        value.code_maintenance != actual.maintenance
+        or value.actor != actual.actor
+        or actual.neural_route != route_id
+        or previous != value.current_vessel
+        or (actual.returned_event if returning else actual.event) != event
+        or len(value.moves) != (1 if returning else 0)
+        or not any(x.actor == actual.actor and x.vessel_id == vessel for x in state.placements)
+    ):
+        raise ValueError("Bind only this genuine Code Swap or its actual hooked return")
+    changed = value.model_copy(
+        update=dict(
+            moves=value.moves + (Move(swap=swap_id, previous=previous, vessel=vessel, event=event),)
         )
     )
     bodies.put(

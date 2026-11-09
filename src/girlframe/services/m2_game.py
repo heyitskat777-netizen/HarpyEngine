@@ -3186,6 +3186,14 @@ class GameService:
                 action["data"]["sheet_revision"] = state.sheets[str(mechanical_owner)].revision
                 self.save_action(c, action)
                 claimed_learned = True
+            if prepared.learned_keep_rider is not None:
+                from girlframe.services.m3_learned_plays import reserve_keep_rider
+
+                if reserve_keep_rider(self, c, state, action, begin_source_event or str(uuid4())):
+                    begin_source_event = action["data"]["learned_keep_rider"]["event"]
+                    action["data"]["sheet_revision"] = state.sheets[str(mechanical_owner)].revision
+                    self.save_action(c, action)
+                    claimed_learned = True
             if prince_demand_attempt is not None:
                 from girlframe.services.m3_prince import bind_exception
 
@@ -4004,6 +4012,10 @@ class GameService:
                 self.valid_order(
                     c, state, int(action["actor_id"]), int(action["channel_id"]), prepared.order_id
                 )
+            if action["data"].get("learned_keep_rider"):
+                from girlframe.services.m3_learned_plays import pre_roll_keep_rider
+
+                pre_roll_keep_rider(self, c, state, action)
             if action["data"].get("learned_no_one_better"):
                 from girlframe.services.m3_learned_plays import pre_roll_triggered
 
@@ -4484,6 +4496,13 @@ class GameService:
 
                 roll_event_id = roll_event_id or str(uuid4())
                 consume_learned_play(self, c, state, action, roll_event_id)
+            if action["data"].get("learned_keep_rider"):
+                from girlframe.services.m3_learned_plays import consume_keep_rider
+
+                roll_event_id = roll_event_id or str(uuid4())
+                consume_keep_rider(self, c, state, action, roll_event_id)
+                if action["data"]["play"] == "keep_your_head":
+                    self.save_action(c, action)
             if committed is not None:
                 from girlframe.services.m3_ankou_feedback import record_roll
 
@@ -6844,6 +6863,11 @@ class GameService:
                     battle=battle_projection(self, c, state, action, dict(row)),
                 )
             actor = state.sheets[str(action["actor_id"])]
+            learned_keep_rule = None
+            if action["data"].get("learned_keep_rider"):
+                from girlframe.services.m3_learned_plays import active_keep_rider_rule
+
+                learned_keep_rule = active_keep_rider_rule(self, c, state, action)
             decision_owner = int(row["actor_id"]) if scoped_author is not None else viewer.user_id
             own = state.sheets.get(str(decision_owner))
             # Return only selectable entities needed by this decision, never another private sheet.
@@ -6891,6 +6915,10 @@ class GameService:
                     )
                     or kicked_mentor_tag(actor, x, state)
                     or kicked_has_rule(actor, "girl.princess.objectively-beautiful", "PRINCESS")
+                    or (
+                        learned_keep_rule == "girl.princess.objectively-beautiful"
+                        and action["data"]["play"] == "flirt"
+                    )
                 ]
             if decision_owner == actor.owner and row["kind"] == "tag_window":
                 from girlframe.services.m3_control_ritual import candidates as ritual_candidates
@@ -6996,6 +7024,8 @@ class GameService:
                     if k in ("order_id", "target")
                 },
             }
+            if learned_keep_rule is not None:
+                result["learned_keep_rule"] = learned_keep_rule
             if row["kind"] in ("order_response", "order_disobey"):
                 from girlframe.services.m3_bonded_rejection import order_projection
 

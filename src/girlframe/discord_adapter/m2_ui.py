@@ -220,7 +220,7 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
     elif kind == "actor_keep":
         harpy_mode = bool(own and own.get("harpy"))
         traits = tuple("beautiful" if x == "sexy" else x for x in TRAITS) if harpy_mode else TRAITS
-        automatic = set(keep_automatic(own))
+        automatic = set(keep_automatic(own, learned_rule=decision.get("learned_keep_rule")))
         retained = set(own.get("retained_plays", ())) if own else set()
         if harpy_mode:
             if "girl.princess.objectively-beautiful" in retained:
@@ -248,9 +248,10 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
                     (("helpless_adorable", "I seem helpless and adorable"),),
                 )
             )
-        if has_rule(own, "girl.oldgen.elder-bitch", "OLDGEN") or (
-            harpy_mode and "girl.oldgen.elder-bitch" in retained
-        ):
+        if (
+            has_rule(own, "girl.oldgen.elder-bitch", "OLDGEN")
+            or decision.get("learned_keep_rule") == "girl.oldgen.elder-bitch"
+        ) or (harpy_mode and "girl.oldgen.elder-bitch" in retained):
             fields.append(flags("Also choose experienced?"))
         if decision.get("enforcer_keep", {}).get("available"):
             for key, label in (
@@ -1302,6 +1303,35 @@ async def open_play(
                 ),
             )
         )
+    from girlframe.services.m3_learned_plays import prepare_keep_riders
+
+    def learned_options() -> tuple[tuple[str, str], ...]:
+        from girlframe.engine.m3_actor_bonds import current_ref
+        from girlframe.services.m2_state import load_state
+
+        with game.store.engine.connect() as connection:
+            current = load_state(connection, game.store.campaign_id)
+            actor = current_ref(current, viewer.user_id)
+            rows = {
+                row["id"]: row
+                for selected_play in ("keep_your_head", "flirt")
+                if selected_play in plays
+                for row in prepare_keep_riders(game, connection, current, actor, selected_play)
+            }
+            return tuple((row["id"], row["label"]) for row in rows.values())
+
+    lessons = await threaded(learned_options)
+    if lessons:
+        fields.append(
+            Field(
+                "learned_keep_rider",
+                "Optional learned Keep or Flirt ability — use one lesson",
+                lessons,
+                minimum=0,
+                maximum=1,
+                required=False,
+            )
+        )
     fields.extend(dampener_controls)
     fields.extend(kicked_controls)
     from girlframe.discord_adapter.m3_ankou_controls import pulse_fields, selected_pulse
@@ -1485,6 +1515,7 @@ async def open_play(
         prepared = PlayInput(
             **prince_values(values),
             consume_seek_food=one(values, "consume_seek_food") == "yes",
+            learned_keep_rider=one(values, "learned_keep_rider") or None,
             ankou_pulse=selected_pulse(values),
             play=play,
             context=values["context"],

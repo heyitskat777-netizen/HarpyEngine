@@ -144,3 +144,45 @@ async def open_neural_route(
         occupy,
     )
     await reply(interaction, form.text(), form)
+
+
+async def open_code_route(
+    interaction: discord.Interaction, service: RouteService, preparation: str
+) -> None:
+    viewer = viewer_from_interaction(interaction)
+    data = await asyncio.to_thread(service.code_menu, viewer)
+    source = next((x for x in data["preparations"] if x["id"] == preparation), None)
+    if source is None:
+        from girlframe.services.onboarding import WorkflowError
+
+        raise WorkflowError("Use the original AM's actual idle Code hardware source")
+
+    async def record(current: discord.Interaction, values: dict[str, Any]) -> str:
+        result = await asyncio.to_thread(
+            service.propose_code,
+            viewer_from_interaction(current),
+            str(current.id),
+            source["maintenance"],
+            preparation,
+            data["revision"],
+            values["account"],
+        )
+        return (
+            "Actual fixed-interface continuity source saved: "
+            + str(result["id"])
+            + ". No movement occurred. The actual operator still confirms circuits, then chooses "
+            "Body only on a genuine Code result. No extra permission, roll or Jailbroken benefit."
+        )
+
+    form = NativeForm(
+        interaction.user.id,
+        "Actual Code continuous interface: " + source["label"],
+        "Before circuit confirmation: record the factual powered original hardware/relay keeping "
+        "every existing spinal endpoint live while the same mind uses "
+        "this real prepared processor. "
+        "This records facts, never another person's reply or a body-transfer entitlement. "
+        "If Code does not select Body, this unconsumed fact has no movement effect.",
+        [Field("account", "Actual powered processing/interface continuity", paragraph=True)],
+        record,
+    )
+    await reply(interaction, form.text(), form)

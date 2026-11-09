@@ -342,6 +342,21 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
             or _appointment_at(game, c, link.event, prep.fact_author) != prep.fact_appointment
         ):
             raise WorkflowError("Preserve the actual original hookup's Handler source context")
+    if value.neural_route is not None:
+        from girlframe.services.m3_am_neural_route import prove_route
+
+        route = prove_route(game, c, state, value.neural_route)
+        if (
+            route.code_maintenance != value.maintenance
+            or not any(x.swap == value.id and x.event == value.event for x in route.moves)
+            or (
+                value.returned_event
+                and not any(
+                    x.swap == value.id and x.event == value.returned_event for x in route.moves
+                )
+            )
+        ):
+            raise WorkflowError("Recover this Code Swap's real continuous route transitions")
     if value.returned_event:
         event = c.execute(
             sa.select(t.events.c.kind, t.events.c.actor_id).where(
@@ -368,7 +383,15 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
 def projection(
     game: GameService, c: Connection, state: GameState, value: code.Maintenance
 ) -> dict[str, Any]:
+    from girlframe.engine.m3_am_neural_route import records as route_records
+    from girlframe.services.m3_am_neural_route import prove_route
+
     return dict(
+        neural_routes=[
+            dict(id=x.id, preparation=x.preparation, label="Actual continuous interface")
+            for x in route_records(state)
+            if x.code_maintenance == value.id and not x.moves and prove_route(game, c, state, x.id)
+        ],
         carried_items=carried_options(game, c, state, value.actor),
         bodies=[
             dict(
@@ -393,7 +416,7 @@ def apply(
     if (
         len(answer.options) != 1
         or answer.denied
-        or set(answer.fields) - {"carried_items"}
+        or set(answer.fields) - {"carried_items", "neural_route"}
         or answer.flag is not None
         or answer.number is not None
         or answer.member is not None
@@ -411,13 +434,20 @@ def apply(
     ):
         raise WorkflowError("Use this actual original operator's prepared hardware")
     try:
-        raw = json.loads(answer.fields["carried_items"]) if answer.fields else []
+        raw = json.loads(answer.fields["carried_items"]) if "carried_items" in answer.fields else []
         if not isinstance(raw, list) or any(not isinstance(x, str) for x in raw):
             raise ValueError("Select the actual physical object IDs")
         items = tuple(raw)
     except (ValueError, TypeError) as error:
         raise WorkflowError("Select only the actual carried objects") from error
     _prove_items(game, c, state, value.actor, items)
+    route_id = answer.fields.get("neural_route")
+    if route_id is not None:
+        from girlframe.services.m3_am_neural_route import require_code_move
+
+        route = require_code_move(game, c, state, action, route_id)
+        if route.preparation != prepared.id:
+            raise WorkflowError("Select the exact prepared destination of this Code route")
     changed = rules.transfer(
         state,
         value,
@@ -425,7 +455,12 @@ def apply(
         action["data"]["response_event"],
         carried_items=items,
         carry_account=answer.text if items else None,
+        neural_route=route_id,
     )
+    if route_id is not None:
+        from girlframe.engine.m3_am_neural_route import stage_code_move
+
+        stage_code_move(state, route_id, changed.id, action["data"]["response_event"])
     code.put(state, value.model_copy(update=dict(body_swap=changed.id)))
 
 
@@ -657,6 +692,10 @@ class BodyService:
             changed = rules.return_to_origin(
                 state, identity, event, carried_items=carried_items, carry_account=carry_account
             )
+            if value.neural_route is not None:
+                from girlframe.engine.m3_am_neural_route import stage_code_move
+
+                stage_code_move(state, value.neural_route, value.id, event, returning=True)
             self.game.event(
                 c, viewer.user_id, key, "m3.am_body_returned", state, event_id=event, swap=identity
             )
@@ -716,8 +755,22 @@ class BodyService:
         with self.store.engine.connect() as c:
             access(self.game, c, viewer)
             state = load_state(c, self.store.campaign_id)
+            from girlframe.engine.m3_am_neural_route import records as route_records
+
             return dict(
                 revision=state.revision,
+                code_continuity=[
+                    dict(id=x.id, maintenance=x.maintenance, label=x.spec.label)
+                    for x in rules.preparations(state)
+                    if int(x.actor.entity) == viewer.user_id
+                    and code.session(state, x.maintenance).phase == "proposed"
+                    and code.session(state, x.maintenance).root is None
+                    and rules.spinal_links(state, x.actor)
+                    and not any(
+                        r.code_maintenance == x.maintenance and r.preparation == x.id
+                        for r in route_records(state)
+                    )
+                ],
                 preparations=[
                     dict(
                         id=x.id,

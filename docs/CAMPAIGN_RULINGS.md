@@ -3998,3 +3998,22 @@ The book does not spell out learning a result-triggered rider. This delegated
 recommendation needs clarity review; alternative: spend the lesson on the first
 underlying Assault regardless of result. Version future changes and preserve
 original lesson/teacher/source/receipt histories, without reviving consumed uses.
+
+
+### Explicit one-use Keep riders and Beautiful Flirt
+
+`vatgrown-selected-keep-rider-use` (PDF32/printed30; PDF46/printed44;
+PDF52/printed50; PDF50/printed48): holding Objectively Beautiful, Itching For A
+Fight or Elder Bitch as a lesson grants no indefinite passive. Select at most one
+actual lesson for a genuine Keep or eligible Beautiful Flirt. Keep spends its
+selected use with its real receipt, even if Elder's optional experienced choice
+is declined. Beautiful Flirt spends only when the selected actual own Tag wins
+and its real mark/modifier applies; a proposal alone is insufficient. Unused
+permission releases only that reservation at real Tag closure, preserving all
+underlying Heat/costs/receipt. Native/permanent rules remain passive as printed.
+
+This delegated use-boundary recommendation requires clarity review. Alternatives:
+automatically spend every held passive, or spend Beautiful merely for reserving
+Flirt permission. Preserve original teacher/lesson/receipt events and published
+No One Better behavior; version future changes without reviving spent sources or
+refunding committed Plays.

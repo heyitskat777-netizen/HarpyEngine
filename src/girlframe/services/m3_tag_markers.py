@@ -438,4 +438,4 @@ def apply_discussion(
         game.request(c, action, discussion["judge"], "tag_marker_selection")
         return
     discussion["ready"] = True
-    ChoiceEngine(game).close_tag_window(c, state, action)
+    ChoiceEngine(game).close_tag_window(c, state, action, closing_choice=row["id"])

@@ -22,7 +22,7 @@ from test_world import initial
 from girlframe.database import tables as t
 from girlframe.delivery.m2_worker import GameWorker
 from girlframe.engine import m3_vatgrown_plays as rules
-from girlframe.engine.creation_details import DESIRES, GirlDetails
+from girlframe.engine.creation_details import DESIRES, GirlDetails, StandardChoice
 from girlframe.engine.drafts import DraftInput
 from girlframe.engine.m2 import ChoiceAnswer, PlayInput
 from girlframe.engine.m3_actor_bonds import current_ref, depth
@@ -64,10 +64,53 @@ def ready(store, tmp_path, monkeypatch, *, teacher="ALPHA"):
         chosen = original_selected(teacher if girl == "MOCKINGBIRD" else girl, frame)
         if chosen.girl_playbook == "OLDGEN":
             chosen = chosen.model_copy(update={"girl_details": GirlDetails(maxims=(0, 1))})
+        elif chosen.girl_playbook == "PRINCESS":
+            chosen = chosen.model_copy(
+                update={"girl_details": GirlDetails(own_standard=StandardChoice(slot=0))}
+            )
         return chosen
 
     monkeypatch.setattr(creation_fixture, "seed", seed_actual)
     monkeypatch.setattr(game_fixture, "selected", selected_actual)
+    if teacher == "PRINCESS":
+        original_rank = creation_fixture.HandlerService.rank
+        original_ready = game_fixture.ready
+        initial_rank_done = False
+
+        def princess_rank(handler, viewer, key, expected, order):
+            nonlocal initial_rank_done
+            # This is the actual initial Handler proposal, before any activation.
+            if not initial_rank_done:
+                result = original_rank(
+                    handler,
+                    viewer,
+                    key,
+                    expected,
+                    tuple(sorted(order, key=lambda ref: ref.user_id != OTHER.user_id)),
+                )
+                initial_rank_done = True
+                return result
+            return original_rank(handler, viewer, key, expected, order)
+
+        def princess_ready(actual_store, *args, **kwargs):
+            result = original_ready(actual_store, *args, **kwargs)
+            coordinated = creation_fixture.CoordinationService(actual_store)
+            for actor, role, slot in ((PLAYER, "princess_peer", 1), (ADMIN, "princess_handler", 2)):
+                request = coordinated.propose(
+                    actor,
+                    "actual-teacher-" + role,
+                    OTHER.user_id,
+                    role,
+                    coordinated.prepare(actor, OTHER.user_id, role),
+                    StandardChoice(slot=slot),
+                )
+                coordinated.decide(
+                    OTHER, "actual-teacher-accept-" + role, request["id"], 1, "accept"
+                )
+            return result
+
+        monkeypatch.setattr(creation_fixture.HandlerService, "rank", princess_rank)
+        monkeypatch.setattr(game_fixture, "ready", princess_ready)
     _, game = service(store, girl="VATGROWN", frame="THE ENFORCER")
     approved(
         store,
@@ -1737,3 +1780,239 @@ def test_actual_casualty_lesson_native_high_assault_extra_maneuver_costs_once_an
     finish_assault(second["id"], second_asset, expect_defeat=True)
     assert game.inspect(PLAYER, action["id"])["receipt"] == receipt
     assert game.dice.calls == calls + 2 and state(game).sheets["2"].girl == "VATGROWN"
+
+
+def test_actual_princess_two_lessons_native_selected_keep_then_winning_self_flirt_tag(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred: explicit one-lesson activation; no passive or multiple-use grant."""
+    from girlframe.discord_adapter.m2_ui import open_choice, open_play
+    from girlframe.engine.m3_girl_runtime_state import has_rule, keep_automatic
+    from girlframe.engine.m3_mockingbird import give_tag
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_learned_plays import (
+        BEAUTIFUL,
+        ELDER,
+        ITCHING,
+        active_keep_rider_rule,
+        keep_rider_rule,
+        prepare_keep_riders,
+    )
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, teacher="PRINCESS")
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(
+            rules.EXPERIMENT,
+            rules.INVESTMENT,
+            rules.SEX,
+            BEAUTIFUL,
+            ITCHING,
+            ELDER,
+        ),
+    )
+    learner, teacher = current_ref(state(game), 2), current_ref(state(game), 3)
+    lessons = []
+    for _ in range(2):
+        session, action = sex(
+            game,
+            worker,
+            gateway,
+            controls,
+            (5, 5),
+            counterpart_account="The actual Princess confirms this distinct voluntary lesson",
+        )
+        actual = state(game)
+        replacement = actual.sheets["2"].identities[0]
+        remaining = {
+            x.name.casefold() for x in actual.sheets["2"].identities if x.id != replacement.id
+        }
+        taught = next(
+            x for x in actual.sheets["3"].identities if x.name.casefold() not in remaining
+        )
+        native_choice(
+            game,
+            OTHER,
+            "vat_sex_learn",
+            identities=(taught.id,),
+            replacements=(replacement.id,),
+            play=(BEAUTIFUL,),
+            account="I teach my actual Objectively Beautiful Play once through this real source",
+        )
+        lessons.append(rules.records(state(game), rules.LearnedPlay)[-1])
+        assert game.inspect(PLAYER, action)["state"] == "complete"
+        controls.send_away(
+            OTHER,
+            str(uuid4()),
+            session,
+            state(game).revision,
+            "The actual original Princess sends her away after this lesson",
+        )
+        tick(worker, gateway, 6)
+    assert lessons[0].id != lessons[1].id
+    assert all(
+        x.actor == learner and x.teacher == teacher and x.rule_id == BEAUTIFUL for x in lessons
+    )
+    actual = state(game)
+    assert actual.sheets["2"].girl == "VATGROWN" and actual.sheets["3"].girl == "PRINCESS"
+    assert not has_rule(actual.sheets["2"], BEAUTIFUL, "PRINCESS")
+    assert keep_automatic(actual.sheets["2"]) == frozenset()
+    assert "sexy" in keep_automatic(actual.sheets["3"])
+    with ledger.engine.connect() as c:
+        menu = prepare_keep_riders(game, c, actual, learner, "keep_your_head")
+        assert {x["id"] for x in menu} == {x.id for x in lessons}
+
+    def interaction(user=2):
+        shown = current(user, uuid4().int % 1000000000)
+        shown.channel_id = 900
+        return shown
+
+    async def begin_native(play, lesson, heat):
+        opened = interaction()
+        await opened.response.defer(ephemeral=True)
+        await open_play(opened, game)
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(interaction(3))
+        form.values.update(
+            play=(play,),
+            heat=(str(heat),),
+            gain=("0",),
+            pair_share=("0",),
+            piloting=("no",),
+            witnessed=("no",),
+            learned_keep_rider=(lesson.id,),
+            context="My actual selected one-use lesson with my own original resources",
+            trigger=("yes",),
+        )
+        if play == "flirt":
+            form.values["target"] = ("3",)
+        submitted = interaction()
+        await form.confirm.callback(submitted)
+        assert form.completed, (
+            submitted.response.send_message.call_args_list,
+            submitted.edit_original_response.call_args_list,
+        )
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+        with ledger.engine.connect() as c:
+            return game.action(c, game.lock(c, 900)["action_id"])
+
+    async def reply_native(viewer, row, **values):
+        opened = interaction(viewer.user_id)
+        await opened.response.defer(ephemeral=True)
+        await open_choice(opened, game, row["id"])
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values.update(values)
+        submitted = interaction(viewer.user_id)
+        await form.confirm.callback(submitted)
+        assert form.completed, (
+            submitted.response.send_message.call_args_list,
+            submitted.edit_original_response.call_args_list,
+        )
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+
+    heat, calls = actual.sheets["2"].heat, game.dice.calls
+    keep = asyncio.run(begin_native("keep_your_head", lessons[0], 1))
+    assert keep["data"]["learned_keep_rider"]["id"] == lessons[0].id
+    assert "learned_play" not in keep["data"] and "learned_no_one_better" not in keep["data"]
+    game.dice.faces = (3, 4)
+    tick(worker, gateway, 3)
+    if game.inspect(PLAYER, keep["id"])["receipt"] is None:
+        game.roll(PLAYER, str(uuid4()), keep["id"])
+    pass_tags(game)
+    row = next(x for x in game.choices(PLAYER) if x["kind"] == "actor_keep")
+    assert game.decision(PLAYER, row["id"])["learned_keep_rule"] == BEAUTIFUL
+    asyncio.run(reply_native(PLAYER, row, options=("tough", "in_control"), denied=("vicious",)))
+    row = next(x for x in game.choices(ADMIN) if x["kind"] == "handler_keep")
+    asyncio.run(
+        reply_native(ADMIN, row, flag=("yes",), text="The real displayed traits are enough")
+    )
+    with ledger.engine.connect() as c:
+        completed = game.action(c, keep["id"])
+        assert keep_rider_rule(game, c, state(game), completed) == BEAUTIFUL
+        assert "sexy" in completed["data"]["result"]["positive"]
+        runtime = state(game).sheets["2"].girl_runtime
+        assert next(x for x in runtime.learned_plays if x.id == lessons[0].id).rolled_event
+        assert next(x for x in runtime.learned_plays if x.id == lessons[1].id).rolled_event is None
+    assert game.inspect(PLAYER, keep["id"])["state"] == "complete"
+    keep_receipt = game.inspect(PLAYER, keep["id"])["receipt"]
+    assert state(game).sheets["2"].heat == heat - 1 and game.dice.calls == calls + 1
+    tick(worker, gateway, 6)
+
+    tag_id, tag_event = str(uuid4()), str(uuid4())
+    with ledger.transaction() as c:
+        tagged = give_tag(
+            state(game),
+            profiles(c, ledger.campaign_id),
+            learner,
+            teacher,
+            "Actual owned attractive composure",
+            tag_id,
+            tag_event,
+            (1, 2, 3),
+        )
+        game.event(
+            c, 3, str(uuid4()), "synthetic.actual_original_giver_tag", tagged, event_id=tag_event
+        )
+    flirt = asyncio.run(begin_native("flirt", lessons[1], 0))
+    assert flirt["data"]["learned_keep_rider"]["id"] == lessons[1].id
+    game.dice.faces = (3, 4)
+    tick(worker, gateway, 3)
+    if game.inspect(PLAYER, flirt["id"])["receipt"] is None:
+        game.roll(PLAYER, str(uuid4()), flirt["id"])
+    with ledger.engine.connect() as c:
+        held = game.action(c, flirt["id"])
+        assert active_keep_rider_rule(game, c, state(game), held) == BEAUTIFUL
+    own = next(x for x in game.choices(PLAYER) if x["kind"] == "tag_window")
+    asyncio.run(
+        reply_native(
+            PLAYER,
+            own,
+            options=("tag",),
+            denied=(tag_id,),
+            number=("1",),
+            text="My actual attractive composure is relevant to this real Flirt",
+        )
+    )
+    # A real proposal has not won or marked anything while the table is still replying.
+    assert not next(x for x in state(game).sheets["2"].tags if x.id == tag_id).marked
+    assert (
+        next(
+            x for x in state(game).sheets["2"].girl_runtime.learned_plays if x.id == lessons[1].id
+        ).rolled_event
+        is None
+    )
+    for viewer in (OTHER, ADMIN):
+        answer(game, viewer, "tag_window", options=("pass",))
+    actual = state(game)
+    assert next(x for x in actual.sheets["2"].tags if x.id == tag_id).marked
+    with ledger.engine.connect() as c:
+        applied = game.action(c, flirt["id"])
+        assert keep_rider_rule(game, c, actual, applied) == BEAUTIFUL
+        assert active_keep_rider_rule(game, c, actual, applied) is None
+        assert applied["data"]["learned_keep_rider"]["tag"] == tag_id
+        assert applied["data"]["result"]["total"] == 8
+        assert any(
+            x.get("tag") == tag_id and x["actor"] == 2 and x["amount"] == 1
+            for x in applied["data"]["modifiers"]
+        )
+    row = next(x for x in game.choices(PLAYER) if x["kind"] == "actor_flirt")
+    asyncio.run(reply_native(PLAYER, row, options=("name",)))
+    row = next(x for x in game.choices(OTHER) if x["kind"] == "target_flirt")
+    asyncio.run(reply_native(OTHER, row, text="The original Princess gives her own actual answer"))
+    assert game.inspect(PLAYER, flirt["id"])["state"] == "complete"
+    assert game.inspect(PLAYER, keep["id"])["receipt"] == keep_receipt
+    assert game.dice.calls == calls + 2 and state(game).sheets["2"].heat == heat - 1
+    with ledger.engine.connect() as c:
+        assert prepare_keep_riders(game, c, state(game), learner, "keep_your_head") == ()
+        assert prepare_keep_riders(game, c, state(game), learner, "flirt") == ()
+        assert keep_rider_rule(game, c, state(game), game.action(c, keep["id"])) == BEAUTIFUL
+        assert keep_rider_rule(game, c, state(game), game.action(c, flirt["id"])) == BEAUTIFUL
+    assert keep_automatic(state(game).sheets["2"]) == frozenset()
+    tick(worker, gateway, 5)

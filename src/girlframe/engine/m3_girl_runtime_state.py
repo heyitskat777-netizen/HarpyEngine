@@ -41,6 +41,15 @@ class GirlRuntime(Model):
     )
 
 
+SELECTED_KEEP_LESSONS = frozenset(
+    {
+        "girl.princess.objectively-beautiful",
+        "girl.alpha.itching-for-a-fight",
+        "girl.oldgen.elder-bitch",
+    }
+)
+
+
 def has_rule(sheet: object, identity: str, native_playbook: str) -> bool:
     if isinstance(sheet, Mapping):
         raw = sheet.get("girl_runtime")
@@ -59,17 +68,22 @@ def has_rule(sheet: object, identity: str, native_playbook: str) -> bool:
         if swap.acquired_rule == identity:
             active = True
     if runtime and any(
-        x.rule_id == identity and x.rolled_event is None for x in runtime.learned_plays
+        x.rule_id == identity and x.rolled_event is None and identity not in SELECTED_KEEP_LESSONS
+        for x in runtime.learned_plays
     ):
         active = True
     return active
 
 
-def keep_automatic(sheet: object) -> frozenset[str]:
+def keep_automatic(sheet: object, *, learned_rule: str | None = None) -> frozenset[str]:
     automatic = set()
-    if has_rule(sheet, "girl.princess.objectively-beautiful", "PRINCESS"):
+    if has_rule(sheet, "girl.princess.objectively-beautiful", "PRINCESS") or (
+        learned_rule == "girl.princess.objectively-beautiful"
+    ):
         automatic.add("sexy")
-    if has_rule(sheet, "girl.alpha.itching-for-a-fight", "ALPHA"):
+    if has_rule(sheet, "girl.alpha.itching-for-a-fight", "ALPHA") or (
+        learned_rule == "girl.alpha.itching-for-a-fight"
+    ):
         automatic.add("vicious")
     return frozenset(automatic)
 

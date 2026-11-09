@@ -1283,3 +1283,79 @@ Final scoped packet22 paths/16 Python/14 source: Ruff/format/types/whitespace,
 registry and planning PASS. Registry477/273 subset/204 unimplemented/440 required/
 0 verified; repository1419 publishable files/40 manifest entries/0 findings.
 No additional gameplay matrix or old success reruns; full P1 regression pending.
+
+
+## Connected Code BODY and explicitly selected learned riders
+
+Basee3fcc8dfa74d8425400fba3c9309b8e8d09d031a published; focused
+CI42539498607 PASS/full regression skipped. Bot OFF/RULES_SUBSET/0 independently
+verified; no deployment, environment publication or human acceptance.
+
+### Actual Code physical continuity
+
+Existing Route has a finite positive Code preparation/Swap/return source, separate
+from intrinsic Jailbroken occupancy. Omitted optional fields preserve old bytes.
+The actual proposed Code source has no Action yet: original Handler can prepare
+real processor hardware, then real spinal contact/review occurs while idle.
+Original AM records factual continuity before Code confirmation; this grants no
+extra movement, veto, circuit, roll or Jailbroken entitlement. Real operator's
+selected Code BODY and actual Swap/receipt remain required. Raw source/SQL proof
+avoids Body.prove recursion. Same temporary mental IDs remain once; bodily stored
+Void stays with its actual parked component. Hooked return and physical own-unplug
+retain their original authors/rights. Unused low/unselected facts do not block
+future sources. Root native Code entry exposes the actual continuity preparation.
+
+### Learned Keep3 / Beautiful Flirt
+
+One explicitly selected actual lesson supplies Objectively Beautiful, Itching For
+A Fight or Elder Bitch through existing real Keep consumers; Beautiful also admits
+its real own-Tag Flirt use. Optional None-omitted prepared field preserves old
+inputs. Unselected lessons grant no global passive and do not silently consume
+together. Native/permanent passives remain unchanged. Selected Keep commits at
+its actual receipt, retaining source proof for traits/experienced. Beautiful Flirt
+commits only a winning actual own-Tag mark/modifier, not a proposal; unused actual
+Tag closure releases only that reservation without roll/cost refund. Normal and
+discussed closure pass their actual row ID; winner/closure responses remain
+distinct canonical sources. True unrolled recovery remains scoped. NoB/default5
+records/events are unchanged. Delegated use-boundary ruling is recorded for
+clarity review. Native/private controls use validated source rule only.
+
+Minimum pytest -q --tb=short nodes:
+- `tests/rules/test_am_body.py::test_actual_native_connected_code_swap_preserves_original_jack_and_hooked_return`
+- `tests/rules/test_vatgrown_plays.py::test_actual_princess_two_lessons_native_selected_keep_then_winning_self_flirt_tag`
+
+Initial consolidated2failed/7.64s: Code movement proof incorrectly expected pending
+choice inside respond, after its actual row was marked answered. Repaired exact
+currently-answered/no-response row +staged original answer/fresh response UUID;
+later raw canonical Swap/SQL/receipt proof unchanged. Learning fixture initially
+violated real Princess starting Ace/standards coordination. Corrected only actual
+initial rank and real own/peer/Handler birth choices. Consolidated retry
+**1failed/1passed9.45s**: connected normal passed and was never rerun; learning
+fixture attempted duplicate Identity labels, corrected to an actual legal teacher
+Identity/replacement.
+
+Keep-only retries:2 failed4.79s at missing native trigger confirmation (fixture;
+corrected);3 failed4.89s at actual m2.play_confirmed rejected by an m3-only new
+proof (source now accepts both real confirmed kinds with unchanged exact positive
+source/Action/record checks);4 failed5.22s because root roll integration staged
+consumption metadata but did not save it to the Action (fixed actual-Keep-only
+save before canonical roll event). Retry5 **1passed/7.09s**. No source events were
+renamed, no duplicate guard waived, no successful old node rerun. All failed
+artifacts retained.
+
+Passing connected normal covers real idle preparation/contact, actual Battery and
+stored point, native factual route/operator Swap, real private message/retry,
+parked Void, native hooked return and own physical unplug. Passing lesson normal
+covers real reviewed Princess teacher/two real lessons, explicit one selection,
+Keep receipt/traits/private replay, remaining unspent lesson then actual winning
+self-Flirt Tag/once-use. Separate learned Alpha/Elder, unused Flirt/recovery,
+discussion and special-Tag branch checks remain deferred final-P1 evidence.
+Full exact-candidate regression/global static/migration/privacy/restore plus
+independent/player gates remain pending. Scoped static/hash results recorded
+under var/p1-connected-keep-*. These are minimum checks, not full regression.
+
+Final scoped packet24 paths/17 Python/15 source: Ruff/format/types/whitespace,
+registry and planning PASS. Registry477/273 subset/204 unimplemented/440 required/
+0 verified; repository1420 publishable files/40 manifest entries/0 findings.
+P1_LEARNED_SOURCE_QUEUE publishes the finite remaining rule IDs/prerequisites,
+including real mandatory-choice gaps. No full-regression or independent claim.

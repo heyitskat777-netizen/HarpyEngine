@@ -193,9 +193,16 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
             ChoiceAnswer(
                 options=tuple(values["body"]),
                 text=values["account"],
-                fields={"carried_items": json.dumps(list(values["carried_items"]))}
-                if values.get("carried_items")
-                else {},
+                fields=(
+                    {"carried_items": json.dumps(list(values["carried_items"]))}
+                    if values.get("carried_items")
+                    else {}
+                )
+                | (
+                    {"neural_route": values["neural_route"][0]}
+                    if values.get("neural_route", ("none",))[0] != "none"
+                    else {}
+                ),
             ),
         )
         return (
@@ -226,6 +233,18 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
                 if detail["body"]["carried_items"]
                 else []
             ),
+            *(
+                [
+                    Field(
+                        "neural_route",
+                        "Actual source-proved continuous spinal route",
+                        (("none", "No continuous spinal source"),)
+                        + tuple((x["id"], x["label"]) for x in detail["body"]["neural_routes"]),
+                    ),
+                ]
+                if detail["body"]["neural_routes"]
+                else []
+            ),
             Field(
                 "account",
                 "Actual operator's performed transfer / object conveyance",
@@ -243,15 +262,24 @@ async def open_body(
     viewer = viewer_from_interaction(interaction)
     if identity is None:
         menu = await asyncio.to_thread(service.menu, viewer)
-        options = tuple(
-            ("prepare:" + x["id"], "Prepare actual body: " + x["label"][:55])
-            for x in menu["preparations"]
-        ) + tuple(
-            (
-                "view:" + x["id"],
-                "Read actual body / return" if not x["returned"] else "Read completed body return",
+        options = (
+            tuple(
+                ("prepare:" + x["id"], "Prepare actual body: " + x["label"][:55])
+                for x in menu["preparations"]
             )
-            for x in menu["swaps"]
+            + tuple(
+                ("continuity:" + x["id"], "Code spinal continuity: " + x["label"][:45])
+                for x in menu["code_continuity"]
+            )
+            + tuple(
+                (
+                    "view:" + x["id"],
+                    "Read actual body / return"
+                    if not x["returned"]
+                    else "Read completed body return",
+                )
+                for x in menu["swaps"]
+            )
         )
         if not options:
             await reply(
@@ -263,6 +291,11 @@ async def open_body(
             kind, key = values["source"][0].split(":", 1)
             if kind == "prepare":
                 await open_prepare(current, service, key)
+            elif kind == "continuity":
+                from girlframe.discord_adapter.m3_am_neural_route import open_code_route
+                from girlframe.services.m3_am_neural_route import RouteService
+
+                await open_code_route(current, RouteService(service.game), key)
             else:
                 await open_body(current, service, key)
 
