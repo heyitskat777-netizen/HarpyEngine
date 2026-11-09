@@ -19,6 +19,30 @@ from girlframe.engine.m3_void_state import (
 )
 from girlframe.engine.m3_world_state import Gorgon
 
+
+def _risk_protection(
+    state: GameState,
+    actor: ActorRef,
+    frame: str | None,
+    source_event: str,
+    source_action: str | None,
+    source_works: tuple[str, ...],
+) -> bool:
+    if has_rule(state.sheets[actor.entity], "girl.mockingbird.risk-factor", "MOCKINGBIRD"):
+        return True
+    from girlframe.engine.m3_learned_play_state import risk_ward
+
+    wards = tuple(
+        risk_ward(state, actor, source_event, source_action, work) for work in source_works
+    )
+    if not wards or wards[0] is None:
+        return False
+    original = wards[0]
+    return all(
+        ward is not None and ward.frame == frame and ward.id == original.id for ward in wards
+    )
+
+
 QUESTIONS = (
     "Are you prepared?",
     "Do you hear the voice of your Handler?",
@@ -116,7 +140,9 @@ def start_threshold(
             )
         return _save(state, value), value
     own = view.inside_frame is True and view.occupied_frame_instance == view.frame_instance
-    mockingbird = has_rule(sheet, "girl.mockingbird.risk-factor", "MOCKINGBIRD")
+    mockingbird = _risk_protection(
+        state, actor, view.frame_instance, event, source_action, (source_work,)
+    )
     frame_assets = [x for x in actual_assets if x.family == "frame"]
     stage: Literal[
         "prevented",
@@ -287,9 +313,15 @@ def confirm_occupancy(
         mode=mode,
     )
     view = resolve(state, value.actor, bindings, require_current_profile=False)
-    sheet = state.sheets[value.actor.entity]
     own = view.inside_frame is True and view.occupied_frame_instance == value.frame_instance
-    mockingbird = has_rule(sheet, "girl.mockingbird.risk-factor", "MOCKINGBIRD")
+    mockingbird = _risk_protection(
+        state,
+        value.actor,
+        value.frame_instance,
+        value.source_event,
+        value.source_action,
+        value.source_works,
+    )
     from girlframe.engine.m3_janus_storage import effective_assets
 
     frames = [x for x in effective_assets(state, value.actor) if x.family == "frame"]
@@ -369,7 +401,7 @@ def resolve_mockingbird(
     """Trusted caller proves the actual linked completed Keep Your Head child, not any Play."""
     state, value = _copy(original, identity, event)
     if value.stage != "resist_pending" or not child_action:
-        raise ValueError("Only the actual Mockingbird threshold's child can resist")
+        raise ValueError("Only the actual Risk Factor threshold's child can resist")
     stage = "prevented" if in_control and handler_enough else "enclosed"
     return _save(
         state,

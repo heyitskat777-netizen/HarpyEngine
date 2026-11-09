@@ -4035,3 +4035,22 @@ Actual Code completion waits for its real required work. NPC Branch corruption
 remains a separate guarded source. This delegated adjustment interpretation needs
 clarity review because the printed Void heading describes gaining. Preserve old
 source/receipt/component/condition histories when revising it.
+
+
+### One learned Risk Factor use retains its whole paid-cause effect
+
+`vatgrown-risk-paid-scope` (PDF35/printed33; PDF50/printed48):
+a genuine paid shift includes Risk Factor's printed protection for that payment's
+own Void cause and held work. It is not restricted by the learner's book label.
+Holding an unused lesson grants no global immunity. When truly inside the original
+own all-Void Frame, require the real linked Keep/in_control and actual Handler
+sufficiency; otherwise apply its genuine prevention. Preserve the raw receipt,
+real cost, original Frame and exact generated work. Do not protect unrelated
+coalesced causes or replace a real child with narration.
+
+Decline spends nothing; actual payment consumes once. This delegated one-use
+scope needs clarity review. Alternatives are overbroad global protection or
+discarding a printed clause during the paid use. Defensive-only activation of an
+unused lesson against another true cause remains a named ordinary provider to
+implement, not an anatomical exclusion or completed automation claim. Version
+future changes while preserving old sources/receipts and consumed entitlements.

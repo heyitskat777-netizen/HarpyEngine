@@ -125,7 +125,13 @@ async def open_mockingbird(
         "Risk Factor",
         "Current actual total: "
         + str(detail["total"])
-        + ". A shift costs real Void; raw dice and Tags stay recorded.",
+        + ". A shift costs real Void; raw dice and Tags stay recorded."
+        + (
+            " Paying spends your one-use lesson. Its Risk Factor protection covers only this "
+            "payment's real Void consequence; any required resistance remains owed."
+            if detail.get("learned_source")
+            else ""
+        ),
         fields,
         submit,
     ).present(interaction)

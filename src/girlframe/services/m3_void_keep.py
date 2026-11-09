@@ -50,8 +50,11 @@ def _current(
     if game.character_binding(c, state, int(actor.entity), require_current_profile=False) != (
         actor.incarnation
     ):
-        raise WorkflowError("This resistance belongs to its actual original Mockingbird.")
+        raise WorkflowError("This resistance belongs to its actual original character.")
     value = rules.threshold(state, meta["threshold"])
+    from girlframe.services.m3_learned_plays import prove_risk_ward
+
+    prove_risk_ward(game, c, state, value)
     approval = game.store.policy.m3_approval
     if (
         value.actor != actor

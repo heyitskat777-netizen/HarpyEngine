@@ -7128,6 +7128,23 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "vatgrown-risk-paid-scope",
+      "summary": "An actual learned Risk Factor payment carries the whole printed protection for its own Void cause and held work; holding a lesson grants no global immunity.",
+      "source": "Rulebook PDF35/printed33 Risk Factor; PDF50/printed48 Vatgrown Sex Play.",
+      "rationale": "Risk Factor includes protection as well as optional result shifting, without an anatomy qualifier. A one-use paid activation must retain its immediate printed consequences while not granting native protection across unrelated causes indefinitely.",
+      "policy_key": "vatgrown_risk_factor_paid_use_scope",
+      "alternatives": [
+        "Grant global native resistance merely while a lesson is held or after any use.",
+        "Discard the printed protection during the learned payment's own consequences."
+      ],
+      "implementation_note": "Bind one real lesson to its original actual paid shift, raw receipt, choice, source event, original Frame and generated work IDs. Its own cause uses printed protection: prevention unless actually inside its own all-Void Frame, then genuine linked Keep/in_control and Handler sufficiency. Do not upgrade unrelated coalesced work or fabricate a completed Keep. Decline spends nothing; payment consumes once and preserves real costs. Unused-lesson defensive-only activation is a separate required ordinary provider, not physiology-ineligible.",
+      "change_impact": "Preserve old native behavior, prior lesson/receipt/events and source-scoped paid-use proof. Future clarification cannot silently refund costs, revive lessons or extend an old ward to another cause.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [

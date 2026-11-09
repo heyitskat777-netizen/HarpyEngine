@@ -6721,6 +6721,12 @@ class GameService:
                     channel=int(action["channel_id"]),
                     am_scrutinized=prepare_source_am(self, c, state, action, viewer),
                 )
+            if action["data"].get("am_scrutinized") and row["kind"] == "battle_defeat":
+                from girlframe.services.m3_am_scrutinized import pilot_defeat_projection
+
+                return dict(row) | pilot_defeat_projection(
+                    self, c, load_state(c, self.store.campaign_id), action, dict(row)
+                )
             if action["data"].get("am_scrutinized") and row["kind"].startswith("am_"):
                 from girlframe.services.m3_am_scrutinized import authorize as authorize_am
                 from girlframe.services.m3_am_scrutinized import projection as project_am

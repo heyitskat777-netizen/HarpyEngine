@@ -68,7 +68,9 @@ async def open_am(
         if value["needs_evidence"] and value["handler_controller"] == viewer.user_id:
             options.append(("evidence:" + value["id"], "Handler: review actual new evidence"))
         if value["secret"] and value["controller"] == viewer.user_id:
-            options.append(("order:" + value["id"], "Original NPC: issue a source-secret Order"))
+            options.append(
+                ("order:" + value["id"], "Original discoverer: issue a source-secret Order")
+            )
         if (
             value["can_report"]
             and value["phase"] == "complete"
@@ -131,7 +133,7 @@ async def open_am(
             fields = [
                 Field(
                     "target",
-                    "Actual new NPC discoverer",
+                    "Actual original person who newly realized it",
                     tuple(
                         (ActorRef.model_validate(x["ref"]).token, x["label"])
                         for x in data["targets"]
@@ -143,7 +145,7 @@ async def open_am(
             fields = [
                 Field(
                     "realized",
-                    "Did this original NPC actually newly realize it?",
+                    "Did you actually newly realize this original AM was adjusted?",
                     (("yes", "Yes"), ("no", "No")),
                 ),
                 Field(
@@ -158,6 +160,8 @@ async def open_am(
                 ),
                 Field("account", "Your own actual discovery and factual review", paragraph=True),
             ]
+            if value and value["discoverer"]["kind"] == "pilot":
+                fields = [x for x in fields if x.key not in ("lower", "human")]
         elif operation == "presentation":
             fields = [
                 Field("expression", "Your actual expression"),
@@ -195,8 +199,8 @@ async def open_am(
                     answer["account"],
                 )
                 return (
-                    "Actual discovery request saved; the original NPC controller "
-                    "answers in /campaign am. " + str(result["id"])
+                    "Actual discovery request saved; the original discoverer "
+                    "answers through her own AM source controls. " + str(result["id"])
                 )
             if operation == "confirm":
                 await asyncio.to_thread(
@@ -206,8 +210,8 @@ async def open_am(
                     identity,
                     data["revision"],
                     answer["realized"][0] == "yes",
-                    answer["lower"][0] == "yes",
-                    answer["human"][0] == "yes",
+                    answer["lower"][0] == "yes" if "lower" in answer else None,
+                    answer["human"][0] == "yes" if "human" in answer else None,
                     answer["account"],
                 )
                 return (
@@ -236,7 +240,7 @@ async def open_am(
                     answer["account"],
                 )
                 return (
-                    "The actual original NPC's source Order is saved; "
+                    "The actual original discoverer's source Order is saved; "
                     "the recipient owns its response."
                 )
             if operation == "evidence":
@@ -347,7 +351,11 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
                 tuple(
                     (
                         x,
-                        "Damage an operator Asset; ask how she plays now"
+                        (
+                            "Damage an operator Asset; ask how she plays now"
+                            if detail.get("code_operator")
+                            else "Damage her actual Asset; ask how she plays now"
+                        )
                         if x == "violence" and detail.get("pilot_operator")
                         else LABELS[x],
                     )

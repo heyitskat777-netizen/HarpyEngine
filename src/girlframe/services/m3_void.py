@@ -607,6 +607,9 @@ class VoidService:
         )
         if not owner and not handler and not guardian_owned:
             raise WorkflowError("This private Void consequence belongs to its actual participants.")
+        from girlframe.services.m3_learned_plays import prove_risk_ward
+
+        learned_ward = prove_risk_ward(self.game, c, state, value)
         result: dict[str, Any] = dict(
             id=identity,
             revision=row["revision"],
@@ -644,6 +647,8 @@ class VoidService:
             and value.protection_release_event is None
             and any(x.actor == actor and x.custody == value.guardian for x in state.placements),
         )
+        if learned_ward is not None:
+            result["learned_risk_ward"] = True
         if value.stage not in rules.FINAL:
             sheet = state.sheets.get(actor.entity)
             if sheet is None:

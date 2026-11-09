@@ -5,9 +5,10 @@ import json
 from uuid import uuid4
 
 import pytest
+import sqlalchemy as sa
 from test_enforcement_initiative import cast_target
 from test_enforcer_requisitions import approved
-from test_ledger import ADMIN, PLAYER
+from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger
 from test_m2_game import Gateway, answer, pass_tags, state, tick
 from test_mission_service import service
@@ -15,6 +16,7 @@ from test_mission_ui import current
 from test_physical_operations import place
 from test_world import initial
 
+from girlframe.database import tables as t
 from girlframe.delivery.m2_worker import GameWorker
 from girlframe.discord_adapter.m2_forms import NativeForm
 from girlframe.discord_adapter.m3_am import open_choice
@@ -312,3 +314,348 @@ def test_disbelief_actual_evidence_report_and_owned_limiter(ledger, tmp_path, mo
     assert not rules.free(state(game), current_ref(state(game), 2), "expression")
     assert rules.presentation(state(game), current_ref(state(game), 2))["expression"] == "smile"
     assert rules.discovery(state(game), identity).phase == "limited" and game.dice.calls == 1
+
+
+def _native_girl_discovery(store, tmp_path, monkeypatch, *, piloting=False):
+    import test_creation_review
+    import test_m2_game
+    from test_ledger import OTHER
+
+    from girlframe.engine.drafts import DraftInput
+
+    seed, selected = test_creation_review.seed, test_m2_game.selected
+
+    def real_seed(target, viewer=PLAYER):
+        if viewer != OTHER:
+            return seed(target, viewer)
+        target.join(viewer, "join-3")
+        target.save_draft(
+            viewer,
+            "draft-3",
+            0,
+            DraftInput(
+                callsign="Actual Girl discoverer",
+                girl_playbook="MOCKINGBIRD",
+                frame_playbook="THE ENFORCER",
+                notes="PRIVATE_DISCOVERER_OOC_NOTE",
+            ),
+        )
+
+    monkeypatch.setattr(test_creation_review, "seed", real_seed)
+    monkeypatch.setattr(
+        test_m2_game, "selected", lambda *_: selected("MOCKINGBIRD", "THE ENFORCER")
+    )
+    _, game = service(store, girl="AM", frame="THE ENFORCER")
+    approved(store, game, tmp_path, monkeypatch, extra=(rules.RULE,))
+    with store.transaction() as c:
+        canon = state(game)
+        canon.world = initial()
+        canon = place(
+            place(canon, 2, mode="outside_frame"),
+            3,
+            mode="piloting" if piloting else "outside_frame",
+        )
+        game.event(c, 1, str(uuid4()), "synthetic.actual_native_discovery_bodies", canon)
+    return game, GameWorker(game), Gateway(), current_ref(state(game), 3)
+
+
+def _native_confirmed_girl_roll(game, worker, gateway, target):
+    from girlframe.discord_adapter.m3_am import open_am
+
+    source = ScrutinyService(game)
+
+    async def trigger():
+        owner = current(2, 998001)
+        owner.channel_id = 900
+        await owner.response.defer(ephemeral=True)
+        await open_am(owner, source, channel=900)
+        menu = owner.edit_original_response.call_args.kwargs["view"]
+        menu.values.update(action=("propose",))
+        chosen = current(2, 998002)
+        await menu.confirm.callback(chosen)
+        form = chosen.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            target=(target.token,), account="She actually newly recognizes my adjustment"
+        )
+        actual = current(2, 998003)
+        await form.confirm.callback(actual)
+        assert form.completed, str(actual.edit_original_response.call_args)
+        identity = rules.discoveries(state(game))[0].id
+        with pytest.raises(WorkflowError):
+            source.confirm(
+                ADMIN,
+                str(uuid4()),
+                identity,
+                state(game).revision,
+                True,
+                None,
+                None,
+                "Cannot invent this other Girl's realization",
+            )
+        original = current(3, 998004)
+        original.channel_id = 900
+        await original.response.defer(ephemeral=True)
+        await open_am(original, source, channel=900)
+        menu = original.edit_original_response.call_args.kwargs["view"]
+        menu.values.update(action=("confirm:" + identity,))
+        chosen = current(3, 998005)
+        await menu.confirm.callback(chosen)
+        form = chosen.edit_original_response.call_args.kwargs["view"]
+        assert not any(x.key in ("lower", "human") for x in form.fields)
+        form.values.update(
+            realized=("yes",), account="I genuinely recognize this original AM's adjustment"
+        )
+        actual = current(3, 998006)
+        await form.confirm.callback(actual)
+        assert form.completed, str(actual.edit_original_response.call_args)
+        return identity
+
+    identity = asyncio.run(trigger())
+    value = rules.discovery(state(game), identity)
+    assert value.code_origin is None and value.discoverer == target and value.controller == 3
+    tick(worker, gateway, 3)
+    game.dice.faces = (4, 5)
+    action = game.begin(
+        PLAYER,
+        str(uuid4()),
+        900,
+        state(game).sheets["2"].revision,
+        PlayInput(
+            play=rules.PLAY,
+            parent=value.root_action,
+            source_work=value.id,
+            target_actor=target,
+            heat=0,
+            trigger_confirmed=True,
+            context="Actual new original Girl realization; my real Scrutinized response",
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    for viewer in (PLAYER, OTHER, ADMIN):
+        if any(x["kind"] == "tag_window" for x in game.choices(viewer)):
+            answer(game, viewer, "tag_window", options=("pass",))
+    return source, identity, value.root_action, action
+
+
+def test_native_original_girl_discovery_secret_and_real_target_scoped_pilot_order(
+    ledger, tmp_path, monkeypatch
+):
+
+    from girlframe.discord_adapter.m3_am import open_am
+    from girlframe.services.m3_am_scrutinized import pilot_order_authority, valid_pilot_order
+
+    game, worker, gateway, target = _native_girl_discovery(ledger, tmp_path, monkeypatch)
+    source, identity, root, action = _native_confirmed_girl_roll(game, worker, gateway, target)
+    before = state(game)
+
+    async def secret():
+        row = next(x for x in game.choices(PLAYER) if x["kind"] == "am_select")
+        owner = current(2, 998007)
+        await owner.response.defer(ephemeral=True)
+        await open_choice(owner, game, row["id"])
+        form = owner.edit_original_response.call_args.kwargs["view"]
+        form.values.update(options=("secret",), account="Please keep the actual adjustment secret")
+        actual = current(2, 998008)
+        await form.confirm.callback(actual)
+        assert form.completed, str(actual.edit_original_response.call_args)
+
+    asyncio.run(secret())
+    actual = state(game)
+    assert depth(actual, current_ref(actual, 2), target) == min(
+        2, depth(before, current_ref(before, 2), target) + 1
+    )
+    assert actual.order == before.order and game.inspect(PLAYER, action)["state"] == "complete"
+    tick(worker, gateway, 5)
+    with ledger.engine.connect() as c:
+        authority = pilot_order_authority(game, c, actual, 3, 2)
+        assert authority and authority["issuer"] == target.model_dump(mode="json")
+        assert pilot_order_authority(game, c, actual, 3, 1) is None
+
+    async def order():
+        owner = current(3, 998009)
+        owner.channel_id = 900
+        await owner.response.defer(ephemeral=True)
+        await open_am(owner, source, channel=900)
+        menu = owner.edit_original_response.call_args.kwargs["view"]
+        menu.values.update(action=("order:" + identity,))
+        chosen = current(3, 998010)
+        await menu.confirm.callback(chosen)
+        form = chosen.edit_original_response.call_args.kwargs["view"]
+        form.values.update(account="Keep my secret and remain here")
+        actual = current(3, 998011)
+        await form.confirm.callback(actual)
+        assert form.completed, str(actual.edit_original_response.call_args)
+
+    asyncio.run(order())
+    with ledger.engine.connect() as c:
+        row = dict(c.execute(sa.select(t.m2["m2_orders"])).mappings().one())
+        assert row["issuer_id"] == "3" and row["target_id"] == "2"
+        assert valid_pilot_order(game, c, state(game), row)
+        assert "npc_order" not in json.loads(row["body_json"])
+    tick(worker, gateway, 3)
+    answer(
+        game,
+        PLAYER,
+        "order_response",
+        options=("immediate",),
+        text="I remain here and keep the actual adjustment secret",
+    )
+    assert game.inspect(PLAYER, root)["state"] == "complete" and game.dice.calls == 1
+    assert rules.discovery(state(game), identity).discoverer == target
+    assert "PRIVATE_DISCOVERER_OOC_NOTE" not in str(source.menu(PLAYER, 900))
+
+
+def test_actual_standalone_girl_last_frame_damage_real_defeat_and_owned_rendition(
+    ledger, tmp_path, monkeypatch
+):
+    from test_battle_pipeline import table
+    from test_ledger import OTHER
+
+    from girlframe.discord_adapter.m2_ui import open_choice as open_actual_choice
+    from girlframe.engine.m3_battle_state import Declaration
+    from girlframe.services.m3_battle import BattleService
+
+    game, worker, gateway, target = _native_girl_discovery(
+        ledger, tmp_path, monkeypatch, piloting=True
+    )
+    battle = BattleService(ledger)
+    frames = [x for x in state(game).sheets["3"].assets if x.family == "frame"]
+    # Prior wear is real source damage with canonical receipts, not a fixture marking loop.
+    for asset in frames[:-1]:
+        preview = battle.preview(PLAYER, 900)
+        actor = next(x for x in preview["actors"] if x["ref"]["entity"] == "2")
+        defender = next(x for x in preview["actors"] if x["ref"] == target.model_dump(mode="json"))
+        actual_girl_assets = {
+            x.id for x in state(game).sheets["2"].assets if x.family == "girl" and not x.damaged
+        }
+        weapon = next(x for x in actor["assets"] if x["id"] in actual_girl_assets)
+        declaration = Declaration.model_validate_json(
+            json.dumps(
+                dict(
+                    play="all_out_assault",
+                    actor=actor["ref"],
+                    target=defender["ref"],
+                    attacking_asset=weapon["id"],
+                    target_asset=asset.id,
+                    actor_sha256=actor["sha256"],
+                    target_sha256=defender["sha256"],
+                    account="Actual prior strike at this piloted Frame's exposed component",
+                )
+            )
+        )
+        proposal = battle.propose(PLAYER, str(uuid4()), preview["revision"], 900, declaration)
+        battle.confirm(
+            ADMIN,
+            str(uuid4()),
+            state(game).revision,
+            proposal["id"],
+            opening=True,
+            reach=True,
+            outside_permission=True,
+            indirect=False,
+            evidence="Actual AM body can strike this current piloted Frame component",
+        )
+        game.dice.faces = (4, 5)
+        hit = game.begin(
+            PLAYER,
+            str(uuid4()),
+            900,
+            state(game).sheets["2"].revision,
+            PlayInput(
+                play="all_out_assault",
+                target_actor=target,
+                attacking_asset=weapon["id"],
+                target_asset=asset.id,
+                battle_context=proposal["id"],
+                piloting=False,
+                heat=0,
+                trigger_confirmed=True,
+                context=declaration.account,
+            ),
+        )["action_id"]
+        tick(worker, gateway, 3)
+        for viewer in (PLAYER, OTHER, ADMIN):
+            if any(x["kind"] == "tag_window" for x in game.choices(viewer)):
+                answer(game, viewer, "tag_window", options=("pass",))
+        table(game)
+        assert game.inspect(PLAYER, hit)["state"] == "complete"
+        tick(worker, gateway, 5)
+    last = next(x for x in state(game).sheets["3"].assets if x.family == "frame" and not x.damaged)
+    source, identity, root, action = _native_confirmed_girl_roll(game, worker, gateway, target)
+    answer(
+        game, PLAYER, "am_select", options=("violence",), text="Actual strike to her piloted Frame"
+    )
+
+    async def strike():
+        row = next(x for x in game.choices(PLAYER) if x["kind"] == "am_pilot_damage")
+        owner = current(2, 998012)
+        await owner.response.defer(ephemeral=True)
+        await open_choice(owner, game, row["id"])
+        form = owner.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            asset=(last.id,), account="Actual damage to the final intact current Frame Asset"
+        )
+        actual = current(2, 998013)
+        await form.confirm.callback(actual)
+        assert form.completed, str(actual.edit_original_response.call_args)
+
+    asyncio.run(strike())
+    assert all(x.damaged for x in state(game).sheets["3"].assets if x.family == "frame")
+    assert not any(x["kind"] == "am_pilot_response" for x in game.choices(OTHER))
+    required = next(x for x in game.choices(OTHER) if x["kind"] == "battle_defeat")
+    decision = game.decision(OTHER, required["id"])
+    assert decision["am_damage_defeat"] and decision["parent"] == action
+    game.dice.faces = (3, 3)
+
+    async def defeat():
+        owner = current(3, 998014)
+        await owner.response.defer(ephemeral=True)
+        await open_actual_choice(owner, game, required["id"])
+        form = owner.edit_original_response.call_args.kwargs["view"]
+        form.values.update(account="My actual Frame has exhausted its intact components")
+        actual = current(3, 998015)
+        await form.confirm.callback(actual)
+        assert form.completed, str(actual.edit_original_response.call_args)
+
+    asyncio.run(defeat())
+    with ledger.engine.connect() as c:
+        child = c.scalar(
+            sa.select(t.m2["m2_actions"].c.id).where(
+                t.m2["m2_actions"].c.parent_id == action,
+                t.m2["m2_actions"].c.actor_id == "3",
+            )
+        )
+    tick(worker, gateway, 3)
+    for viewer in (PLAYER, OTHER, ADMIN):
+        if any(x["kind"] == "tag_window" for x in game.choices(viewer)):
+            answer(game, viewer, "tag_window", options=("pass",))
+    answer(
+        game,
+        OTHER,
+        "defeat_select",
+        options=("escape_cockpit_choose_location",),
+        text="I physically escape this damaged Frame and take shelter here",
+    )
+    assert game.inspect(OTHER, child)["state"] == "complete"
+    assert next(x for x in state(game).placements if x.actor == target).mode == "outside_frame"
+    assert game.inspect(PLAYER, action)["state"] != "complete"
+
+    async def rendition():
+        row = next(x for x in game.choices(OTHER) if x["kind"] == "am_pilot_response")
+        owner = current(3, 998016)
+        await owner.response.defer(ephemeral=True)
+        await open_choice(owner, game, row["id"])
+        form = owner.edit_original_response.call_args.kwargs["view"]
+        form.values.update(account="I am shaken by losing the Frame and choose to crawl away")
+        actual = current(3, 998017)
+        await form.confirm.callback(actual)
+        assert form.completed, str(actual.edit_original_response.call_args)
+
+    asyncio.run(rendition())
+    assert (
+        game.inspect(PLAYER, action)["state"] == game.inspect(PLAYER, root)["state"] == "complete"
+    )
+    assert rules.discovery(state(game), identity).discoverer == target
+    tick(worker, gateway, 5)
+    with ledger.engine.connect() as c:
+        assert game.lock(c, 900)["state"] == "released"

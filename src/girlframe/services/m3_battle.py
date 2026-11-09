@@ -1713,6 +1713,24 @@ def damage_actor(
         prove_npc_hurt_damage(
             game, c, state, source_work, target, asset_id, event, actor, chooser_controller
         )
+    elif (
+        source_action
+        and occurrence == "am_scrutinized_pilot"
+        and game.action(c, source_action)["data"].get("am_scrutinized", {}).get("pilot_damage")
+    ):
+        from girlframe.services.m3_am_scrutinized import validate_pending_pilot_damage
+
+        validate_pending_pilot_damage(
+            game,
+            c,
+            state,
+            game.action(c, source_action),
+            target,
+            asset_id,
+            event,
+            actor,
+            chooser_controller,
+        )
     elif actor is not None:
         frozen_original = False
         if source_action and actor.kind == "pilot" and rules.original_ended(state, actor):

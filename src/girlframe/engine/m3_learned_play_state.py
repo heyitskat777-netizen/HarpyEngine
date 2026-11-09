@@ -1,5 +1,6 @@
 """Actual one-use lessons and the lifetime of their original mechanical marks."""
 
+import json
 from typing import TYPE_CHECKING, Literal
 
 from pydantic import Field
@@ -99,3 +100,92 @@ def stamp_hound_clears(state: "GameState", event: str) -> None:
     for value in hound_status_uses(state):
         if value.clear_reason is not None and value.cleared_event is None:
             put_hound_status(state, value.model_copy(update=dict(cleared_event=event)))
+
+
+class RiskLessonUse(Model):
+    id: str
+    lesson: str
+    actor: ActorRef
+    action: str
+    offer_event: str
+    roll_event: str
+    receipt_sha256: str
+    choice: str
+    event: str
+    frame: str | None
+    before: int
+    after: int = Field(ge=8, le=10)
+    asset: str
+    family: str | None = None
+    work: tuple[str, ...] = ()
+
+
+def risk_lesson_uses(state: "GameState") -> tuple[RiskLessonUse, ...]:
+    return tuple(
+        RiskLessonUse.model_validate_json(x["body"])
+        for x in state.facts
+        if x.get("kind") == "learned_risk_use"
+    )
+
+
+def put_risk_lesson(state: "GameState", value: RiskLessonUse) -> None:
+    state.facts = [
+        x
+        for x in state.facts
+        if not (x.get("kind") == "learned_risk_use" and x.get("id") == value.id)
+    ] + [dict(kind="learned_risk_use", id=value.id, body=value.model_dump_json())]
+
+
+def risk_ward(
+    state: "GameState",
+    actor: ActorRef,
+    source_event: str,
+    source_action: str | None,
+    source_work: str,
+) -> RiskLessonUse | None:
+    """Only a paid use's exact real Void cause; holding a lesson grants nothing."""
+    use = next(
+        (
+            x
+            for x in risk_lesson_uses(state)
+            if (
+                x.actor == actor
+                and x.event == source_event
+                and x.action == source_action
+                and source_work in x.work
+                and x.asset
+                and x.family is not None
+            )
+        ),
+        None,
+    )
+    if use is None:
+        return None
+    paid = next(
+        (
+            json.loads(x["body"])
+            for x in state.facts
+            if (
+                x.get("kind") == "mockingbird_risk_paid"
+                and x.get("action") == use.action
+                and x.get("event") == use.event
+                and x.get("actor") == actor.model_dump_json()
+            )
+        ),
+        None,
+    )
+    if paid is None or any(
+        paid.get(key) != value
+        for key, value in {
+            "learned_source": use.id,
+            "action": use.action,
+            "actor": actor.model_dump(mode="json"),
+            "event": use.event,
+            "asset": use.asset,
+            "family": use.family,
+            "total_before": use.before,
+            "total_after": use.after,
+        }.items()
+    ):
+        raise ValueError("Prove this exact paid lesson's actual Void cause before warding it")
+    return use

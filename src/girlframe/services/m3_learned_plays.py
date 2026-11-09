@@ -16,8 +16,12 @@ from girlframe.engine.m3_girl_runtime_state import GirlRuntime, has_rule
 from girlframe.engine.m3_learned_play_state import (
     HoundStatusUse,
     LearnedPlayUse,
+    RiskLessonUse,
     hound_status_uses,
     put_hound_status,
+    put_risk_lesson,
+    risk_lesson_uses,
+    risk_ward,
 )
 from girlframe.services.m2_game import GameService
 from girlframe.services.onboarding import WorkflowError
@@ -27,6 +31,7 @@ BEAUTIFUL = "girl.princess.objectively-beautiful"
 ITCHING = "girl.alpha.itching-for-a-fight"
 ELDER = "girl.oldgen.elder-bitch"
 HOUND = "girl.alpha.nothing-more-than-a-hound"
+RISK = "girl.mockingbird.risk-factor"
 KEEP_RIDERS = (BEAUTIFUL, ITCHING, ELDER)
 SUPPORTED = {
     "girl.alpha.brutalize": ("brutalize", "ALPHA"),
@@ -42,6 +47,8 @@ SUPPORTED = {
 
 
 def lesson_label(rule_id: str, play: str) -> str:
+    if rule_id == RISK:
+        return "Risk Factor (paid shift and its own Void ward)"
     if rule_id == HOUND:
         return "Nothing More Than a Hound (actual Dog Status +/-1)"
     if rule_id in KEEP_RIDERS:
@@ -59,6 +66,8 @@ def lesson_label(rule_id: str, play: str) -> str:
 
 def lesson_book(rule_id: str) -> str | None:
     """The finite Status lesson has no invented underlying Play ID."""
+    if rule_id == RISK:
+        return "MOCKINGBIRD"
     return "ALPHA" if rule_id == HOUND else SUPPORTED[rule_id][1] if rule_id in SUPPORTED else None
 
 
@@ -70,6 +79,8 @@ def teacher_lessons(sheet: Any) -> tuple[dict[str, str], ...]:
     ]
     if sheet.girl == "ALPHA" and has_rule(sheet, HOUND, "ALPHA"):
         result.append(dict(id=HOUND, label=lesson_label(HOUND, "")))
+    if sheet.girl == "MOCKINGBIRD" and has_rule(sheet, RISK, "MOCKINGBIRD"):
+        result.append(dict(id=RISK, label=lesson_label(RISK, "")))
     return tuple(result)
 
 
@@ -205,8 +216,8 @@ def available(
             continue
         _prove(game, c, state, value)
         if value.claimed_action is not None:
-            if rule_id == HOUND:
-                raise WorkflowError("A Hound lesson is spent only by its actual Status choice")
+            if rule_id in (HOUND, RISK):
+                raise WorkflowError("This lesson is spent only by its actual owned source choice")
             from girlframe.services.m3_handler_advancements import _history
 
             action = game.action(c, value.claimed_action)
@@ -1402,6 +1413,291 @@ def prove_hound_status(
     elif use.cleared_event is not None:
         raise WorkflowError("A cleared Hound mark needs its actual clearing cause")
     return use.direction
+
+
+def risk_lesson_available(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any]
+) -> LearnedPlayUse | None:
+    from girlframe.services.m3_mockingbird import actor
+
+    ref = actor(action)
+    if ref is None or ref.kind != "pilot":
+        return None
+    sheet = state.sheets.get(ref.entity)
+    if sheet is None or sheet.character_id != ref.incarnation:
+        return None
+    runtime = sheet.girl_runtime or GirlRuntime()
+    native = sheet.model_copy(
+        update={"girl_runtime": runtime.model_copy(update={"learned_plays": ()})}
+    )
+    if has_rule(native, RISK, "MOCKINGBIRD") or ref.entity != str(action["actor_id"]):
+        return None
+    bound = action["data"].get("risk_factor", {}).get("learned_source")
+    for value in runtime.learned_plays:
+        if (
+            value.rule_id != RISK
+            or value.actor != ref
+            or value.rolled_event is not None
+            or value.claimed_action is not None
+            or (bound is not None and value.id != bound)
+        ):
+            continue
+        _prove(game, c, state, value)
+        _keep_raw_roll(game, c, action)
+        return value
+    return None
+
+
+def validate_pending_risk_lesson(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    request: dict[str, Any],
+    answer: ChoiceAnswer,
+    event: str,
+) -> RiskLessonUse:
+    meta = action["data"]["risk_factor"]
+    value = risk_lesson_available(game, c, state, action)
+    actual_request = (
+        c.execute(
+            sa.select(t.m2["m2_choices"]).where(
+                t.m2["m2_choices"].c.campaign_id == game.store.campaign_id,
+                t.m2["m2_choices"].c.id == request["id"],
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if (
+        value is None
+        or value.id != meta.get("learned_source")
+        or meta.get("state") != "pending"
+        or request["kind"] != "mockingbird_risk"
+        or request["action_id"] != action["id"]
+        or request["actor_id"] != value.actor.entity
+        or request["state"] != "pending"
+        or actual_request is None
+        or actual_request["state"] != "answered"
+        or actual_request["revision"] != request["revision"] + 1
+        or any(actual_request[key] != request[key] for key in ("action_id", "actor_id", "kind"))
+        or answer.number not in (8, 9, 10)
+        or action["data"].get("response_event") != event
+        or action["data"].get("choices", {}).get("mockingbird_risk:" + value.actor.entity)
+        != answer.model_dump(mode="json")
+    ):
+        raise WorkflowError("Pay only this actual original lesson's owned Risk choice")
+    from girlframe.engine.m3_actors import resolve
+    from girlframe.services.m3_actors import profiles
+
+    original = resolve(state, value.actor, profiles(c, game.store.campaign_id))
+    use = RiskLessonUse(
+        id="learned-risk:" + value.id,
+        lesson=value.id,
+        actor=value.actor,
+        action=action["id"],
+        offer_event=meta["learned_offer_event"],
+        roll_event=_keep_raw_roll(game, c, action),
+        receipt_sha256=_keep_receipt(game, c, action),
+        choice=request["id"],
+        event=event,
+        frame=original.frame_instance,
+        before=meta["before"],
+        after=answer.number,
+        asset=answer.fields.get("asset", ""),
+    )
+    if any(x.id == use.id for x in risk_lesson_uses(state)):
+        raise WorkflowError("This actual source lesson already has its single paid Risk use")
+    _replace(
+        state, value.model_copy(update={"claimed_action": action["id"], "rolled_event": event})
+    )
+    put_risk_lesson(state, use)
+    return use
+
+
+def finalize_risk_lesson(state: GameState, use: RiskLessonUse, payment: Any) -> RiskLessonUse:
+    if (
+        payment.learned_source != use.id
+        or payment.action != use.action
+        or payment.actor != use.actor
+        or payment.event != use.event
+        or payment.total_before != use.before
+        or payment.total_after != use.after
+    ):
+        raise WorkflowError("Bind the actual paid Void alteration to its original lesson")
+    final = use.model_copy(update=dict(asset=payment.asset, family=payment.family))
+    put_risk_lesson(state, final)
+    return final
+
+
+def bind_risk_ward_work(state: GameState, use_id: str, work: str) -> None:
+    use = next((x for x in risk_lesson_uses(state) if x.id == use_id), None)
+    if use is None or not use.asset or use.family is None or not work or work in use.work:
+        raise WorkflowError("Bind only this actual paid use's new real Void consequence")
+    put_risk_lesson(state, use.model_copy(update=dict(work=use.work + (work,))))
+
+
+def prove_risk_lesson(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any]
+) -> RiskLessonUse | None:
+    meta = action["data"].get("risk_factor", {})
+    if meta.get("learned_source") is None or meta.get("state") != "paid":
+        return None
+    from girlframe.engine.m3_actors import resolve
+    from girlframe.engine.m3_mockingbird import RiskPayment
+    from girlframe.services.m3_actor_history import snapshot_profiles
+    from girlframe.services.m3_handler_advancements import _history
+
+    payment = RiskPayment.model_validate_json(json.dumps(meta["payment"]))
+    use = next((x for x in risk_lesson_uses(state) if x.id == payment.learned_source), None)
+    if use is None:
+        raise WorkflowError("Recover this genuine paid Risk lesson")
+    born = _history(c, game, use.event)
+    offer = _history(c, game, use.offer_event)
+    original = resolve(
+        offer,
+        use.actor,
+        snapshot_profiles(c, game.store.campaign_id, offer),
+        require_current_profile=False,
+    )
+    sheet = born.sheets.get(use.actor.entity)
+    runtime = sheet.girl_runtime if sheet else None
+    value = (
+        next((x for x in runtime.learned_plays if x.id == use.lesson), None) if runtime else None
+    )
+    prior_sheet = offer.sheets.get(use.actor.entity)
+    prior_runtime = prior_sheet.girl_runtime if prior_sheet else None
+    prior = (
+        next((x for x in prior_runtime.learned_plays if x.id == use.lesson), None)
+        if prior_runtime
+        else None
+    )
+    request = (
+        c.execute(
+            sa.select(t.m2["m2_choices"]).where(
+                t.m2["m2_choices"].c.campaign_id == game.store.campaign_id,
+                t.m2["m2_choices"].c.id == use.choice,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    response = (
+        c.execute(
+            sa.select(t.m2["m2_responses"]).where(
+                t.m2["m2_responses"].c.campaign_id == game.store.campaign_id,
+                t.m2["m2_responses"].c.choice_id == use.choice,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    event = (
+        c.execute(
+            sa.select(t.events).where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.id == use.event,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    source_work = tuple(x["id"] for x in meta["followups"])
+    if (
+        use not in risk_lesson_uses(born)
+        or value is None
+        or prior is None
+        or use.id != "learned-risk:" + use.lesson
+        or use.lesson != meta["learned_source"]
+        or value.actor != use.actor
+        or value.rule_id != RISK
+        or prior != value.model_copy(update=dict(claimed_action=None, rolled_event=None))
+        or value.claimed_action != action["id"]
+        or value.rolled_event != use.event
+        or use.actor.entity != str(action["actor_id"])
+        or use.action != action["id"]
+        or use.frame != original.frame_instance
+        or use.offer_event != meta.get("learned_offer_event")
+        or use.roll_event != _keep_raw_roll(game, c, action)
+        or use.receipt_sha256 != _keep_receipt(game, c, action)
+        or use.work != source_work
+        or use.choice != meta.get("choice")
+        or payment.actor != use.actor
+        or payment.action != use.action
+        or payment.event != use.event
+        or payment.asset != use.asset
+        or payment.family != use.family
+        or payment.total_before != use.before
+        or payment.total_after != use.after
+        or request is None
+        or response is None
+        or event is None
+        or request["action_id"] != use.action
+        or request["actor_id"] != use.actor.entity
+        or request["kind"] != "mockingbird_risk"
+        or response["event_id"] != use.event
+        or event["kind"] not in ("m2.choice_resolved", "m3.choice_resolved")
+        or json.loads(event["payload_json"]).get("action_id") != use.action
+        or json.loads(event["payload_json"]).get("choice_id") != use.choice
+    ):
+        raise WorkflowError("Preserve this exact original lesson, paid Void and held source work")
+    _prove(game, c, offer, prior)
+    answer = ChoiceAnswer.model_validate_json(response["answer_json"])
+    author = int(use.actor.entity)
+    if action["data"].get("princess_child"):
+        from girlframe.services.m3_princess_sex import prove_response_author
+
+        directed_author = prove_response_author(game, c, born, action, dict(request), use.event)
+        if directed_author is None:
+            raise WorkflowError("Prove the actual original paid Risk response author")
+        author = directed_author
+    if (
+        response["actor_id"] != str(author)
+        or event["actor_id"] != str(author)
+        or answer.number != use.after
+        or answer.text != payment.account
+        or dict(
+            kind="mockingbird_risk_paid",
+            action=use.action,
+            event=use.event,
+            actor=use.actor.model_dump_json(),
+            body=payment.model_dump_json(),
+        )
+        not in born.facts
+        or [x for x in action["data"]["modifiers"] if x.get("source") == RISK]
+        != [dict(source=RISK, amount=use.after - use.before, actor=int(use.actor.entity))]
+    ):
+        raise WorkflowError("Prove the real original human's paid Risk shift and modifier")
+    return use
+
+
+def prove_risk_ward(
+    game: GameService, c: Connection, state: GameState, threshold: Any
+) -> RiskLessonUse | None:
+    candidates = [
+        x
+        for x in risk_lesson_uses(state)
+        if (
+            x.actor == threshold.actor
+            and x.event == threshold.source_event
+            and x.action == threshold.source_action
+            and x.frame == threshold.frame_instance
+            and threshold.source_works
+            and set(threshold.source_works) <= set(x.work)
+        )
+    ]
+    if not candidates:
+        return None
+    if len(candidates) != 1:
+        raise WorkflowError("Preserve one actual paid lesson for this exact Void cause")
+    use = prove_risk_lesson(game, c, state, game.action(c, candidates[0].action))
+    if use != candidates[0] or any(
+        risk_ward(state, threshold.actor, threshold.source_event, threshold.source_action, work)
+        != use
+        for work in threshold.source_works
+    ):
+        raise WorkflowError("Prove this threshold's actual paid source ward")
+    return use
 
 
 def prove_consumed(

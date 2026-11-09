@@ -1,4 +1,4 @@
-"""AM Scrutinized's original NPC-discoverer source; shared integration is release-gated."""
+"""Original-person Scrutinized discovery, owned responses and real source consequences."""
 
 import json
 from typing import Any
@@ -9,7 +9,7 @@ from sqlalchemy import Connection
 
 from girlframe.database import tables as t
 from girlframe.engine import m3_am as rules
-from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput, TagState
+from girlframe.engine.m2 import ChoiceAnswer, GameState, PlayInput, TagState, higher
 from girlframe.engine.m3_actor_bonds import change, current_ref
 from girlframe.engine.m3_actor_state import ActorRef, AssetView, ProfileBinding
 from girlframe.engine.m3_actors import fingerprint, resolve
@@ -86,6 +86,20 @@ def source(game: GameService, c: Connection, state: GameState, identity: str) ->
         or any(getattr(value, key) != getattr(original, key) for key in stable)
     ):
         raise WorkflowError("Recover the actual AM, discoverer and original source controllers")
+    if value.discoverer.kind == "pilot":
+        born = _history(game, c, value.proposed_event)
+        person = born.sheets.get(value.discoverer.entity)
+        if (
+            person is None
+            or person.character_id != value.discoverer.incarnation
+            or value.discoverer == value.actor
+            or value.controller != int(value.discoverer.entity)
+            or not any(
+                x.actor == value.discoverer and x.controller == value.controller
+                for x in value.cast.roles
+            )
+        ):
+            raise WorkflowError("Keep the actual original Girl discoverer and source cast")
     if value.confirmed_event:
         confirmed = rules.discovery(_history(game, c, value.confirmed_event), identity)
         event = c.execute(
@@ -107,7 +121,30 @@ def source(game: GameService, c: Connection, state: GameState, identity: str) ->
             raise WorkflowError(
                 "Only the real original discoverer's factual confirmation establishes discovery"
             )
+        if value.discoverer.kind == "pilot":
+            confirmed_state = _history(game, c, value.confirmed_event)
+            if value.human != rules.human_target(
+                confirmed_state, value.discoverer
+            ) or value.lower_status != higher(confirmed_state, value.caster, value.controller):
+                raise WorkflowError("Preserve the original Girl's actual rank and human-body facts")
     return value
+
+
+def _native_discoverer(
+    state: GameState, value: rules.Discovery, bound: tuple[ProfileBinding, ...]
+) -> bool:
+    if value.discoverer.kind != "pilot" or value.discoverer == value.actor:
+        return False
+    actual = resolve(state, value.discoverer, bound)
+    return (
+        actual.rules == "girl_frame"
+        and actual.controller == int(value.discoverer.entity)
+        and actual.controller == value.controller
+        and any(
+            x.actor == value.discoverer and x.controller == value.controller
+            for x in value.cast.roles
+        )
+    )
 
 
 def _actual(
@@ -122,13 +159,7 @@ def _actual(
     actor = resolve(state, value.actor, bound, require_alive=require_alive)
     discoverer = resolve(state, value.discoverer, bound, require_alive=require_alive)
     cast = _cast(game, c, state, value.cast.channel)
-    native = (
-        value.code_origin is not None
-        and value.discoverer.kind == "pilot"
-        and value.discoverer != value.actor
-        and discoverer.rules == "girl_frame"
-        and discoverer.controller == int(value.discoverer.entity)
-    )
+    native = _native_discoverer(state, value, bound)
     if native:
         game.character_binding(c, state, discoverer.controller)
     if (
@@ -159,6 +190,11 @@ def pilot_damage_assets(
         and (
             x.family != "frame"
             or any(y.family == "frame" and not y.damaged and y.id != x.id for y in actual.assets)
+            or (
+                actual.piloting is True
+                and actual.inside_frame is True
+                and actual.occupied_frame_instance == actual.frame_instance
+            )
         )
     )
 
@@ -563,6 +599,7 @@ def projection(
         ],
         discoverer=resolve(state, value.discoverer, profiles(c, game.store.campaign_id)).label,
         pilot_operator=value.discoverer.kind == "pilot",
+        code_operator=value.code_origin is not None,
         discovery=value.id,
         handler_grant=value.refuge_grant,
     )
@@ -656,8 +693,8 @@ def _prove_effect(game: GameService, c: Connection, value: rules.Discovery) -> N
         from girlframe.services.m3_am_code import prove_code_discovery
 
         prove_code_discovery(game, c, _history(game, c, value.effect_event), action)
-        if value.discoverer.kind == "pilot" and value.outcome == "violence":
-            _pilot_damage_proof(game, c, load_state(c, game.store.campaign_id), action)
+    if value.discoverer.kind == "pilot" and value.outcome == "violence":
+        _pilot_damage_proof(game, c, load_state(c, game.store.campaign_id), action)
     receipt = c.scalar(
         sa.select(t.m2["m2_receipts"].c.body_json).where(
             t.m2["m2_receipts"].c.campaign_id == game.store.campaign_id,
@@ -799,18 +836,26 @@ class ScrutinyService:
             target = resolve(state, npc, profiles(c, self.store.campaign_id))
             cast = _cast(self.game, c, state, channel)
             handler = active_handler(state)
+            native = (
+                npc.kind == "pilot"
+                and npc != actor
+                and target.rules == "girl_frame"
+                and target.controller == int(npc.entity)
+            )
+            if native:
+                self.game.character_binding(c, state, target.controller)
             if (
                 state.revision != expected
                 or self.game.pending_actions(c)
                 or state.sheets[actor.entity].girl != "AM"
                 or not has_rule(state.sheets[actor.entity], rules.RULE, "AM")
-                or target.rules != "npc"
-                or npc.kind != "npc"
-                or target.controller != state.handler
+                or not (native or npc.kind == "npc" and target.rules == "npc")
+                or (not native and target.controller != state.handler)
                 or handler is None
+                or state.handler is None
                 or cast.adjudicator is not None
                 or not any(x.actor == actor for x in cast.roles)
-                or not any(x.actor == npc for x in cast.roles)
+                or not any(x.actor == npc and x.controller == target.controller for x in cast.roles)
                 or any(
                     x.actor == actor and x.discoverer == npc and x.phase != "declined"
                     for x in rules.discoveries(state)
@@ -871,12 +916,13 @@ class ScrutinyService:
         identity: str,
         expected: int,
         newly_realized: bool,
-        lower_status: bool,
-        human: bool,
+        lower_status: bool | None,
+        human: bool | None,
         account: str,
     ) -> dict[str, Any]:
         if (
-            any(type(x) is not bool for x in (newly_realized, lower_status, human))
+            type(newly_realized) is not bool
+            or any(x is not None and type(x) is not bool for x in (lower_status, human))
             or not account.strip()
             or len(account) > 1200
         ):
@@ -898,13 +944,24 @@ class ScrutinyService:
                 raise WorkflowError(
                     "Only the original actual discoverer owns this current factual response"
                 )
+            if value.discoverer.kind == "pilot":
+                actual_lower = higher(state, value.caster, value.controller)
+                actual_human = rules.human_target(state, value.discoverer)
+                if (lower_status is not None and lower_status != actual_lower) or (
+                    human is not None and human != actual_human
+                ):
+                    raise WorkflowError("Use this original Girl's actual canonical rank/body facts")
+            else:
+                if type(lower_status) is not bool or type(human) is not bool:
+                    raise WorkflowError("The actual Handler records the NPC's factual rank/body")
+                actual_lower, actual_human = lower_status, human
             event = str(uuid4())
             value = value.model_copy(
                 update=dict(
                     confirmed_event=event,
                     confirmation=account,
-                    lower_status=lower_status,
-                    human=human,
+                    lower_status=actual_lower,
+                    human=actual_human,
                     phase="ready" if newly_realized else "declined",
                 )
             )
@@ -955,10 +1012,19 @@ class ScrutinyService:
             targets = []
             if actor and sheet and sheet.girl == "AM" and has_rule(sheet, rules.RULE, "AM"):
                 for role in cast_scene.roles:
-                    if role.actor.kind != "npc" or role.controller != state.handler:
+                    native = role.actor.kind == "pilot" and role.actor != actor
+                    if not native and (
+                        role.actor.kind != "npc" or role.controller != state.handler
+                    ):
                         continue
-                    actual = resolve(state, role.actor, ())
-                    if actual.rules != "npc" or any(
+                    actual = resolve(state, role.actor, profiles(c, self.store.campaign_id))
+                    if not (
+                        native
+                        and actual.rules == "girl_frame"
+                        and actual.controller == int(role.actor.entity)
+                        or not native
+                        and actual.rules == "npc"
+                    ) or any(
                         x.actor == actor and x.discoverer == role.actor and x.phase != "declined"
                         for x in rules.discoveries(state)
                     ):
@@ -1378,8 +1444,7 @@ def pilot_order_authority(
     candidates = [
         x
         for x in rules.discoveries(state)
-        if x.code_origin
-        and x.discoverer == first
+        if x.discoverer == first
         and x.actor == second
         and first.kind == "pilot"
         and rules.holds_secret(state, x)
@@ -1414,14 +1479,70 @@ def valid_pilot_order(
     return True
 
 
+def validate_pending_pilot_damage(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    target: ActorRef,
+    asset_id: str | None,
+    event: str,
+    actor: ActorRef | None,
+    chooser_controller: int | None,
+) -> rules.Discovery:
+    """Positive current source before real damage; canonical proof is separate afterward."""
+    from girlframe.services.m3_dose_up import _roll_source
+
+    value = source(game, c, state, action["data"]["am_scrutinized"]["discovery"])
+    _actual(game, c, state, value)
+    _roll_source(game, c, action)
+    meta = action["data"]["am_scrutinized"].get("pilot_damage", {})
+    staged = action["data"].get("choices", {}).get(f"am_pilot_damage:{value.caster}", {})
+    rows, responses = t.m2["m2_choices"], t.m2["m2_responses"]
+    if (
+        not _native_discoverer(state, value, profiles(c, game.store.campaign_id))
+        or target != value.discoverer
+        or actor != value.actor
+        or chooser_controller != value.caster
+        or value.action != action["id"]
+        or value.outcome != "violence"
+        or meta.get("phase") != "select"
+        or action["data"].get("response_event") != event
+        or staged.get("options") != [asset_id]
+        or "violence" not in allowed(game, c, state, value)
+        or not any(
+            x.id == asset_id
+            for x in pilot_damage_assets(state, target, profiles(c, game.store.campaign_id))
+        )
+        or not c.scalar(
+            sa.select(rows.c.id).where(
+                rows.c.campaign_id == game.store.campaign_id,
+                rows.c.action_id == action["id"],
+                rows.c.actor_id == str(value.caster),
+                rows.c.kind == "am_pilot_damage",
+                rows.c.state == "answered",
+                ~sa.exists(
+                    sa.select(responses.c.event_id).where(
+                        responses.c.campaign_id == rows.c.campaign_id,
+                        responses.c.choice_id == rows.c.id,
+                    )
+                ),
+            )
+        )
+    ):
+        raise WorkflowError(
+            "Prove the actual AM's presently applied damage choice and original Girl"
+        )
+    return value
+
+
 def _pilot_damage_proof(
     game: GameService, c: Connection, state: GameState, action: dict[str, Any]
 ) -> rules.Discovery:
     value = source(game, c, state, action["data"]["am_scrutinized"]["discovery"])
     details = action["data"]["am_scrutinized"].get("pilot_damage", {})
     if (
-        not value.code_origin
-        or value.discoverer.kind != "pilot"
+        value.discoverer.kind != "pilot"
         or value.outcome != "violence"
         or details.get("target") != value.discoverer.model_dump(mode="json")
         or not details.get("damage_event")
@@ -1495,8 +1616,7 @@ def apply_pilot_damage(
     details = meta.get("pilot_damage", {})
     event = action["data"]["response_event"]
     if (
-        not value.code_origin
-        or value.discoverer.kind != "pilot"
+        value.discoverer.kind != "pilot"
         or value.outcome != "violence"
         or answer.denied
         or answer.fields
@@ -1516,14 +1636,25 @@ def apply_pilot_damage(
         ):
             raise WorkflowError("The original AM chooses one actual intact operator Asset")
         chosen = next(x for x in actual.assets if x.id == answer.options[0])
-        if chosen.family == "frame" and not any(
-            x.family == "frame" and not x.damaged and x.id != chosen.id for x in actual.assets
+        if (
+            chosen.family == "frame"
+            and not any(
+                x.family == "frame" and not x.damaged and x.id != chosen.id for x in actual.assets
+            )
+            and not (
+                actual.piloting is True
+                and actual.inside_frame is True
+                and actual.occupied_frame_instance == actual.frame_instance
+            )
         ):
             raise WorkflowError(
                 "SOURCE_FRAME_CONSEQUENCE_REQUIRED: preserve actual battle/Frame exhaustion context"
             )
         from girlframe.services.m3_battle import damage_actor
 
+        # The trusted consumer rereads this real Action. Keep the current owned answer in
+        # the same atomic transaction; its canonical response/event are still written by Game.
+        game.save_action(c, action)
         changed, work = damage_actor(
             game,
             c,
@@ -1560,6 +1691,57 @@ def apply_pilot_damage(
         _finish(game, c, state, action)
         return
     raise WorkflowError("Complete the actual required damage work through its owner controls")
+
+
+def pilot_defeat_projection(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    row: dict[str, Any],
+) -> dict[str, Any]:
+    from girlframe.services.m3_battle import source_parent_for_defeat
+
+    value = _pilot_damage_proof(game, c, state, action)
+    details = action["data"]["am_scrutinized"]["pilot_damage"]
+    body = json.loads(row["body_json"])
+    table = t.m3["m3_required_work"]
+    work = (
+        c.execute(
+            sa.select(table)
+            .where(
+                table.c.campaign_id == game.store.campaign_id,
+                table.c.id == body.get("work_id"),
+            )
+            .order_by(table.c.revision.desc())
+            .limit(1)
+        )
+        .mappings()
+        .first()
+    )
+    if (
+        row["kind"] != "battle_defeat"
+        or row["action_id"] != action["id"]
+        or row["actor_id"] != str(value.controller)
+        or row["state"] != "pending"
+        or details["phase"] != "work"
+        or body.get("work_id") not in details["work"]
+        or work is None
+        or work["kind"] != "defeat"
+        or work["state"] != "pending"
+        or work["owner_id"] != value.discoverer.entity
+        or source_parent_for_defeat(game, c, dict(work), value.discoverer) != action["id"]
+    ):
+        raise WorkflowError("Open only this original Girl's actual source-bound Frame Defeat")
+    return dict(
+        am_damage_defeat=True,
+        parent=action["id"],
+        actor=value.controller,
+        channel=int(action["channel_id"]),
+        body=body,
+        play="defeat",
+        result={},
+    )
 
 
 def complete_pilot_damage(

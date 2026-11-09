@@ -10,6 +10,7 @@ from girlframe.engine.m3_actors import resolve
 from girlframe.engine.m3_core import Followup
 from girlframe.engine.m3_girl_runtime_state import has_rule
 from girlframe.engine.m3_janus_storage import GainSource
+from girlframe.engine.m3_learned_play_state import RiskLessonUse, risk_lesson_uses
 from girlframe.engine.m3_sup import Growth
 
 if TYPE_CHECKING:
@@ -25,6 +26,7 @@ SEX = "girl.mockingbird.sex-play"
 
 
 class RiskPayment(Model):
+    learned_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
     action: str = Field(min_length=1)
     actor: ActorRef
     event: str = Field(min_length=1)
@@ -66,11 +68,23 @@ def risk(
     piloting: bool,
     storage: GainSource | None = None,
     growth: Growth | None = None,
+    learned_use: RiskLessonUse | None = None,
 ) -> tuple[GameState, tuple[Followup, ...], RiskPayment]:
     """The player pays real Void to choose an actual 8, 9 or 10 after modifiers."""
     from girlframe.engine.m3_dive import _harpy_assets, resources
 
-    if not owns(original, actor, RISK) or any(
+    learned = (
+        learned_use is not None
+        and learned_use in risk_lesson_uses(original)
+        and learned_use.actor == actor
+        and learned_use.action == action
+        and learned_use.event == event
+        and learned_use.asset == asset
+        and learned_use.before == before
+        and learned_use.after == after
+        and not learned_use.work
+    )
+    if not (owns(original, actor, RISK) or learned) or any(
         x.get("kind") == "mockingbird_risk_paid" and x.get("action") == action
         for x in original.facts
     ):
@@ -133,6 +147,7 @@ def risk(
         assert selected is not None
         family = selected.family
     payment = RiskPayment(
+        learned_source=learned_use.id if learned and learned_use is not None else None,
         action=action,
         actor=actor,
         event=event,

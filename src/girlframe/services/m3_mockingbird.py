@@ -64,7 +64,10 @@ def intercept_results(
     if meta is not None:
         return bool(meta["state"] == "pending")
     ref = actor(action)
-    if ref is None or not rules.owns(state, ref, rules.RISK):
+    from girlframe.services.m3_learned_plays import risk_lesson_available
+
+    lesson = risk_lesson_available(game, c, state, action) if ref is not None else None
+    if ref is None or not (rules.owns(state, ref, rules.RISK) or lesson is not None):
         return False
     actual, _ = resources(state, ref)
     eligible = [x.id for x in actual if not x.void]
@@ -81,6 +84,13 @@ def intercept_results(
         eligible=eligible,
         followups=[],
     )
+    if lesson is not None:
+        from girlframe.services.m3_learned_plays import _keep_raw_roll
+
+        data["risk_factor"].update(
+            learned_source=lesson.id,
+            learned_offer_event=data.get("response_event") or _keep_raw_roll(game, c, action),
+        )
     action["state"] = "awaiting_choices"
     game.request(c, action, int(action["actor_id"]), "mockingbird_risk")
     return True
@@ -105,6 +115,7 @@ def projection(
     from girlframe.services.m3_sup import offer
 
     return dict(
+        learned_source=meta.get("learned_source"),
         casualty_parts=part_choices(game, c, state, ref),
         sup=offer(game, c, state, ref),
         storage_available=storage_available(game, c, state, ref),
@@ -132,11 +143,19 @@ def apply(
     from girlframe.services.m3_casualty_support import require_god, resistance_answer
 
     answer, casualty_part, casualty_site = resistance_answer(answer)
+    from girlframe.services.m3_learned_plays import (
+        bind_risk_ward_work,
+        finalize_risk_lesson,
+        risk_lesson_available,
+        validate_pending_risk_lesson,
+    )
+
+    lesson = risk_lesson_available(game, c, state, action) if meta.get("learned_source") else None
     if (
         meta["state"] != "pending"
         or str(request["actor_id"]) != str(action["actor_id"])
         or meta["receipt"] != action["data"]["receipt"]["id"]
-        or not rules.owns(state, ref, rules.RISK)
+        or not (rules.owns(state, ref, rules.RISK) or lesson is not None)
         or answer.options
         or answer.denied
         or answer.member is not None
@@ -179,6 +198,11 @@ def apply(
             )
         from girlframe.services.m3_janus_storage import gain_source
 
+        learned_use = (
+            validate_pending_risk_lesson(game, c, state, action, request, answer, event)
+            if lesson is not None
+            else None
+        )
         changed, followups, payment = rules.risk(
             state,
             profiles(c, game.store.campaign_id),
@@ -194,8 +218,11 @@ def apply(
                 game, c, state, ref, request["id"], "mockingbird_risk", "storage" in answer.fields
             ),
             growth=growth,
+            learned_use=learned_use,
         )
         _copy(state, changed)
+        if learned_use is not None:
+            learned_use = finalize_risk_lesson(state, learned_use, payment)
         meta.update(state="paid", payment=payment.model_dump(mode="json"), choice=request["id"])
         action["data"]["modifiers"].append(
             dict(
@@ -230,6 +257,8 @@ def apply(
                     reason="mockingbird_risk",
                     details=dict(family=family),
                 )
+                if learned_use is not None:
+                    bind_risk_ward_work(state, learned_use.id, identity)
                 changed, threshold = start_threshold(
                     state,
                     profiles(c, game.store.campaign_id),
@@ -356,6 +385,12 @@ def prove_void_source(
         or payload.get("choice_id") != meta["choice"]
     ):
         raise ValueError("Recover the authenticated actual Risk payment event")
+    if payment.learned_source is not None:
+        from girlframe.services.m3_learned_plays import prove_risk_lesson
+
+        use = prove_risk_lesson(game, c, saved, action)
+        if use is None or use.id != payment.learned_source or first["id"] not in use.work:
+            raise ValueError("Recover the genuine learned Risk payment and exact consequence")
 
 
 def complete_void_continuation(

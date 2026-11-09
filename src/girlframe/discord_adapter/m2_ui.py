@@ -878,7 +878,9 @@ async def open_choice(interaction: discord.Interaction, game: GameService, ident
 
         await open_dive(interaction, game, identity)
         return
-    if decision["kind"] in ("beneath_defeat", "required_defeat"):
+    if decision["kind"] in ("beneath_defeat", "required_defeat") or decision.get(
+        "am_damage_defeat"
+    ):
         from girlframe.discord_adapter.m3_defeat import open_start
 
         await open_start(interaction, game, decision)

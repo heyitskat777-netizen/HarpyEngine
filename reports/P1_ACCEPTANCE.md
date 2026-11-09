@@ -1413,3 +1413,60 @@ Final scoped packet28 paths/21 Python/19 source: Ruff/format/types/whitespace,
 registry and planning PASS. Registry477/273 subset/204 unimplemented/440 required/
 0 verified; repository1421 publishable files/40 manifest entries/0 findings.
 Three new normals passed first run; no extra gameplay rerun. Full P1 gates pending.
+
+
+## Original Girl Scrutinized/Frame exhaustion and whole paid Risk use
+
+Base1c9f7b8090f03a9c71f697bb46d68dca7b609362 published; focused
+CI42544423747 PASS/full regression skipped. Bot OFF/RULES_SUBSET/0 verified.
+
+Standalone living actual native Girl realization now binds original controller,
+CID/cast and genuine owned knowledge confirmation. Existing Discovery model and
+NPC/Code defaults unchanged. Pilot secrecy/Order/harm continuations prove either
+this true source or original Code source. True lastFrame violence is admitted
+only for actual native target occupying/piloting her same current Frame; parked/
+outside guard remains. Source saves its genuine staged answer before trusted
+Battle validation. Exact actual work/owner projection opens real Defeat with its
+real source_work/parent/Actor; no fake row kind, battle, parent, NPC or roll.
+Original human response waits real Defeat/Sprite work. Existing callbacks close
+source only after the actual recipient's rendition.
+
+Paid learned Risk Factor exposes the existing optional owned shift; decline
+spends nothing. A true payment atomically spends one actual lesson, preserves
+raw receipt/other costs, and binds original Frame/cause/real work. Whole printed
+protection applies to that own cause: genuine prevention unless inside own
+all-Void Frame, then actual linked Keep/in_control plus Handler sufficiency.
+Pure and canonical source proofs reject unrelated coalesced work; native/permanent
+behavior unchanged, holding a lesson gives no global immunity or fake Mockingbird
+identity. Source-scoped entitlement remains through held consequences after
+spending. Defensive-only activation of an unused lesson against another true
+cause remains explicit ordinary followup. Delegated use-scope clarity recorded.
+
+Minimum pytest -q --tb=short:
+- `tests/rules/test_am_scrutinized.py::test_native_original_girl_discovery_secret_and_real_target_scoped_pilot_order`
+- `tests/rules/test_am_scrutinized.py::test_actual_standalone_girl_last_frame_damage_real_defeat_and_owned_rendition`
+- `tests/rules/test_vatgrown_plays.py::test_actual_learned_risk_paid_last_frame_void_holds_real_keep_resistance_and_private_replay`
+
+Initial **1failed/2passed9.37s**: Girl secrecy/real target Order and paid Risk
+resistance/closure passed. Frame test failed before gameplay by expecting family
+in a deliberately sanitized menu. Test-only repair selects allowed menu ID using
+actual canonical intact Girl Asset IDs; no product projection widened. Failed-node
+retry **1passed/5.66s**. Neither success rerun. Frame normal uses real prior
+Assaults, actual lastAsset damage, native target-owned Defeat/escape and rendition.
+Risk normal uses real prior Dive/Frame Void, real lesson/paid lastFrame shift,
+actual linked resistance/Handler, exact required work/parent closure/private replay.
+No free damage/Void/rank setter, fake completed child or extra tier matrix.
+
+Worker scoped static PASS. Integrated17 Python/15 source types/format PASS; Ruff
+found only unused root local after source-proof extraction, removed. Final scoped
+packet/hash evidence retained under var/p1-scrutiny-risk-*. Full exact-candidate
+regression/global static/migration/privacy/restore, independent review and real
+player/owner acceptance remain pending. Focused checks are not full regression.
+
+Final scoped packet24 paths/17 Python/15 source: Ruff/format/types/whitespace,
+registry and planning PASS. Repository scan first flagged a false credential
+pattern inside the new unpublished ruling's long risk-prefixed ID; shortened
+that ID, preserving the scanner unchanged. Delta registry/repository checks
+PASS:477 entries/273 subset/204 unimplemented/440 required/0 verified;1421
+publishable files/40 manifest entries/0 findings. Initial failed scan retained.
+No extra gameplay rerun; full P1 gates remain pending.

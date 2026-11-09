@@ -118,7 +118,7 @@ async def open_start(
                 trigger_confirmed=True,
                 parent=decision["parent"],
                 source_work=decision["body"].get("work_id")
-                if decision["kind"] == "required_defeat"
+                if decision["kind"] in ("required_defeat", "battle_defeat")
                 else None,
             ),
         )
