@@ -1,6 +1,6 @@
 {
   "status": "P1_IMPLEMENTATION_AUTHORIZED_TESTING_PENDING",
-  "published_source": "1c9f7b8090f03a9c71f697bb46d68dca7b609362",
+  "published_source": "db95b09aec63f446e4d95859c940e6e55450a4c3",
   "main_merge": "c4550ecbd89bbf84363537e7bdf763c2177a998f",
   "scope": "10Girl labels;10Frame labels representing9official Frame rulesets; JANUS-B uses JANUS",
   "evidence_note": "Publishede3705cf focused CI42531742214 passed; full skipped. Local native Battery disposal1/3.03s and actual continuous AM route1/4.81s minimum evidence; controlled Dose integration active. Final full/global/independent/player gates pending.",
@@ -375,8 +375,8 @@
       "type": "Newgirl",
       "registry_prefix": "girl.newgirl.",
       "status": "Published scoped implementation",
-      "ordinary_workflows_with_evidence": "Trainee; actual Mentor name/companions; Easy Target performance/consequences; Sex and actual Mentor changes. Static reconciliation: existing Easy Target hurt/real physical-harm/protection/failure and actual Mentor teaching/shirking discipline consumers and authored normals exist; no runtime rerun. Positive one-use learner preparation/proof/menu for Easy Target implemented; new learned path NOT RUN, ordinary existing native paths preserved. Actual ordinary NPC hurt now uses genuine performed bodily injury, target-owned Girl Asset selection, actual Harm/work and Newgirl-selected real NPC Punishment before parent completion; native1/4.43s without fake PC Action/RNG.",
-      "missing_before_AI": "Actual NPC hurt is implemented. Other actual NPC use/protect and Handler performances retain source-specific adapters; no universal NPC Play/RNG substitute. Existing Pilot harm/protection and Mentor discipline stay in final authored regression. Actual bodily/work/source continuity and independent review remain gates.",
+      "ordinary_workflows_with_evidence": "Trainee; actual Mentor name/companions; Easy Target performance/consequences; Sex and actual Mentor changes. Static reconciliation: existing Easy Target hurt/real physical-harm/protection/failure and actual Mentor teaching/shirking discipline consumers and authored normals exist; no runtime rerun. Positive one-use learner preparation/proof/menu for Easy Target implemented; new learned path NOT RUN, ordinary existing native paths preserved. Actual ordinary NPC hurt now uses genuine performed bodily injury, target-owned Girl Asset selection, actual Harm/work and Newgirl-selected real NPC Punishment before parent completion; native1/4.43s without fake PC Action/RNG. Actual NPC protection now has genuine unrolled controller performance and two positive failure sources: real bodily Harm or finite original-Handler factual nonmechanical failure. Original Newgirl optional NPC Tag/private saved readback retain ownership/retry. Two new normals passed2/8.29s; no fake Pilot, roll, shield or damage redirect.",
+      "missing_before_AI": "Actual NPC hurt/protect are implemented; NPC-use already routes genuine Newgirl child and remains final verification. Remaining Handler/other counterpart, body/work continuity and cohort-assisted unrolled NPC protection stay source-specific; no universal NPC Play/RNG substitute. Existing Pilot harm/protection and Mentor discipline retain final authored regression and independent review.",
       "later_candidates": "Mentor ending/replacement during an already-pending complex multi-Mentor source.",
       "code": [
         "src/girlframe/services/m3_trainee.py",
@@ -719,8 +719,8 @@
       "type": "Vatgrown",
       "registry_prefix": "girl.vatgrown.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Published scoped Doll and Experiment/Prime/Sex, real learned Brutalize once, original Investor/payment and Comfort gift;8 source normals passed separately. Local actual first DNA-comparison/Tag/private disclosure normal passed1/2.37s; explicit decline authored but unrun. Local genuine unchaperoned attempt/no-position-change/private disclosure/optional real Handler Punishment and actual source-bound movement normal passed1/2.49s; affected existing Wyvern movement normal passed in combined1failed/1passed3.86s. Local actual Stim-teacher learned Dose Up/native self-dose/consumed-grant readback passed1/3.62s. Earlier source/gift/DNA/Brutalize evidence remains. Local independently authored positive chaperoned journey now commits both actual original movements atomically; native two-PC normal passed1/2.21s, with private receipt/retry and parked Frames preserved. Local actual death now enforces a distinct Vatgrown; fresh coordinated review/Status, genuine new kit, activation and original-other authored private noticing passed1/4.57s. Original archives/resources/hardware remain separate. Local learned Old Dog/Easy Target consumers now preserve genuine own lesson, learner resources and consumed receipts; actual native advice cancel/retry/Status/maxim/listening/once use1/4.30s. Actual native learned Easy Target→real Keep child→requester judgment/Status/private readback passed in combined2/7.26s; broader lessons deferred. Genuine learned Mockingbird conversation/native trigger/cancel/fresh proposal/consumed receipt/capabilities/interlocutor Tag/private end passed1/4.90s. Genuine learned No One Better now binds actual final11+ Assault to its existing extra Engage maneuver, learner own resources/receipt, once-use and private readback; native passed in2/11.64s. Explicit Keep3 lessons now share finite canonical selection/use proof without passive grants: Beautiful/Itching automatic traits, Elder experienced choice and Beautiful actual own-Tag Flirt use. Genuine two-lesson Princess native Keep→Flirt minimum1/7.09s; separate learned Alpha/Elder cases deferred. Learned Hound uses existing actual Dog Status selector once, preserves historical receipt/source, and expires through real rank/Punishment effects without reactivation; native Keep→actual Beneath rank clear passed in3/15.99s. Paid learned Risk Factor now carries printed protection only for its actual payment-origin cause/work; real lastFrame payment→linkedKeep/in_control/Handler resistance/private closure passed in2/9.37s, raw receipt preserved.",
-      "missing_before_AI": "Finite remaining learning/source classification beyond actual Brutalize, Dose Up, Old Dog, Easy Target, Mockingbird conversation, No One Better and selected Keep3/Beautiful Flirt; learned Easy Target normal now passed in the minimum2-node run. Genuine surviving-hardware reassignment, additional source/body and unknown same-cell boundary cases remain; final deferred integration/regression/independent/player gates pending. Exact remaining rule IDs/prerequisites are classified in docs/P1_LEARNED_SOURCE_QUEUE.md; Hound and paid Risk implemented; defensive-only unused Risk entry, Call Void/Show Dog/Disposable and true applicable Sex/source adapters still explicit.",
+      "ordinary_workflows_with_evidence": "Published scoped Doll and Experiment/Prime/Sex, real learned Brutalize once, original Investor/payment and Comfort gift;8 source normals passed separately. Local actual first DNA-comparison/Tag/private disclosure normal passed1/2.37s; explicit decline authored but unrun. Local genuine unchaperoned attempt/no-position-change/private disclosure/optional real Handler Punishment and actual source-bound movement normal passed1/2.49s; affected existing Wyvern movement normal passed in combined1failed/1passed3.86s. Local actual Stim-teacher learned Dose Up/native self-dose/consumed-grant readback passed1/3.62s. Earlier source/gift/DNA/Brutalize evidence remains. Local independently authored positive chaperoned journey now commits both actual original movements atomically; native two-PC normal passed1/2.21s, with private receipt/retry and parked Frames preserved. Local actual death now enforces a distinct Vatgrown; fresh coordinated review/Status, genuine new kit, activation and original-other authored private noticing passed1/4.57s. Original archives/resources/hardware remain separate. Local learned Old Dog/Easy Target consumers now preserve genuine own lesson, learner resources and consumed receipts; actual native advice cancel/retry/Status/maxim/listening/once use1/4.30s. Actual native learned Easy Target\u2192real Keep child\u2192requester judgment/Status/private readback passed in combined2/7.26s; broader lessons deferred. Genuine learned Mockingbird conversation/native trigger/cancel/fresh proposal/consumed receipt/capabilities/interlocutor Tag/private end passed1/4.90s. Genuine learned No One Better now binds actual final11+ Assault to its existing extra Engage maneuver, learner own resources/receipt, once-use and private readback; native passed in2/11.64s. Explicit Keep3 lessons now share finite canonical selection/use proof without passive grants: Beautiful/Itching automatic traits, Elder experienced choice and Beautiful actual own-Tag Flirt use. Genuine two-lesson Princess native Keep\u2192Flirt minimum1/7.09s; separate learned Alpha/Elder cases deferred. Learned Hound uses existing actual Dog Status selector once, preserves historical receipt/source, and expires through real rank/Punishment effects without reactivation; native Keep\u2192actual Beneath rank clear passed in3/15.99s. Paid learned Risk Factor now carries printed protection only for its actual payment-origin cause/work; real lastFrame payment\u2192linkedKeep/in_control/Handler resistance/private closure passed in2/9.37s, raw receipt preserved. Unused learned Risk now has explicit original-owner defensive activation against one untouched other-origin source, canonical source/Frame/work proof and real Keep/Handler continuation. Native other-Dive-source/activation/Keep/parent/private-readback minimum1/7.81s after rendered-text assertion-only fix; no new roll/payment or global passive.",
+      "missing_before_AI": "Finite remaining learning/source classification beyond actual Brutalize, Dose Up, Old Dog, Easy Target, Mockingbird conversation, No One Better and selected Keep3/Beautiful Flirt; learned Easy Target normal now passed in the minimum2-node run. Fresh reviewed replacement equipment is implemented. PDF49/printed47 does not require automatic inheritance of old hardware; real optional recovered-equipment reassignment needs its concrete custody/assignment source, not account-based copying. Additional source/body and unknown same-cell boundaries remain; final deferred integration/regression/independent/player gates pending. Exact remaining rule IDs/prerequisites are classified in docs/P1_LEARNED_SOURCE_QUEUE.md; Hound and paid/explicit defensive Risk implemented; Call Void/Show Dog/Disposable and true applicable Sex/source adapters still explicit.",
       "later_candidates": "Compound existing Investor/acquisition obligations during exceptional carrier transitions; ordinary death continuity stays BEFORE AI.",
       "code": [
         "src/girlframe/services/m3_vatgrown.py",
@@ -986,7 +986,7 @@
       "type": "AM",
       "registry_prefix": "girl.am.",
       "status": "Published scoped implementation; final P1 gates pending",
-      "ordinary_workflows_with_evidence": "Existing Jailbroken, Scrutinized and Just Code/body/backup/records paths retained. New no-additional-roll Sex source readback and native circuit routing: actual Alpha→AM smoke1 passed2.15s. Genuine both-AM no-roll delegated encounter passed native/pause/private completion; original Pair outside scene/audience and no extra Action/dice/resources. Shared native completed readback +old policy consumer2 passed3.54s. Local exact physically conveyed held Item/Asset source now supports Code swap, actual new-body damage and owned hooked return; native normal passed1/5.90s after a test-only expected-exception fix. Same IDs/condition/custody, no duplicate parked hardware; Jailbroken native selectors also wired/static checked but that variant not run. Local real spinal contact binds birth vessel endpoints with historical-profile recovery; actual native unplug, intrinsic body transfer/return and reviewed Battery/Storage replug passed1/7.23s; affected historical binding extraction recheck1/6.08s. No automatic link expiry/copy. Actual intrinsic continuous neural route now preserves fixed physical jack, same temporary cognition ID/real communication and parked bodily Void; native move/return/own unplug minimum1/4.81s. Terminal shape already representable through actual prepared processing/body resources; no new terminal framework. Actual Pilot Just Code BODY separates original Handler hardware/hookup facts from Pilot choices/effect/receipt and original AM hooked return; native minimum1/5.85s. Actual Pilot Records now separates original Handler complete dossier/answer from Pilot learner, real Code option/question/private file and canonical source proof; native1/4.35s. Actual Pilot Branch now separates real operator selection from Handler hardware facts/NPC control, preserves legacy ordinary Identity slots and reaches actual Guard, assignment and original-owner takeover; native passed in2/11.64s. Connected actual Code BODY now has an original-AM factual endpoint route while preserving real operator authority, raw Swap/return receipt proof, same mental IDs, parked bodily Void and physical unplug; native passed in1failed1passed9.45s. Actual appropriate empty/all-damaged processing now preserves real resources/medical/Helpless; nonempty all-Void actual adjustment feeds typed Void work and holds/resumes real Code. Native empty Keep/return and actual all-Void entry/Harpy/rebirth passed in3/15.99s. Standalone actual Girl discovery now has its real owned realization, source roll/choice, secrecy/Bond/higher Order. Actual piloting target lastFrame violence uses trusted damage→real target Defeat/escape→own rendition; two native normals passed (secret/Order in2/9.37s; lastFrame1/5.66s).",
+      "ordinary_workflows_with_evidence": "Existing Jailbroken, Scrutinized and Just Code/body/backup/records paths retained. New no-additional-roll Sex source readback and native circuit routing: actual Alpha\u2192AM smoke1 passed2.15s. Genuine both-AM no-roll delegated encounter passed native/pause/private completion; original Pair outside scene/audience and no extra Action/dice/resources. Shared native completed readback +old policy consumer2 passed3.54s. Local exact physically conveyed held Item/Asset source now supports Code swap, actual new-body damage and owned hooked return; native normal passed1/5.90s after a test-only expected-exception fix. Same IDs/condition/custody, no duplicate parked hardware; Jailbroken native selectors also wired/static checked but that variant not run. Local real spinal contact binds birth vessel endpoints with historical-profile recovery; actual native unplug, intrinsic body transfer/return and reviewed Battery/Storage replug passed1/7.23s; affected historical binding extraction recheck1/6.08s. No automatic link expiry/copy. Actual intrinsic continuous neural route now preserves fixed physical jack, same temporary cognition ID/real communication and parked bodily Void; native move/return/own unplug minimum1/4.81s. Terminal shape already representable through actual prepared processing/body resources; no new terminal framework. Actual Pilot Just Code BODY separates original Handler hardware/hookup facts from Pilot choices/effect/receipt and original AM hooked return; native minimum1/5.85s. Actual Pilot Records now separates original Handler complete dossier/answer from Pilot learner, real Code option/question/private file and canonical source proof; native1/4.35s. Actual Pilot Branch now separates real operator selection from Handler hardware facts/NPC control, preserves legacy ordinary Identity slots and reaches actual Guard, assignment and original-owner takeover; native passed in2/11.64s. Connected actual Code BODY now has an original-AM factual endpoint route while preserving real operator authority, raw Swap/return receipt proof, same mental IDs, parked bodily Void and physical unplug; native passed in1failed1passed9.45s. Actual appropriate empty/all-damaged processing now preserves real resources/medical/Helpless; nonempty all-Void actual adjustment feeds typed Void work and holds/resumes real Code. Native empty Keep/return and actual all-Void entry/Harpy/rebirth passed in3/15.99s. Standalone actual Girl discovery now has its real owned realization, source roll/choice, secrecy/Bond/higher Order. Actual piloting target lastFrame violence uses trusted damage\u2192real target Defeat/escape\u2192own rendition; two native normals passed (secret/Order in2/9.37s; lastFrame1/5.66s).",
       "missing_before_AI": "Implemented ordinary source set includes native Jailbroken/Scrutinized/Just Code/Sex, Pilot Body/Records/Branch, actual conveyed hardware, neural route and terminal/all-Void work. Final integrated/affected-consumer regression and independent review remain. Exact non-Enforcer takeover/local vessel, coupled identity, transformed/retained and NPC Branch all-Void prerequisites remain explicit source boundaries; no blanket whole-AM deferral. Outside/parked lastFrame violence remains separately guarded.",
       "later_candidates": "Exceptional simultaneous branch/body/career transitions after ordinary AM play works.",
       "code": [
@@ -1552,12 +1552,12 @@
         },
         {
           "id": "frame.consume.human-hound",
-          "title": "‘Human’ Hound",
+          "title": "\u2018Human\u2019 Hound",
           "source": {
             "document": "rulebook",
             "pdf_page": 66,
             "printed_page": 64,
-            "heading": "‘Human’ Hound"
+            "heading": "\u2018Human\u2019 Hound"
           },
           "published_implementation": "subset",
           "local_implementation": "subset",
@@ -2664,12 +2664,12 @@
         },
         {
           "id": "frame.enforcer.masters-dog",
-          "title": "Master’s Dog",
+          "title": "Master\u2019s Dog",
           "source": {
             "document": "rulebook",
             "pdf_page": 79,
             "printed_page": 77,
-            "heading": "Master’s Dog"
+            "heading": "Master\u2019s Dog"
           },
           "published_implementation": "subset",
           "local_implementation": "subset",
@@ -2685,12 +2685,12 @@
         },
         {
           "id": "frame.enforcer.pavlovs-soldier",
-          "title": "Pavlov’s Soldier",
+          "title": "Pavlov\u2019s Soldier",
           "source": {
             "document": "rulebook",
             "pdf_page": 79,
             "printed_page": 77,
-            "heading": "Pavlov’s Soldier"
+            "heading": "Pavlov\u2019s Soldier"
           },
           "published_implementation": "subset",
           "local_implementation": "subset",
@@ -3287,12 +3287,12 @@
         },
         {
           "id": "frame.red-queen.queens-court",
-          "title": "Queen’s Court",
+          "title": "Queen\u2019s Court",
           "source": {
             "document": "rulebook",
             "pdf_page": 88,
             "printed_page": 86,
-            "heading": "Queen’s Court"
+            "heading": "Queen\u2019s Court"
           },
           "published_implementation": "subset",
           "local_implementation": "subset",

@@ -613,3 +613,216 @@ def test_low_actual_status_and_performance_then_real_protection_and_failure(
     result = controls.failure_tag(*payload)
     assert controls.failure_tag(*payload) == result
     assert state(game).sheets["3"].tags[-1].giver_actor == ward
+
+
+async def _npc_protection_native(game, user, row, values, interaction_id):
+    from girlframe.discord_adapter.m3_easy_target import open_choice
+
+    opened = current(user, interaction_id)
+    opened.channel_id = 900
+    await opened.response.defer(ephemeral=True)
+    await open_choice(opened, game, game.decision({1: ADMIN, 2: PLAYER, 3: OTHER}[user], row["id"]))
+    form = opened.edit_original_response.call_args.kwargs["view"]
+    form.values.update(values)
+    submitted = current(user, interaction_id + 1)
+    submitted.channel_id = 900
+    await form.confirm.callback(submitted)
+    assert form.completed, submitted.edit_original_response.call_args_list
+    saved = state(game)
+    await form.confirm.callback(submitted)
+    assert state(game) == saved
+
+
+def _perform_npc_protection(game, worker, gateway):
+    npc = ActorRef(kind="npc", entity="bystander")
+    identity = source(game, worker, gateway, selected=npc)
+    work = rules.identity(identity, npc)
+    calls = game.dice.calls
+    before = state(game)
+    row = next(x for x in game.choices(OTHER) if x["kind"] == "easy_target_react:" + npc.token)
+    asyncio.run(
+        _npc_protection_native(
+            game,
+            3,
+            row,
+            dict(
+                urge=("protect",),
+                context="I keep the actual corridor clear around her",
+                account="PRIVATE_NPC_PROTECT I want to protect the original Newgirl",
+            ),
+            99400,
+        )
+    )
+    reaction = rules.get(state(game), rules.Reaction, work)
+    assert reaction.performer == npc and reaction.play is None and reaction.child is None
+    validation = next(
+        x for x in game.choices(ADMIN) if x["kind"] == "easy_target_validate:" + npc.token
+    )
+    asyncio.run(
+        _npc_protection_native(
+            game,
+            1,
+            validation,
+            dict(yes=("yes",), account="This actual NPC can keep this real corridor clear"),
+            99410,
+        )
+    )
+    perform = next(x for x in game.choices(OTHER) if x["kind"] == "easy_target_child:" + npc.token)
+    asyncio.run(
+        _npc_protection_native(
+            game,
+            3,
+            perform,
+            dict(account="PRIVATE_PROTECTION_PERFORMED I actually stand guard at her corridor"),
+            99420,
+        )
+    )
+    actual = state(game)
+    protection = rules.records(actual, rules.NpcProtection)[-1]
+    assert protection.actor == npc and protection.controller == 3
+    assert protection.target == current_ref(actual, 2) and protection.session == identity
+    assert game.dice.calls == calls and actual.sheets["3"] == before.sheets["3"]
+    assert actual.sheets["2"].assets == before.sheets["2"].assets
+    assert game.inspect(PLAYER, identity)["state"] == "complete"
+    assert EasyTargetService(game).view(ADMIN, work)["can_report_failure"]
+    with game.store.engine.connect() as c:
+        from girlframe.services.m3_easy_target import prove_npc_protection
+
+        assert prove_npc_protection(game, c, actual, protection.id) == protection
+        assert "PRIVATE_PROTECTION_PERFORMED" not in str(
+            list(c.scalars(sa.select(t.events.c.payload_json)))
+        )
+    return npc, identity, work, protection
+
+
+def test_actual_npc_protection_native_handler_factual_failure_and_owned_optional_tag(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred: actual unrolled protection and nonmechanical failure cost no fictitious damage."""
+    from girlframe.discord_adapter.m3_easy_target import open_easy_target
+    from girlframe.services.m3_easy_target import prove_protection_failure
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, mixed=True)
+    npc, identity, work, protection = _perform_npc_protection(game, worker, gateway)
+    before = state(game)
+    calls = game.dice.calls
+    receipt = game.inspect(PLAYER, identity)["receipt"]
+    with pytest.raises(WorkflowError):
+        controls.fail_protection(
+            OTHER,
+            str(uuid4()),
+            work,
+            before.revision,
+            "I attempted to keep the corridor clear",
+            "Someone actually passed the guard",
+        )
+    with pytest.raises(WorkflowError):
+        controls.fail_protection(
+            ADMIN,
+            str(uuid4()),
+            work,
+            before.revision - 1,
+            "I attempted to keep the corridor clear",
+            "Someone actually passed the guard",
+        )
+    assert state(game) == before
+    with pytest.raises(WorkflowError):
+        controls.view(GuildViewer(9, 200, True, False), work)
+
+    async def report():
+        opened = current(1, 99430)
+        opened.channel_id = 900
+        await opened.response.defer(ephemeral=True)
+        await open_easy_target(opened, controls, work)
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert {x.key for x in form.fields} == {"attempt", "occurred"}
+        form.values.update(
+            attempt="PRIVATE_ATTEMPT The NPC stood watch to keep the corridor clear",
+            occurred="PRIVATE_OCCURRENCE An unwanted visitor actually passed the watch",
+        )
+        submitted = current(1, 99431)
+        submitted.channel_id = 900
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+
+    asyncio.run(report())
+    actual = state(game)
+    failure = rules.records(actual, rules.NpcProtectionFailure)[-1]
+    assert failure.protection == protection.id and failure.npc == npc
+    assert actual.sheets == before.sheets and not rules.records(actual, rules.Harm)
+    assert game.dice.calls == calls and game.inspect(PLAYER, identity)["receipt"] == receipt
+    with ledger.engine.connect() as c:
+        assert prove_protection_failure(game, c, actual, failure.id) == failure
+        event = (
+            c.execute(sa.select(t.events).where(t.events.c.id == failure.event)).mappings().one()
+        )
+        assert event["actor_id"] == "1" and event["kind"] == "m3.easy_target_protection_failed"
+        assert "PRIVATE_OCCURRENCE" not in event["payload_json"]
+    assert controls.view(PLAYER, work)["can_failure_tag"]
+    assert not controls.view(OTHER, work)["can_failure_tag"]
+
+    async def tag():
+        opened = current(2, 99440)
+        opened.channel_id = 900
+        await opened.response.defer(ephemeral=True)
+        await open_easy_target(opened, controls, work)
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values.update(give=("yes",), account="Failed to guard my corridor")
+        submitted = current(2, 99441)
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+
+    asyncio.run(tag())
+    actual = state(game)
+    tagged = next(x for x in actual.world.npcs if x.id == npc.entity)
+    assert tagged.tags[-1].label == "Failed to guard my corridor"
+    assert tagged.tags[-1].giver_entity == current_ref(actual, 2).model_dump_json()
+    assert not controls.view(PLAYER, work)["can_failure_tag"]
+    assert controls.view(OTHER, work)["protection_failure"]["id"] == failure.id
+
+    async def reopen():
+        opened = current(3, 99450)
+        opened.channel_id = 999
+        await opened.response.defer(ephemeral=True)
+        await open_easy_target(opened, controls, work)
+        history = opened.edit_original_response.call_args.kwargs["view"]
+        assert protection.account in "".join(x.body for x in history.pages)
+        assert failure.occurred in "".join(x.body for x in history.pages)
+
+    asyncio.run(reopen())
+
+
+def test_actual_npc_protection_real_bodily_harm_opens_one_optional_failure_tag(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred: a genuine later physical attack uses the existing Harm observer."""
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, mixed=True)
+    npc, identity, work, protection = _perform_npc_protection(game, worker, gateway)
+    tick(worker, gateway, 5)
+    attack = assault(game, worker, gateway)
+    actual = state(game)
+    reaction = rules.get(actual, rules.Reaction, work)
+    harm = rules.get(actual, rules.Harm, reaction.failure)
+    assert harm.source_action == attack and harm.target == protection.target
+    assert not rules.records(actual, rules.NpcProtectionFailure)
+    saved = controls.view(PLAYER, work)
+    assert saved["can_failure_tag"] and saved["npc_protection"]["id"] == protection.id
+    payload = (
+        PLAYER,
+        "actual-npc-protection-decline",
+        work,
+        saved["revision"],
+        False,
+        "I decline my optional Tag after the actual bodily harm",
+    )
+    result = controls.failure_tag(*payload)
+    assert controls.failure_tag(*payload) == result
+    assert controls.view(OTHER, work)["work"]["consequence"] == "failure-declined"
+    assert not next(x for x in state(game).world.npcs if x.id == npc.entity).tags
+    assert game.inspect(PLAYER, identity)["state"] == "complete"

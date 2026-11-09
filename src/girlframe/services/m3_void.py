@@ -649,6 +649,13 @@ class VoidService:
         )
         if learned_ward is not None:
             result["learned_risk_ward"] = True
+        if owner:
+            from girlframe.engine.m3_learned_play_state import DefensiveRiskUse
+            from girlframe.services.m3_learned_plays import defensive_risk_lessons
+
+            result["defensive_risk_lessons"] = defensive_risk_lessons(self.game, c, state, value)
+            if isinstance(learned_ward, DefensiveRiskUse):
+                result["defensive_risk_use"] = learned_ward.model_dump(mode="json")
         if value.stage not in rules.FINAL:
             sheet = state.sheets.get(actor.entity)
             if sheet is None:
@@ -828,6 +835,7 @@ class VoidService:
             "propose_approach",
             "confirm_approach",
             "release_protection",
+            "use_risk_lesson",
         ],
         data: dict[str, Any],
     ) -> dict[str, Any]:
@@ -867,7 +875,15 @@ class VoidService:
             account = str(data.get("account", "")).strip()
             if not account or len(account) > 1200:
                 raise WorkflowError("Describe this actual owned choice or factual consequence.")
-            if operation == "release_protection":
+            if operation == "use_risk_lesson":
+                from girlframe.services.m3_learned_plays import activate_defensive_risk
+
+                use = activate_defensive_risk(
+                    self.game, c, state, value, data["lesson"], event, account
+                )
+                state = rules.apply_defensive_risk(state, bindings, value.id, use, event)
+                current["defensive_risk_use"] = use.id
+            elif operation == "release_protection":
                 if value.guardian is None:
                     raise WorkflowError("This source has no actual protective guardian.")
                 state = physical.release_protective_hold(
@@ -1019,6 +1035,9 @@ class VoidService:
                 raise WorkflowError("Unsupported actual transformation response.")
             value = rules.threshold(state, value.id)
             current["threshold"] = value.id
+            defensive_metadata: dict[str, Any] = {}
+            if operation == "use_risk_lesson":
+                defensive_metadata.update(defensive_risk_use=use.id, lesson=use.lesson)
             self.game.event(
                 c,
                 viewer.user_id,
@@ -1030,6 +1049,7 @@ class VoidService:
                 threshold=value.id,
                 operation=operation,
                 pending_sha256=_digest(current),
+                **defensive_metadata,
             )
             if operation == "release_protection":
                 _append(

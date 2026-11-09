@@ -4054,3 +4054,29 @@ discarding a printed clause during the paid use. Defensive-only activation of an
 unused lesson against another true cause remains a named ordinary provider to
 implement, not an anatomical exclusion or completed automation claim. Version
 future changes while preserving old sources/receipts and consumed entitlements.
+
+
+## P1 deliberate defensive lesson and actual NPC protection
+
+`vatgrown-defense-scope` (Risk Factor PDF35/printed33; Vatgrown Sex PDF50/printed48):
+Use an unused lesson only after the original owner explicitly activates it for
+one untouched genuine other-origin Void threshold. Preserve actual cause/work,
+Frame and before snapshot. No passive ward while holding, fabricated paid roll
+or retroactive second resistance. Actual own all-Void Frame still requires real
+Keep/in_control and Handler sufficiency; unknown occupancy and abandoned Frame
+consequences retain their existing handling. Alternative global protection or
+postfailure activation loses once-use/source ownership. Paid-use proof remains
+a distinct provider. This delegated recommendation requires printed-rule clarity
+review; future changes preserve consumed sources and original costs.
+
+`easy-target-npc-protection-facts` (Easy Target PDF41/printed39):
+Actual controlled NPC protective performance needs its factual source, rather
+than a fabricated Pilot roll, shield or damage redirect. Original Handler may
+record actual nonmechanical failure using both the attempted prevention and what
+occurred. Genuine physical Harm remains its own source. Preserve original
+protector/Newgirl bodies, controller and open source scene. Only the Newgirl
+chooses the optional real NPC Tag, once. The existing scene/co-presence window is
+an adjustable duration interpretation; the book gives no fixed duration. Broader
+off-scene failure or invented automatic protection are alternatives, not current
+implementation. This extends the earlier physical-failure provider without
+rewriting its records. Delegated recommendation; printed clarity review pending.

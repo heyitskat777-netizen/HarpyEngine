@@ -151,8 +151,18 @@ async def open_void(
         await reply(interaction, form.text(), form)
         return
     if stage in FINAL:
+        saved_defense = data.get("defensive_risk_use")
         await reply(
-            interaction, "The actual original Void consequence is resolved: " + clean(stage) + "."
+            interaction,
+            "The actual original Void consequence is resolved: "
+            + clean(stage)
+            + "."
+            + (
+                "\nYour one-use Risk Factor lesson was used for this original source.\n"
+                + clean(saved_defense["account"])
+                if saved_defense
+                else ""
+            ),
         )
         return
     if stage == "resist_pending":
@@ -190,6 +200,10 @@ async def open_void(
     if operation is None:
         actions = []
         if data["owner"]:
+            if data.get("defensive_risk_lessons"):
+                actions.append(
+                    ("use_risk_lesson", "Use an unused Risk Factor lesson for this source")
+                )
             if stage == "physical_review":
                 actions.append(("propose_occupancy", "Describe actual unknown cockpit occupancy"))
             if data["needs_free"]:
@@ -244,7 +258,30 @@ async def open_void(
     values: dict[str, Any] = {}
     text = "Record your actual owned choice; selections alone commit no effect."
     actual_operation = operation
-    if operation == "propose_occupancy":
+    if operation == "use_risk_lesson":
+        if not data["owner"] or not data.get("defensive_risk_lessons"):
+            await reply(interaction, "This source has no eligible unused owned Risk lesson.")
+            return
+        fields = [
+            Field(
+                "lesson",
+                "Your actual unused lesson",
+                tuple((x["id"], x["label"]) for x in data["defensive_risk_lessons"]),
+            ),
+            Field(
+                "account", "Your choice to use it for this actual Void consequence", paragraph=True
+            ),
+        ]
+        text = (
+            "Spend one unused Risk Factor lesson only for this original Void source. "
+            "This adds no Void payment or dice. Inside your own all-Void Frame, "
+            "you still owe a real Keep Your Head and the Handler's actual ruling. "
+            "Continue the ordinary consequence instead to keep the lesson unused."
+        )
+
+        def payload(v: dict[str, Any]) -> dict[str, Any]:
+            return dict(lesson=v["lesson"][0], account=v["account"])
+    elif operation == "propose_occupancy":
         fields = [
             Field(
                 "mode",

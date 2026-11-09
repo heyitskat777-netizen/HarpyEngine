@@ -120,6 +120,38 @@ class RiskLessonUse(Model):
     work: tuple[str, ...] = ()
 
 
+class DefensiveRiskUse(Model):
+    id: str
+    lesson: str
+    actor: ActorRef
+    frame: str
+    threshold: str
+    cause_event: str
+    cause_action: str | None
+    cause_works: tuple[str, ...]
+    source_rows_sha256: str
+    before_revision: int
+    before_threshold_sha256: str
+    event: str
+    account: str = Field(min_length=1, max_length=1200)
+
+
+def defensive_risk_uses(state: "GameState") -> tuple[DefensiveRiskUse, ...]:
+    return tuple(
+        DefensiveRiskUse.model_validate_json(x["body"])
+        for x in state.facts
+        if x.get("kind") == "learned_defensive_risk_use"
+    )
+
+
+def put_defensive_risk(state: "GameState", value: DefensiveRiskUse) -> None:
+    if any(x.id == value.id or x.threshold == value.threshold for x in defensive_risk_uses(state)):
+        raise ValueError("This actual source already has its single defensive lesson use")
+    state.facts.append(
+        dict(kind="learned_defensive_risk_use", id=value.id, body=value.model_dump_json())
+    )
+
+
 def risk_lesson_uses(state: "GameState") -> tuple[RiskLessonUse, ...]:
     return tuple(
         RiskLessonUse.model_validate_json(x["body"])
@@ -142,7 +174,7 @@ def risk_ward(
     source_event: str,
     source_action: str | None,
     source_work: str,
-) -> RiskLessonUse | None:
+) -> RiskLessonUse | DefensiveRiskUse | None:
     """Only a paid use's exact real Void cause; holding a lesson grants nothing."""
     use = next(
         (
@@ -160,7 +192,19 @@ def risk_ward(
         None,
     )
     if use is None:
-        return None
+        candidates = tuple(
+            x
+            for x in defensive_risk_uses(state)
+            if (
+                x.actor == actor
+                and x.cause_event == source_event
+                and x.cause_action == source_action
+                and source_work in x.cause_works
+            )
+        )
+        if len(candidates) > 1:
+            raise ValueError("Preserve one exact original defensive ward for this source")
+        return candidates[0] if candidates else None
     paid = next(
         (
             json.loads(x["body"])

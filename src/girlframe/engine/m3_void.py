@@ -1,6 +1,6 @@
 """Actual original-body Void thresholds and irreversible Apometanoia (PDF19,179)."""
 
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from girlframe.engine import m3_actor_bonds as bonds
 from girlframe.engine import m3_careers as careers
@@ -18,6 +18,9 @@ from girlframe.engine.m3_void_state import (
     VoidThreshold,
 )
 from girlframe.engine.m3_world_state import Gorgon
+
+if TYPE_CHECKING:
+    from girlframe.engine.m3_learned_play_state import DefensiveRiskUse
 
 
 def _risk_protection(
@@ -183,6 +186,70 @@ def start_threshold(
     )
     state.void_thresholds.append(value)
     return state, value
+
+
+def defensive_risk_fresh(value: VoidThreshold) -> bool:
+    """A source choice can precede consequences, never undo an answered one."""
+    return bool(
+        value.stage in ("allured", "physical_review", "abandoned", "enclosed", "questions")
+        and value.free_identity is None
+        and not value.answers
+        and value.resistance_action is None
+        and value.guardian is None
+        and value.gorgon is None
+        and value.survival is None
+        and value.resulting_actor is None
+    )
+
+
+def apply_defensive_risk(
+    original: GameState,
+    bindings: tuple[ProfileBinding, ...],
+    identity: str,
+    use: "DefensiveRiskUse",
+    event: str,
+) -> GameState:
+    from girlframe.engine.m3_janus_storage import effective_assets
+    from girlframe.engine.m3_learned_play_state import defensive_risk_uses
+
+    state, value = _copy(original, identity, event)
+    if (
+        use not in defensive_risk_uses(state)
+        or use.event != event
+        or use.threshold != identity
+        or use.actor != value.actor
+        or use.frame != value.frame_instance
+        or use.cause_event != value.source_event
+        or use.cause_action != value.source_action
+        or use.cause_works != value.source_works
+        or not defensive_risk_fresh(value)
+    ):
+        raise ValueError("Activate only this actual untouched Void source's defensive lesson")
+    view = resolve(state, value.actor, bindings, require_current_profile=False)
+    if view.frame_instance != value.frame_instance:
+        raise ValueError("Keep the original affected Frame, not a replacement vessel")
+    own = view.inside_frame is True and view.occupied_frame_instance == value.frame_instance
+    frames = [x for x in effective_assets(state, value.actor) if x.family == "frame"]
+    stage: Literal["physical_review", "abandoned", "resist_pending", "prevented"]
+    if view.inside_frame is None:
+        stage = "physical_review"
+    elif value.family == "frame" and not own:
+        stage = "abandoned"
+    elif own and frames and all(x.void for x in frames):
+        stage = "resist_pending"
+    else:
+        stage = "prevented"
+    return _save(
+        state,
+        value.model_copy(
+            update=dict(
+                stage=stage,
+                enclosed=own and value.family == "frame",
+                response_event=event,
+                allure_persists=False,
+            )
+        ),
+    )
 
 
 def begin_questions(

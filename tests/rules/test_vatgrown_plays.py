@@ -2434,3 +2434,254 @@ def test_actual_learned_risk_paid_last_frame_void_holds_real_keep_resistance_and
         assert prove_risk_lesson(game, c, state(game), game.action(c, parent)) == use
     assert "PRIVATE_LEARNED_RISK" not in json.dumps(gateway.messages)
     tick(worker, gateway, 6)
+
+
+def test_actual_unused_risk_defense_other_dive_source_native_keep_and_original_completion(
+    ledger, tmp_path, monkeypatch
+):
+    from girlframe.discord_adapter.m3_void import open_void
+    from girlframe.discord_adapter.m3_void_keep import open_keep
+    from girlframe.engine.m3_actors import resolve
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+    from girlframe.engine.m3_learned_play_state import defensive_risk_uses, risk_lesson_uses
+    from girlframe.engine.m3_mockingbird import RISK
+    from girlframe.engine.m3_physical_state import CockpitAction
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_learned_plays import available, prove_risk_ward
+    from girlframe.services.m3_physical import PhysicalService
+    from girlframe.services.m3_void import VoidService
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, teacher="MOCKINGBIRD")
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(rules.EXPERIMENT, rules.INVESTMENT, rules.SEX, rules.BRUTALIZE, RISK),
+    )
+    session, lesson_action = sex(
+        game,
+        worker,
+        gateway,
+        controls,
+        (5, 5),
+        counterpart_account="My actual Mockingbird voluntarily teaches this whole one-use Play",
+    )
+    actual = state(game)
+    learner = current_ref(actual, 2)
+    replacement = actual.sheets["2"].identities[0]
+    retained = {x.name.casefold() for x in actual.sheets["2"].identities if x.id != replacement.id}
+    taught = next(x for x in actual.sheets["3"].identities if x.name.casefold() not in retained)
+    native_choice(
+        game,
+        OTHER,
+        "vat_sex_learn",
+        identities=(taught.id,),
+        replacements=(replacement.id,),
+        play=(RISK,),
+        account="I teach Risk Factor once, including deliberate defensive use",
+    )
+    lesson = rules.records(state(game), rules.LearnedPlay)[-1]
+    assert game.inspect(PLAYER, lesson_action)["state"] == "complete"
+    controls.send_away(
+        OTHER,
+        str(uuid4()),
+        session,
+        state(game).revision,
+        "The original teacher actually ends the required stay",
+    )
+    tick(worker, gateway, 6)
+    frames = [x.id for x in state(game).sheets["2"].assets if x.family == "frame"]
+    assert len(frames) >= 2
+    physical = PhysicalService(ledger)
+    for index, asset in enumerate(frames):
+        if index == len(frames) - 1:
+            with ledger.engine.connect() as c:
+                pose = resolve(
+                    state(game), learner, profiles(c, ledger.campaign_id)
+                ).position_sha256
+            physical.operate(
+                PLAYER,
+                str(uuid4()),
+                state(game).revision,
+                CockpitAction(
+                    actor=learner,
+                    operation="sit",
+                    expected_position=pose,
+                    account="I actually enter my original co-located Frame",
+                    confirmed=True,
+                ),
+                channel=900,
+            )
+        game.dice.faces = (3, 3)
+        dive = game.begin(
+            PLAYER,
+            str(uuid4()),
+            900,
+            state(game).sheets["2"].revision,
+            PlayInput(
+                play="dive_deep",
+                heat=0,
+                trigger_confirmed=True,
+                context="I actually commune through my original Frame link",
+            ),
+        )["action_id"]
+        tick(worker, gateway, 3)
+        pass_tags(game)
+        # The offered numeric shift is explicitly declined. It neither pays
+        # Void nor spends the separate defensive-only source entitlement.
+        answer(game, PLAYER, "mockingbird_risk")
+        with ledger.engine.connect() as c:
+            assert available(game, c, state(game), learner, RISK).id == lesson.id
+        chooser = next(
+            viewer
+            for viewer in (PLAYER, ADMIN)
+            if any(row["kind"] == "dive_select" for row in game.choices(viewer))
+        )
+        answer(
+            game,
+            chooser,
+            "dive_select",
+            options=("void_and_unmark_all",),
+            text="This genuine Dive result alters the actual original component",
+        )
+        answer(
+            game,
+            PLAYER,
+            "dive_effect",
+            fields={"asset": asset},
+            text="Actual Frame component becomes flesh-threaded Void through communion",
+        )
+        assert next(x for x in state(game).sheets["2"].assets if x.id == asset).void
+        if index < len(frames) - 1:
+            assert game.inspect(PLAYER, dive)["state"] == "complete"
+            tick(worker, gateway, 6)
+    assert not risk_lesson_uses(state(game))
+    assert not has_rule(state(game).sheets["2"], RISK, "MOCKINGBIRD")
+    assert game.inspect(PLAYER, dive)["state"] != "complete"
+    with ledger.engine.connect() as c:
+        rows = (
+            c.execute(
+                sa.select(t.m3["m3_required_work"]).where(
+                    t.m3["m3_required_work"].c.campaign_id == ledger.campaign_id,
+                    t.m3["m3_required_work"].c.kind == "void_threshold",
+                    t.m3["m3_required_work"].c.state == "pending",
+                )
+            )
+            .mappings()
+            .all()
+        )
+        work = next(
+            x["id"] for x in rows if json.loads(x["body_json"]).get("source_action") == dive
+        )
+    void = VoidService(ledger)
+    before = void.get(PLAYER, work)
+    assert before["stage"] == "enclosed" and before["defensive_risk_lessons"][0]["id"] == lesson.id
+    assert "defensive_risk_lessons" not in void.get(ADMIN, work)
+    raw = game.inspect(PLAYER, dive)["receipt"]
+    calls, heat = game.dice.calls, state(game).sheets["2"].heat
+    cause = before["threshold"]
+
+    def interaction(user=2):
+        opened = current(user, uuid4().int % 1000000000)
+        opened.channel_id = 900
+        return opened
+
+    async def defend():
+        opened = interaction()
+        await opened.response.defer(ephemeral=True)
+        await open_void(opened, void, work)
+        menu = opened.edit_original_response.call_args.kwargs["view"]
+        assert not await menu.interaction_check(interaction(3))
+        opened = interaction()
+        await opened.response.defer(ephemeral=True)
+        await open_void(opened, void, work, operation="use_risk_lesson")
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert "adds no Void payment or dice" in form.text()
+        form.values.update(
+            lesson=(lesson.id,),
+            account="PRIVATE_RISK_DEFENSE I use this lesson only for this real Dive source",
+        )
+        sent = interaction()
+        await form.confirm.callback(sent)
+        assert form.completed, sent.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(sent)
+        assert state(game) == saved
+
+    asyncio.run(defend())
+    actual = state(game)
+    use = defensive_risk_uses(actual)[-1]
+    after = void.get(PLAYER, work)
+    assert use.lesson == lesson.id and use.actor == learner and use.cause_action == dive
+    assert after["stage"] == "resist_pending" and after["learned_risk_ward"]
+    assert not after["defensive_risk_lessons"]
+    for name in (
+        "id",
+        "actor",
+        "frame_instance",
+        "family",
+        "source_event",
+        "source_action",
+        "source_works",
+    ):
+        assert after["threshold"][name] == cause[name]
+    assert game.dice.calls == calls and actual.sheets["2"].heat == heat
+    assert game.inspect(PLAYER, dive)["receipt"] == raw and not risk_lesson_uses(actual)
+    with ledger.engine.connect() as c:
+        assert available(game, c, actual, learner, RISK) is None
+        threshold = next(x for x in actual.void_thresholds if x.id == use.threshold)
+        assert prove_risk_ward(game, c, actual, threshold) == use
+        spent = next(x for x in actual.sheets["2"].girl_runtime.learned_plays if x.id == lesson.id)
+        assert spent.claimed_action is None and spent.rolled_event == use.event
+    with pytest.raises(WorkflowError):
+        void.respond(
+            PLAYER,
+            str(uuid4()),
+            work,
+            before["revision"],
+            before["game_revision"],
+            before["expected"],
+            "use_risk_lesson",
+            dict(lesson=lesson.id, account="No duplicate"),
+        )
+
+    async def resist():
+        opened = interaction()
+        await opened.response.defer(ephemeral=True)
+        await open_keep(opened, game, work)
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            heat=("0",), account="My actual resistance to this original Void consequence"
+        )
+        sent = interaction()
+        await form.confirm.callback(sent)
+        assert form.completed, sent.edit_original_response.call_args_list
+
+    game.dice.faces = (4, 4)
+    asyncio.run(resist())
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    assert not any(x["kind"] == "mockingbird_risk" for x in game.choices(PLAYER))
+    answer(game, PLAYER, "actor_keep", options=("in_control", "tough"), denied=("desperate",))
+    answer(game, ADMIN, "handler_keep", flag=True, text="This genuine defensive Keep is enough")
+    assert void.get(PLAYER, work)["stage"] == "prevented"
+    assert game.inspect(PLAYER, dive)["state"] == "complete"
+    assert game.inspect(PLAYER, dive)["receipt"] == raw and game.dice.calls == calls + 1
+    assert not has_rule(state(game).sheets["2"], RISK, "MOCKINGBIRD")
+    with ledger.engine.connect() as c:
+        threshold = next(x for x in state(game).void_thresholds if x.id == use.threshold)
+        assert prove_risk_ward(game, c, state(game), threshold) == use
+    assert "PRIVATE_RISK_DEFENSE" not in json.dumps(gateway.messages)
+
+    async def reopen():
+        from girlframe.discord_adapter.ledger import clean
+
+        opened = interaction()
+        await opened.response.defer(ephemeral=True)
+        await open_void(opened, void, work)
+        assert clean(use.account) in opened.edit_original_response.call_args.kwargs["content"]
+
+    asyncio.run(reopen())
+    assert "defensive_risk_use" not in void.get(ADMIN, work)
+    tick(worker, gateway, 6)

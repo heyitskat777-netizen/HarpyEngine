@@ -1470,3 +1470,62 @@ that ID, preserving the scanner unchanged. Delta registry/repository checks
 PASS:477 entries/273 subset/204 unimplemented/440 required/0 verified;1421
 publishable files/40 manifest entries/0 findings. Initial failed scan retained.
 No extra gameplay rerun; full P1 gates remain pending.
+
+
+## Next integrated packet — in progress
+
+Published db95b09aec63f446e4d95859c940e6e55450a4c3;
+[focused CI42548133990](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42548133990)
+PASS; full-regression step skipped. NPC Easy Target protection and unused learned
+Risk defensive entry are separately owned active source packets.
+
+Root authored `tests/rules/test_p1_campaign_loop.py::test_human_mission_play_discipline_off_duty_recovery_and_next_mission`
+for final regression, **NOT RUN**: genuine mission acceptance/dispatch, actual
+Keep/receipt and Handler sufficiency, actual Dog discipline, mission rewards,
+three real Strain draws/columns/effects, owned Off-Duty/recovery/Handler scene,
+map advancement and next mission. Provider/bot keys are absent inside this
+synthetic scenario; no live connection or model call. Actual source receipts and
+private/public boundaries are asserted. Ruff/format PASS for this new test only;
+no runtime success or human acceptance is inferred. Full candidate gates pending.
+
+Defensive Risk minimum: `pytest -q --tb=short tests/rules/test_vatgrown_plays.py::test_actual_unused_risk_defense_other_dive_source_native_keep_and_original_completion`.
+Initial1failed7.32s only at final native readback assertion (raw underscore text
+compared with Markdown-escaped mock representation). Test-only correction checks
+`clean(account)` in actual rendered content. Failed-node retry **1passed7.81s**,
+`var/p1-defense-minimum{,-retry}.txt/xml`. Actual other-source Dive, deliberate
+private activation, genuine Keep/Handler resistance, original work closure and
+private saved readback succeeded. No repeated earlier source tests; final P1
+regression and independent/human gates remain pending.
+
+NPC Easy Target protection minimum `pytest -q --tb=short` selected
+`test_actual_npc_protection_native_handler_factual_failure_and_owned_optional_tag`
+and `test_actual_npc_protection_real_bodily_harm_opens_one_optional_failure_tag`
+from `tests/rules/test_easy_target.py`: **2passed8.29s**, first run,
+`var/p1-npc-protection-minimum.txt/xml`. Actual NPC protection uses its own
+controller's real nonrolled performance; genuine bodily Harm and original-Handler
+factual nonmechanical failure remain separate sources. Original Newgirl alone
+gives/declines the actual NPC Tag. Saved private paginated readback/retry retained.
+No fake Action/RNG/Pilot or automatic shield. Cohort assistance to this unrolled
+source remains an explicit fail-closed adapter boundary. NPC-use already has a
+genuine Newgirl child; its final verification is pending, not a new NPC roll gap.
+Worker exact4 scoped static PASS. Source-scene duration and factual failure are
+delegated recommendations recorded for clarity review. Prior successful tests
+were not rerun. Full final P1 regression/global checks and independent/human
+acceptance remain pending.
+
+Read-only Vatgrown equipment reconciliation: Experiment PDF49/printed47 requires
+a different Vatgrown, reset Bonds/Identities and original others' owned noticing.
+It does not require automatic inheritance of the dead Girl's Frame. Preserve the
+already implemented actual Handler-issued reviewed fresh kit baseline and its
+existing1/4.57s native evidence. Archive snapshots retain provenance; they neither
+transfer ownership by account nor erase surviving hardware. Optional recovered
+hardware reissue needs its actual selected physical IDs/condition/custody and
+authorized assignment source. No universal inventory or new unconditional
+Experiment blocker was inferred; no code/test rerun for this source clarification.
+
+Final scoped packet18 paths/11 Python/8 source: Ruff/format/types/whitespace,
+registry and planning PASS. Registry477/273 subset/204 unimplemented/440 required/
+0 verified. Repository1422 publishable files/40 original manifest entries/0 findings.
+Root campaign-loop test remains authored NOT RUN. Successful prior gameplay
+nodes were not repeated. Exact final P1 full regression/global static/migration/
+privacy/restore, independent source review and real human acceptance are pending.

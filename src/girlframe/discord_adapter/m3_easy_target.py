@@ -7,6 +7,7 @@ import discord
 
 from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
+from girlframe.discord_adapter.m3_memory_pages import MemoryForm, MemoryHistory
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m2 import ChoiceAnswer, PlayInput
 from girlframe.services.m2_game import GameService
@@ -52,7 +53,7 @@ async def open_choice(
             )
             await open_declaration(interaction, BattleService(game.store), parent=parent)
             return
-        if not detail.get("npc_hurt"):
+        if not detail.get("npc_hurt") and not detail.get("npc_protect"):
             from girlframe.discord_adapter.m2_ui import open_play
 
             await open_play(interaction, game, parent=decision)
@@ -147,7 +148,11 @@ async def open_choice(
         specific = {x: values[x][0] for x in ("primary", "play") if values.get(x)}
         if values.get("context"):
             specific["context"] = values["context"]
-        if kind == "easy_target_react" and detail.get("npc_reactor") and options == ("hurt",):
+        if (
+            kind == "easy_target_react"
+            and detail.get("npc_reactor")
+            and options in (("hurt",), ("protect",))
+        ):
             specific.pop("play", None)
         await asyncio.to_thread(
             game.respond,
@@ -164,7 +169,11 @@ async def open_choice(
         )
         return "Your original person's actual Easy Target choice is saved."
 
-    form = NativeForm(
+    async def access(current: discord.Interaction) -> None:
+        assert isinstance(decision, dict)
+        await asyncio.to_thread(game.decision, viewer_from_interaction(current), decision["id"])
+
+    form = MemoryForm(
         interaction.user.id,
         "Easy Target",
         (
@@ -175,10 +184,18 @@ async def open_choice(
             else "Validate the actual supported one-Asset bodily injury and physical source; "
             "this account cannot invent harm, an NPC roll, or damage an inaccessible body."
             if kind == "easy_target_validate" and detail.get("npc_hurt")
+            else "Record only the actual NPC protective action you performed. This creates no "
+            "roll, interception, bonus or injury. The Newgirl may give your NPC a Tag after "
+            "a source-proved failure; OOC pause remains available."
+            if kind == "easy_target_child" and detail.get("npc_protect")
+            else "Validate the actual NPC protective task and source. Performance remains the "
+            "NPC controller's own factual account, without an NPC roll or free defense."
+            if kind == "easy_target_validate" and detail.get("npc_protect")
             else "Actual fictional urge and performed consequences; OOC pause remains available."
         ),
         fields,
         submit,
+        authorize=access,
     )
     await reply(interaction, form.text(), form)
 
@@ -187,6 +204,7 @@ async def open_easy_target(
     interaction: discord.Interaction, service: EasyTargetService, identity: str | None = None
 ) -> None:
     viewer = viewer_from_interaction(interaction)
+    form: NativeForm
     if identity is not None:
         shown = await asyncio.to_thread(service.view, viewer, identity)
         if shown.get("can_failure_tag"):
@@ -203,10 +221,25 @@ async def open_easy_target(
                 )
                 return "Your actual optional protection-failure Tag choice is saved."
 
-            form = NativeForm(
+            async def failure_access(current: discord.Interaction) -> None:
+                await asyncio.to_thread(service.view, viewer_from_interaction(current), identity)
+
+            fact = shown.get("protection_failure")
+            context = (
+                (
+                    "\nAttempted prevention: "
+                    + fact["attempt"]
+                    + "\nActual occurrence: "
+                    + fact["occurred"]
+                )
+                if fact
+                else ""
+            )
+            form = MemoryForm(
                 interaction.user.id,
                 "Actual protection failure",
-                "Your original protector failed after real bodily harm. You own this optional Tag.",
+                "Your original protector failed after source-proved harm or a factual Handler "
+                "decision. You own this optional Tag." + context,
                 [
                     Field(
                         "give",
@@ -216,6 +249,41 @@ async def open_easy_target(
                     Field("account", "Actual Tag label, or your explicit decline", paragraph=True),
                 ],
                 failure,
+                authorize=failure_access,
+            )
+            await reply(interaction, form.text(), form)
+            return
+        if shown.get("can_report_failure"):
+
+            async def report(current: discord.Interaction, values: dict[str, Any]) -> str:
+                await asyncio.to_thread(
+                    service.fail_protection,
+                    viewer_from_interaction(current),
+                    str(current.id),
+                    identity,
+                    shown["revision"],
+                    values["attempt"],
+                    values["occurred"],
+                )
+                return "Your actual source-bound protection-failure decision is saved."
+
+            async def report_access(current: discord.Interaction) -> None:
+                await asyncio.to_thread(service.view, viewer_from_interaction(current), identity)
+
+            form = MemoryForm(
+                interaction.user.id,
+                "Actual NPC protection failure",
+                "As the original Handler, record the attempted prevention and what actually "
+                "occurred without inventing mechanical harm. This grants only the original "
+                "Newgirl's optional failure Tag; no bodily damage or other outcome is applied."
+                + "\nActual protective performance: "
+                + shown["npc_protection"]["account"],
+                [
+                    Field("attempt", "Actual attempted prevention", paragraph=True),
+                    Field("occurred", "Actual nonmechanical occurrence", paragraph=True),
+                ],
+                report,
+                authorize=report_access,
             )
             await reply(interaction, form.text(), form)
             return
@@ -231,8 +299,18 @@ async def open_easy_target(
             + ("; actual attempt resolved" if x["completed_event"] else "; pending")
             for x in shown.get("npc_hurt", ())
         )
-        await reply(
-            interaction,
+        protection = shown.get("npc_protection")
+        failed = shown.get("protection_failure")
+        if protection:
+            history += "\nActual NPC protection: " + protection["account"]
+        if failed:
+            history += "\nAttempted prevention: " + failed["attempt"]
+            history += "\nActual occurrence: " + failed["occurred"]
+
+        async def history_access(current: discord.Interaction) -> None:
+            await asyncio.to_thread(service.view, viewer_from_interaction(current), identity)
+
+        text = (
             work["urge"]
             + ": "
             + work["account"]
@@ -245,8 +323,10 @@ async def open_easy_target(
                     else "Waiting for actual required performance"
                 )
             )
-            + history,
+            + history
         )
+        history_view = MemoryHistory(interaction.user.id, text, history_access)
+        await reply(interaction, history_view.text(), history_view)
         return
     data = await asyncio.to_thread(service.menu, viewer, int(interaction.channel_id or 0))
     options = [(x["id"], x["label"]) for x in data["tasks"]]

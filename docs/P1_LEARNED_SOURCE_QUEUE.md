@@ -18,7 +18,7 @@ separate learned Alpha/Elder and other deferred branches retain final gates.
 | Source rule | Owner / assignment | Real dependency and next action | State |
 |---|---|---|---|
 | `girl.alpha.nothing-more-than-a-hound` | Malleable source/root integration frozen | Actual Dog/unmarked Status selector, one use and real Punishment/Status expiry implemented | Native actual lesson/Status/rank-clear passed in3/15.99s; final gates pending |
-| `girl.mockingbird.risk-factor` | Queued | Paid optional shift/real Void and source-scoped printed protection implemented; add defensive-only unused-lesson entry on other true source | Paid native minimum passed in2/9.37s; defensive entry missing |
+| `girl.mockingbird.risk-factor` | Queued | Paid optional shift/real Void and explicit unused-lesson defensive entry on other true source implemented; retain exact cause/Frame/work scope | Paid native minimum passed in2/9.37s; other-origin native defensive activation/real Keep/closure1/7.81s; final gates pending |
 | `girl.mockingbird.call-of-the-void` | Queued | Existing Dive reclassification/communion, real current Frame/Assets, confirmed companion or actual Gorgon; bind selected effect | Missing learned adapter |
 | `girl.princess.show-dog` | Queued | Existing actual Off-Duty period and both real NPC choices; bind one use | Missing learned adapter |
 | `girl.stim-blissed.disposable-psyche` | Queued | Actual Identity mark/disposal or period use and mandatory Tag/capacity work; bind exact one use | Missing learned adapter |

@@ -3,6 +3,8 @@
 from typing import Literal
 from uuid import NAMESPACE_URL, uuid5
 
+from pydantic import Field
+
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef, Model, SceneCast
 
@@ -89,11 +91,44 @@ class NpcHurt(Model):
     completed_event: str | None = None
 
 
+class NpcProtection(Model):
+    id: str
+    reaction: str
+    session: str
+    actor: ActorRef
+    controller: int
+    target: ActorRef
+    handler: ActorRef
+    cast: SceneCast
+    choice: str
+    account: str = Field(min_length=1, max_length=1200)
+    event: str
+    actor_position: str | None
+    target_position: str | None
+    actor_vessel: str | None
+    target_vessel: str | None
+
+
+class NpcProtectionFailure(Model):
+    id: str
+    protection: str
+    reaction: str
+    ward: ActorRef
+    npc: ActorRef
+    handler: ActorRef
+    scene: SceneCast
+    event: str
+    attempt: str = Field(min_length=1, max_length=1200)
+    occurred: str = Field(min_length=1, max_length=1200)
+
+
 KINDS: dict[type[Model], str] = {
     Session: "easy_target_session",
     Reaction: "easy_target_reaction",
     Harm: "easy_target_harm",
     NpcHurt: "easy_target_npc_hurt",
+    NpcProtection: "easy_target_npc_protection",
+    NpcProtectionFailure: "easy_target_npc_protection_failure",
 }
 
 

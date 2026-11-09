@@ -506,7 +506,7 @@ def apply(
         if urge not in ("pass", "contempt", "cohort") and (
             (
                 not answer.fields.get("play")
-                and not (urge == "hurt" and actor.kind == "npc" and performer == actor)
+                and not (urge in ("hurt", "protect") and actor.kind == "npc" and performer == actor)
             )
             or not answer.fields.get("context", "").strip()
         ):
@@ -549,7 +549,42 @@ def apply(
             ).controller
             _request(game, c, action, owner, "easy_target_child", value)
         elif kind == "easy_target_child":
-            if _npc_hurt_reaction(value):
+            if _npc_protect_reaction(value):
+                if (
+                    answer.options
+                    or answer.fields
+                    or answer.flag is not None
+                    or not answer.text.strip()
+                ):
+                    raise WorkflowError("Record only this actual NPC's performed protection")
+                _npc_protect_context(game, c, state, value)
+                if value.performance_event or value.child:
+                    raise WorkflowError("The original NPC protection was already performed")
+                bound = profiles(c, game.store.campaign_id)
+                npc = resolve(state, value.actor, bound)
+                ward = _native(game, c, state, source.actor)
+                protection = rules.NpcProtection(
+                    id=str(uuid4()),
+                    reaction=value.id,
+                    session=source.id,
+                    actor=value.actor,
+                    controller=value.controller,
+                    target=source.actor,
+                    handler=source.handler,
+                    cast=_cast(game, c, state, source.cast.channel),
+                    choice=row["id"],
+                    account=answer.text.strip(),
+                    event=event,
+                    actor_position=npc.position_sha256,
+                    target_position=ward.position_sha256,
+                    actor_vessel=npc.vessel_id,
+                    target_vessel=ward.vessel_id,
+                )
+                rules.put(state, protection)
+                value = value.model_copy(update=dict(performance_event=event))
+                rules.put(state, value)
+                _consequence(game, c, state, action, value, event)
+            elif _npc_hurt_reaction(value):
                 if answer.options or answer.fields or answer.flag is not None:
                     raise WorkflowError("Record only this actual NPC's performed bodily action")
                 _npc_hurt_context(game, c, state, value)
@@ -686,6 +721,261 @@ def apply(
 
 
 apply_choice = apply
+
+
+def _npc_protect_reaction(value: rules.Reaction) -> bool:
+    return (
+        value.urge == "protect"
+        and value.actor.kind == "npc"
+        and value.performer == value.actor
+        and value.play is None
+    )
+
+
+def _npc_protect_context(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    value: rules.Reaction,
+) -> rules.Session:
+    """A genuine free present World NPC, not an account's Pilot or a free Engage grant."""
+    prove(game, c, state, value.id)
+    source = _session(game, c, state, game.action(c, value.session))
+    if (
+        not _npc_protect_reaction(value)
+        or not rules.settled(state, source)
+        or not value.validation_event
+        or value.child
+        or current_ref(state, source.caster) != source.actor
+        or active_handler(state) != source.handler
+        or state.handler != source.handler_controller
+    ):
+        raise WorkflowError("Use the actual validated original NPC protective source")
+    choices = t.m2["m2_choices"]
+    validation_row = next(
+        (
+            x
+            for x in c.execute(
+                sa.select(choices).where(
+                    choices.c.campaign_id == game.store.campaign_id,
+                    choices.c.action_id == source.id,
+                    choices.c.kind == "easy_target_validate:" + value.actor.token,
+                )
+            ).mappings()
+            if json.loads(x["body_json"]).get("work") == value.id
+        ),
+        None,
+    )
+    if validation_row is None:
+        raise WorkflowError("Recover the original Handler's factual protection validation")
+    validation = _response(
+        game,
+        c,
+        source.id,
+        validation_row["id"],
+        value.validation_event,
+        source.handler_controller,
+        "easy_target_validate:" + value.actor.token,
+    )
+    if validation.flag is not True or not validation.text.strip():
+        raise WorkflowError("Preserve actual performed protection and its validated trigger")
+    bound = profiles(c, game.store.campaign_id)
+    actor = resolve(state, value.actor, bound, require_current_profile=False)
+    ward = _native(game, c, state, source.actor)
+    npc = (
+        next((x for x in state.world.npcs if x.id == value.actor.entity), None)
+        if state.world
+        else None
+    )
+    scene = _cast(game, c, state, source.cast.channel)
+    if (
+        npc is None
+        or npc.source_kind == "wyvern_wraith"
+        or actor.rules != "npc"
+        or not actor.alive
+        or actor.controller != value.controller
+        or actor.offstage_source
+        or actor.custody not in (None, "free")
+        or ward.inside_frame is not False
+        or ward.custody not in (None, "free")
+        or actor.cell is None
+        or actor.cell != ward.cell
+        or scene.id != source.cast.id
+        or not scene.open
+        or not all(
+            any(r.actor == ref and r.controller == owner for r in scene.roles)
+            for ref, owner in ((source.actor, source.caster), (value.actor, value.controller))
+        )
+    ):
+        raise WorkflowError("Use actual available original bodies in their live protection scene")
+    if any(
+        x.session == source.id and x.urge == "cohort" and x.primary == value.id
+        for x in rules.records(state, rules.Reaction)
+    ):
+        raise WorkflowError("REQUIRED_NPC_PROTECTION_COHORT_ADAPTER: no fictitious assistance roll")
+    return source
+
+
+def prove_npc_protection(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    identity: str,
+) -> rules.NpcProtection:
+    value = _get(state, rules.NpcProtection, identity)
+    born = _history(c, game, value.event)
+    reaction = prove(game, c, born, value.reaction)
+    source = _session(game, c, born, game.action(c, value.session))
+    original = _get(born, rules.NpcProtection, identity)
+    if (
+        original != value
+        or not _npc_protect_reaction(reaction)
+        or (value.actor, value.controller, value.target, value.handler)
+        != (reaction.actor, reaction.controller, source.actor, source.handler)
+        or reaction.protection_event != value.event
+        or reaction.performance_event != value.event
+    ):
+        raise WorkflowError("Recover the canonical original NPC protective performance")
+    answer = _response(
+        game,
+        c,
+        value.session,
+        value.choice,
+        value.event,
+        value.controller,
+        "easy_target_child:" + value.actor.token,
+    )
+    if (
+        answer.text.strip() != value.account
+        or answer.options
+        or answer.fields
+        or answer.flag is not None
+    ):
+        raise WorkflowError("Only the actual NPC controller authors this performed protection")
+    from girlframe.services.m3_actor_history import snapshot_profiles
+
+    bound = snapshot_profiles(c, game.store.campaign_id, born)
+    actor, ward = (
+        resolve(born, ref, bound, require_current_profile=False)
+        for ref in (value.actor, value.target)
+    )
+    if (
+        actor.rules != "npc"
+        or not actor.alive
+        or actor.controller != value.controller
+        or actor.cell is None
+        or actor.cell != ward.cell
+        or actor.position_sha256 != value.actor_position
+        or ward.position_sha256 != value.target_position
+        or actor.vessel_id != value.actor_vessel
+        or ward.vessel_id != value.target_vessel
+        or value.cast.id != source.cast.id
+        or not value.cast.open
+        or not all(
+            any(r.actor == ref and r.controller == owner for r in value.cast.roles)
+            for ref, owner in ((source.actor, source.caster), (value.actor, value.controller))
+        )
+    ):
+        raise WorkflowError("Preserve actual original protective bodies and scene, never a proxy")
+    return value
+
+
+def _active_npc_protection(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    value: rules.Reaction,
+) -> rules.NpcProtection:
+    source = _npc_protect_context(game, c, state, value)
+    if not value.protection_event or value.failure or value.exemption:
+        raise WorkflowError("Use an actual unfailed, unexempted NPC protective performance")
+    protection = next(
+        (
+            x
+            for x in rules.records(state, rules.NpcProtection)
+            if x.reaction == value.id and x.event == value.protection_event
+        ),
+        None,
+    )
+    if protection is None:
+        raise WorkflowError("Recover the actual original NPC protection")
+    prove_npc_protection(game, c, state, protection.id)
+    bound = profiles(c, game.store.campaign_id)
+    if (
+        resolve(state, value.actor, bound).vessel_id != protection.actor_vessel
+        or resolve(state, source.actor, bound).vessel_id != protection.target_vessel
+    ):
+        raise WorkflowError("Changed protective bodies require their actual new source")
+    return protection
+
+
+def prove_protection_failure(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    identity: str,
+) -> rules.NpcProtectionFailure:
+    failure = _get(state, rules.NpcProtectionFailure, identity)
+    born = _history(c, game, failure.event)
+    if failure != _get(born, rules.NpcProtectionFailure, identity):
+        raise WorkflowError("Preserve the actual Handler's original factual failure decision")
+    protection = prove_npc_protection(game, c, born, failure.protection)
+    reaction = prove(game, c, born, failure.reaction)
+    source = _session(game, c, born, game.action(c, protection.session))
+    audit = c.execute(
+        sa.select(t.events.c.kind, t.events.c.actor_id).where(
+            t.events.c.campaign_id == game.store.campaign_id,
+            t.events.c.id == failure.event,
+        )
+    ).first()
+    if (
+        audit is None
+        or audit.kind != "m3.easy_target_protection_failed"
+        or audit.actor_id != str(source.handler_controller)
+        or failure.handler != source.handler
+        or active_handler(born) != source.handler
+        or failure.scene.id != source.cast.id
+        or not failure.scene.open
+        or not all(
+            any(r.actor == ref and r.controller == owner for r in failure.scene.roles)
+            for ref, owner in ((source.actor, source.caster), (reaction.actor, reaction.controller))
+        )
+        or failure.ward != source.actor
+        or failure.npc != reaction.actor
+        or protection.reaction != reaction.id
+        or reaction.failure != failure.id
+    ):
+        raise WorkflowError("Prove only this original live NPC protection's factual failure")
+    return failure
+
+
+def _prove_protection_failure(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    value: rules.Reaction,
+    source: rules.Session,
+) -> None:
+    if any(x.id == value.failure for x in rules.records(state, rules.NpcProtectionFailure)):
+        fact = prove_protection_failure(game, c, state, value.failure or "")
+        if fact.reaction != value.id or fact.ward != source.actor or fact.npc != value.actor:
+            raise WorkflowError("Keep this original protector's own failed source")
+    else:
+        harm = _get(state, rules.Harm, value.failure or "")
+        if (
+            harm != _get(_history(c, game, harm.event), rules.Harm, harm.id)
+            or harm.target != source.actor
+            or not value.protection_event
+        ):
+            raise WorkflowError("Recover actual bodily harm after the original protection")
+        if _npc_protect_reaction(value):
+            protection = next(
+                (x for x in rules.records(state, rules.NpcProtection) if x.reaction == value.id),
+                None,
+            )
+            if protection is None:
+                raise WorkflowError("Actual NPC protection must precede this harm")
+            prove_npc_protection(game, c, state, protection.id)
 
 
 def _npc_hurt_reaction(value: rules.Reaction) -> bool:
@@ -1574,6 +1864,12 @@ def observe_harm(
             )
         ):
             continue
+        if _npc_protect_reaction(value):
+            try:
+                _active_npc_protection(game, c, before, value)
+            except (WorkflowError, ValueError):
+                # Real harm resolves; unavailable old protection grants no new Tag.
+                continue
         value = value.model_copy(update=dict(failure=identity, completed_event=None))
         rules.put(after, value)
         # This optional entitlement survives independently of the completed source.
@@ -1665,6 +1961,7 @@ def projection(
         kind=row["kind"].split(":")[0],
         npc_reactor=bool(body.get("actor", {}).get("kind") == "npc"),
         npc_hurt=bool(value and _npc_hurt_reaction(value)),
+        npc_protect=bool(value and _npc_protect_reaction(value)),
         roles=roles,
         urges=rules.choices(source) + (("pass",) if source.total >= 11 else ()),
         work=value.model_dump(mode="json") if value else None,
@@ -1738,6 +2035,17 @@ class EasyTargetService:
                     "This private original urge belongs only to its actual participants"
                 )
             prove(self.game, c, state, identity)
+            protection = next(
+                (x for x in rules.records(state, rules.NpcProtection) if x.reaction == identity),
+                None,
+            )
+            active = False
+            if protection and not value.failure and not value.exemption:
+                try:
+                    _active_npc_protection(self.game, c, state, value)
+                    active = True
+                except (WorkflowError, ValueError):
+                    pass
             return dict(
                 id=identity,
                 revision=state.revision,
@@ -1748,6 +2056,24 @@ class EasyTargetService:
                     for x in rules.records(state, rules.NpcHurt)
                     if x.reaction == identity
                 ],
+                npc_protection=prove_npc_protection(self.game, c, state, protection.id).model_dump(
+                    mode="json"
+                )
+                if protection
+                else None,
+                protection_failure=prove_protection_failure(
+                    self.game, c, state, value.failure
+                ).model_dump(mode="json")
+                if value.failure
+                and any(
+                    x.id == value.failure for x in rules.records(state, rules.NpcProtectionFailure)
+                )
+                else None,
+                can_report_failure=bool(
+                    active
+                    and viewer.user_id == source.handler_controller
+                    and active_handler(state) == source.handler
+                ),
                 can_failure_tag=bool(
                     value.failure
                     and not value.completed_event
@@ -1762,6 +2088,79 @@ class EasyTargetService:
                 ],
             )
 
+    def fail_protection(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        identity: str,
+        revision: int,
+        attempt: str,
+        occurred: str,
+    ) -> dict[str, Any]:
+        if not all(x.strip() and len(x) <= 1200 for x in (attempt, occurred)):
+            raise WorkflowError(
+                "Record the actual attempted prevention and nonmechanical occurrence"
+            )
+
+        def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
+            state = load_state(c, self.store.campaign_id)
+            value = prove(self.game, c, state, identity)
+            source = _session(self.game, c, state, self.game.action(c, value.session))
+            if (
+                state.revision != revision
+                or viewer.user_id != source.handler_controller
+                or active_handler(state) != source.handler
+                or state.handler != viewer.user_id
+            ):
+                raise WorkflowError(
+                    "Only this original Handler adjudicates the actual current failure"
+                )
+            protection = _active_npc_protection(self.game, c, state, value)
+            event = str(uuid4())
+            failure = rules.NpcProtectionFailure(
+                id=str(uuid4()),
+                protection=protection.id,
+                reaction=value.id,
+                ward=source.actor,
+                npc=value.actor,
+                handler=source.handler,
+                scene=_cast(self.game, c, state, source.cast.channel),
+                event=event,
+                attempt=attempt.strip(),
+                occurred=occurred.strip(),
+            )
+            rules.put(state, failure)
+            rules.put(
+                state, value.model_copy(update=dict(failure=failure.id, completed_event=None))
+            )
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.easy_target_protection_failed",
+                state,
+                event_id=event,
+                work=identity,
+                failure=failure.id,
+            )
+            return dict(id=failure.id)
+
+        return self.store._write(
+            viewer,
+            key,
+            "m3.easy_target_protection_failed",
+            dict(
+                id=identity,
+                revision=revision,
+                attempt=attempt,
+                occurred=occurred,
+            ),
+            operation,
+            auto_audit=False,
+            authorize=lambda c: _access(self.game, c, viewer),
+        )
+
     def failure_tag(
         self, viewer: GuildViewer, key: str, identity: str, revision: int, give: bool, account: str
     ) -> dict[str, Any]:
@@ -1769,6 +2168,7 @@ class EasyTargetService:
             raise WorkflowError("Choose your actual optional failure Tag or an explicit decline")
 
         def operation(c: Connection) -> dict[str, Any]:
+            self.game.unpaused(c)
             state = load_state(c, self.store.campaign_id)
             if state.revision != revision:
                 raise WorkflowError("STALE_EASY_TARGET: reopen the actual saved protection failure")
@@ -1784,12 +2184,7 @@ class EasyTargetService:
                 raise WorkflowError(
                     "Only the original Newgirl owns this actual unspent protection-failure Tag"
                 )
-            harm = _get(state, rules.Harm, value.failure)
-            born = _get(_history(c, self.game, harm.event), rules.Harm, harm.id)
-            if born != harm or harm.target != source.actor or not value.protection_event:
-                raise WorkflowError(
-                    "Recover the original committed bodily harm after actual protection"
-                )
+            _prove_protection_failure(self.game, c, state, value, source)
             event = str(uuid4())
             if give:
                 _copy(

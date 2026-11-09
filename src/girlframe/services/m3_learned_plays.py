@@ -14,10 +14,13 @@ from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_girl_runtime_state import GirlRuntime, has_rule
 from girlframe.engine.m3_learned_play_state import (
+    DefensiveRiskUse,
     HoundStatusUse,
     LearnedPlayUse,
     RiskLessonUse,
+    defensive_risk_uses,
     hound_status_uses,
+    put_defensive_risk,
     put_hound_status,
     put_risk_lesson,
     risk_lesson_uses,
@@ -1673,7 +1676,12 @@ def prove_risk_lesson(
 
 def prove_risk_ward(
     game: GameService, c: Connection, state: GameState, threshold: Any
-) -> RiskLessonUse | None:
+) -> RiskLessonUse | DefensiveRiskUse | None:
+    defensive = [x for x in defensive_risk_uses(state) if x.threshold == threshold.id]
+    if defensive:
+        if len(defensive) != 1:
+            raise WorkflowError("Preserve this source's single actual defensive use")
+        return prove_defensive_risk(game, c, state, threshold, defensive[0])
     candidates = [
         x
         for x in risk_lesson_uses(state)
@@ -1697,6 +1705,253 @@ def prove_risk_ward(
         for work in threshold.source_works
     ):
         raise WorkflowError("Prove this threshold's actual paid source ward")
+    return use
+
+
+def _defensive_source_rows(
+    game: GameService,
+    c: Connection,
+    value: Any,
+    *,
+    pending: bool = False,
+) -> tuple[dict[str, Any], ...]:
+    from girlframe.services.m3_void import source
+
+    if not value.source_works:
+        raise WorkflowError("Use a genuine original Void consequence")
+    rows = []
+    for identity in value.source_works:
+        current, body, actor = source(game, c, identity)
+        table = t.m3["m3_required_work"]
+        first = (
+            c.execute(
+                sa.select(table).where(
+                    table.c.campaign_id == game.store.campaign_id,
+                    table.c.id == identity,
+                    table.c.revision == 1,
+                )
+            )
+            .mappings()
+            .one()
+        )
+        latest = json.loads(current["body_json"])
+        if (
+            actor != value.actor
+            or body.get("threshold", value.id) != value.id
+            or (pending and current["state"] != "pending")
+            or (
+                pending
+                and any(
+                    latest.get(key)
+                    for key in (
+                        "damage_asset",
+                        "approach",
+                        "rebirth_choice",
+                        "guardian",
+                    )
+                )
+            )
+        ):
+            raise WorkflowError("Keep this exact unadvanced original Void source and owner")
+        rows.append(dict(first))
+    if not any(
+        x["event_id"] == value.source_event
+        and json.loads(x["body_json"]).get("source_action") == value.source_action
+        for x in rows
+    ):
+        raise WorkflowError("Preserve the original threshold's actual canonical cause")
+    return tuple(rows)
+
+
+def defensive_risk_lessons(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    threshold: Any,
+) -> tuple[dict[str, str], ...]:
+    from girlframe.engine.m3_actors import resolve
+    from girlframe.engine.m3_void import defensive_risk_fresh
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_mockingbird import released
+
+    if (
+        not released(game)
+        or not defensive_risk_fresh(threshold)
+        or any(x.threshold == threshold.id for x in defensive_risk_uses(state))
+        or prove_risk_ward(game, c, state, threshold) is not None
+    ):
+        return ()
+    actor = threshold.actor
+    sheet = state.sheets.get(actor.entity)
+    if (
+        sheet is None
+        or sheet.character_id != actor.incarnation
+        or has_rule(sheet, RISK, "MOCKINGBIRD")
+    ):
+        return ()
+    actual = resolve(state, actor, profiles(c, game.store.campaign_id))
+    if actual.frame_instance != threshold.frame_instance:
+        return ()
+    _defensive_source_rows(game, c, threshold, pending=True)
+    result = []
+    for value in sheet.girl_runtime.learned_plays if sheet.girl_runtime else ():
+        if (
+            value.actor == actor
+            and value.rule_id == RISK
+            and value.claimed_action is None
+            and value.rolled_event is None
+        ):
+            _prove(game, c, state, value)
+            result.append(
+                dict(id=value.id, label="Use one Risk Factor lesson for this Void source")
+            )
+    return tuple(result)
+
+
+def activate_defensive_risk(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    threshold: Any,
+    lesson: str,
+    event: str,
+    account: str,
+) -> DefensiveRiskUse:
+    if lesson not in {x["id"] for x in defensive_risk_lessons(game, c, state, threshold)}:
+        raise WorkflowError("Choose your actual unused lesson for this untouched Void source")
+    sheet = state.sheets[threshold.actor.entity]
+    value = (
+        next((x for x in sheet.girl_runtime.learned_plays if x.id == lesson), None)
+        if sheet.girl_runtime
+        else None
+    )
+    if value is None:
+        raise WorkflowError("Recover the exact actual unspent defensive lesson")
+    use = DefensiveRiskUse(
+        id="learned-risk-defense:" + lesson,
+        lesson=lesson,
+        actor=threshold.actor,
+        frame=threshold.frame_instance,
+        threshold=threshold.id,
+        cause_event=threshold.source_event,
+        cause_action=threshold.source_action,
+        cause_works=threshold.source_works,
+        source_rows_sha256=_digest(_defensive_source_rows(game, c, threshold, pending=True)),
+        before_revision=state.revision,
+        before_threshold_sha256=_digest(threshold.model_dump(mode="json")),
+        event=event,
+        account=account,
+    )
+    _replace(state, value.model_copy(update=dict(rolled_event=event)))
+    put_defensive_risk(state, use)
+    return use
+
+
+def prove_defensive_risk(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    threshold: Any,
+    use: DefensiveRiskUse,
+) -> DefensiveRiskUse:
+    from girlframe.engine import m3_void as void
+    from girlframe.services.m3_actor_history import snapshot_profiles
+    from girlframe.services.m3_handler_advancements import _history
+
+    born = _history(c, game, use.event)
+    history = t.m2["m2_state_history"]
+    prior_raw = c.scalar(
+        sa.select(history.c.body_json).where(
+            history.c.campaign_id == game.store.campaign_id,
+            history.c.revision == use.before_revision,
+        )
+    )
+    if prior_raw is None:
+        raise WorkflowError("Recover the actual pre-activation Void source history")
+    before = GameState.model_validate_json(prior_raw)
+    prior_sheet, born_sheet = before.sheets.get(use.actor.entity), born.sheets.get(use.actor.entity)
+    prior = (
+        next((x for x in prior_sheet.girl_runtime.learned_plays if x.id == use.lesson), None)
+        if prior_sheet and prior_sheet.girl_runtime
+        else None
+    )
+    spent = (
+        next((x for x in born_sheet.girl_runtime.learned_plays if x.id == use.lesson), None)
+        if born_sheet and born_sheet.girl_runtime
+        else None
+    )
+    event = (
+        c.execute(
+            sa.select(t.events).where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.id == use.event,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    payload = json.loads(event["payload_json"]) if event else {}
+    original = next((x for x in before.void_thresholds if x.id == use.threshold), None)
+    sources = _defensive_source_rows(game, c, threshold)
+    bindings = snapshot_profiles(c, game.store.campaign_id, before)
+    for row in sources:
+        if original is None or row["id"] not in original.source_works:
+            body = json.loads(row["body_json"])
+            before, original = void.start_threshold(
+                before,
+                bindings,
+                use.actor,
+                body["details"]["family"],
+                row["event_id"],
+                row["id"],
+                source_action=body.get("source_action"),
+            )
+    birth_threshold = next((x for x in born.void_thresholds if x.id == use.threshold), None)
+    if (
+        use not in defensive_risk_uses(born)
+        or use.id != "learned-risk-defense:" + use.lesson
+        or threshold.actor != use.actor
+        or threshold.frame_instance != use.frame
+        or threshold.source_event != use.cause_event
+        or threshold.source_action != use.cause_action
+        or threshold.source_works != use.cause_works
+        or use.source_rows_sha256 != _digest(sources)
+        or original is None
+        or not void.defensive_risk_fresh(original)
+        or _digest(original.model_dump(mode="json")) != use.before_threshold_sha256
+        or prior is None
+        or spent is None
+        or prior.rule_id != RISK
+        or prior.actor != use.actor
+        or prior.claimed_action is not None
+        or prior.rolled_event is not None
+        or spent != prior.model_copy(update=dict(rolled_event=use.event))
+        or event is None
+        or event["actor_id"] != use.actor.entity
+        or event["kind"] != "m3.void_response"
+        or payload.get("operation") != "use_risk_lesson"
+        or payload.get("threshold") != use.threshold
+        or payload.get("defensive_risk_use") != use.id
+        or payload.get("lesson") != use.lesson
+        or payload.get("work_id") not in use.cause_works
+        or birth_threshold is None
+        or birth_threshold.response_event != use.event
+    ):
+        raise WorkflowError(
+            "Prove the real original owner's single defensive activation and untouched cause"
+        )
+    _prove(game, c, before, prior)
+    staged = before.model_copy(deep=True)
+    put_defensive_risk(staged, use)
+    expected = void.apply_defensive_risk(
+        staged,
+        bindings,
+        use.threshold,
+        use,
+        use.event,
+    )
+    if void.threshold(expected, use.threshold) != birth_threshold:
+        raise WorkflowError("Keep the actual defensive classification and original physical source")
     return use
 
 
