@@ -12,6 +12,7 @@ from girlframe.engine import m3_disposable_psyche as rules
 from girlframe.engine.m2 import GameState, PlayInput, mark_identity, spend_heat
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_girl_runtime_state import has_rule
+from girlframe.engine.m3_learned_play_state import PsychePermit
 from girlframe.engine.m3_policy import RULESET
 from girlframe.services.m2_choices import ChoiceEngine
 from girlframe.services.m2_game import GameService
@@ -33,9 +34,9 @@ def _gate(game: GameService) -> None:
 
 def prepare_disposal(
     game: GameService, c: Connection, state: GameState, owner: int, prepared: PlayInput
-) -> None:
+) -> PsychePermit | None:
     if not prepared.disposable_heat:
-        return
+        return None
     _gate(game)
     if prepared.parent and game.action(c, prepared.parent)["data"].get("princess_sex"):
         from girlframe.services.m3_princess_sex import _direction
@@ -56,7 +57,10 @@ def prepare_disposal(
         raise WorkflowError(
             "SOURCE_CLONE_DISPOSAL_REQUIRED: remove only an original native Identity"
         )
-    rules.admit_removal(state, sheet, identity)
+    from girlframe.services.m3_learned_plays import prepare_psyche_permit
+
+    permit = prepare_psyche_permit(game, c, state, owner, prepared)
+    rules.admit_removal(state, sheet, identity, permit=permit)
     from girlframe.engine.m3_ankou_feedback import RULE as feedback_rule
     from girlframe.engine.m3_ankou_feedback import final_mark
 
@@ -65,6 +69,7 @@ def prepare_disposal(
         if registry is None:
             raise WorkflowError("SOURCE_ANKOU_FEEDBACK_REQUIRED: release the actual consumer")
         registry.require_available(feedback_rule)
+    return permit
 
 
 def prepare_off_duty(game: GameService, state: GameState, owner: int) -> None:
@@ -88,7 +93,7 @@ def record_disposal(
         link_feedback_disposal(game, c, state, action, event)
         return
     owner = int(action["actor_id"])
-    prepare_disposal(game, c, before, owner, prepared)
+    permit = prepare_disposal(game, c, before, owner, prepared)
     actor = current_ref(before, owner)
     original = before.sheets[actor.entity]
     identity = next(x for x in original.identities if x.id == prepared.identity)
@@ -101,6 +106,7 @@ def record_disposal(
         prepared.pair_share,
         state=expected,
         disposable_heat=prepared.disposable_heat,
+        learned_psyche=permit,
     )
     spend_heat(sheet, prepared.heat)
     actual = state.sheets[actor.entity]
@@ -154,6 +160,10 @@ def prove_disposal(
     if value.commit_event:
         return prove_feedback_disposal(game, c, state, value, action)
     before, born = _before(game, c, value.event), _history(c, game, value.event)
+    if action["data"].get("learned_psyche"):
+        from girlframe.services.m3_learned_plays import PSYCHE, prove_daily_lesson
+
+        prove_daily_lesson(game, c, born, action, PSYCHE)
     event = (
         c.execute(
             sa.select(t.events).where(
@@ -348,8 +358,13 @@ def sync_off_duty(game: GameService, c: Connection, action: dict[str, Any], even
     owner = int(action["actor_id"])
     actor = current_ref(state, owner)
     sheet = state.sheets[actor.entity]
-    if not has_rule(sheet, rules.RULE, "STIM-BLISSED"):
+    from girlframe.services.m3_learned_plays import off_duty_psyche_permit
+
+    permit = off_duty_psyche_permit(game, c, state, action)
+    if not has_rule(sheet, rules.RULE, "STIM-BLISSED") and permit is None:
         return
+    if permit is not None:
+        _gate(game)
     prepare_off_duty(game, state, owner)
     period = periods(game)._get(c, meta["period_id"])
     progress = period.progress.get(str(owner))
@@ -413,6 +428,8 @@ def _resolve(
 
 
 def _prove_trigger(game: GameService, c: Connection, row: dict[str, Any]) -> rules.Trigger:
+    from girlframe.services.m3_learned_plays import off_duty_psyche_permit
+
     value = rules.Trigger.model_validate_json(json.dumps(json.loads(row["body_json"])["trigger"]))
     source = _history(c, game, value.event)
     action = game.action(c, value.action)
@@ -510,7 +527,10 @@ def _prove_trigger(game: GameService, c: Connection, row: dict[str, Any]) -> rul
         )
         or value.actor != current_ref(source, int(action["actor_id"]))
         or tuple(x.id for x in source.sheets[value.actor.entity].tags) != value.tags
-        or not has_rule(source.sheets[value.actor.entity], rules.RULE, "STIM-BLISSED")
+        or not (
+            has_rule(source.sheets[value.actor.entity], rules.RULE, "STIM-BLISSED")
+            or off_duty_psyche_permit(game, c, source, action) is not None
+        )
     ):
         raise WorkflowError(
             "Recover the immutable actual GoOffDuty trigger, original Tags and owner"
@@ -521,6 +541,8 @@ def _prove_trigger(game: GameService, c: Connection, row: dict[str, Any]) -> rul
 def prove_conversion(
     game: GameService, c: Connection, state: GameState, identity: str
 ) -> rules.Conversion:
+    from girlframe.services.m3_learned_plays import off_duty_psyche_permit
+
     value = next((x for x in rules.conversions(state) if x.id == identity), None)
     if value is None:
         raise WorkflowError("Recover the actual source-owned Tag conversion")
@@ -537,7 +559,10 @@ def prove_conversion(
         .first()
     )
     expected, tags, replaced, created = rules.convert(
-        before.sheets[trigger.actor.entity], value.selections, identity
+        before.sheets[trigger.actor.entity],
+        value.selections,
+        identity,
+        permit=off_duty_psyche_permit(game, c, before, game.action(c, trigger.action)),
     )
     if (
         value not in rules.conversions(born)
@@ -715,6 +740,8 @@ class PsycheService:
         expected: int,
         selections: tuple[rules.TagSelection, ...],
     ) -> dict[str, Any]:
+        from girlframe.services.m3_learned_plays import off_duty_psyche_permit
+
         selections = tuple(
             rules.TagSelection.model_validate_json(x.model_dump_json()) for x in selections
         )
@@ -736,7 +763,12 @@ class PsycheService:
                 raise WorkflowError("Complete this actual GoOffDuty rebuilding before recovery")
             _check_tags(self.game, c, state, trigger, selections)
             sheet, tags, replaced, created = rules.convert(
-                state.sheets[trigger.actor.entity], selections, identity
+                state.sheets[trigger.actor.entity],
+                selections,
+                identity,
+                permit=off_duty_psyche_permit(
+                    self.game, c, state, self.game.action(c, trigger.action)
+                ),
             )
             event = str(uuid4())
             value = rules.Conversion(

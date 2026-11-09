@@ -1296,19 +1296,11 @@ async def open_play(
             (("yes", "I confirm the trigger applies"),),
         ),
     ]
-    if has_rule(sheet, "girl.stim-blissed.disposable-psyche", "STIM-BLISSED"):
-        fields.append(
-            Field(
-                "disposable_heat",
-                "Optional Identity disposal: additional Heat",
-                (
-                    ("0", "Keep marked Identity"),
-                    ("3", "Remove it: +3 Heat"),
-                    ("4", "Remove it: +4 Heat"),
-                ),
-            )
-        )
-    from girlframe.services.m3_learned_plays import prepare_call_lessons, prepare_keep_riders
+    from girlframe.services.m3_learned_plays import (
+        prepare_call_lessons,
+        prepare_daily_lessons,
+        prepare_keep_riders,
+    )
 
     def learned_options() -> dict[str, tuple[tuple[str, str], ...]]:
         from girlframe.engine.m3_actor_bonds import current_ref
@@ -1328,12 +1320,52 @@ async def open_play(
                 if "dive_deep" in plays
                 else ()
             )
+            daily = (
+                prepare_daily_lessons(
+                    game,
+                    connection,
+                    current,
+                    actor,
+                    "go_off_duty" if "go_off_duty" in plays else plays[0],
+                )
+                if plays
+                else dict(show_dog=(), psyche=())
+            )
             return dict(
+                show_dog=tuple((row["id"], row["label"]) for row in daily["show_dog"]),
+                psyche=tuple((row["id"], row["label"]) for row in daily["psyche"]),
                 keep=tuple((row["id"], row["label"]) for row in rows.values()),
                 call=tuple((row["id"], row["label"]) for row in calls),
             )
 
     lessons = await threaded(learned_options)
+    if has_rule(sheet, "girl.stim-blissed.disposable-psyche", "STIM-BLISSED") or lessons["psyche"]:
+        fields.append(
+            Field(
+                "disposable_heat",
+                "Optional Identity disposal: additional Heat",
+                (
+                    ("0", "Keep marked Identity"),
+                    ("3", "Remove it: +3 Heat"),
+                    ("4", "Remove it: +4 Heat"),
+                ),
+            )
+        )
+    for key, title in (
+        ("show_dog", "Optional Show Dog lesson — this Off-Duty"),
+        ("psyche", "Optional Disposable Psyche lesson — this Play"),
+    ):
+        if lessons[key]:
+            fields.append(
+                Field(
+                    "learned_" + key,
+                    title,
+                    lessons[key],
+                    minimum=0,
+                    maximum=1,
+                    required=False,
+                )
+            )
     if lessons["keep"]:
         fields.append(
             Field(
@@ -1541,6 +1573,8 @@ async def open_play(
             consume_seek_food=one(values, "consume_seek_food") == "yes",
             learned_keep_rider=one(values, "learned_keep_rider") or None,
             learned_call=one(values, "learned_call") or None,
+            learned_show_dog=one(values, "learned_show_dog") or None,
+            learned_psyche=one(values, "learned_psyche") or None,
             ankou_pulse=selected_pulse(values),
             play=play,
             context=values["context"],

@@ -15,11 +15,14 @@ from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_girl_runtime_state import GirlRuntime, has_rule
 from girlframe.engine.m3_learned_play_state import (
     CallLessonUse,
+    DailyLessonUse,
     DefensiveRiskUse,
     HoundStatusUse,
     LearnedPlayUse,
+    PsychePermit,
     RiskLessonUse,
     call_lesson_uses,
+    daily_lesson_uses,
     defensive_risk_uses,
     hound_status_uses,
     put_defensive_risk,
@@ -38,6 +41,16 @@ ELDER = "girl.oldgen.elder-bitch"
 HOUND = "girl.alpha.nothing-more-than-a-hound"
 RISK = "girl.mockingbird.risk-factor"
 CALL = "girl.mockingbird.call-of-the-void"
+SHOW_DOG = "girl.princess.show-dog"
+PSYCHE = "girl.stim-blissed.disposable-psyche"
+DOLL = "girl.vatgrown.unassuming-doll"
+DAILY: dict[
+    Literal["girl.princess.show-dog", "girl.stim-blissed.disposable-psyche"], tuple[str, str]
+] = {
+    "girl.princess.show-dog": ("learned_show_dog", "PRINCESS"),
+    "girl.stim-blissed.disposable-psyche": ("learned_psyche", "STIM-BLISSED"),
+}
+OFF_DUTY = ("go_off_duty", "void_observation")
 CALL_OPTIONS = ("call_reclassify_assets", "call_cockpit_guest", "call_gorgon_relay")
 KEEP_RIDERS = (BEAUTIFUL, ITCHING, ELDER)
 SUPPORTED = {
@@ -54,6 +67,12 @@ SUPPORTED = {
 
 
 def lesson_label(rule_id: str, play: str) -> str:
+    if rule_id in (SHOW_DOG, PSYCHE, DOLL):
+        return {
+            SHOW_DOG: "Show Dog (one actual Off-Duty source)",
+            PSYCHE: "Disposable Psyche (one actual mark or Off-Duty source)",
+            DOLL: "Unassuming Doll (already native; acquisition history)",
+        }[rule_id]
     if rule_id == CALL:
         return "Call of the Void (one actual Dive's extra options)"
     if rule_id == RISK:
@@ -77,6 +96,10 @@ def lesson_book(rule_id: str) -> str | None:
     """The finite Status lesson has no invented underlying Play ID."""
     if rule_id in (RISK, CALL):
         return "MOCKINGBIRD"
+    if rule_id in DAILY:
+        return DAILY[rule_id][1]
+    if rule_id == DOLL:
+        return "VATGROWN"
     return "ALPHA" if rule_id == HOUND else SUPPORTED[rule_id][1] if rule_id in SUPPORTED else None
 
 
@@ -92,6 +115,9 @@ def teacher_lessons(sheet: Any) -> tuple[dict[str, str], ...]:
         result.append(dict(id=RISK, label=lesson_label(RISK, "")))
     if sheet.girl == "MOCKINGBIRD" and has_rule(sheet, CALL, "MOCKINGBIRD"):
         result.append(dict(id=CALL, label=lesson_label(CALL, "")))
+    for rule, book in ((SHOW_DOG, "PRINCESS"), (PSYCHE, "STIM-BLISSED"), (DOLL, "VATGROWN")):
+        if sheet.girl == book and has_rule(sheet, rule, book):
+            result.append(dict(id=rule, label=lesson_label(rule, "")))
     return tuple(result)
 
 
@@ -227,7 +253,7 @@ def available(
             continue
         _prove(game, c, state, value)
         if value.claimed_action is not None:
-            if rule_id in (HOUND, RISK, CALL):
+            if rule_id in (HOUND, RISK, CALL, SHOW_DOG, PSYCHE, DOLL):
                 raise WorkflowError("This lesson is spent only by its actual owned source choice")
             from girlframe.services.m3_handler_advancements import _history
 
@@ -2406,3 +2432,317 @@ def finish_call_unused(
     _replace(state, value.model_copy(update=dict(claimed_action=None)))
     state.facts.append(dict(kind="learned_call_use", id=action["id"], body=use.model_dump_json()))
     action["data"]["learned_call"].update(resolved_event=event, used=False)
+
+
+def prepare_daily_lessons(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    actor: ActorRef,
+    play: str,
+) -> dict[str, tuple[dict[str, str], ...]]:
+    from girlframe.services.m3_access import load_registry
+
+    result: dict[str, tuple[dict[str, str], ...]] = dict(show_dog=(), psyche=())
+    sheet = state.sheets.get(actor.entity) if actor.kind == "pilot" else None
+    if sheet is None or sheet.character_id != actor.incarnation:
+        return result
+    runtime = sheet.girl_runtime or GirlRuntime()
+    native = sheet.model_copy(
+        update={"girl_runtime": runtime.model_copy(update={"learned_plays": ()})}
+    )
+    for rule, (key, book) in DAILY.items():
+        try:
+            load_registry().require_available(rule)
+        except ValueError:
+            continue
+        if (rule == SHOW_DOG and play != "go_off_duty") or has_rule(native, rule, book):
+            continue
+        candidates = []
+        for value in runtime.learned_plays:
+            if (
+                value.rule_id == rule
+                and value.actor == actor
+                and value.claimed_action is None
+                and value.rolled_event is None
+            ):
+                _prove(game, c, state, value)
+                candidates.append(dict(id=value.id, rule_id=rule, label=lesson_label(rule, play)))
+        result["show_dog" if key == "learned_show_dog" else "psyche"] = tuple(candidates)
+    return result
+
+
+def _daily_mode(
+    prepared: dict[str, Any], rule: str
+) -> Literal["mark", "off_duty", "mark_off_duty"]:
+    off_duty = prepared["play"] in OFF_DUTY
+    marking = bool(prepared.get("disposable_heat") and prepared.get("identity"))
+    if rule == SHOW_DOG and prepared["play"] == "go_off_duty":
+        return "off_duty"
+    if rule == PSYCHE:
+        if off_duty and marking:
+            return "mark_off_duty"
+        if off_duty:
+            return "off_duty"
+        if marking:
+            return "mark"
+    raise WorkflowError("This actual source must trigger the selected lesson's printed effect")
+
+
+def reserve_daily_lessons(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    event: str,
+) -> bool:
+    prepared = action["data"]["prepared"]
+    actor = current_ref(state, int(action["actor_id"]))
+    choices = prepare_daily_lessons(game, c, state, actor, prepared["play"])
+    changed = False
+    for rule, (key, _) in DAILY.items():
+        identity = prepared.get(key)
+        if identity is None:
+            continue
+        candidates = choices["show_dog" if rule == SHOW_DOG else "psyche"]
+        if identity not in {x["id"] for x in candidates} or action["data"].get(key) or not event:
+            raise WorkflowError(
+                "Explicitly select your actual unused lesson for this original source"
+            )
+        mode = _daily_mode(prepared, rule)
+        runtime = state.sheets[actor.entity].girl_runtime
+        assert runtime is not None
+        value = next(x for x in runtime.learned_plays if x.id == identity)
+        _replace(state, value.model_copy(update=dict(claimed_action=action["id"])))
+        action["data"][key] = dict(id=identity, event=event, mode=mode)
+        changed = True
+    return changed
+
+
+def _daily_reservation(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    rule: str,
+) -> LearnedPlayUse:
+    from girlframe.services.m3_handler_advancements import _history
+
+    if rule not in DAILY:
+        raise WorkflowError("Use one of the two actual supported daily lesson sources")
+    key, _ = DAILY[rule]
+    meta = action["data"][key]
+    born = _history(c, game, meta["event"])
+    actor = current_ref(born, int(action["actor_id"]))
+    initial = born.sheets[actor.entity].girl_runtime
+    sheet = state.sheets.get(actor.entity)
+    runtime = sheet.girl_runtime if sheet and sheet.character_id == actor.incarnation else None
+    original = (
+        next((x for x in initial.learned_plays if x.id == meta["id"]), None) if initial else None
+    )
+    value = (
+        next((x for x in runtime.learned_plays if x.id == meta["id"]), None) if runtime else None
+    )
+    event = (
+        c.execute(
+            sa.select(t.events).where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.id == meta["event"],
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if (
+        value is None
+        or original is None
+        or event is None
+        or value.actor != actor
+        or value.rule_id != rule
+        or action["data"]["prepared"].get(key) != value.id
+        or meta.get("mode") != _daily_mode(action["data"]["prepared"], rule)
+        or event["kind"] not in ("m2.play_confirmed", "m3.play_confirmed")
+        or json.loads(event["payload_json"]).get("action_id") != action["id"]
+        or original != value.model_copy(update=dict(claimed_action=action["id"], rolled_event=None))
+    ):
+        raise WorkflowError("Recover the original actor's exact source-specific lesson reservation")
+    _prove(game, c, born, original)
+    _prove(game, c, state, value)
+    return value
+
+
+def pre_roll_daily_lessons(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+) -> None:
+    for rule, (key, _) in DAILY.items():
+        if action["data"].get(key) is None:
+            continue
+        value = _daily_reservation(game, c, state, action, rule)
+        if (
+            value.actor != current_ref(state, int(action["actor_id"]))
+            or value.claimed_action != action["id"]
+            or value.rolled_event is not None
+            or action["data"].get("receipt")
+            or action["data"][key].get("resolved_event")
+        ):
+            raise WorkflowError("Use only this current original source's unrolled lesson")
+
+
+def release_daily_unrolled(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+) -> bool:
+    if not any(action["data"].get(key) for key, _ in DAILY.values()):
+        return False
+    pre_roll_daily_lessons(game, c, state, action)
+    for rule, (key, _) in DAILY.items():
+        if action["data"].get(key):
+            value = _daily_reservation(game, c, state, action, rule)
+            _replace(state, value.model_copy(update=dict(claimed_action=None)))
+    return True
+
+
+def consume_daily_lessons(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    roll_event: str,
+) -> None:
+    for rule, (key, _) in DAILY.items():
+        if not action["data"].get(key):
+            continue
+        value = _daily_reservation(game, c, state, action, rule)
+        if (
+            value.claimed_action != action["id"]
+            or value.rolled_event is not None
+            or any(x.action == action["id"] and x.rule_id == rule for x in daily_lesson_uses(state))
+        ):
+            raise WorkflowError(
+                "Consume each actual source lesson once at its real committed receipt"
+            )
+        meta = action["data"][key]
+        use = DailyLessonUse(
+            action=action["id"],
+            lesson=value.id,
+            rule_id=rule,
+            actor=value.actor,
+            mode=meta["mode"],
+            begin_event=meta["event"],
+            event=roll_event,
+            receipt_sha256=_keep_receipt(game, c, action),
+        )
+        _replace(state, value.model_copy(update=dict(rolled_event=roll_event)))
+        state.facts.append(
+            dict(kind="learned_daily_use", id=action["id"] + ":" + rule, body=use.model_dump_json())
+        )
+        meta["resolved_event"] = roll_event
+
+
+def prove_daily_lesson(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    rule: str,
+) -> DailyLessonUse | None:
+    if rule not in DAILY:
+        raise WorkflowError("Use one of the two actual supported daily lesson sources")
+    key, _ = DAILY[rule]
+    if not action["data"].get(key):
+        return None
+    values = [x for x in daily_lesson_uses(state) if x.action == action["id"] and x.rule_id == rule]
+    if len(values) != 1:
+        raise WorkflowError("Recover the genuine committed source lesson and receipt")
+    use = values[0]
+    from girlframe.services.m3_handler_advancements import _history
+
+    born = _history(c, game, use.event)
+    value = _daily_reservation(game, c, born, action, rule)
+    meta = action["data"][key]
+    if (
+        use not in daily_lesson_uses(born)
+        or use.actor != value.actor
+        or use.lesson != value.id
+        or use.mode != meta["mode"]
+        or use.begin_event != meta["event"]
+        or use.event != meta.get("resolved_event")
+        or use.event != _keep_raw_roll(game, c, action)
+        or use.receipt_sha256 != _keep_receipt(game, c, action)
+        or value.claimed_action != action["id"]
+        or value.rolled_event != use.event
+    ):
+        raise WorkflowError("Prove this exact original source, lesson and canonical receipt")
+    if use.mode in ("mark", "mark_off_duty"):
+        from girlframe.engine.m3_disposable_psyche import disposals
+
+        disposal = next(
+            (x for x in disposals(born) if x.id == action["id"] and x.actor == use.actor), None
+        )
+        if disposal is None or disposal.receipt != action["data"]["receipt"]["id"]:
+            raise WorkflowError("Preserve the actual owned Identity disposal and Heat cost")
+        if disposal.event != use.event:
+            from girlframe.services.m3_disposable_psyche import prove_feedback_disposal
+
+            if disposal.commit_event is None or disposal.roll_event != use.event:
+                raise WorkflowError("Preserve the genuine pre-RNG disposal and later actual roll")
+            prove_feedback_disposal(game, c, born, disposal, action)
+    return use
+
+
+def prepare_psyche_permit(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    owner: int,
+    prepared: Any,
+) -> PsychePermit | None:
+    identity = prepared.learned_psyche
+    if identity is None:
+        return None
+    actor = current_ref(state, owner)
+    sheet = state.sheets[actor.entity]
+    value = (
+        next((x for x in sheet.girl_runtime.learned_plays if x.id == identity), None)
+        if sheet.girl_runtime
+        else None
+    )
+    if (
+        value is None
+        or value.rule_id != PSYCHE
+        or value.actor != actor
+        or value.rolled_event is not None
+    ):
+        raise WorkflowError("Use your actual unspent original Psyche lesson for this mark")
+    _prove(game, c, state, value)
+    mode = _daily_mode(prepared.model_dump(mode="json"), PSYCHE)
+    if mode == "off_duty":
+        raise WorkflowError(
+            "A real mark/removal requires its explicit disposal amount and Identity"
+        )
+    if value.claimed_action is not None:
+        action = game.action(c, value.claimed_action)
+        if action["data"]["prepared"] != prepared.model_dump(mode="json"):
+            raise WorkflowError("Keep the exact original claimed source for this Identity mark")
+        _daily_reservation(game, c, state, action, PSYCHE)
+    return PsychePermit(lesson=value, mode=mode)
+
+
+def off_duty_psyche_permit(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+) -> PsychePermit | None:
+    use = prove_daily_lesson(game, c, state, action, PSYCHE)
+    if use is None:
+        return None
+    if use.mode not in ("off_duty", "mark_off_duty"):
+        return None
+    value = _daily_reservation(game, c, state, action, PSYCHE)
+    return PsychePermit(lesson=value, mode=use.mode)

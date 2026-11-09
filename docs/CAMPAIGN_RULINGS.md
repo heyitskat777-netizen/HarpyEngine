@@ -4094,3 +4094,20 @@ no passive Call, teacher hardware or counterpart consent. Consuming at the raw
 roll even without an extra choice is the alternative interpretation; charging
 again for each consequent choice would split one use. Delegated recommendation,
 printed clarity review pending. Preserve old events and native source behavior.
+
+
+## P1 learned Off-Duty and removal source scope
+
+`vatgrown-daily-source-scope` (Show Dog PDF33/printed31; Psyche PDF38/printed36;
+Sex learning PDF50/printed48): explicitly select at most one actual lesson per
+rule for one genuine source Action. Its canonical roll spends once and retains
+only that source's real printed consequences. Show Dog keeps its independent
+choices/NPCs and original Handler risk. Psyche keeps actual Identity removal,
++3/+4 Heat, Feedback and real Tag/capacity/replacement requirements. A legal
+combined mark-and-Go-OffDuty Action carries both its own clauses; a standalone
+mark grants no later Off-Duty entitlement. Automatic spending or carrying a mark
+use into an unrelated period are alternatives, not the chosen interpretation.
+Native Unassuming Doll acquisition is truthful source history without extra
+permanent ownership or automatic spending during an already-native use.
+Delegated recommendation; printed-rule clarity review pending. Preserve original
+costs, choices, native records and once-use history through later adjustments.

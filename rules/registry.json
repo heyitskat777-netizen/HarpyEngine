@@ -7196,6 +7196,23 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "vatgrown-daily-source-scope",
+      "policy_key": "vatgrown_daily_source_scope",
+      "summary": "Explicit learned Show Dog and Disposable Psyche uses bind one genuine own source Action and its actual Off-Duty or removal consequences.",
+      "source": "Rulebook PDF33/printed31 Show Dog; PDF38/printed36 Disposable Psyche; PDF50/printed48 Vatgrown Sex Play.",
+      "rationale": "These abilities have source-triggered consequences rather than independent invented rolls. A deliberate one-use activation must retain the actual printed consequence without becoming a permanent passive.",
+      "alternatives": [
+        "Automatically consume any held lesson on every applicable ordinary Action.",
+        "Treat any Psyche marking use as permission to embrace Tags during a later unrelated Off-Duty period."
+      ],
+      "implementation_note": "Original learner explicitly selects at most one actual lesson per rule. Canonical source reservation/roll consumption, real current actor/period/receipt and held work remain required. Show Dog retains independent original choices, actual NPCs and Handler risk. Psyche retains genuine native Identity constraints, actual +3/+4 Heat/removal, real Feedback and actual Tag/capacity/replacement choices. A legal combined mark-and-Go-OffDuty Action may carry both of its own printed clauses as mark_off_duty; standalone marking gives no future period entitlement. History-only native Unassuming Doll acquisition grants no stack and never auto-spends on an already-native use.",
+      "change_impact": "Preserve original native events, real costs, consent, choice ownership and consumed lesson history. Future clarification cannot copy teacher prerequisites, resurrect spent sources or turn a duplicate native lesson into new permanent ownership.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -8567,7 +8584,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_show_dog.py"
+        "tests/rules/test_show_dog.py",
+        "tests/rules/test_vatgrown_plays.py::test_actual_princess_show_dog_lesson_native_off_duty_two_choices_bond_and_private_message"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -8927,7 +8945,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_disposable_psyche.py"
+        "tests/rules/test_disposable_psyche.py",
+        "tests/rules/test_vatgrown_plays.py::test_actual_stim_psyche_lessons_native_mark_removal_and_distinct_off_duty_tag_embrace"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -9532,7 +9551,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_vatgrown.py"
+        "tests/rules/test_vatgrown.py",
+        "tests/rules/test_vatgrown_plays.py::test_actual_native_same_book_doll_lesson_history_does_not_stack_or_spend_on_native_use"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -10365,7 +10385,9 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_consume.py"
+        "tests/rules/test_consume.py",
+        "tests/rules/test_consume.py::test_actual_supply_delivery_cap_loss_survives_true_expiry_then_native_partake_regrowth",
+        "tests/rules/test_consume.py::test_actual_paid_sup_dive_cap_loss_then_native_partake_regrowth_keeps_void_birth"
       ],
       "m2_play_id": null,
       "module": "core",

@@ -8,7 +8,7 @@ from pydantic import Field
 from girlframe.engine.m3_actor_state import ActorRef, Model
 
 if TYPE_CHECKING:
-    from girlframe.engine.m2 import GameState
+    from girlframe.engine.m2 import GameState, PilotSheet
 
 
 class LearnedPlayUse(Model):
@@ -20,6 +20,50 @@ class LearnedPlayUse(Model):
     event: str = Field(min_length=1)
     claimed_action: str | None = None
     rolled_event: str | None = None
+
+
+class PsychePermit(Model):
+    lesson: LearnedPlayUse
+    mode: Literal["mark", "off_duty", "mark_off_duty"]
+
+
+def psyche_permitted(
+    sheet: "PilotSheet", permit: PsychePermit | None, *, converting: bool = False
+) -> bool:
+    if permit is None or permit.lesson.rule_id != "girl.stim-blissed.disposable-psyche":
+        return False
+    value = permit.lesson
+    return bool(
+        sheet.girl_runtime
+        and value in sheet.girl_runtime.learned_plays
+        and value.actor.kind == "pilot"
+        and value.actor.entity == str(sheet.owner)
+        and value.actor.incarnation == sheet.character_id
+        and (
+            permit.mode in ("off_duty", "mark_off_duty") and value.rolled_event is not None
+            if converting
+            else permit.mode in ("mark", "mark_off_duty") and value.rolled_event is None
+        )
+    )
+
+
+class DailyLessonUse(Model):
+    action: str
+    lesson: str
+    rule_id: Literal["girl.princess.show-dog", "girl.stim-blissed.disposable-psyche"]
+    actor: ActorRef
+    mode: Literal["mark", "off_duty", "mark_off_duty"]
+    begin_event: str
+    event: str
+    receipt_sha256: str
+
+
+def daily_lesson_uses(state: "GameState") -> tuple[DailyLessonUse, ...]:
+    return tuple(
+        DailyLessonUse.model_validate_json(x["body"])
+        for x in state.facts
+        if x.get("kind") == "learned_daily_use"
+    )
 
 
 class HoundStatusUse(Model):

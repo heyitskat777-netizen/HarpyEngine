@@ -74,10 +74,13 @@ def synchronize(
             continue
         original, source = eligibility(c, game.store, state, period, owner)
         sheet = original.sheets.get(str(owner))
+        from girlframe.services.m3_learned_plays import SHOW_DOG, prove_daily_lesson
+
+        learned = prove_daily_lesson(game, c, original, action, SHOW_DOG)
         if (
             sheet is None
             or sheet.character_id != period.character_ids.get(str(owner))
-            or not has_rule(sheet, rules.RULE, "PRINCESS")
+            or not (has_rule(sheet, rules.RULE, "PRINCESS") or learned is not None)
             or source is None
         ):
             continue
@@ -119,13 +122,18 @@ def _source(
     actor = ActorRef.model_validate(body["actor"])
     original, event = eligibility(c, game.store, state, period, int(actor.entity))
     action = game.action(c, body["source_action"])
+    from girlframe.services.m3_learned_plays import SHOW_DOG, prove_daily_lesson
+
+    learned = prove_daily_lesson(game, c, original, action, SHOW_DOG)
     if (
         event is None
         or event != body["source_event"]
         or action["data"]["prepared"]["play"] != "go_off_duty"
         or period.progress[str(actor.entity)].action_id != action["id"]
         or actor != current_ref(original, int(actor.entity))
-        or not has_rule(original.sheets[actor.entity], rules.RULE, "PRINCESS")
+        or not (
+            has_rule(original.sheets[actor.entity], rules.RULE, "PRINCESS") or learned is not None
+        )
         or ActorRef.model_validate(body["handler"]) != active_handler(original)
     ):
         raise WorkflowError("Prove the actual original Go-OffDuty character, rule and receipt")

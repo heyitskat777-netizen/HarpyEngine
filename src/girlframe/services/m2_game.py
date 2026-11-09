@@ -2400,7 +2400,7 @@ class GameService:
             cute_uniforms = prepare_cute_keep(self, c, viewer, state, prepared, actor=acting_ref)
             from girlframe.services.m3_disposable_psyche import prepare_disposal
 
-            prepare_disposal(self, c, state, sheet.owner, prepared)
+            disposal_permit = prepare_disposal(self, c, state, sheet.owner, prepared)
             if prepared.disposable_heat and (
                 (m3 is not None and prepared.play not in ("go_off_duty", "void_observation"))
                 or (
@@ -2430,6 +2430,7 @@ class GameService:
                         prepared.pair_share,
                         state=preview_state,
                         disposable_heat=prepared.disposable_heat,
+                        learned_psyche=disposal_permit,
                     )
                 if share and str(sheet.pair) not in state.sheets:
                     raise WorkflowError("The Pair must have an active sheet to receive Heat.")
@@ -3203,6 +3204,19 @@ class GameService:
 
                 if reserve_call_lesson(self, c, state, action, begin_source_event or str(uuid4())):
                     begin_source_event = action["data"]["learned_call"]["event"]
+                    action["data"]["sheet_revision"] = state.sheets[str(mechanical_owner)].revision
+                    self.save_action(c, action)
+                    claimed_learned = True
+            if prepared.learned_show_dog is not None or prepared.learned_psyche is not None:
+                from girlframe.services.m3_learned_plays import reserve_daily_lessons
+
+                if reserve_daily_lessons(
+                    self, c, state, action, begin_source_event or str(uuid4())
+                ):
+                    daily_source = (
+                        action["data"].get("learned_show_dog") or action["data"]["learned_psyche"]
+                    )
+                    begin_source_event = daily_source["event"]
                     action["data"]["sheet_revision"] = state.sheets[str(mechanical_owner)].revision
                     self.save_action(c, action)
                     claimed_learned = True
@@ -4036,6 +4050,10 @@ class GameService:
                 from girlframe.services.m3_learned_plays import pre_roll_call_lesson
 
                 pre_roll_call_lesson(self, c, state, action)
+            if action["data"].get("learned_show_dog") or action["data"].get("learned_psyche"):
+                from girlframe.services.m3_learned_plays import pre_roll_daily_lessons
+
+                pre_roll_daily_lessons(self, c, state, action)
             if action["data"].get("am_code"):
                 from girlframe.services.m3_am_code import pre_roll as pre_roll_am_code
 
@@ -4109,7 +4127,7 @@ class GameService:
             if committed is None:
                 from girlframe.services.m3_disposable_psyche import prepare_disposal
 
-                prepare_disposal(self, c, state, sheet.owner, prepared)
+                disposal_permit = prepare_disposal(self, c, state, sheet.owner, prepared)
                 if prepared.identity:
                     from girlframe.engine.m3_clone_am import mark_additional
                     from girlframe.services.m3_clone_am import prove_additional
@@ -4126,6 +4144,7 @@ class GameService:
                             prepared.pair_share,
                             state=state,
                             disposable_heat=prepared.disposable_heat,
+                            learned_psyche=disposal_permit,
                         )
                     if share:
                         state.sheets[str(sheet.pair)].heat += share
@@ -4519,6 +4538,13 @@ class GameService:
                 consume_keep_rider(self, c, state, action, roll_event_id)
                 if action["data"]["play"] == "keep_your_head":
                     self.save_action(c, action)
+            if action["data"].get("learned_show_dog") or action["data"].get("learned_psyche"):
+                from girlframe.services.m3_learned_plays import consume_daily_lessons
+
+                roll_event_id = roll_event_id or str(uuid4())
+                consume_daily_lessons(self, c, state, action, roll_event_id)
+                action["data"]["sheet_revision"] = state.sheets[str(action["actor_id"])].revision
+                self.save_action(c, action)
             if committed is not None:
                 from girlframe.services.m3_ankou_feedback import record_roll
 

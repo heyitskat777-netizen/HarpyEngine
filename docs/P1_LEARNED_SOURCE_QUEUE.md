@@ -20,11 +20,11 @@ separate learned Alpha/Elder and other deferred branches retain final gates.
 | `girl.alpha.nothing-more-than-a-hound` | Malleable source/root integration frozen | Actual Dog/unmarked Status selector, one use and real Punishment/Status expiry implemented | Native actual lesson/Status/rank-clear passed in3/15.99s; final gates pending |
 | `girl.mockingbird.risk-factor` | Queued | Paid optional shift/real Void and explicit unused-lesson defensive entry on other true source implemented; retain exact cause/Frame/work scope | Paid native minimum passed in2/9.37s; other-origin native defensive activation/real Keep/closure1/7.81s; final gates pending |
 | `girl.mockingbird.call-of-the-void` | Queued | All three existing Dive effects now use actual selected lesson/receipt, components, consenting guest and real Gorgon; bind one whole original Dive | Native combined source/cancellation/classification/guest/Gorgon1/10.33s after fixture API fix; final gates pending |
-| `girl.princess.show-dog` | Queued | Existing actual Off-Duty period and both real NPC choices; bind one use | Missing learned adapter |
-| `girl.stim-blissed.disposable-psyche` | Queued | Actual Identity mark/disposal or period use and mandatory Tag/capacity work; bind exact one use | Missing learned adapter |
+| `girl.princess.show-dog` | Queued | Real original Go-OffDuty source, both independent choices/NPCs/message/Bond and original Handler risk implemented | Native source normal passed in2passed2failed20.03s; final gates pending |
+| `girl.stim-blissed.disposable-psyche` | Queued | Actual independent Identity disposal/Heat and real Off-Duty Tag embraces now have distinct source-bound lesson uses; real Feedback preserved | Two-mode native episode1 of2passed13.64s retry after synthetic Malleable policy fixture fix; learned Ankou runtime deferred |
 | `girl.bonded.always-by-her-side` | Queued eligibility/consumer | Genuine independent original Pair first, then actual one-use source; learning creates no Pair/Hers/Paired Identity | Missing when genuinely applicable |
 | `girl.am.scrutinized`, `girl.am.just-code` | Queued eligibility/consumer | Real adjusted-mind discovery or actual accessible circuit/mind/operator source; a native biological Vatgrown label alone supplies neither | Missing when genuinely applicable |
-| `girl.vatgrown.unassuming-doll` | Queued acquisition reconciliation | Native Vatgrown already owns real provider; mandatory same-book learning must retain truthful redundant-source history without spending permanent ownership | Selection/history gap |
+| `girl.vatgrown.unassuming-doll` | Queued acquisition reconciliation | Actual native acquisition/history supported without stacking or spending on ordinary native use; later nonnative source stays explicit | Meaningful same-book native history/no-stack node authored NOT RUN for final regression |
 
 ## Sex and ongoing-source boundaries
 

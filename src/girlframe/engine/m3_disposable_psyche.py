@@ -9,6 +9,7 @@ from girlframe.engine.m2 import GameState, IdentityState, PilotSheet, TagState
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_girl_runtime_state import has_rule
 from girlframe.engine.m3_identity_slots import replacement_slot
+from girlframe.engine.m3_learned_play_state import PsychePermit, psyche_permitted
 from girlframe.engine.m3_leviathan_obsession import require_unlocked
 
 RULE = "girl.stim-blissed.disposable-psyche"
@@ -77,9 +78,18 @@ def put(state: GameState, value: Disposal | Conversion) -> None:
     state.facts.append(dict(kind=kind, id=value.id, body=value.model_dump_json()))
 
 
-def removable(sheet: PilotSheet, identity: IdentityState) -> None:
+def removable(
+    sheet: PilotSheet,
+    identity: IdentityState,
+    *,
+    permit: PsychePermit | None = None,
+    converting: bool = False,
+) -> None:
     if (
-        not has_rule(sheet, RULE, "STIM-BLISSED")
+        not (
+            has_rule(sheet, RULE, "STIM-BLISSED")
+            or psyche_permitted(sheet, permit, converting=converting)
+        )
         or identity.protected
         or identity.paired
         or identity.am_limiter is not None
@@ -91,8 +101,14 @@ def removable(sheet: PilotSheet, identity: IdentityState) -> None:
     require_unlocked(sheet.identities, (identity.id,))
 
 
-def admit_removal(state: GameState, sheet: PilotSheet, identity: IdentityState) -> None:
-    removable(sheet, identity)
+def admit_removal(
+    state: GameState,
+    sheet: PilotSheet,
+    identity: IdentityState,
+    *,
+    permit: PsychePermit | None = None,
+) -> None:
+    removable(sheet, identity, permit=permit)
     if sheet.frame == "PROJECT ANKOU":
         from girlframe.engine.m3_ankou_feedback import final_mark
 
@@ -116,8 +132,13 @@ def convert(
     original: PilotSheet,
     selections: tuple[TagSelection, ...],
     source: str,
+    *,
+    permit: PsychePermit | None = None,
 ) -> tuple[PilotSheet, tuple[TagState, ...], tuple[IdentityState, ...], tuple[IdentityState, ...]]:
-    if not has_rule(original, RULE, "STIM-BLISSED"):
+    if not (
+        has_rule(original, RULE, "STIM-BLISSED")
+        or psyche_permitted(original, permit, converting=True)
+    ):
         raise ValueError("Use the original source-owned Disposable Psyche Girl")
     if not 1 <= len(selections) <= 4 or len({x.tag for x in selections}) != len(selections):
         raise ValueError("Choose one to four distinct actual owned Tags")
@@ -142,7 +163,7 @@ def convert(
         old = next((x for x in state.identities if x.id == replaced_id), None)
         if old is None:
             raise ValueError("Replace an actual original owned Identity")
-        removable(state, old)
+        removable(state, old, permit=permit, converting=True)
         old_slots[old.id] = old.slot
         replaced.append(old.model_copy(deep=True))
     state.identities = [x for x in state.identities if x.id not in replacements]

@@ -30,6 +30,8 @@ class FrameAssetLoss(Model):
         "defeat_new_void",
         "partake_excrete",
         "partake_regrowth",
+        "supply_drop_cap",
+        "sup_dive_cap",
     ]
     id: str
     actor: ActorRef
@@ -617,6 +619,229 @@ def partake_losses(
                     actor=actor,
                     frame=consume.frame(state, actor),
                     event=source.event,
+                    asset=old,
+                )
+            )
+    return tuple(result)
+
+
+def supply_drop_losses(
+    game: GameService, c: Connection, state: GameState, actor: ActorRef
+) -> tuple[FrameAssetLoss, ...]:
+    """Delivery may permanently displace hardware; temporary equipment expiry is not regrowth."""
+    from girlframe.engine import m3_supply_drop as supply
+    from girlframe.services.m3_supply_drop import use_source
+
+    result = []
+    for use in supply.uses(state):
+        if (
+            use.target != actor
+            or use.frame != consume.frame(state, actor)
+            or use.kind != "drop"
+            or not use.replacement
+            or not use.effect_event
+            or use.phase not in ("delivered", "expired")
+        ):
+            continue
+        before, born = snapshots(game, c, use.effect_event)
+        delivered = use_source(game, c, born, use.id)
+        use_source(game, c, state, use.id)
+        if not _surviving_frame(state, before, born, actor):
+            continue
+        prior = next((x for x in supply.uses(before) if x.id == use.id), None)
+        audit = (
+            c.execute(
+                sa.select(t.events).where(
+                    t.events.c.campaign_id == game.store.campaign_id,
+                    t.events.c.id == use.effect_event,
+                )
+            )
+            .mappings()
+            .first()
+        )
+        old = next((x for x in before.sheets[actor.entity].assets if x.id == use.replacement), None)
+        new = AssetState(id=use.asset, family="frame", name=use.name, description=use.description)
+        if (
+            prior is None
+            or prior.phase != "proposed"
+            or prior.effect_event is not None
+            or delivered.phase != "delivered"
+            or delivered.effect_event != use.effect_event
+            or delivered.replacement != use.replacement
+            or delivered.frame != consume.frame(state, actor)
+            or not delivered.effect_account
+            or old is None
+            or old.family != "frame"
+            or any(x.id == old.id for x in born.sheets[actor.entity].assets)
+            or new not in born.sheets[actor.entity].assets
+            or audit is None
+            or audit["kind"] != "m3.supply_drop_delivered"
+            or audit["actor_id"] != actor.entity
+            or json.loads(audit["payload_json"]).get("use_id") != use.id
+        ):
+            raise WorkflowError(
+                "Prove the actual accepted temporary delivery and permanent cap loss"
+            )
+        try:
+            expected = install(
+                before.sheets[actor.entity],
+                new,
+                replace=old.id,
+                effective_void=stored_ids(before, actor),
+                state=before,
+            )
+        except ValueError as error:
+            raise WorkflowError(
+                "Recover the real legal Supply Drop cap exchange: " + str(error)
+            ) from None
+        if expected.sheet.assets != born.sheets[actor.entity].assets:
+            raise WorkflowError("Preserve this actual Supply Drop component exchange")
+        if _eligible(before, actor, old):
+            result.append(
+                FrameAssetLoss(
+                    source_kind="supply_drop_cap",
+                    id=use.id,
+                    actor=actor,
+                    frame=use.frame,
+                    event=use.effect_event,
+                    asset=old,
+                )
+            )
+    return tuple(result)
+
+
+def sup_dive_losses(
+    game: GameService, c: Connection, state: GameState, actor: ActorRef
+) -> tuple[FrameAssetLoss, ...]:
+    """Only a genuine paid Sup at an actual Dive Void choice, never every Grown fact."""
+    from girlframe.engine import m3_sup as sup
+    from girlframe.engine.m3_dive_state import Effect
+    from girlframe.services.m3_dose_up import _roll_source
+    from girlframe.services.m3_sup import prove_growth
+
+    result = []
+    actions, choices = t.m2["m2_actions"], t.m2["m2_choices"]
+    for grown in sup.growths(state):
+        if grown.actor != actor or grown.choice.family != "frame" or not grown.choice.replace:
+            continue
+        if (
+            c.scalar(
+                sa.select(actions.c.id).where(
+                    actions.c.campaign_id == game.store.campaign_id, actions.c.id == grown.action
+                )
+            )
+            is None
+        ):
+            continue  # Other genuine work-owned Sup sources need their own positive adapter.
+        action = game.action(c, grown.action)
+        if action["data"].get("play") != "dive_deep":
+            continue
+        before, born = snapshots(game, c, grown.event)
+        if grown not in sup.growths(born):
+            raise WorkflowError("Recover the exact original canonical Sup growth")
+        if not _surviving_frame(state, before, born, actor):
+            continue
+        _roll_source(game, c, action)
+        bound = action["data"].get("character_ids") or game.legacy_action_bindings(c, action)
+        if (
+            action["actor_id"] != actor.entity
+            or bound.get(actor.entity) != actor.incarnation
+            or grown.frame != consume.frame(state, actor)
+            or prove_growth(game, c, born, actor, grown.event) != grown
+        ):
+            raise WorkflowError("Keep the original paid Sup, Dive actor and surviving Frame")
+        response = (
+            c.execute(
+                sa.select(choices)
+                .join(
+                    t.m2["m2_responses"],
+                    sa.and_(
+                        choices.c.campaign_id == t.m2["m2_responses"].c.campaign_id,
+                        choices.c.id == t.m2["m2_responses"].c.choice_id,
+                    ),
+                )
+                .where(
+                    choices.c.campaign_id == game.store.campaign_id,
+                    choices.c.action_id == grown.action,
+                    choices.c.kind == "dive_effect",
+                    t.m2["m2_responses"].c.event_id == grown.event,
+                )
+            )
+            .mappings()
+            .one_or_none()
+        )
+        if response is None or json.loads(response["body_json"]).get("step") != grown.step:
+            raise WorkflowError("Prove this real original Dive effect choice")
+        answer = _response(
+            game, c, grown.action, response["id"], grown.event, "dive_effect", int(actor.entity)
+        )
+        fact = next(
+            (
+                x
+                for x in born.facts
+                if x.get("kind") == "dive_effect"
+                and x.get("action") == grown.action
+                and x.get("step") == str(grown.step)
+                and x.get("source_event") == grown.event
+            ),
+            None,
+        )
+        effect = Effect.model_validate_json(fact["effect"]) if fact else None
+        if (
+            fact is None
+            or fact["option"] != "void_and_unmark_all"
+            or fact["actor"] != actor.model_dump_json()
+            or effect is None
+            or effect.growth != grown.choice
+            or effect.asset is not None
+            or effect.description != grown.description
+            or answer.text != grown.description
+            or answer.fields
+            != dict(
+                sup_name=grown.choice.name, sup_family="frame", sup_replace=grown.choice.replace
+            )
+        ):
+            raise WorkflowError("Prove the actual owned Void gain and exact Sup choice")
+        old = next(
+            (x for x in before.sheets[actor.entity].assets if x.id == grown.choice.replace), None
+        )
+        new = next((x for x in born.sheets[actor.entity].assets if x.id == grown.asset), None)
+        if (
+            old is None
+            or new is None
+            or any(x.id == old.id for x in born.sheets[actor.entity].assets)
+        ):
+            raise WorkflowError(
+                "The actual Sup cap exchange must remove the named original hardware"
+            )
+        try:
+            expected, _, exact_growth = sup.grow(
+                before,
+                actor,
+                grown.choice,
+                grown.description,
+                grown.action,
+                grown.event,
+                piloting=bool(action["data"]["prepared"]["piloting"]),
+                step=grown.step,
+            )
+        except ValueError as error:
+            raise WorkflowError(
+                "Recover the actual legal Sup cap exchange: " + str(error)
+            ) from None
+        if (
+            exact_growth != grown
+            or expected.sheets[actor.entity].assets != born.sheets[actor.entity].assets
+        ):
+            raise WorkflowError("Preserve this exact original Sup component exchange")
+        if _eligible(before, actor, old):
+            result.append(
+                FrameAssetLoss(
+                    source_kind="sup_dive_cap",
+                    id=grown.asset,
+                    actor=actor,
+                    frame=grown.frame,
+                    event=grown.event,
                     asset=old,
                 )
             )

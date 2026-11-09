@@ -175,6 +175,8 @@ class RegrownFrame(Model):
             "defeat_new_void",
             "partake_excrete",
             "partake_regrowth",
+            "supply_drop_cap",
+            "sup_dive_cap",
         ]
         | None
     ) = Field(default=None, exclude_if=lambda value: value is None)

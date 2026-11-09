@@ -1546,3 +1546,320 @@ def test_actual_partake_excretion_then_regrowth_cap_losses_have_prior_sources_on
     assert controls.view(PLAYER, last.id)["type"] == "regrowth"
     tick(worker, gateway, 6)
     assert game.inspect(PLAYER, third)["state"] == "complete"
+
+
+def _elective_regrowth_ready(ledger, tmp_path, monkeypatch):
+    from girlframe.engine.m3_assets import counts_toward_limit
+    from girlframe.engine.m3_requisition_state import Installation
+    from girlframe.services.m3_requisitions import RequisitionService
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch)
+    acquire(controls, rules.PARTAKE)
+    actor = current_ref(state(game), 2)
+    original = next(x for x in state(game).sheets["2"].assets if x.family == "frame")
+    purchases = RequisitionService(game)
+    index = 0
+    while True:
+        data = purchases.view(PLAYER)
+        sheet = state(game).sheets["2"]
+        if (
+            sum(counts_toward_limit(sheet, x) for x in sheet.assets if x.family == "frame")
+            >= data["frame_capacity"]
+        ):
+            break
+        purchases.buy(
+            PLAYER,
+            str(uuid4()),
+            actor,
+            data["source_sha256"],
+            Installation(
+                name="Actual elective spare " + str(index),
+                description="Actual permanently installed paid source hardware",
+                account="I actually pay for and install this original Frame component",
+                trigger_confirmed=True,
+            ),
+        )
+        index += 1
+    return game, worker, gateway, controls, actor, original
+
+
+def _elective_dive(game, worker, gateway):
+    """Use actual worker progression; a missing committed receipt must not be concealed."""
+    game.dice.faces = (4, 5)
+    heat = state(game).sheets["2"].heat
+    identity = game.begin(
+        PLAYER,
+        str(uuid4()),
+        900,
+        state(game).sheets["2"].revision,
+        PlayInput(
+            play="dive_deep",
+            heat=heat if heat >= 5 else 0,
+            piloting=True,
+            context="I genuinely commune with my original current Frame",
+            trigger_confirmed=True,
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    assert game.inspect(PLAYER, identity)["receipt"]
+    pass_tags(game)
+    return identity
+
+
+def _elective_partake(game, worker, gateway):
+    action = _elective_dive(game, worker, gateway)
+    answer(
+        game,
+        PLAYER,
+        "dive_select",
+        options=("erase_identity_and_table_question",),
+        text="My actual original communion before optional Partake",
+    )
+    ordinary = next(
+        x for x in state(game).sheets["2"].identities if not x.protected and not x.paired
+    )
+    answer(
+        game,
+        PLAYER,
+        "dive_effect",
+        fields={"identity": ordinary.id},
+        text="What does this actual original Frame need now?",
+    )
+    for viewer in (PLAYER, OTHER, ADMIN):
+        if any(x["kind"] == "dive_table_answer" for x in game.choices(viewer)):
+            answer(game, viewer, "dive_table_answer", text="My own actual table answer")
+    return action, next(x for x in game.choices(PLAYER) if x["kind"] == "consume_partake")
+
+
+def test_actual_supply_delivery_cap_loss_survives_true_expiry_then_native_partake_regrowth(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred: a true temporary delivery displaces one permanent component, never free supply."""
+    from test_supply_drop import acquire as buy_supply
+    from test_supply_drop import launch, native_receive, propose, settle
+
+    from girlframe.engine import m3_handler_ordinary as ordinary
+    from girlframe.engine import m3_supply_drop as supply
+    from girlframe.services.m3_consume_regrowth import _selections, prove_regrowth
+    from girlframe.services.m3_frame_asset_losses import supply_drop_losses
+    from girlframe.services.m3_handler_ordinary import HandlerOrdinaryService
+    from girlframe.services.m3_handler_pr import HandlerPRService
+    from girlframe.services.m3_supply_drop import SupplyDropService
+
+    game, worker, gateway, controls, actor, old = _elective_regrowth_ready(
+        ledger, tmp_path, monkeypatch
+    )
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(ordinary.RULE, supply.RULE, rules.STARVATION, rules.EAT, *rules.REQUISITIONS),
+    )
+    HandlerOrdinaryService(ledger).record_session(
+        ADMIN,
+        str(uuid4()),
+        state(game).revision,
+        "Actual supply source Session",
+        "The original Handler genuinely begins this Session",
+    )
+    public = HandlerPRService(ledger)
+    event = public.plan(
+        ADMIN,
+        str(uuid4()),
+        state(game).revision,
+        "Actual supply Foundation feature",
+        "The original Girl participates in a real feature",
+        (actor,),
+    )["id"]
+    public.activity(
+        ADMIN,
+        str(uuid4()),
+        event,
+        state(game).revision,
+        "I actually host this Foundation feature",
+        hosting=True,
+    )
+    public.activity(
+        PLAYER,
+        str(uuid4()),
+        event,
+        state(game).revision,
+        "My actual original Girl participates in this feature",
+    )
+    public.submit_result(
+        ADMIN,
+        str(uuid4()),
+        event,
+        state(game).revision,
+        "The original participants actually perform the planned feature",
+    )
+    award = public.resolve(
+        ADMIN,
+        str(uuid4()),
+        event,
+        state(game).revision,
+        True,
+        "The genuine adjudicator records the actual successful result",
+    )["award"]
+    delivery = SupplyDropService(ledger)
+    buy_supply(delivery, award)
+    missions = MissionService(ledger)
+    mission = launch(missions)
+    identity = propose(delivery, game, mission)
+    native_receive(delivery, identity, replace=old.id, number=991700)
+    use = next(x for x in supply.uses(state(game)) if x.id == identity)
+    assert use.replacement == old.id and use.phase == "delivered"
+    assert not any(x.id == old.id for x in state(game).sheets["2"].assets)
+    with ledger.engine.connect() as c:
+        loss = next(x for x in supply_drop_losses(game, c, state(game), actor) if x.id == identity)
+        assert loss.asset == old and loss.event == use.effect_event
+    # Record the real Handler-owned mission outcome first. This actual lifetime
+    # operation expires its delivered equipment and creates the genuine owed work.
+    active = missions.get(ADMIN, mission)["mission"]
+    missions.end(ADMIN, str(uuid4()), mission, active["revision"], True)
+    settle(missions, game, mission)
+    expired = next(x for x in supply.uses(state(game)) if x.id == identity)
+    assert expired.phase == "expired" and expired.expiry_event != use.effect_event
+    assert not any(x.id in (old.id, use.asset) for x in state(game).sheets["2"].assets)
+    cockpit(game, "pilot")
+    action, row = _elective_partake(game, worker, gateway)
+    detail = game.decision(PLAYER, row["id"])["detail"]
+    token = rules.identity("missing-frame-supply-drop-cap", identity)
+    assert token in detail["regrow_missing"] and use.asset not in detail["regrow_missing"]
+    before, calls = state(game), game.dice.calls
+    receipt = game.inspect(PLAYER, action)["receipt"]
+    girl = next(x.id for x in before.sheets["2"].assets if x.family == "girl" and not x.damaged)
+    _native_actual_cap_partake(game, row, girl=girl, token=token)
+    final = state(game)
+    component = next(
+        x
+        for x in rules.records(final, rules.RegrownFrame)
+        if x.loss_kind == "supply_drop_cap" and x.loss == identity
+    )
+    assert component.original == old and component.loss_event == use.effect_event
+    assert component.component.id not in (old.id, use.asset) and not component.component.damaged
+    assert next(x for x in final.sheets["2"].assets if x.id == girl).damaged
+    assert not any(x.id in (old.id, use.asset) for x in final.sheets["2"].assets)
+    assert supply.uses(final) == supply.uses(before)
+    assert game.dice.calls == calls and game.inspect(PLAYER, action)["receipt"] == receipt
+    with ledger.engine.connect() as c:
+        assert prove_regrowth(game, c, final, component.id) == component
+        assert token not in {x.token for x in _selections(game, c, final, actor)}
+    with pytest.raises(WorkflowError):
+        controls.view(OTHER, component.id)
+    assert controls.view(PLAYER, component.id)["type"] == "regrowth"
+    tick(worker, gateway, 6)
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+
+
+def test_actual_paid_sup_dive_cap_loss_then_native_partake_regrowth_keeps_void_birth(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred: only this true owned Dive gain authorizes its displaced component."""
+    import asyncio
+
+    from test_mission_ui import current
+    from test_sup import purchase as buy_sup
+
+    from girlframe.discord_adapter.m3_dive import open_dive
+    from girlframe.discord_adapter.m3_sup import GROW
+    from girlframe.engine import m3_sup as sup
+    from girlframe.services.m3_consume_regrowth import _selections, prove_regrowth
+    from girlframe.services.m3_frame_asset_losses import sup_dive_losses
+
+    game, worker, gateway, controls, actor, old = _elective_regrowth_ready(
+        ledger, tmp_path, monkeypatch
+    )
+    paid = buy_sup(game, tmp_path, monkeypatch)
+    cockpit(game, "pilot")
+    growth_action = _elective_dive(game, worker, gateway)
+    answer(
+        game,
+        PLAYER,
+        "dive_select",
+        options=("void_and_unmark_all",),
+        text="I choose my actual Frame's printed Void gain",
+    )
+    row = next(x for x in game.choices(PLAYER) if x["kind"] == "dive_effect")
+    before = state(game)
+
+    async def grow():
+        opened = current(2, 991800)
+        opened.channel_id = 900
+        await opened.response.defer(ephemeral=True)
+        await open_dive(opened, game, row["id"])
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values.update(asset=(GROW,))
+        select = current(2, 991801)
+        select.channel_id = 900
+        await form.confirm.callback(select)
+        assert form.completed, select.edit_original_response.call_args_list
+        actual = select.edit_original_response.call_args.kwargs["view"]
+        actual.values.update(
+            name="Actual Sup-grown Void plate",
+            family=("frame",),
+            replace=(old.id,),
+            description="PRIVATE_SUP actual new already-Void organic hardware",
+        )
+        submitted = current(2, 991802)
+        submitted.channel_id = 900
+        await actual.confirm.callback(submitted)
+        assert actual.completed, submitted.edit_original_response.call_args_list
+        saved = state(game)
+        await actual.confirm.callback(submitted)
+        assert state(game) == saved
+
+    asyncio.run(grow())
+    grown = sup.growths(state(game))[-1]
+    assert grown.purchase == paid.id and grown.choice.replace == old.id
+    assert grown.action == growth_action and grown.frame == rules.frame(state(game), actor)
+    assert not any(x.id == old.id for x in state(game).sheets["2"].assets)
+    assert next(x for x in state(game).sheets["2"].assets if x.id == grown.asset).void
+    assert state(game).sheets["2"].permissions == before.sheets["2"].permissions
+    with ledger.engine.connect() as c:
+        loss = next(x for x in sup_dive_losses(game, c, state(game), actor) if x.id == grown.asset)
+        assert loss.asset == old and loss.event == grown.event
+    answer(
+        game,
+        PLAYER,
+        "consume_partake",
+        options=("pass",),
+        text="I decline optional Partake on this first real Dive",
+    )
+    tick(worker, gateway, 6)
+    assert game.inspect(PLAYER, growth_action)["state"] == "complete"
+    action, row = _elective_partake(game, worker, gateway)
+    detail = game.decision(PLAYER, row["id"])["detail"]
+    token = rules.identity("missing-frame-sup-dive-cap", grown.asset)
+    assert token in detail["regrow_missing"]
+    replacement = detail["regrow_replacements"][0][0]
+    before, calls = state(game), game.dice.calls
+    receipt = game.inspect(PLAYER, action)["receipt"]
+    girl = next(x.id for x in before.sheets["2"].assets if x.family == "girl" and not x.damaged)
+    _native_actual_cap_partake(game, row, girl=girl, token=token, replacement=replacement)
+    final = state(game)
+    component = next(
+        x
+        for x in rules.records(final, rules.RegrownFrame)
+        if x.loss_kind == "sup_dive_cap" and x.loss == grown.asset
+    )
+    assert component.original == old and component.loss_event == grown.event
+    assert component.component.id not in (old.id, grown.asset, replacement)
+    assert component.component.void == old.void and component.replacement == replacement
+    assert next(x for x in final.sheets["2"].assets if x.id == grown.asset).void
+    assert next(x for x in final.sheets["2"].assets if x.id == girl).damaged
+    assert final.sheets["2"].permissions == before.sheets["2"].permissions
+    assert game.dice.calls == calls and game.inspect(PLAYER, action)["receipt"] == receipt
+    with ledger.engine.connect() as c:
+        assert prove_regrowth(game, c, final, component.id) == component
+        assert token not in {x.token for x in _selections(game, c, final, actor)}
+        assert (
+            next(x for x in sup_dive_losses(game, c, final, actor) if x.id == grown.asset).asset
+            == old
+        )
+    assert controls.view(PLAYER, component.id)["type"] == "regrowth"
+    with pytest.raises(WorkflowError):
+        controls.view(OTHER, component.id)
+    tick(worker, gateway, 6)
+    assert game.inspect(PLAYER, action)["state"] == "complete"

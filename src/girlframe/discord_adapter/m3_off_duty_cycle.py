@@ -143,10 +143,46 @@ async def open_action(
             fields = [x for x in fields if x.key != "identity" or x.options]
             from girlframe.engine.m3_girl_runtime_state import has_rule
 
-            if has_rule(
-                sheet,
-                "girl.stim-blissed.disposable-psyche",
-                "STIM-BLISSED",
+            observation = own is not None and own.get("observation") is not None
+
+            def learned_options() -> dict[str, tuple[dict[str, str], ...]]:
+                from girlframe.engine.m3_actor_bonds import current_ref
+                from girlframe.services.m2_state import load_state
+                from girlframe.services.m3_learned_plays import prepare_daily_lessons
+
+                with service.store.engine.connect() as connection:
+                    current = load_state(connection, service.store.campaign_id)
+                    return prepare_daily_lessons(
+                        service.game,
+                        connection,
+                        current,
+                        current_ref(current, viewer.user_id),
+                        "void_observation" if observation else "go_off_duty",
+                    )
+
+            lessons = await asyncio.to_thread(learned_options)
+            for key, label in (
+                ("show_dog", "Optional Show Dog lesson — this Off-Duty"),
+                ("psyche", "Optional Disposable Psyche lesson — this Play"),
+            ):
+                if lessons[key]:
+                    fields.append(
+                        Field(
+                            "learned_" + key,
+                            label,
+                            tuple((row["id"], row["label"]) for row in lessons[key]),
+                            0,
+                            1,
+                            required=False,
+                        )
+                    )
+            if (
+                has_rule(
+                    sheet,
+                    "girl.stim-blissed.disposable-psyche",
+                    "STIM-BLISSED",
+                )
+                or lessons["psyche"]
             ):
                 fields.append(
                     Field(
@@ -159,7 +195,6 @@ async def open_action(
                         ),
                     )
                 )
-            observation = own is not None and own.get("observation") is not None
             title = (
                 "Void Observation — confirm your Play"
                 if observation
@@ -189,6 +224,8 @@ async def open_action(
                 prepared = PlayInput(
                     play="void_observation" if observation else "go_off_duty",
                     off_duty_id=identity,
+                    learned_show_dog=one(values, "learned_show_dog") or None,
+                    learned_psyche=one(values, "learned_psyche") or None,
                     heat=0,
                     trigger_confirmed=True,
                     context=values["context"],

@@ -22,6 +22,8 @@ from girlframe.services.m3_frame_asset_losses import (
     defeat_void_losses,
     installment_loss,
     partake_losses,
+    sup_dive_losses,
+    supply_drop_losses,
 )
 from girlframe.services.m3_handler_advancements import _history
 from girlframe.services.onboarding import WorkflowError
@@ -40,6 +42,8 @@ class Selection(Model):
             "defeat_new_void",
             "partake_excrete",
             "partake_regrowth",
+            "supply_drop_cap",
+            "sup_dive_cap",
         ]
         | None
     ) = None
@@ -200,7 +204,13 @@ def _selections(
             paid_loss = installment_loss(game, c, state, receipt)
             if paid_loss is not None:
                 losses.append(paid_loss)
-    for provider in (defeat_alternative_losses, defeat_void_losses, partake_losses):
+    for provider in (
+        defeat_alternative_losses,
+        defeat_void_losses,
+        partake_losses,
+        supply_drop_losses,
+        sup_dive_losses,
+    ):
         losses.extend(
             value
             for value in provider(game, c, state, actor)
@@ -214,6 +224,8 @@ def _selections(
                 "defeat_new_void",
                 "partake_excrete",
                 "partake_regrowth",
+                "supply_drop_cap",
+                "sup_dive_cap",
             ]
             | None
         ) = loss.source_kind if loss.source_kind != "budget" else None

@@ -1591,3 +1591,60 @@ on their failed-node-only fixture retries; no prior successful nodes rerun.
 Snapshots/check commands under `var/p1-call-continuity-*`. Full exact-candidate
 P1 regression, global static/migration/privacy/restore, independent review and
 human acceptance remain pending. Bot OFF; no live source deployment.
+
+
+## Learned Off-Duty sources and elective CONSUME loss — active
+
+Base926889a88c9f6d86670045305dd8e2c96d766a74 published; focused
+[CI42551553637](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42551553637)
+PASS/full regression skipped. Malleable owns frozen-contract learned Off-Duty7
+(including engine/m2 input/typed mark admission); root owns Game/recovery/native/
+runtime integration. AM owns4 CONSUME source provider/regrowth/test files.
+Existing native/NPC/Gorgon carrier following is already implemented and not a
+new missing feature. SupplyDrop/Sup permanent cap displacements are concrete
+new providers; ordinary expired temporary equipment must never regrow as stock.
+Linked Battery/Storage/Core consumers remain explicitly sourced followups.
+Workers author normals without execution; root minimum after source freezes.
+
+First consolidated minimum (new ShowDog, Psyche, SupplyDrop cap-loss and Sup
+cap-loss normals only): **2passed/2failed20.03s**,
+`var/p1-daily-cap-minimum.txt/xml`. ShowDog native real OffDuty/owned two choices/
+NPC Bond/private message and Sup real paid Dive/cap/next Partake regrowth passed.
+These successes will not be rerun. Psyche reached real removal but its synthetic
+Stim-giver Tag fixture lacked the already implemented Malleable rule release;
+restore that scoped synthetic policy and preserve the real nonqualifying-Tag
+hook. Supply fixture had never called actual mission.end before complete; add
+the real Handler end, then actual consequences/expiry before settle. No production
+guard/registry widening or fake work completion. Failed nodes alone await retry.
+Root actual OffDuty source form and concrete Ankou Feedback commit/replay now
+pass the positive typed Psyche permit; learned Ankou runtime branch deferred.
+
+Failed-node-only retry (Psyche and Supply): **2passed13.64s**,
+`var/p1-daily-cap-minimum-retry.txt/xml`. Psyche retains its true Stim giver and
+actual Tag hook under synthetic-only Malleable approval; no qualifying Birth is
+asserted for this Tag without a real drug source. Actual Identity removal/Heat
+and distinct-lesson real OffDuty embraces/private state complete. Supply calls
+real Handler mission.end, expires actual temporary equipment and settles real
+required punishment before completion, then actually regrows the original
+permanent displaced component through native Partake. Source guards unchanged.
+ShowDog and Sup successes were not rerun. All4 new normals have passing evidence;
+this is focused/segmented, not full regression.
+
+New same-book native Doll acquisition/history/no-stack normal
+`test_actual_native_same_book_doll_lesson_history_does_not_stack_or_spend_on_native_use`
+in test_vatgrown_plays is authored **NOT RUN**, deferred to final candidate. It
+uses real second Vatgrown/Handler-reviewed desires/starting NPC and native Doll
+source. No extra permanent grant or automatic native lesson consumption.
+Learned Ankou committed Feedback, legal combined mark/OffDuty mode and broader
+shared original consumers likewise remain final integrated checks. Whole new
+source implementation is not inferred independently certified from these normals.
+
+Final scoped packet24 paths/17 Python/15 source: Ruff/format/types/whitespace,
+registry/planning/repository PASS. Registry477/273 subset/204 unimplemented/
+440 required/0 verified; repository1422 publishable files/40 original manifest
+entries/0 findings. Exact commands/hashes under `var/p1-daily-cap-*`. Four new
+normal passes are combined first-run/failed-only retry evidence; no broad/full
+regression claim. New Doll history node, learned Ankou committed Feedback and
+combined mark/OffDuty variant remain deferred. Full exact-candidate regression/
+global static/migration/privacy/restore, independent review and actual human
+acceptance remain pending; bot OFF, no live source deployment.

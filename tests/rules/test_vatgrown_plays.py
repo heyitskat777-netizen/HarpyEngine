@@ -2984,3 +2984,525 @@ def test_actual_learned_call_native_classification_guest_and_gorgon_keep_origina
     assert "PRIVATE_LEARNED_CALL" not in json.dumps(gateway.messages)
     assert "PRIVATE_GORGON_REPLY" not in json.dumps(gateway.messages)
     tick(worker, gateway, 6)
+
+
+def _learn_daily_source(game, worker, gateway, controls, rule):
+    session, action = sex(
+        game,
+        worker,
+        gateway,
+        controls,
+        (5, 5),
+        counterpart_account="My actual original person teaches this printed source voluntarily",
+    )
+    actual = state(game)
+    replacement = actual.sheets["2"].identities[0]
+    retained = {x.name.casefold() for x in actual.sheets["2"].identities if x.id != replacement.id}
+    taught = next(x for x in actual.sheets["3"].identities if x.name.casefold() not in retained)
+    native_choice(
+        game,
+        OTHER,
+        "vat_sex_learn",
+        identities=(taught.id,),
+        replacements=(replacement.id,),
+        play=(rule,),
+        account="The original teacher chooses this actual one-use lesson",
+    )
+    lesson = rules.records(state(game), rules.LearnedPlay)[-1]
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    controls.send_away(
+        OTHER,
+        str(uuid4()),
+        session,
+        state(game).revision,
+        "The actual original counterpart ends the required source stay",
+    )
+    tick(worker, gateway, 6)
+    return lesson
+
+
+def _native_daily_roll(game, cycle, period, field, lesson):
+    from girlframe.discord_adapter.m3_off_duty_cycle import open_action
+
+    async def begin():
+        opened = current(2, uuid4().int % 1000000000)
+        opened.channel_id = 900
+        await opened.response.defer(ephemeral=True)
+        await open_action(opened, cycle, period, "play")
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert any(x.key == field for x in form.fields)
+        form.values.update(
+            context="My actual original time at this real Foundation base",
+            gain=("0",),
+            share=("0",),
+            confirm=("yes",),
+            **{field: (lesson.id,)},
+        )
+        if any(x.key == "disposable_heat" for x in form.fields):
+            form.values["disposable_heat"] = ("0",)
+        sent = current(2, uuid4().int % 1000000000)
+        sent.channel_id = 900
+        await form.confirm.callback(sent)
+        assert form.completed, (
+            sent.response.send_message.call_args_list,
+            sent.edit_original_response.call_args_list,
+        )
+        with game.store.engine.connect() as c:
+            return game.lock(c, 900)["action_id"]
+
+    return asyncio.run(begin())
+
+
+def test_actual_princess_show_dog_lesson_native_off_duty_two_choices_bond_and_private_message(
+    ledger, tmp_path, monkeypatch
+):
+    from girlframe.discord_adapter.m3_show_dog import open_show_dog
+    from girlframe.engine.m3_actor_state import ActorRef
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+    from girlframe.services.m3_learned_plays import (
+        SHOW_DOG,
+        prepare_daily_lessons,
+        prove_daily_lesson,
+    )
+    from girlframe.services.m3_show_dog import ShowDogService, prove
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, teacher="PRINCESS")
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(rules.EXPERIMENT, rules.INVESTMENT, rules.SEX, rules.BRUTALIZE, SHOW_DOG),
+    )
+    lesson = _learn_daily_source(game, worker, gateway, controls, SHOW_DOG)
+    learner, teacher = current_ref(state(game), 2), current_ref(state(game), 3)
+    world = WorldService(MissionService(ledger))
+    world.npc(
+        ADMIN,
+        str(uuid4()),
+        state(game).revision,
+        Npc(
+            id="daily-appearance-witness",
+            name="Actual local spectator",
+            jobs=("civilian",),
+            detail="A real existing person who can see this public appearance",
+            controller=1,
+            cell=(0, 0),
+            revealed=True,
+        ),
+    )
+    npc = ActorRef(kind="npc", entity="daily-appearance-witness")
+    assert depth(state(game), learner, npc) == 0
+    assert not has_rule(state(game).sheets["2"], SHOW_DOG, "PRINCESS")
+    with ledger.engine.connect() as c:
+        assert (
+            prepare_daily_lessons(game, c, state(game), learner, "go_off_duty")["show_dog"][0]["id"]
+            == lesson.id
+        )
+    cycle, period = real_period(MissionService(ledger), game)
+    game.dice.faces = (2, 2)
+    calls = game.dice.calls
+    action = _native_daily_roll(game, cycle, period, "learned_show_dog", lesson)
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    raw = game.inspect(PLAYER, action)["receipt"]
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    shows = ShowDogService(game)
+    with ledger.engine.connect() as c:
+        work = next(x for x in shows._tasks(c, PLAYER) if x["pending"])
+        use = prove_daily_lesson(game, c, state(game), game.action(c, action), SHOW_DOG)
+        assert use.lesson == lesson.id and use.mode == "off_duty"
+    with pytest.raises(WorkflowError):
+        shows.view(OTHER, work["id"])
+
+    async def choose(viewer, operation, **values):
+        opened = current(viewer.user_id, uuid4().int % 1000000000)
+        await opened.response.defer(ephemeral=True)
+        await open_show_dog(opened, shows, work["id"])
+        menu = opened.edit_original_response.call_args.kwargs["view"]
+        menu.values["action"] = (operation,)
+        response = current(viewer.user_id, uuid4().int % 1000000000)
+        await menu.confirm.callback(response)
+        form = response.edit_original_response.call_args.kwargs["view"]
+        form.values.update(values)
+        sent = current(viewer.user_id, uuid4().int % 1000000000)
+        await form.confirm.callback(sent)
+        assert form.completed, sent.edit_original_response.call_args_list
+        before = state(game)
+        await form.confirm.callback(sent)
+        assert state(game) == before
+
+    asyncio.run(
+        choose(
+            PLAYER,
+            "message",
+            target=(teacher.token,),
+            message="PRIVATE_LEARNED_SHOW_DOG The actual addressed message",
+            account="I actually send this message during the public appearance",
+        )
+    )
+    assert not shows.view(PLAYER, work["id"])["complete"]
+    asyncio.run(
+        choose(
+            PLAYER,
+            "second",
+            npc=(npc.token,),
+            desire=("emulate",),
+            account="This actual original spectator saw my performed appearance",
+        )
+    )
+    assert depth(state(game), learner, npc) == 1
+    assert not shows.view(PLAYER, work["id"])["complete"]
+    asyncio.run(
+        choose(
+            ADMIN,
+            "risk",
+            punish=("no",),
+            account="The original Handler judges the actual performed risk; no Punishment arises",
+        )
+    )
+    saved = shows.view(PLAYER, work["id"])
+    assert saved["complete"] and not saved["punishment"]
+    with ledger.engine.connect() as c:
+        show = prove(game, c, state(game), work["id"])
+        assert show.actor == learner and show.source_action == action
+    from girlframe.engine import m3_show_dog as show_rules
+
+    message = show_rules.records(state(game), show_rules.Message)[-1]
+    assert shows.view_message(OTHER, message.id)["text"].startswith("PRIVATE_LEARNED_SHOW_DOG")
+    with pytest.raises(WorkflowError):
+        shows.view_message(ADMIN, message.id)
+    assert game.inspect(PLAYER, action)["receipt"] == raw and game.dice.calls == calls + 1
+    assert state(game).sheets["2"].girl == "VATGROWN"
+    with ledger.engine.connect() as c:
+        assert not prepare_daily_lessons(game, c, state(game), learner, "go_off_duty")["show_dog"]
+    assert "PRIVATE_LEARNED_SHOW_DOG" not in json.dumps(gateway.messages)
+    # This closes this exact borrowed rule; actual other period obligations
+    # and the learner's ordinary recovery keep their existing controls.
+    assert not cycle.review(PLAYER, period)["own"]["recovered"]
+    tick(worker, gateway, 6)
+
+
+def test_actual_stim_psyche_lessons_native_mark_removal_and_distinct_off_duty_tag_embrace(
+    ledger, tmp_path, monkeypatch
+):
+    from girlframe.discord_adapter.m2_ui import open_play
+    from girlframe.discord_adapter.m3_disposable_psyche import open_psyche
+    from girlframe.engine import m3_disposable_psyche as psyche_rules
+    from girlframe.engine import m3_malleable as malleable_rules
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+    from girlframe.engine.m3_mockingbird import give_tag
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_disposable_psyche import (
+        PsycheService,
+        prove_conversion,
+        prove_disposal,
+    )
+    from girlframe.services.m3_learned_plays import (
+        PSYCHE,
+        prepare_daily_lessons,
+        prove_daily_lesson,
+    )
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, teacher="STIM-BLISSED")
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(
+            rules.EXPERIMENT,
+            rules.INVESTMENT,
+            rules.SEX,
+            rules.BRUTALIZE,
+            "girl.stim-blissed.dose-up",
+            PSYCHE,
+            malleable_rules.RULE,
+        ),
+    )
+    marking = _learn_daily_source(game, worker, gateway, controls, PSYCHE)
+    rebuilding = _learn_daily_source(game, worker, gateway, controls, PSYCHE)
+    learner, teacher = current_ref(state(game), 2), current_ref(state(game), 3)
+    before = state(game)
+    identity = next(x for x in before.sheets["2"].identities if not x.marked and not x.protected)
+    heat = before.sheets["2"].heat + 1 + 3
+    calls = game.dice.calls
+
+    async def mark():
+        opened = current(2, uuid4().int % 1000000000)
+        opened.channel_id = 900
+        await opened.response.defer(ephemeral=True)
+        await open_play(opened, game, _pilot=True)
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert any(x.key == "learned_psyche" for x in form.fields)
+        form.values.update(
+            play=("keep_your_head",),
+            learned_psyche=(marking.id,),
+            identity=(identity.id,),
+            gain=("1",),
+            disposable_heat=("3",),
+            pair_share=("0",),
+            heat=(str(heat),),
+            piloting=("no",),
+            witnessed=("no",),
+            trigger=("yes",),
+            context="I actually mark and discard this original Identity while defending myself",
+        )
+        sent = current(2, uuid4().int % 1000000000)
+        sent.channel_id = 900
+        await form.confirm.callback(sent)
+        assert form.completed, (
+            sent.response.send_message.call_args_list,
+            sent.edit_original_response.call_args_list,
+        )
+        with ledger.engine.connect() as c:
+            return game.lock(c, 900)["action_id"]
+
+    game.dice.faces = (1, 1)
+    action = asyncio.run(mark())
+    assert state(game).sheets["2"].identities == before.sheets["2"].identities
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    answer(game, PLAYER, "actor_keep", options=("in_control", "tough"), denied=("desperate",))
+    answer(game, ADMIN, "handler_keep", flag=True, text="The actual evasion result is enough")
+    actual = state(game)
+    assert game.inspect(PLAYER, action)["state"] == "complete" and game.dice.calls == calls + 1
+    assert identity.id not in {x.id for x in actual.sheets["2"].identities}
+    assert actual.sheets["2"].heat == 0 and len(actual.sheets["2"].identities) == 3
+    assert actual.sheets["3"] == before.sheets["3"]
+    raw = game.inspect(PLAYER, action)["receipt"]
+    assert raw["disposable_psyche"] == action and raw["pre_total"] == 2 + heat
+    with ledger.engine.connect() as c:
+        disposal = prove_disposal(game, c, actual, action)
+        assert disposal.identity == identity and disposal.extra == 3 and disposal.spent == heat
+        assert prove_daily_lesson(game, c, actual, game.action(c, action), PSYCHE).mode == "mark"
+        assert (
+            prepare_daily_lessons(game, c, actual, learner, "go_off_duty")["psyche"][0]["id"]
+            == rebuilding.id
+        )
+    assert not has_rule(actual.sheets["2"], PSYCHE, "STIM-BLISSED")
+    tick(worker, gateway, 6)
+    # Genuine ordinary Tag producer with the actual original human giver and
+    # profile bindings; no fabricated inventory, disposable drug or choice.
+    with ledger.transaction() as c:
+        tag_event = str(uuid4())
+        changed = give_tag(
+            state(game),
+            profiles(c, ledger.campaign_id),
+            learner,
+            teacher,
+            "Actual learned Psyche rebuilding Tag",
+            str(uuid4()),
+            tag_event,
+            (),
+        )
+        game.event(
+            c,
+            OTHER.user_id,
+            str(uuid4()),
+            "synthetic.actual_ordinary_tag_given",
+            changed,
+            event_id=tag_event,
+        )
+    tag = next(
+        x for x in state(game).sheets["2"].tags if x.label == "Actual learned Psyche rebuilding Tag"
+    )
+    # The actual Stim giver's birth hook runs under this fixture's explicit
+    # rule release. Ordinary Psyche/Vatgrown sources create no drug physiology.
+    assert not any(
+        x.id == tag.id for x in malleable_rules.records(state(game), malleable_rules.Birth)
+    )
+    cycle, period = real_period(MissionService(ledger), game)
+    game.dice.faces = (2, 2)
+    off_duty = _native_daily_roll(game, cycle, period, "learned_psyche", rebuilding)
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    psyche = PsycheService(ledger, game)
+    work = next(x for x in psyche.menu(PLAYER)["tasks"] if x["pending"])
+    data = psyche.view(PLAYER, work["id"])
+    assert data["count"] == 3 and tag.id in {x["id"] for x in data["tags"]}
+    with pytest.raises(WorkflowError):
+        psyche.view(OTHER, work["id"])
+    before_conversion = state(game)
+
+    async def embrace():
+        opened = current(2, uuid4().int % 1000000000)
+        opened.channel_id = 901
+        await opened.response.defer(ephemeral=True)
+        await open_psyche(opened, psyche, work["id"])
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values["tags"] = (tag.id,)
+        sent = current(2, uuid4().int % 1000000000)
+        await form.confirm.callback(sent)
+        assert form.completed, sent.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(sent)
+        assert state(game) == saved
+
+    asyncio.run(embrace())
+    actual = state(game)
+    converted = psyche_rules.conversions(actual)[-1]
+    assert converted.tags == (tag,) and not converted.replaced
+    assert len(actual.sheets["2"].identities) == 4 and not actual.sheets["2"].tags
+    assert actual.sheets["2"].identities[-1].name == tag.label
+    assert actual.sheets["2"].heat == before_conversion.sheets["2"].heat
+    assert actual.sheets["2"].assets == before_conversion.sheets["2"].assets
+    with ledger.engine.connect() as c:
+        assert prove_conversion(game, c, actual, work["id"]) == converted
+        assert (
+            prove_daily_lesson(game, c, actual, game.action(c, off_duty), PSYCHE).mode == "off_duty"
+        )
+        assert not prepare_daily_lessons(game, c, actual, learner, "go_off_duty")["psyche"]
+    assert psyche.view(PLAYER, work["id"])["phase"] == "converted"
+    assert game.inspect(PLAYER, action)["receipt"] == raw
+    assert actual.sheets["2"].girl == "VATGROWN" and not has_rule(
+        actual.sheets["2"], PSYCHE, "STIM-BLISSED"
+    )
+    assert not cycle.review(PLAYER, period)["own"]["recovered"]
+    tick(worker, gateway, 6)
+
+
+def test_actual_native_same_book_doll_lesson_history_does_not_stack_or_spend_on_native_use(
+    ledger, tmp_path, monkeypatch
+):
+    from girlframe.discord_adapter.m3_vatgrown import open_choice, open_vatgrown
+    from girlframe.engine import m3_vatgrown as doll_rules
+    from girlframe.engine.creation_details import DesireChoice, NpcInvestor
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+    from girlframe.services.m3_learned_plays import DOLL, available
+    from girlframe.services.m3_vatgrown import DollService
+
+    # Both real public profiles are Vatgrown from their original birth. The
+    # additional teacher independently receives the actual Handler proposal;
+    # no activated Girl label, DNA source or investor is rewritten.
+    original_selected, original_ready = game_fixture.selected, game_fixture.ready
+
+    def selected_vatgrown(girl="MOCKINGBIRD", frame="JANUS-B"):
+        draft = original_selected(girl, frame)
+        if girl == "VATGROWN":
+            draft = draft.model_copy(
+                update={
+                    "girl_details": GirlDetails(
+                        investors=tuple(
+                            NpcInvestor(npc_slot=x.slot, desires=DesireChoice(slots=(0,)))
+                            for x in draft.npc_bonds
+                        )
+                    )
+                }
+            )
+        return draft
+
+    def ready_both_vatgrown(store, *args, **kwargs):
+        result = original_ready(store, *args, **kwargs)
+        coordinated = creation_fixture.CoordinationService(store)
+        request = coordinated.propose(
+            ADMIN,
+            "doll-teacher-handler-desires",
+            OTHER.user_id,
+            "vatgrown_handler",
+            coordinated.prepare(ADMIN, OTHER.user_id, "vatgrown_handler"),
+            DesireChoice(slots=(1,)),
+        )
+        coordinated.decide(OTHER, "doll-teacher-accept-desires", request["id"], 1, "accept")
+        return result
+
+    monkeypatch.setattr(game_fixture, "selected", selected_vatgrown)
+    monkeypatch.setattr(game_fixture, "ready", ready_both_vatgrown)
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, teacher="VATGROWN")
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(rules.EXPERIMENT, rules.INVESTMENT, rules.SEX, rules.BRUTALIZE, DOLL),
+    )
+    slot = state(game).sheets["3"].review.creation.npc_bonds[0].slot
+    WorldService(MissionService(ledger)).import_starting_npc(
+        OTHER,
+        str(uuid4()),
+        state(game).revision,
+        slot,
+        "original-investor",
+    )
+    learner, teacher = current_ref(state(game), 2), current_ref(state(game), 3)
+    assert state(game).sheets["2"].girl == state(game).sheets["3"].girl == "VATGROWN"
+    assert has_rule(state(game).sheets["2"], DOLL, "VATGROWN")
+    lesson = _learn_daily_source(game, worker, gateway, controls, DOLL)
+    with ledger.engine.connect() as c:
+        assert prove_learned_play(game, c, state(game), lesson.id) == lesson
+        assert available(game, c, state(game), learner, DOLL).id == lesson.id
+    doll = DollService(game)
+
+    def interaction(user=2):
+        value = current(user, uuid4().int % 1000000000)
+        value.channel_id = 900
+        return value
+
+    async def native_begin():
+        opened = interaction()
+        await opened.response.defer(ephemeral=True)
+        await open_vatgrown(opened, doll)
+        menu = opened.edit_original_response.call_args.kwargs["view"]
+        menu.values["source"] = ("play",)
+        response = interaction()
+        await menu.confirm.callback(response)
+        form = response.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            target=(teacher.token,),
+            identity=(),
+            gain=("0",),
+            heat=("0",),
+            account="I actually fade into the background beside this original person",
+        )
+        sent = interaction()
+        await form.confirm.callback(sent)
+        assert form.completed, sent.edit_original_response.call_args_list
+        with ledger.engine.connect() as c:
+            return game.lock(c, 900)["action_id"]
+
+    calls = game.dice.calls
+    action = asyncio.run(native_begin())
+    game.dice.faces = (4, 4)
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    raw = game.inspect(PLAYER, action)["receipt"]
+
+    async def native_answer(viewer, kind, **values):
+        row = next(x for x in game.choices(viewer) if x["kind"] == kind)
+        opened = interaction(viewer.user_id)
+        await opened.response.defer(ephemeral=True)
+        await open_choice(opened, game, game.decision(viewer, row["id"]))
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values.update(values)
+        sent = interaction(viewer.user_id)
+        await form.confirm.callback(sent)
+        assert form.completed, sent.edit_original_response.call_args_list
+
+    asyncio.run(native_answer(PLAYER, "vat_doll_benefits", options=("quiet", "information")))
+    asyncio.run(
+        native_answer(
+            OTHER,
+            "vat_doll_information",
+            text="PRIVATE_SAME_BOOK_DOLL The real observer offers this secret",
+        )
+    )
+    saved = doll.view(PLAYER, action)
+    assert saved["quiet"] and saved["information"]["answer"].startswith("PRIVATE_SAME_BOOK_DOLL")
+    assert game.inspect(PLAYER, action)["state"] == "complete" and game.dice.calls == calls + 1
+    assert game.inspect(PLAYER, action)["receipt"] == raw
+    with ledger.engine.connect() as c:
+        actual = game.action(c, action)
+        assert not any(
+            key in actual["data"] for key in ("learned_play", "learned_show_dog", "learned_psyche")
+        )
+        source = doll_rules.source(state(game), action)
+        assert source.actor == learner and len(source.benefits) == 2
+        assert available(game, c, state(game), learner, DOLL).id == lesson.id
+        runtime = next(
+            x for x in state(game).sheets["2"].girl_runtime.learned_plays if x.id == lesson.id
+        )
+        assert runtime.claimed_action is None and runtime.rolled_event is None
+        assert prove_learned_play(game, c, state(game), lesson.id) == lesson
+    assert state(game).sheets["2"].girl == "VATGROWN"
+    assert "PRIVATE_SAME_BOOK_DOLL" not in json.dumps(gateway.messages)
+    tick(worker, gateway, 6)

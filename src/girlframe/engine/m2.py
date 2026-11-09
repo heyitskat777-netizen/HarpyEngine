@@ -47,6 +47,7 @@ from girlframe.engine.m3_harpy_rest_state import Rest as HarpyRest
 from girlframe.engine.m3_item_state import HeldItem, ItemTransfer
 from girlframe.engine.m3_janus_link_state import BatteryAsset, BatteryLink
 from girlframe.engine.m3_janus_state import JanusCore
+from girlframe.engine.m3_learned_play_state import PsychePermit
 from girlframe.engine.m3_leviathan_arrival_state import ExternalPose, LeviathanArrival
 from girlframe.engine.m3_leviathan_obsession_state import IdentityAuthority, Obsession
 from girlframe.engine.m3_lobotomy_state import BlockedPlay, Surgery
@@ -377,6 +378,12 @@ class GameState(Model):
 
 
 class PlayInput(Model):
+    learned_show_dog: str | None = Field(
+        default=None, min_length=1, max_length=100, exclude_if=lambda value: value is None
+    )
+    learned_psyche: str | None = Field(
+        default=None, min_length=1, max_length=100, exclude_if=lambda value: value is None
+    )
     learned_call: str | None = Field(
         default=None, min_length=1, max_length=100, exclude_if=lambda value: value is None
     )
@@ -547,6 +554,7 @@ def mark_identity(
     *,
     state: GameState | None = None,
     disposable_heat: Literal[0, 3, 4] = 0,
+    learned_psyche: PsychePermit | None = None,
 ) -> int:
     identity = next((x for x in sheet.identities if x.id == entry), None)
     if identity is None or identity.marked:
@@ -574,7 +582,7 @@ def mark_identity(
             raise ValueError("Disposable Psyche requires the actual source state")
         from girlframe.engine.m3_disposable_psyche import admit_removal
 
-        admit_removal(state, sheet, identity)
+        admit_removal(state, sheet, identity, permit=learned_psyche)
     identity.marked = True
     sheet.heat += gain - share + disposable_heat
     if disposable_heat:

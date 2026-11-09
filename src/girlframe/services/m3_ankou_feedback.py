@@ -124,6 +124,9 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         raise WorkflowError("Preserve the actual last mark, original Frame and initiating Play")
     expected = GameState.model_validate_json(before.model_dump_json())
     changed = expected.sheets[value.actor.entity]
+    from girlframe.services.m3_disposable_psyche import prepare_disposal
+
+    disposal_permit = prepare_disposal(game, c, before, changed.owner, value.prepared)
     mark_identity(
         changed,
         value.identity.id,
@@ -131,6 +134,7 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         value.prepared.pair_share,
         state=expected,
         disposable_heat=value.prepared.disposable_heat,
+        learned_psyche=disposal_permit,
     )
     spend_heat(changed, value.prepared.heat)
     actual = born.sheets[value.actor.entity]
@@ -223,6 +227,9 @@ def hold_before_roll(
         raise WorkflowError(
             "SOURCE_ANKOU_PERSON_REQUIRED: this scene needs its actual counterpart adapter"
         )
+    from girlframe.services.m3_disposable_psyche import prepare_disposal, record_committed_disposal
+
+    disposal_permit = prepare_disposal(game, c, state, sheet.owner, prepared)
     if (
         viewer.user_id != sheet.owner
         or action.get("parent_id") is not None
@@ -247,6 +254,7 @@ def hold_before_roll(
         or prepared.pair_share
         or prepared.disposable_heat
         and sheet.girl != "STIM-BLISSED"
+        and disposal_permit is None
     ):
         raise WorkflowError(
             "SOURCE_ANKOU_MARK_PORT_REQUIRED: preserve this specialised marking source"
@@ -256,11 +264,13 @@ def hold_before_roll(
     entry = next(x for x in sheet.identities if x.id == prepared.identity)
     event = str(uuid4())
     heat_before = sheet.heat
-    from girlframe.services.m3_disposable_psyche import prepare_disposal, record_committed_disposal
-
-    prepare_disposal(game, c, state, sheet.owner, prepared)
     mark_identity(
-        sheet, entry.id, prepared.gain, state=state, disposable_heat=prepared.disposable_heat
+        sheet,
+        entry.id,
+        prepared.gain,
+        state=state,
+        disposable_heat=prepared.disposable_heat,
+        learned_psyche=disposal_permit,
     )
     spend_heat(sheet, prepared.heat)
     sheet.revision += 1
