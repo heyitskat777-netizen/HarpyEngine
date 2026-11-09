@@ -173,10 +173,13 @@ def apply(
     required: list[Followup] = []
     kind = details.kind
     from girlframe.engine.m3_girl_runtime_state import has_rule
+    from girlframe.engine.m3_learned_play_state import active_hound_status, clear_hound_status
 
-    if kind != "passing_responsibility" and has_rule(
-        sheet, "girl.alpha.nothing-more-than-a-hound", "ALPHA"
+    if kind != "passing_responsibility" and (
+        has_rule(sheet, "girl.alpha.nothing-more-than-a-hound", "ALPHA")
+        or active_hound_status(state, subject) is not None
     ):
+        clear_hound_status(state, subject, "punishment", source_event)
         sheet.status_marked = False
     if kind == "lobotomization":
         from girlframe.engine.m3_lobotomy import apply as apply_surgery

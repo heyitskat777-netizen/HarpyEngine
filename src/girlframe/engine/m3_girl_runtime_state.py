@@ -68,7 +68,10 @@ def has_rule(sheet: object, identity: str, native_playbook: str) -> bool:
         if swap.acquired_rule == identity:
             active = True
     if runtime and any(
-        x.rule_id == identity and x.rolled_event is None and identity not in SELECTED_KEEP_LESSONS
+        x.rule_id == identity
+        and x.rolled_event is None
+        and identity not in SELECTED_KEEP_LESSONS
+        and identity != "girl.alpha.nothing-more-than-a-hound"
         for x in runtime.learned_plays
     ):
         active = True

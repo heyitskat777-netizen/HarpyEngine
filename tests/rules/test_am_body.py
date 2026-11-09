@@ -1,6 +1,7 @@
 """Actual circuits transfer, real new-body damage, and same-AM hooked return."""
 
 import asyncio
+import json
 from uuid import uuid4
 
 import pytest
@@ -1023,3 +1024,190 @@ def test_actual_native_connected_code_swap_preserves_original_jack_and_hooked_re
     with ledger.engine.connect() as c:
         assert prove_route(game, c, final, route.id) == saved
     assert "PRIVATE_CODE_RELAY_CORE_ANSWER" not in str(route_service.view(PLAYER, route.id))
+
+
+def _native_adjusted_processing_body(store, tmp_path, monkeypatch, asset_lines):
+    game, maintenance, root, action, worker, gateway, _ = rolled(
+        store, tmp_path, monkeypatch, (4, 5), choose_identity=False
+    )
+    source = BodyService(game)
+    original = state(game).model_copy(deep=True)
+
+    async def actual_body():
+        handler = current(1, 997001)
+        await handler.response.defer(ephemeral=True)
+        await open_prepare(handler, source, maintenance)
+        form = handler.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            vessel="actual-purpose-built-processor",
+            label="Actual supplied processing body",
+            source="Actual supplied independent processor and current physical condition, reviewed",
+            processing=("yes",),
+            unoccupied=("yes",),
+            medical=("fit",),
+            mind_assets=(),
+            assets=asset_lines,
+        )
+        actual = current(1, 997002)
+        await form.confirm.callback(actual)
+        assert form.completed, str(actual.edit_original_response.call_args)
+        answer(game, ADMIN, "am_code_options", options=("body",))
+        row = next(x for x in game.choices(ADMIN) if x["kind"] == "am_code_body")
+        handler = current(1, 997003)
+        await handler.response.defer(ephemeral=True)
+        await open_choice(handler, game, row["id"])
+        form = handler.edit_original_response.call_args.kwargs["view"]
+        preparation = next(
+            x for x in bodies.preparations(state(game)) if x.maintenance == maintenance
+        )
+        form.values.update(
+            body=(preparation.id,), account="Actual performed circuit/body adjustment"
+        )
+        actual = current(1, 997004)
+        await form.confirm.callback(actual)
+        assert form.completed, str(actual.edit_original_response.call_args)
+
+    asyncio.run(actual_body())
+    swap = bodies.swap(state(game), code.session(state(game), maintenance).body_swap)
+    return game, source, swap, original, root, action, worker, gateway
+
+
+def test_native_empty_real_processor_is_not_battle_injury_and_can_keep_then_return(
+    ledger, tmp_path, monkeypatch
+):
+    from girlframe.discord_adapter.m3_am_body import open_body
+    from girlframe.engine.m3_actor_bonds import is_helpless
+
+    game, source, swap, before, root, action, worker, gateway = _native_adjusted_processing_body(
+        ledger, tmp_path, monkeypatch, "none"
+    )
+    actual = state(game)
+    actor = current_ref(actual, 2)
+    assert not any(x.family == "girl" for x in actual.sheets["2"].assets)
+    assert not is_helpless(actual, actor)
+    assert actual.helpless_conditions == before.helpless_conditions
+    assert actual.sheets["2"].helpless_against == before.sheets["2"].helpless_against
+    assert [x for x in actual.sheets["2"].assets if x.family == "frame"] == [
+        x for x in before.sheets["2"].assets if x.family == "frame"
+    ]
+    assert actual.career_archives == before.career_archives and not actual.void_thresholds
+    assert (
+        game.inspect(PLAYER, action)["state"] == game.inspect(PLAYER, root)["state"] == "complete"
+    )
+    tick(worker, gateway, 5)
+    casts = CastService(ActorService(MissionService(ledger)))
+    cast = casts.view(ADMIN, 900)
+    casts.change(
+        ADMIN,
+        str(uuid4()),
+        900,
+        cast["game_revision"],
+        cast["cast_revision"],
+        "withdraw",
+        swap.operator,
+    )
+    game.dice.faces = (4, 5)
+    keep = game.begin(
+        PLAYER,
+        str(uuid4()),
+        900,
+        state(game).sheets["2"].revision,
+        PlayInput(
+            play="keep_your_head",
+            heat=0,
+            trigger_confirmed=True,
+            context="The same AM uses this real processor to keep her head",
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    for viewer in (PLAYER, OTHER, ADMIN):
+        if any(x["kind"] == "tag_window" for x in game.choices(viewer)):
+            answer(game, viewer, "tag_window", options=("pass",))
+    answer(game, PLAYER, "actor_keep", options=("sexy", "tough"), denied=("desperate",))
+    answer(game, ADMIN, "handler_keep", flag=True, text="Actual same-mind calm response")
+    assert game.inspect(PLAYER, keep)["state"] == "complete"
+    tick(worker, gateway, 5)
+
+    async def actual_return():
+        owner = current(2, 997005)
+        await owner.response.defer(ephemeral=True)
+        await open_body(owner, source, swap.id)
+        form = owner.edit_original_response.call_args.kwargs["view"]
+        assert "no physical Assets" in form.instructions
+        form.values.update(operation=("return",))
+        actual = current(2, 997006)
+        await form.confirm.callback(actual)
+        assert form.completed, str(actual.edit_original_response.call_args)
+
+    asyncio.run(actual_return())
+    final = state(game)
+    assert next(x for x in final.placements if x.actor == actor).vessel_id == swap.original_vessel
+    assert [x for x in final.sheets["2"].assets if x.family == "girl"] == [
+        x for x in before.sheets["2"].assets if x.family == "girl"
+    ]
+    assert not is_helpless(final, actor)
+    with ledger.engine.connect() as c:
+        assert prove(game, c, final, swap.id).returned_event
+
+
+def test_actual_all_void_body_holds_code_until_real_entry_questions_and_rebirth(
+    ledger, tmp_path, monkeypatch
+):
+    from test_void_service import five_no, respond
+
+    from girlframe.services.m3_am_body_consequences import prove_void_source
+    from girlframe.services.m3_void import VoidService
+
+    game, _, swap, before, root, action, worker, gateway = _native_adjusted_processing_body(
+        ledger,
+        tmp_path,
+        monkeypatch,
+        "Void actuator | Actual supplied already-corrupted physical component | intact | void",
+    )
+    with ledger.engine.connect() as c:
+        rows = (
+            c.execute(
+                sa.select(t.m3["m3_required_work"]).where(
+                    t.m3["m3_required_work"].c.kind == "void_threshold",
+                    t.m3["m3_required_work"].c.revision == 1,
+                )
+            )
+            .mappings()
+            .all()
+        )
+        row = next(
+            x for x in rows if json.loads(x["body_json"]).get("reason") == "am_body_adjustment"
+        )
+        body = json.loads(row["body_json"])
+        prove_void_source(game, c, dict(row), body, current_ref(state(game), 2))
+        assert body["source_id"] == swap.id and body["adjustment_event"] == swap.event
+        assert body["source_action"] == action and body["details"] == dict(family="girl")
+        assert game.action(c, action)["data"]["am_body_void"]["work"] == row["id"]
+    assert game.inspect(PLAYER, action)["state"] == "awaiting_choices"
+    assert game.inspect(PLAYER, root)["state"] != "complete"
+    service = VoidService(ledger)
+    work = row["id"]
+    assert service.get(PLAYER, work)["stage"] == "allured"
+    # This performs actual original Frame entry and five independently owned honest answers.
+    five_no(service, work)
+    inside = state(game)
+    assert next(x for x in inside.placements if x.actor == swap.actor).mode == "inside_frame"
+    assert game.inspect(PLAYER, action)["state"] == "awaiting_choices"
+    data = service.get(PLAYER, work)
+    choice = data["rebirth_choice"] | dict(
+        retained_identities=[before.sheets["2"].identities[1].id],
+        new_identities=["Actual new self"],
+        account="Actual owner chooses this real rebirth",
+    )
+    respond(service, work, "save_rebirth", dict(choice=choice, account="Actual saved own choice"))
+    respond(service, work, "rebirth", dict(choice=choice, account="Actual source-owned conversion"))
+    final = state(game)
+    assert service.get(PLAYER, work)["stage"] == "converted"
+    assert "2" not in final.sheets
+    assert any(x.actor == swap.actor and x.ending == "harpy" for x in final.career_archives)
+    assert final.harpy_states[-1].old_body_vessel == swap.new_vessel
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    assert game.inspect(PLAYER, root)["state"] == "complete"
+    tick(worker, gateway, 6)
+    with ledger.engine.connect() as c:
+        assert game.lock(c, 900)["state"] == "released"

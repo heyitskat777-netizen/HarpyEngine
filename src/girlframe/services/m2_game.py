@@ -161,6 +161,10 @@ class GameService:
             ruleset_version=M3_RULESET if kind.startswith("m3.") else RULESET,
         )
         if state is not None:
+            if any(x.get("kind") == "learned_hound_status_use" for x in state.facts):
+                from girlframe.engine.m3_learned_play_state import stamp_hound_clears
+
+                stamp_hound_clears(state, event)
             from girlframe.engine.m3_careers import stamp_tag_givers
             from girlframe.engine.m3_enforcer import end_lost_frame_grasps
 
@@ -5237,6 +5241,11 @@ class GameService:
                     event_id=event,
                 )
             )
+            if action["data"].get("am_code"):
+                from girlframe.services.m3_am_body_consequences import synchronize as sync_am_body
+
+                sync_am_body(self, c, event)
+                action = self.action(c, action["id"])
             if action["data"].get("easy_target"):
                 from girlframe.services.m3_easy_target import synchronize_npc_hurt
 
@@ -5797,6 +5806,10 @@ class GameService:
                 allowed.update((snoop["target_controller"], snoop["procedural_gm"]))
             if viewer.user_id not in allowed:
                 raise WorkflowError("This action is not visible to you.")
+            if action["data"].get("learned_hound_status"):
+                from girlframe.services.m3_learned_plays import prove_hound_status
+
+                prove_hound_status(self, c, load_state(c, self.store.campaign_id), action)
             result = action["data"]["result"] if action["state"] == "complete" else None
             parties = {int(action["actor_id"]), action["data"].get("prepared", {}).get("target")}
             if result and action["data"].get("janus"):
@@ -7026,6 +7039,11 @@ class GameService:
             }
             if learned_keep_rule is not None:
                 result["learned_keep_rule"] = learned_keep_rule
+            if row["kind"] == "tag_window" and decision_owner == actor.owner:
+                from girlframe.services.m3_learned_plays import hound_status_available
+
+                if hound_status_available(self, c, state, action, decision_owner):
+                    result["learned_hound_available"] = True
             if row["kind"] in ("order_response", "order_disobey"):
                 from girlframe.services.m3_bonded_rejection import order_projection
 

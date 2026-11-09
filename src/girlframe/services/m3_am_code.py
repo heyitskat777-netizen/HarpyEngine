@@ -380,7 +380,10 @@ def finish(
     game: GameService, c: Connection, state: GameState, action: dict[str, Any], event: str
 ) -> None:
     from girlframe.services.m2_choices import ChoiceEngine
+    from girlframe.services.m3_am_body_consequences import intercept_finish
 
+    if intercept_finish(game, c, state, action, event):
+        return
     if game.pending(c, action["id"]):
         return
     value = rules.session(state, action["data"]["am_code"]["maintenance"])

@@ -235,6 +235,8 @@ def create(state: GameState, value: Maintenance, preparation: str, event: str) -
     if value.operator.kind == "pilot" and source.fact_author is None:
         raise ValueError("Use the actual original Handler's prepared branch hardware")
     controller = int(source.fact_author.entity) if source.fact_author else value.controller
+    if source.spec.assets and all(x.void for x in source.spec.assets):
+        raise ValueError("SOURCE_NPC_VOID_REQUIRED: preserve the actual branch corruption source")
     hardware._ordinary(state, value.actor, source.spec.assets)
     identity = str(uuid4())
     npc_ref = ActorRef(kind="npc", entity="am-branch:" + identity)

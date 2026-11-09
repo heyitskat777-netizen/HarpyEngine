@@ -10,14 +10,14 @@ character's anatomy, Pair, rank, resources, consent or private knowledge.
 Brutalize, Dose Up, Old Dog New Pups, Easy Target, Bad At Being A Person and
 No One Better have finite acquired-source consumers. This packet adds explicit
 Objectively Beautiful, Itching For A Fight and Elder Bitch Keep riders, including
-Beautiful's own-Tag Flirt use. Native minimum evidence lives in P1_ACCEPTANCE;
+Beautiful's own-Tag Flirt use. Learned Hound now has actual Status use and expiry. Native minimum evidence lives in P1_ACCEPTANCE;
 separate learned Alpha/Elder and other deferred branches retain final gates.
 
 ## Bounded remaining providers
 
 | Source rule | Owner / assignment | Real dependency and next action | State |
 |---|---|---|---|
-| `girl.alpha.nothing-more-than-a-hound` | Malleable next; root shared ports | Actual Dog/unmarked Status, existing owned +/-1 Tag-window selector; bind one use and real Punishment/Status expiry | Read-only contract frozen; no implementation yet |
+| `girl.alpha.nothing-more-than-a-hound` | Malleable source/root integration frozen | Actual Dog/unmarked Status selector, one use and real Punishment/Status expiry implemented | Native actual lesson/Status/rank-clear passed in3/15.99s; final gates pending |
 | `girl.mockingbird.risk-factor` | Queued | Existing actual optional roll shift, genuine Void payment/onset and required work; bind selected once-use | Missing learned adapter |
 | `girl.mockingbird.call-of-the-void` | Queued | Existing Dive reclassification/communion, real current Frame/Assets, confirmed companion or actual Gorgon; bind selected effect | Missing learned adapter |
 | `girl.princess.show-dog` | Queued | Existing actual Off-Duty period and both real NPC choices; bind one use | Missing learned adapter |

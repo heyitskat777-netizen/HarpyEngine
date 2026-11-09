@@ -596,7 +596,7 @@ class ChoiceEngine:
                 self.finish(c, state, action)
             return
         if kind == "tag_window":
-            self.tag_proposal(c, state, action, owner, answer)
+            self.tag_proposal(c, state, action, owner, answer, choice=request["id"])
             if not any(
                 x["kind"] == "tag_window" and x["state"] == "pending"
                 for x in self.game.pending(c, action["id"])
@@ -1167,6 +1167,8 @@ class ChoiceEngine:
         action: dict[str, Any],
         owner: int,
         answer: ChoiceAnswer,
+        *,
+        choice: str | None = None,
     ) -> None:
         from girlframe.services import m3_tag_markers as markers
         from girlframe.services.m3_ankou import self_tag as champion_self_tag
@@ -1263,7 +1265,27 @@ class ChoiceEngine:
                 answer.number in (-1, 1) and bool(answer.text.strip()),
                 "Choose a direction and explain relevance.",
             )
+        learned_status = False
         if (
+            owner == actor
+            and answer.fields.get("status", "0") != "0"
+            and not has_rule(sheet, "girl.alpha.nothing-more-than-a-hound", "ALPHA")
+        ):
+            from girlframe.services.m3_learned_plays import use_hound_status
+
+            require(choice is not None, "Recover this actual owned Status response")
+            assert choice is not None
+            learned_status = use_hound_status(
+                self.game,
+                c,
+                state,
+                action,
+                owner,
+                answer,
+                action["data"]["response_event"],
+                choice=choice,
+            )
+        if not learned_status and (
             owner == actor
             and has_rule(sheet, "girl.alpha.nothing-more-than-a-hound", "ALPHA")
             and state.order
@@ -1284,8 +1306,15 @@ class ChoiceEngine:
                 action["data"]["modifiers"].append(
                     {"source": "alpha_status", "amount": int(answer.fields["status"])}
                 )
-        elif set(answer.fields) - {"marker"}:
-            raise WorkflowError("This actor has no supported Status-mark modifier.")
+        elif not learned_status and set(answer.fields) - {"marker"}:
+            from girlframe.services.m3_learned_plays import hound_status_available
+
+            require(
+                set(answer.fields) <= {"status", "marker"}
+                and answer.fields.get("status") == "0"
+                and hound_status_available(self.game, c, state, action, owner),
+                "This actor has no supported Status-mark modifier.",
+            )
         if answer.options in (("tag",), ("starvation",)):
             assert marker is not None
             markers.capture(self.game, c, state, action, marker)

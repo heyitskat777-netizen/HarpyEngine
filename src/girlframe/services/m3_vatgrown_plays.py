@@ -520,17 +520,18 @@ def apply_choice(
         elif any(answer.fields.get(x) for x in ("identities", "identity", "replacements")):
             raise WorkflowError("Identity data requires its actual selected source effect")
         if "play" in answer.options:
-            from girlframe.services.m3_learned_plays import SUPPORTED, grant
+            from girlframe.services.m3_learned_plays import grant, lesson_book
 
             rule_id = answer.fields.get("play", "")
+            book = lesson_book(rule_id)
             teacher = (
                 state.sheets.get(value.target.entity) if value.target.kind == "pilot" else None
             )
             if (
-                rule_id not in SUPPORTED
+                book is None
                 or teacher is None
-                or teacher.girl != SUPPORTED[rule_id][1]
-                or not has_rule(teacher, rule_id, SUPPORTED[rule_id][1])
+                or teacher.girl != book
+                or not has_rule(teacher, rule_id, book)
             ):
                 raise WorkflowError(
                     "UNSUPPORTED_LEARNED_PLAY: select this original teacher's supported actual Play"
@@ -656,7 +657,7 @@ def projection(
     sheet = state.sheets[value.actor.entity]
     teacher = state.sheets.get(value.target.entity) if value.target.kind == "pilot" else None
     from girlframe.engine.m3_leviathan_obsession import require_unlocked
-    from girlframe.services.m3_learned_plays import SUPPORTED, lesson_label
+    from girlframe.services.m3_learned_plays import teacher_lessons
 
     replacements = []
     for identity in sheet.identities:
@@ -675,11 +676,7 @@ def projection(
         identities=[dict(id=x.id, name=x.name) for x in teacher.identities] if teacher else [],
         replacements=replacements,
         required=2 if value.tier in ("mid", "high") else 1,
-        plays=[
-            dict(id=rule, label=lesson_label(rule, play))
-            for rule, (play, book) in SUPPORTED.items()
-            if teacher and teacher.girl == book and has_rule(teacher, rule, book)
-        ],
+        plays=list(teacher_lessons(teacher)) if teacher else [],
         question=json.loads(row["body_json"]).get("question"),
         discipline=value.discipline,
         departed=bool(value.departed_event),
@@ -702,9 +699,10 @@ def synchronize(game: GameService, c: Connection, action: dict[str, Any], event:
 def prove_learned_play(
     game: GameService, c: Connection, state: GameState, identity: str
 ) -> rules.LearnedPlay:
-    from girlframe.services.m3_learned_plays import SUPPORTED
+    from girlframe.services.m3_learned_plays import lesson_book
 
     value = _get(state, rules.LearnedPlay, identity)
+    book = lesson_book(value.rule_id)
     born = _history(c, game, value.event)
     source = prove(game, c, state, value.session)
     selection = next(
@@ -721,7 +719,7 @@ def prove_learned_play(
         or value.teacher != source.target
         or selection is None
         or selection.fields.get("play") != value.rule_id
-        or value.rule_id not in SUPPORTED
+        or book is None
         or value.teacher.kind != "pilot"
     ):
         raise WorkflowError("Recover the actual source-owned immutable learned Play")
@@ -735,8 +733,8 @@ def prove_learned_play(
         or answer.fields != selection.fields
         or teacher is None
         or teacher.character_id != value.teacher.incarnation
-        or teacher.girl != SUPPORTED[value.rule_id][1]
-        or not has_rule(teacher, value.rule_id, SUPPORTED[value.rule_id][1])
+        or teacher.girl != book
+        or not has_rule(teacher, value.rule_id, book)
     ):
         raise WorkflowError(
             "The actual original teacher and printed author must supply this one-use Play"

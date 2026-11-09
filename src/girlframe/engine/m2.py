@@ -484,6 +484,9 @@ def shift_status(state: GameState, owner: int, delta: int) -> None:
     if before != groups[-1]:
         for member in before:
             if str(member) in state.sheets:
+                from girlframe.engine.m3_learned_play_state import clear_hound_status
+
+                clear_hound_status(state, member, "rank")
                 state.sheets[str(member)].status_marked = False
 
 

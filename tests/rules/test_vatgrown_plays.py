@@ -872,6 +872,7 @@ def test_actual_oldgen_teacher_learned_advice_cancel_retry_status_maxim_listen_a
     calls = game.dice.calls
     game.abort(ADMIN, str(uuid4()), abandoned)
     tick(worker, gateway, 5)
+
     recovery = RecoveryService(game)
     saved = next(x for x in recovery.saved(PLAYER) if x["id"] == abandoned)
     assert saved["cancellable"] and not saved["rolled"]
@@ -2015,4 +2016,198 @@ def test_actual_princess_two_lessons_native_selected_keep_then_winning_self_flir
         assert keep_rider_rule(game, c, state(game), game.action(c, keep["id"])) == BEAUTIFUL
         assert keep_rider_rule(game, c, state(game), game.action(c, flirt["id"])) == BEAUTIFUL
     assert keep_automatic(state(game).sheets["2"]) == frozenset()
+    tick(worker, gateway, 5)
+
+
+def test_actual_alpha_hound_lesson_native_status_mark_then_real_rank_clear(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred: true initial Dog, an actual Status cost, and a source-backed clear."""
+    from girlframe.discord_adapter.m2_ui import open_choice, open_play
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+    from girlframe.engine.m3_intracadre_marriage import is_dog
+    from girlframe.engine.m3_learned_play_state import active_hound_status, hound_status_uses
+    from girlframe.services.m3_learned_plays import HOUND, available, prove_hound_status
+
+    original_rank = creation_fixture.HandlerService.rank
+    ranked = False
+
+    def initial_dog(handler, viewer, key, expected, order):
+        nonlocal ranked
+        if not ranked:
+            result = original_rank(
+                handler,
+                viewer,
+                key,
+                expected,
+                tuple(sorted(order, key=lambda x: x.user_id != OTHER.user_id)),
+            )
+            ranked = True
+            return result
+        return original_rank(handler, viewer, key, expected, order)
+
+    monkeypatch.setattr(creation_fixture.HandlerService, "rank", initial_dog)
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, teacher="ALPHA")
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "owner_m3_rulings": ledger.policy.owner_m3_rulings.model_copy(
+                update={"beneath_private_choices": "affected_owner"}
+            )
+        }
+    )
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(rules.EXPERIMENT, rules.INVESTMENT, rules.SEX, HOUND),
+    )
+    learner, teacher = current_ref(state(game), 2), current_ref(state(game), 3)
+    assert state(game).order == (3, 2) and is_dog(state(game), 2)
+    session, source_action = sex(game, worker, gateway, controls, (5, 5))
+    actual = state(game)
+    replacement = actual.sheets["2"].identities[0]
+    remaining = {x.name.casefold() for x in actual.sheets["2"].identities if x.id != replacement.id}
+    taught = next(x for x in actual.sheets["3"].identities if x.name.casefold() not in remaining)
+    native_choice(
+        game,
+        OTHER,
+        "vat_sex_learn",
+        identities=(taught.id,),
+        replacements=(replacement.id,),
+        play=(HOUND,),
+        account="The actual Alpha teaches her Status-marking Play once",
+    )
+    lesson = rules.records(state(game), rules.LearnedPlay)[-1]
+    assert lesson.actor == learner and lesson.teacher == teacher and lesson.rule_id == HOUND
+    assert game.inspect(PLAYER, source_action)["state"] == "complete"
+    controls.send_away(
+        OTHER,
+        str(uuid4()),
+        session,
+        state(game).revision,
+        "The original Alpha releases the actual learner after this lesson",
+    )
+    tick(worker, gateway, 6)
+    assert not has_rule(state(game).sheets["2"], HOUND, "ALPHA")
+    assert has_rule(state(game).sheets["3"], HOUND, "ALPHA")
+
+    def interaction(user=2):
+        shown = current(user, uuid4().int % 1000000000)
+        shown.channel_id = 900
+        return shown
+
+    async def begin_native(play, heat):
+        opened = interaction()
+        await opened.response.defer(ephemeral=True)
+        await open_play(opened, game)
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            play=(play,),
+            trigger=("yes",),
+            heat=(str(heat),),
+            gain=("0",),
+            pair_share=("0",),
+            piloting=("no",),
+            witnessed=("no",),
+            context="My actual original Girl performs this real source with her own resources",
+        )
+        if play == "put_someone_beneath_you":
+            form.values["target"] = ("3",)
+        submitted = interaction()
+        await form.confirm.callback(submitted)
+        assert form.completed, (
+            submitted.response.send_message.call_args_list,
+            submitted.edit_original_response.call_args_list,
+        )
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+        with ledger.engine.connect() as c:
+            return game.action(c, game.lock(c, 900)["action_id"])
+
+    async def native_answer(viewer, row, **values):
+        opened = interaction(viewer.user_id)
+        await opened.response.defer(ephemeral=True)
+        await open_choice(opened, game, row["id"])
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values.update(values)
+        submitted = interaction(viewer.user_id)
+        await form.confirm.callback(submitted)
+        assert form.completed, (
+            submitted.response.send_message.call_args_list,
+            submitted.edit_original_response.call_args_list,
+        )
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+
+    heat, calls = state(game).sheets["2"].heat, game.dice.calls
+    keep = asyncio.run(begin_native("keep_your_head", 1))
+    assert "learned_play" not in keep["data"] and "learned_hound_status" not in keep["data"]
+    game.dice.faces = (3, 3)
+    tick(worker, gateway, 3)
+    if game.inspect(PLAYER, keep["id"])["receipt"] is None:
+        game.roll(PLAYER, str(uuid4()), keep["id"])
+    row = next(x for x in game.choices(PLAYER) if x["kind"] == "tag_window")
+    assert game.decision(PLAYER, row["id"])["learned_hound_available"]
+    with ledger.engine.connect() as c:
+        assert available(game, c, state(game), learner, HOUND).id == lesson.id
+    asyncio.run(native_answer(PLAYER, row, options=("pass",), **{"fields.status": ("1",)}))
+    actual = state(game)
+    mark = active_hound_status(actual, learner)
+    assert actual.sheets["2"].status_marked and mark and mark.lesson == lesson.id
+    assert is_dog(actual, 2) and actual.order == (3, 2)
+    with ledger.engine.connect() as c:
+        action = game.action(c, keep["id"])
+        assert prove_hound_status(game, c, actual, action) == 1
+        assert action["data"]["modifiers"] == [dict(source="alpha_status", amount=1)]
+        assert available(game, c, actual, learner, HOUND) is None
+    for viewer in (OTHER, ADMIN):
+        answer(game, viewer, "tag_window", options=("pass",))
+    row = next(x for x in game.choices(PLAYER) if x["kind"] == "actor_keep")
+    asyncio.run(native_answer(PLAYER, row, options=("tough", "in_control"), denied=("vicious",)))
+    row = next(x for x in game.choices(ADMIN) if x["kind"] == "handler_keep")
+    asyncio.run(
+        native_answer(ADMIN, row, flag=("yes",), text="The real adjusted mid result is enough")
+    )
+    assert game.inspect(PLAYER, keep["id"])["state"] == "complete"
+    assert game.inspect(PLAYER, keep["id"])["result"]["total"] == 8
+    receipt = game.inspect(PLAYER, keep["id"])["receipt"]
+    assert receipt["pre_total"] == 7 and state(game).sheets["2"].heat == heat - 1
+    assert state(game).sheets["2"].status_marked and game.dice.calls == calls + 1
+    tick(worker, gateway, 6)
+
+    # A genuine ordinary source lowers the former Ace; no rank setter or fake
+    # Punishment is used merely to clear the learned mark.
+    beneath = asyncio.run(begin_native("put_someone_beneath_you", 0))
+    game.dice.faces = (4, 4)
+    tick(worker, gateway, 3)
+    if game.inspect(PLAYER, beneath["id"])["receipt"] is None:
+        game.roll(PLAYER, str(uuid4()), beneath["id"])
+    pass_tags(game)
+    answer(
+        game,
+        PLAYER,
+        "beneath_select",
+        options=("tag", "status"),
+        fields={"tag": "Actually put beneath the former Dog"},
+        text="The original Girl actually puts this counterpart beneath her",
+    )
+    actual = state(game)
+    assert game.inspect(PLAYER, beneath["id"])["state"] == "complete"
+    assert actual.order == (2, 3) and not is_dog(actual, 2)
+    assert not actual.sheets["2"].status_marked and active_hound_status(actual, learner) is None
+    ended = next(x for x in hound_status_uses(actual) if x.id == mark.id)
+    assert ended.clear_reason == "rank" and ended.cleared_event
+    with ledger.engine.connect() as c:
+        assert prove_hound_status(game, c, actual, game.action(c, keep["id"])) == 1
+        assert available(game, c, actual, learner, HOUND) is None
+    # An uncommitted projection checks that a later independent boolean could
+    # not revive this ended source; it grants or writes no campaign resource.
+    projection = actual.model_copy(deep=True)
+    projection.sheets["2"].status_marked = True
+    assert active_hound_status(projection, learner) is None
+    assert game.inspect(PLAYER, keep["id"])["receipt"] == receipt
+    assert game.dice.calls == calls + 2 and actual.sheets["2"].girl == "VATGROWN"
     tick(worker, gateway, 5)

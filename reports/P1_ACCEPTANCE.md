@@ -1359,3 +1359,57 @@ registry and planning PASS. Registry477/273 subset/204 unimplemented/440 require
 0 verified; repository1420 publishable files/40 manifest entries/0 findings.
 P1_LEARNED_SOURCE_QUEUE publishes the finite remaining rule IDs/prerequisites,
 including real mandatory-choice gaps. No full-regression or independent claim.
+
+
+## Actual AM processing thresholds and learned Hound lifetime
+
+Basea9690edcbc7f71664ec8ff96f9aa73975a80d6ca published; focused
+CI42542433165 PASS/full regression skipped. Bot OFF, RULES_SUBSET/0 independently
+verified. No deployment/environment publication/model calls or human acceptance.
+
+Real requisite processing is independent of named gear: native explicit none
+means zero actual components. Actual zero/all-damaged hardware does not invent
+battle injury/opponent/processing Asset, clear existing Helpless or heal medical
+condition. Nonempty effective clear→all-Void canonical Code Swap/return/intrinsic
+Occupancy creates a typed source for existing Void threshold/entry/prevention/
+Harpy work. Empty is not all-Void; Frame family is unchanged. Actual Code finish
+intercepts before completion, holds the genuine Action/lock and links real work;
+postcanonical response SQL materializes it, and only real final outcome resumes
+Code via an actual closure event/author. Standalone movement has no fabricated
+parent. NPC Branch all-Void remains explicitly guarded. Delegated adjustment
+interpretation recorded with clarity review pending.
+
+Learned Hound uses actual owned Tag-window Status selection, even pass/no Tag,
+only while actual Dog/unmarked with a proved lesson. It spends one source and
+applies the existing +/-1 once. Zero/omission spends nothing; holding a lesson
+grants no global passive. Native/permanent Alpha unchanged. Typed mark lifetime
+persists after lesson consumption; real rank/Punishment clearing ends it and
+canonical event stamping prevents a later boolean from reviving an old mark.
+Passing Responsibility does not clear as a Punishment. Historical canonical
+readback proves original rank/receipt/owned response without requiring today's
+rank/incarnation/mark; no speculative staged external-reader path. Finite teacher
+book/offer helpers include this Status rule without a wildcard/invented Play ID.
+
+One consolidated pytest -q --tb=short, **3passed/15.99s first run**:
+- `tests/rules/test_am_body.py::test_native_empty_real_processor_is_not_battle_injury_and_can_keep_then_return`
+- `tests/rules/test_am_body.py::test_actual_all_void_body_holds_code_until_real_entry_questions_and_rebirth`
+- `tests/rules/test_vatgrown_plays.py::test_actual_alpha_hound_lesson_native_status_mark_then_real_rank_clear`
+
+Actual empty processor/Keep/return; actual all-Void Code hold→entry/questions→
+Harpy/rebirth→real source closure; actual Alpha teacher/Dog lesson→Keep7→Status+1
+→8→completed Keep→genuine Beneath/actual rank shift→typed expiry/private replay/
+nonreactivation. No fake campaign rank/resource setter or extra test matrix.
+Other expiry, transformed-body, rollback/source variants and existing affected
+consumers remain final regression checks. Environment restart was reconciled from
+saved files/worker ownership; no source reapplication or redeployment.
+
+Worker scoped static PASS. Root11 types found only an import-name collision in
+Void source (different callback parameter names); finite AM callback alias fixed,
+module1 types PASS. Exact packet preflight/hash results under var/p1-terminal-hound-*.
+Full exact-candidate regression/global static/migration/privacy/restore, independent
+source/clarity review and real player/owner acceptance remain pending.
+
+Final scoped packet28 paths/21 Python/19 source: Ruff/format/types/whitespace,
+registry and planning PASS. Registry477/273 subset/204 unimplemented/440 required/
+0 verified; repository1421 publishable files/40 manifest entries/0 findings.
+Three new normals passed first run; no extra gameplay rerun. Full P1 gates pending.

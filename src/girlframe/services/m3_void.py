@@ -128,6 +128,13 @@ def source(
 
             prove_loss_work(game, c, first, body, actor)
             return current, body, actor
+        if body.get("reason") == "am_body_adjustment":
+            from girlframe.services.m3_am_body_consequences import (
+                prove_void_source as prove_am_body_void_source,
+            )
+
+            prove_am_body_void_source(game, c, first, body, actor)
+            return current, body, actor
         if body.get("reason") == "wyvern_renovation":
             from girlframe.services.m3_wyvern_support import prove_renovation_void
 
@@ -505,6 +512,10 @@ def complete(
             from girlframe.services.m3_budget_cleanup import complete_void as complete_cleanup
 
             complete_cleanup(game, c, identity, event, viewer, key)
+        elif body.get("reason") == "am_body_adjustment":
+            from girlframe.services.m3_am_body_consequences import complete_void_continuation
+
+            complete_void_continuation(game, c, identity, event, viewer, key)
         elif body.get("reason") != "physical_entry":
             from girlframe.services.m3_dive import complete_void_continuation as dive_complete
 

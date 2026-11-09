@@ -64,7 +64,8 @@ async def open_prepare(
     async def submit(current: discord.Interaction, values: dict[str, Any]) -> str:
         vessel = values["vessel"].strip()
         assets = []
-        for index, line in enumerate(values["assets"].splitlines()):
+        asset_lines = "" if values["assets"].strip().lower() == "none" else values["assets"]
+        for index, line in enumerate(asset_lines.splitlines()):
             if not line.strip():
                 continue
             parts = tuple(x.strip() for x in line.split("|"))
@@ -134,7 +135,8 @@ async def open_prepare(
             ),
             Field(
                 "assets",
-                "One actual Asset per line: name | source | intact/damaged | clear/void",
+                "Actual Assets per line; 'none' for none: "
+                "name | source | intact/damaged | clear/void",
                 paragraph=True,
             ),
             *(

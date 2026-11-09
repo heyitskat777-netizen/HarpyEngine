@@ -130,8 +130,13 @@ def social(
         raise ValueError("This target needs actual resources for every printed Punishment effect")
     if subject.kind == "pilot":
         from girlframe.engine.m3_girl_runtime_state import has_rule
+        from girlframe.engine.m3_learned_play_state import active_hound_status, clear_hound_status
 
-        if has_rule(state.sheets[subject.entity], "girl.alpha.nothing-more-than-a-hound", "ALPHA"):
+        if (
+            has_rule(state.sheets[subject.entity], "girl.alpha.nothing-more-than-a-hound", "ALPHA")
+            or active_hound_status(state, subject) is not None
+        ):
+            clear_hound_status(state, subject, "punishment", event)
             state.sheets[subject.entity].status_marked = False
     if instruction.kind not in SOCIAL or details.kind != instruction.kind:
         raise ValueError("Use a source-supported actual-role social Punishment")

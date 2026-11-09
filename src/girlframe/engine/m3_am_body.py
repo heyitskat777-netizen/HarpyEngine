@@ -276,8 +276,8 @@ def _ordinary(
         or len([x for x in assets if x.battery_asset is None]) > 5
     ):
         raise ValueError("Use actual distinct ordinary Girl Assets within the printed capacity")
-    if not assets or not any(not x.damaged for x in assets) or all(x.void for x in assets):
-        raise ValueError("SOURCE_BODY_CONSEQUENCE_REQUIRED: actual full-Void/last-usable body port")
+    # Requisite processing is separately source-proved by BodySpec. Asset absence/condition
+    # alone is not battle depletion. Actual occupation/return materializes real Void consequences.
     if any(
         x.battery_asset is not None and x not in retained for x in state.sheets[actor.entity].assets
     ):

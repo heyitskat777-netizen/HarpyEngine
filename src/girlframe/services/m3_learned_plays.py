@@ -13,7 +13,12 @@ from girlframe.engine.m2 import ChoiceAnswer, GameState, TagState
 from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef, Model
 from girlframe.engine.m3_girl_runtime_state import GirlRuntime, has_rule
-from girlframe.engine.m3_learned_play_state import LearnedPlayUse
+from girlframe.engine.m3_learned_play_state import (
+    HoundStatusUse,
+    LearnedPlayUse,
+    hound_status_uses,
+    put_hound_status,
+)
 from girlframe.services.m2_game import GameService
 from girlframe.services.onboarding import WorkflowError
 
@@ -21,6 +26,7 @@ NO_ONE_BETTER = "girl.casualty.no-one-better"
 BEAUTIFUL = "girl.princess.objectively-beautiful"
 ITCHING = "girl.alpha.itching-for-a-fight"
 ELDER = "girl.oldgen.elder-bitch"
+HOUND = "girl.alpha.nothing-more-than-a-hound"
 KEEP_RIDERS = (BEAUTIFUL, ITCHING, ELDER)
 SUPPORTED = {
     "girl.alpha.brutalize": ("brutalize", "ALPHA"),
@@ -36,6 +42,8 @@ SUPPORTED = {
 
 
 def lesson_label(rule_id: str, play: str) -> str:
+    if rule_id == HOUND:
+        return "Nothing More Than a Hound (actual Dog Status +/-1)"
     if rule_id in KEEP_RIDERS:
         return {
             BEAUTIFUL: "Objectively Beautiful (Keep or own-Tag Flirt)",
@@ -47,6 +55,22 @@ def lesson_label(rule_id: str, play: str) -> str:
         if rule_id == NO_ONE_BETTER
         else play.replace("_", " ").title()
     )
+
+
+def lesson_book(rule_id: str) -> str | None:
+    """The finite Status lesson has no invented underlying Play ID."""
+    return "ALPHA" if rule_id == HOUND else SUPPORTED[rule_id][1] if rule_id in SUPPORTED else None
+
+
+def teacher_lessons(sheet: Any) -> tuple[dict[str, str], ...]:
+    result = [
+        dict(id=rule, label=lesson_label(rule, play))
+        for rule, (play, book) in SUPPORTED.items()
+        if sheet.girl == book and has_rule(sheet, rule, book)
+    ]
+    if sheet.girl == "ALPHA" and has_rule(sheet, HOUND, "ALPHA"):
+        result.append(dict(id=HOUND, label=lesson_label(HOUND, "")))
+    return tuple(result)
 
 
 class NoOneBetterResolution(Model):
@@ -117,11 +141,11 @@ def grant(
     rule_id: str,
     event: str,
 ) -> str:
-    if rule_id not in SUPPORTED:
+    book = lesson_book(rule_id)
+    if book is None:
         raise WorkflowError(
             "UNSUPPORTED_LEARNED_PLAY: this real counterpart Play needs its consumer"
         )
-    _, book = SUPPORTED[rule_id]
     if (
         actor.kind != "pilot"
         or teacher.kind != "pilot"
@@ -165,7 +189,7 @@ def available(
     action_id: str | None = None,
 ) -> LearnedPlayUse | None:
     """Positive canonical lesson, never another person's book or reservation."""
-    if rule_id not in SUPPORTED or actor.kind != "pilot":
+    if lesson_book(rule_id) is None or actor.kind != "pilot":
         return None
     sheet = state.sheets.get(actor.entity)
     if sheet is None or sheet.character_id != actor.incarnation:
@@ -181,6 +205,8 @@ def available(
             continue
         _prove(game, c, state, value)
         if value.claimed_action is not None:
+            if rule_id == HOUND:
+                raise WorkflowError("A Hound lesson is spent only by its actual Status choice")
             from girlframe.services.m3_handler_advancements import _history
 
             action = game.action(c, value.claimed_action)
@@ -1132,6 +1158,250 @@ def keep_rider_rule(
     if actual.claimed_action != action["id"] or actual.rolled_event != saved.event:
         raise WorkflowError("Preserve the selected spent lesson for its own held outcome")
     return value.rule_id
+
+
+def _hound_candidate(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any], owner: int
+) -> LearnedPlayUse | None:
+    if str(owner) != str(action["actor_id"]):
+        return None
+    sheet = state.sheets.get(str(owner))
+    if sheet is None or not sheet.character_id:
+        return None
+    actor = ActorRef(kind="pilot", entity=str(owner), incarnation=sheet.character_id)
+    from girlframe.engine.m3_intracadre_marriage import is_dog
+
+    runtime = sheet.girl_runtime or GirlRuntime()
+    native = sheet.model_copy(
+        update={"girl_runtime": runtime.model_copy(update={"learned_plays": ()})}
+    )
+    if (
+        action["data"].get("character_ids", {}).get(str(owner)) != actor.incarnation
+        or has_rule(native, HOUND, "ALPHA")
+        or sheet.status_marked
+        or not is_dog(state, owner)
+        or any(x.actor == actor and x.clear_reason is None for x in hound_status_uses(state))
+    ):
+        return None
+    return available(game, c, state, actor, HOUND)
+
+
+def hound_status_available(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any], owner: int
+) -> bool:
+    value = _hound_candidate(game, c, state, action, owner)
+    if value is None:
+        return False
+    _keep_raw_roll(game, c, action)
+    return True
+
+
+def use_hound_status(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    action: dict[str, Any],
+    owner: int,
+    answer: ChoiceAnswer,
+    event: str,
+    *,
+    choice: str,
+) -> bool:
+    if answer.fields.get("status", "0") == "0":
+        return False
+    value = _hound_candidate(game, c, state, action, owner)
+    if value is None:
+        return False
+    requests = t.m2["m2_choices"]
+    row = (
+        c.execute(
+            sa.select(requests).where(
+                requests.c.campaign_id == game.store.campaign_id,
+                requests.c.id == choice,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if (
+        answer.fields.get("status") not in ("-1", "1")
+        or set(answer.fields) - {"status", "marker"}
+        or row is None
+        or row["action_id"] != action["id"]
+        or row["kind"] != "tag_window"
+        or row["actor_id"] != str(owner)
+        or row["state"] != "answered"
+        or action["data"].get("response_event") != event
+        or action["data"].get("choices", {}).get("tag_window:" + str(owner))
+        != answer.model_dump(mode="json")
+        or action["data"].get("learned_hound_status")
+    ):
+        raise WorkflowError("Use the actual original Dog's owned Status response, once")
+    direction: Literal[-1, 1] = -1 if answer.fields["status"] == "-1" else 1
+    value_id = "learned-hound:" + value.id
+    if any(x.id == value_id for x in hound_status_uses(state)):
+        raise WorkflowError("This original lesson already has its actual Hound mark")
+    use = HoundStatusUse(
+        id=value_id,
+        lesson=value.id,
+        actor=value.actor,
+        action=action["id"],
+        roll_event=_keep_raw_roll(game, c, action),
+        choice=choice,
+        event=event,
+        direction=direction,
+        receipt_sha256=_keep_receipt(game, c, action),
+        rank_order=state.order,
+    )
+    sheet = state.sheets[value.actor.entity]
+    sheet.status_marked = True
+    sheet.revision += 1
+    action["data"]["modifiers"].append(dict(source="alpha_status", amount=direction))
+    _replace(
+        state, value.model_copy(update={"claimed_action": action["id"], "rolled_event": event})
+    )
+    put_hound_status(state, use)
+    action["data"]["learned_hound_status"] = dict(
+        id=use.id,
+        lesson=value.id,
+        event=event,
+        roll_event=use.roll_event,
+        choice=choice,
+        amount=direction,
+    )
+    return True
+
+
+def prove_hound_status(
+    game: GameService, c: Connection, state: GameState, action: dict[str, Any]
+) -> int | None:
+    meta = action["data"].get("learned_hound_status")
+    if meta is None:
+        return None
+    use = next((x for x in hound_status_uses(state) if x.id == meta.get("id")), None)
+    if use is None:
+        raise WorkflowError("Recover the actual source-owned learned Hound mark")
+    row = (
+        c.execute(
+            sa.select(t.m2["m2_choices"]).where(
+                t.m2["m2_choices"].c.campaign_id == game.store.campaign_id,
+                t.m2["m2_choices"].c.id == use.choice,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    response = (
+        c.execute(
+            sa.select(t.m2["m2_responses"]).where(
+                t.m2["m2_responses"].c.campaign_id == game.store.campaign_id,
+                t.m2["m2_responses"].c.choice_id == use.choice,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    event = (
+        c.execute(
+            sa.select(t.events).where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.id == use.event,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if event is None or response is None:
+        raise WorkflowError("Save the actual original Status response before canonical readback")
+    from girlframe.engine.m3_intracadre_marriage import is_dog
+    from girlframe.services.m3_handler_advancements import _history
+
+    born = _history(c, game, use.event)
+    original_sheet = born.sheets.get(use.actor.entity)
+    learned = original_sheet.girl_runtime if original_sheet else None
+    value = (
+        next((x for x in learned.learned_plays if x.id == use.lesson), None) if learned else None
+    )
+    if (
+        use.action != action["id"]
+        or use.actor.entity != str(action["actor_id"])
+        or action["data"].get("character_ids", {}).get(use.actor.entity) != use.actor.incarnation
+        or use.id != "learned-hound:" + use.lesson
+        or value is None
+        or value.actor != use.actor
+        or value.rule_id != HOUND
+        or value.claimed_action != action["id"]
+        or value.rolled_event != use.event
+        or use.roll_event != _keep_raw_roll(game, c, action)
+        or use.receipt_sha256 != _keep_receipt(game, c, action)
+        or meta
+        != dict(
+            id=use.id,
+            lesson=use.lesson,
+            event=use.event,
+            roll_event=use.roll_event,
+            choice=use.choice,
+            amount=use.direction,
+        )
+        or row is None
+        or row["action_id"] != action["id"]
+        or row["kind"] != "tag_window"
+        or row["actor_id"] != use.actor.entity
+        or row["state"] != "answered"
+        or [x for x in action["data"]["modifiers"] if x.get("source") == "alpha_status"]
+        != [dict(source="alpha_status", amount=use.direction)]
+    ):
+        raise WorkflowError("Prove this exact original Hound lesson, Status choice and modifier")
+    _prove(game, c, born, value)
+    original = next((x for x in hound_status_uses(born) if x.id == use.id), None)
+    before_raw = c.scalar(
+        sa.select(t.m2["m2_state_history"].c.body_json).where(
+            t.m2["m2_state_history"].c.campaign_id == game.store.campaign_id,
+            t.m2["m2_state_history"].c.revision == born.revision - 1,
+        )
+    )
+    before = GameState.model_validate_json(before_raw) if before_raw else None
+    answer = ChoiceAnswer.model_validate_json(response["answer_json"])
+    author = int(use.actor.entity)
+    if action["data"].get("princess_child"):
+        from girlframe.services.m3_princess_sex import prove_response_author
+
+        actual_author = prove_response_author(game, c, born, action, dict(row), use.event)
+        if actual_author is None:
+            raise WorkflowError("Prove the actual directed Status response author")
+        author = actual_author
+    if (
+        original is None
+        or original.clear_reason is not None
+        or original.cleared_event is not None
+        or original != use.model_copy(update=dict(clear_reason=None, cleared_event=None))
+        or before is None
+        or use.actor.entity not in before.sheets
+        or before.sheets[use.actor.entity].character_id != use.actor.incarnation
+        or before.sheets[use.actor.entity].status_marked
+        or not is_dog(before, int(use.actor.entity))
+        or before.order != use.rank_order
+        or not born.sheets[use.actor.entity].status_marked
+        or event["kind"] not in ("m2.choice_resolved", "m3.choice_resolved")
+        or event["actor_id"] != str(author)
+        or response["actor_id"] != str(author)
+        or response["event_id"] != use.event
+        or json.loads(event["payload_json"]).get("action_id") != action["id"]
+        or json.loads(event["payload_json"]).get("choice_id") != use.choice
+        or answer.fields.get("status") != str(use.direction)
+    ):
+        raise WorkflowError(
+            "Recover the actual unmarked Dog source and canonical human Status choice"
+        )
+    if use.clear_reason is not None:
+        if use.cleared_event is None:
+            raise WorkflowError("Save the actual typed Status clear before canonical readback")
+        cleared = _history(c, game, use.cleared_event)
+        if use not in hound_status_uses(cleared):
+            raise WorkflowError("Preserve the real actual mark-clearing source")
+    elif use.cleared_event is not None:
+        raise WorkflowError("A cleared Hound mark needs its actual clearing cause")
+    return use.direction
 
 
 def prove_consumed(

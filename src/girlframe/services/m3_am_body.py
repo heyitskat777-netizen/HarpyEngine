@@ -699,6 +699,9 @@ class BodyService:
             self.game.event(
                 c, viewer.user_id, key, "m3.am_body_returned", state, event_id=event, swap=identity
             )
+            from girlframe.services.m3_am_body_consequences import synchronize
+
+            synchronize(self.game, c, event)
             return dict(id=identity, vessel=changed.original_vessel)
 
         return self.store._write(

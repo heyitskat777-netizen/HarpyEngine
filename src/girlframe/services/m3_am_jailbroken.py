@@ -271,6 +271,9 @@ class JailbrokenService:
                 occupancy=value.id,
                 **audit,
             )
+            from girlframe.services.m3_am_body_consequences import synchronize
+
+            synchronize(self.game, c, event)
             return dict(id=value.id, vessel=value.vessel)
 
         return self.store._write(

@@ -4017,3 +4017,21 @@ automatically spend every held passive, or spend Beautiful merely for reserving
 Flirt permission. Preserve original teacher/lesson/receipt events and published
 No One Better behavior; version future changes without reviving spent sources or
 refunding committed Plays.
+
+
+### Appropriate processing hardware and real body thresholds
+
+`am-processing-body-resource-thresholds` (PDF55–56/printed53–54;
+PDF15/printed13; PDF19/printed17): real processing power does not require a named
+processing Asset or minimum gear count. Preparing zero/all-damaged hardware
+does not invent battle depletion, an opponent, injury or recovery. Keep actual
+medical condition and existing Helpless; real later damage uses its true source.
+
+A genuine nonempty effective clear→all-Void AM form adjustment should enter the
+existing Girl threshold/entry/prevention/Harpy path. Empty is never all-Void.
+Preparation records condition; only actual canonical Swap/return/Occupancy causes
+work. Frame resources stay unchanged, with no fabricated Frame Defeat or Void.
+Actual Code completion waits for its real required work. NPC Branch corruption
+remains a separate guarded source. This delegated adjustment interpretation needs
+clarity review because the printed Void heading describes gaining. Preserve old
+source/receipt/component/condition histories when revising it.

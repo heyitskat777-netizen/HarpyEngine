@@ -149,7 +149,10 @@ def choice_fields(decision: dict[str, Any]) -> list[Field]:
             own
             and own.get("owner") == decision["actor"]
             and not own.get("status_marked")
-            and has_rule(own, "girl.alpha.nothing-more-than-a-hound", "ALPHA")
+            and (
+                has_rule(own, "girl.alpha.nothing-more-than-a-hound", "ALPHA")
+                or decision.get("learned_hound_available", False)
+            )
         ):
             fields.append(
                 menu(
