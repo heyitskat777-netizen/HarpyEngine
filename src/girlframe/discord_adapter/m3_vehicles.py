@@ -43,8 +43,8 @@ async def open_vehicles(interaction: discord.Interaction, service: VehicleServic
             "Confirmed occupancy",
             (
                 ("empty", "Actually empty"),
-                ("occupied", "Occupied; aftermath adapter required"),
-                ("unknown", "Unknown; clarify before crushing"),
+                ("occupied", "Occupied; occupant effects are separate"),
+                ("unknown", "Unknown; no occupant outcome assumed"),
             ),
         ),
     ]
@@ -62,8 +62,8 @@ async def open_vehicles(interaction: discord.Interaction, service: VehicleServic
             values["occupancy"][0],
         )
         return (
-            "Actual vehicle facts saved. Occupied or unknown vehicles need "
-            "their real aftermath source before being crushed."
+            "Actual regular-vehicle facts saved. Crushing destroys the object; "
+            "any harm, escape or other effects on people require their separate actual source."
         )
 
     form = NativeForm(interaction.user.id, "Assess an actual regular vehicle", text, fields, submit)

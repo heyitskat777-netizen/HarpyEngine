@@ -392,13 +392,18 @@ def source_trigger(
                 "source_event",
                 "account",
                 "learned_source",
+                "learned_sex_source",
             )
         )
         or [(x.actor, x.controller) for x in declared.parties]
         != [(x.actor, x.controller) for x in trigger.parties]
         or trigger.cast_sha256 != meta["cast_sha256"]
         or trigger.actor != caster
-        or not owns(original, caster, SEX if handler_required else PERSON)
+        or not (
+            owns(original, caster, SEX if handler_required else PERSON)
+            or handler_required
+            and declared.learned_sex_source is not None
+        )
         or handler_required
         and any(x.decision != "accepted" for x in trigger.parties)
         or [x.actor.model_dump(mode="json") for x in trigger.parties]
@@ -409,6 +414,11 @@ def source_trigger(
         or json.loads(audit["payload_json"]).get("trigger") != trigger.id
     ):
         raise WorkflowError("Prove original cast, actual rule and original authored trigger")
+    if trigger.learned_sex_source is not None:
+        from girlframe.services.m3_mockingbird_plays import prove_learned_sex_trigger
+
+        if not handler_required or not prove_learned_sex_trigger(game, c, proof, trigger, action):
+            raise WorkflowError("Prove this genuine learned intimacy source and actual receipt")
     if trigger.learned_source is not None:
         from girlframe.services.m3_mockingbird_plays import prove_learned_trigger
 

@@ -518,10 +518,9 @@ class RecoveryService:
                     released_learning = (
                         release_daily_unrolled(self.game, c, state, action) or released_learning
                     )
-                if cancel and (
-                    (action["data"].get("stim_sex") or {}).get("learned_source")
-                    or (action["data"].get("princess_sex") or {}).get("learned_source")
-                ):
+                from girlframe.services.m3_learned_sex import source_id as learned_sex_id
+
+                if cancel and learned_sex_id(action) is not None:
                     from girlframe.services.m3_learned_sex import release_unrolled as release_sex
 
                     released_learning = (

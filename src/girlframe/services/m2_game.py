@@ -3100,6 +3100,10 @@ class GameService:
                 from girlframe.services.m3_alpha_sex import bind as bind_alpha_sex
 
                 bind_alpha_sex(state, self.action(c, identity))
+            if (mockingbird or {}).get("learned_sex_source"):
+                from girlframe.services.m3_mockingbird_plays import bind as bind_mockingbird_sex
+
+                bind_mockingbird_sex(state, self.action(c, identity))
             appearance_reset = False
             if m3 is not None and prepared.play in ("go_off_duty", "void_observation"):
                 from girlframe.engine.m3_appearance_matrix import reset_at_start
@@ -3383,10 +3387,11 @@ class GameService:
                 from girlframe.services.m3_princess_sex import bind as bind_princess
 
                 bind_princess(state, action, begin_source_event)
-            if (stim_sex or {}).get("learned_source") or (princess_sex or {}).get("learned_source"):
-                from girlframe.services.m3_learned_sex import bind_action as bind_learned_sex
+            from girlframe.services.m3_learned_sex import bind_action as bind_learned_sex
+            from girlframe.services.m3_learned_sex import source_id as learned_sex_id
 
-                assert begin_source_event is not None
+            if learned_sex_id(action) is not None:
+                begin_source_event = begin_source_event or str(uuid4())
                 if bind_learned_sex(self, c, state, action, begin_source_event):
                     action["data"]["sheet_revision"] = state.sheets[str(mechanical_owner)].revision
                     self.save_action(c, action)
@@ -4062,9 +4067,9 @@ class GameService:
                 from girlframe.services.m3_learned_plays import pre_roll_daily_lessons
 
                 pre_roll_daily_lessons(self, c, state, action)
-            if (action["data"].get("stim_sex") or {}).get("learned_source") or (
-                action["data"].get("princess_sex") or {}
-            ).get("learned_source"):
+            from girlframe.services.m3_learned_sex import source_id as learned_sex_id
+
+            if learned_sex_id(action) is not None:
                 from girlframe.services.m3_learned_sex import pre_roll as learned_sex_pre_roll
 
                 learned_sex_pre_roll(self, c, state, action)
@@ -4559,9 +4564,9 @@ class GameService:
                 consume_daily_lessons(self, c, state, action, roll_event_id)
                 action["data"]["sheet_revision"] = state.sheets[str(action["actor_id"])].revision
                 self.save_action(c, action)
-            if (action["data"].get("stim_sex") or {}).get("learned_source") or (
-                action["data"].get("princess_sex") or {}
-            ).get("learned_source"):
+            from girlframe.services.m3_learned_sex import source_id as learned_sex_id
+
+            if learned_sex_id(action) is not None:
                 from girlframe.services.m3_learned_sex import consume as consume_learned_sex
 
                 roll_event_id = roll_event_id or str(uuid4())

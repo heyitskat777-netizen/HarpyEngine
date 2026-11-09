@@ -1,4 +1,4 @@
-"""Private entry for the two supported learned voluntary source Plays."""
+"""Private entry for four supported learned Sex Plays."""
 
 import asyncio
 from typing import Any
@@ -9,12 +9,18 @@ from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine.m3_actor_bonds import current_ref
+from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_learned_sex import lessons
 from girlframe.services.onboarding import WorkflowError
 
-RULES = ("girl.princess.sex-play", "girl.stim-blissed.sex-play")
+RULES = (
+    "girl.princess.sex-play",
+    "girl.stim-blissed.sex-play",
+    "girl.alpha.sex-play",
+    "girl.mockingbird.sex-play",
+)
 
 
 async def open_learned_sex(
@@ -22,18 +28,18 @@ async def open_learned_sex(
 ) -> None:
     viewer = viewer_from_interaction(interaction)
 
-    def available() -> tuple[dict[str, str], ...]:
+    def available() -> tuple[ActorRef | None, tuple[dict[str, str], ...]]:
         with game.store.engine.connect() as connection:
             game.authorize(connection, viewer, game=False)
             state = load_state(connection, game.store.campaign_id)
             if str(viewer.user_id) not in state.sheets:
-                return ()
+                return None, ()
             actor = current_ref(state, viewer.user_id)
-            return tuple(
+            return actor, tuple(
                 row for rule in RULES for row in lessons(game, connection, state, actor, rule)
             )
 
-    choices = await asyncio.to_thread(available)
+    actor, choices = await asyncio.to_thread(available)
 
     async def open_source(current: discord.Interaction, lesson: str) -> None:
         row = next((item for item in choices if item["id"] == lesson), None)
@@ -49,6 +55,17 @@ async def open_learned_sex(
             from girlframe.services.m3_stim_sex import SexService as StimSexService
 
             await open_stim(current, StimSexService(game), learned_source=lesson)
+        elif row["rule_id"] == RULES[2]:
+            from girlframe.discord_adapter.m3_alpha_sex import open_alpha
+            from girlframe.services.m3_alpha_sex import SexService as AlphaSexService
+
+            await open_alpha(current, AlphaSexService(game), learned_source=lesson)
+        elif row["rule_id"] == RULES[3]:
+            from girlframe.discord_adapter.m3_mockingbird_plays import open_book
+
+            if actor is None:
+                raise WorkflowError("Reopen the lesson with your active character.")
+            await open_book(current, game, actor_ref=actor, learned_source=lesson)
         else:
             raise WorkflowError("This lesson is waiting for its Play controls.")
 
@@ -58,7 +75,7 @@ async def open_learned_sex(
     if not choices:
         await reply(
             interaction,
-            "No unused Princess or Stim lesson is available. "
+            "No unused Sex Play lesson is available for these controls. "
             "Reopen an existing invitation or Play from your inbox.",
         )
         return
@@ -68,8 +85,8 @@ async def open_learned_sex(
 
     form = NativeForm(
         interaction.user.id,
-        "Learned Plays",
-        "Choose one unused lesson. The other person answers the invitation first; "
+        "Learned Sex Plays",
+        "Choose one unused lesson. Each person confirms their own participation; "
         "your roll uses the lesson once.",
         [Field("lesson", "Your lesson", tuple((row["id"], row["label"]) for row in choices))],
         choose,

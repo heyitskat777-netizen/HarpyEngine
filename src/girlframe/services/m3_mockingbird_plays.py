@@ -209,6 +209,7 @@ def prepare(
             and x.actor == actor
             and x.bonded_source == value.bonded_source
             and x.learned_source == value.learned_source
+            and x.learned_sex_source == value.learned_sex_source
             for x in source.mockingbird.triggers
         )
     ):
@@ -278,6 +279,11 @@ def prepare(
             appointment=appointment,
             followups=[],
         )
+        | (
+            {"learned_sex_source": value.learned_sex_source}
+            if value.learned_sex_source is not None
+            else {}
+        )
         | ({"learned_source": value.learned_source} if value.learned_source is not None else {})
         | ({"bonded_source": value.bonded_source} if value.bonded_source is not None else {})
         | (
@@ -285,6 +291,31 @@ def prepare(
             if value.changeling_source is not None
             else {}
         )
+    )
+
+
+def bind(state: GameState, action: dict[str, Any]) -> None:
+    """Bind only the explicit learned source after this actual Action was inserted."""
+    meta = action["data"]["mockingbird"]
+    if meta.get("learned_sex_source") is None:
+        return
+    value = _trigger(state, meta["trigger"])
+    if (
+        value.play != SEX
+        or value.state != "ready"
+        or value.action is not None
+        or value.learned_sex_source != meta["learned_sex_source"]
+        or action["data"]["prepared"].get("source_work") != value.id
+        or str(action["actor_id"]) != value.actor.entity
+    ):
+        raise WorkflowError("Bind only this exact actual accepted intimacy source Action")
+    state.mockingbird = state.mockingbird.model_copy(
+        update={
+            "triggers": tuple(
+                x.model_copy(update=dict(action=action["id"])) if x.id == value.id else x
+                for x in state.mockingbird.triggers
+            )
+        }
     )
 
 
@@ -630,6 +661,7 @@ class MockingbirdService:
         primary: ActorRef | None = None,
         bonded_source: str | None = None,
         changeling_source: str | None = None,
+        learned_source: str | None = None,
     ) -> dict[str, Any]:
         def access(c: Connection) -> None:
             Access(self.store).authorize(c, viewer, "plays", director_response=True)
@@ -644,6 +676,13 @@ class MockingbirdService:
             cast = _cast(self.game, c, state, channel)
             bound = profiles(c, self.store.campaign_id)
             actual = resolve(state, actor, bound, require_current_profile=False)
+            if learned_source is not None and (
+                play != SEX
+                or len(targets) != 1
+                or bonded_source is not None
+                or changeling_source is not None
+            ):
+                raise WorkflowError("Use one actual learned source and one real counterpart")
             if changeling_source is not None:
                 from girlframe.services.m3_changeling_sex import admit_contact
 
@@ -654,7 +693,16 @@ class MockingbirdService:
                 )
             if (
                 actual.controller != viewer.user_id
-                or not _owned_source_rule(self.game, c, state, actor, play, targets, bonded_source)
+                or not _owned_source_rule(
+                    self.game,
+                    c,
+                    state,
+                    actor,
+                    play,
+                    targets,
+                    bonded_source,
+                    lesson_id=learned_source,
+                )
                 or not targets
                 or len(set(targets)) != len(targets)
                 or actor in targets
@@ -730,6 +778,13 @@ class MockingbirdService:
                 account=account,
                 state="ready" if play == PERSON else "proposed",
             )
+            if learned_source is not None:
+                from girlframe.services.m3_learned_sex import reserve_trigger_invitation
+
+                link = reserve_trigger_invitation(self.game, c, state, value, learned_source)
+                value = value.model_copy(update=dict(learned_sex_source=link))
+                if cast not in state.scene_casts:
+                    state.scene_casts.append(cast)
             state.mockingbird = state.mockingbird.model_copy(
                 update={"triggers": (*state.mockingbird.triggers, value)}
             )
@@ -767,6 +822,7 @@ class MockingbirdService:
                 targets=[x.model_dump(mode="json") for x in targets],
                 account=account,
             )
+            | ({"learned_source": learned_source} if learned_source is not None else {})
             | ({"primary": primary.model_dump(mode="json")} if primary is not None else {})
             | ({"bonded_source": bonded_source} if bonded_source is not None else {})
             | ({"changeling_source": changeling_source} if changeling_source is not None else {}),
@@ -816,8 +872,19 @@ class MockingbirdService:
                     )
                 }
             )
+            event = str(uuid4())
+            if value.learned_sex_source is not None:
+                from girlframe.services.m3_learned_sex import withdraw_invitation
+
+                withdraw_invitation(self.game, c, state, value, event)
             self.game.event(
-                c, viewer.user_id, key, "m3.mockingbird_trigger_withdrawn", state, trigger=identity
+                c,
+                viewer.user_id,
+                key,
+                "m3.mockingbird_trigger_withdrawn",
+                state,
+                event_id=event,
+                trigger=identity,
             )
             return dict(id=identity, state="withdrawn")
 
@@ -878,6 +945,9 @@ class MockingbirdService:
                     )
                 }
             )
+            from girlframe.services.m3_learned_sex import record_trigger_consent
+
+            record_trigger_consent(self.game, c, state, value, accept, event)
             self.game.event(
                 c,
                 viewer.user_id,
@@ -907,7 +977,14 @@ class MockingbirdService:
             auto_audit=False,
         )
 
-    def preview(self, viewer: GuildViewer, channel: int, actor: ActorRef) -> dict[str, Any]:
+    def preview(
+        self,
+        viewer: GuildViewer,
+        channel: int,
+        actor: ActorRef,
+        *,
+        learned_source: str | None = None,
+    ) -> dict[str, Any]:
         from girlframe.services.m3_battle import _cast
         from girlframe.services.m3_enforcement_initiative import _known_target
 
@@ -919,19 +996,27 @@ class MockingbirdService:
             actual = resolve(state, actor, bound, require_current_profile=False)
             if actual.controller != viewer.user_id or not any(x.actor == actor for x in cast.roles):
                 raise WorkflowError("Choose your actual owned original role in this scene")
+            from girlframe.services.m3_learned_sex import admit_offer
+
+            learned_sex = admit_offer(self.game, c, state, actor, rules.SEX, learned_source)
+            if learned_source is not None and not learned_sex:
+                raise WorkflowError("Reopen your actual available intimacy lesson")
             plays = []
             for play, rule in PLAY_RULES.items():
                 try:
                     load_registry().require_available(rule)
                 except ValueError:
                     continue
-                if _permanent_rule(state, actor, play) or (
-                    play == PERSON and _person_lesson(self.game, c, state, actor) is not None
+                if (
+                    (play == SEX and learned_sex)
+                    or _permanent_rule(state, actor, play)
+                    or (play == PERSON and _person_lesson(self.game, c, state, actor) is not None)
                 ):
                     plays.append(play)
             return dict(
                 actor=actor.model_dump(mode="json"),
                 plays=plays,
+                learned_sex=learned_sex,
                 learned_person=_person_lesson(self.game, c, state, actor) is not None,
                 sheet_revision=state.sheets[actor.entity].revision
                 if actor.kind == "pilot"
@@ -956,7 +1041,11 @@ class MockingbirdService:
     def _tasks(self, c: Connection, viewer: GuildViewer) -> list[dict[str, Any]]:
         state = load_state(c, self.store.campaign_id)
         result = []
+        from girlframe.services.m3_learned_sex import cancelled
+
         for value in state.mockingbird.triggers:
+            if cancelled(self.game, c, state, value.learned_sex_source):
+                continue
             if value.state in ("started", "complete", "declined", "withdrawn"):
                 continue
             try:
@@ -1053,9 +1142,15 @@ class MockingbirdService:
                         table.c.state != "aborted",
                     )
                 )
+                from girlframe.services.m3_learned_sex import cancelled
+                from girlframe.services.m3_learned_sex import prove as prove_sex
+
+                if trigger.learned_sex_source is not None:
+                    prove_sex(self.game, c, state, trigger.learned_sex_source)
                 return dict(
                     id=identity,
                     kind="mockingbird_trigger",
+                    lesson_cancelled=cancelled(self.game, c, state, trigger.learned_sex_source),
                     body=trigger.model_dump(mode="json"),
                     owner=own,
                     action=action,
@@ -1227,7 +1322,18 @@ def _owned_source_rule(
     play: str,
     targets: tuple[ActorRef, ...],
     bonded_source: str | None,
+    *,
+    lesson_id: str | None = None,
 ) -> bool:
+    if lesson_id is not None:
+        from girlframe.services.m3_learned_sex import admit_offer
+
+        return (
+            play == SEX
+            and len(targets) == 1
+            and bonded_source is None
+            and admit_offer(game, c, state, actor, rules.SEX, lesson_id)
+        )
     if bonded_source is None:
         return _permanent_rule(state, actor, play) or (
             play == PERSON and _person_lesson(game, c, state, actor) is not None
@@ -1344,6 +1450,8 @@ def _owned_trigger_rule(
     value: Trigger,
     action: dict[str, Any] | None = None,
 ) -> bool:
+    if value.learned_sex_source is not None:
+        return prove_learned_sex_trigger(game, c, state, value, action)
     if value.learned_source is not None:
         return prove_learned_trigger(game, c, state, value, action)
     if value.play == PERSON:
@@ -1357,3 +1465,45 @@ def _owned_trigger_rule(
         tuple(x.actor for x in value.parties),
         value.bonded_source,
     )
+
+
+def prove_learned_sex_trigger(
+    game: "GameService",
+    c: Connection,
+    state: GameState,
+    trigger: Trigger,
+    action: dict[str, Any] | None = None,
+) -> bool:
+    """Positive actual intimacy source; Person's distinct published lesson stays unchanged."""
+    if trigger.learned_sex_source is None:
+        return False
+    from girlframe.services.m3_learned_sex import admit_source, prove
+
+    if (
+        trigger.play != SEX
+        or len(trigger.parties) != 1
+        or trigger.learned_source is not None
+        or trigger.bonded_source is not None
+        or trigger.changeling_source is not None
+    ):
+        raise WorkflowError("Preserve the exact single original learned intimacy source")
+    admit_source(
+        game,
+        c,
+        state,
+        trigger.actor,
+        trigger.parties[0].actor,
+        rules.SEX,
+        trigger.learned_sex_source,
+    )
+    value = prove(game, c, state, trigger.learned_sex_source)
+    if value.session != trigger.id:
+        raise WorkflowError("Use the exact actual learned trigger")
+    if action is not None and (
+        value.action != action["id"]
+        or action["data"].get("mockingbird", {}).get("learned_sex_source") != value.id
+        or action["data"]["prepared"].get("source_work") != trigger.id
+        or str(action["actor_id"]) != trigger.actor.entity
+    ):
+        raise WorkflowError("Keep the actual original learned intimacy Action")
+    return True

@@ -31,6 +31,7 @@ class Party(Model):
 
 
 class Trigger(Model):
+    learned_sex_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
     learned_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
     bonded_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
     changeling_source: str | None = Field(default=None, exclude_if=lambda value: value is None)

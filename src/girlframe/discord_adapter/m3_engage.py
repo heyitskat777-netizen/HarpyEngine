@@ -47,7 +47,7 @@ async def open_engage(interaction: discord.Interaction, game: GameService, ident
         fields.append(
             Field(
                 "wyvern_vehicle",
-                "Actual empty vehicle to crush (optional)",
+                "Actual regular vehicle to crush (optional)",
                 tuple((x["id"], x["label"]) for x in vehicles),
                 minimum=0,
                 required=False,

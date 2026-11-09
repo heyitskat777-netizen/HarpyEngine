@@ -26,14 +26,22 @@ LABELS = dict(
 
 
 async def open_book(
-    interaction: discord.Interaction, game: GameService, *, actor_ref: ActorRef
+    interaction: discord.Interaction,
+    game: GameService,
+    *,
+    actor_ref: ActorRef,
+    learned_source: str | None = None,
 ) -> None:
     service = MockingbirdService(game)
     if interaction.channel_id is None:
         raise WorkflowError("Use your actual source scene channel")
     channel = interaction.channel_id
     data = await asyncio.to_thread(
-        service.preview, viewer_from_interaction(interaction), channel, actor_ref
+        service.preview,
+        viewer_from_interaction(interaction),
+        channel,
+        actor_ref,
+        learned_source=learned_source,
     )
     if not data["plays"]:
         raise WorkflowError("No actual owned Mockingbird Play has a reviewed source release yet")
@@ -53,6 +61,7 @@ async def open_book(
                     else "Sex Play",
                 )
                 for x in data["plays"]
+                if learned_source is None or x == "mockingbird_sex"
             ),
         ),
         Field(
@@ -60,7 +69,7 @@ async def open_book(
             "Actual conversation or interaction counterparts",
             tuple((x["token"], x["label"]) for x in data["targets"]),
             minimum=1,
-            maximum=max(1, len(data["targets"])),
+            maximum=1 if learned_source is not None else max(1, len(data["targets"])),
         ),
         Field(
             "primary",
@@ -83,6 +92,7 @@ async def open_book(
             values["play"][0],
             tuple(ActorRef.model_validate(targets[x]["ref"]) for x in values["targets"]),
             values["account"],
+            learned_source=learned_source,
             primary=ActorRef.model_validate(targets[values["primary"][0]]["ref"])
             if values.get("primary")
             else None,
@@ -117,6 +127,14 @@ async def open_request(
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     data = await asyncio.to_thread(service.get, viewer, identity)
+    if data.get("lesson_cancelled"):
+        await reply(
+            interaction,
+            "Your actual unrolled source was cancelled. "
+            + data["body"]["account"]
+            + " A fresh invitation needs a new own answer.",
+        )
+        return
     if (
         data["kind"] == "mockingbird_trigger"
         and data["owner"]
@@ -272,8 +290,8 @@ async def open_request(
         await reply(
             interaction,
             (
-                "Actual learned conversation source:\n" + body["account"] + "\n"
-                if body.get("learned_source")
+                "Actual learned source:\n" + body["account"] + "\n"
+                if body.get("learned_source") or body.get("learned_sex_source")
                 else ""
             )
             + "This source already has Play "

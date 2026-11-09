@@ -4111,3 +4111,19 @@ Native Unassuming Doll acquisition is truthful source history without extra
 permanent ownership or automatic spending during an already-native use.
 Delegated recommendation; printed-rule clarity review pending. Preserve original
 costs, choices, native records and once-use history through later adjustments.
+
+
+## P1 Crushing Bulk and regular-vehicle occupants
+
+`wyvern-regular-vehicle-destruction` (PDF76/printed74): the printed maneuver
+destroys a regular vehicle without a vacancy restriction or automatic occupant
+outcome. Admit genuine assessed occupied/unknown objects through the same
+actual Engage cost/receipt/choice/destruction. Preserve every person's current
+conditions and position until a separate genuine source changes them. Current
+regular objects have no named boarding/carrier bindings; map co-location does
+not create them. Rejecting these objects until an extra acknowledgment, or
+automatically killing/evacuating people, are unprinted alternatives. The existing
+Ship destruction ruling uses the same source-limited principle. Keep Sprite,
+real Frame and Ship/Base sources distinct. Delegated recommendation; printed
+clarity review pending. Preserve previous assessments, receipts and people; any
+future real boarding producer must specify its own lifecycle.

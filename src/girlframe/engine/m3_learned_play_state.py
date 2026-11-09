@@ -25,7 +25,12 @@ class LearnedPlayUse(Model):
 class LearnedSexLink(Model):
     id: str
     lesson: str
-    rule_id: Literal["girl.princess.sex-play", "girl.stim-blissed.sex-play"]
+    rule_id: Literal[
+        "girl.princess.sex-play",
+        "girl.stim-blissed.sex-play",
+        "girl.alpha.sex-play",
+        "girl.mockingbird.sex-play",
+    ]
     session: str
     actor: ActorRef
     target: ActorRef
@@ -38,7 +43,7 @@ class LearnedSexLink(Model):
     roll_event: str | None = None
     receipt_sha256: str | None = None
     released_event: str | None = None
-    released_kind: Literal["declined", "owner_cancelled"] | None = None
+    released_kind: Literal["declined", "owner_cancelled", "withdrawn"] | None = None
 
 
 def learned_sex_links(state: "GameState") -> tuple[LearnedSexLink, ...]:

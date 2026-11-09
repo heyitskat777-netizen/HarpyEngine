@@ -2,26 +2,27 @@
 
 Owner authorized continuation2026-11-08. Bot OFF; RULES_SUBSET. Most automated testing deferred to final P1 candidate; only minimum likely-flow smoke during work. No unequal-rule percentages.
 
-Current published source: **a96252c3416cf80f6a9c9997db010b5f1e6e0bca**
-([focused CI42554312918](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42554312918)
-passed; full regression skipped). Learned Show Dog/Psyche, native Doll history
-and SupplyDrop/Sup cap-loss providers are published. Full P1 gates pending.
+Current published source: **5a2577359b0ad11bcbb72cd3dd63baf7ec6a507a**
+([focused CI42557842616](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42557842616)
+passed; full regression skipped). Princess/Stim lesson sources, historical grant
+proof repair and real private patrol-Harpy encounter are published. P1 gates pending.
 
 Active assignments (shared checkout; maximum two implementation workers):
 
 | Workflow | Owner | Dependency | Next action | Evidence |
 |---|---|---|---|---|
-| Learned Princess/Stim Sex pilot | Malleable11 +root shared ports frozen | Actual invitation/consent, real original body/Action/receipt and genuine held consequences | Publish finite two-consumer lesson source and canonical historical grant-contact repair | Princess passed in3/15.08s; Stim expiry1/4.91s after historical-proof fix; no native book/physiology copy |
-| Low Void patrol-Harpy source | AM new4 +root ports frozen | Selected3/column1; actual introduction/Harpy body review, patrol Girl/current scene | Publish canonical extraD6/private observer knowledge with no automatic mood effects | New actual introduction/body review/sighting passed in3/15.08s; existing endings retained |
-| Shared entry and private routing | Root10 | Two source packets above | Integrate /girl lessons/private optional cards, real bind/consume/recovery; exact source Harpy introduction and observer visibility | Shared new-entry/routing source normals and SDK passed; final scoped integration pending |
-| Final human-operated journey | Root authored test | Ordinary source checklist closed | Run genuine mission→Play→discipline→Strain→OffDuty/recovery→next mission on final candidate |Authored NOT RUN; final static/regression/migration/privacy/restore/independent/human gates pending |
+| Learned Alpha/Mockingbird Sex pair | Malleable12 +root7 frozen | Existing finite source helper, real Alpha Session and Mock Trigger/Party evidence | Publish two genuine source adapters and positive consumed-source pure effects; no fake Alpha bound_event or Person metadata reuse | Two real mid native normals passed in3/10.44s failed-only retry; original event/metadata preserved |
+| Occupied regular-vehicle Crushing Bulk | AM4 frozen; root native label/ruling | Existing real assessment/Engage/rule/owned cost/receipt/destruction | Admit assessed occupied/unknown regular objects; preserve people and separate harm rules | Actual native occupied-object normal passed in3/10.44s after genuine staged-proof timing fix |
+| Final human-operated journey | Root authored test | Ordinary source checklist closed | Run mission→Play→discipline→Strain→OffDuty/recovery→next mission on final candidate |Authored NOT RUN; final full/global/migration/privacy/restore/review/human gates pending |
 
-Recent published focused evidence: NPC protection2/8.29s; defensive Risk1/7.81s;
-Call3-effects1/10.33s; reset/Whip/AM/Animal gift1/16.80s; Daily/CONSUME4 normals
-in2passed2failed20.03s then failed-only2passed13.64s. Fixture failures preserved;
-no repeated earlier successes. New Doll history and learned Ankou Feedback
-remain explicit final verification. No automatic Vatgrown old-Frame inheritance
-requirement was found; existing carrier following and Harpy endings stay complete.
+Current packet3 new normals passed in3/10.44s after initial3failed6.26s (root canonical begin event, test opener, genuine staged proof fixes). Next bounded read-only contracts: Oldgen/Newgirl optional-source effects and OffDuty Modular/Risk Sup losses.
+
+Last published packet: Princess +patrol +SDK first3passed1failed15.08s; failed-only
+Stim1passed4.91s after true historical grant proof repair. Earlier successes not
+rerun. Existing Harpy endings and carrier following were reconciled, not rebuilt.
+Doll history, learned Ankou committed Feedback and combined daily mode remain
+explicit final verification. No automatic old-Frame inheritance or unprinted
+regular-vehicle occupant harm is inferred.
 
 | Deliverable | Owner | Dependency | Next concrete action | Completion evidence |
 |---|---|---|---|---|

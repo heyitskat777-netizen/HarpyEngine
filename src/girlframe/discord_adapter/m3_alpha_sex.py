@@ -12,12 +12,17 @@ from girlframe.engine.m2 import ChoiceAnswer
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_alpha_sex import SexService
+from girlframe.services.onboarding import WorkflowError
 
 
-async def open_alpha(interaction: discord.Interaction, service: SexService) -> None:
+async def open_alpha(
+    interaction: discord.Interaction, service: SexService, *, learned_source: str | None = None
+) -> None:
     viewer = viewer_from_interaction(interaction)
     channel = int(interaction.channel_id or 0)
     data = await asyncio.to_thread(service.menu, viewer, channel)
+    if learned_source is not None and learned_source not in {x["id"] for x in data["lessons"]}:
+        raise WorkflowError("Reopen your actual available Alpha lesson")
     options = [("invite", "Confirm a voluntary source interaction")] if data["targets"] else []
     options += [
         ("consent:" + x["id"], "Answer your source invitation")
@@ -99,7 +104,17 @@ async def open_alpha(interaction: discord.Interaction, service: SexService) -> N
                     ),
                 ),
                 Field("account", "Your actual voluntary source interaction", paragraph=True),
-            ]
+            ] + (
+                [
+                    Field(
+                        "lesson",
+                        "One actual learned source",
+                        tuple((x["id"], x["label"]) for x in data["lessons"]),
+                    )
+                ]
+                if data["lessons"]
+                else []
+            )
 
             async def invite(response: discord.Interaction, answer: dict[str, Any]) -> str:
                 target = next(
@@ -115,6 +130,7 @@ async def open_alpha(interaction: discord.Interaction, service: SexService) -> N
                     ActorRef.model_validate(target["ref"]),
                     data["revision"],
                     answer["account"],
+                    learned_source=next(iter(answer.get("lesson", ())), learned_source),
                 )
                 return (
                     "Source invitation saved. The actual counterpart answers in /campaign alpha. "

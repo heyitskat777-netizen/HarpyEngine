@@ -929,7 +929,12 @@ class InboxService:
 
             if str(viewer.user_id) in canon.sheets:
                 actor = lesson_owner(canon, viewer.user_id)
-                for rule in ("girl.princess.sex-play", "girl.stim-blissed.sex-play"):
+                for rule in (
+                    "girl.princess.sex-play",
+                    "girl.stim-blissed.sex-play",
+                    "girl.alpha.sex-play",
+                    "girl.mockingbird.sex-play",
+                ):
                     for lesson in learned_sources(
                         GameService(self.store), connection, canon, actor, rule
                     ):
@@ -941,11 +946,11 @@ class InboxService:
                                 canon.revision,
                                 "playbook",
                                 lesson["label"],
-                                "You and the person you invite",
+                                "You and the other participant",
                                 "available",
                                 False,
                                 False,
-                                "Start an invitation using this one-use lesson.",
+                                "Open the private controls for this one-use lesson.",
                                 "The other person retains their own answer and choices.",
                                 "Start a learned Play",
                                 task="m3_learned_sex",

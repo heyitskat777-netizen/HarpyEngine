@@ -7213,6 +7213,23 @@
       "authority": "delegated_recommendation",
       "clarity_review": true,
       "revision": 1
+    },
+    {
+      "id": "wyvern-regular-vehicle-destruction",
+      "policy_key": "wyvern_regular_vehicle_destruction",
+      "summary": "Crushing Bulk destroys an assessed regular vehicle regardless of occupancy without automatically harming, healing or moving people.",
+      "source": "Rulebook PDF76/printed74 Crushing Bulk; related ship_destruction_no_extra_occupant_harm ruling.",
+      "rationale": "The printed maneuver names a regular vehicle without requiring vacancy or prescribing occupant outcomes. A map cell or occupancy label is not a named boarding/transport source.",
+      "alternatives": [
+        "Reject occupied or unknown vehicles until an unprinted aftermath choice is completed.",
+        "Automatically kill, evacuate, damage or restore people when the object is crushed."
+      ],
+      "implementation_note": "Preserve actual paid rule, piloting/current scene/position, owned selected Asset cost, Engage receipt/answer and canonical destruction proof. Keep original occupancy assessment immutable, record destroyed_event/source_action, and stop offering destroyed objects. Current regular vehicles have no actual body/carrier bindings to clean. Genuine separate physical harm/escape/death sources retain their original triggers/owners; no generic acknowledgment or fake NPC roll. Sprite, real Frames and Ship-Base sources remain distinct.",
+      "change_impact": "Future genuine object destructions only; preserve old receipts, assessments and people/resources/positions. A future real regular-vehicle boarding producer must define its own lifecycle before claiming automatic occupant effects.",
+      "provenance": "owner_approved_campaign_ruling",
+      "authority": "delegated_recommendation",
+      "clarity_review": true,
+      "revision": 1
     }
   ],
   "entries": [
@@ -8898,7 +8915,8 @@
         "tests/rules/test_handler_girl_void_service.py",
         "tests/rules/test_handler_void.py",
         "tests/rules/test_handler_girl_void.py",
-        "tests/rules/test_mockingbird_sex_closure.py"
+        "tests/rules/test_mockingbird_sex_closure.py",
+        "tests/rules/test_vatgrown_plays.py::test_actual_learned_mockingbird_sex_native_withdraw_attest_mid_starry_and_held_source"
       ],
       "m2_play_id": "mockingbird_sex",
       "module": "core"
@@ -9684,7 +9702,8 @@
       "dependencies": [],
       "test_evidence": [
         "tests/rules/test_alpha_sex.py",
-        "tests/rules/test_required_plays.py"
+        "tests/rules/test_required_plays.py",
+        "tests/rules/test_vatgrown_plays.py::test_actual_learned_alpha_sex_native_consent_mid_broken_bond_and_private_once_use"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -11286,7 +11305,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_wyvern.py"
+        "tests/rules/test_wyvern.py",
+        "tests/rules/test_wyvern_combat.py::test_actual_native_occupied_regular_vehicle_crush_preserves_people_and_real_cost"
       ],
       "m2_play_id": null,
       "module": "core",

@@ -1707,3 +1707,46 @@ that unchanged path before checks/staging, no tests had run in that preflight.
 Four minimum checks have passing first-run/failed-only retry evidence; new Stim
 lifetime proof bug fixed. Commands/hash manifest `var/p1-sex-patrol-*`. Final full
 P1/global/migration/privacy/restore/independent/human gates stay pending. Bot OFF.
+
+
+## Learned Alpha/Mockingbird and regular occupied vehicle — active
+
+Base5a2577359b0ad11bcbb72cd3dd63baf7ec6a507a published;
+[focused CI42557842616](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42557842616)
+PASS/full regression skipped. Malleable12 actual source adapters; AM4 minimal
+vehicle target correction; root7 shared dispatch/private native/Inbox/runtime
+and Engage label. Finite source_id dispatch grants no entitlement: real source
+services still prove each body/party/lesson/receipt and effects. Mock Sex uses
+learned_sex_source separately from published Person learned_source; Alpha uses
+its real evidence without inventing bound_event. Vehicle interpretation recorded
+with exact printed source and alternatives; no fake occupant aftermath. New
+normals authored without worker execution, minimum after source freezes.
+
+Current three-node minimum initial **3failed6.26s**; failed-node-only retry
+**3passed10.44s**, `var/p1-sex-pair-vehicle-minimum{,-retry}.txt/xml`. Alpha
+needed root to allocate its genuine canonical begin event for the actual Link
+claim (no fabricated Session.bound_event); Mock fixture imported nonexistent
+open_choice instead of existing open_sex. Vehicle exposed an existing staged
+proof mismatch: real owned choice is already answered/revision+1 before its
+response is persisted. Source guard now proves exact campaign/choice/Action/
+kind/owner, answered state, no persisted response/canonical birth, matching
+current response_event and exact in-flight chosen Asset/vehicle. Later canonical
+birth/SQL proof unchanged. No pending bypass or forged aftermath.
+
+Passed actual Alpha consent/real mid receipt/Broken/Bond; Mock actual withdrawal/
+fresh attestations/mid real Starry/Bond/held private source; occupied regular
+vehicle actual assessment/Engage/owned cost/object destruction with people/
+positions unchanged. Source ID dispatch only selects a finite actual adapter;
+it grants no permission. Four source families keep original defaults/events;
+Mock Person metadata remains separate. Existing other tier/group/decline and
+shared source/rollback tests remain final regression, not inferred from3 normals.
+
+Final scoped packet30 paths/23 Python/21 source: Ruff/format/types/whitespace,
+registry/planning/repository PASS. Registry477/274 subset/203 unimplemented/
+440 required/0 verified; repository1428 publishable files/40 original manifest
+entries/0 findings. Three new normals passed on failed-only retry after two real
+integration/proof fixes and one fixture API fix. No previous successes rerun.
+Commands/hash snapshot `var/p1-sex-pair-vehicle-*`. Source ID helper is a finite
+dispatch extraction for actual consumers, with authorization retained in each
+rule service. No test-speed claim. Full final P1/global/migration/privacy/restore/
+independent/human gates remain pending; bot OFF and no live deployment.

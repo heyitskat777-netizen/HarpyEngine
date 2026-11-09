@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
+import sqlalchemy as sa
 from test_enforcement_initiative import cast_target
 from test_ledger import ADMIN, OTHER, PLAYER
 from test_ledger import ledger as ledger_fixture
@@ -342,3 +343,162 @@ def test_actual_handler_assessed_empty_vehicle_is_crushed_by_real_engage_with_co
     crush = next(x for x in records(canon, battle.WyvernCrush) if x.action == action)
     assert crush.vehicle == vehicle.id and crush.outcome == "crushed" and crush.completed_event
     assert game.inspect(PLAYER, action)["state"] == "complete" and game.dice.calls == 1
+
+
+def test_actual_native_occupied_regular_vehicle_crush_preserves_people_and_real_cost(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred: occupancy does not invent passenger identity or unprinted personal aftermath."""
+    from test_mission_ui import current
+
+    from girlframe.discord_adapter.m3_engage import open_engage
+    from girlframe.discord_adapter.m3_vehicles import open_vehicles
+    from girlframe.services.m3_vehicles import prove, vehicle_options
+
+    game, worker, gateway, source = ready(ledger, tmp_path, monkeypatch)
+    buy(source, rules.CRUSH)
+    service = VehicleService(game)
+    before = state(game)
+    with pytest.raises(WorkflowError):
+        service.assess(
+            OTHER,
+            str(uuid4()),
+            before.revision,
+            900,
+            "A different person's assessment",
+            "No Handler source",
+            (0, 0),
+            "occupied",
+        )
+    assert state(game) == before
+
+    async def assess():
+        opened = current(1, 995000)
+        opened.channel_id = 900
+        await opened.response.defer(ephemeral=True)
+        await open_vehicles(opened, service)
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values.update(
+            name="Actual occupied regular truck",
+            description=(
+                "An actual occupied regular vehicle, not a Vital Frame; no named passenger claim"
+            ),
+            x=("0",),
+            y=("0",),
+            occupancy=("occupied",),
+        )
+        submitted = current(1, 995001)
+        submitted.channel_id = 900
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+
+    asyncio.run(assess())
+    assessed = vehicles.vehicles(state(game))[-1]
+    assert assessed.occupancy == "occupied" and assessed.assessed_by == 1
+    assert state(game).sheets == before.sheets and state(game).placements == before.placements
+    actor, opponent = current_ref(state(game), 2), current_ref(state(game), 3)
+    game.dice.faces = (6, 6)
+    action = game.begin(
+        PLAYER,
+        str(uuid4()),
+        900,
+        state(game).sheets["2"].revision,
+        PlayInput(
+            play="engage",
+            target_actor=opponent,
+            heat=1,
+            piloting=True,
+            trigger_confirmed=True,
+            context="I genuinely engage the actual opponent beside this assessed regular vehicle",
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    receipt = game.inspect(PLAYER, action)["receipt"]
+    assert receipt  # Never conceal a broken real worker flow with a direct roll fallback.
+    pass_tags(game)
+    row = next(x for x in game.choices(PLAYER) if x["kind"] == "engage_maneuvers")
+    detail = game.decision(PLAYER, row["id"])["engage"]
+    assert any(x["id"] == assessed.id for x in detail["wyvern_vehicles"])
+    allowed = {x["id"] for x in detail["assets"]}
+    cost = next(
+        x.id for x in state(game).sheets["2"].assets if x.id in allowed and x.intrinsic is None
+    )
+    rest = [x["id"] for x in detail["assets"] if x["id"] != cost]
+    assert len(rest) >= 2
+    before, calls = state(game), game.dice.calls
+
+    async def crush():
+        opened = current(2, 995010)
+        opened.channel_id = 900
+        await opened.response.defer(ephemeral=True)
+        await open_engage(opened, game, row["id"])
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(current(3, 995011))
+        form.values.update(
+            maneuvers=("crush_small", "cover", "lure"),
+            asset_crush_small=(cost,),
+            asset_cover=(rest[0],),
+            asset_lure=(rest[1],),
+            wyvern_vehicle=(assessed.id,),
+            denied=(cost,),
+            text="I crush the actual truck, cover the approach and lure the actual foe",
+        )
+        submitted = current(2, 995012)
+        submitted.channel_id = 900
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+
+    asyncio.run(crush())
+    final = state(game)
+    vehicle = next(x for x in vehicles.vehicles(final) if x.id == assessed.id)
+    assert (
+        vehicle.destroyed_event
+        and vehicle.source_action == action
+        and vehicle.occupancy == "occupied"
+    )
+    assert final.world == before.world and final.placements == before.placements
+    assert final.neural_connections == before.neural_connections
+    assert set(final.sheets) == set(before.sheets)
+    assert all(final.sheets[uid] == sheet for uid, sheet in before.sheets.items() if uid != "2")
+    own, old = final.sheets["2"], before.sheets["2"]
+    assert (own.heat, own.permissions, own.identities, own.tags) == (
+        old.heat,
+        old.permissions,
+        old.identities,
+        old.tags,
+    )
+    assert own.frame_runtime == old.frame_runtime
+    for asset in old.assets:
+        actual = next(x for x in own.assets if x.id == asset.id)
+        assert actual == (asset.model_copy(update={"damaged": True}) if asset.id == cost else asset)
+    assert game.dice.calls == calls and game.inspect(PLAYER, action)["receipt"] == receipt
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    effect = next(x for x in records(final, battle.WyvernCrush) if x.action == action)
+    assert effect.vehicle == vehicle.id and effect.target is None
+    assert effect.outcome == "crushed" and effect.completed_event and not effect.work
+    with ledger.engine.connect() as c:
+        assert prove(game, c, final, vehicle.id) == vehicle
+        from girlframe.services.m3_dose_up import _cast
+
+        assert vehicle.id not in {
+            x["id"] for x in vehicle_options(game, c, final, _cast(game, c, final, 900), actor)
+        }
+        # The canonical response retains the actual object and owned cost, without a fake passenger.
+        from girlframe.database import tables as t
+
+        response = (
+            c.execute(
+                sa.select(t.m2["m2_responses"]).where(t.m2["m2_responses"].c.choice_id == row["id"])
+            )
+            .mappings()
+            .one()
+        )
+        answer_value = json.loads(response["answer_json"])
+        assert answer_value["fields"]["wyvern_vehicle"] == vehicle.id
+        assert answer_value["fields"]["crush_small"] == cost

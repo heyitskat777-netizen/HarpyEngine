@@ -77,12 +77,26 @@ def _contact(
     *,
     bonded_source: str | None = None,
     changeling_source: str | None = None,
+    learned_source: str | None = None,
+    lesson_id: str | None = None,
+    pending_event: str | None = None,
 ) -> None:
     from girlframe.services.m3_bonded import admit_delegation
     from girlframe.services.m3_changeling_sex import admit_contact
+    from girlframe.services.m3_learned_sex import admit_offer, admit_source
 
-    if changeling_source is not None and bonded_source is not None:
-        raise WorkflowError("Keep actual psychic contact separate from Bonded delegation")
+    if (
+        sum(x is not None for x in (changeling_source, bonded_source, learned_source, lesson_id))
+        > 1
+    ):
+        raise WorkflowError("Keep actual learned, psychic and Bonded sources separate")
+    learned = (
+        admit_source(
+            game, c, state, actor, target, rules.RULE, learned_source, pending_event=pending_event
+        )
+        if learned_source is not None
+        else admit_offer(game, c, state, actor, rules.RULE, lesson_id)
+    )
     remote = admit_contact(game, c, state, actor, target, rules.RULE, changeling_source)
 
     bound = profiles(c, game.store.campaign_id)
@@ -98,7 +112,7 @@ def _contact(
         or target.kind != "pilot"
         or actor == target
         or not (
-            has_rule(state.sheets[actor.entity], rules.RULE, "ALPHA")
+            (learned or has_rule(state.sheets[actor.entity], rules.RULE, "ALPHA"))
             if bonded_source is None
             else admit_delegation(game, c, state, actor, target, rules.RULE, bonded_source)
         )
@@ -134,6 +148,17 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
             game, c, state, value.changeling_source, value.id, value.actor, value.target, rules.RULE
         )
 
+    if value.learned_source is not None:
+        from girlframe.services.m3_learned_sex import prove as prove_lesson
+
+        link = prove_lesson(game, c, state, value.learned_source)
+        if (link.rule_id, link.session, link.actor, link.target) != (
+            rules.RULE,
+            value.id,
+            value.actor,
+            value.target,
+        ):
+            raise WorkflowError("Preserve the exact actual learned Alpha source")
     original = rules.get(_history(game, c, value.proposed_event), identity)
     from girlframe.services.m3_bonded import prove_delegation
 
@@ -152,6 +177,7 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         "proposal",
         "bonded_source",
         "changeling_source",
+        "learned_source",
     )
     audit = c.execute(
         sa.select(t.events.c.kind, t.events.c.actor_id).where(
@@ -254,6 +280,7 @@ def preview(game: GameService, viewer: GuildViewer, channel: int) -> dict[str, A
                     channel,
                     bonded_source=value.bonded_source,
                     changeling_source=value.changeling_source,
+                    learned_source=value.learned_source,
                 )
                 prove(game, c, state, value.id)
                 ready.append(
@@ -301,6 +328,7 @@ def prepare(
         channel,
         bonded_source=value.bonded_source,
         changeling_source=value.changeling_source,
+        learned_source=value.learned_source,
     )
     if fingerprint(_cast(game, c, state, channel)) != fingerprint(value.cast):
         raise WorkflowError(
@@ -322,6 +350,7 @@ def prepare(
             phase="unrolled",
             followups=[],
         )
+        | ({"learned_source": value.learned_source} if value.learned_source is not None else {})
         | ({"bonded_source": value.bonded_source} if value.bonded_source is not None else {})
         | (
             {"changeling_source": value.changeling_source}
@@ -352,6 +381,7 @@ def pre_roll(
         int(action["channel_id"]),
         bonded_source=value.bonded_source,
         changeling_source=value.changeling_source,
+        learned_source=value.learned_source,
     )
     if value.effect_event:
         raise WorkflowError("Resume the actual saved source result; do not reroll")
@@ -966,13 +996,24 @@ class SexService:
             state = load_state(c, self.store.campaign_id)
             cast = _cast(self.game, c, state, channel)
             actor = current_ref(state, viewer.user_id)
+            from girlframe.services.m3_learned_sex import cancelled, lessons
+
+            offered = lessons(self.game, c, state, actor, rules.RULE)
             targets = []
-            if has_rule(state.sheets[actor.entity], rules.RULE, "ALPHA"):
+            if has_rule(state.sheets[actor.entity], rules.RULE, "ALPHA") or offered:
                 for role in cast.roles:
                     if role.actor.kind != "pilot" or role.actor == actor:
                         continue
                     try:
-                        _contact(self.game, c, state, actor, role.actor, channel)
+                        _contact(
+                            self.game,
+                            c,
+                            state,
+                            actor,
+                            role.actor,
+                            channel,
+                            lesson_id=offered[0]["id"] if offered else None,
+                        )
                     except (ValueError, WorkflowError):
                         continue
                     targets.append(
@@ -986,10 +1027,13 @@ class SexService:
             return dict(
                 revision=state.revision,
                 targets=targets,
+                lessons=offered,
                 sessions=[
                     dict(
                         id=x.id,
-                        phase=x.phase,
+                        phase="cancelled"
+                        if cancelled(self.game, c, state, x.learned_source)
+                        else x.phase,
                         actor=x.actor.model_dump(mode="json"),
                         target=x.target.model_dump(mode="json"),
                         caster=x.caster,
@@ -1010,13 +1054,17 @@ class SexService:
                 raise WorkflowError(
                     "Only the actual original participants may read this private source"
                 )
+            from girlframe.services.m3_learned_sex import cancelled
+
+            ended = cancelled(self.game, c, state, value.learned_source)
             return dict(
                 id=value.id,
                 revision=state.revision,
-                phase=value.phase,
+                phase="cancelled" if ended else value.phase,
                 proposal=value.proposal,
                 counterpart=value.counterpart,
-                can_answer=value.phase == "invited"
+                can_answer=not ended
+                and value.phase == "invited"
                 and viewer.user_id == value.counterpart
                 and broken.current(state, value.actor)
                 and broken.current(state, value.target),
@@ -1024,6 +1072,8 @@ class SexService:
 
     def _tasks(self, c: Connection, viewer: GuildViewer) -> list[dict[str, Any]]:
         state = load_state(c, self.store.campaign_id)
+        from girlframe.services.m3_learned_sex import cancelled
+
         return [
             dict(
                 id=x.id,
@@ -1033,7 +1083,8 @@ class SexService:
                 actionable=True,
             )
             for x in rules.sessions(state)
-            if x.phase == "invited"
+            if not cancelled(self.game, c, state, x.learned_source)
+            and x.phase == "invited"
             and x.counterpart == viewer.user_id
             and broken.current(state, x.actor)
             and broken.current(state, x.target)
@@ -1050,6 +1101,7 @@ class SexService:
         *,
         bonded_source: str | None = None,
         changeling_source: str | None = None,
+        learned_source: str | None = None,
     ) -> dict[str, Any]:
         if not account.strip() or len(account) > 1200:
             raise WorkflowError("Describe only your actual voluntary source interaction")
@@ -1067,6 +1119,7 @@ class SexService:
                 channel,
                 bonded_source=bonded_source,
                 changeling_source=changeling_source,
+                lesson_id=learned_source,
             )
             if state.revision != expected or self.game.pending_actions(c):
                 raise WorkflowError(
@@ -1088,6 +1141,13 @@ class SexService:
                 proposed_event=event,
                 proposal=account,
             )
+            if learned_source is not None:
+                from girlframe.services.m3_learned_sex import reserve_invitation
+
+                link = reserve_invitation(self.game, c, state, value, rules.RULE, learned_source)
+                value = value.model_copy(update=dict(learned_source=link))
+            if cast not in state.scene_casts:
+                state.scene_casts.append(cast)
             rules.put(state, value)
             if changeling_source is not None:
                 from girlframe.services.m3_changeling_sex import bind_source
@@ -1126,6 +1186,7 @@ class SexService:
                 expected=expected,
                 account=account,
             )
+            | ({"learned_source": learned_source} if learned_source is not None else {})
             | ({"bonded_source": bonded_source} if bonded_source is not None else {})
             | ({"changeling_source": changeling_source} if changeling_source is not None else {}),
             operation,
@@ -1167,6 +1228,7 @@ class SexService:
                 value.cast.channel,
                 bonded_source=value.bonded_source,
                 changeling_source=value.changeling_source,
+                learned_source=value.learned_source,
             )
             event = str(uuid4())
             rules.put(
@@ -1179,6 +1241,9 @@ class SexService:
                     )
                 ),
             )
+            from girlframe.services.m3_learned_sex import record_consent
+
+            record_consent(self.game, c, state, rules.get(state, identity), accept, event)
             self.game.event(
                 c,
                 viewer.user_id,

@@ -3810,3 +3810,248 @@ def test_actual_learned_stim_sex_new_source_drug_helpless_real_expiry_and_privat
     assert not has_rule(actual.sheets["2"], stim.RULE, "STIM-BLISSED")
     assert not has_rule(actual.sheets["2"], "girl.stim-blissed.dose-up", "STIM-BLISSED")
     assert "PRIVATE_LEARNED_STIM" not in json.dumps(gateway.messages)
+
+
+def test_actual_learned_alpha_sex_native_consent_mid_broken_bond_and_private_once_use(
+    ledger, tmp_path, monkeypatch
+):
+    from girlframe.discord_adapter.m2_ui import open_play
+    from girlframe.discord_adapter.m3_alpha_sex import open_consent
+    from girlframe.engine import m3_alpha as broken
+    from girlframe.engine import m3_alpha_sex as alpha
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+    from girlframe.services.m3_alpha_sex import SexService
+    from girlframe.services.m3_learned_sex import lessons, prove, source_id
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch)
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(rules.EXPERIMENT, rules.INVESTMENT, rules.SEX, rules.BRUTALIZE, alpha.RULE),
+    )
+    lesson = _learn_daily_source(game, worker, gateway, controls, alpha.RULE)
+    learner, target = current_ref(state(game), 2), current_ref(state(game), 3)
+    service = SexService(game)
+    link = _native_learned_sex_invitation(game, lesson, target)
+    assert not game.choices(PLAYER)
+    with pytest.raises(WorkflowError):
+        service.view(ADMIN, link.session)
+    _native_learned_sex_card(
+        game,
+        service,
+        open_consent,
+        link.session,
+        OTHER,
+        accept=("yes",),
+        account="PRIVATE_LEARNED_ALPHA My own actual voluntary confirmation",
+    )
+    before = state(game)
+    heat, calls = before.sheets["2"].heat, game.dice.calls
+    bond = depth(before, learner, target)
+    game.dice.faces = (3, 4)
+
+    async def prepare_native():
+        opened = _learned_sex_interaction()
+        await opened.response.defer(ephemeral=True)
+        await open_play(opened, game)
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert alpha.PLAY in dict(next(x for x in form.fields if x.key == "play").options)
+        form.values.update(
+            play=(alpha.PLAY,),
+            alpha_sex_source=(link.session,),
+            heat=("1",),
+            gain=("0",),
+            pair_share=("0",),
+            piloting=("no",),
+            witnessed=("no",),
+            trigger=("yes",),
+            context="Our actual accepted original physical source",
+            disposable_heat=("0",),
+        )
+        sent = _learned_sex_interaction()
+        await form.confirm.callback(sent)
+        assert form.completed, (
+            sent.response.send_message.call_args_list,
+            sent.edit_original_response.call_args_list,
+        )
+        saved = state(game)
+        await form.confirm.callback(sent)
+        assert state(game) == saved
+
+    asyncio.run(prepare_native())
+    with ledger.engine.connect() as c:
+        action = game.lock(c, 900)["action_id"]
+        actual_action = game.action(c, action)
+        assert source_id(actual_action) == link.id
+        assert actual_action["data"]["alpha_sex"]["learned_source"] == link.id
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    actual = state(game)
+    source = alpha.get(actual, link.session)
+    assert source.phase == "complete" and source.condition
+    assert any(
+        x.id == source.condition and x.source_action == action
+        for x in broken.conditions(actual, target, learner)
+    )
+    assert depth(actual, learner, target) == min(3, bond + 1)
+    assert actual.sheets["2"].heat == heat - 1 and game.dice.calls == calls + 1
+    assert actual.sheets["3"].assets == before.sheets["3"].assets
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    raw = game.inspect(PLAYER, action)["receipt"]
+    with ledger.engine.connect() as c:
+        spent = prove(game, c, actual, link.id)
+        assert spent.action == action and spent.roll_event and spent.receipt_sha256
+        assert not lessons(game, c, actual, learner, alpha.RULE)
+    assert service.track(PLAYER, link.session)["target"] == target.model_dump(mode="json")
+    assert service.view(OTHER, link.session)["proposal"].startswith("PRIVATE_LEARNED_SEX")
+    assert game.inspect(PLAYER, action)["receipt"] == raw
+    assert actual.sheets["2"].girl == "VATGROWN"
+    assert not has_rule(actual.sheets["2"], alpha.RULE, "ALPHA")
+    assert "PRIVATE_LEARNED_ALPHA" not in json.dumps(gateway.messages)
+    tick(worker, gateway, 6)
+
+
+def test_actual_learned_mockingbird_sex_native_withdraw_attest_mid_starry_and_held_source(
+    ledger, tmp_path, monkeypatch
+):
+    from girlframe.discord_adapter.m3_learned_sex import open_learned_sex
+    from girlframe.discord_adapter.m3_mockingbird_plays import open_request
+    from girlframe.discord_adapter.m3_mockingbird_sex import open_sex
+    from girlframe.engine import m3_mockingbird as mockingbird
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+    from girlframe.engine.m3_learned_play_state import learned_sex_links
+    from girlframe.engine.m3_mockingbird_state import SEX
+    from girlframe.services.m3_learned_sex import lessons, prove, source_id
+    from girlframe.services.m3_mockingbird_effects import source_trigger
+    from girlframe.services.m3_mockingbird_plays import MockingbirdService
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, teacher="MOCKINGBIRD")
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(rules.EXPERIMENT, rules.INVESTMENT, rules.SEX, rules.BRUTALIZE, mockingbird.SEX),
+    )
+    lesson = _learn_daily_source(game, worker, gateway, controls, mockingbird.SEX)
+    learner, target = current_ref(state(game), 2), current_ref(state(game), 3)
+    service = MockingbirdService(game)
+
+    def native_invitation():
+        async def invite():
+            opened = _learned_sex_interaction()
+            await opened.response.defer(ephemeral=True)
+            await open_learned_sex(opened, game, identity=lesson.id)
+            form = opened.edit_original_response.call_args.kwargs["view"]
+            assert dict(next(x for x in form.fields if x.key == "play").options) == {
+                SEX: "Sex Play"
+            }
+            assert not await form.interaction_check(_learned_sex_interaction(3))
+            form.values.update(
+                play=(SEX,),
+                targets=(target.token,),
+                account="PRIVATE_LEARNED_MOCK Our own actual voluntary physical source",
+            )
+            sent = _learned_sex_interaction()
+            await form.confirm.callback(sent)
+            assert form.completed, (
+                sent.response.send_message.call_args_list,
+                sent.edit_original_response.call_args_list,
+            )
+            saved = state(game)
+            await form.confirm.callback(sent)
+            assert state(game) == saved
+
+        asyncio.run(invite())
+        return learned_sex_links(state(game))[-1]
+
+    first = native_invitation()
+    with pytest.raises(WorkflowError):
+        service.get(ADMIN, first.session)
+    withdrawn = service.withdraw(PLAYER, str(uuid4()), first.session)
+    assert withdrawn["state"] == "withdrawn"
+    with ledger.engine.connect() as c:
+        assert prove(game, c, state(game), first.id).released_kind == "withdrawn"
+        assert lessons(game, c, state(game), learner, mockingbird.SEX)[0]["id"] == lesson.id
+    link = native_invitation()
+    assert link.id != first.id
+    _native_learned_sex_card(
+        game,
+        service,
+        open_request,
+        link.session,
+        OTHER,
+        party=("0",),
+        accept=("yes",),
+    )
+    trigger = next(x for x in state(game).mockingbird.triggers if x.id == link.session)
+    assert trigger.state == "ready" and trigger.parties[0].event
+    assert trigger.learned_source is None and trigger.learned_sex_source == link.id
+    before = state(game)
+    heat, calls = before.sheets["2"].heat, game.dice.calls
+    bond = depth(before, learner, target)
+    game.dice.faces = (3, 4)
+
+    async def start_native():
+        opened = _learned_sex_interaction()
+        await opened.response.defer(ephemeral=True)
+        await open_request(opened, service, link.session, continue_source=True)
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values.update(heat=("1",), gain=("0",))
+        sent = _learned_sex_interaction()
+        await form.confirm.callback(sent)
+        assert form.completed, (
+            sent.response.send_message.call_args_list,
+            sent.edit_original_response.call_args_list,
+        )
+
+    asyncio.run(start_native())
+    with ledger.engine.connect() as c:
+        action = game.lock(c, 900)["action_id"]
+        actual_action = game.action(c, action)
+        assert source_id(actual_action) == link.id
+        assert "learned_source" not in actual_action["data"]["mockingbird"]
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    raw = game.inspect(PLAYER, action)["receipt"]
+
+    async def choose_starry():
+        row = next(x for x in game.choices(PLAYER) if x["kind"] == "mockingbird_sex_select")
+        opened = _learned_sex_interaction()
+        await opened.response.defer(ephemeral=True)
+        await open_sex(opened, game, row["id"])
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values.update(option=("starry",), capability=("deception",))
+        sent = _learned_sex_interaction()
+        await form.confirm.callback(sent)
+        assert form.completed, (
+            sent.response.send_message.call_args_list,
+            sent.edit_original_response.call_args_list,
+        )
+
+    asyncio.run(choose_starry())
+    actual = state(game)
+    tag = next(x for x in actual.sheets["3"].tags if x.label == "Starry-Eyed")
+    assert tag.giver_actor == learner and tag.giver == 2
+    assert mockingbird.starry_capabilities(actual, learner, target) == ("deception",)
+    assert depth(actual, learner, target) == min(3, bond + 1)
+    assert actual.sheets["2"].heat == heat - 1 and game.dice.calls == calls + 1
+    assert actual.sheets["2"].assets == before.sheets["2"].assets
+    assert actual.sheets["3"].assets == before.sheets["3"].assets
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    assert game.inspect(PLAYER, action)["receipt"] == raw
+    with ledger.engine.connect() as c:
+        used = prove(game, c, actual, link.id)
+        assert used.action == action and used.roll_event and used.receipt_sha256
+        assert not lessons(game, c, actual, learner, mockingbird.SEX)
+        assert source_trigger(game, c, game.action(c, action), actual)[0].kind == "handler"
+    assert service.get(PLAYER, link.session)["body"]["account"].startswith("PRIVATE_LEARNED_MOCK")
+    with pytest.raises(WorkflowError):
+        service.get(ADMIN, link.session)
+    assert actual.sheets["2"].girl == "VATGROWN"
+    assert not has_rule(actual.sheets["2"], mockingbird.SEX, "MOCKINGBIRD")
+    assert not has_rule(actual.sheets["2"], mockingbird.PERSON, "MOCKINGBIRD")
+    assert "PRIVATE_LEARNED_MOCK" not in json.dumps(gateway.messages)
+    tick(worker, gateway, 6)

@@ -2341,7 +2341,7 @@ def register_game(tree: app_commands.CommandTree, guild_id: int, game: GameServi
         except WorkflowError as error:
             await reply(interaction, str(error))
 
-    @girl.command(name="lessons", description="Start a learned Play with a new invitation")
+    @girl.command(name="lessons", description="Choose a learned Sex Play and its private controls")
     async def learned_source_controls(interaction: discord.Interaction) -> None:
         from girlframe.discord_adapter.m3_learned_sex import open_learned_sex
 

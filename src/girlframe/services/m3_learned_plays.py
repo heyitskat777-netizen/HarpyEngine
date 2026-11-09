@@ -45,7 +45,12 @@ CALL = "girl.mockingbird.call-of-the-void"
 SHOW_DOG = "girl.princess.show-dog"
 PSYCHE = "girl.stim-blissed.disposable-psyche"
 DOLL = "girl.vatgrown.unassuming-doll"
-SEX_LESSONS = {"girl.princess.sex-play": "PRINCESS", "girl.stim-blissed.sex-play": "STIM-BLISSED"}
+SEX_LESSONS = {
+    "girl.princess.sex-play": "PRINCESS",
+    "girl.stim-blissed.sex-play": "STIM-BLISSED",
+    "girl.alpha.sex-play": "ALPHA",
+    "girl.mockingbird.sex-play": "MOCKINGBIRD",
+}
 DAILY: dict[
     Literal["girl.princess.show-dog", "girl.stim-blissed.disposable-psyche"], tuple[str, str]
 ] = {

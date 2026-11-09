@@ -35,13 +35,21 @@ The ten exact Sex source IDs are `girl.princess.sex-play`,
 `girl.bonded.sex-play`. Princess and Stim now have source-bound one-use adapters through a finite real
 invitation/consent/Action/receipt helper. Princess refusal/cancel/fresh consent and
 mid effects passed; Stim actual source Drug/effect/two-scene expiry passed after
-repairing canonical historical grant contact. Alpha and Mockingbird are the next
-bounded pair. Remaining specialized/remote providers do not yet implement
+repairing canonical historical grant contact. Alpha and Mockingbird now have the same source-bound lifecycle through their
+real native Session and Trigger/Party evidence; positive consumed-source pure
+Mock effects preserve Person metadata. Their two mid native normals passed
+in failed-only3/10.44s alongside occupied-vehicle destruction. Remaining specialized/remote providers do not yet implement
 all one-use learning for their exact IDs. Transferable ordinary outcomes remain P1
 when their actual conditions hold. Keep real parts, original Pair, AM/no-roll
 treatment, drug, Mentor and body requirements explicit; no blanket later-module
 classification or copied fictional prerequisites. Exceptional retained-book,
 transformed-body and cross-class cases require their own bounded classification.
+
+Oldgen has no blanket starting-Maxim prerequisite: its low rewrite is optional,
+as is mid unmarking; unavailable optional targets do not justify fabricated
+Maxims. Newgirl Sex may create an actual Mentor relationship without a previous
+Mentor. The next bounded adapters must preserve real assignment/discovery
+consequences without copying teacher roles or granting the whole Trainee passive.
 
 Higher Standard, Just The Way Things Are, Trainee/Mentor, Malleable, Barely A Girl/
 Wounded God, Experiment/Prime Investment and Pair/Intimacy are setup, diceless,

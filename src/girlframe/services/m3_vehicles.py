@@ -120,7 +120,6 @@ def vehicle_options(
         if (
             value.scene != cast.id
             or value.destroyed_event
-            or value.occupancy != "empty"
             or cell is not None
             and value.cell != cell
         ):
@@ -158,7 +157,7 @@ def destroy_vehicle(
         or vehicle_id not in {x["id"] for x in vehicle_options(game, c, state, cast, actor)}
     ):
         raise WorkflowError(
-            "Crush only a genuinely present empty regular vehicle through the actual Engage source"
+            "Crush only a genuinely present regular vehicle through the actual Engage source"
         )
     changed = GameState.model_validate_json(state.model_dump_json())
     rules.put(changed, value.model_copy(update=dict(destroyed_event=event, source_action=action)))

@@ -1176,7 +1176,7 @@ def apply_maneuver(
         )
         return ()
     if vehicle is not None and vehicle not in {x["id"] for x in options["vehicles"]}:
-        raise WorkflowError("Choose a real assessed empty regular vehicle in the actual scene")
+        raise WorkflowError("Choose a real assessed regular vehicle in the actual scene")
     if vehicle is None:
         target_gorgon = (
             next((x for x in state.world.gorgons if x.id == target.entity), None)
@@ -1190,7 +1190,7 @@ def apply_maneuver(
             or not target_gorgon.alive
         ):
             raise WorkflowError(
-                "Crush an actual opposing Sprite Gorgon or assessed empty regular vehicle"
+                "Crush an actual opposing Sprite Gorgon or assessed regular vehicle"
             )
         require_targetable(game, c, state, target)
     crush = battle.WyvernCrush(
@@ -1239,15 +1239,40 @@ def _crush_source(
         is not None
     )
     if not birth_saved:
-        pending = next((x for x in game.pending(c, action["id"]) if x["id"] == value.choice), None)
+        choices, responses = t.m2["m2_choices"], t.m2["m2_responses"]
+        staged = (
+            c.execute(
+                sa.select(choices).where(
+                    choices.c.campaign_id == game.store.campaign_id,
+                    choices.c.id == value.choice,
+                )
+            )
+            .mappings()
+            .first()
+        )
+        response_saved = c.scalar(
+            sa.select(responses.c.choice_id).where(
+                responses.c.campaign_id == game.store.campaign_id,
+                responses.c.choice_id == value.choice,
+            )
+        )
+        answer = (
+            action["data"].get("choices", {}).get("engage_maneuvers:" + str(action["actor_id"]), {})
+        )
         if (
-            pending is None
-            or pending["kind"] != "engage_maneuvers"
-            or int(pending["actor_id"]) != int(action["actor_id"])
+            staged is None
+            or staged["action_id"] != action["id"]
+            or staged["state"] != "answered"
+            or staged["kind"] != "engage_maneuvers"
+            or str(staged["actor_id"]) != str(action["actor_id"])
+            or response_saved is not None
             or action["data"].get("response_event") != value.event
+            or "crush_small" not in answer.get("options", [])
+            or answer.get("fields", {}).get("crush_small") != value.asset
+            or answer.get("fields", {}).get("wyvern_vehicle") != value.vehicle
         ):
             raise WorkflowError(
-                "Stage crushing only inside its actual owned pending Engage response"
+                "Stage crushing only inside its actual owned current Engage response"
             )
         require_rule(game, c, state, value.actor, rules.CRUSH)
         _live_frame(game, c, state, value.actor, value.frame)

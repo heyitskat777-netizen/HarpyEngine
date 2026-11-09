@@ -162,6 +162,42 @@ def exposure(
     return state
 
 
+def _owns_source(state: GameState, actor: ActorRef, action: str) -> bool:
+    """Pure effect admission; the service proves canonical source/receipt first."""
+    if owns(state, actor, SEX):
+        return True
+    from girlframe.engine.m3_learned_play_state import learned_sex_links
+
+    trigger = next((x for x in state.mockingbird.triggers if x.action == action), None)
+    if (
+        trigger is None
+        or trigger.play != "mockingbird_sex"
+        or trigger.actor != actor
+        or trigger.learned_sex_source is None
+        or trigger.learned_source is not None
+        or trigger.bonded_source is not None
+        or trigger.changeling_source is not None
+        or len(trigger.parties) != 1
+        or trigger.parties[0].decision != "accepted"
+    ):
+        return False
+    return any(
+        x.id == trigger.learned_sex_source
+        and x.rule_id == SEX
+        and x.session == trigger.id
+        and x.actor == actor
+        and x.target == trigger.parties[0].actor
+        and x.action == action
+        and x.accepted is True
+        and x.bound_event is not None
+        and x.roll_event is not None
+        and x.receipt_sha256 is not None
+        and len(x.receipt_sha256) == 64
+        and x.released_event is None
+        for x in learned_sex_links(state)
+    )
+
+
 def infect(
     original: GameState,
     bindings: tuple[ProfileBinding, ...],
@@ -175,7 +211,7 @@ def infect(
     storage: GainSource | None = None,
     growth: Growth | None = None,
 ) -> tuple[GameState, tuple[Followup, ...]]:
-    if not owns(original, actor, SEX):
+    if not _owns_source(original, actor, action):
         raise ValueError("Use this actual original person's owned Sex Play")
     view = resolve(original, target, bindings, require_current_profile=False)
     if target.kind == "pilot":
@@ -225,7 +261,7 @@ def starry(
 ) -> GameState:
     from girlframe.engine.m3_mockingbird_state import CAPABILITIES
 
-    if not owns(original, actor, SEX) or capability not in CAPABILITIES:
+    if not _owns_source(original, actor, action) or capability not in CAPABILITIES:
         raise ValueError("Choose one actual conversation capability from the owned printed rule")
     identity = "starry:" + action
     state = give_tag(original, bindings, target, actor, "Starry-Eyed", identity, event, observers)
@@ -249,7 +285,7 @@ def starry(
 def helpless(
     original: GameState, actor: ActorRef, target: ActorRef, action: str, event: str
 ) -> GameState:
-    if not owns(original, actor, SEX):
+    if not _owns_source(original, actor, action):
         raise ValueError("Only the actual acting original person suffers this source result")
     return exposure(
         make_helpless(original, actor, target, event), actor, target, "low_tag", action, event
@@ -304,7 +340,7 @@ def write_self_asset(
     """The explicit self option writes one new Girl Asset, with actual acquisition caps."""
     from girlframe.engine.m3_core import install
 
-    if not owns(original, actor, SEX) or not name.strip() or len(name) > 120:
+    if not _owns_source(original, actor, action) or not name.strip() or len(name) > 120:
         raise ValueError("Name the one actual self-written Void Asset")
     if not description.strip() or len(description) > 1200 or not event:
         raise ValueError("Describe the actual Void taken into yourself")

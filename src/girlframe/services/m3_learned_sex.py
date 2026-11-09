@@ -1,4 +1,4 @@
-"""Two genuine learned Sex providers, with separate invitation and actual Action ownership."""
+"""Finite genuine learned Sex providers, with separate invitation and actual Action ownership."""
 
 import json
 from typing import TYPE_CHECKING, Any
@@ -29,6 +29,8 @@ if TYPE_CHECKING:
 SOURCES = {
     "girl.princess.sex-play": ("princess_sex", "PRINCESS", "m3.princess_sex"),
     "girl.stim-blissed.sex-play": ("stim_sex", "STIM-BLISSED", "m3.stim_sex"),
+    "girl.alpha.sex-play": ("alpha_sex", "ALPHA", "m3.alpha_sex"),
+    "girl.mockingbird.sex-play": ("mockingbird_sex", "MOCKINGBIRD", "m3.mockingbird_trigger"),
 }
 
 
@@ -44,6 +46,14 @@ def _session(state: GameState, value: LearnedSexLink) -> Any:
         from girlframe.engine.m3_princess_sex import get as princess_get
 
         return princess_get(state, value.session)
+    if value.rule_id == "girl.alpha.sex-play":
+        from girlframe.engine.m3_alpha_sex import get as alpha_get
+
+        return alpha_get(state, value.session)
+    if value.rule_id == "girl.mockingbird.sex-play":
+        from girlframe.services.m3_mockingbird_plays import _trigger
+
+        return _trigger(state, value.session)
     from girlframe.engine.m3_stim_sex import get as stim_get
 
     return stim_get(state, value.session)
@@ -145,10 +155,34 @@ def reserve_invitation(
     return value.id
 
 
+def reserve_trigger_invitation(
+    game: "GameService", c: Connection, state: GameState, trigger: Any, lesson: str
+) -> str:
+    rule = "girl.mockingbird.sex-play"
+    if (
+        trigger.play != "mockingbird_sex"
+        or len(trigger.parties) != 1
+        or not admit_offer(game, c, state, trigger.actor, rule, lesson)
+    ):
+        raise WorkflowError("Select your actual free lesson and one real intimacy counterpart")
+    value = LearnedSexLink(
+        id="learned-sex:" + trigger.id,
+        lesson=lesson,
+        rule_id="girl.mockingbird.sex-play",
+        session=trigger.id,
+        actor=trigger.actor,
+        target=trigger.parties[0].actor,
+        cast_sha256=trigger.cast_sha256,
+        proposed_event=trigger.source_event,
+    )
+    put_learned_sex_link(state, value)
+    return value.id
+
+
 def prove(game: "GameService", c: Connection, state: GameState, identity: str) -> LearnedSexLink:
     value = get(state, identity)
     if value.rule_id not in SOURCES:
-        raise WorkflowError("Use one of the two genuine learned Sex providers")
+        raise WorkflowError("Use one of the genuine learned Sex providers")
     _, _, prefix = SOURCES[value.rule_id]
     proposed = _history(c, game, value.proposed_event)
     born = get(proposed, identity)
@@ -164,6 +198,33 @@ def prove(game: "GameService", c: Connection, state: GameState, identity: str) -
         "proposed_event",
     )
     grant = _grant(game, c, proposed, value)
+    mockingbird = value.rule_id == "girl.mockingbird.sex-play"
+    original_invitation = (
+        first.state == "proposed"
+        and first.action is None
+        and first.play == "mockingbird_sex"
+        and len(first.parties) == 1
+        and first.parties[0].actor == value.target
+        and first.parties[0].decision == "pending"
+        and first.parties[0].event is None
+        and first.actor == value.actor
+        and first.source_event == value.proposed_event
+        and first.cast_sha256 == value.cast_sha256
+        and first.learned_sex_source == value.id
+        and first.learned_source is None
+        and any(
+            x.id == first.scene and x.open and fingerprint(x) == value.cast_sha256
+            for x in proposed.scene_casts
+        )
+        if mockingbird
+        else first.phase == "invited"
+        and first.consent_event is None
+        and first.learned_source == value.id
+        and first.actor == value.actor
+        and first.target == value.target
+        and first.proposed_event == value.proposed_event
+        and fingerprint(first.cast) == value.cast_sha256
+    )
     if (
         any(getattr(value, k) != getattr(born, k) for k in stable)
         or any(
@@ -179,17 +240,11 @@ def prove(game: "GameService", c: Connection, state: GameState, identity: str) -
                 "released_kind",
             )
         )
-        or first.phase != "invited"
-        or first.consent_event is not None
+        or not original_invitation
         or (value.consent_event is None) != (value.accepted is None)
         or (value.action is None) != (value.bound_event is None)
         or (value.roll_event is None) != (value.receipt_sha256 is None)
         or (value.released_event is None) != (value.released_kind is None)
-        or first.learned_source != value.id
-        or first.actor != value.actor
-        or first.target != value.target
-        or first.proposed_event != value.proposed_event
-        or fingerprint(first.cast) != value.cast_sha256
         or first.bonded_source is not None
         or first.changeling_source is not None
         or grant.claimed_action is not None
@@ -219,18 +274,69 @@ def prove(game: "GameService", c: Connection, state: GameState, identity: str) -
             raise WorkflowError("Prove the actual original human's canonical learned source event")
         return _history(c, game, event)
 
-    audit(value.proposed_event, (prefix + "_invited",), value.actor.entity, session=value.session)
+    payload = {"trigger" if mockingbird else "session": value.session}
+    audit(
+        value.proposed_event,
+        (prefix if mockingbird else prefix + "_invited",),
+        value.actor.entity,
+        **payload,
+    )
+    if mockingbird:
+        current = _session(state, value)
+        if any(
+            getattr(first, key) != getattr(current, key)
+            for key in (
+                "id",
+                "play",
+                "actor",
+                "scene",
+                "channel",
+                "cast_sha256",
+                "source_event",
+                "account",
+                "learned_source",
+                "learned_sex_source",
+                "bonded_source",
+                "changeling_source",
+            )
+        ) or [(x.actor, x.controller) for x in first.parties] != [
+            (x.actor, x.controller) for x in current.parties
+        ]:
+            raise WorkflowError(
+                "Preserve the original learned trigger and actual party controllers"
+            )
     if value.consent_event is not None:
         consent = audit(
-            value.consent_event, (prefix + "_consent",), value.target.entity, session=value.session
+            value.consent_event,
+            ("m3.mockingbird_trigger_attested" if mockingbird else prefix + "_consent",),
+            str(first.parties[0].controller) if mockingbird else value.target.entity,
+            **(
+                dict(
+                    trigger=value.session,
+                    party=value.target.model_dump(mode="json"),
+                    accept=value.accepted,
+                )
+                if mockingbird
+                else payload
+            ),
         )
         saved = get(consent, identity)
         actual = _session(consent, value)
         if (
             saved.consent_event != value.consent_event
             or saved.accepted != value.accepted
-            or actual.consent_event != value.consent_event
-            or actual.phase != ("accepted" if value.accepted else "declined")
+            or (
+                (
+                    actual.parties[0].event != value.consent_event
+                    or actual.parties[0].decision != ("accepted" if value.accepted else "declined")
+                    or actual.state != ("ready" if value.accepted else "declined")
+                )
+                if mockingbird
+                else (
+                    actual.consent_event != value.consent_event
+                    or actual.phase != ("accepted" if value.accepted else "declined")
+                )
+            )
         ):
             raise WorkflowError("Keep the actual counterpart's own confirmation or refusal")
     if value.action is not None:
@@ -249,7 +355,13 @@ def prove(game: "GameService", c: Connection, state: GameState, identity: str) -
             original.action != value.action
             or original.bound_event != value.bound_event
             or session.action != value.action
-            or session.bound_event != value.bound_event
+            or (
+                session.state != "ready"
+                if mockingbird
+                else session.phase != "active"
+                if value.rule_id == "girl.alpha.sex-play"
+                else session.bound_event != value.bound_event
+            )
             or claimed.claimed_action != value.action
             or claimed.rolled_event is not None
         ):
@@ -278,6 +390,20 @@ def prove(game: "GameService", c: Connection, state: GameState, identity: str) -
                 or value.action is not None
             ):
                 raise WorkflowError("A source refusal is the actual counterpart's answer")
+        elif value.released_kind == "withdrawn":
+            if not mockingbird or value.action is not None or value.roll_event is not None:
+                raise WorkflowError("Withdraw only the actual unbound learned trigger")
+            withdrawn = audit(
+                value.released_event,
+                ("m3.mockingbird_trigger_withdrawn",),
+                value.actor.entity,
+                trigger=value.session,
+            )
+            if (
+                get(withdrawn, identity).released_event != value.released_event
+                or _session(withdrawn, value).state != "withdrawn"
+            ):
+                raise WorkflowError("Recover the actual original owner's source withdrawal")
         elif value.released_kind == "owner_cancelled":
             if value.action is None or value.roll_event is not None:
                 raise WorkflowError("Cancel only the genuine unrolled original source")
@@ -358,15 +484,70 @@ def record_consent(
     )
 
 
-def _action_link(state: GameState, action: dict[str, Any]) -> LearnedSexLink | None:
+def record_trigger_consent(
+    game: "GameService", c: Connection, state: GameState, trigger: Any, accepted: bool, event: str
+) -> None:
+    if trigger.learned_sex_source is None:
+        return
+    value = prove(game, c, state, trigger.learned_sex_source)
+    if (
+        value.consent_event is not None
+        or value.released_event is not None
+        or len(trigger.parties) != 1
+        or trigger.parties[0].actor != value.target
+        or trigger.parties[0].event != event
+        or trigger.parties[0].decision != ("accepted" if accepted else "declined")
+    ):
+        raise WorkflowError("Preserve the actual original party's voluntary source response")
+    put_learned_sex_link(
+        state,
+        value.model_copy(
+            update=dict(
+                consent_event=event,
+                accepted=accepted,
+                **(dict(released_event=event, released_kind="declined") if not accepted else {}),
+            )
+        ),
+    )
+
+
+def withdraw_invitation(
+    game: "GameService", c: Connection, state: GameState, trigger: Any, event: str
+) -> None:
+    if trigger.learned_sex_source is None:
+        return
+    value = prove(game, c, state, trigger.learned_sex_source)
+    if value.action is not None or value.roll_event is not None or value.released_event:
+        raise WorkflowError("Withdraw only your actual unbound source reservation")
+    put_learned_sex_link(
+        state,
+        value.model_copy(
+            update=dict(
+                released_event=event,
+                released_kind="withdrawn",
+            )
+        ),
+    )
+
+
+def source_id(action: dict[str, Any]) -> str | None:
+    """Finite metadata dispatch only: this makes no eligibility/authority claim."""
+    data = action["data"]
     values = [
-        get(state, meta["learned_source"])
-        for key in ("princess_sex", "stim_sex")
-        if (meta := action["data"].get(key)) and meta.get("learned_source")
+        meta["learned_source"]
+        for key in ("princess_sex", "stim_sex", "alpha_sex")
+        if (meta := data.get(key)) and meta.get("learned_source")
     ]
+    if data.get("mockingbird", {}).get("learned_sex_source"):
+        values.append(data["mockingbird"]["learned_sex_source"])
     if len(values) > 1:
         raise WorkflowError("One genuine Action has one learned intimacy source")
     return values[0] if values else None
+
+
+def _action_link(state: GameState, action: dict[str, Any]) -> LearnedSexLink | None:
+    identity = source_id(action)
+    return get(state, identity) if identity is not None else None
 
 
 def bind_action(
@@ -383,7 +564,13 @@ def bind_action(
         or value.action is not None
         or value.released_event is not None
         or session.action != action["id"]
-        or session.bound_event != event
+        or (
+            session.state != "ready"
+            if value.rule_id == "girl.mockingbird.sex-play"
+            else session.phase != "active"
+            if value.rule_id == "girl.alpha.sex-play"
+            else session.bound_event != event
+        )
         or str(action["actor_id"]) != value.actor.entity
         or grant.claimed_action is not None
         or grant.rolled_event is not None
