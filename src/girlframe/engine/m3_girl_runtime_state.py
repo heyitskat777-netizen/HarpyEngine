@@ -84,6 +84,7 @@ def has_rule(sheet: object, identity: str, native_playbook: str) -> bool:
         and identity != "girl.oldgen.sex-play"
         and identity != "girl.newgirl.sex-play"
         and identity != "girl.vatgrown.sex-play"
+        and identity != "girl.am.sex-play"
         for x in runtime.learned_plays
     ):
         active = True

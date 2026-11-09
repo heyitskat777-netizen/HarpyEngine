@@ -50,12 +50,17 @@ as is mid unmarking; unavailable optional targets do not justify fabricated
 Maxims. Newgirl Sex may create an actual Mentor relationship without a previous
 Mentor. Both source-bound adapters are now implemented: actual Oldgen low/no-Maxim optional
 decline and Newgirl mid/no-respect real created Mentor normals passed. No teacher
-roles or whole Trainee passive are copied. Remaining exact Sex providers are
-Casualty, Vatgrown, AM and Bonded, plus actual Mockingbird/Newgirl group Links.
+roles or whole Trainee passive are copied.
 Vatgrown native acquisition history and genuine nonnative one-use consumer are
 implemented; native history passed first and real Defeat/Alpha transition plus
 nonnative mid/private once-use passed failed-only2/19.32s.
-AM requires its actual no-roll performance/gift use event, never a fake receipt.
+AM now has its actual no-roll performance/gift use event: native earned lesson,
+separate original consent/performances, no-refund use, mandatory Animal gift and
+private readback/pause passed failed-only3/19.53s. No extra Action/receipt/Heat,
+rolled_event or Just Code. Rolled-counterpart consumer is implemented but runtime
+verification remains deferred. Remaining exact Sex providers are Casualty and
+Bonded plus Mockingbird/Newgirl group Links. Native AM+AM entry is being reconciled
+separately; borrowed-source success does not prove that ordinary native entry.
 
 Higher Standard, Just The Way Things Are, Trainee/Mentor, Malleable, Barely A Girl/
 Wounded God, Experiment/Prime Investment and Pair/Intimacy are setup, diceless,

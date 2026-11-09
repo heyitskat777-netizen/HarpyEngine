@@ -20,6 +20,8 @@ class LearnedPlayUse(Model):
     event: str = Field(min_length=1)
     claimed_action: str | None = None
     rolled_event: str | None = None
+    claimed_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    used_event: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class LearnedSexLink(Model):

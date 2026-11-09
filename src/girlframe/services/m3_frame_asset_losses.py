@@ -23,6 +23,7 @@ from girlframe.services.onboarding import WorkflowError
 
 if TYPE_CHECKING:
     from girlframe.engine.m3_modular import Replacement as ModularReplacement
+    from girlframe.engine.m3_sup import Grown as SupGrowth
 
 
 class FrameAssetLoss(Model):
@@ -40,6 +41,9 @@ class FrameAssetLoss(Model):
         "modular_quote",
         "modular_doctor",
         "modular_supply",
+        "sup_sex_cap",
+        "sup_dormant_cap",
+        "sup_cleanup_cap",
     ]
     id: str
     actor: ActorRef
@@ -1022,6 +1026,7 @@ def sup_risk_losses(
     from girlframe.engine import m3_sup as sup
     from girlframe.services.m3_actors import profiles
     from girlframe.services.m3_dose_up import _roll_source
+    from girlframe.services.m3_learned_plays import prove_risk_lesson
     from girlframe.services.m3_sup import prove_growth
 
     result = []
@@ -1043,12 +1048,19 @@ def sup_risk_losses(
         if not meta or (meta.get("payment") or {}).get("event") != grown.event:
             continue  # Other actual Sup source families need their own positive adapters.
         payment = risk.RiskPayment.model_validate(meta["payment"])
-        if payment.learned_source is not None:
-            continue
         before, born = snapshots(game, c, grown.event)
         if not _surviving_frame(state, before, born, actor):
             continue
         _roll_source(game, c, action)
+        lesson = prove_risk_lesson(game, c, born, action) if payment.learned_source else None
+        if payment.learned_source is not None and (
+            lesson is None
+            or lesson.id != payment.learned_source
+            or lesson.actor != actor
+            or lesson.asset != grown.asset
+            or lesson.event != grown.event
+        ):
+            raise WorkflowError("Recover this exact genuine consumed Risk lesson and Sup payment")
         bound = action["data"].get("character_ids") or game.legacy_action_bindings(c, action)
         answer = _response(
             game,
@@ -1074,6 +1086,7 @@ def sup_risk_losses(
             or bound.get(actor.entity) != actor.incarnation
             or meta.get("actor") != actor.model_dump(mode="json")
             or not risk.owns(before, actor, risk.RISK)
+            and lesson is None
             or payment.actor != actor
             or payment.action != action["id"]
             or payment.asset != grown.asset
@@ -1102,25 +1115,42 @@ def sup_risk_losses(
                 "The actual Risk Sup cap exchange must remove its original component"
             )
         try:
-            expected, _, exact_payment = risk.risk(
-                before,
-                profiles(c, game.store.campaign_id),
-                actor,
-                action["id"],
-                grown.event,
-                "",
-                grown.description,
-                payment.total_before,
-                payment.total_after,
-                piloting=bool(action["data"].get("prepared", {}).get("piloting")),
-                growth=grown.choice,
-            )
+            exact_payment = None
+            if lesson is None:
+                expected, _, exact_payment = risk.risk(
+                    before,
+                    profiles(c, game.store.campaign_id),
+                    actor,
+                    action["id"],
+                    grown.event,
+                    "",
+                    grown.description,
+                    payment.total_before,
+                    payment.total_after,
+                    piloting=bool(action["data"].get("prepared", {}).get("piloting")),
+                    growth=grown.choice,
+                )
+            else:
+                # The consumed lesson/payment is proved above, never staged or acquired again.
+                expected, _, replayed = sup.grow(
+                    before,
+                    actor,
+                    grown.choice,
+                    grown.description,
+                    action["id"],
+                    grown.event,
+                    piloting=bool(action["data"].get("prepared", {}).get("piloting")),
+                    step=grown.step,
+                )
+                if replayed != grown:
+                    raise ValueError("Preserve the actual lesson's exact paid Sup growth")
         except ValueError as error:
             raise WorkflowError(
                 "Recover the actual legal Risk Sup exchange: " + str(error)
             ) from None
         if (
-            exact_payment != payment
+            lesson is None
+            and exact_payment != payment
             or grown not in sup.growths(expected)
             or expected.sheets[actor.entity].assets != born.sheets[actor.entity].assets
         ):
@@ -1496,4 +1526,370 @@ def modular_supply_losses(
                 game, c, before, born, repaired, actor, source, event, "modular_supply"
             )
         )
+    return tuple(result)
+
+
+def _sup_source_loss(
+    game: GameService,
+    c: Connection,
+    before: GameState,
+    born: GameState,
+    replayed: GameState,
+    grown: "SupGrowth",
+    kind: Literal["sup_sex_cap", "sup_dormant_cap", "sup_cleanup_cap"],
+) -> FrameAssetLoss | None:
+    """After positive gain-source proof, require the exact paid same-Frame cap exchange."""
+    from girlframe.engine.m3_sup import growths
+    from girlframe.services.m3_sup import prove_growth
+
+    actor = grown.actor
+    old = next(
+        (x for x in before.sheets[actor.entity].assets if x.id == grown.choice.replace), None
+    )
+    new = next((x for x in born.sheets[actor.entity].assets if x.id == grown.asset), None)
+    if (
+        old is None
+        or new is None
+        or grown.choice.family != "frame"
+        or grown.frame != consume.frame(born, actor)
+        or grown not in growths(born)
+        or grown in growths(before)
+        or prove_growth(game, c, born, actor, grown.event) != grown
+        or grown not in growths(replayed)
+        or any(x.id == old.id for x in born.sheets[actor.entity].assets)
+        or any(x.id == new.id for x in before.sheets[actor.entity].assets)
+        or replayed.sheets[actor.entity].assets != born.sheets[actor.entity].assets
+    ):
+        raise WorkflowError("Recover the exact original paid source-specific Sup cap exchange")
+    if not _eligible(before, actor, old):
+        return None
+    return FrameAssetLoss(
+        source_kind=kind,
+        id=grown.asset,
+        actor=actor,
+        frame=grown.frame,
+        event=grown.event,
+        asset=old,
+    )
+
+
+def sup_sex_losses(
+    game: GameService, c: Connection, state: GameState, actor: ActorRef
+) -> tuple[FrameAssetLoss, ...]:
+    from girlframe.engine import m3_mockingbird_sex as sex
+    from girlframe.engine import m3_sup as sup
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_dose_up import _roll_source
+    from girlframe.services.m3_mockingbird_effects import source_trigger
+    from girlframe.services.m3_mockingbird_sex import _transfer_source
+
+    result = []
+    actions = t.m2["m2_actions"]
+    for grown in sup.growths(state):
+        if grown.actor != actor or grown.choice.family != "frame" or not grown.choice.replace:
+            continue
+        if (
+            c.scalar(
+                sa.select(actions.c.id).where(
+                    actions.c.campaign_id == game.store.campaign_id, actions.c.id == grown.action
+                )
+            )
+            is None
+        ):
+            continue
+        action = game.action(c, grown.action)
+        if action["data"].get("play") != "mockingbird_sex":
+            continue
+        before, born = snapshots(game, c, grown.event)
+        if not _surviving_frame(state, before, born, actor):
+            continue
+        meta = action["data"]["mockingbird"]
+        records = [x for x in meta.get("sex_effects", ()) if x["event"] == grown.event]
+        if len(records) != 1:
+            raise WorkflowError("Recover this exact original Sex growth effect")
+        record = records[0]
+        _roll_source(game, c, action)
+        source_trigger(game, c, action, born)
+        caster = ActorRef.model_validate(meta["actor"])
+        answer = _response(
+            game,
+            c,
+            action["id"],
+            record["choice"],
+            grown.event,
+            "mockingbird_sex_rewrite",
+            int(actor.entity),
+        )
+        fact = dict(
+            kind="mockingbird_sex_effect",
+            id=record["id"],
+            action=action["id"],
+            event=grown.event,
+            body=json.dumps(record, sort_keys=True),
+        )
+        infection, transfer = record["details"]["infection"], record["details"].get("transfer")
+        if (
+            record["effect"] not in ("high_infect", "collect_redirect")
+            or record["choice_kind"] != "mockingbird_sex_rewrite"
+            or record["effect_controller"] != int(actor.entity)
+            or infection["target"] != actor.model_dump(mode="json")
+            or actor.model_dump(mode="json") not in record["affected"]
+            or fact not in born.facts
+            or fact in before.facts
+            or record["before"][actor.token]
+            != [x.model_dump_json() for x in sex.assets(before, actor)]
+            or record["after"][actor.token]
+            != [x.model_dump_json() for x in sex.assets(born, actor)]
+            or answer.text != grown.description
+            or answer.options
+            or answer.denied
+            or answer.flag is not None
+            or answer.member is not None
+            or answer.number is not None
+            or answer.fields
+            != dict(
+                sup_name=grown.choice.name, sup_family="frame", sup_replace=grown.choice.replace
+            )
+            or (record["effect"] == "high_infect") != (action["data"]["result"]["tier"] == "high")
+            or (record["effect"] == "collect_redirect") != bool(transfer)
+        ):
+            raise WorkflowError("Prove the original counterpart-owned Sex rewrite and real growth")
+        replayed = GameState.model_validate_json(before.model_dump_json())
+        copied_action = dict(
+            action,
+            data=action["data"]
+            | {"response_event": grown.event, "mockingbird": meta | {"sex_transfer": transfer}},
+        )
+        if transfer:
+            source_owner = ActorRef.model_validate(meta["parties"][0]["actor"])
+            restore = _response(
+                game,
+                c,
+                action["id"],
+                transfer["restore_choice"],
+                transfer["restore_event"],
+                "mockingbird_sex_restore",
+                int(source_owner.entity),
+            )
+            selection_event = c.scalar(
+                sa.select(t.m2["m2_responses"].c.event_id).where(
+                    t.m2["m2_responses"].c.campaign_id == game.store.campaign_id,
+                    t.m2["m2_responses"].c.choice_id == transfer["caster_choice"],
+                )
+            )
+            if selection_event is None:
+                raise WorkflowError("Recover the actual original Sex transfer selection")
+            selected = _response(
+                game,
+                c,
+                action["id"],
+                transfer["caster_choice"],
+                selection_event,
+                "mockingbird_sex_redirect",
+                int(caster.entity),
+            )
+            if restore.text != transfer["restore"] or selected.fields != dict(
+                source_asset=transfer["source_asset"],
+                destination=actor.token,
+                destination_asset=infection["asset"] or "",
+            ):
+                raise WorkflowError("Preserve the real source-owned transfer and restoration")
+            replayed, source_owner = _transfer_source(game, c, replayed, copied_action)
+        elif infection["caster_choice"] is not None:
+            selected_event = c.scalar(
+                sa.select(t.m2["m2_responses"].c.event_id).where(
+                    t.m2["m2_responses"].c.campaign_id == game.store.campaign_id,
+                    t.m2["m2_responses"].c.choice_id == infection["caster_choice"],
+                )
+            )
+            if selected_event is None:
+                raise WorkflowError("Recover the actual caster's infection choice")
+            selected = _response(
+                game,
+                c,
+                action["id"],
+                infection["caster_choice"],
+                selected_event,
+                "mockingbird_sex_infect",
+                int(caster.entity),
+            )
+            if selected.fields != dict(asset=infection["asset"]):
+                raise WorkflowError("Preserve the actual selected infection destination")
+        elif infection["asset"] is not None or any(not x.void for x in sex.assets(before, actor)):
+            raise WorkflowError("Prove the genuine already-Void counterpart's growth option")
+        try:
+            replayed, _ = sex.infect(
+                replayed,
+                profiles(c, game.store.campaign_id),
+                caster,
+                actor,
+                "",
+                grown.description,
+                grown.action,
+                grown.event,
+                growth=grown.choice,
+            )
+        except ValueError as error:
+            raise WorkflowError("Recover the actual Sex Sup exchange: " + str(error)) from None
+        loss = _sup_source_loss(game, c, before, born, replayed, grown, "sup_sex_cap")
+        if loss is not None:
+            result.append(loss)
+    return tuple(result)
+
+
+def sup_dormant_losses(
+    game: GameService, c: Connection, state: GameState, actor: ActorRef
+) -> tuple[FrameAssetLoss, ...]:
+    from girlframe.engine import m3_battle_dormant as dormant
+    from girlframe.engine import m3_sup as sup
+    from girlframe.engine.m3_actors import resolve
+    from girlframe.engine.m3_battle_state import Required
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_battle_dormant import DormantService
+    from girlframe.services.m3_dose_up import _roll_source
+
+    result = []
+    work = t.m3["m3_required_work"]
+    for grown in sup.growths(state):
+        if grown.actor != actor or grown.choice.family != "frame" or not grown.choice.replace:
+            continue
+        if (
+            c.scalar(
+                sa.select(work.c.id).where(
+                    work.c.campaign_id == game.store.campaign_id,
+                    work.c.id == grown.action,
+                    work.c.kind == "dormant_void",
+                )
+            )
+            is None
+        ):
+            continue
+        before, born = snapshots(game, c, grown.event)
+        if not _surviving_frame(state, before, born, actor):
+            continue
+        row, body, original = DormantService(game.store, game)._source(c, grown.action)
+        required = Required.model_validate_json(json.dumps(body["requirement"]))
+        fact = next(
+            (
+                x
+                for x in born.facts
+                if x.get("kind") == "dormant_void_paid"
+                and x.get("work") == grown.action
+                and x.get("event") == grown.event
+            ),
+            None,
+        )
+        payment = dormant.Corruption.model_validate_json(fact["body"]) if fact else None
+        _repair_event(
+            game,
+            c,
+            grown.event,
+            "m3.dormant_void_taken",
+            int(actor.entity),
+            "work_id",
+            grown.action,
+        )
+        if (
+            payment is None
+            or original != actor
+            or body.get("corruption_event") != grown.event
+            or body.get("asset") != grown.asset
+            or payment.actor != actor
+            or payment.gorgon != required.opponent
+            or payment.work != grown.action
+            or payment.event != grown.event
+            or payment.asset != grown.asset
+            or payment.family != "frame"
+            or payment.description != grown.description
+        ):
+            raise WorkflowError("Prove the actual original owned Dormant corruption payment")
+        if body.get("source_action"):
+            _roll_source(game, c, game.action(c, body["source_action"]))
+        actual = resolve(
+            before, actor, profiles(c, game.store.campaign_id), require_current_profile=False
+        )
+        if actual.piloting is None or required.opponent is None:
+            raise WorkflowError("Recover the actual Dormant victim's original physical context")
+        try:
+            replayed, _ = dormant.inflict(
+                before,
+                profiles(c, game.store.campaign_id),
+                actor,
+                required.opponent,
+                grown.action,
+                None,
+                grown.description,
+                grown.event,
+                piloting=actual.piloting,
+                growth=grown.choice,
+            )
+        except ValueError as error:
+            raise WorkflowError("Recover the actual Dormant Sup exchange: " + str(error)) from None
+        if fact not in replayed.facts:
+            raise WorkflowError("Preserve the exact original Dormant Corruption source")
+        loss = _sup_source_loss(game, c, before, born, replayed, grown, "sup_dormant_cap")
+        if loss is not None:
+            result.append(loss)
+    return tuple(result)
+
+
+def sup_cleanup_losses(
+    game: GameService, c: Connection, state: GameState, actor: ActorRef
+) -> tuple[FrameAssetLoss, ...]:
+    from girlframe.engine import m3_budget_cleanup as cleanup
+    from girlframe.engine import m3_sup as sup
+    from girlframe.engine.m3_actors import resolve
+    from girlframe.engine.m3_janus_storage import alter
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_budget_cleanup import prove_gain
+
+    result = []
+    ids = {x.id for x in cleanup.cases(state)}
+    for grown in sup.growths(state):
+        if (
+            grown.actor != actor
+            or grown.choice.family != "frame"
+            or not grown.choice.replace
+            or grown.action not in ids
+        ):
+            continue
+        before, born = snapshots(game, c, grown.event)
+        if not _surviving_frame(state, before, born, actor):
+            continue
+        value = prove_gain(game, c, born, grown.action)
+        original = cleanup.get(before, value.id)
+        if (
+            value.selected is None
+            or value.people[value.selected] != actor
+            or value.gain_event != grown.event
+            or value.asset != grown.asset
+            or value.storage
+            or value.description != grown.description
+            or original.phase != "rewrite"
+            or original.gain_event is not None
+            or original.people != value.people
+            or original.selected != value.selected
+        ):
+            raise WorkflowError("Prove the actual selected cleanup exposure and owned Sup gain")
+        actual = resolve(
+            before, actor, profiles(c, game.store.campaign_id), require_current_profile=False
+        )
+        if actual.piloting is None:
+            raise WorkflowError("Recover the actual exposure victim's original physical context")
+        try:
+            replayed, _ = alter(
+                before,
+                actor,
+                "",
+                grown.description,
+                grown.action,
+                grown.event,
+                piloting=actual.piloting,
+                growth=grown.choice,
+            )
+        except ValueError as error:
+            raise WorkflowError("Recover the actual cleanup Sup exchange: " + str(error)) from None
+        loss = _sup_source_loss(game, c, before, born, replayed, grown, "sup_cleanup_cap")
+        if loss is not None:
+            result.append(loss)
     return tuple(result)

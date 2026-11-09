@@ -20,7 +20,9 @@ class RequiredLink(Model):
     provider: Literal["ankou_nomination"] = "ankou_nomination"
     source: str
     recipe: str
-    rule: Literal["girl.alpha.sex-play", "girl.stim-blissed.dose-up"] = "girl.alpha.sex-play"
+    rule: Literal["girl.alpha.sex-play", "girl.stim-blissed.dose-up", "girl.oldgen.sex-play"] = (
+        "girl.alpha.sex-play"
+    )
     actor: ActorRef
     target: ActorRef
     cast: SceneCast

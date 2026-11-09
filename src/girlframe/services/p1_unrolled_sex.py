@@ -8,6 +8,7 @@ from sqlalchemy import Connection
 from girlframe.engine import p1_unrolled_sex as rules
 from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef
+from girlframe.engine.m3_am_sex import Source as LearnedAMSource
 from girlframe.engine.m3_bonded import Source
 from girlframe.engine.m3_bonded_am import Source as BondedAMSource
 from girlframe.engine.m3_changeling_sex import UnrolledAMSex
@@ -26,7 +27,7 @@ def _participants(
     game: "GameService",
     c: Connection,
     state: GameState,
-    source: Source | UnrolledAMSex | BondedAMSource,
+    source: Source | UnrolledAMSex | BondedAMSource | LearnedAMSource,
 ) -> dict[str, tuple[ActorRef, int]]:
     if isinstance(source, UnrolledAMSex):
         from girlframe.services.m3_changeling_sex import am_participants
@@ -46,7 +47,7 @@ def _gift_people(
     game: "GameService",
     c: Connection,
     state: GameState,
-    source: Source | UnrolledAMSex | BondedAMSource,
+    source: Source | UnrolledAMSex | BondedAMSource | LearnedAMSource,
     gift: rules.AnimalGift,
 ) -> tuple[tuple[ActorRef, int], tuple[ActorRef, int]]:
     people = _participants(game, c, state, source)
@@ -66,10 +67,13 @@ def offer(
     game: "GameService",
     c: Connection,
     state: GameState,
-    source: Source | UnrolledAMSex | BondedAMSource,
+    source: Source | UnrolledAMSex | BondedAMSource | LearnedAMSource,
     event: str,
 ) -> None:
     if source.kind != "sex" or source.action is not None or source.target is None:
+        return
+    if isinstance(source, LearnedAMSource) and source.mode != "both_am":
+        # The actual rolled counterpart source already owns this same scene's gifts.
         return
     people = _participants(game, c, state, source)
     for animal_role, target_role in ((source.actor, source.target), (source.target, source.actor)):
@@ -87,7 +91,9 @@ def offer(
             state,
             rules.AnimalGift(
                 id=identity,
-                source_kind="bonded_am"
+                source_kind="learned_am"
+                if isinstance(source, LearnedAMSource)
+                else "bonded_am"
                 if isinstance(source, BondedAMSource)
                 else "changeling_am"
                 if isinstance(source, UnrolledAMSex)
@@ -114,7 +120,7 @@ def tasks(
     game: "GameService",
     c: Connection,
     state: GameState,
-    source: Source | UnrolledAMSex | BondedAMSource,
+    source: Source | UnrolledAMSex | BondedAMSource | LearnedAMSource,
     viewer: GuildViewer,
 ) -> list[dict[str, Any]]:
     people = _participants(game, c, state, source)
@@ -248,7 +254,12 @@ def give(
         gift = prove(game, c, state, identity)
         source = _source(game, c, state, gift)
         animal, target = _gift_people(game, c, state, source, gift)
-        if gift.source_kind == "bonded_am":
+        if gift.source_kind == "learned_am":
+            from girlframe.services.m3_am_sex import _access_learned
+
+            _access_learned(game, c, viewer)
+            require_ready(game, c, state, source.id)
+        elif gift.source_kind == "bonded_am":
             from girlframe.services.m3_access import Access
 
             gate = Access(game.store)
@@ -307,7 +318,11 @@ def give(
             source_id=source.id,
             gift_id=gift.id,
         )
-        if gift.source_kind == "bonded_am":
+        if gift.source_kind == "learned_am":
+            from girlframe.services.m3_am_sex import synchronize_learned
+
+            synchronize_learned(game, c, changed, source.id, event)
+        elif gift.source_kind == "bonded_am":
             from girlframe.services.m3_bonded_am import synchronize
 
             synchronize(game, c, changed, source.id, event)
@@ -329,7 +344,11 @@ def give(
 
 def _source(
     game: "GameService", c: Connection, state: GameState, gift: rules.AnimalGift
-) -> Source | UnrolledAMSex | BondedAMSource:
+) -> Source | UnrolledAMSex | BondedAMSource | LearnedAMSource:
+    if gift.source_kind == "learned_am":
+        from girlframe.services.m3_am_sex import prove_learned
+
+        return prove_learned(game, c, state, gift.source)
     if gift.source_kind == "bonded_am":
         from girlframe.services.m3_bonded_am import prove
 

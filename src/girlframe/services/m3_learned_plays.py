@@ -45,6 +45,7 @@ CALL = "girl.mockingbird.call-of-the-void"
 SHOW_DOG = "girl.princess.show-dog"
 PSYCHE = "girl.stim-blissed.disposable-psyche"
 DOLL = "girl.vatgrown.unassuming-doll"
+AM_SEX = "girl.am.sex-play"
 SEX_LESSONS = {
     "girl.princess.sex-play": "PRINCESS",
     "girl.stim-blissed.sex-play": "STIM-BLISSED",
@@ -77,6 +78,8 @@ SUPPORTED = {
 
 
 def lesson_label(rule_id: str, play: str) -> str:
+    if rule_id == AM_SEX:
+        return "AM Sex (one actual no-roll source; no circuit capability)"
     if rule_id in SEX_LESSONS:
         return SEX_LESSONS[rule_id].replace("-", " ").title() + " Sex (one voluntary source)"
     if rule_id in (SHOW_DOG, PSYCHE, DOLL):
@@ -106,6 +109,8 @@ def lesson_label(rule_id: str, play: str) -> str:
 
 def lesson_book(rule_id: str) -> str | None:
     """The finite Status lesson has no invented underlying Play ID."""
+    if rule_id == AM_SEX:
+        return "AM"
     if rule_id in (RISK, CALL):
         return "MOCKINGBIRD"
     if rule_id in SEX_LESSONS:
@@ -123,6 +128,8 @@ def teacher_lessons(sheet: Any) -> tuple[dict[str, str], ...]:
         for rule, (play, book) in SUPPORTED.items()
         if sheet.girl == book and has_rule(sheet, rule, book)
     ]
+    if sheet.girl == "AM" and has_rule(sheet, AM_SEX, "AM"):
+        result.append(dict(id=AM_SEX, label=lesson_label(AM_SEX, "")))
     if sheet.girl == "ALPHA" and has_rule(sheet, HOUND, "ALPHA"):
         result.append(dict(id=HOUND, label=lesson_label(HOUND, "")))
     if sheet.girl == "MOCKINGBIRD" and has_rule(sheet, RISK, "MOCKINGBIRD"):
@@ -265,6 +272,8 @@ def available(
             value.actor != actor
             or value.rule_id != rule_id
             or value.rolled_event is not None
+            or value.claimed_source is not None
+            or value.used_event is not None
             or value.claimed_action not in (None, action_id)
         ):
             continue

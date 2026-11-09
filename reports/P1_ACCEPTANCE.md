@@ -1849,3 +1849,61 @@ hashes `var/p1-vatgrown-modular-family-*`; original worker freezes preserved.
 No claimed test-speed improvement. Current working queue shortened; prior
 detailed ownership/evidence retained under historical heading. Full candidate
 regression/global/migration/privacy/restore/independent/human gates pending.
+
+## Learned AM, full Sup source family and real required Oldgen
+
+Base40b3b226aa8ad45879b3c664690ef7998e315817 published;
+[focused CI42564398560](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42564398560)
+PASS/full skipped. Malleable8 actual typed no-roll source/use/gifts; AM4 real
+Sup Sex/Dormant/cleanup/learned-Risk loss proofs; root4 finite own-Sex recipe
+pilot Alpha+Oldgen and distinct self-Dose; root5 private routing/pause/runtime.
+
+Initial six **3passed3failed28.83s**; failed-only three **3passed19.53s**,
+`var/p1-am-sup-required-minimum{,-retry}.txt/xml`. Source snapshots per attempt
+preserved. Root Oldgen, Sup Sex and learned Risk passed first; AM/Dormant/cleanup
+passed retry. No successful node rerun. AM exposed genuine historical proof bug:
+old declined source was compared with today's grant reused by a new source.
+Terminal unused release now proves its actual canonical release snapshot; active/
+used/completed current-source/used-event/no-refund checks unchanged. Dormant
+fixture placed a body twice; now actual Battle setup establishes it once. Cleanup
+fixture read nonexistent Request.revision; now uses actual Strain work view's
+revision/game_revision. No source/physical/policy guard weakened.
+
+AM native episode proves actual teacher acquisition, separate refusal/fresh consent,
+original two performed accounts, true once-use without fake Action/receipt/Heat/
+rolled event or Just Code, real Animal gift, private readback, source pause and
+waiting/actionable separation. Real rolled-counterpart source proof implemented,
+but its runtime is explicitly deferred; no double Animal gift from underlying
+actual rolls. Other real gifts/privacy/stale/rollback/shared consumers remain final
+regression. Oldgen actual original Intense relationship/Task→own source/consent→
+unrolled cancel/relink→real mid effects→actual Task/pause restoration passed.
+Native Alpha event/record/default preserved; self-Dose's unusual recipe stays
+explicit. This is a small real two-consumer extraction, not a generic rule DSL.
+
+Sup four distinct producer episodes preserve canonical original paid birth,
+true SQL response/work/growth, surviving original Frame and consumed missing
+component; actual Partake regrowth retains newborn and original roll. Prior
+provider namespaces/events/defaults unchanged, no inventory-diff authority.
+
+Inbox helper reuse deferred for AM because waiting and viewer-actionable states
+differ: explicit projection uses service-owned pending/waiting booleans and
+original-controller visibility. Native routing adds no authority. Source pause
+starts only real effects/owed gifts, never elective invitation. Scoped21 Python/
+18 source Ruff/format/mypy PASS before owner delta repairs; owner AM1 and test1
+static deltas PASS. No worker pytest/collection, broad or repeated old-success
+checks. No test-speed improvement claim. Final full/global/migration/privacy/
+restore/independent/human gates remain pending; bot OFF, RULES_SUBSET/0verified.
+
+Next named dependencies: borrowed Mock/Newgirl group Link; actual native AM+AM
+entry reconciliation; learned Casualty true non-GOD body-site injury provenance
+and its genuine consequence/lifetime consumer; original Bonded Pair sources and
+applicable ongoing acquisition. No fabricated nine-part Wounded God or automatic
+P3 deferral. Reconciliation contracts are read-only, not implemented acceptance.
+
+Final packet26 paths/21 Python/18 source. Whitespace, registry/planning/repository
+PASS:477 entries/274subset/203unimplemented/440required/0verified;1429 publishable
+files/40 manifest/0findings. Exact scoped source checks plus owner repair deltas
+recorded above; manifests/attempt hashes/commands `var/p1-am-sup-required-*`.
+Initial manifest preflight expected normal_nodes while AM handoff used normal;
+normalized metadata before tests ran, no source/runtime change. Final candidate
+full regression/global static/migration/privacy/restore/review/human gates pending.

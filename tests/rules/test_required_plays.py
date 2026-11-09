@@ -505,3 +505,184 @@ def test_actual_ankou_nomination_native_own_advice_and_real_listening_complete_s
     asyncio.run(SourcePauseWorker(game).tick(gateway))
     with ledger.engine.connect() as c:
         assert projection(game, c, task.id)["state"] == "closed"
+
+
+def test_actual_nomination_native_oldgen_source_cancel_relink_results_and_pause_restore(
+    ledger, tmp_path, monkeypatch
+):
+    from test_oldgen_sex import native_choice
+
+    from girlframe.discord_adapter.m3_oldgen_sex import open_oldgen_sex
+    from girlframe.engine import m3_oldgen_sex as oldgen
+    from girlframe.services.m3_oldgen_sex import OldgenSexService
+
+    _, game = service(ledger, girl="OLDGEN", frame=ankou.FRAME)
+    approved(ledger, game, tmp_path, monkeypatch, extra=(ankou.RELAY, oldgen.RULE))
+    with ledger.transaction() as c:
+        actual = state(game)
+        actual.world = initial()
+        actual = place(place(actual, 2, mode="outside_frame"), 3, mode="outside_frame")
+        game.event(c, 1, str(uuid4()), "synthetic.actual_original_oldgen_ankou_bodies", actual)
+    worker, gateway = GameWorker(game), Gateway()
+    sex, controls, required = OldgenSexService(game), AnkouService(game), RequiredPlayService(game)
+
+    def finish(action, label):
+        game.dice.faces = (4, 5)
+        tick(worker, gateway, 3)
+        if game.inspect(PLAYER, action)["state"] == "ready_to_roll":
+            game.roll(PLAYER, str(uuid4()), action)
+        pass_tags(game)
+        native_choice(game, PLAYER, "oldgen_sex_effects", ("tag", "bond"), fields={"tag": label})
+        assert game.inspect(PLAYER, action)["state"] == "complete"
+
+    first = sex.invite(
+        PLAYER,
+        str(uuid4()),
+        900,
+        current_ref(state(game), 3),
+        state(game).revision,
+        "PRIVATE_OWN_OLDGEN: genuine first voluntary source",
+    )["id"]
+    sex.respond(
+        OTHER,
+        str(uuid4()),
+        first,
+        state(game).revision,
+        True,
+        "My own actual counterpart confirmation",
+    )
+    prior = game.begin(
+        PLAYER,
+        str(uuid4()),
+        900,
+        state(game).sheets["2"].revision,
+        PlayInput(
+            play=oldgen.PLAY,
+            source_work=first,
+            target_actor=current_ref(state(game), 3),
+            heat=0,
+            context="Our genuine first voluntary interaction",
+            trigger_confirmed=True,
+        ),
+    )["action_id"]
+    finish(prior, "PRIVATE_OWN_OLDGEN: first actual source Tag")
+    tick(worker, gateway, 5)
+    actual = state(game)
+    assert depth(actual, current_ref(actual, 2), current_ref(actual, 3)) == 2
+    relay = controls.activate_relay(
+        PLAYER,
+        str(uuid4()),
+        900,
+        actual.revision,
+        ("speech", "touch"),
+        "Actual relay with my original Intense partner",
+    )["id"]
+    controls.choose_consequence(
+        ADMIN,
+        str(uuid4()),
+        state(game).revision,
+        relay,
+        "nominees",
+        "The original Intense partners nominate actual Plays",
+    )
+    nomination = next(
+        x
+        for x in ankou.records(state(game), ankou.Task)
+        if x.source == relay and x.kind == "nominate" and x.actor == current_ref(state(game), 3)
+    )
+    controls.choose_task(
+        OTHER,
+        str(uuid4()),
+        state(game).revision,
+        nomination.id,
+        oldgen.PLAY,
+        "Nominate her own Oldgen source, without authoring consent",
+    )
+    task = next(
+        x
+        for x in ankou.records(state(game), ankou.Task)
+        if x.source == relay and x.kind == "perform"
+    )
+    asyncio.run(SourcePauseWorker(game).tick(gateway))
+    with ledger.engine.connect() as c:
+        assert projection(game, c, task.id)["state"] == "held"
+        assert not game.pending_actions(c)
+    with pytest.raises(WorkflowError):
+        required.menu(OTHER, task.id)
+    source_menu = native(lambda i: open_required(i, game, task.id), operation=("invite_oldgen",))
+    invitation = submit(source_menu, action=("invite",))
+    submit(
+        invitation,
+        target=(current_ref(state(game), 3).token,),
+        account="PRIVATE_OWN_OLDGEN: new actual interaction during required pause",
+    )
+    recipe = oldgen.records(state(game), oldgen.Session)[-1]
+    native(
+        lambda i: open_oldgen_sex(i, sex, recipe.id),
+        user=3,
+        accept=("yes",),
+        account="My independent original counterpart answer",
+    )
+    assert oldgen.get(state(game), recipe.id).consent_event
+    with pytest.raises(WorkflowError, match="STALE"):
+        required.link(PLAYER, str(uuid4()), task.id, recipe.id, state(game).revision - 1)
+    native(lambda i: open_required(i, game, task.id), operation=("link:" + recipe.id,))
+    selected = rules.records(state(game))[-1]
+    assert selected.rule == oldgen.RULE and selected.recipe == recipe.id
+
+    def start_oldgen():
+        form = native(lambda i: open_required(i, game, task.id), operation=("play",))
+        submit(
+            form,
+            heat=("0",),
+            gain=("1",),
+            share=("0",),
+            context="PRIVATE_OWN_OLDGEN: actual accepted nominated interaction",
+        )
+        with ledger.engine.connect() as c:
+            action = game.action(c, game.lock(c, 900)["action_id"])
+            assert action["data"]["oldgen_sex"]["session"] == recipe.id
+            assert action["data"]["ankou_effect_child"]["id"] == task.id
+            return action["id"]
+
+    abandoned = start_oldgen()
+    before, calls = state(game), game.dice.calls
+    game.abort(ADMIN, str(uuid4()), abandoned)
+    tick(worker, gateway, 5)
+    recovery = RecoveryService(game)
+    saved = next(x for x in recovery.saved(PLAYER) if x["id"] == abandoned)
+    assert saved["cancellable"] and not saved["rolled"]
+    args = PLAYER, str(uuid4()), abandoned, saved["revision"]
+    recovered = recovery.recover(*args, cancel=True)
+    assert recovery.recover(*args, cancel=True) == recovered
+    cancelled = state(game)
+    assert rules.get(cancelled, selected.id).retired_event
+    restored = oldgen.get(cancelled, recipe.id)
+    assert restored.action is None and restored.bound_event is None and restored.phase == "accepted"
+    assert restored.consent_event == oldgen.get(before, recipe.id).consent_event
+    assert game.dice.calls == calls and cancelled.sheets["2"].heat == before.sheets["2"].heat
+    with ledger.engine.connect() as c:
+        prove(game, c, cancelled, selected.id)
+    args = PLAYER, str(uuid4()), task.id, recipe.id, cancelled.revision
+    linked = required.link(*args)
+    assert required.link(*args) == linked and linked["id"] != selected.id
+    action = start_oldgen()
+    finish(action, "PRIVATE_OWN_OLDGEN: actual required source outcome")
+    final = state(game)
+    assert oldgen.get(final, recipe.id).phase == "complete"
+    assert ankou.get(final, ankou.Task, task.id).completed_event
+    assert required.menu(PLAYER, task.id)["completed"]
+    with ledger.engine.connect() as c:
+        value = prove(game, c, final, linked["id"])
+        assert value.action == action and value.completed_event
+        receipt = game.action(c, action)["data"]["receipt"]
+        assert receipt and game.action(c, action)["data"]["oldgen_sex"][
+            "actor"
+        ] == recipe.actor.model_dump(mode="json")
+    assert game.dice.calls == calls + 1
+    tick(worker, gateway, 7)
+    asyncio.run(SourcePauseWorker(game).tick(gateway))
+    with ledger.engine.connect() as c:
+        assert projection(game, c, task.id)["state"] == "closed"
+    assert {key[0] + key[1]: value for key, value in gateway.values.items()} == gateway.original
+    assert "PRIVATE_OWN_OLDGEN" not in json.dumps(gateway.messages)

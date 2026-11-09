@@ -1,4 +1,4 @@
-"""Private entry for seven supported learned Sex Plays."""
+"""Private entry for supported rolled and no-roll learned Sex sources."""
 
 import asyncio
 from typing import Any
@@ -12,6 +12,7 @@ from girlframe.engine.m3_actor_bonds import current_ref
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
+from girlframe.services.m3_am_sex import lessons as am_lessons
 from girlframe.services.m3_learned_sex import lessons
 from girlframe.services.onboarding import WorkflowError
 
@@ -40,7 +41,7 @@ async def open_learned_sex(
             actor = current_ref(state, viewer.user_id)
             return actor, tuple(
                 row for rule in RULES for row in lessons(game, connection, state, actor, rule)
-            )
+            ) + am_lessons(game, connection, state, actor)
 
     actor, choices = await asyncio.to_thread(available)
 
@@ -84,6 +85,11 @@ async def open_learned_sex(
             from girlframe.services.m3_vatgrown_plays import VatgrownPlaysService
 
             await open_vatgrown_plays(current, VatgrownPlaysService(game), learned_source=lesson)
+        elif row["rule_id"] == "girl.am.sex-play":
+            from girlframe.discord_adapter.m3_am_sex import open_am_sex
+            from girlframe.services.m3_am_sex import SexService as AMSexService
+
+            await open_am_sex(current, AMSexService(game), learned_source=lesson)
         else:
             raise WorkflowError("This lesson is waiting for its Play controls.")
 
@@ -105,7 +111,7 @@ async def open_learned_sex(
         interaction.user.id,
         "Learned Sex Plays",
         "Choose one unused lesson. Each person confirms their own participation; "
-        "your roll uses the lesson once.",
+        "the actual source uses the lesson once.",
         [Field("lesson", "Your lesson", tuple((row["id"], row["label"]) for row in choices))],
         choose,
     )

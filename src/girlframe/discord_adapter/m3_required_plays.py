@@ -1,4 +1,4 @@
-"""Actual nominated Alpha source invitation, selection and resource preparation."""
+"""Actual nominated owned sources, invitations and real resource preparation."""
 
 import asyncio
 from typing import Any
@@ -9,6 +9,7 @@ from girlframe.discord_adapter.bot import viewer_from_interaction
 from girlframe.discord_adapter.m2_forms import Field, NativeForm
 from girlframe.discord_adapter.onboarding import reply
 from girlframe.engine import m3_dose_up as dose
+from girlframe.engine import m3_oldgen_sex as oldgen
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_required_plays import RequiredPlayService
@@ -25,6 +26,8 @@ async def open_required(
         if link is None:
             if data["alpha_offered"]:
                 options.append(("invite", "Propose an actual voluntary Alpha source"))
+            if data["oldgen_offered"]:
+                options.append(("invite_oldgen", "Propose an actual voluntary Oldgen source"))
             if data["self_dose"]:
                 options.append(("self_dose", "Select your actual own self-Dose recipe"))
             options += [("link:" + x["id"], x["label"]) for x in data["accepted"]]
@@ -36,11 +39,11 @@ async def open_required(
         options.append(("retry", "Retry actual scene permission handling"))
     summary = (
         "The nominated performance remains owed until its real source outcomes finish. "
-        "The actual counterpart confirms their own source through Alpha controls or Requests. "
+        "The actual counterpart confirms their own source through its controls or Requests. "
         "Invitations and selection perform no Play and infer no consent. "
         + f"Scene permissions: {data['pause']['state']}."
     )
-    if not data["alpha_offered"]:
+    if not data["alpha_offered"] and not data["oldgen_offered"]:
         summary = (
             "The actual nominated self-Dose remains owed until its real cocktail outcomes finish. "
             "Selecting a recipe spends no Heat and creates no drug or Contact. "
@@ -67,6 +70,11 @@ async def open_required(
             from girlframe.services.m3_alpha_sex import SexService
 
             await open_alpha(current, SexService(game))
+        elif selected == "invite_oldgen":
+            from girlframe.discord_adapter.m3_oldgen_sex import open_oldgen_sex
+            from girlframe.services.m3_oldgen_sex import OldgenSexService
+
+            await open_oldgen_sex(current, OldgenSexService(game))
         elif selected == "self_dose":
             await asyncio.to_thread(
                 service.link_self_dose,
@@ -101,12 +109,12 @@ async def open_required(
             await _play(
                 current,
                 game,
-                play="alpha_sex",
+                play=oldgen.PLAY if link["rule"] == oldgen.RULE else "alpha_sex",
                 source=link["recipe"],
                 context="",
                 delegated_target=ActorRef.model_validate(link["target"]),
                 channel=data["channel"],
-                title="Alpha Play",
+                title="Oldgen Play" if link["rule"] == oldgen.RULE else "Alpha Play",
             )
         elif selected == "resume":
             from girlframe.discord_adapter.m2_ui import open_pending

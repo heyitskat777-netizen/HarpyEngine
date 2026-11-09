@@ -2543,3 +2543,502 @@ def test_actual_native_supply_repair_modular_replacement_then_partake_regrowth(
     _assert_native_modular_loss_regrowth(
         game, GameWorker(game), Gateway(), controls, loss, replacement
     )
+
+
+def _native_actual_sup_cap_growth(game, opener, old, first_values, *, number, name):
+    import asyncio
+
+    from test_mission_ui import current
+
+    async def respond():
+        opened = current(2, number)
+        opened.channel_id = 900
+        await opened.response.defer(ephemeral=True)
+        await opener(opened)
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(current(3, number + 1))
+        form.values.update(first_values)
+        selected = current(2, number + 2)
+        selected.channel_id = 900
+        await form.confirm.callback(selected)
+        assert form.completed, selected.edit_original_response.call_args_list
+        growth = selected.edit_original_response.call_args.kwargs["view"]
+        growth.values.update(
+            name=name,
+            family=("frame",),
+            replace=(old.id,),
+            description="PRIVATE_SUP_FAMILY actual source-owned new Void hardware: " + name,
+        )
+        actual = current(2, number + 3)
+        actual.channel_id = 900
+        await growth.confirm.callback(actual)
+        assert growth.completed, actual.edit_original_response.call_args_list
+        saved = state(game)
+        await growth.confirm.callback(actual)
+        assert state(game) == saved
+
+    asyncio.run(respond())
+
+
+def test_actual_native_sex_sup_cap_loss_then_partake_preserves_owned_counterpart_and_source(
+    ledger, tmp_path, monkeypatch
+):
+    from test_sup import purchase as buy_sup
+
+    from girlframe.discord_adapter.m3_mockingbird_sex import open_sex
+    from girlframe.engine import m3_mockingbird as mockingbird
+    from girlframe.engine import m3_sup as sup
+    from girlframe.services.m3_frame_asset_losses import sup_sex_losses
+    from girlframe.services.m3_mockingbird_plays import MockingbirdService
+
+    game, worker, gateway, controls, actor, old = _elective_regrowth_ready(
+        ledger, tmp_path, monkeypatch
+    )
+    paid = buy_sup(game, tmp_path, monkeypatch)
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(rules.STARVATION, rules.EAT, *rules.REQUISITIONS, sup.RULE, mockingbird.SEX),
+    )
+    caster = current_ref(state(game), 3)
+    source = MockingbirdService(game)
+    trigger = source.propose(
+        OTHER,
+        str(uuid4()),
+        900,
+        caster,
+        "mockingbird_sex",
+        (actor,),
+        "My actual original voluntary interaction with this other person",
+    )
+    source.attest(PLAYER, str(uuid4()), trigger["id"], actor, True)
+    game.dice.faces = (6, 6)
+    action = game.begin(
+        OTHER,
+        str(uuid4()),
+        900,
+        state(game).sheets["3"].revision,
+        PlayInput(
+            play="mockingbird_sex",
+            source_work=trigger["id"],
+            heat=0,
+            context="Actual accepted counterpart source",
+            trigger_confirmed=True,
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    assert game.inspect(OTHER, action)["receipt"]
+    pass_tags(game)
+    original_target = next(
+        x for x in state(game).sheets["2"].assets if x.family == "girl" and not x.void
+    ).model_copy(deep=True)
+    answer(game, OTHER, "mockingbird_sex_infect", fields={"asset": original_target.id})
+    row = next(x for x in game.choices(PLAYER) if x["kind"] == "mockingbird_sex_rewrite")
+    before, calls = state(game), game.dice.calls
+    receipt = game.inspect(OTHER, action)["receipt"]
+
+    async def opener(interaction):
+        await open_sex(interaction, game, row["id"])
+
+    _native_actual_sup_cap_growth(
+        game, opener, old, {"mode": ("grow",)}, number=992600, name="Actual counterpart Sup plate"
+    )
+    born = state(game)
+    grown = next(x for x in sup.growths(born) if x.action == action)
+    assert grown.purchase == paid.id and grown.actor == actor
+    assert next(x for x in born.sheets["2"].assets if x.id == original_target.id) == original_target
+    assert born.sheets["3"].assets == before.sheets["3"].assets
+    assert depth(born, caster, actor) == min(2, depth(before, caster, actor) + 1)
+    assert game.inspect(OTHER, action)["receipt"] == receipt and game.dice.calls == calls
+    with ledger.engine.connect() as c:
+        loss = next(x for x in sup_sex_losses(game, c, born, actor) if x.id == grown.asset)
+    assert loss.asset == old
+    replacement = next(x for x in born.sheets["2"].assets if x.id == grown.asset)
+    tick(worker, gateway, 6)
+    assert game.inspect(OTHER, action)["state"] == "complete"
+    _assert_native_modular_loss_regrowth(game, worker, gateway, controls, loss, replacement)
+
+
+def test_actual_native_dormant_sup_cap_loss_then_attack_completion_and_partake(
+    ledger, tmp_path, monkeypatch
+):
+    import test_battle_pipeline
+    import test_battle_service
+    from test_battle_pipeline import dormant_source, table
+    from test_sup import purchase as buy_sup
+
+    from girlframe.discord_adapter.m3_battle_dormant import open_dormant
+    from girlframe.discord_adapter.m3_sup import GROW
+    from girlframe.engine import m3_sup as sup
+    from girlframe.engine.m3_assets import counts_toward_limit
+    from girlframe.engine.m3_requisition_state import Installation
+    from girlframe.services.m3_battle_dormant import DormantService
+    from girlframe.services.m3_frame_asset_losses import sup_dormant_losses
+    from girlframe.services.m3_requisitions import RequisitionService
+
+    _, game = service(ledger, girl="OLDGEN", frame="CONSUME")
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(rules.STARVATION, rules.EAT, *rules.REQUISITIONS, sup.RULE),
+    )
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "m3_approval": ledger.policy.m3_approval.model_copy(
+                update={"subsystems": ledger.policy.m3_approval.subsystems | {"world", "playbooks"}}
+            )
+        }
+    )
+    with ledger.transaction() as c:
+        canon = state(game)
+        canon.sheets["2"].permissions = 20
+        canon.sheets["2"].heat = 1
+        for sheet in canon.sheets.values():
+            for asset in sheet.assets:
+                asset.void = False
+        game.event(c, 1, str(uuid4()), "synthetic.actual_prior_unplaced_consume_resources", canon)
+    worker, gateway, controls = GameWorker(game), Gateway(), ConsumeService(game)
+    actor = current_ref(state(game), 2)
+    monkeypatch.setattr(test_battle_service, "ready", lambda store: (game, worker, gateway))
+    original_prepared = test_battle_pipeline.prepared
+    acquired = {}
+
+    def paid_prepared(store, *, girl=None):
+        # The real Battle helper establishes the previously unknown bodies once.
+        result = original_prepared(store, girl=girl)
+        acquire(controls, rules.PARTAKE)
+        purchases = RequisitionService(game)
+        while True:
+            data = purchases.view(PLAYER)
+            sheet = state(game).sheets["2"]
+            if (
+                sum(counts_toward_limit(sheet, x) for x in sheet.assets if x.family == "frame")
+                >= data["frame_capacity"]
+            ):
+                break
+            purchases.buy(
+                PLAYER,
+                str(uuid4()),
+                actor,
+                data["source_sha256"],
+                Installation(
+                    name="Actual Dormant source spare " + str(len(sheet.assets)),
+                    description="Actual paid hardware before the real attack declaration",
+                    account="I genuinely purchase this original permanent component",
+                    trigger_confirmed=True,
+                ),
+            )
+        acquired["sup"] = buy_sup(game, tmp_path, monkeypatch)
+        # dormant_source builds its own fresh declaration after these real purchases.
+        return result
+
+    monkeypatch.setattr(test_battle_pipeline, "prepared", paid_prepared)
+    actual_game, _, _, action, work = dormant_source(ledger, monkeypatch)
+    paid = acquired["sup"]
+    assert actual_game is game
+    with ledger.engine.connect() as c:
+        declaration = game.action(c, action)["data"]["battle"]
+    old = next(
+        x.model_copy(deep=True)
+        for x in state(game).sheets["2"].assets
+        if x.family == "frame" and not x.void and x.id != declaration["attacking_asset"]
+    )
+    source = DormantService(ledger, game)
+    receipt, calls = game.inspect(PLAYER, action)["receipt"], game.dice.calls
+
+    async def opener(interaction):
+        await open_dormant(interaction, source, work)
+
+    _native_actual_sup_cap_growth(
+        game,
+        opener,
+        old,
+        {"asset": (GROW,), "piloting": ("yes",)},
+        number=992700,
+        name="Actual Dormant-payment Sup plate",
+    )
+    born = state(game)
+    grown = next(x for x in sup.growths(born) if x.action == work)
+    assert grown.purchase == paid.id and game.inspect(PLAYER, action)["state"] != "complete"
+    assert game.inspect(PLAYER, action)["receipt"] == receipt and game.dice.calls == calls
+    with ledger.engine.connect() as c:
+        loss = next(x for x in sup_dormant_losses(game, c, born, actor) if x.id == grown.asset)
+    assert loss.asset == old and source.get(PLAYER, work)["state"] == "resolved"
+    replacement = next(x for x in born.sheets["2"].assets if x.id == grown.asset)
+    table(game)
+    tick(worker, gateway, 6)
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    _assert_native_modular_loss_regrowth(game, worker, gateway, controls, loss, replacement)
+
+
+def test_actual_native_cleanup_exposure_sup_cap_loss_then_real_period_and_partake(
+    ledger, tmp_path, monkeypatch
+):
+    import test_budget_cleanup
+    from test_off_duty_cycle import activate, call, finish_routine, movement, recover_both
+    from test_sup import purchase as buy_sup
+    from test_supply_drop import launch, settle
+    from test_world import gorgon
+
+    from girlframe.discord_adapter.m3_budget_cleanup import open_cleanup
+    from girlframe.discord_adapter.m3_sup import GROW
+    from girlframe.engine import m3_budget_cleanup as cleanup
+    from girlframe.engine import m3_sup as sup
+    from girlframe.engine.m3_strain_effects import Choice
+    from girlframe.engine.m3_world_state import Faction
+    from girlframe.services.m3_budget_cleanup import CleanupService
+    from girlframe.services.m3_frame_asset_losses import sup_cleanup_losses
+    from girlframe.services.m3_off_duty_cycle import CycleService
+
+    game, worker, gateway, controls, actor, old = _elective_regrowth_ready(
+        ledger, tmp_path, monkeypatch
+    )
+    paid = buy_sup(game, tmp_path, monkeypatch)
+    missions = MissionService(ledger)
+    mission = launch(missions)
+    data = missions.get(ADMIN, mission)["mission"]
+    missions.end(ADMIN, str(uuid4()), mission, data["revision"], True)
+    settle(missions, game, mission)
+    effects, actual_game, mission, work, _, draw = test_budget_cleanup.ready(
+        ledger, existing=(missions, game, {"id": mission})
+    )
+    assert actual_game is game
+    test_budget_cleanup.select(effects, mission, work, "exposure")
+    identity = work + ":cleanup"
+    source = CleanupService(ledger)
+    actual = cleanup.get(state(game), identity)
+    assert (
+        actual.selected is not None and actual.people[actual.selected] == actor and draw.calls == 1
+    )
+
+    async def opener(interaction):
+        await open_cleanup(interaction, source, identity)
+
+    _native_actual_sup_cap_growth(
+        game,
+        opener,
+        old,
+        {"asset": (GROW,)},
+        number=992800,
+        name="Actual cleanup-exposure Sup plate",
+    )
+    born = state(game)
+    grown = next(x for x in sup.growths(born) if x.action == identity)
+    assert grown.purchase == paid.id and draw.calls == 1
+    assert cleanup.get(born, identity).phase == "complete"
+    assert test_budget_cleanup.resolved(ledger, identity) == "resolved"
+    with ledger.engine.connect() as c:
+        loss = next(x for x in sup_cleanup_losses(game, c, born, actor) if x.id == grown.asset)
+    assert loss.asset == old
+    replacement = next(x for x in born.sheets["2"].assets if x.id == grown.asset)
+    period = actual.period
+    for track in ("void", "rebellion"):
+        request = next(x for x in state(game).strain.requests if x.track == track)
+        reviewed = effects.strain.work(ADMIN, request.id)
+        effects.strain.dice.face = 1
+        rolled = effects.strain.roll(
+            ADMIN, str(uuid4()), request.id, reviewed["revision"], reviewed["game_revision"]
+        )
+        effects.strain.choose(
+            ADMIN, str(uuid4()), request.id, rolled["revision"], state(game).revision, 1
+        )
+        selected = (
+            Choice(
+                rule_id="strain.void.low.1.1",
+                account="The actual new Directed appears at the map edge",
+                gorgon=gorgon("directed", "cleanup-sup-arrival", (10, 0)),
+            )
+            if track == "void"
+            else Choice(
+                rule_id="strain.rebellion.low.1.1",
+                account="Actual source organizing at the city",
+                target="city0",
+                faction=Faction(
+                    id="cleanup-sup-group",
+                    name="Actual cleanup-period group",
+                    kind="rebel",
+                    cells=((0, 4),),
+                    description="Actual new source group",
+                ),
+            )
+        )
+        effects.apply(
+            ADMIN, str(uuid4()), request.id + ":effect", 1, state(game).revision, selected
+        )
+    cycle = CycleService(effects.strain.periods)
+    activate(cycle, game, period)
+    recover_both(cycle, game, period)
+    finish_routine(cycle, game, period)
+    call(cycle, game, ADMIN, period, "finish", movement(game))
+    assert draw.calls == 1
+    _assert_native_modular_loss_regrowth(game, worker, gateway, controls, loss, replacement)
+
+
+def test_actual_learned_risk_sup_cap_loss_retains_real_lesson_payment_then_partake(
+    ledger, tmp_path, monkeypatch
+):
+    import test_vatgrown_plays
+    from test_sup import purchase as buy_sup
+
+    from girlframe.discord_adapter.m3_mockingbird import open_mockingbird
+    from girlframe.discord_adapter.m3_sup import GROW
+    from girlframe.engine import m3_sup as sup
+    from girlframe.engine import m3_vatgrown_plays as vat
+    from girlframe.engine.m3_assets import counts_toward_limit
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+    from girlframe.engine.m3_mockingbird import RISK
+    from girlframe.engine.m3_requisition_state import Installation
+    from girlframe.services.m3_frame_asset_losses import sup_risk_losses
+    from girlframe.services.m3_learned_plays import available, prove_risk_lesson
+    from girlframe.services.m3_requisitions import RequisitionService
+
+    original_service = test_vatgrown_plays.service
+    monkeypatch.setattr(
+        test_vatgrown_plays,
+        "service",
+        lambda store, girl, frame: original_service(store, girl=girl, frame="CONSUME"),
+    )
+    game, worker, gateway, teacher_source = test_vatgrown_plays.ready(
+        ledger, tmp_path, monkeypatch, teacher="MOCKINGBIRD"
+    )
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(
+            rules.STARVATION,
+            rules.EAT,
+            *rules.REQUISITIONS,
+            sup.RULE,
+            RISK,
+            vat.EXPERIMENT,
+            vat.INVESTMENT,
+            vat.SEX,
+        ),
+    )
+    actor = current_ref(state(game), 2)
+    session, lesson_action = test_vatgrown_plays.sex(
+        game,
+        worker,
+        gateway,
+        teacher_source,
+        (5, 5),
+        counterpart_account="My actual original Mockingbird teaches one whole Risk Factor use",
+    )
+    own = state(game).sheets["2"]
+    replaced = own.identities[0]
+    remaining = {x.name.casefold() for x in own.identities if x.id != replaced.id}
+    taught = next(
+        x for x in state(game).sheets["3"].identities if x.name.casefold() not in remaining
+    )
+    test_vatgrown_plays.native_choice(
+        game,
+        OTHER,
+        "vat_sex_learn",
+        identities=(taught.id,),
+        replacements=(replaced.id,),
+        play=(RISK,),
+        account="I genuinely teach this printed Risk Factor Play once",
+    )
+    lesson = vat.records(state(game), vat.LearnedPlay)[-1]
+    assert game.inspect(PLAYER, lesson_action)["state"] == "complete"
+    teacher_source.send_away(
+        OTHER,
+        str(uuid4()),
+        session,
+        state(game).revision,
+        "The actual teacher ends the required stay",
+    )
+    tick(worker, gateway, 6)
+    with ledger.transaction() as c:
+        canon = state(game)
+        canon.sheets["2"].permissions = 20
+        game.event(c, 1, str(uuid4()), "synthetic.actual_prior_learner_permissions", canon)
+    controls = ConsumeService(game)
+    acquire(controls, rules.PARTAKE)
+    paid = buy_sup(game, tmp_path, monkeypatch)
+    purchases = RequisitionService(game)
+    while True:
+        data = purchases.view(PLAYER)
+        sheet = state(game).sheets["2"]
+        if (
+            sum(counts_toward_limit(sheet, x) for x in sheet.assets if x.family == "frame")
+            >= data["frame_capacity"]
+        ):
+            break
+        purchases.buy(
+            PLAYER,
+            str(uuid4()),
+            actor,
+            data["source_sha256"],
+            Installation(
+                name="Actual learner spare " + str(len(sheet.assets)),
+                description="Actual permanently purchased pre-source hardware",
+                account="Actual paid original spare",
+                trigger_confirmed=True,
+            ),
+        )
+    old = next(
+        x.model_copy(deep=True)
+        for x in state(game).sheets["2"].assets
+        if x.family == "frame" and not x.void
+    )
+    with ledger.engine.connect() as c:
+        assert available(game, c, state(game), actor, RISK).id == lesson.id
+    cockpit(game, "pilot")
+    heat = state(game).sheets["2"].heat
+    game.dice.faces = (1, 2)
+    incoming = game.begin(
+        PLAYER,
+        str(uuid4()),
+        900,
+        state(game).sheets["2"].revision,
+        PlayInput(
+            play="keep_your_head",
+            heat=heat if heat >= 5 else 0,
+            piloting=True,
+            context="I actually resist this original incoming threat",
+            trigger_confirmed=True,
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    assert game.inspect(PLAYER, incoming)["receipt"]
+    pass_tags(game)
+    row = next(x for x in game.choices(PLAYER) if x["kind"] == "mockingbird_risk")
+    receipt, calls = game.inspect(PLAYER, incoming)["receipt"], game.dice.calls
+
+    async def opener(interaction):
+        await open_mockingbird(interaction, game, row["id"])
+
+    _native_actual_sup_cap_growth(
+        game,
+        opener,
+        old,
+        {"total": ("9",), "asset": (GROW,)},
+        number=992900,
+        name="Actual consumed-lesson Sup plate",
+    )
+    born = state(game)
+    grown = next(x for x in sup.growths(born) if x.action == incoming)
+    assert grown.purchase == paid.id and not has_rule(born.sheets["2"], RISK, "MOCKINGBIRD")
+    with ledger.engine.connect() as c:
+        use = prove_risk_lesson(game, c, born, game.action(c, incoming))
+        assert use.lesson == lesson.id and use.asset == grown.asset
+        loss = next(x for x in sup_risk_losses(game, c, born, actor) if x.id == grown.asset)
+        assert available(game, c, born, actor, RISK) is None
+    assert (
+        loss.asset == old
+        and game.dice.calls == calls
+        and game.inspect(PLAYER, incoming)["receipt"] == receipt
+    )
+    answer(game, PLAYER, "actor_keep", options=("in_control", "vicious"), denied=("desperate",))
+    answer(game, ADMIN, "handler_keep", flag=True, text="The actual defense works")
+    tick(worker, gateway, 6)
+    assert game.inspect(PLAYER, incoming)["state"] == "complete"
+    replacement = next(x for x in born.sheets["2"].assets if x.id == grown.asset)
+    _assert_native_modular_loss_regrowth(game, worker, gateway, controls, loss, replacement)

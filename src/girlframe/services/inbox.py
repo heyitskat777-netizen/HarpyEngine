@@ -960,6 +960,54 @@ class InboxService:
                             )
                         )
 
+            from girlframe.services.m3_am_sex import SexService as AMSexService
+            from girlframe.services.m3_am_sex import lessons as am_lessons
+
+            if str(viewer.user_id) in canon.sheets:
+                actor = lesson_owner(canon, viewer.user_id)
+                for lesson in am_lessons(GameService(self.store), connection, canon, actor):
+                    items.append(
+                        InboxItem(
+                            "learned-source:" + lesson["id"],
+                            "learned_source",
+                            lesson["id"],
+                            canon.revision,
+                            "playbook",
+                            lesson["label"],
+                            "You and the actual counterpart",
+                            "available",
+                            False,
+                            False,
+                            "Open the private controls for this no-roll lesson.",
+                            "Each original participant owns consent and performed-scene details.",
+                            "Start a learned source",
+                            task="m3_learned_sex",
+                        )
+                    )
+            for encounter in AMSexService(GameService(self.store))._tasks(connection, viewer):
+                # This source distinguishes awaiting another original participant from
+                # this viewer's own decision; the rule service owns both projections.
+                items.append(
+                    InboxItem(
+                        "learned-am:" + encounter["id"],
+                        "learned_am",
+                        encounter["id"],
+                        encounter["revision"],
+                        "playbook",
+                        encounter["label"],
+                        "Actual original source participants",
+                        "pending"
+                        if encounter["pending"] or encounter["waiting"]
+                        else "established",
+                        bool(encounter["pending"]),
+                        False,
+                        "Read or continue the actual no-roll source and owed gifts.",
+                        "Participants own their consent, performance and gifts.",
+                        "Open your actual AM source",
+                        task="m3_learned_am",
+                    )
+                )
+
             from girlframe.services.m3_missions import MissionService
             from girlframe.services.m3_off_duty import OffDutyService
             from girlframe.services.m3_patrol_harpy import PatrolHarpyService

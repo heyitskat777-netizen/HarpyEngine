@@ -4780,3 +4780,259 @@ def test_actual_retained_vatgrown_sex_lesson_after_real_defeat_alpha_change_nati
     assert "PRIVATE_BORROWED_VATGROWN" not in json.dumps(gateway.messages)
     assert "PRIVATE_VATGROWN_REPLY" not in json.dumps(gateway.messages)
     tick(worker, gateway, 6)
+
+
+def test_actual_learned_am_sex_native_independent_no_roll_performances_and_real_animal_gift(
+    ledger, tmp_path, monkeypatch
+):
+    from girlframe.delivery.p1_source_pause_worker import SourcePauseWorker
+    from girlframe.discord_adapter.ledger import clean
+    from girlframe.discord_adapter.m3_am_sex import open_am_sex
+    from girlframe.discord_adapter.m3_learned_sex import open_learned_sex
+    from girlframe.engine import m3_am_sex as am
+    from girlframe.engine import m3_gender_designation as gender
+    from girlframe.engine import m3_handler_ordinary as ordinary
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+    from girlframe.engine.p1_unrolled_sex import gifts
+    from girlframe.services.m3_am_sex import SexService, lessons, prove_learned
+    from girlframe.services.m3_gender_designation import GenderDesignationService
+    from girlframe.services.m3_handler_ordinary import HandlerOrdinaryService
+    from girlframe.services.m3_handler_pr import HandlerPRService
+    from girlframe.services.p1_unrolled_sex import prove as prove_gift
+
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, teacher="AM")
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(
+            rules.EXPERIMENT,
+            rules.INVESTMENT,
+            rules.SEX,
+            rules.BRUTALIZE,
+            am.RULE,
+            ordinary.RULE,
+            gender.RULE,
+        ),
+    )
+    lesson = _learn_daily_source(game, worker, gateway, controls, am.RULE)
+    actor, target = current_ref(state(game), 2), current_ref(state(game), 3)
+    assert state(game).sheets["2"].girl == "VATGROWN" and state(game).sheets["3"].girl == "AM"
+    assert not has_rule(state(game).sheets["2"], am.RULE, "AM")
+    # Actual earned Handler award and actual legal designation; no gender/resource setter.
+    HandlerOrdinaryService(ledger).record_session(
+        ADMIN,
+        str(uuid4()),
+        state(game).revision,
+        "Actual legal-source Session",
+        "The actual original facilitator begins this Session",
+    )
+    pr = HandlerPRService(ledger)
+    publicity = pr.plan(
+        ADMIN,
+        str(uuid4()),
+        state(game).revision,
+        "Actual Foundation feature",
+        "The actual Handler hosts and this original Vatgrown participates",
+        (actor,),
+    )["id"]
+    pr.activity(
+        ADMIN,
+        str(uuid4()),
+        publicity,
+        state(game).revision,
+        "I actually host the Foundation feature",
+        hosting=True,
+    )
+    pr.activity(
+        PLAYER,
+        str(uuid4()),
+        publicity,
+        state(game).revision,
+        "My actual original Vatgrown participates in the Foundation feature",
+    )
+    pr.submit_result(
+        ADMIN, str(uuid4()), publicity, state(game).revision, "The actual event has been performed"
+    )
+    earned = pr.resolve(
+        ADMIN,
+        str(uuid4()),
+        publicity,
+        state(game).revision,
+        True,
+        "The authorized actual result adjudicator records real Foundation success",
+    )
+    law = GenderDesignationService(ledger)
+    acquisition = law.buy(
+        ADMIN,
+        str(uuid4()),
+        earned["award"],
+        state(game).revision,
+        "Spend the actual earned and held Award on this legal request",
+    )["id"]
+    law.designate(
+        ADMIN,
+        str(uuid4()),
+        acquisition,
+        state(game).revision,
+        (actor,),
+        "animal",
+        "The actual Handler legally designates this original Vatgrown an Animal",
+    )
+    assert gender.current(state(game), actor).gender == "animal"
+    service = SexService(game)
+    with ledger.engine.connect() as c:
+        action_count = c.scalar(sa.select(sa.func.count()).select_from(t.m2["m2_actions"]))
+    before, calls = state(game), game.dice.calls
+
+    def native_invite():
+        async def invite():
+            opened = _learned_sex_interaction()
+            await opened.response.defer(ephemeral=True)
+            await open_learned_sex(opened, game, identity=lesson.id)
+            menu = opened.edit_original_response.call_args.kwargs["view"]
+            menu.values["source"] = ("invite",)
+            response = _learned_sex_interaction()
+            await menu.confirm.callback(response)
+            form = response.edit_original_response.call_args.kwargs["view"]
+            assert not await form.interaction_check(_learned_sex_interaction(3))
+            form.values.update(
+                target=(target.token,),
+                lesson=(lesson.id,),
+                account="PRIVATE_LEARNED_AM Our actual voluntary source, no circuits",
+            )
+            sent = _learned_sex_interaction()
+            await form.confirm.callback(sent)
+            assert form.completed, sent.edit_original_response.call_args_list
+            saved = state(game)
+            await form.confirm.callback(sent)
+            assert state(game) == saved
+
+        asyncio.run(invite())
+        return am.sources(state(game))[-1]
+
+    def native_operation(viewer, source_id, operation, **values):
+        async def operate():
+            opened = _learned_sex_interaction(viewer.user_id)
+            await opened.response.defer(ephemeral=True)
+            await open_am_sex(opened, service, identity=source_id)
+            menu = opened.edit_original_response.call_args.kwargs["view"]
+            menu.values["operation"] = (operation,)
+            response = _learned_sex_interaction(viewer.user_id)
+            await menu.confirm.callback(response)
+            form = response.edit_original_response.call_args.kwargs["view"]
+            form.values.update(values)
+            sent = _learned_sex_interaction(viewer.user_id)
+            await form.confirm.callback(sent)
+            assert form.completed, sent.edit_original_response.call_args_list
+
+        asyncio.run(operate())
+
+    declined = native_invite()
+    native_operation(
+        OTHER, declined.id, "confirm", accept=("no",), account="My own actual source refusal"
+    )
+    assert am.source(state(game), declined.id).phase == "declined"
+    with ledger.engine.connect() as c:
+        assert lessons(game, c, state(game), actor)[0]["id"] == lesson.id
+    source = native_invite()
+    assert source.mode == "both_am" and source.action is None and source.counterpart_action is None
+    with pytest.raises(WorkflowError):
+        service.view_learned(ADMIN, source.id)
+    native_operation(
+        OTHER,
+        source.id,
+        "confirm",
+        accept=("yes",),
+        account="My own independent voluntary confirmation",
+    )
+    native_operation(
+        PLAYER,
+        source.id,
+        "perform",
+        circuits=("no",),
+        account=(
+            "PRIVATE_OWN_AM I actually performed my original person's scene without circuit access"
+        ),
+    )
+    actual = state(game)
+    first = am.source(actual, source.id)
+    assert first.used_event and first.phase == "active" and not first.effect_event
+    runtime = next(x for x in actual.sheets["2"].girl_runtime.learned_plays if x.id == lesson.id)
+    assert runtime.used_event == first.used_event and runtime.claimed_source == source.id
+    assert runtime.claimed_action is None and runtime.rolled_event is None
+    assert not gifts(actual)
+    with ledger.engine.connect() as c:
+        own = next(x for x in service._tasks(c, PLAYER) if x["id"] == source.id)
+        other = next(x for x in service._tasks(c, OTHER) if x["id"] == source.id)
+        assert not own["pending"] and own["waiting"]
+        assert other["pending"] and not other["waiting"]
+        assert not service._tasks(c, ADMIN)
+    unchanged = state(game)
+    with pytest.raises(WorkflowError):
+        service.withdraw(
+            PLAYER, str(uuid4()), source.id, unchanged.revision, "No refund of actual performed use"
+        )
+    assert state(game) == unchanged
+    native_operation(
+        OTHER,
+        source.id,
+        "perform",
+        circuits=("no",),
+        account="PRIVATE_OTHER_AM I independently performed my own original scene, no circuits",
+    )
+    actual = state(game)
+    assert am.source(actual, source.id).phase == "effects"
+    gift = next(x for x in gifts(actual) if x.source == source.id)
+    assert gift.source_kind == "learned_am" and gift.animal == actor and gift.target == target
+    assert gift.tag is None
+    asyncio.run(SourcePauseWorker(game).tick(gateway))
+    with ledger.engine.connect() as c:
+        assert not any(x["pending"] for x in service._tasks(c, OTHER))
+        assert any(x["pending"] for x in service._tasks(c, PLAYER) if x["id"] == source.id)
+    native_operation(
+        PLAYER,
+        source.id,
+        "gift",
+        gift=(gift.id,),
+        tag="PRIVATE_AM_GIFT My actual ordinary source Tag",
+    )
+    actual = state(game)
+    completed = am.source(actual, source.id)
+    assert completed.phase == "complete" and completed.completed_event and completed.action is None
+    assert len([x for x in am.performances(actual) if x.source == source.id]) == 2
+    tagged = next(x for x in actual.sheets["3"].tags if x.id == gifts(actual)[-1].tag)
+    assert tagged.giver_actor == actor and tagged.label.startswith("PRIVATE_AM_GIFT")
+    assert game.dice.calls == calls
+    assert {x: sheet.heat for x, sheet in actual.sheets.items()} == {
+        x: sheet.heat for x, sheet in before.sheets.items()
+    }
+    with ledger.engine.connect() as c:
+        assert c.scalar(sa.select(sa.func.count()).select_from(t.m2["m2_actions"])) == action_count
+        assert prove_learned(game, c, actual, source.id) == completed
+        assert prove_gift(game, c, actual, gift.id).tag == tagged.id
+        assert not lessons(game, c, actual, actor)
+        rows = [x for x in service._tasks(c, PLAYER) if x["id"] == source.id]
+        assert rows[0]["phase"] == "resolved" and not rows[0]["pending"] and not rows[0]["waiting"]
+    assert not has_rule(actual.sheets["2"], "girl.am.just-code", "AM")
+    assert not has_rule(actual.sheets["2"], am.RULE, "AM")
+
+    async def read_private():
+        opened = _learned_sex_interaction()
+        await opened.response.defer(ephemeral=True)
+        await open_am_sex(opened, service, identity=source.id)
+        view = opened.edit_original_response.call_args.kwargs["view"]
+        text = "".join(page.body for page in view.pages)
+        assert clean(completed.account) in text and "Mandatory Animal Tag given" in text
+        for item in am.performances(actual):
+            if item.source == source.id:
+                assert clean(item.account) in text
+        assert clean(tagged.label) in text
+        assert not await view.interaction_check(_learned_sex_interaction(1))
+
+    asyncio.run(read_private())
+    assert "PRIVATE_OWN_AM" not in json.dumps(gateway.messages)
+    assert "PRIVATE_OTHER_AM" not in json.dumps(gateway.messages)
+    assert "PRIVATE_AM_GIFT" not in json.dumps(gateway.messages)
+    asyncio.run(SourcePauseWorker(game).tick(gateway))

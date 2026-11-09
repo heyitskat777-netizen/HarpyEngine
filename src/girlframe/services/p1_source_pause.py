@@ -68,6 +68,13 @@ def _sources(state: GameState) -> tuple[_Source, ...]:
         for x in borrowed_am.sources(state)
         if x.phase in ("active", "effects") and not x.completed_event
     )
+    from girlframe.engine import m3_am_sex as learned_am
+
+    learned_encounters = tuple(
+        _Source(x.id, "learned_am", x.cast.channel, x.cast.id, x.effect_event)
+        for x in learned_am.sources(state)
+        if x.phase == "effects" and x.effect_event and not x.completed_event
+    )
     from girlframe.engine import m3_void_frame_entry as entry_rules
 
     entries: tuple[_Source, ...] = ()
@@ -84,7 +91,16 @@ def _sources(state: GameState) -> tuple[_Source, ...]:
             )
             for x in pause_sources(state)
         )
-    return (*bonded, *commands, *openings, *sequences, *performances, *am_encounters, *entries)
+    return (
+        *bonded,
+        *commands,
+        *openings,
+        *sequences,
+        *performances,
+        *am_encounters,
+        *learned_encounters,
+        *entries,
+    )
 
 
 def active(state: GameState, identity: str) -> bool:
@@ -298,6 +314,10 @@ def require_clear(
                             continue
             raise WorkflowError(
                 "Resolve the actual original Ankou source and its required followups"
+            )
+        if row["kind"] == "learned_am":
+            raise WorkflowError(
+                "SOURCE_SCENE_PAUSED: finish the actual no-roll AM source and its owed gifts"
             )
         if row["kind"] == "changeling_pause":
             from girlframe.engine import m3_changeling as mental

@@ -2,10 +2,10 @@
 
 Owner authorized continuation2026-11-08. Bot OFF; RULES_SUBSET. Most automated testing deferred to final P1 candidate; only minimum likely-flow smoke during work. No unequal-rule percentages.
 
-Current published source: **41f91455015e0c58f98f75b1917ab93083d5ad18**
-([focused CI42562797057](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42562797057)
-passed; full regression skipped). Oldgen/Newgirl learning and actual Modular
-OffDuty/Risk Sup regrowth are published. Full P1 and human gates remain pending.
+Current published source: **40b3b226aa8ad45879b3c664690ef7998e315817**
+([focused CI42564398560](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42564398560)
+passed; full regression skipped). Vatgrown native history/retained use, the remaining Modular repair family and
+actual directed paid-basis ownership are published. Full P1 and human gates remain pending.
 
 ## Working queue
 
@@ -15,12 +15,12 @@ minimum normal episodes without pytest/collection. No previously green-node reru
 
 | Workflow | Owner | Dependency | Next concrete action | Evidence/state |
 |---|---|---|---|---|
-| Vatgrown Sex learning | Complete; Malleable7 +root3 | Actual original grant and true Defeat/Alpha transition | Preserve broader final branches; next actual learned AM no-roll | Native history passed first; nonnative real transition/private once-use passed failed-only2/19.32s |
-| Remaining Modular repair-loss family | Complete; AM4 | Actual accepted paid Quote, Doctor patient response or Supply repair acceptance | Next full actual Sup gain-source family | Doctor/Supply passed retry1; Quote actual source/period/scene/regrowth passed failed-only2/19.32s |
-| Remaining learned Sex providers | Malleable next | Existing genuine source and current-body/Pair/no-roll operations | AM actual no-roll use-event/performance/gifts, actual Casualty parts mapping, original Bonded Pair; borrowed Mock/Newgirl group Link | Exact IDs/conditions in P1_LEARNED_SOURCE_QUEUE; not fake anatomy exclusions, no automatic passive |
+| Learned AM no-roll source | Complete; Malleable8 +root5 | Actual grant and independent source performances/gifts | Next borrowed group Link; reconcile existing native AM+AM entry separately | Native two-performance/Animal/private/pause normal passed failed-only3/19.53s; no fake Action/receipt/rolled event |
+| Remaining Sup gain-source family | Complete; AM4 | Genuine paid birth: Mockingbird Sex, Dormant work, cleanup and learned Risk | Preserve final affected-consumer verification; next actual body-site source dependency | Sex/learnedRisk passed first; Dormant/cleanup passed failed-only3/19.53s |
+| Remaining learned Sex providers | Malleable after AM | Existing genuine current-body/Pair/party operations | Actual Casualty parts mapping and original Bonded Pair; borrowed Mock/Newgirl group Link | Exact IDs/conditions in P1_LEARNED_SOURCE_QUEUE; not fake anatomy exclusions, no automatic passive |
 | Other transferable ongoing/setup sources | Root with next dependency group | Actual Pair, accessible circuits/adjusted mind or real setup/history | Source-specific acquisition and effect adapters for Always By Her Side, Scrutinized/Just Code; meaningful original first-two acquisition | Native producers exist; remaining learned adapters stay open, not empty acknowledgement |
-| Remaining ordinary forced/controlled source adapters | Root after active integration | Genuine original Task/directive/parent, performer and resources | Pilot actual required Oldgen source beside published Alpha/Dose/direct3; finite shared lookup, genuine consent/cancellation/parent proof | Basic7/directed NPC Flirt, self-Dose/advice/EasyTarget and actual paid counterpart Kicked Puppy/Dampener implemented; both new basis normals passed first |
-| Remaining CONSUME gain/lifetime sources | AM after Modular family | Actual Sup gain birth, linked component/holder/lifetime | Actual Sup Sex/Dormant/work-owned gain providers and learned Risk source admission | Read-only source contract ready in same4; carrier following/unplug Battery/exact Storage already exist, no new generic/Core cap-loss producer established |
+| Actual required Oldgen source pilot | Root4 | Genuine original Task/directive/parent, performer and resources | Integrate actual Oldgen source beside Alpha; preserve self-Dose distinct recipe; validate native consent/cancellation/relink/real results/Task pause | Native source/consent/unrolled cancel/relink/actual outcomes/Task and scene-pause restoration passed first in3/28.83s; existing Alpha/Dose regressions deferred final; other own recipes explicit |
+| Linked-resource lifetime reconciliation | Complete read-only; preserve final checks | Actual component/holder/vessel and original operation | Preserve original guards; no new generic lifetime subsystem | Carrier following, real unplug Battery expiry and exact Storage exist; no concrete additional Core cap-loss producer established |
 | Human-operated campaign verification | Root | Ordinary source checklist closed | Run authored mission→Play→discipline→Strain→OffDuty/recovery→next mission; facilitator roles/pause/delivery/restore | Campaign-loop and native Doll-history normals authored NOT RUN; learned Ankou committed Feedback/combined mode remain final verification |
 | Final exact-candidate gates | Root; independent reviewer; owner/players | Frozen implemented source and disclosed limitations | Full regression including Deep-Brain-Spikes pagination; global static/migration/privacy/restore; independent review; private Discord test handoff | PENDING. Focused CI is not full regression, review, player success or acceptance; bot OFF |
 
