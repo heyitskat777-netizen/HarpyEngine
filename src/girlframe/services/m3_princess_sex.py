@@ -771,6 +771,8 @@ def child_projection(
     )
     from girlframe.engine.m3_clone_am import additional_identities
     from girlframe.services.m3_clone_am import prove_additional
+    from girlframe.services.m3_dampener import entitlement as dampener_entitlement
+    from girlframe.services.m3_kicked_puppy import entitlement as kicked_entitlement
     from girlframe.services.m3_nightmare import entitlement
 
     extra = additional_identities(state, sheet.owner)
@@ -815,6 +817,11 @@ def child_projection(
         assets=[x.model_dump(mode="json") for x in actual.assets],
         piloting=actual.piloting,
         nightmare=bool(entitlement(game, c, state, value.actor)),
+        kicked_puppy=value.play == "flirt"
+        and value.target is not None
+        and value.target.kind == "pilot"
+        and bool(kicked_entitlement(game, c, state, value.actor)),
+        dampener=bool(dampener_entitlement(game, c, state, value.actor)),
         child=value.child,
         descriptor=descriptor,
     )
@@ -1016,11 +1023,6 @@ def child_source(
     ):
         raise WorkflowError(
             "Only the original Princess directs this fixed counterpart's actual single legal child"
-        )
-    if prepared.kicked_puppy_basis or prepared.dampener_modifier is not None:
-        raise WorkflowError(
-            "UNSUPPORTED_RULE: this controlled child needs its actual "
-            "Kicked/Dampener source adapter"
         )
     _prerequisites(game, c, state, session, value.play, value.target, value.order_id)
     return dict(

@@ -179,6 +179,9 @@ class RegrownFrame(Model):
             "sup_dive_cap",
             "modular_recovery",
             "sup_risk_cap",
+            "modular_quote",
+            "modular_doctor",
+            "modular_supply",
         ]
         | None
     ) = Field(default=None, exclude_if=lambda value: value is None)

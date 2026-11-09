@@ -32,6 +32,7 @@ class LearnedSexLink(Model):
         "girl.mockingbird.sex-play",
         "girl.oldgen.sex-play",
         "girl.newgirl.sex-play",
+        "girl.vatgrown.sex-play",
     ]
     session: str
     actor: ActorRef

@@ -1036,3 +1036,117 @@ def test_actual_princess_controls_native_stim_self_dose_real_resources_author_an
         controls.controlled(PLAYER, direction.id)
     assert game.dice.calls == calls + 1
     tick(worker, gateway, 5)
+
+
+@pytest.mark.parametrize("basis", ["kicked_puppy", "dampener"])
+def test_actual_directed_native_flirt_uses_paid_counterpart_basis_and_not_author_resources(
+    ledger, tmp_path, monkeypatch, basis
+):
+    from girlframe.engine import m3_dampener as dampener
+    from girlframe.engine import m3_kicked_puppy as kicked
+    from girlframe.engine.m3_actor_state import ActorRef
+    from girlframe.services.m3_dampener import DampenerService
+    from girlframe.services.m3_kicked_puppy import KickedPuppyService
+
+    game, worker, gateway, service = setup(ledger, tmp_path, monkeypatch)
+    rule = kicked.RULE if basis == "kicked_puppy" else dampener.RULE
+    approved(
+        ledger, game, tmp_path, monkeypatch, extra=(ordinary.RULE, rules.RULE, gender.RULE, rule)
+    )
+    with ledger.transaction() as c:
+        actual = state(game)
+        sheet = actual.sheets["3"]
+        sheet.permissions = 6
+        sheet.heat = 5
+        if basis == "kicked_puppy":
+            for asset in sheet.assets:
+                if asset.family == "girl":
+                    asset.damaged = True
+        game.event(c, 1, str(uuid4()), "synthetic.actual_counterpart_resources", actual)
+    purchase = KickedPuppyService(game) if basis == "kicked_puppy" else DampenerService(game)
+    menu = purchase.menu(OTHER)
+    before_permissions = state(game).sheets["3"].permissions
+    key = str(uuid4())
+    args = (
+        OTHER,
+        key,
+        menu["revision"],
+        ActorRef.model_validate(menu["actor"]),
+        menu["frame"],
+        "PRIVATE_DIRECTED_BASIS: actual counterpart's paid Class acquisition",
+        menu["donors"][0] if menu["donors"] else None,
+    )
+    bought = purchase.buy(*args)
+    assert purchase.buy(*args) == bought
+    assert state(game).sheets["3"].permissions == before_permissions - menu["price"]
+    identity, parent = roll(game, worker, gateway, service, (6, 6), native=True)
+    pass_tags(game)
+    actual = state(game)
+    princess, performer = current_ref(actual, 2), current_ref(actual, 3)
+    princess_sheet = actual.sheets["2"].model_copy(deep=True)
+    original_heat = actual.sheets["3"].heat
+    damaged = sum(x.family == "girl" and x.damaged for x in actual.sheets["3"].assets)
+    parent_receipt = game.inspect(PLAYER, parent)["receipt"]
+    direction = _directed_native(game, identity, "flirt", target=princess)
+    game.dice = Dice((3, 3))
+    values = dict(heat=("0",), identity=(), gain=("0",))
+    if basis == "kicked_puppy":
+        values["kicked_puppy_basis"] = ("damaged",)
+    else:
+        values.update(heat=("5",), dampener_modifier=("3",))
+    child = _prepare_directed_native(game, service, identity, **values)
+    with ledger.engine.connect() as c:
+        action = game.action(c, child)
+        meta = action["data"][basis]
+        assert action["actor_id"] == "3" and meta["actor"] == performer.model_dump(mode="json")
+        assert meta["purchase"] == bought["id"]
+    tick(worker, gateway, 3)
+    if game.inspect(PLAYER, child)["state"] == "ready_to_roll":
+        game.roll(PLAYER, str(uuid4()), child)
+    receipt = game.inspect(PLAYER, child)["receipt"]
+    assert receipt["base_modifier"] == (damaged if basis == "kicked_puppy" else 3)
+    assert receipt["heat"] == (0 if basis == "kicked_puppy" else 5)
+    assert (
+        receipt["kicked_purchase" if basis == "kicked_puppy" else "dampener_purchase"]
+        == bought["id"]
+    )
+    assert state(game).sheets["3"].heat == original_heat - (0 if basis == "kicked_puppy" else 5)
+    assert state(game).sheets["2"] == princess_sheet
+    _pass_directed_tags(game)
+    actor_row = next(x for x in game.choices(PLAYER) if x["kind"] == "actor_flirt")
+    assert actor_row["actor_id"] == "3"
+    with pytest.raises(WorkflowError):
+        game.respond(
+            OTHER,
+            str(uuid4()),
+            actor_row["id"],
+            actor_row["revision"],
+            ChoiceAnswer(options=("name",)),
+        )
+    args = (
+        PLAYER,
+        str(uuid4()),
+        actor_row["id"],
+        actor_row["revision"],
+        ChoiceAnswer(options=("name",)),
+    )
+    reply = game.respond(*args)
+    assert game.respond(*args) == reply
+    target_row = next(x for x in game.choices(PLAYER) if x["kind"] == "target_flirt")
+    assert target_row["actor_id"] == "2"
+    game.respond(
+        PLAYER,
+        str(uuid4()),
+        target_row["id"],
+        target_row["revision"],
+        ChoiceAnswer(text="PRIVATE_DIRECTED_BASIS: the real recipient's own answer"),
+    )
+    assert game.inspect(PLAYER, child)["state"] == "complete"
+    assert game.inspect(PLAYER, parent)["state"] == "complete"
+    assert game.inspect(PLAYER, child)["receipt"] == receipt
+    assert game.inspect(PLAYER, parent)["receipt"] == parent_receipt
+    assert rules.direction(state(game), direction.id).completed_event
+    assert game.dice.calls == 1
+    assert service.view(OTHER, identity)["phase"] == "complete"
+    tick(worker, gateway, 8)
+    assert "PRIVATE_DIRECTED_BASIS" not in json.dumps(gateway.messages)

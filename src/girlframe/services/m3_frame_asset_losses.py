@@ -1,7 +1,7 @@
 """Explicit source producers share one immutable Frame-loss selection shape."""
 
 import json
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import sqlalchemy as sa
 from sqlalchemy import Connection
@@ -21,6 +21,9 @@ from girlframe.services.m3_asset_loss import snapshots
 from girlframe.services.m3_privileges import purchase_proof
 from girlframe.services.onboarding import WorkflowError
 
+if TYPE_CHECKING:
+    from girlframe.engine.m3_modular import Replacement as ModularReplacement
+
 
 class FrameAssetLoss(Model):
     source_kind: Literal[
@@ -34,6 +37,9 @@ class FrameAssetLoss(Model):
         "sup_dive_cap",
         "modular_recovery",
         "sup_risk_cap",
+        "modular_quote",
+        "modular_doctor",
+        "modular_supply",
     ]
     id: str
     actor: ActorRef
@@ -1130,4 +1136,364 @@ def sup_risk_losses(
                     asset=old,
                 )
             )
+    return tuple(result)
+
+
+def _repair_event(
+    game: GameService, c: Connection, event: str, kind: str, human: int, key: str, source: str
+) -> dict[str, Any]:
+    row = (
+        c.execute(
+            sa.select(t.events).where(
+                t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == event
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if (
+        row is None
+        or row["kind"] != kind
+        or row["actor_id"] != str(human)
+        or json.loads(row["payload_json"]).get(key) != source
+    ):
+        raise WorkflowError("Recover the exact original human's canonical repair source")
+    return dict(row)
+
+
+def _modular_repair_losses(
+    game: GameService,
+    c: Connection,
+    before: GameState,
+    born: GameState,
+    repaired: GameState,
+    actor: ActorRef,
+    source: str,
+    event: str,
+    kind: Literal["modular_quote", "modular_doctor", "modular_supply"],
+    selected: tuple["ModularReplacement", ...] | None = None,
+) -> tuple[FrameAssetLoss, ...]:
+    """Replay only after the caller proves its actual distinct repair producer."""
+    from girlframe.engine.m3_modular import Replacement, replace_repaired
+    from girlframe.services.m3_modular import entitlement
+
+    facts = [
+        x
+        for x in born.facts
+        if x.get("kind") == "modular_repair"
+        and x.get("actor") == actor.model_dump_json()
+        and x.get("source") == source
+        and not x.get("period")
+        and x not in before.facts
+    ]
+    if not facts:
+        return ()
+    receipt = entitlement(game, c, born, actor)
+    if (
+        receipt is None
+        or any(x.get("purchase") != receipt.id for x in facts)
+        or len({x["old"] for x in facts}) != len(facts)
+    ):
+        raise WorkflowError("Keep the actual original paid Modular repair entitlement")
+    choices, originals = [], []
+    for fact in facts:
+        old = next((x for x in before.sheets[actor.entity].assets if x.id == fact["old"]), None)
+        new = next((x for x in born.sheets[actor.entity].assets if x.id == fact["new"]), None)
+        if (
+            old is None
+            or new is None
+            or old.id == new.id
+            or any(x.id == old.id for x in born.sheets[actor.entity].assets)
+            or any(x.id == new.id for x in before.sheets[actor.entity].assets)
+        ):
+            raise WorkflowError("Recover the original replaced hardware and distinct new component")
+        choices.append(Replacement(asset=old.id, name=new.name, description=new.description))
+        originals.append(old)
+    if selected is not None and tuple(choices) != selected:
+        raise WorkflowError("Preserve the original patient's exact owned Modular repair selection")
+    try:
+        replace_repaired(
+            repaired, actor, before.sheets[actor.entity], tuple(choices), None, source=source
+        )
+    except ValueError as error:
+        raise WorkflowError("Recover the actual legal Modular repair: " + str(error)) from None
+    if repaired.sheets[actor.entity].assets != born.sheets[actor.entity].assets or any(
+        x not in repaired.facts for x in facts
+    ):
+        raise WorkflowError("Preserve the actual source repair and pure Modular replacement")
+    return tuple(
+        FrameAssetLoss(
+            source_kind=kind,
+            id=consume.identity(kind.replace("_", "-"), source, old.id),
+            actor=actor,
+            frame=consume.frame(born, actor),
+            event=event,
+            asset=old,
+        )
+        for old in originals
+        if _eligible(before, actor, old)
+    )
+
+
+def modular_quote_losses(
+    game: GameService, c: Connection, state: GameState, actor: ActorRef
+) -> tuple[FrameAssetLoss, ...]:
+    from girlframe.engine.m3_economy import RepairQuote, quoted_repair_in_state
+    from girlframe.engine.m3_off_duty import Period
+    from girlframe.engine.m3_repairs import active
+    from girlframe.services.m3_handler_advancements import _history
+    from girlframe.services.m3_intracadre_marriage import prove_flow
+
+    result: list[FrameAssetLoss] = []
+    history = t.m3["m3_off_duty_history"]
+    for quote in state.repair_quotes:
+        source = "repair_quote:" + quote.id
+        if quote.owner != actor or quote.state != "accepted" or quote.response_event is None:
+            continue
+        if not any(
+            x.get("kind") == "modular_repair" and x.get("source") == source for x in state.facts
+        ):
+            continue
+        event = quote.response_event
+        before, born = snapshots(game, c, event)
+        if not _surviving_frame(state, before, born, actor):
+            continue
+        pending = next((x for x in before.repair_quotes if x.id == quote.id), None)
+        original = next(
+            (x for x in _history(c, game, quote.source_event).repair_quotes if x.id == quote.id),
+            None,
+        )
+        audit = _repair_event(
+            game, c, event, "m3.repair_quote_answered", int(actor.entity), "quote_id", quote.id
+        )
+        _repair_event(
+            game,
+            c,
+            quote.source_event,
+            "m3.repair_quote_offered",
+            quote.handler,
+            "quote_id",
+            quote.id,
+        )
+        period_raw = c.scalar(
+            sa.select(history.c.body_json)
+            .join(
+                t.events,
+                sa.and_(
+                    t.events.c.campaign_id == history.c.campaign_id,
+                    t.events.c.id == history.c.event_id,
+                ),
+            )
+            .where(
+                history.c.campaign_id == game.store.campaign_id,
+                history.c.id == quote.period,
+                t.events.c.seq < audit["seq"],
+            )
+            .order_by(t.events.c.seq.desc())
+            .limit(1)
+        )
+        period = Period.model_validate_json(period_raw) if period_raw else None
+        if (
+            pending is None
+            or pending != original
+            or pending.state != "pending"
+            or quote
+            != pending.model_copy(
+                update=dict(state="accepted", revision=pending.revision + 1, response_event=event)
+            )
+            or quote not in born.repair_quotes
+            or json.loads(audit["payload_json"]).get("accepted") is not True
+            or before.handler != quote.handler
+            or quote.frame_instance != consume.frame(before, actor)
+            or active(before, quote.period) != quote.shortages
+            or period is None
+            or period.phase != "active"
+            or period.handler != quote.handler
+            or period.character_ids.get(actor.entity) != actor.incarnation
+            or actor.entity not in period.progress
+            or not period.progress[actor.entity].recovered
+        ):
+            raise WorkflowError("Recover the original accepted Handler quote and actual recovery")
+        repaired = GameState.model_validate_json(before.model_dump_json())
+        try:
+            quoted_repair_in_state(
+                repaired,
+                actor,
+                RepairQuote(
+                    id=quote.id,
+                    handler_id=quote.handler,
+                    owner_id=int(actor.entity),
+                    asset_id=quote.asset,
+                    sheet_revision=quote.sheet_revision,
+                    quote_revision=pending.revision,
+                    cost=quote.cost,
+                ),
+                current_handler=quote.handler,
+                expected_quote_revision=pending.revision,
+                event=event,
+                source=quote.id,
+            )
+        except ValueError as error:
+            raise WorkflowError("Recover the actual paid quote: " + str(error)) from None
+        prove_flow(game, c, before, born, actor, event, quote.id, quote.cost)
+        if any(
+            repaired.sheets[uid].permissions != sheet.permissions
+            for uid, sheet in born.sheets.items()
+        ):
+            raise WorkflowError("Preserve the actual quoted price and Permission balances")
+        result.extend(
+            _modular_repair_losses(
+                game, c, before, born, repaired, actor, source, event, "modular_quote"
+            )
+        )
+    return tuple(result)
+
+
+def modular_doctor_losses(
+    game: GameService, c: Connection, state: GameState, actor: ActorRef
+) -> tuple[FrameAssetLoss, ...]:
+    from pydantic import TypeAdapter
+
+    from girlframe.engine import m3_doctor as doctor
+    from girlframe.engine.m3_modular import Replacement
+    from girlframe.services.m3_doctor import owned
+    from girlframe.services.m3_dose_up import _roll_source
+
+    result: list[FrameAssetLoss] = []
+    requests, responses = t.m2["m2_choices"], t.m2["m2_responses"]
+    rows = c.execute(
+        sa.select(requests, responses.c.event_id)
+        .join(
+            responses,
+            sa.and_(
+                responses.c.campaign_id == requests.c.campaign_id,
+                responses.c.choice_id == requests.c.id,
+            ),
+        )
+        .where(
+            requests.c.campaign_id == game.store.campaign_id,
+            requests.c.kind == "doctor_patient",
+            requests.c.actor_id == actor.entity,
+        )
+    ).mappings()
+    for row in rows:
+        source = "doctor:" + row["action_id"] + ":" + row["id"]
+        if not any(
+            x.get("kind") == "modular_repair" and x.get("source") == source for x in state.facts
+        ):
+            continue
+        event = row["event_id"]
+        before, born = snapshots(game, c, event)
+        if not _surviving_frame(state, before, born, actor):
+            continue
+        action = game.action(c, row["action_id"])
+        meta = action["data"].get("doctor")
+        if meta is None or action["data"].get("play") != "nanobot_injection":
+            raise WorkflowError("Prove the actual original Nanobot repair Action")
+        _roll_source(game, c, action)
+        doctor_actor = ActorRef.model_validate(meta["actor"])
+        bound = action["data"].get("character_ids") or game.legacy_action_bindings(c, action)
+        audit = c.execute(
+            sa.select(t.events.c.seq).where(
+                t.events.c.campaign_id == game.store.campaign_id, t.events.c.id == event
+            )
+        ).scalar_one()
+        benefits = _preceding(game, c, action["id"], "doctor_nanobot_benefits", audit)
+        granted = _response(
+            game,
+            c,
+            action["id"],
+            benefits["id"],
+            benefits["event_id"],
+            "doctor_nanobot_benefits",
+            meta["actor_controller"],
+        )
+        selected = _response(
+            game, c, action["id"], row["id"], event, "doctor_patient", int(actor.entity)
+        )
+        body = json.loads(row["body_json"])
+        if (
+            meta["target"] != actor.model_dump(mode="json")
+            or meta["target_controller"] != int(actor.entity)
+            or bound.get(actor.entity) != actor.incarnation
+            or bound.get(doctor_actor.entity) != doctor_actor.incarnation
+            or action["actor_id"] != doctor_actor.entity
+            or not owned(game, c, before, doctor_actor, doctor.NANO)
+            or doctor.frame_id(before, doctor_actor) != meta["frame"]
+            or "repair" not in granted.options
+            or body.get("repair") != 2
+            or "modular" not in selected.fields
+            or set(selected.fields) - {"modular", "identity"}
+        ):
+            raise WorkflowError("Keep the actual Doctor benefit and patient's owned repair choices")
+        choices = TypeAdapter(tuple[Replacement, ...]).validate_json(selected.fields["modular"])
+        if not choices or not {x.asset for x in choices} <= set(selected.options):
+            raise WorkflowError("Replace only the actual selected Nanobot repairs")
+        repaired = GameState.model_validate_json(before.model_dump_json())
+        try:
+            doctor.repair(repaired, actor, selected.options, 2)
+        except ValueError as error:
+            raise WorkflowError("Recover the real patient repairs: " + str(error)) from None
+        result.extend(
+            _modular_repair_losses(
+                game, c, before, born, repaired, actor, source, event, "modular_doctor", choices
+            )
+        )
+    return tuple(result)
+
+
+def modular_supply_losses(
+    game: GameService, c: Connection, state: GameState, actor: ActorRef
+) -> tuple[FrameAssetLoss, ...]:
+    from girlframe.engine import m3_supply_drop as supply
+    from girlframe.engine.m3_actors import resolve
+    from girlframe.engine.m3_doctor import repair
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_supply_drop import use_source
+
+    result: list[FrameAssetLoss] = []
+    for value in supply.uses(state):
+        if (
+            value.target != actor
+            or value.kind != "repair"
+            or value.phase != "repaired"
+            or not value.effect_event
+        ):
+            continue
+        source, event = value.id, value.effect_event
+        if not any(
+            x.get("kind") == "modular_repair" and x.get("source") == source for x in state.facts
+        ):
+            continue
+        before, born = snapshots(game, c, event)
+        if not _surviving_frame(state, before, born, actor):
+            continue
+        original = next((x for x in supply.uses(before) if x.id == value.id), None)
+        _repair_event(
+            game, c, event, "m3.supply_drop_repaired", int(actor.entity), "use_id", value.id
+        )
+        actual = resolve(
+            before, actor, profiles(c, game.store.campaign_id), require_current_profile=False
+        )
+        if (
+            use_source(game, c, born, value.id) != value
+            or original is None
+            or original.phase != "proposed"
+            or original.effect_event is not None
+            or value.frame != consume.frame(before, actor)
+            or original.position != actual.source_sha256
+            or not value.effect_account
+            or not value.effect_account.strip()
+        ):
+            raise WorkflowError("Recover the actual paid Supply repair and recipient acceptance")
+        repaired = GameState.model_validate_json(before.model_dump_json())
+        try:
+            repair(repaired, actor, (value.asset,), 1)
+        except ValueError as error:
+            raise WorkflowError("Recover the real Supply repair: " + str(error)) from None
+        result.extend(
+            _modular_repair_losses(
+                game, c, before, born, repaired, actor, source, event, "modular_supply"
+            )
+        )
     return tuple(result)

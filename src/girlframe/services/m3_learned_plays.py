@@ -52,6 +52,7 @@ SEX_LESSONS = {
     "girl.mockingbird.sex-play": "MOCKINGBIRD",
     "girl.oldgen.sex-play": "OLDGEN",
     "girl.newgirl.sex-play": "NEWGIRL",
+    "girl.vatgrown.sex-play": "VATGROWN",
 }
 DAILY: dict[
     Literal["girl.princess.show-dog", "girl.stim-blissed.disposable-psyche"], tuple[str, str]

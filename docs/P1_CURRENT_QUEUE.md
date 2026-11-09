@@ -2,6 +2,44 @@
 
 Owner authorized continuation2026-11-08. Bot OFF; RULES_SUBSET. Most automated testing deferred to final P1 candidate; only minimum likely-flow smoke during work. No unequal-rule percentages.
 
+Current published source: **41f91455015e0c58f98f75b1917ab93083d5ad18**
+([focused CI42562797057](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42562797057)
+passed; full regression skipped). Oldgen/Newgirl learning and actual Modular
+OffDuty/Risk Sup regrowth are published. Full P1 and human gates remain pending.
+
+## Working queue
+
+Shared checkout; at most two implementation workers. Root owns central services,
+Inbox/native dispatch, integration, evidence and publication. Workers author
+minimum normal episodes without pytest/collection. No previously green-node reruns.
+
+| Workflow | Owner | Dependency | Next concrete action | Evidence/state |
+|---|---|---|---|---|
+| Vatgrown Sex learning | Complete; Malleable7 +root3 | Actual original grant and true Defeat/Alpha transition | Preserve broader final branches; next actual learned AM no-roll | Native history passed first; nonnative real transition/private once-use passed failed-only2/19.32s |
+| Remaining Modular repair-loss family | Complete; AM4 | Actual accepted paid Quote, Doctor patient response or Supply repair acceptance | Next full actual Sup gain-source family | Doctor/Supply passed retry1; Quote actual source/period/scene/regrowth passed failed-only2/19.32s |
+| Remaining learned Sex providers | Malleable next | Existing genuine source and current-body/Pair/no-roll operations | AM actual no-roll use-event/performance/gifts, actual Casualty parts mapping, original Bonded Pair; borrowed Mock/Newgirl group Link | Exact IDs/conditions in P1_LEARNED_SOURCE_QUEUE; not fake anatomy exclusions, no automatic passive |
+| Other transferable ongoing/setup sources | Root with next dependency group | Actual Pair, accessible circuits/adjusted mind or real setup/history | Source-specific acquisition and effect adapters for Always By Her Side, Scrutinized/Just Code; meaningful original first-two acquisition | Native producers exist; remaining learned adapters stay open, not empty acknowledgement |
+| Remaining ordinary forced/controlled source adapters | Root after active integration | Genuine original Task/directive/parent, performer and resources | Pilot actual required Oldgen source beside published Alpha/Dose/direct3; finite shared lookup, genuine consent/cancellation/parent proof | Basic7/directed NPC Flirt, self-Dose/advice/EasyTarget and actual paid counterpart Kicked Puppy/Dampener implemented; both new basis normals passed first |
+| Remaining CONSUME gain/lifetime sources | AM after Modular family | Actual Sup gain birth, linked component/holder/lifetime | Actual Sup Sex/Dormant/work-owned gain providers and learned Risk source admission | Read-only source contract ready in same4; carrier following/unplug Battery/exact Storage already exist, no new generic/Core cap-loss producer established |
+| Human-operated campaign verification | Root | Ordinary source checklist closed | Run authored mission→Play→discipline→Strain→OffDuty/recovery→next mission; facilitator roles/pause/delivery/restore | Campaign-loop and native Doll-history normals authored NOT RUN; learned Ankou committed Feedback/combined mode remain final verification |
+| Final exact-candidate gates | Root; independent reviewer; owner/players | Frozen implemented source and disclosed limitations | Full regression including Deep-Brain-Spikes pagination; global static/migration/privacy/restore; independent review; private Discord test handoff | PENDING. Focused CI is not full regression, review, player success or acceptance; bot OFF |
+
+These are dependent systems, not equal-sized tasks or a completion percentage.
+Native Girl/Frame implementations, patrol Harpy and occupied regular-vehicle
+Crushing Bulk are already implemented. Preserve all authored deferred checks.
+An unrepresentable ordinary effect stays open; a facilitator form alone does not
+complete it. No AI/deployment/environment publication/private-engine mutation.
+
+## Historical package evidence
+
+The table below preserves earlier assignments and scoped results. Its old next-action wording is historical; the bounded queue above is the working view.
+
+### Previous detailed queue and evidence (superseded working assignments)
+
+The following detailed snapshot is historical. Current ownership and next actions
+are in the Working queue above. Preserve its source/evidence without reopening
+completed mechanics based on old “next” wording.
+
 Current published source: **7ca8f03a109dd372d18701ec6a9061a41161a58a**
 ([focused CI42560377871](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42560377871)
 passed; full regression skipped). Alpha/Mockingbird lessons and regular occupied
@@ -37,9 +75,6 @@ daily mode remain explicit final verification.
 
 The current queue groups dependent systems; its rows are not equal-sized tasks or a completion percentage. Mockingbird tiers/gates, Enforcer firearm, Oldgen rewrite, Casualty hardware, NPC/directed Flirt, AM/Bonded no-roll, Man repeat/Paired conversion, Sprite Bite, Wyvern combat and Court/Ankou/CHANGELING normals already have implementation. Preserve their authored deferred checks; do not reopen them as missing systems without a concrete failure.
 
-## Historical package evidence
-
-The table below preserves earlier assignments and scoped results. Its old next-action wording is historical; the bounded queue above is the working view.
 
 | Package | Owner | Dependency | Next action | Evidence/state |
 |---|---|---|---|---|

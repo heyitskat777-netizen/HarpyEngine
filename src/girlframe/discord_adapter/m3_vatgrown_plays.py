@@ -14,6 +14,7 @@ from girlframe.engine.m2 import ChoiceAnswer, PlayInput
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_vatgrown_plays import VatgrownPlaysService
+from girlframe.services.onboarding import WorkflowError
 
 
 async def open_choice(
@@ -265,7 +266,12 @@ async def _sex(
         learning = "\n".join(
             ["Copied Identity: " + x["text"] for x in data.get("copies", ())]
             + [
-                "Learned once: " + x["rule"].rsplit(".", 1)[-1].replace("-", " ")
+                (
+                    "Acquired history (already owned; no extra use): "
+                    if x.get("history_only")
+                    else "Learned once: "
+                )
+                + x["rule"].rsplit(".", 1)[-1].replace("-", " ")
                 for x in data.get("learned", ())
             ]
         )
@@ -473,11 +479,17 @@ async def _investment(
 
 
 async def open_vatgrown_plays(
-    interaction: discord.Interaction, service: VatgrownPlaysService, identity: str | None = None
+    interaction: discord.Interaction,
+    service: VatgrownPlaysService,
+    identity: str | None = None,
+    *,
+    learned_source: str | None = None,
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     if identity is None:
         data = await asyncio.to_thread(service.menu, viewer, int(interaction.channel_id or 0))
+        if learned_source is not None and learned_source not in {x["id"] for x in data["lessons"]}:
+            raise WorkflowError("Reopen your actual available learned Vatgrown source")
         options = [(x["id"], x["label"]) for x in data["tasks"]]
         if data["can_invite"]:
             options.insert(0, ("invite", "Actual voluntary Vatgrown source"))
@@ -503,6 +515,14 @@ async def open_vatgrown_plays(
                 ),
                 Field("account", "Actual voluntary proposal", paragraph=True),
             ]
+            if chosen == "invite" and data["lessons"]:
+                fields.append(
+                    Field(
+                        "lesson",
+                        "One actual lesson for this source",
+                        tuple((x["id"], x["label"]) for x in data["lessons"]),
+                    )
+                )
             if chosen == "investor":
                 fields.insert(
                     1,
@@ -528,6 +548,7 @@ async def open_vatgrown_plays(
                         target,
                         data["revision"],
                         answers["account"],
+                        learned_source=next(iter(answers.get("lesson", ())), learned_source),
                     )
                 else:
                     result = await asyncio.to_thread(

@@ -53,7 +53,10 @@ def prepare(
     if prepared.dampener_modifier is None:
         return None
     Access(game.store).authorize(c, viewer, "plays")
-    actor = current_ref(state, viewer.user_id)
+    from girlframe.services.m3_princess_performer import acting_owner
+
+    owner = acting_owner(game, c, viewer, prepared, state)
+    actor = current_ref(state, owner)
     receipt = entitlement(game, c, state, actor)
     if (
         receipt is None

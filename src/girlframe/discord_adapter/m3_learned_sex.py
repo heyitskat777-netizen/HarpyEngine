@@ -1,4 +1,4 @@
-"""Private entry for six supported learned Sex Plays."""
+"""Private entry for seven supported learned Sex Plays."""
 
 import asyncio
 from typing import Any
@@ -22,6 +22,7 @@ RULES = (
     "girl.mockingbird.sex-play",
     "girl.oldgen.sex-play",
     "girl.newgirl.sex-play",
+    "girl.vatgrown.sex-play",
 )
 
 
@@ -78,6 +79,11 @@ async def open_learned_sex(
             from girlframe.services.m3_newgirl_sex import NewgirlSexService
 
             await open_newgirl_sex(current, NewgirlSexService(game), learned_source=lesson)
+        elif row["rule_id"] == RULES[6]:
+            from girlframe.discord_adapter.m3_vatgrown_plays import open_vatgrown_plays
+            from girlframe.services.m3_vatgrown_plays import VatgrownPlaysService
+
+            await open_vatgrown_plays(current, VatgrownPlaysService(game), learned_source=lesson)
         else:
             raise WorkflowError("This lesson is waiting for its Play controls.")
 

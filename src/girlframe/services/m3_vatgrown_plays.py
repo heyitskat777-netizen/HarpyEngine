@@ -72,19 +72,48 @@ def _vatgrown(
     return actual
 
 
-def _contact(game: GameService, c: Connection, state: GameState, value: rules.Session) -> None:
+def _contact(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    value: rules.Session,
+    *,
+    lesson_id: str | None = None,
+    pending_event: str | None = None,
+) -> None:
     from girlframe.services.m3_bonded import admit_delegation
     from girlframe.services.m3_changeling_sex import admit_contact
+    from girlframe.services.m3_learned_sex import admit_offer, admit_source
 
-    if value.changeling_source is not None and value.bonded_source is not None:
-        raise WorkflowError("Keep actual psychic contact separate from Bonded delegation")
+    if (
+        sum(
+            x is not None
+            for x in (value.changeling_source, value.bonded_source, value.learned_source, lesson_id)
+        )
+        > 1
+    ):
+        raise WorkflowError("Keep actual learned, psychic and Bonded sources separate")
+    learned = (
+        admit_source(
+            game,
+            c,
+            state,
+            value.actor,
+            value.target,
+            rules.SEX,
+            value.learned_source,
+            pending_event=pending_event,
+        )
+        if value.learned_source is not None
+        else admit_offer(game, c, state, value.actor, rules.SEX, lesson_id)
+    )
     remote = admit_contact(
         game, c, state, value.actor, value.target, rules.SEX, value.changeling_source
     )
 
     own = (
         _vatgrown(game, c, state, value.actor, rules.SEX)
-        if value.bonded_source is None
+        if value.bonded_source is None and not learned
         else _native(game, c, state, value.actor)
     )
     if value.bonded_source is not None:
@@ -156,6 +185,7 @@ def _birth_contact(
         )
         or (
             value.bonded_source is None
+            and value.learned_source is None
             and (
                 state.sheets[value.actor.entity].girl != "VATGROWN"
                 or not has_rule(state.sheets[value.actor.entity], rules.SEX, "VATGROWN")
@@ -199,6 +229,17 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         )
     origin = _history(c, game, value.proposed_event)
     born = _get(origin, rules.Session, identity)
+    if value.learned_source is not None:
+        from girlframe.services.m3_learned_sex import prove as prove_lesson
+
+        link = prove_lesson(game, c, state, value.learned_source)
+        if (link.rule_id, link.session, link.actor, link.target) != (
+            rules.SEX,
+            value.id,
+            value.actor,
+            value.target,
+        ):
+            raise WorkflowError("Preserve the original actual learned Vatgrown source")
     stable = (
         "id",
         "actor",
@@ -213,6 +254,7 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         "proposal",
         "bonded_source",
         "changeling_source",
+        "learned_source",
     )
     _event(game, c, value.proposed_event, ("m3.vatgrown_sex_invited",), value.caster)
     if any(getattr(value, x) != getattr(born, x) for x in stable):
@@ -292,6 +334,7 @@ def prepare(
             cast_sha256=fingerprint(value.cast),
             table=sorted({x.controller for x in value.cast.roles} | {state.handler}),
         )
+        | ({"learned_source": value.learned_source} if value.learned_source is not None else {})
         | ({"bonded_source": value.bonded_source} if value.bonded_source is not None else {})
         | (
             {"changeling_source": value.changeling_source}
@@ -1678,6 +1721,7 @@ class VatgrownPlaysService:
         *,
         bonded_source: str | None = None,
         changeling_source: str | None = None,
+        learned_source: str | None = None,
     ) -> dict[str, Any]:
         if not account.strip() or len(account) > 1200:
             raise WorkflowError("Describe only the actual voluntary source proposal")
@@ -1688,7 +1732,7 @@ class VatgrownPlaysService:
             actor = current_ref(state, viewer.user_id)
             own = (
                 _vatgrown(self.game, c, state, actor, rules.SEX)
-                if bonded_source is None
+                if bonded_source is None and learned_source is None
                 else _native(self.game, c, state, actor)
             )
             if bonded_source is not None:
@@ -1721,7 +1765,14 @@ class VatgrownPlaysService:
                 proposed_event=event,
                 proposal=account.strip(),
             )
-            _contact(self.game, c, state, value)
+            _contact(self.game, c, state, value, lesson_id=learned_source)
+            if learned_source is not None:
+                from girlframe.services.m3_learned_sex import reserve_invitation
+
+                source_link = reserve_invitation(
+                    self.game, c, state, value, rules.SEX, learned_source
+                )
+                value = value.model_copy(update=dict(learned_source=source_link))
             if scene not in state.scene_casts:
                 state.scene_casts.append(scene)
             rules.put(state, value)
@@ -1765,6 +1816,7 @@ class VatgrownPlaysService:
             "m3.vatgrown_sex_invited",
             expected,
             dict(channel=channel, target=target.model_dump(mode="json"), account=account)
+            | ({"learned_source": learned_source} if learned_source is not None else {})
             | ({"bonded_source": bonded_source} if bonded_source is not None else {})
             | ({"changeling_source": changeling_source} if changeling_source is not None else {}),
             operation,
@@ -1801,6 +1853,9 @@ class VatgrownPlaysService:
                     )
                 ),
             )
+            from girlframe.services.m3_learned_sex import record_consent
+
+            record_consent(self.game, c, state, rules.get(state, identity), accept, event)
             return dict(id=identity, phase="accepted" if accept else "declined")
 
         return self._mutate(
@@ -2644,6 +2699,8 @@ class VatgrownPlaysService:
     def _tasks(self, c: Connection, viewer: GuildViewer) -> list[dict[str, Any]]:
         state = load_state(c, self.store.campaign_id)
         result = []
+        from girlframe.services.m3_learned_sex import cancelled
+
         for session in rules.records(state, rules.Session):
             if viewer.user_id not in (session.caster, session.counterpart):
                 continue
@@ -2655,7 +2712,8 @@ class VatgrownPlaysService:
                 ),
                 None,
             )
-            pending = (
+            ended = cancelled(self.game, c, state, session.learned_source)
+            pending = not ended and (
                 session.phase == "invited"
                 and viewer.user_id == session.counterpart
                 or session.phase == "accepted"
@@ -2673,7 +2731,9 @@ class VatgrownPlaysService:
                     revision=state.revision,
                     pending=pending,
                     phase="resolved"
-                    if (session.completed_event and side is None) or session.phase == "declined"
+                    if ended
+                    or (session.completed_event and side is None)
+                    or session.phase == "declined"
                     else "pending",
                 )
             )
@@ -2792,11 +2852,15 @@ class VatgrownPlaysService:
                     None,
                 )
                 runtime = state.sheets[value.actor.entity].girl_runtime
+                from girlframe.services.m3_learned_sex import cancelled
+
+                ended = cancelled(self.game, c, state, value.learned_source)
                 return dict(
                     id=identity,
                     type="sex",
                     revision=state.revision,
-                    session=value.model_dump(mode="json"),
+                    session=value.model_dump(mode="json")
+                    | ({"phase": "cancelled"} if ended else {}),
                     side=side.model_dump(mode="json") if side else None,
                     copies=[
                         dict(text=x.text, id=x.id)
@@ -2807,6 +2871,13 @@ class VatgrownPlaysService:
                         dict(
                             rule=x.rule_id,
                             id=x.id,
+                            history_only=(
+                                x.rule_id == rules.SEX
+                                and state.sheets[value.actor.entity].girl == "VATGROWN"
+                                and has_rule(
+                                    state.sheets[value.actor.entity], rules.SEX, "VATGROWN"
+                                )
+                            ),
                             can_dose=(
                                 x.rule_id == "girl.stim-blissed.dose-up"
                                 and viewer.user_id == value.caster
@@ -2913,9 +2984,18 @@ class VatgrownPlaysService:
             targets, possible = [], []
             own_investors: list[dict[str, Any]] = []
             available = False
+            offered: tuple[dict[str, str], ...] = ()
+            from girlframe.services.m3_learned_sex import lessons
+
             try:
                 actor = current_ref(state, viewer.user_id)
-                _vatgrown(self.game, c, state, actor, rules.SEX)
+                actual_owner = _native(self.game, c, state, actor)
+                offered = lessons(self.game, c, state, actor, rules.SEX)
+                native = state.sheets[actor.entity].girl == "VATGROWN" and has_rule(
+                    state.sheets[actor.entity], rules.SEX, "VATGROWN"
+                )
+                if not native and not offered:
+                    raise WorkflowError("Use an owned native source or actual available lesson")
                 scene = _cast(self.game, c, state, channel)
                 for role in scene.roles:
                     if role.actor == actor:
@@ -2926,29 +3006,26 @@ class VatgrownPlaysService:
                         profiles(c, self.store.campaign_id),
                         require_current_profile=False,
                     )
-                    if actual.alive:
-                        possible.append(
-                            dict(
-                                ref=role.actor.model_dump(mode="json"),
-                                id=role.actor.token,
-                                label=actual.label,
-                            )
-                        )
+                    item = dict(
+                        ref=role.actor.model_dump(mode="json"),
+                        id=role.actor.token,
+                        label=actual.label,
+                    )
+                    if native and actual.alive:
+                        possible.append(item)
                     if (
                         role.actor.kind == "pilot"
+                        and actual.alive
                         and actual.inside_frame is False
                         and actual.vessel_id
+                        and actual_owner.cell is not None
+                        and actual.cell == actual_owner.cell
                     ):
-                        targets.append(
-                            dict(
-                                ref=role.actor.model_dump(mode="json"),
-                                id=role.actor.token,
-                                label=actual.label,
-                            )
-                        )
-                own_investors = [
-                    x.model_dump(mode="json") for x in investors(self.game, c, state, actor)
-                ]
+                        targets.append(item)
+                if native:
+                    own_investors = [
+                        x.model_dump(mode="json") for x in investors(self.game, c, state, actor)
+                    ]
                 available = True
             except (ValueError, WorkflowError):
                 pass
@@ -2960,6 +3037,7 @@ class VatgrownPlaysService:
                 possible_investors=possible,
                 investors=own_investors,
                 tasks=self._tasks(c, viewer),
+                lessons=offered,
             )
 
 

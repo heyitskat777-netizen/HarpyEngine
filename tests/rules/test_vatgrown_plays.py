@@ -4436,3 +4436,347 @@ def test_actual_learned_newgirl_sex_empty_mentor_native_mid_no_respect_installs_
     assert game.inspect(OTHER, action)["receipt"] == raw
     assert "PRIVATE_LEARNED_NEWGIRL" not in json.dumps(gateway.messages)
     tick(worker, gateway, 6)
+
+
+def _actual_two_vatgrown_sex_bodies(ledger, tmp_path, monkeypatch):
+    from girlframe.engine.creation_details import DesireChoice, NpcInvestor
+
+    # Same positive initial creation path as the existing same-book Doll case.
+    # Both actual bodies/Investor accounts exist before activation.
+    original_selected, original_ready = game_fixture.selected, game_fixture.ready
+
+    def selected_both(girl="MOCKINGBIRD", frame="JANUS-B"):
+        draft = original_selected(girl, frame)
+        if girl == "VATGROWN":
+            draft = draft.model_copy(
+                update={
+                    "girl_details": GirlDetails(
+                        investors=tuple(
+                            NpcInvestor(npc_slot=x.slot, desires=DesireChoice(slots=(0,)))
+                            for x in draft.npc_bonds
+                        )
+                    )
+                }
+            )
+        return draft
+
+    def ready_both(store, *args, **kwargs):
+        result = original_ready(store, *args, **kwargs)
+        coordinated = creation_fixture.CoordinationService(store)
+        request = coordinated.propose(
+            ADMIN,
+            "sex-teacher-handler-desires",
+            OTHER.user_id,
+            "vatgrown_handler",
+            coordinated.prepare(ADMIN, OTHER.user_id, "vatgrown_handler"),
+            DesireChoice(slots=(1,)),
+        )
+        coordinated.decide(OTHER, "sex-teacher-accept-desires", request["id"], 1, "accept")
+        return result
+
+    monkeypatch.setattr(game_fixture, "selected", selected_both)
+    monkeypatch.setattr(game_fixture, "ready", ready_both)
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch, teacher="VATGROWN")
+    slot = state(game).sheets["3"].review.creation.npc_bonds[0].slot
+    WorldService(MissionService(ledger)).import_starting_npc(
+        OTHER, str(uuid4()), state(game).revision, slot, "original-investor"
+    )
+    return game, worker, gateway, controls
+
+
+def _native_vatgrown_mid_questions(game, worker, gateway, controls, *, lesson=None):
+    from girlframe.discord_adapter.m3_learned_sex import open_learned_sex
+    from girlframe.discord_adapter.m3_vatgrown_plays import open_vatgrown_plays
+    from girlframe.engine.m3_learned_play_state import learned_sex_links
+
+    target = current_ref(state(game), 3)
+    if lesson is None:
+        source = controls.invite(
+            PLAYER,
+            str(uuid4()),
+            900,
+            target,
+            state(game).revision,
+            "PRIVATE_NATIVE_VATGROWN My actual independent native source",
+        )["id"]
+    else:
+
+        async def invite():
+            opened = _learned_sex_interaction()
+            await opened.response.defer(ephemeral=True)
+            await open_learned_sex(opened, game, identity=lesson.id)
+            menu = opened.edit_original_response.call_args.kwargs["view"]
+            menu.values["source"] = ("invite",)
+            response = _learned_sex_interaction()
+            await menu.confirm.callback(response)
+            form = response.edit_original_response.call_args.kwargs["view"]
+            assert not await form.interaction_check(_learned_sex_interaction(3))
+            form.values.update(
+                target=(target.token,),
+                lesson=(lesson.id,),
+                account="PRIVATE_BORROWED_VATGROWN My actual retained one-use source",
+            )
+            sent = _learned_sex_interaction()
+            await form.confirm.callback(sent)
+            assert form.completed, sent.edit_original_response.call_args_list
+
+        asyncio.run(invite())
+        source = learned_sex_links(state(game))[-1].session
+    _native_learned_sex_card(
+        game,
+        controls,
+        open_vatgrown_plays,
+        source,
+        OTHER,
+        accept=("yes",),
+        account="The actual original counterpart confirms only this voluntary source",
+    )
+    game.dice.faces = (3, 4)
+    _native_learned_sex_card(
+        game,
+        controls,
+        open_vatgrown_plays,
+        source,
+        PLAYER,
+        heat=("1",),
+    )
+    with game.store.engine.connect() as c:
+        action = game.lock(c, 900)["action_id"]
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    native_choice(
+        game,
+        PLAYER,
+        "vat_sex_learn",
+        effects=("plans", "good"),
+        plans="PRIVATE_VATGROWN_PLAN What are you actually planning?",
+        good="PRIVATE_VATGROWN_GOOD How can I actually be good for you?",
+        account="My own two real mid-tier questions, with no extra acquisitions",
+    )
+    native_choice(game, OTHER, "vat_sex_plans", account="PRIVATE_VATGROWN_REPLY My actual plan")
+    native_choice(
+        game, OTHER, "vat_sex_good", account="PRIVATE_VATGROWN_REPLY Help with this actual task"
+    )
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+    return source, action
+
+
+def test_actual_native_vatgrown_sex_lesson_high_first_two_history_no_stack_or_native_spend(
+    ledger, tmp_path, monkeypatch
+):
+    from girlframe.discord_adapter.m3_vatgrown_plays import open_vatgrown_plays
+    from girlframe.engine.m3_learned_play_state import learned_sex_links
+    from girlframe.services.m3_learned_plays import available
+    from girlframe.services.m3_learned_sex import lessons, source_id
+
+    game, worker, gateway, controls = _actual_two_vatgrown_sex_bodies(ledger, tmp_path, monkeypatch)
+    learner, target = current_ref(state(game), 2), current_ref(state(game), 3)
+    lesson = _learn_daily_source(game, worker, gateway, controls, rules.SEX)
+    original = rules.get(state(game), lesson.session)
+    acquisition = next(
+        x
+        for x in rules.records(state(game), rules.Selection)
+        if x.session == lesson.session and x.choice and "play" in x.options
+    )
+    assert original.tier == "high" and acquisition.options == ("identity", "play")
+    assert acquisition.controller == 3 and acquisition.fields["play"] == rules.SEX
+    side = next(
+        x for x in rules.records(state(game), rules.SideCondition) if x.session == original.id
+    )
+    assert side.released_event and side.actor == learner and side.counterpart == target
+    with ledger.engine.connect() as c:
+        assert prove_learned_play(game, c, state(game), lesson.id) == lesson
+        assert available(game, c, state(game), learner, rules.SEX).id == lesson.id
+        assert not lessons(game, c, state(game), learner, rules.SEX)
+    history = controls.view(PLAYER, lesson.session)
+    assert history["learned"][0]["history_only"]
+
+    async def read_native_history():
+        opened = _learned_sex_interaction()
+        await opened.response.defer(ephemeral=True)
+        await open_vatgrown_plays(opened, controls, lesson.session)
+        content = opened.edit_original_response.call_args.kwargs["content"]
+        assert "Acquired history" in content and "already owned" in content
+
+    asyncio.run(read_native_history())
+    before, calls = state(game), game.dice.calls
+    _, action = _native_vatgrown_mid_questions(game, worker, gateway, controls)
+    actual = state(game)
+    assert game.dice.calls == calls + 1
+    assert actual.sheets["2"].heat == before.sheets["2"].heat - 1
+    assert actual.sheets["2"].identities == before.sheets["2"].identities
+    assert len(rules.records(actual, rules.LearnedPlay)) == 1 and not learned_sex_links(actual)
+    with ledger.engine.connect() as c:
+        assert source_id(game.action(c, action)) is None
+        runtime = next(
+            x for x in actual.sheets["2"].girl_runtime.learned_plays if x.id == lesson.id
+        )
+        assert runtime.claimed_action is None and runtime.rolled_event is None
+        assert prove_learned_play(game, c, actual, lesson.id) == lesson
+    assert actual.sheets["2"].girl == "VATGROWN"
+    assert "PRIVATE_VATGROWN_REPLY" not in json.dumps(gateway.messages)
+    tick(worker, gateway, 6)
+
+
+def test_actual_retained_vatgrown_sex_lesson_after_real_defeat_alpha_change_native_mid_source(
+    ledger, tmp_path, monkeypatch
+):
+    from girlframe.engine.m3_actors import resolve
+    from girlframe.engine.m3_girl_runtime_state import has_rule
+    from girlframe.engine.m3_girl_transition_state import Plan
+    from girlframe.engine.m3_learned_play_state import learned_sex_links
+    from girlframe.engine.m3_physical_state import CockpitAction
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_girl_transition import GirlTransitionService
+    from girlframe.services.m3_learned_sex import lessons, prove, source_id
+    from girlframe.services.m3_physical import PhysicalService
+
+    game, worker, gateway, controls = _actual_two_vatgrown_sex_bodies(ledger, tmp_path, monkeypatch)
+    ledger.policy = ledger.policy.model_copy(
+        update={
+            "owner_m3_rulings": ledger.policy.owner_m3_rulings.model_copy(
+                update={"beneath_private_choices": "affected_owner"}
+            )
+        }
+    )
+    lesson = _learn_daily_source(game, worker, gateway, controls, rules.SEX)
+    learner, target = current_ref(state(game), 2), current_ref(state(game), 3)
+    with ledger.engine.connect() as c:
+        assert side_condition(game, c, state(game), learner) is None
+    # Establish only pre-existing damage. The last Asset is damaged by an actual
+    # owned Beneath counter; that genuine result produces the mandatory Defeat.
+    with ledger.transaction() as c:
+        prior = state(game)
+        frames = [x for x in prior.sheets["2"].assets if x.family == "frame"]
+        for asset in frames[1:]:
+            asset.damaged = True
+        final_frame = frames[0].id
+        game.event(c, 1, str(uuid4()), "synthetic.saved_prior_frame_damage", prior)
+    physical = PhysicalService(ledger)
+    with ledger.engine.connect() as c:
+        actual = resolve(state(game), learner, profiles(c, ledger.campaign_id))
+    physical.operate(
+        PLAYER,
+        str(uuid4()),
+        state(game).revision,
+        CockpitAction(
+            actor=learner,
+            operation="pilot",
+            expected_position=actual.position_sha256,
+            confirmed=True,
+            account="I actually pilot my original co-located Frame",
+        ),
+        channel=900,
+    )
+    game.dice.faces = (1, 1)
+    damage_parent = game.begin(
+        PLAYER,
+        str(uuid4()),
+        900,
+        state(game).sheets["2"].revision,
+        PlayInput(
+            play="put_someone_beneath_you",
+            target=3,
+            heat=0,
+            piloting=True,
+            context="Our actual confrontation while I pilot this damaged Frame",
+            trigger_confirmed=True,
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    answer(
+        game,
+        OTHER,
+        "beneath_select",
+        options=("damage",),
+        text="My actual counter damages her Frame",
+    )
+    answer(game, PLAYER, "beneath_details", denied=(final_frame,))
+    assert any(x["kind"] == "beneath_defeat" for x in game.choices(PLAYER))
+    defeat = game.begin(
+        PLAYER,
+        str(uuid4()),
+        900,
+        state(game).sheets["2"].revision,
+        PlayInput(
+            play="defeat",
+            parent=damage_parent,
+            heat=0,
+            context="The actual last Frame Asset was damaged",
+            trigger_confirmed=True,
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    pass_tags(game)
+    answer(
+        game,
+        PLAYER,
+        "defeat_select",
+        options=("change_girl_playbook",),
+        fields={"girl_playbook": "ALPHA"},
+        text="This actual Defeat changes my same original Girl",
+    )
+    tick(worker, gateway, 6)
+    assert game.inspect(PLAYER, defeat)["state"] == "complete"
+    assert game.inspect(PLAYER, damage_parent)["state"] == "complete"
+    transition = GirlTransitionService(ledger)
+    work = next(x for x in transition.tasks(PLAYER) if x["state"] == "pending")
+    data = transition.get(PLAYER, work["id"])
+    transition.configure(
+        PLAYER,
+        str(uuid4()),
+        work["id"],
+        data["revision"],
+        Plan(account="The actual new Alpha baseline grants no starting resources"),
+    )
+    data = transition.get(PLAYER, work["id"])
+    transition.finalize(PLAYER, str(uuid4()), work["id"], data["revision"], data["game_revision"])
+    with ledger.engine.connect() as c:
+        actual = resolve(state(game), learner, profiles(c, ledger.campaign_id))
+    if actual.inside_frame:
+        physical.operate(
+            PLAYER,
+            str(uuid4()),
+            state(game).revision,
+            CockpitAction(
+                actor=learner,
+                operation="exit",
+                expected_position=actual.position_sha256,
+                confirmed=True,
+                account="I actually climb out beside my original damaged Frame",
+            ),
+            channel=900,
+        )
+    before = state(game)
+    assert before.sheets["2"].girl == "ALPHA" and current_ref(before, 2) == learner
+    assert before.sheets["3"].girl == "VATGROWN"
+    assert not has_rule(before.sheets["2"], rules.SEX, "VATGROWN")
+    assert rules.records(before, rules.LearnedPlay)[0] == lesson
+    with ledger.engine.connect() as c:
+        assert prove_learned_play(game, c, before, lesson.id) == lesson
+        assert lessons(game, c, before, learner, rules.SEX)[0]["id"] == lesson.id
+    calls, bond = game.dice.calls, depth(before, learner, target)
+    source, action = _native_vatgrown_mid_questions(game, worker, gateway, controls, lesson=lesson)
+    actual = state(game)
+    assert actual.sheets["2"].girl == "ALPHA" and current_ref(actual, 2) == learner
+    assert rules.get(actual, source).phase == "complete"
+    assert actual.sheets["2"].assets == before.sheets["2"].assets
+    assert actual.sheets["2"].identities == before.sheets["2"].identities
+    assert depth(actual, learner, target) == min(2, bond + 1)
+    assert game.dice.calls == calls + 1
+    link = learned_sex_links(actual)[-1]
+    assert link.actor == learner and link.target == target and link.lesson == lesson.id
+    with ledger.engine.connect() as c:
+        used = prove(game, c, actual, link.id)
+        assert used.action == action and used.roll_event and used.receipt_sha256
+        assert source_id(game.action(c, action)) == link.id
+        assert not lessons(game, c, actual, learner, rules.SEX)
+    with pytest.raises(WorkflowError):
+        controls.view(ADMIN, source)
+    assert controls.view(PLAYER, source)["session"]["proposal"].startswith(
+        "PRIVATE_BORROWED_VATGROWN"
+    )
+    assert "PRIVATE_BORROWED_VATGROWN" not in json.dumps(gateway.messages)
+    assert "PRIVATE_VATGROWN_REPLY" not in json.dumps(gateway.messages)
+    tick(worker, gateway, 6)

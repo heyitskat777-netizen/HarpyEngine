@@ -32,6 +32,7 @@ SOURCES = {
     "girl.alpha.sex-play": ("alpha_sex", "ALPHA", "m3.alpha_sex"),
     "girl.oldgen.sex-play": ("oldgen_sex", "OLDGEN", "m3.oldgen_sex"),
     "girl.newgirl.sex-play": ("newgirl_sex", "NEWGIRL", "m3.newgirl_sex"),
+    "girl.vatgrown.sex-play": ("vatgrown_sex", "VATGROWN", "m3.vatgrown_sex"),
     "girl.mockingbird.sex-play": ("mockingbird_sex", "MOCKINGBIRD", "m3.mockingbird_trigger"),
 }
 
@@ -64,6 +65,10 @@ def _session(state: GameState, value: LearnedSexLink) -> Any:
         from girlframe.engine.m3_newgirl_sex import get as newgirl_get
 
         return newgirl_get(state, value.session)
+    if value.rule_id == "girl.vatgrown.sex-play":
+        from girlframe.engine.m3_vatgrown_plays import get as vatgrown_get
+
+        return vatgrown_get(state, value.session)
     from girlframe.engine.m3_stim_sex import get as stim_get
 
     return stim_get(state, value.session)
@@ -339,7 +344,15 @@ def prove(game: "GameService", c: Connection, state: GameState, identity: str) -
             raise WorkflowError("Prove the actual original human's canonical learned source event")
         return _history(c, game, event)
 
-    payload = {"trigger" if mockingbird else "session": value.session}
+    # Vatgrown's existing transaction wrapper stamps its source ID as `source`.
+    # Other Session providers stamp `session`; Mockingbird stamps `trigger`.
+    payload = {
+        "trigger"
+        if mockingbird
+        else "source"
+        if value.rule_id == "girl.vatgrown.sex-play"
+        else "session": value.session
+    }
     audit(
         value.proposed_event,
         (prefix if mockingbird else prefix + "_proposed" if newgirl else prefix + "_invited",),
@@ -380,7 +393,11 @@ def prove(game: "GameService", c: Connection, state: GameState, identity: str) -
                 if newgirl
                 else prefix + "_consent",
             ),
-            str(first.parties[0].controller) if mockingbird else value.target.entity,
+            str(first.parties[0].controller)
+            if mockingbird
+            else str(first.controllers[value.target.token])
+            if newgirl
+            else str(first.counterpart),
             **(
                 dict(
                     trigger=value.session,
@@ -546,10 +563,11 @@ def record_consent(
     if session.learned_source is None:
         return
     value = prove(game, c, state, session.learned_source)
+    original = _session(_history(c, game, value.proposed_event), value)
     if (
         value.consent_event is not None
         or value.released_event is not None
-        or session.counterpart != int(value.target.entity)
+        or session.counterpart != original.counterpart
     ):
         raise WorkflowError("Only the real original counterpart answers this invitation once")
     put_learned_sex_link(
@@ -645,7 +663,14 @@ def source_id(action: dict[str, Any]) -> str | None:
     data = action["data"]
     values = [
         meta["learned_source"]
-        for key in ("princess_sex", "stim_sex", "alpha_sex", "oldgen_sex", "newgirl_sex")
+        for key in (
+            "princess_sex",
+            "stim_sex",
+            "alpha_sex",
+            "oldgen_sex",
+            "newgirl_sex",
+            "vatgrown_sex",
+        )
         if (meta := data.get(key)) and meta.get("learned_source")
     ]
     if data.get("mockingbird", {}).get("learned_sex_source"):

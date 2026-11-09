@@ -1790,3 +1790,62 @@ planning and repository PASS; registry477/274 subset/203 unimplemented/440 requi
 initially caught CSV CRLF from root writer; normalized to existing LF, delta
 whitespace PASS. No semantic gameplay change or repeated successful test.
 Frozen paths/hashes/commands: `var/p1-oldgen-newgirl-loss-*`. Bot OFF.
+
+## Vatgrown learning, remaining Modular repair family and directed paid basis
+
+Base41f91455015e0c58f98f75b1917ab93083d5ad18 is published;
+[focused CI42562797057](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42562797057)
+PASS/full skipped. Malleable7 actual Vatgrown native history/nonnative source;
+AM4 remaining quoted/Doctor/Supply repair-loss family; root3 finite native/Inbox/
+runtime plus root5 real directed Kicked Puppy/Dampener performer ownership fix.
+No new schema/event, generic rule engine, paid capability or live bot deployment.
+
+Initial minimum seven **3passed4failed30.87s**; failed-only four
+**2passed2failed31.84s**. Native Vatgrown history and both directed paid basis
+cases passed first; Doctor/Supply passed first retry. No green node rerun.
+Artifacts `var/p1-vatgrown-modular-family-minimum{,-retry}.txt/xml`; per-attempt
+source hashes saved. Nonnative fixture needed existing synthetic Beneath ruling;
+quote needed original mapped body before actual OffDuty. Doctor's real high15
+Dive needed its real Handler choice and Girl rewrite before Partake. Supply
+already piloted, so helper now inspects actual body before requesting pilot.
+No source/policy/roll/result guard weakened. Remaining canonical Vatgrown proof
+bug: helper expected session= but genuine source events use source=; finite
+Vatgrown key corrected while other providers preserve their existing keys.
+Quote closure now performs its actual required city scene and each original
+participant's own attendance, rather than illegal routine-only decline.
+Final failed-only two retry pending.
+
+Directed basis fix uses existing acting_owner proof at preparation/preRoll, exact
+paid counterpart receipt/current Frame, actual damage or full Heat expenditure.
+Native private controls preserve original recipient answers and parent completion.
+Defaults/events/ordinary viewer ownership unchanged. A saved wrongly prepared
+unrolled source must use normal recovery; no known receipt is rewritten.
+Scoped19 Python/16 source Ruff/format/mypy PASS before fixture/key deltas; each
+owner ran only delta static checks after repair, no worker pytest/collection.
+Existing source privacy/stale/rollback/revocation/shared consumers remain final
+regression; seven normals do not imply full affected-consumer coverage.
+
+Remaining Sup family is explicitly next; read-only reconciliation found existing
+Battery unplug expiry, exact-component/vessel Storage and carrier operations,
+not a missing generic linked-lifetime framework. No new separate Core cap-loss
+producer established; preserve original physical/Core guards and no copied stock.
+Remaining learned sources include actual AM no-roll/gifts, Casualty parts, real
+Bonded Pair and group Links. Final full/global/migration/privacy/restore and
+independent/human gates pending, RULES_SUBSET, zero independent certification.
+
+Final failed-only two **2passed19.32s**,
+`var/p1-vatgrown-modular-family-minimum-retry2.txt/xml`. All seven new normal
+cases now have focused passing first-run/failed-only evidence; no earlier green
+node rerun. Retained actual acquisition→real Defeat/Alpha creation/finalization/
+exit→native learned source/consent/mid questions/Bond/private once-use passed.
+Quote genuine cost/replacement/required scene/attendance/period closure/native
+regrowth passed. Per-attempt source snapshots preserved; not a full regression.
+
+Final scoped24 paths/19 Python/16 source static evidence PASS (whole packet
+before fixture/key fixes plus owner test/source deltas). Whitespace, registry,
+original planning and repository PASS:477 entries/274subset/203unimplemented/
+440required/0verified;1428 publishable files/40 manifest/0findings. Commands/
+hashes `var/p1-vatgrown-modular-family-*`; original worker freezes preserved.
+No claimed test-speed improvement. Current working queue shortened; prior
+detailed ownership/evidence retained under historical heading. Full candidate
+regression/global/migration/privacy/restore/independent/human gates pending.

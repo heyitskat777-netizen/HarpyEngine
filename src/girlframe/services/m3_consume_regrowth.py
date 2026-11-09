@@ -21,7 +21,10 @@ from girlframe.services.m3_frame_asset_losses import (
     defeat_alternative_losses,
     defeat_void_losses,
     installment_loss,
+    modular_doctor_losses,
+    modular_quote_losses,
     modular_recovery_losses,
+    modular_supply_losses,
     partake_losses,
     sup_dive_losses,
     sup_risk_losses,
@@ -48,6 +51,9 @@ class Selection(Model):
             "sup_dive_cap",
             "modular_recovery",
             "sup_risk_cap",
+            "modular_quote",
+            "modular_doctor",
+            "modular_supply",
         ]
         | None
     ) = None
@@ -214,6 +220,9 @@ def _selections(
         partake_losses,
         supply_drop_losses,
         modular_recovery_losses,
+        modular_quote_losses,
+        modular_doctor_losses,
+        modular_supply_losses,
         sup_dive_losses,
         sup_risk_losses,
     ):
@@ -234,6 +243,9 @@ def _selections(
                 "sup_dive_cap",
                 "modular_recovery",
                 "sup_risk_cap",
+                "modular_quote",
+                "modular_doctor",
+                "modular_supply",
             ]
             | None
         ) = loss.source_kind if loss.source_kind != "budget" else None

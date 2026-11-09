@@ -52,7 +52,9 @@ Mentor. Both source-bound adapters are now implemented: actual Oldgen low/no-Max
 decline and Newgirl mid/no-respect real created Mentor normals passed. No teacher
 roles or whole Trainee passive are copied. Remaining exact Sex providers are
 Casualty, Vatgrown, AM and Bonded, plus actual Mockingbird/Newgirl group Links.
-Next: Vatgrown native acquisition history and genuine nonnative one-use consumer;
+Vatgrown native acquisition history and genuine nonnative one-use consumer are
+implemented; native history passed first and real Defeat/Alpha transition plus
+nonnative mid/private once-use passed failed-only2/19.32s.
 AM requires its actual no-roll performance/gift use event, never a fake receipt.
 
 Higher Standard, Just The Way Things Are, Trainee/Mentor, Malleable, Barely A Girl/

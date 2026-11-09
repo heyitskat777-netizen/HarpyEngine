@@ -56,14 +56,17 @@ def prepare(
         if prepared.kicked_puppy_basis:
             raise WorkflowError("Kicked Puppy's alternative applies only to your actual Flirt")
         return None
-    actor = current_ref(state, viewer.user_id)
+    from girlframe.services.m3_princess_performer import acting_owner
+
+    owner = acting_owner(game, c, viewer, prepared, state)
+    actor = current_ref(state, owner)
     receipt = entitlement(game, c, state, actor)
     if receipt is None:
         if prepared.kicked_puppy_basis:
             raise WorkflowError("Acquire the actual Kicked Puppy rule before choosing its basis")
         return None
     Access(game.store).authorize(c, viewer, "plays")
-    if prepared.target is None or prepared.target == viewer.user_id:
+    if prepared.target is None or prepared.target == owner:
         raise WorkflowError("Choose another actual original Pilot for this Flirt")
     target = ActorRef(
         kind="pilot",

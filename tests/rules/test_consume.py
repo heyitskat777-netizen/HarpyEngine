@@ -1606,7 +1606,7 @@ def _elective_dive(game, worker, gateway):
     return identity
 
 
-def _elective_partake(game, worker, gateway, *, decline_risk=False):
+def _elective_partake(game, worker, gateway, *, decline_risk=False, finish_handler=False):
     action = _elective_dive(game, worker, gateway)
     if decline_risk:
         answer(game, PLAYER, "mockingbird_risk")
@@ -1630,6 +1630,24 @@ def _elective_partake(game, worker, gateway, *, decline_risk=False):
     for viewer in (PLAYER, OTHER, ADMIN):
         if any(x["kind"] == "dive_table_answer" for x in game.choices(viewer)):
             answer(game, viewer, "dive_table_answer", text="My own actual table answer")
+    if finish_handler and any(x["kind"] == "dive_select" for x in game.choices(ADMIN)):
+        answer(
+            game,
+            ADMIN,
+            "dive_select",
+            options=("void_and_unmark_all",),
+            text="The actual high result requires my printed Handler choice",
+        )
+        site = next(
+            x.id for x in state(game).sheets["2"].assets if x.family == "girl" and not x.void
+        )
+        answer(
+            game,
+            PLAYER,
+            "dive_effect",
+            fields={"asset": site},
+            text="I record the actual Void alteration at this owned Girl Asset",
+        )
     return action, next(x for x in game.choices(PLAYER) if x["kind"] == "consume_partake")
 
 
@@ -2127,3 +2145,401 @@ def test_actual_native_risk_sup_cap_exchange_then_partake_regrowth_preserves_ori
     assert controls.view(PLAYER, regrown.id)["type"] == "regrowth"
     tick(worker, gateway, 6)
     assert game.inspect(PLAYER, action)["state"] == "complete"
+
+
+def _acquire_modular_for_consume(game):
+    from girlframe.services.m3_modular import ModularService
+
+    source = ModularService(game)
+    data = source.menu(PLAYER)
+    source.buy(
+        PLAYER,
+        str(uuid4()),
+        data["revision"],
+        ActorRef.model_validate(data["actor"]),
+        data["frame"],
+        "Actual paid original Modular graft",
+        "Actual additional fitting",
+        "Actual new hardware from this paid graft",
+        data["donors"][0],
+    )
+
+
+def _assert_native_modular_loss_regrowth(game, worker, gateway, controls, loss, replacement):
+    from girlframe.engine.m3_actors import resolve
+    from girlframe.engine.m3_assets import counts_toward_limit, frame_capacity
+    from girlframe.services.m3_actors import profiles
+    from girlframe.services.m3_consume_regrowth import _selections, prove_regrowth
+
+    with game.store.engine.connect() as c:
+        canon = state(game)
+        body = resolve(canon, loss.actor, profiles(c, game.store.campaign_id))
+    if body.piloting is not True:
+        cockpit(game, "pilot")
+    action, row = _elective_partake(game, worker, gateway, finish_handler=True)
+    detail = game.decision(PLAYER, row["id"])["detail"]
+    token = rules.identity("missing-frame-" + loss.source_kind.replace("_", "-"), loss.id)
+    assert token in detail["regrow_missing"]
+    before, calls = state(game), game.dice.calls
+    sheet = before.sheets["2"]
+    full = sum(
+        counts_toward_limit(sheet, x) for x in sheet.assets if x.family == "frame"
+    ) >= frame_capacity(sheet, before)
+    displaced = (
+        next((x[0] for x in detail["regrow_replacements"] if x[0] != replacement.id), None)
+        if full
+        else None
+    )
+    receipt = game.inspect(PLAYER, action)["receipt"]
+    girl = next(x.id for x in sheet.assets if x.family == "girl" and not x.damaged)
+    _native_actual_cap_partake(game, row, girl=girl, token=token, replacement=displaced)
+    final = state(game)
+    regrown = next(
+        x
+        for x in rules.records(final, rules.RegrownFrame)
+        if x.loss_kind == loss.source_kind and x.loss == loss.id
+    )
+    assert regrown.original == loss.asset and regrown.loss_event == loss.event
+    assert regrown.component.id not in (loss.asset.id, replacement.id, displaced)
+    assert next(x for x in final.sheets["2"].assets if x.id == replacement.id) == replacement
+    assert next(x for x in final.sheets["2"].assets if x.id == girl).damaged
+    assert not any(x.id == loss.asset.id for x in final.sheets["2"].assets)
+    assert game.dice.calls == calls and game.inspect(PLAYER, action)["receipt"] == receipt
+    assert final.sheets["2"].permissions == sheet.permissions
+    with game.store.engine.connect() as c:
+        assert prove_regrowth(game, c, final, regrown.id) == regrown
+        assert token not in {x.token for x in _selections(game, c, final, loss.actor)}
+    with pytest.raises(WorkflowError):
+        controls.view(OTHER, regrown.id)
+    assert controls.view(PLAYER, regrown.id)["type"] == "regrowth"
+    tick(worker, gateway, 6)
+    assert game.inspect(PLAYER, action)["state"] == "complete"
+
+
+def test_actual_native_paid_quote_modular_repair_then_partake_regrowth(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred: actual shortage/quoted payment, distinct from free ordinary recovery."""
+    import asyncio
+
+    import test_repair_service
+    import test_strain_service
+    from test_mission_ui import current
+    from test_off_duty_cycle import call, finish_routine, movement, roll_for
+    from test_repair_service import ready as repair_ready
+
+    from girlframe.discord_adapter.m3_repairs import open_quote
+    from girlframe.engine import m3_modular as modular
+    from girlframe.engine.m3_core import RepairSelection
+    from girlframe.engine.m3_off_duty import RecoveryChoice
+    from girlframe.services.m3_access import Access
+    from girlframe.services.m3_frame_asset_losses import modular_quote_losses
+
+    def configured(store, frame):
+        missions, game = service(store, girl="OLDGEN", frame="CONSUME")
+        approved(
+            store,
+            game,
+            tmp_path,
+            monkeypatch,
+            extra=(rules.STARVATION, rules.EAT, *rules.REQUISITIONS, modular.RULE),
+        )
+        missions.access = Access(store)
+        return missions, game
+
+    monkeypatch.setattr(test_strain_service, "service", configured)
+    original_period = test_repair_service.source_period
+
+    def placed_period(store):
+        effects, cycle, game, period = original_period(store)
+        with store.transaction() as c:
+            canon = state(game)
+            canon = place(place(canon, 2, mode="outside_frame"), 3, mode="outside_frame")
+            game.event(
+                c, 1, str(uuid4()), "synthetic.actual_original_repair_period_positions", canon
+            )
+        return effects, cycle, game, period
+
+    monkeypatch.setattr(test_repair_service, "source_period", placed_period)
+    repairs, cycle, game, period = repair_ready(ledger)
+    cycle.missions.access = Access(ledger)
+    with ledger.transaction() as c:
+        canon = state(game)
+        canon.sheets["2"].permissions = 20
+        game.event(c, 1, str(uuid4()), "synthetic.actual_quote_owner_resources", canon)
+    controls = ConsumeService(game)
+    acquire(controls, rules.PARTAKE)
+    _acquire_modular_for_consume(game)
+    actor = current_ref(state(game), 2)
+    old = next(x.model_copy(deep=True) for x in state(game).sheets["2"].assets if x.id == "frame:1")
+    quote = repairs.offer(ADMIN, str(uuid4()), state(game).revision, period, 2, old.id, 2)
+    before = state(game)
+
+    async def accept():
+        opened = current(2, 992300)
+        opened.channel_id = 900
+        await opened.response.defer(ephemeral=True)
+        await open_quote(opened, repairs, quote["id"])
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(current(3, 992301))
+        form.values.update(answer=("accept",), modular_assets=(old.id,))
+        form.values["modular_name:" + old.id] = "Actual quoted replacement"
+        form.values["modular_description:" + old.id] = "New hardware for the actual priced repair"
+        submitted = current(2, 992302)
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+
+    asyncio.run(accept())
+    born = state(game)
+    assert born.sheets["2"].permissions == before.sheets["2"].permissions - 2
+    with ledger.engine.connect() as c:
+        loss = next(x for x in modular_quote_losses(game, c, born, actor) if x.asset.id == old.id)
+    fact = next(
+        x
+        for x in born.facts
+        if x.get("kind") == "modular_repair" and x.get("source") == "repair_quote:" + quote["id"]
+    )
+    replacement = next(x for x in born.sheets["2"].assets if x.id == fact["new"])
+    assert loss.asset == old
+    roll_for(cycle, game, period, OTHER, (4, 4))
+    call(
+        cycle,
+        game,
+        OTHER,
+        period,
+        "scene",
+        "nearby_city",
+        (3, 2),
+        "We actually play the required high OffDuty scene together in a nearby city",
+    )
+    call(cycle, game, OTHER, period, "acknowledge", 3)
+    call(cycle, game, PLAYER, period, "acknowledge", 3)
+    sheet = state(game).sheets["3"]
+    selection = RepairSelection(
+        **{
+            family: tuple(x.id for x in sheet.assets if x.family == family and x.damaged)[:1]
+            for family in ("girl", "frame")
+        }
+    )
+    call(cycle, game, OTHER, period, "recover", RecoveryChoice(repairs=selection))
+    finish_routine(cycle, game, period)
+    call(cycle, game, ADMIN, period, "finish", movement(game))
+    _assert_native_modular_loss_regrowth(
+        game, GameWorker(game), Gateway(), controls, loss, replacement
+    )
+
+
+def test_actual_native_doctor_patient_modular_repair_then_partake_regrowth(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred: actual other Doctor performs the Play; only the patient selects replacement."""
+    import asyncio
+
+    import test_m2_game
+    from test_mission_ui import current
+
+    from girlframe.discord_adapter.m3_doctor import open_choice
+    from girlframe.engine import m3_doctor as doctor
+    from girlframe.engine import m3_modular as modular
+    from girlframe.services.m3_doctor import DoctorService
+    from girlframe.services.m3_frame_asset_losses import modular_doctor_losses
+
+    original_ready, original_selected = test_m2_game.ready, test_m2_game.selected
+    monkeypatch.setattr(
+        test_m2_game,
+        "ready",
+        lambda store, girl, frame: original_ready(store, girl, frame, other_frame=doctor.BOOK),
+    )
+    monkeypatch.setattr(
+        test_m2_game, "selected", lambda girl, frame: original_selected(girl, doctor.BOOK)
+    )
+    # The real setup helper now saves/reviews/activates Other's actual Doctor profile and draft.
+    game, worker, gateway, controls = ready(ledger, tmp_path, monkeypatch)
+    approved(
+        ledger,
+        game,
+        tmp_path,
+        monkeypatch,
+        extra=(
+            rules.STARVATION,
+            rules.EAT,
+            *rules.REQUISITIONS,
+            modular.RULE,
+            doctor.NANO,
+            doctor.TRACK,
+        ),
+    )
+    acquire(controls, rules.PARTAKE)
+    _acquire_modular_for_consume(game)
+    actor = current_ref(state(game), 2)
+    with ledger.transaction() as c:
+        canon = state(game)
+        canon.sheets["3"].heat = 2
+        old = next(
+            x for x in canon.sheets["2"].assets if x.family == "frame" and x.intrinsic is None
+        )
+        old.damaged = True
+        old = old.model_copy(deep=True)
+        game.event(c, 1, str(uuid4()), "synthetic.actual_prior_patient_damage", canon)
+    game.dice.faces = (3, 4)
+    action = game.begin(
+        OTHER,
+        str(uuid4()),
+        900,
+        state(game).sheets["3"].revision,
+        PlayInput(
+            play="nanobot_injection",
+            target_actor=actor,
+            heat=2,
+            context="I actually treat this original patient",
+            trigger_confirmed=True,
+        ),
+    )["action_id"]
+    tick(worker, gateway, 3)
+    assert game.inspect(OTHER, action)["receipt"]
+    pass_tags(game)
+    receipt, calls = game.inspect(OTHER, action)["receipt"], game.dice.calls
+    source = DoctorService(game)
+
+    async def treat():
+        row = next(x for x in game.choices(OTHER) if x["kind"] == "doctor_nanobot_benefits")
+        opened = current(3, 992400)
+        await opened.response.defer(ephemeral=True)
+        await open_choice(opened, source, row["id"])
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        form.values.update(choices=("repair",))
+        selected = current(3, 992401)
+        await form.confirm.callback(selected)
+        assert form.completed, selected.edit_original_response.call_args_list
+        row = next(x for x in game.choices(PLAYER) if x["kind"] == "doctor_patient")
+        patient = current(2, 992402)
+        await patient.response.defer(ephemeral=True)
+        await open_choice(patient, source, row["id"])
+        owned = patient.edit_original_response.call_args.kwargs["view"]
+        assert not await owned.interaction_check(current(3, 992403))
+        owned.values.update(assets=(old.id,), modular_assets=(old.id,))
+        owned.values["modular_name:" + old.id] = "Actual Nanobot replacement"
+        owned.values["modular_description:" + old.id] = "Patient-authored new repaired hardware"
+        submitted = current(2, 992404)
+        await owned.confirm.callback(submitted)
+        assert owned.completed, submitted.edit_original_response.call_args_list
+        saved = state(game)
+        await owned.confirm.callback(submitted)
+        assert state(game) == saved
+
+    asyncio.run(treat())
+    born = state(game)
+    assert game.inspect(OTHER, action)["receipt"] == receipt and game.dice.calls == calls
+    with ledger.engine.connect() as c:
+        loss = next(x for x in modular_doctor_losses(game, c, born, actor) if x.asset.id == old.id)
+    fact = next(
+        x for x in born.facts if x.get("kind") == "modular_repair" and x.get("old") == old.id
+    )
+    replacement = next(x for x in born.sheets["2"].assets if x.id == fact["new"])
+    assert loss.asset == old
+    tick(worker, gateway, 6)
+    assert game.inspect(OTHER, action)["state"] == "complete"
+    _assert_native_modular_loss_regrowth(game, worker, gateway, controls, loss, replacement)
+
+
+def test_actual_native_supply_repair_modular_replacement_then_partake_regrowth(
+    ledger, tmp_path, monkeypatch
+):
+    """Deferred: genuine used advancement/mission repair, never temporary equipment expiry."""
+    import asyncio
+
+    import test_strain_service
+    from test_mission_ui import current
+    from test_supply_drop import acquire as acquire_supply
+    from test_supply_drop import launch, propose, settle
+    from test_supply_drop import ready as supply_ready
+
+    from girlframe.discord_adapter.m3_supply_drop import open_delivery
+    from girlframe.engine import m3_handler_advancements as awards
+    from girlframe.engine import m3_modular as modular
+    from girlframe.engine import m3_supply_drop as supply
+    from girlframe.services.m3_access import Access
+    from girlframe.services.m3_frame_asset_losses import modular_supply_losses
+
+    def configured(store, frame):
+        missions, game = service(store, girl="OLDGEN", frame="CONSUME")
+        approved(
+            store,
+            game,
+            tmp_path,
+            monkeypatch,
+            extra=(
+                rules.STARVATION,
+                rules.EAT,
+                *rules.REQUISITIONS,
+                modular.RULE,
+                *awards.RULES,
+                supply.RULE,
+            ),
+        )
+        missions.access = Access(store)
+        return missions, game
+
+    monkeypatch.setattr(test_strain_service, "service", configured)
+    game, supplies, missions, award = supply_ready(ledger, tmp_path, monkeypatch)
+    acquire_supply(supplies, award)
+    with ledger.transaction() as c:
+        canon = state(game)
+        canon.sheets["2"].permissions = 20
+        game.event(c, 1, str(uuid4()), "synthetic.actual_original_modular_funds", canon)
+    controls = ConsumeService(game)
+    acquire(controls, rules.PARTAKE)
+    _acquire_modular_for_consume(game)
+    actor = current_ref(state(game), 2)
+    with ledger.transaction() as c:
+        canon = state(game)
+        old = next(
+            x for x in canon.sheets["2"].assets if x.family == "frame" and x.intrinsic is None
+        )
+        old.damaged = True
+        old = old.model_copy(deep=True)
+        game.event(c, 1, str(uuid4()), "synthetic.actual_prior_supply_repair_damage", canon)
+    mission = launch(missions)
+    identity = propose(supplies, game, mission, "repair", old.id)
+
+    async def receive():
+        opened = current(2, 992500)
+        await opened.response.defer(ephemeral=True)
+        await open_delivery(opened, supplies, identity)
+        form = opened.edit_original_response.call_args.kwargs["view"]
+        assert not await form.interaction_check(current(3, 992501))
+        form.values.update(
+            receive=("yes",),
+            modular=("replace",),
+            name="Actual Supply repair replacement",
+            description="Owned replacement from this actual mission repair",
+            account="I genuinely receive the actual source repair",
+        )
+        submitted = current(2, 992502)
+        await form.confirm.callback(submitted)
+        assert form.completed, submitted.edit_original_response.call_args_list
+        saved = state(game)
+        await form.confirm.callback(submitted)
+        assert state(game) == saved
+
+    asyncio.run(receive())
+    born = state(game)
+    use = next(x for x in supply.uses(born) if x.id == identity)
+    assert use.kind == "repair" and use.phase == "repaired"
+    with ledger.engine.connect() as c:
+        loss = next(x for x in modular_supply_losses(game, c, born, actor) if x.asset.id == old.id)
+    fact = next(
+        x for x in born.facts if x.get("kind") == "modular_repair" and x.get("source") == identity
+    )
+    replacement = next(x for x in born.sheets["2"].assets if x.id == fact["new"])
+    assert loss.asset == old and loss.event == use.effect_event
+    data = missions.get(ADMIN, mission)["mission"]
+    missions.end(ADMIN, str(uuid4()), mission, data["revision"], True)
+    settle(missions, game, mission)
+    assert next(x for x in supply.uses(state(game)) if x.id == identity).phase == "repaired"
+    _assert_native_modular_loss_regrowth(
+        game, GameWorker(game), Gateway(), controls, loss, replacement
+    )

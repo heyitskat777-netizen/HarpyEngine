@@ -154,6 +154,10 @@ async def open_princess(
                     context=values["context"],
                     trigger_confirmed=True,
                     heat=int(values["heat"][0]),
+                    kicked_puppy_basis=bool(values.get("kicked_puppy_basis")),
+                    dampener_modifier=cast(Literal[2, 3], int(values["dampener_modifier"][0]))
+                    if values.get("dampener_modifier")
+                    else None,
                     identity=next(iter(values.get("identity", ())), None),
                     gain=int(values.get("gain", ("0",))[0]),
                 ),
@@ -273,6 +277,26 @@ async def open_choice(
                 required=False,
             ),
         ]
+        if child["kicked_puppy"]:
+            fields.append(
+                Field(
+                    "kicked_puppy_basis",
+                    "Counterpart's paid Kicked Puppy roll basis",
+                    (("damaged", "Actual damaged Girl Assets; spend no Heat"),),
+                    minimum=0,
+                    required=False,
+                )
+            )
+        if child["dampener"]:
+            fields.append(
+                Field(
+                    "dampener_modifier",
+                    "Counterpart's paid Dampener: spend at least 5 Heat",
+                    (("2", "+2 basis"), ("3", "+3 basis")),
+                    minimum=0,
+                    required=False,
+                )
+            )
         if child["disposable"]:
             fields.append(
                 Field(
@@ -378,6 +402,10 @@ async def open_choice(
                     pair_share=int(next(iter(values.get("pair_share", ())), "0")),
                     context=child["context"],
                     heat=int(values["heat"][0]),
+                    kicked_puppy_basis=bool(values.get("kicked_puppy_basis")),
+                    dampener_modifier=cast(Literal[2, 3], int(values["dampener_modifier"][0]))
+                    if values.get("dampener_modifier")
+                    else None,
                     identity=next(iter(values.get("identity", ())), None),
                     gain=int(values.get("gain", ("0",))[0]),
                     disposable_heat=cast(

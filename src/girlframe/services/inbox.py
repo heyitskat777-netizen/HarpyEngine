@@ -936,6 +936,7 @@ class InboxService:
                     "girl.mockingbird.sex-play",
                     "girl.oldgen.sex-play",
                     "girl.newgirl.sex-play",
+                    "girl.vatgrown.sex-play",
                 ):
                     for lesson in learned_sources(
                         GameService(self.store), connection, canon, actor, rule
