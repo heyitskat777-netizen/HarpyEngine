@@ -3383,6 +3383,14 @@ class GameService:
                 from girlframe.services.m3_princess_sex import bind as bind_princess
 
                 bind_princess(state, action, begin_source_event)
+            if (stim_sex or {}).get("learned_source") or (princess_sex or {}).get("learned_source"):
+                from girlframe.services.m3_learned_sex import bind_action as bind_learned_sex
+
+                assert begin_source_event is not None
+                if bind_learned_sex(self, c, state, action, begin_source_event):
+                    action["data"]["sheet_revision"] = state.sheets[str(mechanical_owner)].revision
+                    self.save_action(c, action)
+                    claimed_learned = True
             if secretary_response is not None:
                 from girlframe.services.m3_secretary import link_response
 
@@ -4054,6 +4062,12 @@ class GameService:
                 from girlframe.services.m3_learned_plays import pre_roll_daily_lessons
 
                 pre_roll_daily_lessons(self, c, state, action)
+            if (action["data"].get("stim_sex") or {}).get("learned_source") or (
+                action["data"].get("princess_sex") or {}
+            ).get("learned_source"):
+                from girlframe.services.m3_learned_sex import pre_roll as learned_sex_pre_roll
+
+                learned_sex_pre_roll(self, c, state, action)
             if action["data"].get("am_code"):
                 from girlframe.services.m3_am_code import pre_roll as pre_roll_am_code
 
@@ -4543,6 +4557,15 @@ class GameService:
 
                 roll_event_id = roll_event_id or str(uuid4())
                 consume_daily_lessons(self, c, state, action, roll_event_id)
+                action["data"]["sheet_revision"] = state.sheets[str(action["actor_id"])].revision
+                self.save_action(c, action)
+            if (action["data"].get("stim_sex") or {}).get("learned_source") or (
+                action["data"].get("princess_sex") or {}
+            ).get("learned_source"):
+                from girlframe.services.m3_learned_sex import consume as consume_learned_sex
+
+                roll_event_id = roll_event_id or str(uuid4())
+                consume_learned_sex(self, c, state, action, roll_event_id)
                 action["data"]["sheet_revision"] = state.sheets[str(action["actor_id"])].revision
                 self.save_action(c, action)
             if committed is not None:

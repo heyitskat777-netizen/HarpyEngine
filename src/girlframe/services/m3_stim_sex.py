@@ -42,15 +42,38 @@ def _access(game: GameService, c: Connection, viewer: GuildViewer) -> None:
 
 
 def _physical_contact(
-    game: GameService, c: Connection, state: GameState, value: rules.Session
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    value: rules.Session,
+    *,
+    pending_event: str | None = None,
 ) -> None:
     from girlframe.services.m3_bonded import admit_delegation
     from girlframe.services.m3_changeling_sex import admit_contact
 
-    if value.changeling_source is not None and value.bonded_source is not None:
+    if (
+        sum(
+            x is not None
+            for x in (value.changeling_source, value.bonded_source, value.learned_source)
+        )
+        > 1
+    ):
         raise WorkflowError("Keep actual psychic contact separate from Bonded delegation")
     remote = admit_contact(
         game, c, state, value.actor, value.target, rules.RULE, value.changeling_source
+    )
+    from girlframe.services.m3_learned_sex import admit_source
+
+    learned = admit_source(
+        game,
+        c,
+        state,
+        value.actor,
+        value.target,
+        rules.RULE,
+        value.learned_source,
+        pending_event=pending_event,
     )
 
     own, other = (
@@ -69,7 +92,7 @@ def _physical_contact(
         or own.controller != value.caster
         or other.controller != value.counterpart
         or not (
-            has_rule(state.sheets[value.actor.entity], rules.RULE, "STIM-BLISSED")
+            (has_rule(state.sheets[value.actor.entity], rules.RULE, "STIM-BLISSED") or learned)
             if value.bonded_source is None
             else admit_delegation(
                 game, c, state, value.actor, value.target, rules.RULE, value.bonded_source
@@ -89,12 +112,19 @@ def _physical_contact(
         )
 
 
-def _contact(game: GameService, c: Connection, state: GameState, value: rules.Session) -> None:
+def _contact(
+    game: GameService,
+    c: Connection,
+    state: GameState,
+    value: rules.Session,
+    *,
+    pending_event: str | None = None,
+) -> None:
     _native(game, c, state, value.actor)
     _native(game, c, state, value.target)
     if fingerprint(_cast(game, c, state, value.cast.channel)) != fingerprint(value.cast):
         raise WorkflowError("Recover the original actual voluntary source cast")
-    _physical_contact(game, c, state, value)
+    _physical_contact(game, c, state, value, pending_event=pending_event)
 
 
 def _selection(game: GameService, c: Connection, state: GameState, value: rules.Selection) -> None:
@@ -111,6 +141,17 @@ def _selection(game: GameService, c: Connection, state: GameState, value: rules.
 
 def prove(game: GameService, c: Connection, state: GameState, identity: str) -> rules.Session:
     value = rules.get(state, identity)
+    if value.learned_source is not None:
+        from girlframe.services.m3_learned_sex import prove as prove_lesson
+
+        link = prove_lesson(game, c, state, value.learned_source)
+        if (
+            link.rule_id != rules.RULE
+            or link.session != value.id
+            or link.actor != value.actor
+            or link.target != value.target
+        ):
+            raise WorkflowError("Preserve this exact original learned Stim source")
     if value.changeling_source is not None:
         from girlframe.services.m3_changeling_sex import prove_source_link
 
@@ -140,6 +181,7 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         "proposal",
         "bonded_source",
         "changeling_source",
+        "learned_source",
     )
     if (
         any(getattr(first, key) != getattr(value, key) for key in stable)
@@ -322,6 +364,7 @@ def prepare(
             handler=handler.model_dump(mode="json"),
             handler_controller=value.cast.facilitator,
         )
+        | ({"learned_source": value.learned_source} if value.learned_source is not None else {})
         | ({"bonded_source": value.bonded_source} if value.bonded_source is not None else {})
         | (
             {"changeling_source": value.changeling_source}
@@ -928,14 +971,17 @@ class SexService:
             _access(self.game, c, viewer)
             state = load_state(c, self.store.campaign_id)
             targets = []
+            from girlframe.services.m3_learned_sex import lessons
+
+            learned: tuple[dict[str, str], ...] = ()
             try:
                 actor = current_ref(state, viewer.user_id)
+                learned = lessons(self.game, c, state, actor, rules.RULE)
                 own = _native(self.game, c, state, actor)
                 cast = _cast(self.game, c, state, channel)
                 if (
-                    has_rule(state.sheets[actor.entity], rules.RULE, "STIM-BLISSED")
-                    and own.inside_frame is False
-                ):
+                    has_rule(state.sheets[actor.entity], rules.RULE, "STIM-BLISSED") or learned
+                ) and own.inside_frame is False:
                     for role in cast.roles:
                         if role.actor.kind != "pilot" or role.actor == actor:
                             continue
@@ -952,6 +998,7 @@ class SexService:
                 pass
             return dict(
                 revision=state.revision,
+                lessons=learned,
                 targets=targets,
                 sessions=[
                     dict(id=x.id, phase=x.phase, caster=x.caster, counterpart=x.counterpart)
@@ -962,16 +1009,21 @@ class SexService:
 
     def _tasks(self, c: Connection, viewer: GuildViewer) -> list[dict[str, Any]]:
         state = load_state(c, self.store.campaign_id)
+        from girlframe.services.m3_learned_sex import cancelled
+
         return [
             dict(
                 id=x.id,
                 revision=state.revision,
                 label="Your actual Stim intimacy and drug source",
-                phase=x.phase,
-                pending=x.phase == "invited"
-                and viewer.user_id == x.counterpart
-                or x.phase == "accepted"
-                and viewer.user_id == x.caster,
+                phase="cancelled" if cancelled(self.game, c, state, x.learned_source) else x.phase,
+                pending=not cancelled(self.game, c, state, x.learned_source)
+                and (
+                    x.phase == "invited"
+                    and viewer.user_id == x.counterpart
+                    or x.phase == "accepted"
+                    and viewer.user_id == x.caster
+                ),
             )
             for x in rules.records(state, rules.Session)
             if viewer.user_id in (x.caster, x.counterpart)
@@ -992,7 +1044,10 @@ class SexService:
             for effect in rules.records(state, rules.Effect):
                 if effect.action == value.action:
                     prove_effect(self.game, c, state, effect.id)
+            from girlframe.services.m3_learned_sex import cancelled
+
             return value.model_dump(mode="json", exclude={"cast", "registry"}) | dict(
+                lesson_cancelled=cancelled(self.game, c, state, value.learned_source),
                 revision=state.revision,
                 drugs=[
                     dict(
@@ -1026,6 +1081,7 @@ class SexService:
         *,
         bonded_source: str | None = None,
         changeling_source: str | None = None,
+        learned_source: str | None = None,
     ) -> dict[str, Any]:
         if not account.strip() or len(account) > 1200:
             raise WorkflowError("Describe only your actual voluntary source interaction")
@@ -1057,7 +1113,18 @@ class SexService:
                 proposed_event=str(uuid4()),
                 proposal=account,
             )
-            _contact(self.game, c, state, value)
+            if learned_source is not None:
+                from girlframe.services.m3_learned_sex import reserve_invitation
+
+                source = reserve_invitation(self.game, c, state, value, rules.RULE, learned_source)
+                value = value.model_copy(update=dict(learned_source=source))
+            _contact(
+                self.game,
+                c,
+                state,
+                value,
+                pending_event=value.proposed_event if learned_source else None,
+            )
             if not any(x.id == cast.id for x in state.scene_casts):
                 state.scene_casts.append(cast)
             rules.put(state, value)
@@ -1101,7 +1168,8 @@ class SexService:
                 account=account,
             )
             | ({"bonded_source": bonded_source} if bonded_source is not None else {})
-            | ({"changeling_source": changeling_source} if changeling_source is not None else {}),
+            | ({"changeling_source": changeling_source} if changeling_source is not None else {})
+            | ({"learned_source": learned_source} if learned_source is not None else {}),
             operation,
             auto_audit=False,
             authorize=lambda c: _access(self.game, c, viewer),
@@ -1142,6 +1210,9 @@ class SexService:
                     )
                 ),
             )
+            from girlframe.services.m3_learned_sex import record_consent
+
+            record_consent(self.game, c, state, rules.get(state, value.id), accept, event)
             self.game.event(
                 c,
                 viewer.user_id,

@@ -14,6 +14,7 @@ from girlframe.engine.m2 import GameState
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.engine.m3_harpy_defeat import offstage_travel
 from girlframe.engine.m3_world_state import (
+    AdversaryPilot,
     Board,
     Cell,
     Faction,
@@ -318,6 +319,94 @@ class WorldService:
                 deferred=list(deferred),
             )
             return data
+
+    def introduce_patrol_harpy(
+        self,
+        viewer: GuildViewer,
+        key: str,
+        work: str,
+        work_revision: int,
+        game_revision: int,
+        pilot: AdversaryPilot,
+        account: str,
+    ) -> dict[str, Any]:
+        value = AdversaryPilot.model_validate_json(pilot.model_dump_json())
+
+        def operation(c: Connection) -> dict[str, Any]:
+            from girlframe.services.m3_patrol_harpy import validate_introduction
+
+            state = self._state(c, game_revision)
+            validate_introduction(self.game, c, state, viewer, work, work_revision, value)
+            world = state.world
+            if (
+                world is None
+                or not account.strip()
+                or len(account) > 1200
+                or value.kind != "harpy"
+                or value.controller != viewer.user_id
+                or not value.alive
+                or value.custody != "free"
+                or value.custodian is not None
+                or value.custody_event is not None
+                or value.revealed
+                or value.exposed
+                or value.tags
+                or value.rebel_resources_json is not None
+                or not world.board.contains(value.cell)
+                or any(
+                    item.id == value.id
+                    for group in (world.pilots, world.npcs, world.gorgons, world.locations)
+                    for item in group
+                )
+            ):
+                raise WorkflowError(
+                    "Introduce the actual source Handler's living, free, unrevealed Harpy "
+                    "with its real placed facts."
+                )
+            if any(
+                row.get("kind") == "patrol_harpy_introduction" and row.get("work") == work
+                for row in state.facts
+            ):
+                raise WorkflowError("Resume this patrol source's already introduced actual Harpy.")
+            event = str(uuid4())
+            actor = ActorRef(kind="external_pilot", entity=value.id)
+            state.world = rules.update(world, pilots=world.pilots + (value,))
+            state.facts.append(
+                dict(
+                    kind="patrol_harpy_introduction",
+                    work=work,
+                    actor=actor.model_dump_json(),
+                    pilot=value.model_dump_json(),
+                    handler=str(viewer.user_id),
+                    event=event,
+                    account=account.strip(),
+                )
+            )
+            self.game.event(
+                c,
+                viewer.user_id,
+                key,
+                "m3.patrol_harpy_introduced",
+                state,
+                event_id=event,
+                source_work=work,
+                entity_id=value.id,
+            )
+            return dict(id=value.id, actor=actor.model_dump(mode="json"))
+
+        return self._write(
+            viewer,
+            key,
+            "m3.patrol_harpy_introduced",
+            dict(
+                work=work,
+                work_revision=work_revision,
+                game_revision=game_revision,
+                pilot=value.model_dump(mode="json"),
+                account=account,
+            ),
+            operation,
+        )
 
     def npc(
         self,

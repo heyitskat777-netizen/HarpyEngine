@@ -88,6 +88,12 @@ async def open_effect(
 
         await open_void_frame_entry(interaction, VoidFrameEntryService(service.strain), identity)
         return
+    if data["rule_id"] == "strain.void.low.3.1":
+        from girlframe.discord_adapter.m3_patrol_harpy import open_patrol_harpy
+        from girlframe.services.m3_patrol_harpy import PatrolHarpyService
+
+        await open_patrol_harpy(interaction, PatrolHarpyService(service.strain), identity)
+        return
     if data["state"] != "pending":
         await reply(
             interaction,

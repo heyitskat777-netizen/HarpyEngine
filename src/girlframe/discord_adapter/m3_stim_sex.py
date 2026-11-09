@@ -12,6 +12,7 @@ from girlframe.engine.m2 import ChoiceAnswer, PlayInput
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_stim_sex import SexService
+from girlframe.services.onboarding import WorkflowError
 
 
 async def open_choice(
@@ -56,12 +57,23 @@ async def open_choice(
 
 
 async def open_stim(
-    interaction: discord.Interaction, service: SexService, identity: str | None = None
+    interaction: discord.Interaction,
+    service: SexService,
+    identity: str | None = None,
+    *,
+    learned_source: str | None = None,
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     channel = int(interaction.channel_id or 0)
     if identity is not None:
         value = await asyncio.to_thread(service.view, viewer, identity)
+        if value.get("lesson_cancelled"):
+            await reply(
+                interaction,
+                "You cancelled this unrolled learned source. Its lesson is unused; "
+                "a new source requires a fresh invitation and the counterpart's own answer.",
+            )
+            return
         if value["phase"] == "invited" and value["counterpart"] == viewer.user_id:
 
             async def respond(current: discord.Interaction, values: dict[str, Any]) -> str:
@@ -182,6 +194,8 @@ async def open_stim(
         )
         return
     data = await asyncio.to_thread(service.menu, viewer, channel)
+    if learned_source is not None and learned_source not in {x["id"] for x in data["lessons"]}:
+        raise WorkflowError("Reopen your actual available learned source")
     options = [("invite", "Record an actual voluntary source")] if data["targets"] else []
     options.extend((x["id"], "Your original Stim source: " + x["phase"]) for x in data["sessions"])
     if not options:
@@ -207,6 +221,7 @@ async def open_stim(
                 ActorRef.model_validate(target["ref"]),
                 data["revision"],
                 answer["account"],
+                learned_source=next(iter(answer.get("lesson", ())), learned_source),
             )
             return (
                 "Actual source invitation saved. The other human owns their source reply "
@@ -228,9 +243,22 @@ async def open_stim(
                     ),
                 ),
                 Field("account", "Your actual voluntary source", paragraph=True),
-            ],
+            ]
+            + (
+                [
+                    Field(
+                        "lesson",
+                        "One actual lesson for this voluntary source",
+                        tuple((x["id"], x["label"]) for x in data["lessons"]),
+                    )
+                ]
+                if data["lessons"]
+                else []
+            ),
             invite,
         )
+        if learned_source is not None:
+            form.values["lesson"] = (learned_source,)
         await reply(current, form.text(), form)
         return None
 

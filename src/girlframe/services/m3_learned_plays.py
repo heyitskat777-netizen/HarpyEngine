@@ -25,6 +25,7 @@ from girlframe.engine.m3_learned_play_state import (
     daily_lesson_uses,
     defensive_risk_uses,
     hound_status_uses,
+    learned_sex_links,
     put_defensive_risk,
     put_hound_status,
     put_risk_lesson,
@@ -44,6 +45,7 @@ CALL = "girl.mockingbird.call-of-the-void"
 SHOW_DOG = "girl.princess.show-dog"
 PSYCHE = "girl.stim-blissed.disposable-psyche"
 DOLL = "girl.vatgrown.unassuming-doll"
+SEX_LESSONS = {"girl.princess.sex-play": "PRINCESS", "girl.stim-blissed.sex-play": "STIM-BLISSED"}
 DAILY: dict[
     Literal["girl.princess.show-dog", "girl.stim-blissed.disposable-psyche"], tuple[str, str]
 ] = {
@@ -67,6 +69,8 @@ SUPPORTED = {
 
 
 def lesson_label(rule_id: str, play: str) -> str:
+    if rule_id in SEX_LESSONS:
+        return SEX_LESSONS[rule_id].replace("-", " ").title() + " Sex (one voluntary source)"
     if rule_id in (SHOW_DOG, PSYCHE, DOLL):
         return {
             SHOW_DOG: "Show Dog (one actual Off-Duty source)",
@@ -96,6 +100,8 @@ def lesson_book(rule_id: str) -> str | None:
     """The finite Status lesson has no invented underlying Play ID."""
     if rule_id in (RISK, CALL):
         return "MOCKINGBIRD"
+    if rule_id in SEX_LESSONS:
+        return SEX_LESSONS[rule_id]
     if rule_id in DAILY:
         return DAILY[rule_id][1]
     if rule_id == DOLL:
@@ -116,6 +122,9 @@ def teacher_lessons(sheet: Any) -> tuple[dict[str, str], ...]:
     if sheet.girl == "MOCKINGBIRD" and has_rule(sheet, CALL, "MOCKINGBIRD"):
         result.append(dict(id=CALL, label=lesson_label(CALL, "")))
     for rule, book in ((SHOW_DOG, "PRINCESS"), (PSYCHE, "STIM-BLISSED"), (DOLL, "VATGROWN")):
+        if sheet.girl == book and has_rule(sheet, rule, book):
+            result.append(dict(id=rule, label=lesson_label(rule, "")))
+    for rule, book in SEX_LESSONS.items():
         if sheet.girl == book and has_rule(sheet, rule, book):
             result.append(dict(id=rule, label=lesson_label(rule, "")))
     return tuple(result)
@@ -249,6 +258,10 @@ def available(
             or value.rule_id != rule_id
             or value.rolled_event is not None
             or value.claimed_action not in (None, action_id)
+        ):
+            continue
+        if rule_id in SEX_LESSONS and any(
+            x.lesson == value.id and x.released_event is None for x in learned_sex_links(state)
         ):
             continue
         _prove(game, c, state, value)

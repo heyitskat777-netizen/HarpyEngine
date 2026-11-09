@@ -961,6 +961,22 @@ class InboxView(discord.ui.View):
             from girlframe.services.m3_malleable import MalleableService
 
             await open_malleable(interaction, MalleableService(self.service.store), item.identity)
+        elif item.task == "m3_learned_sex":
+            from girlframe.discord_adapter.m3_learned_sex import open_learned_sex
+            from girlframe.services.m2_game import GameService
+
+            await open_learned_sex(interaction, GameService(self.service.store), item.identity)
+        elif item.task == "m3_patrol_harpy":
+            from girlframe.discord_adapter.m3_patrol_harpy import open_patrol_harpy
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_patrol_harpy import PatrolHarpyService
+            from girlframe.services.m3_strain import StrainService
+
+            source = PatrolHarpyService(
+                StrainService(OffDutyService(MissionService(self.service.store)))
+            )
+            await open_patrol_harpy(interaction, source, item.identity)
         elif item.task == "m3_stim_sex":
             from girlframe.discord_adapter.m3_stim_sex import open_stim
             from girlframe.services.m2_game import GameService

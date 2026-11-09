@@ -32,8 +32,12 @@ The ten exact Sex source IDs are `girl.princess.sex-play`,
 `girl.mockingbird.sex-play`, `girl.stim-blissed.sex-play`,
 `girl.newgirl.sex-play`, `girl.casualty.sex-play`, `girl.oldgen.sex-play`,
 `girl.vatgrown.sex-play`, `girl.alpha.sex-play`, `girl.am.sex-play` and
-`girl.bonded.sex-play`. Existing specialized/remote providers do not yet implement
-all one-use learning for these IDs. Transferable ordinary outcomes remain P1
+`girl.bonded.sex-play`. Princess and Stim now have source-bound one-use adapters through a finite real
+invitation/consent/Action/receipt helper. Princess refusal/cancel/fresh consent and
+mid effects passed; Stim actual source Drug/effect/two-scene expiry passed after
+repairing canonical historical grant contact. Alpha and Mockingbird are the next
+bounded pair. Remaining specialized/remote providers do not yet implement
+all one-use learning for their exact IDs. Transferable ordinary outcomes remain P1
 when their actual conditions hold. Keep real parts, original Pair, AM/no-roll
 treatment, drug, Mentor and body requirements explicit; no blanket later-module
 classification or copied fictional prerequisites. Exceptional retained-book,

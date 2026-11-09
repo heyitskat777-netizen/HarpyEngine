@@ -8559,7 +8559,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_princess_sex.py"
+        "tests/rules/test_princess_sex.py",
+        "tests/rules/test_vatgrown_plays.py::test_actual_learned_princess_sex_invitation_decline_cancel_fresh_consent_favour_and_tag"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -9023,7 +9024,8 @@
       "contract": null,
       "dependencies": [],
       "test_evidence": [
-        "tests/rules/test_stim_sex.py"
+        "tests/rules/test_stim_sex.py",
+        "tests/rules/test_vatgrown_plays.py::test_actual_learned_stim_sex_new_source_drug_helpless_real_expiry_and_private_receipt"
       ],
       "m2_play_id": null,
       "module": "core"
@@ -15650,14 +15652,16 @@
         "heading": "Void low: die 3, column 1"
       },
       "required": true,
-      "implementation": "unimplemented",
+      "implementation": "subset",
       "source_audit": "inventoried",
       "independent_review": "pending",
       "reviewer": null,
       "review_reference": null,
       "contract": null,
       "dependencies": [],
-      "test_evidence": [],
+      "test_evidence": [
+        "tests/rules/test_patrol_harpy.py::test_actual_low_void_patrol_new_harpy_body_review_native_die_and_private_sighting"
+      ],
       "m2_play_id": null,
       "module": "core"
     },

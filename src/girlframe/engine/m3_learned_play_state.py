@@ -22,6 +22,41 @@ class LearnedPlayUse(Model):
     rolled_event: str | None = None
 
 
+class LearnedSexLink(Model):
+    id: str
+    lesson: str
+    rule_id: Literal["girl.princess.sex-play", "girl.stim-blissed.sex-play"]
+    session: str
+    actor: ActorRef
+    target: ActorRef
+    cast_sha256: str
+    proposed_event: str
+    consent_event: str | None = None
+    accepted: bool | None = None
+    action: str | None = None
+    bound_event: str | None = None
+    roll_event: str | None = None
+    receipt_sha256: str | None = None
+    released_event: str | None = None
+    released_kind: Literal["declined", "owner_cancelled"] | None = None
+
+
+def learned_sex_links(state: "GameState") -> tuple[LearnedSexLink, ...]:
+    return tuple(
+        LearnedSexLink.model_validate_json(x["body"])
+        for x in state.facts
+        if x.get("kind") == "learned_sex_link"
+    )
+
+
+def put_learned_sex_link(state: "GameState", value: LearnedSexLink) -> None:
+    state.facts = [
+        x
+        for x in state.facts
+        if not (x.get("kind") == "learned_sex_link" and x.get("id") == value.id)
+    ] + [dict(kind="learned_sex_link", id=value.id, body=value.model_dump_json())]
+
+
 class PsychePermit(Model):
     lesson: LearnedPlayUse
     mode: Literal["mark", "off_duty", "mark_off_duty"]

@@ -1648,3 +1648,62 @@ regression claim. New Doll history node, learned Ankou committed Feedback and
 combined mark/OffDuty variant remain deferred. Full exact-candidate regression/
 global static/migration/privacy/restore, independent review and actual human
 acceptance remain pending; bot OFF, no live source deployment.
+
+
+## Learned Sex pilot and Low Void patrol encounter — active
+
+Basea96252c3416cf80f6a9c9997db010b5f1e6e0bca published;
+[focused CI42554312918](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/42554312918)
+PASS/full regression skipped. Malleable owns finite Princess/Stim source10; AM
+NEW patrol-Harpy4; root owns shared10 ports/entry/routing/visibility. No wholesale
+engine or native-effect rewrite. Source-defined fresh Stim Drug effects differ
+from teacher inventory or acquired physiology. Patrol introduction uses actual
+source Handler and a separate genuine Harpy runtime/body review before sighting;
+canonical observer knowledge never globally reveals a hidden actor. Mood never
+forces invented attack/flee/healing/dialogue. Existing Harpy rescue/capture/death/
+shutdown/physical-extraction consumers were reconciled rather than rebuilt.
+Worker normals are authored without execution. Minimum after source freezes;
+full exact-candidate and independent/human gates remain pending.
+
+First new minimum: learned Princess, learned Stim, patrol-Harpy and changed SDK
+command registration, **3passed1failed15.08s**,
+`var/p1-sex-patrol-minimum.txt/xml`. Princess actual refusal/cancel/fresh consent/
+favour/optional Tag, patrol true introduction/body review/extraD6/private known
+actor and SDK command tree passed. These successes will not be repeated.
+Stim reached genuine Drug effects but real scene closure exposed a historical
+grant-proof bug: Vatgrown source.prove called live _contact/_cast, reading the
+now-closed SQL scene despite passing a canonical historical state. Worker gets
+only additional `services/m3_vatgrown_plays.py` historical proof region; preserve
+live consent/scene/body guards and prove the original saved cast/event. Retry
+only the failed actual Drug-expiry node. No fixture bypass or false completed
+source. New patrol row is implementation SUBSET, independent review pending;
+no full rules or P1 regression claim.
+
+Failed-only Stim retry **1passed4.91s**,
+`var/p1-sex-patrol-minimum-retry.txt/xml`. Real historical defect repaired in
+Vatgrown source proof: canonical saved invitation snapshot now proves original
+open cast/facilitator/roles and snapshot-bound original bodies/controllers/
+vessels/source eligibility. Live _contact remains unchanged; original consent,
+authors, canonical Bonded/psychic delegation proofs remain required. Genuine
+source Drugs/Helpless/two actual scene closures/expiry/private receipt succeeded.
+Princess, patrol and SDK successes were not rerun. Four passing focused checks,
+not a full regression. Worker delta1 Ruff/format/mypy/whitespace PASS.
+
+Shared extraction is finite learned Sex source reservation/proof for two actual
+consumers, preserving per-book eligibility/effects/ownership. No generic rule
+DSL, native book mutation or teacher resources. No test-speed improvement is
+claimed. Existing source/privacy/stale/retry/rollback tests remain in final full
+regression; focused normals cover refusal/recovery/known receipt and private
+readback, not every shared-consumer branch. Remaining retained/Ankou/source
+boundaries and deferred Doll/campaign-loop normals remain visible.
+
+Final scoped packet31 paths/25 Python/23 source: Ruff/types/whitespace, registry,
+planning and repository PASS. Format check caught only a root new menu-label
+reflow; formatter plus Ruff/format delta1 PASS, no semantic change or gameplay
+rerun. Registry477/274 subset/203 unimplemented/440 required/0 independently
+verified. Repository1428 publishable files/40 original manifest entries/0 findings.
+Initial root manifest preflight included unchanged campaign-rulings doc; removed
+that unchanged path before checks/staging, no tests had run in that preflight.
+Four minimum checks have passing first-run/failed-only retry evidence; new Stim
+lifetime proof bug fixed. Commands/hash manifest `var/p1-sex-patrol-*`. Final full
+P1/global/migration/privacy/restore/independent/human gates stay pending. Bot OFF.

@@ -24,6 +24,7 @@ from girlframe.engine.m3_work_scope import WorkScope
 from girlframe.services.m2_game import GameService
 from girlframe.services.m2_state import load_state
 from girlframe.services.m3_access import Access, digest
+from girlframe.services.m3_actor_history import snapshot_profiles
 from girlframe.services.m3_actors import profiles
 from girlframe.services.m3_dose_up import _cast, _native, _response, _roll_source
 from girlframe.services.m3_handler_advancements import _history
@@ -124,6 +125,63 @@ def _contact(game: GameService, c: Connection, state: GameState, value: rules.Se
         )
 
 
+def _birth_contact(
+    game: GameService, c: Connection, state: GameState, value: rules.Session
+) -> None:
+    """Validate canonical invitation bodies/cast without reopening today's SQL scene.
+
+    The caller proves the invitation event and any delegated/psychic source. Invitation
+    creation saves the exact live cast in this same snapshot, including legacy casts.
+    Historical profile bindings establish original bodies, never current authority.
+    """
+    bindings = snapshot_profiles(c, game.store.campaign_id, state)
+    own = resolve(state, value.actor, bindings)
+    other = resolve(state, value.target, bindings, require_current_profile=False)
+    remote = value.changeling_source is not None
+    natives = (own, other) if value.target.kind == "pilot" else (own,)
+    if (
+        value.actor.kind != "pilot"
+        or value.target.kind not in ("pilot", "npc", "handler")
+        or value.actor == value.target
+        or (remote and value.bonded_source is not None)
+        or value.cast not in state.scene_casts
+        or not value.cast.open
+        or value.cast.adjudicator is not None
+        or value.cast.facilitator != state.handler
+        or own.controller != value.caster
+        or other.controller != value.counterpart
+        or any(
+            x.rules != "girl_frame" or state.sheets[x.ref.entity].medical_state != "fit"
+            for x in natives
+        )
+        or (
+            value.bonded_source is None
+            and (
+                state.sheets[value.actor.entity].girl != "VATGROWN"
+                or not has_rule(state.sheets[value.actor.entity], rules.SEX, "VATGROWN")
+            )
+        )
+        or any(
+            not x.alive
+            or (not remote and x.inside_frame is not False)
+            or x.offstage_source
+            or (not remote and x.cell is None)
+            or x.vessel_id is None
+            or x.custody not in (None, "free")
+            for x in (own, other)
+        )
+        or (not remote and own.cell != other.cell)
+        or (own.vessel_id, other.vessel_id) != (value.actor_vessel, value.target_vessel)
+        or is_helpless(state, value.actor)
+        or is_helpless(state, value.target)
+        or not all(
+            any(r.actor == ref and r.controller == owner for r in value.cast.roles)
+            for ref, owner in ((value.actor, value.caster), (value.target, value.counterpart))
+        )
+    ):
+        raise WorkflowError("Recover the actual invitation's original bodies, cast and authors")
+
+
 def prove(game: GameService, c: Connection, state: GameState, identity: str) -> rules.Session:
     value = _get(state, rules.Session, identity)
     if value.changeling_source is not None:
@@ -139,7 +197,8 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
         prove_delegation(
             game, c, state, value.bonded_source, value.id, value.actor, value.target, rules.SEX
         )
-    born = _get(_history(c, game, value.proposed_event), rules.Session, identity)
+    origin = _history(c, game, value.proposed_event)
+    born = _get(origin, rules.Session, identity)
     stable = (
         "id",
         "actor",
@@ -158,7 +217,7 @@ def prove(game: GameService, c: Connection, state: GameState, identity: str) -> 
     _event(game, c, value.proposed_event, ("m3.vatgrown_sex_invited",), value.caster)
     if any(getattr(value, x) != getattr(born, x) for x in stable):
         raise WorkflowError("Preserve the real original Vatgrown source, bodies and authors")
-    _contact(game, c, _history(c, game, value.proposed_event), born)
+    _birth_contact(game, c, origin, born)
     if value.consent_event:
         agreed = _get(_history(c, game, value.consent_event), rules.Session, identity)
         _event(game, c, value.consent_event, ("m3.vatgrown_sex_consent",), value.counterpart)

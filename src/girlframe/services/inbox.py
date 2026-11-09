@@ -924,6 +924,54 @@ class InboxService:
                     )
                 )
 
+            from girlframe.engine.m3_actor_bonds import current_ref as lesson_owner
+            from girlframe.services.m3_learned_sex import lessons as learned_sources
+
+            if str(viewer.user_id) in canon.sheets:
+                actor = lesson_owner(canon, viewer.user_id)
+                for rule in ("girl.princess.sex-play", "girl.stim-blissed.sex-play"):
+                    for lesson in learned_sources(
+                        GameService(self.store), connection, canon, actor, rule
+                    ):
+                        items.append(
+                            InboxItem(
+                                "learned-source:" + lesson["id"],
+                                "learned_source",
+                                lesson["id"],
+                                canon.revision,
+                                "playbook",
+                                lesson["label"],
+                                "You and the person you invite",
+                                "available",
+                                False,
+                                False,
+                                "Start an invitation using this one-use lesson.",
+                                "The other person retains their own answer and choices.",
+                                "Start a learned Play",
+                                task="m3_learned_sex",
+                            )
+                        )
+
+            from girlframe.services.m3_missions import MissionService
+            from girlframe.services.m3_off_duty import OffDutyService
+            from girlframe.services.m3_patrol_harpy import PatrolHarpyService
+            from girlframe.services.m3_strain import StrainService
+
+            patrol = PatrolHarpyService(StrainService(OffDutyService(MissionService(self.store))))
+            for observation in patrol._tasks(connection, viewer):
+                items.append(
+                    _playbook_task(
+                        cast(_RuleTask, observation),
+                        prefix="patrol-harpy:",
+                        source="patrol_harpy",
+                        counterpart="Original patrol observer and source Handler",
+                        effect="Read the actual private sighting and saved observation.",
+                        details="This does not reveal the Harpy to other characters.",
+                        primary="Read patrol sighting",
+                        task="m3_patrol_harpy",
+                    )
+                )
+
             from girlframe.services.m3_mentor import MentorService
 
             for mentor in MentorService(GameService(self.store))._tasks(connection, viewer):
@@ -3583,6 +3631,7 @@ class InboxService:
                         continue  # Preserve the authorized source card instead of duplicating it.
                     if json.loads(work["body_json"])["rule_id"] in SUPPORTED | {
                         "strain.void.low.1.2",
+                        "strain.void.low.3.1",
                         "strain.rebellion.low.4.2",
                         "strain.budget.high.1.2",
                     }:

@@ -204,7 +204,12 @@ class ActorService:
                 refs.extend(
                     ActorRef(kind="external_pilot", entity=x.id)
                     for x in state.world.pilots
-                    if x.alive and x.revealed
+                    if x.alive
+                    and (
+                        x.revealed
+                        or x.kind == "harpy"
+                        and self._patrol_known(c, state, perspective, x.id)
+                    )
                 )
                 refs.extend(
                     ActorRef(kind="gorgon", entity=x.id)
@@ -236,6 +241,13 @@ class ActorService:
                 "perspective": actor.ref.model_dump(mode="json"),
                 "actors": known,
             }
+
+    def _patrol_known(
+        self, c: Connection, state: GameState, observer: ActorRef, harpy: str
+    ) -> bool:
+        from girlframe.services.m3_patrol_harpy import knows
+
+        return knows(self.game, c, state, observer, ActorRef(kind="external_pilot", entity=harpy))
 
     def bind_legacy(self, viewer: GuildViewer, key: str, expected: int) -> dict[str, Any]:
         def authorize(c: Connection) -> None:

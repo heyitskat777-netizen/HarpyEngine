@@ -13,6 +13,7 @@ from girlframe.engine.m2 import ChoiceAnswer, PlayInput
 from girlframe.engine.m3_actor_state import ActorRef
 from girlframe.services.m2_game import GameService
 from girlframe.services.m3_princess_sex import SexService
+from girlframe.services.onboarding import WorkflowError
 
 DISCLOSURE = (
     "Confirm only your own actual voluntary interaction. On a high result the Princess "
@@ -23,12 +24,18 @@ DISCLOSURE = (
 
 
 async def open_princess(
-    interaction: discord.Interaction, service: SexService, identity: str | None = None
+    interaction: discord.Interaction,
+    service: SexService,
+    identity: str | None = None,
+    *,
+    learned_source: str | None = None,
 ) -> None:
     viewer = viewer_from_interaction(interaction)
     channel = int(interaction.channel_id or 0)
     if identity is None:
         data = await asyncio.to_thread(service.menu, viewer, channel)
+        if learned_source is not None and learned_source not in {x["id"] for x in data["lessons"]}:
+            raise WorkflowError("Reopen your actual available learned source")
         options = [("invite", "Propose your actual voluntary source")] if data["targets"] else []
         options += [(x["id"], "Saved interaction: " + x["phase"]) for x in data["sessions"]]
         if not options:
@@ -51,10 +58,11 @@ async def open_princess(
                     ActorRef.model_validate(target["ref"]),
                     data["revision"],
                     answer["account"],
+                    learned_source=next(iter(answer.get("lesson", ())), learned_source),
                 )
                 return "Saved. The actual counterpart answers their own private source invitation."
 
-            await NativeForm(
+            form = NativeForm(
                 current.user.id,
                 "Princess source",
                 DISCLOSURE,
@@ -65,9 +73,23 @@ async def open_princess(
                         tuple((x["token"], x["label"]) for x in data["targets"]),
                     ),
                     Field("account", "Your actual voluntary source interaction", paragraph=True),
-                ],
+                ]
+                + (
+                    [
+                        Field(
+                            "lesson",
+                            "One actual lesson for this voluntary source",
+                            tuple((x["id"], x["label"]) for x in data["lessons"]),
+                        )
+                    ]
+                    if data["lessons"]
+                    else []
+                ),
                 invite,
-            ).present(current)
+            )
+            if learned_source is not None:
+                form.values["lesson"] = (learned_source,)
+            await form.present(current)
             return None
 
         await NativeForm(
@@ -79,6 +101,13 @@ async def open_princess(
         ).present(interaction)
         return
     data = await asyncio.to_thread(service.view, viewer, identity)
+    if data.get("lesson_cancelled"):
+        await reply(
+            interaction,
+            "You cancelled this unrolled learned source. Its lesson is unused; "
+            "a new source needs a new invitation and the actual counterpart's own answer.",
+        )
+        return
     if data["phase"] == "invited" and data["counterpart"] == viewer.user_id:
 
         async def confirm(current: discord.Interaction, values: dict[str, Any]) -> str:
