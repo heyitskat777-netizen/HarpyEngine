@@ -112,3 +112,38 @@ offline regression only. Bot/hourly automation/models/deployment remain OFF.
 Independent technical review found and checked the privacy/actionability fixes;
 new rescue/Casualty delta review is being completed. Rule/clarity and human
 acceptance are still pending. No registry entry was promoted.
+
+
+## First frozen regression attempt and bounded repairs
+
+Published source checkpoint `500314341a9ad16f323ec16e80776a2798f9e9c0`.
+Its default CI [43580025144](https://github.com/heyitskat777-netizen/HarpyEngine/actions/runs/43580025144)
+failed actual SDK registration: adding a26th `/mission` child exceeded Discord's
+limit. New NPC resources now use the existing `/mission position` view dropdown
+(`body` default / `npc_resources`), preserving the25-command boundary. The actual
+SDK normal passes1/1.04s; test assertions cover both choices and absence of a
+separate child. The bot was never started.
+
+The full local attempt was interrupted early after that concrete startup blocker,
+retaining partial XML/log evidence: **20 failed,114 passed176.24s**. This is not a
+full-regression result. Its actual failures were grouped and repaired:
+
+-18 native Alpha counter cases shared a required optional-Identity Heat selector
+  with no initial value. Initialize the visible existing-Heat commitment to0;
+  source/Identity/cost guards are unchanged. Representative failed node passed
+  1/3.86s, then the remaining failed17 passed49.50s.
+- Actual mandatory manual Off-Duty used a Handler-authored adjudication event,
+  while a reused receipt helper accepted only patient-authored dice events.
+  Added exact typed decision/request/response/receipt/event/source proof for
+  that legitimate no-dice path. Original failed normal passed1/3.52s, total8
+  and zero RNG retained. An optional-event type annotation was corrected.
+- AM hooked-return test expected only Return; the integrated owner menu already
+  includes separately source-proved Spinal controls. Reconciled that exact
+  menu assertion, preserving real return/source/history checks; passed1/6.58s.
+
+All20 failed gameplay nodes and the CI startup node now have focused passing
+evidence. A new exact commit and complete regression are required; earlier
+successes are retained, not presented as a final run. The next run also records
+private incremental progress/failure evidence via a test-observer hook which
+never selects, skips or changes tests. Full-suite scope includes both approved
+simulation files and all existing memory-pagination/boundary tests.

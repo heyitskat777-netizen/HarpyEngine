@@ -217,6 +217,13 @@ def test_forbidden_go_off_duty_manual_source_reaches_actual_optional_scene_and_r
     with ledger.engine.connect() as c:
         actual = cycle.periods._get(c, period).progress["2"].roll
     assert actual.faces is None and actual.adjudication.total == 8 and actual.total == 8
+    from girlframe.services.m3_dose_up import _roll_source
+
+    with ledger.engine.connect() as c:
+        action = game.action(c, identity)
+        source, total = _roll_source(game, c, action)
+        assert source == action["data"]["receipt"]["adjudication"]["source_event"]
+        assert total == 8 and action["data"]["receipt"]["rng_source"] == "manual_adjudication"
     no_frame_trigger(cycle, game, period)
     call(cycle, game, PLAYER, period, "scene", None, (), "")
     call(cycle, game, PLAYER, period, "recover", RecoveryChoice())

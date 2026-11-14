@@ -133,6 +133,7 @@ def begin_counter(game, worker, gateway, parent, choice, faces):
         await opened.response.defer(ephemeral=True)
         await open_alpha_choice(opened, game, choice["id"])
         form = opened.edit_original_response.call_args.kwargs["view"]
+        assert form.values["gain"] == ("0",)
         assert "brutalize" in dict(next(x for x in form.fields if x.key == "play").options)
         assert not await form.interaction_check(interaction(2))
         form.values.update(play=("brutalize",), heat=("1",), context=prepared.context)
@@ -160,6 +161,8 @@ def begin_counter(game, worker, gateway, parent, choice, faces):
         assert child["data"]["alpha"]["actor"] == actor.model_dump(mode="json")
         assert child["data"]["alpha"]["target"] == target.model_dump(mode="json")
         assert child["data"]["prepared"]["source_work"] is None
+        assert child["data"]["prepared"]["identity"] is None
+        assert child["data"]["prepared"]["gain"] == 0
     assert state(game).sheets["3"].heat == before.sheets["3"].heat
     assert game.dice.calls == calls
     game.dice.faces = faces

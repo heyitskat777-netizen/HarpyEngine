@@ -26,6 +26,11 @@ def test_actual_bot_registers_complete_bounded_private_command_surface(ledger):
             frame_area = campaign.get_command("frame").parameters[0]
             assert frame_area.name == "area" and frame_area.default == "frame"
             assert {choice.value for choice in frame_area.choices} == {"frame", "body"}
+            mission = bot.tree.get_command("mission", guild=guild)
+            position_view = mission.get_command("position").parameters[0]
+            assert position_view.name == "view" and position_view.default == "body"
+            assert {choice.value for choice in position_view.choices} == {"body", "npc_resources"}
+            assert mission.get_command("npc_resources") is None
             assert bot.tree.get_command("facilitator", guild=guild) is not None
             for name in ("am", "alpha", "princess", "casualty", "vatgrown", "bonded"):
                 assert girl.get_command(name) is not None

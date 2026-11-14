@@ -476,6 +476,77 @@ def pre_roll(
         commit_declaration(state, action)
 
 
+def _manual_roll_source(
+    game: GameService, c: Connection, action: dict[str, Any], receipt: dict[str, Any]
+) -> str:
+    """A mandatory no-dice outcome keeps its actual judge, request and source event."""
+    from girlframe.engine import m3_adjudication as manual_rules
+    from girlframe.engine.m3_adjudication_state import Decision
+    from girlframe.engine.m3_policy import RULESET
+
+    try:
+        decision = Decision.model_validate_json(json.dumps(receipt["adjudication"]))
+        expected = manual_rules.receipt(decision, receipt["id"], receipt["rolled_utc"])
+        expected["ruleset"] = RULESET
+        request = (
+            c.execute(
+                sa.select(t.m2["m2_choices"]).where(
+                    t.m2["m2_choices"].c.campaign_id == game.store.campaign_id,
+                    t.m2["m2_choices"].c.id == decision.request,
+                )
+            )
+            .mappings()
+            .first()
+        )
+        response = c.scalar(
+            sa.select(t.m2["m2_responses"].c.answer_json).where(
+                t.m2["m2_responses"].c.campaign_id == game.store.campaign_id,
+                t.m2["m2_responses"].c.choice_id == decision.request,
+                t.m2["m2_responses"].c.actor_id == str(decision.required.controller),
+                t.m2["m2_responses"].c.event_id == decision.source_event,
+            )
+        )
+        event = (
+            c.execute(
+                sa.select(t.events).where(
+                    t.events.c.campaign_id == game.store.campaign_id,
+                    t.events.c.id == decision.source_event,
+                )
+            )
+            .mappings()
+            .first()
+        )
+        payload = json.loads(event["payload_json"]) if event else {}
+        if (
+            receipt != expected
+            or decision.action != action["id"]
+            or decision.required.play != action["data"]["play"]
+            or decision.required.patient_controller != int(action["actor_id"])
+            or decision.required.model_dump(mode="json") != action["data"].get("adjudication")
+            or request is None
+            or request["action_id"] != action["id"]
+            or request["kind"] != "manual_adjudication"
+            or request["state"] != "resolved"
+            or request["actor_id"] != str(decision.required.controller)
+            or json.loads(request["body_json"]).get("decision") != decision.model_dump(mode="json")
+            or response is None
+            or json.loads(response) != {"manual_adjudication": decision.model_dump(mode="json")}
+            or event is None
+            or event["kind"] != "m3.manual_adjudicated"
+            or event["actor_id"] != str(decision.required.controller)
+            or payload.get("action_id") != action["id"]
+            or payload.get("receipt_id") != receipt["id"]
+            or payload.get("adjudication_id") != decision.id
+        ):
+            raise ValueError("The actual source-owned manual receipt does not match")
+        # Validate the original forbidden-Play/body facts at the immutable decision,
+        # rather than requiring the campaign's later period revision to stay frozen.
+        manual_rules.validate(_history(c, game, decision.source_event), decision.required)
+    except (KeyError, TypeError, ValueError) as error:
+        raise WorkflowError("Recover the actual source-owned manual adjudication event") from error
+    return decision.source_event
+
+
 def _roll_source(game: GameService, c: Connection, action: dict[str, Any]) -> tuple[str, int]:
     receipt = (
         c.execute(
@@ -522,15 +593,19 @@ def _roll_source(game: GameService, c: Connection, action: dict[str, Any]) -> tu
         if direction is None:
             raise WorkflowError("Recover the genuine scoped Easy Target roll author")
         author = direction.author_controller
-    event = c.scalar(
-        sa.select(t.events.c.id).where(
-            t.events.c.campaign_id == game.store.campaign_id,
-            t.events.c.kind.in_(("m2.rolled", "m3.rolled")),
-            t.events.c.actor_id == str(author),
-            sa.func.json_extract(t.events.c.payload_json, "$.action_id") == action["id"],
-            sa.func.json_extract(t.events.c.payload_json, "$.receipt_id") == receipt["id"],
+    event: str | None
+    if action["data"]["receipt"].get("rng_source") == "manual_adjudication":
+        event = _manual_roll_source(game, c, action, action["data"]["receipt"])
+    else:
+        event = c.scalar(
+            sa.select(t.events.c.id).where(
+                t.events.c.campaign_id == game.store.campaign_id,
+                t.events.c.kind.in_(("m2.rolled", "m3.rolled")),
+                t.events.c.actor_id == str(author),
+                sa.func.json_extract(t.events.c.payload_json, "$.action_id") == action["id"],
+                sa.func.json_extract(t.events.c.payload_json, "$.receipt_id") == receipt["id"],
+            )
         )
-    )
     if event is None:
         raise WorkflowError("Recover the actual canonical original Dose Up roll event")
     if action["data"].get("prince_mark"):

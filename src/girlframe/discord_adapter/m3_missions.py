@@ -602,28 +602,29 @@ def register_missions(
             await reply(interaction, str(error))
 
     @group.command(
-        name="position", description="Review your actual original body and Frame positions"
+        name="position", description="Review actual positions or NPC treatment resources"
     )
-    async def position(interaction: discord.Interaction) -> None:
+    @app_commands.choices(
+        view=[
+            app_commands.Choice(name="Body and Frame positions", value="body"),
+            app_commands.Choice(name="NPC treatment resources", value="npc_resources"),
+        ]
+    )
+    async def position(interaction: discord.Interaction, view: str = "body") -> None:
         from girlframe.discord_adapter.m3_physical import open_initial
         from girlframe.services.m3_physical import PhysicalService
 
         await interaction.response.defer(ephemeral=True)
         try:
-            await open_initial(interaction, PhysicalService(service.store))
-        except WorkflowError as error:
-            await reply(interaction, str(error))
+            if view == "body":
+                await open_initial(interaction, PhysicalService(service.store))
+            elif view == "npc_resources":
+                from girlframe.discord_adapter.m3_npc_resources import open_npc_resources
+                from girlframe.services.m3_npc_resources import NpcResourcesService
 
-    @group.command(
-        name="npc_resources", description="Record or review witnessed NPC treatment resources"
-    )
-    async def npc_resources(interaction: discord.Interaction) -> None:
-        from girlframe.discord_adapter.m3_npc_resources import open_npc_resources
-        from girlframe.services.m3_npc_resources import NpcResourcesService
-
-        await interaction.response.defer(ephemeral=True)
-        try:
-            await open_npc_resources(interaction, NpcResourcesService(service.game))
+                await open_npc_resources(interaction, NpcResourcesService(service.game))
+            else:
+                raise WorkflowError("Choose body positions or NPC treatment resources")
         except WorkflowError as error:
             await reply(interaction, str(error))
 

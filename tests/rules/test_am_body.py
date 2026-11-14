@@ -269,7 +269,12 @@ def test_real_code_body_swap_new_asset_damage_and_private_hooked_return(
         await InboxView(inbox, 2).route(own, item)
         form = own.edit_original_response.call_args.kwargs["view"]
         assert "Prepared arm [damaged]" in form.text()
-        assert set(dict(next(x for x in form.fields if x.key == "operation").options)) == {"return"}
+        # The integrated owner menu also opens the independently source-proved
+        # spinal controls; this does not create or replace a body hookup.
+        assert set(dict(next(x for x in form.fields if x.key == "operation").options)) == {
+            "return",
+            "spinal",
+        }
         expected = service.view(PLAYER, changed.id)["revision"]
         form.values.update(operation=("return",), account="")
         await form.confirm.callback(current(2, 961008))

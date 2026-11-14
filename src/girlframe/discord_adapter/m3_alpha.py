@@ -315,5 +315,14 @@ async def open_alpha_choice(
         )
         return "Your actual Brutalize response is saved. Immediate consequences remain required."
 
-    form = NativeForm(viewer.user_id, "Brutalize — owned response", text, fields, submit)
+    form = NativeForm(
+        viewer.user_id,
+        "Brutalize — owned response",
+        text,
+        fields,
+        submit,
+        # Identity marking is optional. Existing Heat requires no new gain;
+        # show that actual zero commitment in review without forcing another pick.
+        values={"gain": ("0",)} if data["kind"] == "alpha_counter_play" else None,
+    )
     await reply(interaction, form.text(), form)
